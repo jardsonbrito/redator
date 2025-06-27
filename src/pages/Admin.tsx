@@ -64,7 +64,7 @@ const Admin = () => {
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso.",
       });
-      navigate('/', { replace: true });
+      navigate('/home', { replace: true });
     } catch (error) {
       console.error('Error signing out:', error);
       toast({
