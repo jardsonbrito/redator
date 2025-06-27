@@ -28,15 +28,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Check if user is admin
+          // Check if user is admin by email
           const { data: profile } = await supabase
             .from('profiles')
             .select('email')
             .eq('id', session.user.id)
             .single();
           
-          // You can set admin emails here or use a role field
-          setIsAdmin(profile?.email === 'admin@redator.com');
+          // Set admin for the specified email
+          setIsAdmin(profile?.email === 'jardsonbrito@gmail.com');
         } else {
           setIsAdmin(false);
         }
