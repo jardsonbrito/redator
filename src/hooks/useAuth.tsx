@@ -20,21 +20,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const checkAdminStatus = async (userId: string) => {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', userId)
-        .single();
-      
-      const adminStatus = profile?.email === 'jardsonbrito@gmail.com';
-      console.log('Admin check - Profile:', profile, 'Admin status:', adminStatus);
-      setIsAdmin(adminStatus);
-    } catch (error) {
-      console.error('Error checking admin status:', error);
+  const checkAdminStatus = (userEmail: string | undefined) => {
+    if (!userEmail) {
       setIsAdmin(false);
+      return false;
     }
+    
+    const adminStatus = userEmail === 'jardsonbrito@gmail.com';
+    console.log('Admin check - Email:', userEmail, 'Admin status:', adminStatus);
+    setIsAdmin(adminStatus);
+    return adminStatus;
   };
 
   useEffect(() => {
@@ -45,14 +40,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       async (event, session) => {
         if (!mounted) return;
 
-        console.log('Auth state changed:', event, session?.user?.email);
-        
-        setSession(session);
-        setUser(session?.user ?? null);
+        console.log('Auth state changed:', event, 'User:', session?.user?.email);
         
         if (session?.user) {
-          await checkAdminStatus(session.user.id);
+          setSession(session);
+          setUser(session.user);
+          checkAdminStatus(session.user.email);
         } else {
+          setSession(null);
+          setUser(null);
           setIsAdmin(false);
         }
         
@@ -63,15 +59,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Check for existing session
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         if (!mounted) return;
 
-        console.log('Initial session:', session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
+        }
+
+        console.log('Initial session check:', session?.user?.email);
         
         if (session?.user) {
-          await checkAdminStatus(session.user.id);
+          setSession(session);
+          setUser(session.user);
+          checkAdminStatus(session.user.email);
+        } else {
+          setSession(null);
+          setUser(null);
+          setIsAdmin(false);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -94,25 +100,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('Attempting sign in with:', email);
     setLoading(true);
     
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) {
-      console.error('Sign in error:', error);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        setLoading(false);
+        return { error };
+      }
+
+      if (data.user) {
+        console.log('Sign in successful for:', data.user.email);
+        // Don't set loading to false here - let the auth state change handle it
+        return { error: null };
+      }
+      
       setLoading(false);
+      return { error: new Error('Login failed - no user returned') };
+    } catch (error) {
+      console.error('Sign in exception:', error);
+      setLoading(false);
+      return { error };
     }
-    
-    return { error };
   };
 
   const signOut = async () => {
     console.log('Signing out...');
     setLoading(true);
-    await supabase.auth.signOut();
-    setIsAdmin(false);
-    setLoading(false);
+    
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      setUser(null);
+      setIsAdmin(false);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

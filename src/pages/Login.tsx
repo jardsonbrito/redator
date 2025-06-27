@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('jardsonbrito@gmail.com');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, user, isAdmin, loading: authLoading } = useAuth();
@@ -20,17 +20,28 @@ const Login = () => {
 
   // Redirect if already authenticated and admin
   useEffect(() => {
+    console.log('Login page - Auth loading:', authLoading, 'User:', user?.email, 'IsAdmin:', isAdmin);
+    
     if (!authLoading && user && isAdmin) {
-      console.log('User is already authenticated and admin, redirecting...');
-      navigate('/admin');
+      console.log('User is already authenticated as admin, redirecting to /admin');
+      navigate('/admin', { replace: true });
     }
   }, [user, isAdmin, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    
+    if (!email || !password) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha email e senha.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    console.log('Form submitted with:', { email, password: '***' });
+    setLoading(true);
+    console.log('Form submitted - attempting login with:', email);
 
     try {
       const { error } = await signIn(email, password);
@@ -39,19 +50,23 @@ const Login = () => {
         console.error('Login error:', error);
         toast({
           title: "Erro no login",
-          description: error.message || "Erro ao fazer login. Verifique suas credenciais.",
+          description: error.message || "Credenciais inválidas. Verifique email e senha.",
           variant: "destructive",
         });
       } else {
-        console.log('Login successful');
+        console.log('Login successful, waiting for redirect...');
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o painel administrativo...",
         });
-        // Don't manually navigate here - let the useEffect handle it
+        
+        // Give a moment for the auth state to update, then redirect
+        setTimeout(() => {
+          navigate('/admin', { replace: true });
+        }, 1000);
       }
-    } catch (error) {
-      console.error('Unexpected error:', error);
+    } catch (error: any) {
+      console.error('Unexpected login error:', error);
       toast({
         title: "Erro inesperado",
         description: "Ocorreu um erro inesperado. Tente novamente.",
@@ -66,7 +81,16 @@ const Login = () => {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-lg">Carregando...</div>
+        <div className="text-lg">Carregando sistema de autenticação...</div>
+      </div>
+    );
+  }
+
+  // If already logged in as admin, show redirect message
+  if (user && isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-lg">Redirecionando para o painel administrativo...</div>
       </div>
     );
   }
@@ -83,7 +107,10 @@ const Login = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Login Administrativo</CardTitle>
+            <CardTitle className="text-center">Painel Administrativo</CardTitle>
+            <p className="text-center text-sm text-gray-600">
+              Acesso exclusivo para administradores
+            </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,6 +132,7 @@ const Login = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Digite sua senha"
                   required
                 />
               </div>
@@ -114,12 +142,14 @@ const Login = () => {
                 className="w-full" 
                 disabled={loading}
               >
-                {loading ? 'Entrando...' : 'Entrar'}
+                {loading ? 'Fazendo login...' : 'Acessar Painel Admin'}
               </Button>
             </form>
             
-            <div className="mt-4 text-sm text-gray-600 text-center">
-              <p>Use as credenciais de administrador para acessar o painel.</p>
+            <div className="mt-4 text-xs text-gray-500 text-center">
+              <p>Credenciais de teste:</p>
+              <p>Email: jardsonbrito@gmail.com</p>
+              <p>Senha: !!Levy1902@</p>
             </div>
           </CardContent>
         </Card>
