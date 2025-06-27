@@ -23,47 +23,22 @@ export const RedacaoForm = () => {
     setLoading(true);
 
     try {
-      // First create the tema if it doesn't exist
-      let temaId = null;
-      
-      // Check if tema already exists
-      const { data: existingTema } = await supabase
-        .from('temas')
-        .select('id')
-        .eq('frase_tematica', formData.frase_tematica)
-        .single();
-
-      if (existingTema) {
-        temaId = existingTema.id;
-      } else {
-        // Create new tema
-        const { data: newTema, error: temaError } = await supabase
-          .from('temas')
-          .insert([{
-            frase_tematica: formData.frase_tematica,
-            eixo_tematico: formData.eixo_tematico
-          }])
-          .select()
-          .single();
-
-        if (temaError) throw temaError;
-        temaId = newTema.id;
-      }
-
-      // Now create the redacao
+      // Inserir diretamente na tabela redacoes
       const { error } = await supabase
         .from('redacoes')
         .insert([{
-          tema_id: temaId,
           conteudo: formData.conteudo,
-          pdf_url: formData.thumbnail_url // Using as thumbnail for now
+          pdf_url: formData.thumbnail_url,
+          // Adicionar campos extras se necessário
+          nota_total: 1000, // Redação exemplar
+          data_envio: new Date().toISOString(),
         }]);
 
       if (error) throw error;
 
       toast({
         title: "Sucesso!",
-        description: "Redação adicionada com sucesso.",
+        description: "Redação exemplar adicionada com sucesso.",
       });
 
       // Reset form
@@ -74,9 +49,10 @@ export const RedacaoForm = () => {
         thumbnail_url: ''
       });
     } catch (error: any) {
+      console.error('Erro ao salvar redação:', error);
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || "Erro ao salvar redação exemplar.",
         variant: "destructive",
       });
     } finally {
@@ -85,13 +61,14 @@ export const RedacaoForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <Label htmlFor="frase_tematica">Frase Temática</Label>
         <Input
           id="frase_tematica"
           value={formData.frase_tematica}
           onChange={(e) => setFormData({...formData, frase_tematica: e.target.value})}
+          placeholder="Ex: A importância da educação no Brasil"
           required
         />
       </div>
@@ -102,6 +79,7 @@ export const RedacaoForm = () => {
           id="eixo_tematico"
           value={formData.eixo_tematico}
           onChange={(e) => setFormData({...formData, eixo_tematico: e.target.value})}
+          placeholder="Ex: Educação, Meio Ambiente, Tecnologia"
           required
         />
       </div>
@@ -112,23 +90,26 @@ export const RedacaoForm = () => {
           id="conteudo"
           value={formData.conteudo}
           onChange={(e) => setFormData({...formData, conteudo: e.target.value})}
-          rows={10}
+          rows={15}
+          placeholder="Digite aqui o texto completo da redação exemplar..."
           required
+          className="min-h-[400px]"
         />
       </div>
 
       <div>
-        <Label htmlFor="thumbnail_url">URL da Thumbnail</Label>
+        <Label htmlFor="thumbnail_url">Imagem de Capa (URL)</Label>
         <Input
           id="thumbnail_url"
           type="url"
           value={formData.thumbnail_url}
           onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
+          placeholder="https://exemplo.com/imagem.jpg"
         />
       </div>
 
-      <Button type="submit" disabled={loading}>
-        {loading ? 'Salvando...' : 'Salvar Redação'}
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? 'Salvando...' : 'Salvar Redação Exemplar'}
       </Button>
     </form>
   );

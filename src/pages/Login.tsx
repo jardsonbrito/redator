@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,39 +14,62 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { signIn } = useAuth();
+  const { signIn, user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirect if already authenticated and admin
+  useEffect(() => {
+    if (!authLoading && user && isAdmin) {
+      console.log('User is already authenticated and admin, redirecting...');
+      navigate('/admin');
+    }
+  }, [user, isAdmin, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     console.log('Form submitted with:', { email, password: '***' });
 
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      console.error('Login error:', error);
-      setError(error.message);
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        console.error('Login error:', error);
+        toast({
+          title: "Erro no login",
+          description: error.message || "Erro ao fazer login. Verifique suas credenciais.",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Login successful');
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Redirecionando para o painel administrativo...",
+        });
+        // Don't manually navigate here - let the useEffect handle it
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
       toast({
-        title: "Erro no login",
-        description: error.message,
+        title: "Erro inesperado",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
       });
-    } else {
-      console.log('Login successful, redirecting to admin...');
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Redirecionando para o painel administrativo...",
-      });
-      navigate('/admin');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
+
+  // Show loading if auth is still loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -85,12 +108,6 @@ const Login = () => {
                   required
                 />
               </div>
-              
-              {error && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                  {error}
-                </div>
-              )}
               
               <Button 
                 type="submit" 

@@ -12,38 +12,55 @@ export const VideoForm = () => {
   
   const [formData, setFormData] = useState({
     titulo: '',
-    categoria: '',
     youtube_url: '',
-    thumbnail_url: ''
+    categoria: ''
   });
+
+  const extractYouTubeID = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const generateThumbnailUrl = (url: string) => {
+    const videoId = extractYouTubeID(url);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const thumbnailUrl = generateThumbnailUrl(formData.youtube_url);
+      
       const { error } = await supabase
         .from('videos')
-        .insert([formData]);
+        .insert([{
+          titulo: formData.titulo,
+          youtube_url: formData.youtube_url,
+          categoria: formData.categoria,
+          thumbnail_url: thumbnailUrl
+        }]);
 
       if (error) throw error;
 
       toast({
         title: "Sucesso!",
-        description: "Vídeo adicionado com sucesso.",
+        description: "Vídeo adicionado com sucesso à videoteca.",
       });
 
       // Reset form
       setFormData({
         titulo: '',
-        categoria: '',
         youtube_url: '',
-        thumbnail_url: ''
+        categoria: ''
       });
     } catch (error: any) {
+      console.error('Erro ao salvar vídeo:', error);
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || "Erro ao salvar vídeo.",
         variant: "destructive",
       });
     } finally {
@@ -52,13 +69,14 @@ export const VideoForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <Label htmlFor="titulo">Título do Vídeo</Label>
+        <Label htmlFor="titulo">Assunto do Vídeo</Label>
         <Input
           id="titulo"
           value={formData.titulo}
           onChange={(e) => setFormData({...formData, titulo: e.target.value})}
+          placeholder="Ex: Como escrever uma boa introdução"
           required
         />
       </div>
@@ -69,33 +87,27 @@ export const VideoForm = () => {
           id="categoria"
           value={formData.categoria}
           onChange={(e) => setFormData({...formData, categoria: e.target.value})}
-          required
+          placeholder="Ex: Técnicas de Redação, Repertório, Estrutura"
         />
       </div>
 
       <div>
-        <Label htmlFor="youtube_url">URL do YouTube</Label>
+        <Label htmlFor="youtube_url">Link do YouTube</Label>
         <Input
           id="youtube_url"
           type="url"
           value={formData.youtube_url}
           onChange={(e) => setFormData({...formData, youtube_url: e.target.value})}
+          placeholder="https://www.youtube.com/watch?v=..."
           required
         />
+        <p className="text-sm text-gray-600 mt-1">
+          Cole o link completo do vídeo do YouTube. O thumbnail será gerado automaticamente.
+        </p>
       </div>
 
-      <div>
-        <Label htmlFor="thumbnail_url">URL da Thumbnail</Label>
-        <Input
-          id="thumbnail_url"
-          type="url"
-          value={formData.thumbnail_url}
-          onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
-        />
-      </div>
-
-      <Button type="submit" disabled={loading}>
-        {loading ? 'Salvando...' : 'Salvar Vídeo'}
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? 'Salvando...' : 'Salvar Vídeo na Videoteca'}
       </Button>
     </form>
   );

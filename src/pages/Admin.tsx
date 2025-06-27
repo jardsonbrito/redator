@@ -17,23 +17,33 @@ const Admin = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('Admin page - User:', user?.email, 'IsAdmin:', isAdmin, 'Loading:', loading);
+    console.log('Admin page - Loading:', loading, 'User:', user?.email, 'IsAdmin:', isAdmin);
     
-    if (!loading && (!user || !isAdmin)) {
-      console.log('Redirecting to login - User:', !!user, 'IsAdmin:', isAdmin);
-      toast({
-        title: "Acesso negado",
-        description: "É necessário fazer login como administrador.",
-        variant: "destructive",
-      });
-      navigate('/login');
+    if (!loading) {
+      if (!user) {
+        console.log('No user, redirecting to login');
+        toast({
+          title: "Acesso negado",
+          description: "É necessário fazer login para acessar esta página.",
+          variant: "destructive",
+        });
+        navigate('/login');
+      } else if (!isAdmin) {
+        console.log('User is not admin, redirecting to home');
+        toast({
+          title: "Acesso negado",
+          description: "Você não tem permissão para acessar o painel administrativo.",
+          variant: "destructive",
+        });
+        navigate('/');
+      }
     }
   }, [user, isAdmin, loading, navigate, toast]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-lg">Carregando...</div>
+        <div className="text-lg">Carregando painel...</div>
       </div>
     );
   }
@@ -57,9 +67,14 @@ const Admin = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Painel de Administração - App do Laboratório do Redator
+              </h1>
               <p className="text-gray-600">
-                Gerencie o conteúdo do App do Redator - Logado como: {user.email}
+                Gerencie conteúdos das seções: Redações Exemplares, Temas e Videoteca
+              </p>
+              <p className="text-sm text-blue-600 mt-1">
+                Logado como: {user.email}
               </p>
             </div>
             <Button onClick={handleSignOut} variant="outline" className="flex items-center gap-2">
@@ -71,37 +86,29 @@ const Admin = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="temas" className="w-full">
+        <Tabs defaultValue="redacoes" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="redacoes" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Redações Exemplares
+            </TabsTrigger>
             <TabsTrigger value="temas" className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               Temas
             </TabsTrigger>
-            <TabsTrigger value="redacoes" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Redações
-            </TabsTrigger>
-            <TabsTrigger value="videos" className="flex items-center gap-2">
+            <TabsTrigger value="videoteca" className="flex items-center gap-2">
               <Video className="w-4 h-4" />
-              Vídeos
+              Videoteca
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="temas">
-            <Card>
-              <CardHeader>
-                <CardTitle>Adicionar Novo Tema</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TemaForm />
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="redacoes">
             <Card>
               <CardHeader>
-                <CardTitle>Adicionar Nova Redação Exemplar</CardTitle>
+                <CardTitle>Cadastrar Nova Redação Exemplar</CardTitle>
+                <p className="text-gray-600">
+                  Adicione redações exemplares que serão exibidas para os usuários
+                </p>
               </CardHeader>
               <CardContent>
                 <RedacaoForm />
@@ -109,10 +116,27 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="videos">
+          <TabsContent value="temas">
             <Card>
               <CardHeader>
-                <CardTitle>Adicionar Novo Vídeo</CardTitle>
+                <CardTitle>Cadastrar Novo Tema</CardTitle>
+                <p className="text-gray-600">
+                  Crie temas com textos motivadores para prática de redação
+                </p>
+              </CardHeader>
+              <CardContent>
+                <TemaForm />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="videoteca">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cadastrar Novo Vídeo</CardTitle>
+                <p className="text-gray-600">
+                  Adicione vídeos educativos do YouTube à videoteca
+                </p>
               </CardHeader>
               <CardContent>
                 <VideoForm />

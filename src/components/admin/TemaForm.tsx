@@ -17,8 +17,7 @@ export const TemaForm = () => {
     texto_1: '',
     texto_2: '',
     texto_3: '',
-    imagem_texto_4_url: '',
-    video_url: ''
+    imagem_texto_4_url: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,13 +43,13 @@ export const TemaForm = () => {
         texto_1: '',
         texto_2: '',
         texto_3: '',
-        imagem_texto_4_url: '',
-        video_url: ''
+        imagem_texto_4_url: ''
       });
     } catch (error: any) {
+      console.error('Erro ao salvar tema:', error);
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || "Erro ao salvar tema.",
         variant: "destructive",
       });
     } finally {
@@ -59,13 +58,14 @@ export const TemaForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <Label htmlFor="frase_tematica">Frase Temática</Label>
         <Input
           id="frase_tematica"
           value={formData.frase_tematica}
           onChange={(e) => setFormData({...formData, frase_tematica: e.target.value})}
+          placeholder="Ex: A importância da sustentabilidade no século XXI"
           required
         />
       </div>
@@ -76,6 +76,7 @@ export const TemaForm = () => {
           id="eixo_tematico"
           value={formData.eixo_tematico}
           onChange={(e) => setFormData({...formData, eixo_tematico: e.target.value})}
+          placeholder="Ex: Meio Ambiente, Educação, Tecnologia"
           required
         />
       </div>
@@ -86,6 +87,8 @@ export const TemaForm = () => {
           id="texto_1"
           value={formData.texto_1}
           onChange={(e) => setFormData({...formData, texto_1: e.target.value})}
+          rows={4}
+          placeholder="Primeiro texto motivador para a redação..."
         />
       </div>
 
@@ -95,6 +98,8 @@ export const TemaForm = () => {
           id="texto_2"
           value={formData.texto_2}
           onChange={(e) => setFormData({...formData, texto_2: e.target.value})}
+          rows={4}
+          placeholder="Segundo texto motivador para a redação..."
         />
       </div>
 
@@ -104,30 +109,23 @@ export const TemaForm = () => {
           id="texto_3"
           value={formData.texto_3}
           onChange={(e) => setFormData({...formData, texto_3: e.target.value})}
+          rows={4}
+          placeholder="Terceiro texto motivador para a redação..."
         />
       </div>
 
       <div>
-        <Label htmlFor="imagem_texto_4_url">URL da Imagem Motivadora</Label>
+        <Label htmlFor="imagem_texto_4_url">Imagem Motivadora (URL)</Label>
         <Input
           id="imagem_texto_4_url"
           type="url"
           value={formData.imagem_texto_4_url}
           onChange={(e) => setFormData({...formData, imagem_texto_4_url: e.target.value})}
+          placeholder="https://exemplo.com/imagem-motivadora.jpg"
         />
       </div>
 
-      <div>
-        <Label htmlFor="video_url">URL do Vídeo (opcional)</Label>
-        <Input
-          id="video_url"
-          type="url"
-          value={formData.video_url}
-          onChange={(e) => setFormData({...formData, video_url: e.target.value})}
-        />
-      </div>
-
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading} className="w-full">
         {loading ? 'Salvando...' : 'Salvar Tema'}
       </Button>
     </form>
