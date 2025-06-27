@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -35,8 +36,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             .eq('id', session.user.id)
             .single();
           
+          console.log('Profile data:', profile);
+          
           // Set admin for the specified email
-          setIsAdmin(profile?.email === 'jardsonbrito@gmail.com');
+          const adminStatus = profile?.email === 'jardsonbrito@gmail.com';
+          console.log('Admin status:', adminStatus);
+          setIsAdmin(adminStatus);
         } else {
           setIsAdmin(false);
         }
@@ -47,6 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -56,14 +62,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('Attempting sign in with:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    if (error) {
+      console.error('Sign in error:', error);
+    } else {
+      console.log('Sign in successful');
+    }
+    
     return { error };
   };
 
   const signOut = async () => {
+    console.log('Signing out...');
     await supabase.auth.signOut();
   };
 

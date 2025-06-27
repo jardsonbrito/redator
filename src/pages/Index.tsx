@@ -1,11 +1,10 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
   const menuItems = [
     {
@@ -48,16 +47,15 @@ const Index = () => {
                 Sua plataforma completa para aprender e praticar redação
               </p>
             </div>
-            {!isAdmin && (
+            {user && isAdmin ? (
+              <Link to="/admin" className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                <Settings className="w-5 h-5" />
+                <span>Painel Admin</span>
+              </Link>
+            ) : (
               <Link to="/login" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
                 <Settings className="w-5 h-5" />
                 <span>Admin</span>
-              </Link>
-            )}
-            {isAdmin && (
-              <Link to="/admin" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
-                <Settings className="w-5 h-5" />
-                <span>Painel Admin</span>
               </Link>
             )}
           </div>

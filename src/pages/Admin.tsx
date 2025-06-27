@@ -1,7 +1,7 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,21 +9,31 @@ import { LogOut, FileText, BookOpen, Video } from 'lucide-react';
 import { TemaForm } from '@/components/admin/TemaForm';
 import { RedacaoForm } from '@/components/admin/RedacaoForm';
 import { VideoForm } from '@/components/admin/VideoForm';
+import { useToast } from '@/hooks/use-toast';
 
 const Admin = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
+    console.log('Admin page - User:', user?.email, 'IsAdmin:', isAdmin, 'Loading:', loading);
+    
     if (!loading && (!user || !isAdmin)) {
+      console.log('Redirecting to login - User:', !!user, 'IsAdmin:', isAdmin);
+      toast({
+        title: "Acesso negado",
+        description: "É necessário fazer login como administrador.",
+        variant: "destructive",
+      });
       navigate('/login');
     }
-  }, [user, isAdmin, loading, navigate]);
+  }, [user, isAdmin, loading, navigate, toast]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div>Carregando...</div>
+        <div className="text-lg">Carregando...</div>
       </div>
     );
   }
@@ -34,6 +44,10 @@ const Admin = () => {
 
   const handleSignOut = async () => {
     await signOut();
+    toast({
+      title: "Logout realizado",
+      description: "Você foi desconectado com sucesso.",
+    });
     navigate('/');
   };
 
@@ -44,7 +58,9 @@ const Admin = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
-              <p className="text-gray-600">Gerencie o conteúdo do App do Redator</p>
+              <p className="text-gray-600">
+                Gerencie o conteúdo do App do Redator - Logado como: {user.email}
+              </p>
             </div>
             <Button onClick={handleSignOut} variant="outline" className="flex items-center gap-2">
               <LogOut className="w-4 h-4" />

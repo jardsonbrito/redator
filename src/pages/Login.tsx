@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -16,17 +17,31 @@ const Login = () => {
   const [error, setError] = useState('');
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    console.log('Form submitted with:', { email, password: '***' });
+
     const { error } = await signIn(email, password);
     
     if (error) {
+      console.error('Login error:', error);
       setError(error.message);
+      toast({
+        title: "Erro no login",
+        description: error.message,
+        variant: "destructive",
+      });
     } else {
+      console.log('Login successful, redirecting to admin...');
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Redirecionando para o painel administrativo...",
+      });
       navigate('/admin');
     }
     
@@ -56,6 +71,7 @@ const Login = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jardsonbrito@gmail.com"
                   required
                 />
               </div>
@@ -71,7 +87,9 @@ const Login = () => {
               </div>
               
               {error && (
-                <div className="text-red-600 text-sm">{error}</div>
+                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                  {error}
+                </div>
               )}
               
               <Button 
@@ -82,6 +100,10 @@ const Login = () => {
                 {loading ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>
+            
+            <div className="mt-4 text-sm text-gray-600 text-center">
+              <p>Use as credenciais de administrador para acessar o painel.</p>
+            </div>
           </CardContent>
         </Card>
       </div>

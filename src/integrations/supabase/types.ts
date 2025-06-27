@@ -11,37 +11,22 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
-          acesso_liberado: boolean | null
-          created_at: string | null
-          creditos: number | null
           email: string
           id: string
           nome: string
           sobrenome: string
-          turma_id: string | null
-          updated_at: string | null
         }
         Insert: {
-          acesso_liberado?: boolean | null
-          created_at?: string | null
-          creditos?: number | null
           email: string
           id: string
           nome: string
           sobrenome: string
-          turma_id?: string | null
-          updated_at?: string | null
         }
         Update: {
-          acesso_liberado?: boolean | null
-          created_at?: string | null
-          creditos?: number | null
           email?: string
           id?: string
           nome?: string
           sobrenome?: string
-          turma_id?: string | null
-          updated_at?: string | null
         }
         Relationships: []
       }
