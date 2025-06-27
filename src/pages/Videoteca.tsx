@@ -2,56 +2,37 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Play } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Videoteca = () => {
-  // Mock data - será substituído pelos dados do Supabase
-  const videos = [
-    {
-      id: 1,
-      assunto: "Como estruturar uma redação dissertativo-argumentativa",
-      link_youtube: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    },
-    {
-      id: 2,
-      assunto: "Técnicas de argumentação: como convencer o leitor",
-      link_youtube: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    },
-    {
-      id: 3,
-      assunto: "A importância da proposta de intervenção no ENEM",
-      link_youtube: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    },
-    {
-      id: 4,
-      assunto: "Coesão e coerência textual: conectivos e progressão temática",
-      link_youtube: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    },
-    {
-      id: 5,
-      assunto: "Como evitar clichês e frases feitas na redação",
-      link_youtube: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    },
-    {
-      id: 6,
-      assunto: "Análise de redações nota 1000: o que as torna especiais",
-      link_youtube: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+  const { data: videos, isLoading } = useQuery({
+    queryKey: ['videos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('videos')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     }
-  ];
+  });
 
-  // Função para extrair o ID do vídeo do YouTube
-  const getYouTubeId = (url: string) => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-    return match ? match[1] : null;
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center">
+        <div>Carregando vídeos...</div>
+      </div>
+    );
+  }
 
-  // Função para gerar thumbnail do YouTube
-  const getYouTubeThumbnail = (url: string) => {
-    const videoId = getYouTubeId(url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+  const openVideo = (url: string) => {
+    window.open(url, '_blank');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -62,7 +43,7 @@ const Videoteca = () => {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Videoteca</h1>
-              <p className="text-gray-600">Vídeos educativos sobre técnicas de redação</p>
+              <p className="text-gray-600">Assista conteúdos sobre escrita e repertório</p>
             </div>
           </div>
         </div>
@@ -70,54 +51,40 @@ const Videoteca = () => {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {videos.map((video) => {
-            const thumbnailUrl = getYouTubeThumbnail(video.link_youtube);
-            
-            return (
-              <a 
-                key={video.id} 
-                href={video.link_youtube} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="group"
-              >
-                <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
+        {videos && videos.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {videos.map((video) => (
+              <div key={video.id} className="group cursor-pointer" onClick={() => openVideo(video.youtube_url)}>
+                <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105">
                   <div className="aspect-video overflow-hidden rounded-t-lg relative">
-                    {thumbnailUrl ? (
-                      <img 
-                        src={thumbnailUrl} 
-                        alt={video.assunto}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <Play className="w-12 h-12 text-gray-400" />
-                      </div>
-                    )}
-                    
-                    {/* Play button overlay */}
-                    <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center group-hover:bg-opacity-30 transition-all duration-300">
-                      <div className="bg-red-600 rounded-full p-3 group-hover:scale-110 transition-transform duration-300">
-                        <Play className="w-6 h-6 text-white fill-current" />
-                      </div>
+                    <img 
+                      src={video.thumbnail_url || "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=300&h=200&fit=crop"} 
+                      alt={video.titulo}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Play className="w-12 h-12 text-white" />
                     </div>
                   </div>
-                  
                   <CardContent className="p-4">
-                    <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                      {video.assunto}
-                    </h3>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
-                      <Play className="w-4 h-4" />
-                      <span>Assistir no YouTube</span>
+                    <div className="mb-2">
+                      <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                        {video.categoria}
+                      </span>
                     </div>
+                    <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                      {video.titulo}
+                    </h3>
                   </CardContent>
                 </Card>
-              </a>
-            );
-          })}
-        </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Nenhum vídeo encontrado. Adicione vídeos através do painel administrativo.</p>
+          </div>
+        )}
       </main>
     </div>
   );

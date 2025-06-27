@@ -9,385 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      atividades: {
-        Row: {
-          created_at: string | null
-          data_fim: string
-          data_inicio: string
-          descricao: string | null
-          id: string
-          status: Database["public"]["Enums"]["atividade_status"] | null
-          tema_id: string | null
-          titulo: string
-        }
-        Insert: {
-          created_at?: string | null
-          data_fim: string
-          data_inicio: string
-          descricao?: string | null
-          id?: string
-          status?: Database["public"]["Enums"]["atividade_status"] | null
-          tema_id?: string | null
-          titulo: string
-        }
-        Update: {
-          created_at?: string | null
-          data_fim?: string
-          data_inicio?: string
-          descricao?: string | null
-          id?: string
-          status?: Database["public"]["Enums"]["atividade_status"] | null
-          tema_id?: string | null
-          titulo?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "atividades_tema_id_fkey"
-            columns: ["tema_id"]
-            isOneToOne: false
-            referencedRelation: "temas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      atividades_corretores: {
-        Row: {
-          atividade_id: string | null
-          corretor_id: string | null
-          id: string
-        }
-        Insert: {
-          atividade_id?: string | null
-          corretor_id?: string | null
-          id?: string
-        }
-        Update: {
-          atividade_id?: string | null
-          corretor_id?: string | null
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "atividades_corretores_atividade_id_fkey"
-            columns: ["atividade_id"]
-            isOneToOne: false
-            referencedRelation: "atividades"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "atividades_corretores_corretor_id_fkey"
-            columns: ["corretor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      atividades_turmas: {
-        Row: {
-          atividade_id: string | null
-          id: string
-          turma_id: string | null
-        }
-        Insert: {
-          atividade_id?: string | null
-          id?: string
-          turma_id?: string | null
-        }
-        Update: {
-          atividade_id?: string | null
-          id?: string
-          turma_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "atividades_turmas_atividade_id_fkey"
-            columns: ["atividade_id"]
-            isOneToOne: false
-            referencedRelation: "atividades"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "atividades_turmas_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      avisos: {
-        Row: {
-          autor_id: string | null
-          conteudo: string
-          created_at: string | null
-          id: string
-          titulo: string
-          turma_id: string | null
-        }
-        Insert: {
-          autor_id?: string | null
-          conteudo: string
-          created_at?: string | null
-          id?: string
-          titulo: string
-          turma_id?: string | null
-        }
-        Update: {
-          autor_id?: string | null
-          conteudo?: string
-          created_at?: string | null
-          id?: string
-          titulo?: string
-          turma_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "avisos_autor_id_fkey"
-            columns: ["autor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avisos_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      configuracoes: {
-        Row: {
-          chave: string
-          id: string
-          updated_at: string | null
-          valor: string | null
-        }
-        Insert: {
-          chave: string
-          id?: string
-          updated_at?: string | null
-          valor?: string | null
-        }
-        Update: {
-          chave?: string
-          id?: string
-          updated_at?: string | null
-          valor?: string | null
-        }
-        Relationships: []
-      }
-      corretores_turmas: {
-        Row: {
-          corretor_id: string | null
-          id: string
-          turma_id: string | null
-        }
-        Insert: {
-          corretor_id?: string | null
-          id?: string
-          turma_id?: string | null
-        }
-        Update: {
-          corretor_id?: string | null
-          id?: string
-          turma_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "corretores_turmas_corretor_id_fkey"
-            columns: ["corretor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "corretores_turmas_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      credit_audit: {
-        Row: {
-          action: string
-          admin_id: string | null
-          created_at: string | null
-          id: string
-          new_credits: number | null
-          old_credits: number | null
-          user_id: string
-        }
-        Insert: {
-          action: string
-          admin_id?: string | null
-          created_at?: string | null
-          id?: string
-          new_credits?: number | null
-          old_credits?: number | null
-          user_id: string
-        }
-        Update: {
-          action?: string
-          admin_id?: string | null
-          created_at?: string | null
-          id?: string
-          new_credits?: number | null
-          old_credits?: number | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "credit_audit_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "credit_audit_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      forum_comentarios: {
-        Row: {
-          autor_id: string | null
-          conteudo: string
-          created_at: string | null
-          id: string
-          post_id: string | null
-        }
-        Insert: {
-          autor_id?: string | null
-          conteudo: string
-          created_at?: string | null
-          id?: string
-          post_id?: string | null
-        }
-        Update: {
-          autor_id?: string | null
-          conteudo?: string
-          created_at?: string | null
-          id?: string
-          post_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "forum_comentarios_autor_id_fkey"
-            columns: ["autor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forum_comentarios_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "forum_posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      forum_posts: {
-        Row: {
-          autor_id: string | null
-          conteudo: string
-          created_at: string | null
-          id: string
-          titulo: string
-          turma_id: string | null
-        }
-        Insert: {
-          autor_id?: string | null
-          conteudo: string
-          created_at?: string | null
-          id?: string
-          titulo: string
-          turma_id?: string | null
-        }
-        Update: {
-          autor_id?: string | null
-          conteudo?: string
-          created_at?: string | null
-          id?: string
-          titulo?: string
-          turma_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "forum_posts_autor_id_fkey"
-            columns: ["autor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "forum_posts_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      marcacoes: {
-        Row: {
-          comentario: string | null
-          competencia: Database["public"]["Enums"]["competencia_type"]
-          created_at: string | null
-          height: number
-          id: string
-          pagina: number
-          redacao_id: string | null
-          tipo_erro: string
-          width: number
-          x: number
-          y: number
-        }
-        Insert: {
-          comentario?: string | null
-          competencia: Database["public"]["Enums"]["competencia_type"]
-          created_at?: string | null
-          height: number
-          id?: string
-          pagina: number
-          redacao_id?: string | null
-          tipo_erro: string
-          width: number
-          x: number
-          y: number
-        }
-        Update: {
-          comentario?: string | null
-          competencia?: Database["public"]["Enums"]["competencia_type"]
-          created_at?: string | null
-          height?: number
-          id?: string
-          pagina?: number
-          redacao_id?: string | null
-          tipo_erro?: string
-          width?: number
-          x?: number
-          y?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marcacoes_redacao_id_fkey"
-            columns: ["redacao_id"]
-            isOneToOne: false
-            referencedRelation: "redacoes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           acesso_liberado: boolean | null
@@ -399,7 +20,6 @@ export type Database = {
           sobrenome: string
           turma_id: string | null
           updated_at: string | null
-          user_type: Database["public"]["Enums"]["user_type"]
         }
         Insert: {
           acesso_liberado?: boolean | null
@@ -411,7 +31,6 @@ export type Database = {
           sobrenome: string
           turma_id?: string | null
           updated_at?: string | null
-          user_type: Database["public"]["Enums"]["user_type"]
         }
         Update: {
           acesso_liberado?: boolean | null
@@ -423,39 +42,6 @@ export type Database = {
           sobrenome?: string
           turma_id?: string | null
           updated_at?: string | null
-          user_type?: Database["public"]["Enums"]["user_type"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rate_limits: {
-        Row: {
-          action: string
-          created_at: string | null
-          id: string
-          ip_address: unknown | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string | null
-          id?: string
-          ip_address?: unknown | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string | null
-          id?: string
-          ip_address?: unknown | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -480,7 +66,6 @@ export type Database = {
           nota_c5: number | null
           nota_total: number | null
           pdf_url: string | null
-          status: Database["public"]["Enums"]["redacao_status"] | null
           tema_id: string | null
           usuario_simples_id: string | null
         }
@@ -504,7 +89,6 @@ export type Database = {
           nota_c5?: number | null
           nota_total?: number | null
           pdf_url?: string | null
-          status?: Database["public"]["Enums"]["redacao_status"] | null
           tema_id?: string | null
           usuario_simples_id?: string | null
         }
@@ -528,7 +112,6 @@ export type Database = {
           nota_c5?: number | null
           nota_total?: number | null
           pdf_url?: string | null
-          status?: Database["public"]["Enums"]["redacao_status"] | null
           tema_id?: string | null
           usuario_simples_id?: string | null
         }
@@ -545,13 +128,6 @@ export type Database = {
             columns: ["tema_id"]
             isOneToOne: false
             referencedRelation: "temas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "redacoes_usuario_simples_id_fkey"
-            columns: ["usuario_simples_id"]
-            isOneToOne: false
-            referencedRelation: "usuarios_simples"
             referencedColumns: ["id"]
           },
         ]
@@ -589,45 +165,6 @@ export type Database = {
           texto_2?: string | null
           texto_3?: string | null
           video_url?: string | null
-        }
-        Relationships: []
-      }
-      turmas: {
-        Row: {
-          created_at: string | null
-          id: string
-          nome: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          nome: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          nome?: string
-        }
-        Relationships: []
-      }
-      usuarios_simples: {
-        Row: {
-          created_at: string
-          id: string
-          nome: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          nome: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          nome?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -681,10 +218,7 @@ export type Database = {
       }
     }
     Enums: {
-      atividade_status: "agendada" | "em_progresso" | "finalizada"
       competencia_type: "C1" | "C2" | "C3" | "C4" | "C5"
-      redacao_status: "pendente" | "corrigido"
-      user_type: "aluno" | "corretor" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -800,10 +334,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      atividade_status: ["agendada", "em_progresso", "finalizada"],
       competencia_type: ["C1", "C2", "C3", "C4", "C5"],
-      redacao_status: ["pendente", "corrigido"],
-      user_type: ["aluno", "corretor", "admin"],
     },
   },
 } as const

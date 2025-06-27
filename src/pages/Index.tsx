@@ -1,9 +1,12 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video } from "lucide-react";
+import { BookOpen, FileText, Video, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
+  const { isAdmin } = useAuth();
+
   const menuItems = [
     {
       title: "Redações Exemplares",
@@ -36,13 +39,27 @@ const Index = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              App do Redator
-            </h1>
-            <p className="text-lg text-gray-600">
-              Sua plataforma completa para aprender e praticar redação
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                App do Redator
+              </h1>
+              <p className="text-lg text-gray-600">
+                Sua plataforma completa para aprender e praticar redação
+              </p>
+            </div>
+            {!isAdmin && (
+              <Link to="/login" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                <Settings className="w-5 h-5" />
+                <span>Admin</span>
+              </Link>
+            )}
+            {isAdmin && (
+              <Link to="/admin" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+                <Settings className="w-5 h-5" />
+                <span>Painel Admin</span>
+              </Link>
+            )}
           </div>
         </div>
       </header>
