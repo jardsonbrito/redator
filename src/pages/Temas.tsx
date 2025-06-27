@@ -9,12 +9,18 @@ const Temas = () => {
   const { data: temas, isLoading } = useQuery({
     queryKey: ['temas'],
     queryFn: async () => {
+      console.log('Fetching temas...');
       const { data, error } = await supabase
         .from('temas')
         .select('*')
         .order('publicado_em', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching temas:', error);
+        throw error;
+      }
+      
+      console.log('Temas fetched:', data);
       return data;
     }
   });
@@ -49,29 +55,36 @@ const Temas = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {temas && temas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {temas.map((tema) => (
-              <Link key={tema.id} to={`/temas/${tema.id}`} className="group">
-                <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
-                  <div className="aspect-video overflow-hidden rounded-t-lg">
-                    <img 
-                      src={tema.imagem_texto_4_url || "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=300&h=200&fit=crop"} 
-                      alt={tema.frase_tematica}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="mb-2">
-                      <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
-                        {tema.eixo_tematico}
-                      </span>
+            {temas.map((tema) => {
+              console.log('Rendering tema:', tema);
+              return (
+                <Link key={tema.id} to={`/temas/${tema.id}`} className="group">
+                  <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
+                    <div className="aspect-video overflow-hidden rounded-t-lg">
+                      <img 
+                        src={tema.imagem_texto_4_url || "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=300&h=200&fit=crop"} 
+                        alt={tema.frase_tematica}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
                     </div>
-                    <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-green-600 transition-colors">
-                      {tema.frase_tematica}
-                    </h3>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                    <CardContent className="p-4">
+                      {tema.eixo_tematico && (
+                        <div className="mb-2">
+                          <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
+                            {tema.eixo_tematico}
+                          </span>
+                        </div>
+                      )}
+                      {tema.frase_tematica && (
+                        <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-green-600 transition-colors">
+                          {tema.frase_tematica}
+                        </h3>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">

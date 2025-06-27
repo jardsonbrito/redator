@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const VideoForm = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
     titulo: '',
@@ -44,6 +46,9 @@ export const VideoForm = () => {
         }]);
 
       if (error) throw error;
+
+      // Invalidate and refetch videos query
+      await queryClient.invalidateQueries({ queryKey: ['videos'] });
 
       toast({
         title: "Sucesso!",
@@ -88,6 +93,7 @@ export const VideoForm = () => {
           value={formData.categoria}
           onChange={(e) => setFormData({...formData, categoria: e.target.value})}
           placeholder="Ex: Técnicas de Redação, Repertório, Estrutura"
+          required
         />
       </div>
 
