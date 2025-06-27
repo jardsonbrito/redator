@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -98,9 +99,9 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
       <div className="w-full max-w-md p-4">
         <div className="mb-6">
-          <Link to="/home" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+          <Link to="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
             <ArrowLeft className="w-5 h-5" />
-            <span>Voltar ao menu principal</span>
+            <span>Voltar ao início</span>
           </Link>
         </div>
         
