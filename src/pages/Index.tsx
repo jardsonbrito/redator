@@ -23,7 +23,7 @@ const Index = () => {
     },
     {
       title: "Videoteca",
-      description: "Assista vídeos educativos sobre técnicas de redação",
+      description: "Assista conteúdos sobre escrita e repertório",
       icon: Video,
       path: "/videoteca",
       color: "bg-purple-500",
