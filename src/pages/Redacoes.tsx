@@ -29,10 +29,10 @@ const Redacoes = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Carregando redações exemplares...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-redator-primary mx-auto mb-4"></div>
+          <p className="text-redator-accent">Carregando redações exemplares...</p>
         </div>
       </div>
     );
@@ -41,13 +41,13 @@ const Redacoes = () => {
   if (error) {
     console.error('Erro na página Redações:', error);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-red-600 mb-2">❌ Erro ao carregar redações</h2>
-          <p className="text-gray-600 mb-4">Erro: {error.message}</p>
+          <p className="text-redator-accent mb-4">Erro: {error.message}</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="bg-redator-primary text-white px-4 py-2 rounded hover:bg-redator-primary/90"
           >
             Tentar novamente
           </button>
@@ -57,20 +57,20 @@ const Redacoes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+            <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
               <ArrowLeft className="w-5 h-5" />
               <span>Voltar</span>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Redações Exemplares</h1>
-              <p className="text-gray-600">Aprenda com redações nota 1000</p>
+              <h1 className="text-2xl font-bold text-redator-primary">Redações Exemplares</h1>
+              <p className="text-redator-accent">Aprenda com redações nota 1000</p>
               {redacoes && (
-                <p className="text-sm text-blue-600">
+                <p className="text-sm text-redator-secondary">
                   ✅ {redacoes.length} redação{redacoes.length !== 1 ? 'ões' : ''} exemplar{redacoes.length !== 1 ? 'es' : ''} encontrada{redacoes.length !== 1 ? 's' : ''}
                 </p>
               )}
@@ -93,7 +93,7 @@ const Redacoes = () => {
               
               return (
                 <Link key={redacao.id} to={`/redacoes/${redacao.id}`} className="group">
-                  <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
+                  <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-secondary/50">
                     <div className="aspect-video overflow-hidden rounded-t-lg">
                       <img 
                         src={redacao.pdf_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop"} 
@@ -107,22 +107,22 @@ const Redacoes = () => {
                     </div>
                     <CardContent className="p-4">
                       <div className="mb-2">
-                        <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                        <span className="text-xs font-medium text-white bg-redator-primary px-2 py-1 rounded">
                           {redacao.eixo_tematico || 'Redação Exemplar'}
                         </span>
                       </div>
                       
-                      <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
+                      <h3 className="font-semibold text-redator-primary line-clamp-2 group-hover:text-redator-accent transition-colors mb-2">
                         {redacao.frase_tematica || 'Redação Exemplar - Nota 1000'}
                       </h3>
                       
                       <div className="flex items-center justify-between">
                         {redacao.nota_total && (
-                          <span className="text-sm text-green-600 font-medium">
+                          <span className="text-sm text-redator-secondary font-medium">
                             ⭐ Nota: {redacao.nota_total}
                           </span>
                         )}
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-redator-accent">
                           📅 {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}
                         </div>
                       </div>
@@ -135,11 +135,11 @@ const Redacoes = () => {
         ) : (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📝</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhuma redação exemplar encontrada</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-xl font-semibold text-redator-primary mb-2">Nenhuma redação exemplar encontrada</h3>
+            <p className="text-redator-accent mb-4">
               As redações exemplares ainda não foram cadastradas.
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-redator-accent/70">
               ℹ️ Use o painel administrativo para adicionar redações nota 1000.
             </p>
           </div>

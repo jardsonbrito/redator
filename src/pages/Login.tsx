@@ -80,8 +80,8 @@ const Login = () => {
   // Show loading if auth is still loading
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-lg">Carregando sistema de autenticação...</div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
+        <div className="text-lg text-redator-accent">Carregando sistema de autenticação...</div>
       </div>
     );
   }
@@ -89,33 +89,33 @@ const Login = () => {
   // If already logged in as admin, show redirect message
   if (user && isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-lg">Redirecionando para o painel administrativo...</div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
+        <div className="text-lg text-redator-accent">Redirecionando para o painel administrativo...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
       <div className="w-full max-w-md p-4">
         <div className="mb-6">
-          <Link to="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
+          <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
             <ArrowLeft className="w-5 h-5" />
             <span>Voltar ao início</span>
           </Link>
         </div>
         
-        <Card>
+        <Card className="border-redator-accent/20">
           <CardHeader>
-            <CardTitle className="text-center">Painel Administrativo</CardTitle>
-            <p className="text-center text-sm text-gray-600">
+            <CardTitle className="text-center text-redator-primary">Painel Administrativo</CardTitle>
+            <p className="text-center text-sm text-redator-accent">
               Acesso exclusivo para administradores
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-redator-primary">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -123,10 +123,11 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Digite seu email"
                   required
+                  className="border-redator-accent/30 focus:border-redator-primary"
                 />
               </div>
               <div>
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password" className="text-redator-primary">Senha</Label>
                 <Input
                   id="password"
                   type="password"
@@ -134,12 +135,13 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Digite sua senha"
                   required
+                  className="border-redator-accent/30 focus:border-redator-primary"
                 />
               </div>
               
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white" 
                 disabled={loading}
               >
                 {loading ? 'Fazendo login...' : 'Acessar Painel Admin'}

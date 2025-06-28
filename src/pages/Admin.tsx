@@ -43,10 +43,10 @@ const Admin = () => {
   // Show loading while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
         <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 animate-pulse text-blue-600" />
-          <span className="text-lg">Verificando permissões administrativas...</span>
+          <Shield className="w-6 h-6 animate-pulse text-redator-primary" />
+          <span className="text-lg text-redator-accent">Verificando permissões administrativas...</span>
         </div>
       </div>
     );
@@ -76,23 +76,23 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+      <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Shield className="w-6 h-6 text-blue-600" />
+              <h1 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <Shield className="w-6 h-6 text-redator-primary" />
                 Painel Administrativo - App do Laboratório do Redator
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-redator-accent mt-1">
                 Gerencie conteúdos: Redações Exemplares, Temas e Videoteca
               </p>
-              <p className="text-sm text-green-600 font-medium mt-1">
+              <p className="text-sm text-redator-secondary font-medium mt-1">
                 ✅ Logado como administrador: {user.email}
               </p>
             </div>
-            <Button onClick={handleSignOut} variant="outline" className="flex items-center gap-2">
+            <Button onClick={handleSignOut} variant="outline" className="flex items-center gap-2 border-redator-accent text-redator-primary hover:bg-redator-accent/10">
               <LogOut className="w-4 h-4" />
               Sair
             </Button>
@@ -102,41 +102,41 @@ const Admin = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="bg-white border border-redator-secondary/20 rounded-lg p-4">
             <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-green-600" />
-              <span className="font-medium text-green-800">Painel Administrativo Ativo</span>
+              <Shield className="w-5 h-5 text-redator-secondary" />
+              <span className="font-medium text-redator-primary">Painel Administrativo Ativo</span>
             </div>
-            <p className="text-green-700 text-sm mt-1">
+            <p className="text-redator-accent text-sm mt-1">
               Você está autenticado como administrador e pode gerenciar todos os conteúdos do app.
             </p>
           </div>
         </div>
 
         <Tabs defaultValue="redacoes" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="redacoes" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3 bg-white border border-redator-accent/20">
+            <TabsTrigger value="redacoes" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
               <FileText className="w-4 h-4" />
               Redações Exemplares
             </TabsTrigger>
-            <TabsTrigger value="temas" className="flex items-center gap-2">
+            <TabsTrigger value="temas" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
               <BookOpen className="w-4 h-4" />
               Temas
             </TabsTrigger>
-            <TabsTrigger value="videoteca" className="flex items-center gap-2">
+            <TabsTrigger value="videoteca" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
               <Video className="w-4 h-4" />
               Videoteca
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="redacoes">
-            <Card>
+            <Card className="border-redator-accent/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-redator-primary">
                   <FileText className="w-5 h-5" />
                   Cadastrar Nova Redação Exemplar
                 </CardTitle>
-                <p className="text-gray-600">
+                <p className="text-redator-accent">
                   Adicione redações nota 1000 que servirão de exemplo para os estudantes
                 </p>
               </CardHeader>
@@ -147,13 +147,13 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="temas">
-            <Card>
+            <Card className="border-redator-accent/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-redator-primary">
                   <BookOpen className="w-5 h-5" />
                   Cadastrar Novo Tema
                 </CardTitle>
-                <p className="text-gray-600">
+                <p className="text-redator-accent">
                   Crie temas com textos motivadores para prática de redação dos alunos
                 </p>
               </CardHeader>
@@ -164,13 +164,13 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="videoteca">
-            <Card>
+            <Card className="border-redator-accent/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-redator-primary">
                   <Video className="w-5 h-5" />
                   Cadastrar Novo Vídeo
                 </CardTitle>
-                <p className="text-gray-600">
+                <p className="text-redator-accent">
                   Adicione vídeos educativos do YouTube à videoteca do app
                 </p>
               </CardHeader>

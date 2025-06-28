@@ -42,10 +42,10 @@ const Temas = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p>Carregando temas do banco de dados...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-redator-accent mx-auto mb-4"></div>
+          <p className="text-redator-accent">Carregando temas do banco de dados...</p>
         </div>
       </div>
     );
@@ -54,13 +54,13 @@ const Temas = () => {
   if (error) {
     console.error('Erro na página Temas:', error);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-red-600 mb-2">❌ Erro ao carregar temas</h2>
-          <p className="text-gray-600 mb-4">Erro: {error.message}</p>
+          <p className="text-redator-accent mb-4">Erro: {error.message}</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            className="bg-redator-accent text-white px-4 py-2 rounded hover:bg-redator-accent/90"
           >
             Tentar novamente
           </button>
@@ -70,20 +70,20 @@ const Temas = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2 text-green-600 hover:text-green-700 transition-colors">
+            <Link to="/" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
               <ArrowLeft className="w-5 h-5" />
               <span>Voltar</span>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
-              <p className="text-gray-600">Propostas de redação organizadas por eixo temático</p>
+              <h1 className="text-2xl font-bold text-redator-primary">Temas</h1>
+              <p className="text-redator-accent">Propostas de redação organizadas por eixo temático</p>
               {temas && (
-                <p className="text-sm text-green-600">
+                <p className="text-sm text-redator-secondary">
                   ✅ {temas.length} tema{temas.length !== 1 ? 's' : ''} encontrado{temas.length !== 1 ? 's' : ''}
                 </p>
               )}
@@ -106,7 +106,7 @@ const Temas = () => {
               
               return (
                 <Link key={tema.id} to={`/temas/${tema.id}`} className="group">
-                  <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
+                  <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-secondary/50">
                     <div className="aspect-video overflow-hidden rounded-t-lg">
                       <img 
                         src={tema.imagem_texto_4_url || "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop"} 
@@ -121,17 +121,17 @@ const Temas = () => {
                     <CardContent className="p-4">
                       {tema.eixo_tematico && (
                         <div className="mb-2">
-                          <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
+                          <span className="text-xs font-medium text-white bg-redator-accent px-2 py-1 rounded">
                             {tema.eixo_tematico}
                           </span>
                         </div>
                       )}
                       {tema.frase_tematica && (
-                        <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-green-600 transition-colors">
+                        <h3 className="font-semibold text-redator-primary line-clamp-2 group-hover:text-redator-accent transition-colors">
                           {tema.frase_tematica}
                         </h3>
                       )}
-                      <div className="mt-2 text-xs text-gray-500">
+                      <div className="mt-2 text-xs text-redator-accent">
                         📅 {new Date(tema.publicado_em).toLocaleDateString('pt-BR')}
                       </div>
                     </CardContent>
@@ -143,11 +143,11 @@ const Temas = () => {
         ) : (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📝</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhum tema encontrado</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-xl font-semibold text-redator-primary mb-2">Nenhum tema encontrado</h3>
+            <p className="text-redator-accent mb-4">
               Os temas de redação ainda não foram cadastrados no banco de dados.
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-redator-accent/70">
               ℹ️ Use o painel administrativo para adicionar novos temas.
             </p>
           </div>
