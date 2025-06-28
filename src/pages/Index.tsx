@@ -46,7 +46,7 @@ const Index = () => {
                   <PenTool className="w-8 h-8 text-white" />
                 </div>
                 <h1 className="text-4xl font-bold text-gray-900">
-                  App do Redator
+                  Redator
                 </h1>
               </div>
               <p className="text-lg text-gray-600">
