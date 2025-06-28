@@ -5,6 +5,18 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Type extension para incluir o campo imagem_texto_4_url
+type TemaWithImage = {
+  id: string;
+  frase_tematica: string;
+  eixo_tematico: string;
+  texto_1: string | null;
+  texto_2: string | null;
+  texto_3: string | null;
+  imagem_texto_4_url: string | null;
+  publicado_em: string | null;
+};
+
 const Temas = () => {
   const { data: temas, isLoading, error } = useQuery({
     queryKey: ['temas'],
@@ -22,7 +34,7 @@ const Temas = () => {
       
       console.log('Temas encontrados:', data?.length || 0);
       console.log('Dados dos temas:', data);
-      return data || [];
+      return (data || []) as TemaWithImage[];
     },
     refetchOnMount: true,
     refetchOnWindowFocus: true,

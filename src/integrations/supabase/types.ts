@@ -128,6 +128,7 @@ export type Database = {
           eixo_tematico: string
           frase_tematica: string
           id: string
+          imagem_texto_4_url: string | null
           publicado_em: string | null
           texto_1: string | null
           texto_2: string | null
@@ -137,6 +138,7 @@ export type Database = {
           eixo_tematico: string
           frase_tematica: string
           id?: string
+          imagem_texto_4_url?: string | null
           publicado_em?: string | null
           texto_1?: string | null
           texto_2?: string | null
@@ -146,6 +148,7 @@ export type Database = {
           eixo_tematico?: string
           frase_tematica?: string
           id?: string
+          imagem_texto_4_url?: string | null
           publicado_em?: string | null
           texto_1?: string | null
           texto_2?: string | null
