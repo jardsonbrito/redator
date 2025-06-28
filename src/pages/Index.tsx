@@ -41,7 +41,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
-              <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="flex items-center justify-center gap-3 mb-3">
                 <div className="p-3 rounded-full bg-redator-primary">
                   <PenTool className="w-8 h-8 text-white" />
                 </div>
@@ -49,7 +49,10 @@ const Index = () => {
                   Redator
                 </h1>
               </div>
-              <p className="text-lg text-redator-accent">Pilares da nota 1000: redação, tema e repertório.</p>
+              {/* Slogan com destaque visual reforçado */}
+              <p className="text-xl font-semibold text-redator-accent leading-relaxed tracking-wide">
+                Plataforma Redator: a base da sua aprovação — redação, tema e repertório.
+              </p>
             </div>
             {user && isAdmin ? (
               <Link 
@@ -57,7 +60,8 @@ const Index = () => {
                 className="flex items-center gap-2 bg-redator-primary text-white px-4 py-2 rounded-md hover:bg-redator-primary/90 transition-colors"
               >
                 <Settings className="w-5 h-5" />
-                <span>Painel Admin</span>
+                <span className="hidden sm:inline">Painel Admin</span>
+                <span className="sm:hidden">Professor</span>
               </Link>
             ) : (
               <Link 
