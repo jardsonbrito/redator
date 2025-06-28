@@ -17,7 +17,8 @@ export const RedacaoForm = () => {
     frase_tematica: '',
     eixo_tematico: '',
     conteudo: '',
-    pdf_url: ''
+    pdf_url: '',
+    dica_de_escrita: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,6 +34,7 @@ export const RedacaoForm = () => {
         .insert([{
           conteudo: formData.conteudo.trim(),
           pdf_url: formData.pdf_url.trim() || null,
+          dica_de_escrita: formData.dica_de_escrita.trim() || null,
           nota_total: 1000, // Redação exemplar
           data_envio: new Date().toISOString(),
           // Campos específicos para metadados da redação exemplar
@@ -65,7 +67,8 @@ export const RedacaoForm = () => {
         frase_tematica: '',
         eixo_tematico: '', 
         conteudo: '',
-        pdf_url: ''
+        pdf_url: '',
+        dica_de_escrita: ''
       });
 
     } catch (error: any) {
@@ -123,6 +126,21 @@ export const RedacaoForm = () => {
         />
         <p className="text-sm text-gray-600 mt-1">
           Este conteúdo será exibido apenas na página de detalhes da redação.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="dica_de_escrita">Dica de escrita (opcional)</Label>
+        <Textarea
+          id="dica_de_escrita"
+          value={formData.dica_de_escrita}
+          onChange={(e) => setFormData({...formData, dica_de_escrita: e.target.value})}
+          rows={4}
+          placeholder="Digite aqui uma dica ou comentário sobre esta redação exemplar..."
+          className="min-h-[100px]"
+        />
+        <p className="text-sm text-gray-600 mt-1">
+          Este comentário será exibido ao público, abaixo da redação, como dica de escrita.
         </p>
       </div>
 

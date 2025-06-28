@@ -43,6 +43,7 @@ export type Database = {
           conteudo: string
           data_correcao: string | null
           data_envio: string | null
+          dica_de_escrita: string | null
           eixo_tematico: string | null
           frase_tematica: string | null
           id: string
@@ -68,6 +69,7 @@ export type Database = {
           conteudo: string
           data_correcao?: string | null
           data_envio?: string | null
+          dica_de_escrita?: string | null
           eixo_tematico?: string | null
           frase_tematica?: string | null
           id?: string
@@ -93,6 +95,7 @@ export type Database = {
           conteudo?: string
           data_correcao?: string | null
           data_envio?: string | null
+          dica_de_escrita?: string | null
           eixo_tematico?: string | null
           frase_tematica?: string | null
           id?: string

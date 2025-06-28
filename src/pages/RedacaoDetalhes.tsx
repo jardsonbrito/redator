@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lightbulb } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,6 +88,19 @@ const RedacaoDetalhes = () => {
                 </p>
               ))}
             </div>
+
+            {/* Dica de Escrita */}
+            {redacao.dica_de_escrita && (
+              <div className="mt-8 p-6 bg-amber-50 rounded-lg border-l-4 border-amber-400">
+                <h3 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5" />
+                  Dica de Escrita
+                </h3>
+                <p className="text-amber-800 leading-relaxed">
+                  {redacao.dica_de_escrita}
+                </p>
+              </div>
+            )}
 
             {redacao.nota_total && (
               <div className="mt-6 p-4 bg-green-50 rounded-lg">
