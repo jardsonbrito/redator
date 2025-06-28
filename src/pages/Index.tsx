@@ -1,78 +1,56 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-
 const Index = () => {
-  const { isAdmin, user } = useAuth();
-  
-  const menuItems = [
-    {
-      title: "Redações Exemplares",
-      description: "Acesse redações nota 1000 e aprenda com os melhores exemplos",
-      icon: FileText,
-      path: "/redacoes",
-      color: "bg-redator-primary",
-      hoverColor: "hover:bg-redator-primary"
-    },
-    {
-      title: "Temas",
-      description: "Explore propostas de redação organizadas por eixo temático",
-      icon: BookOpen,
-      path: "/temas",
-      color: "bg-redator-accent",
-      hoverColor: "hover:bg-redator-accent"
-    },
-    {
-      title: "Videoteca",
-      description: "Assista conteúdos sobre escrita e repertório",
-      icon: Video,
-      path: "/videoteca",
-      color: "bg-redator-secondary",
-      hoverColor: "hover:bg-redator-secondary"
-    }
-  ];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+  const {
+    isAdmin,
+    user
+  } = useAuth();
+  const menuItems = [{
+    title: "Redações Exemplares",
+    description: "Acesse redações nota 1000 e aprenda com os melhores exemplos",
+    icon: FileText,
+    path: "/redacoes",
+    color: "bg-redator-primary",
+    hoverColor: "hover:bg-redator-primary"
+  }, {
+    title: "Temas",
+    description: "Explore propostas de redação organizadas por eixo temático",
+    icon: BookOpen,
+    path: "/temas",
+    color: "bg-redator-accent",
+    hoverColor: "hover:bg-redator-accent"
+  }, {
+    title: "Videoteca",
+    description: "Assista conteúdos sobre escrita e repertório",
+    icon: Video,
+    path: "/videoteca",
+    color: "bg-redator-secondary",
+    hoverColor: "hover:bg-redator-secondary"
+  }];
+  return <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
               <div className="flex items-center justify-center gap-3 mb-6">
-                <img 
-                  src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" 
-                  alt="Redator Logo" 
-                  className="h-16 w-auto"
-                />
+                <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="Redator Logo" className="h-16 w-auto" />
               </div>
               {/* Slogan com destaque visual aprimorado */}
               <div className="max-w-3xl mx-auto">
-                <p className="text-2xl font-bold text-redator-accent leading-relaxed tracking-wide px-4">
-                  Plataforma Redator: a base da sua aprovação — redação, tema e repertório.
-                </p>
+                <p className="text-2xl font-bold text-redator-accent leading-relaxed tracking-wide px-4">Plataforma Redator: a base de sua aprovação</p>
               </div>
             </div>
-            {user && isAdmin ? (
-              <Link 
-                to="/admin" 
-                className="flex items-center gap-2 bg-redator-primary text-white px-4 py-2 rounded-md hover:bg-redator-primary/90 transition-colors"
-              >
+            {user && isAdmin ? <Link to="/admin" className="flex items-center gap-2 bg-redator-primary text-white px-4 py-2 rounded-md hover:bg-redator-primary/90 transition-colors">
                 <Settings className="w-5 h-5" />
                 <span className="hidden sm:inline">Painel Admin</span>
                 <span className="sm:hidden">Professor</span>
-              </Link>
-            ) : (
-              <Link 
-                to="/login" 
-                className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors"
-              >
+              </Link> : <Link to="/login" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
                 <Settings className="w-5 h-5" />
                 <span>Professor</span>
-              </Link>
-            )}
+              </Link>}
           </div>
         </div>
       </header>
@@ -80,8 +58,7 @@ const Index = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {menuItems.map((item, index) => (
-            <Link key={index} to={item.path} className="group">
+          {menuItems.map((item, index) => <Link key={index} to={item.path} className="group">
               <Card className="h-full transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-secondary/50">
                 <CardContent className="p-8 text-center">
                   <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${item.color} ${item.hoverColor} transition-colors duration-300 mb-6 group-hover:scale-110`}>
@@ -97,8 +74,7 @@ const Index = () => {
                   </p>
                 </CardContent>
               </Card>
-            </Link>
-          ))}
+            </Link>)}
         </div>
 
         {/* Footer Info */}
@@ -124,8 +100,6 @@ const Index = () => {
           </div>
         </div>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
