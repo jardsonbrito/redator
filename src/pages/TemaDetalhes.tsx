@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -68,18 +67,23 @@ const TemaDetalhes = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/temas" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span>Voltar</span>
-            </Link>
-            <div>
-              {tema.eixo_tematico && (
-                <span className="text-sm font-medium text-white bg-redator-accent px-2 py-1 rounded">
-                  {tema.eixo_tematico}
-                </span>
-              )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link to="/temas" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+                <span>Voltar</span>
+              </Link>
+              <div>
+                {tema.eixo_tematico && (
+                  <span className="text-sm font-medium text-white bg-redator-accent px-2 py-1 rounded">
+                    {tema.eixo_tematico}
+                  </span>
+                )}
+              </div>
             </div>
+            <Link to="/" className="hover:opacity-80 transition-opacity">
+              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-12 w-auto" />
+            </Link>
           </div>
         </div>
       </header>

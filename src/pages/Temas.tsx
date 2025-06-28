@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -74,20 +73,25 @@ const Temas = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span>Voltar</span>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-redator-primary">Temas</h1>
-              <p className="text-redator-accent">Propostas de redação organizadas por eixo temático</p>
-              {temas && (
-                <p className="text-sm text-redator-secondary">
-                  ✅ {temas.length} tema{temas.length !== 1 ? 's' : ''} encontrado{temas.length !== 1 ? 's' : ''}
-                </p>
-              )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link to="/" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+                <span>Voltar</span>
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold text-redator-primary">Temas</h1>
+                <p className="text-redator-accent">Propostas de redação organizadas por eixo temático</p>
+                {temas && (
+                  <p className="text-sm text-redator-secondary">
+                    ✅ {temas.length} tema{temas.length !== 1 ? 's' : ''} encontrado{temas.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
             </div>
+            <Link to="/" className="hover:opacity-80 transition-opacity">
+              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-12 w-auto" />
+            </Link>
           </div>
         </div>
       </header>
