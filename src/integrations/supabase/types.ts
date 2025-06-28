@@ -43,6 +43,8 @@ export type Database = {
           conteudo: string
           data_correcao: string | null
           data_envio: string | null
+          eixo_tematico: string | null
+          frase_tematica: string | null
           id: string
           nota_c1: number | null
           nota_c2: number | null
@@ -66,6 +68,8 @@ export type Database = {
           conteudo: string
           data_correcao?: string | null
           data_envio?: string | null
+          eixo_tematico?: string | null
+          frase_tematica?: string | null
           id?: string
           nota_c1?: number | null
           nota_c2?: number | null
@@ -89,6 +93,8 @@ export type Database = {
           conteudo?: string
           data_correcao?: string | null
           data_envio?: string | null
+          eixo_tematico?: string | null
+          frase_tematica?: string | null
           id?: string
           nota_c1?: number | null
           nota_c2?: number | null
