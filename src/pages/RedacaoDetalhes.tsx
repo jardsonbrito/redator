@@ -106,29 +106,6 @@ const RedacaoDetalhes = () => {
                 </p>
               </div>
             )}
-
-            {redacao.nota_total && (
-              <div className="mt-6 p-4 bg-white rounded-lg border border-redator-accent/20">
-                <h3 className="font-semibold text-redator-primary mb-2">📊 Nota Total: {redacao.nota_total}</h3>
-                <div className="grid grid-cols-5 gap-2 text-sm text-redator-accent">
-                  {redacao.nota_c1 && <div>C1: {redacao.nota_c1}</div>}
-                  {redacao.nota_c2 && <div>C2: {redacao.nota_c2}</div>}
-                  {redacao.nota_c3 && <div>C3: {redacao.nota_c3}</div>}
-                  {redacao.nota_c4 && <div>C4: {redacao.nota_c4}</div>}
-                  {redacao.nota_c5 && <div>C5: {redacao.nota_c5}</div>}
-                </div>
-              </div>
-            )}
-
-            <div className="mt-8 pt-6 border-t border-redator-accent/20">
-              <div className="bg-white rounded-lg p-4 border border-redator-accent/20">
-                <h3 className="font-semibold text-redator-primary mb-2">💡 Dica de Estudo</h3>
-                <p className="text-redator-accent text-sm">
-                  Observe como esta redação desenvolve cada argumento com exemplos concretos e conecta as ideias de forma coesa. 
-                  Pratique identificando a tese, os argumentos e a conclusão.
-                </p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </main>
