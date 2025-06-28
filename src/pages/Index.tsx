@@ -86,15 +86,15 @@ const Index = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-redator-accent">
               <div>
                 <div className="font-medium text-redator-primary mb-2">1. Explore</div>
-                <p>Navegue pelos conteúdos organizados por categoria</p>
+                <p>Analise criticamente redações exemplares com alto potencial de nota 1000.</p>
               </div>
               <div>
                 <div className="font-medium text-redator-accent mb-2">2. Aprenda</div>
-                <p>Estude redações exemplares e propostas de temas</p>
+                <p>Acesse propostas de redação organizadas por eixo temático e treine diferentes tipos de abordagem.</p>
               </div>
               <div>
                 <div className="font-medium text-redator-secondary mb-2">3. Pratique</div>
-                <p>Assista aos vídeos e aplique as técnicas aprendidas</p>
+                <p>Assista a vídeos e aprofunde seu repertório sociocultural para enriquecer seus argumentos.</p>
               </div>
             </div>
           </div>
