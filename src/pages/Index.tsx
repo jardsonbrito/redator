@@ -1,5 +1,6 @@
+
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, Settings } from "lucide-react";
+import { BookOpen, FileText, Video, Settings, PenTool } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -40,9 +41,14 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                App do Redator
-              </h1>
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <div className="bg-blue-600 p-3 rounded-full">
+                  <PenTool className="w-8 h-8 text-white" />
+                </div>
+                <h1 className="text-4xl font-bold text-gray-900">
+                  App do Redator
+                </h1>
+              </div>
               <p className="text-lg text-gray-600">
                 Sua plataforma completa para aprender e praticar redação
               </p>
