@@ -40,7 +40,7 @@ const Index = () => {
               </div>
               {/* Slogan com destaque visual aprimorado */}
               <div className="max-w-3xl mx-auto">
-                <p className="text-2xl font-bold text-redator-accent leading-relaxed tracking-wide px-4">Plataforma Redator: a base de sua aprovação</p>
+                <p className="text-2xl font-bold text-redator-accent leading-relaxed tracking-wide px-4">App do Redator</p>
               </div>
             </div>
             {user && isAdmin ? <Link to="/admin" className="flex items-center gap-2 bg-redator-primary text-white px-4 py-2 rounded-md hover:bg-redator-primary/90 transition-colors">
