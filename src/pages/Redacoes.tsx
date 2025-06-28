@@ -86,7 +86,8 @@ const Redacoes = () => {
             {redacoes.map((redacao) => {
               console.log('Renderizando redação:', {
                 id: redacao.id,
-                conteudo_preview: redacao.conteudo?.substring(0, 100),
+                frase_tematica: redacao.frase_tematica,
+                eixo_tematico: redacao.eixo_tematico,
                 nota_total: redacao.nota_total
               });
               
@@ -96,7 +97,7 @@ const Redacoes = () => {
                     <div className="aspect-video overflow-hidden rounded-t-lg">
                       <img 
                         src={redacao.pdf_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop"} 
-                        alt="Redação Exemplar"
+                        alt={redacao.frase_tematica || "Redação Exemplar"}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         onError={(e) => {
                           console.log('Erro ao carregar imagem, usando fallback');
@@ -107,15 +108,12 @@ const Redacoes = () => {
                     <CardContent className="p-4">
                       <div className="mb-2">
                         <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                          Redação Exemplar
+                          {redacao.eixo_tematico || 'Redação Exemplar'}
                         </span>
                       </div>
                       
                       <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
-                        {redacao.conteudo ? 
-                          `${redacao.conteudo.substring(0, 80)}...` : 
-                          'Redação Exemplar'
-                        }
+                        {redacao.frase_tematica || 'Redação Exemplar - Nota 1000'}
                       </h3>
                       
                       <div className="flex items-center justify-between">

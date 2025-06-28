@@ -14,13 +14,7 @@ const RedacaoDetalhes = () => {
       console.log('Fetching redacao details for id:', id);
       const { data, error } = await supabase
         .from('redacoes')
-        .select(`
-          *,
-          temas (
-            frase_tematica,
-            eixo_tematico
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single();
       
@@ -69,9 +63,9 @@ const RedacaoDetalhes = () => {
               <span>Voltar</span>
             </Link>
             <div>
-              {redacao.temas?.eixo_tematico && (
+              {redacao.eixo_tematico && (
                 <span className="text-sm font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                  {redacao.temas.eixo_tematico}
+                  {redacao.eixo_tematico}
                 </span>
               )}
             </div>
@@ -84,7 +78,7 @@ const RedacaoDetalhes = () => {
         <Card>
           <CardContent className="p-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-6 leading-tight">
-              {redacao.temas?.frase_tematica || "Redação Exemplar"}
+              {redacao.frase_tematica || "Redação Exemplar"}
             </h1>
             
             <div className="prose prose-lg max-w-none">

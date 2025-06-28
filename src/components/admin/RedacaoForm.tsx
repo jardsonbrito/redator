@@ -27,8 +27,7 @@ export const RedacaoForm = () => {
     try {
       console.log('Salvando redação exemplar...', formData);
       
-      // Inserir APENAS a redação na tabela redacoes
-      // NÃO criar tema separado - isso estava causando a duplicação
+      // Inserir APENAS na tabela redacoes - SEM criar entrada em temas
       const { data: redacaoData, error } = await supabase
         .from('redacoes')
         .insert([{
@@ -36,8 +35,9 @@ export const RedacaoForm = () => {
           pdf_url: formData.pdf_url.trim() || null,
           nota_total: 1000, // Redação exemplar
           data_envio: new Date().toISOString(),
-          // Salvar os dados do tema diretamente nos campos da redação
-          // sem criar entrada separada na tabela temas
+          // Campos específicos para metadados da redação exemplar
+          frase_tematica: formData.frase_tematica.trim(),
+          eixo_tematico: formData.eixo_tematico.trim()
         }])
         .select('*')
         .single();
@@ -92,7 +92,7 @@ export const RedacaoForm = () => {
           required
         />
         <p className="text-sm text-gray-600 mt-1">
-          Esta informação será usada apenas para identificar a redação exemplar.
+          Esta será a frase temática exibida como título da redação exemplar.
         </p>
       </div>
 
@@ -106,7 +106,7 @@ export const RedacaoForm = () => {
           required
         />
         <p className="text-sm text-gray-600 mt-1">
-          Categoria temática da redação para organização.
+          Categoria temática que será exibida como subtítulo nos cards.
         </p>
       </div>
 
@@ -121,6 +121,9 @@ export const RedacaoForm = () => {
           required
           className="min-h-[400px]"
         />
+        <p className="text-sm text-gray-600 mt-1">
+          Este conteúdo será exibido apenas na página de detalhes da redação.
+        </p>
       </div>
 
       <div>
@@ -143,7 +146,7 @@ export const RedacaoForm = () => {
       
       {loading && (
         <p className="text-sm text-blue-600 text-center">
-          ⚠️ Salvando APENAS na tabela de redações exemplares...
+          ⚠️ Salvando APENAS na tabela de redações...
         </p>
       )}
     </form>
