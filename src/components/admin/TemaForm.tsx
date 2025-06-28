@@ -27,33 +27,63 @@ export const TemaForm = () => {
     setLoading(true);
 
     try {
-      console.log('Salvando tema:', formData);
+      console.log('Tentando salvar tema no Supabase:', formData);
 
+      // Verificar se o usuário está autenticado
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Sessão atual:', session);
+      
+      if (sessionError) {
+        console.error('Erro ao verificar sessão:', sessionError);
+        throw new Error('Erro de autenticação: ' + sessionError.message);
+      }
+
+      if (!session) {
+        throw new Error('Usuário não está autenticado. Faça login novamente.');
+      }
+
+      // Preparar dados garantindo que são strings
+      const dataToInsert = {
+        frase_tematica: String(formData.frase_tematica || '').trim(),
+        eixo_tematico: String(formData.eixo_tematico || '').trim(),
+        texto_1: formData.texto_1 ? String(formData.texto_1).trim() : null,
+        texto_2: formData.texto_2 ? String(formData.texto_2).trim() : null,
+        texto_3: formData.texto_3 ? String(formData.texto_3).trim() : null,
+        imagem_texto_4_url: formData.imagem_texto_4_url ? String(formData.imagem_texto_4_url).trim() : null,
+        publicado_em: new Date().toISOString()
+      };
+
+      console.log('Dados preparados para inserção:', dataToInsert);
+
+      // Inserir no Supabase
       const { data, error } = await supabase
         .from('temas')
-        .insert([formData])
+        .insert([dataToInsert])
         .select('*')
         .single();
 
       if (error) {
-        console.error('Erro ao salvar tema:', error);
+        console.error('Erro detalhado do Supabase:', error);
+        console.error('Código do erro:', error.code);
+        console.error('Detalhes do erro:', error.details);
+        console.error('Dica do erro:', error.hint);
         throw error;
       }
 
-      console.log('Tema salvo com sucesso:', data);
+      console.log('Tema salvo com sucesso no Supabase:', data);
 
-      // Invalidate and refetch queries immediately
+      // Invalidar e recarregar queries
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['temas'] }),
         queryClient.refetchQueries({ queryKey: ['temas'] }),
       ]);
 
       toast({
-        title: "Sucesso!",
-        description: "Tema adicionado com sucesso.",
+        title: "✅ Sucesso!",
+        description: "Tema cadastrado com sucesso no banco de dados.",
       });
 
-      // Reset form
+      // Limpar formulário
       setFormData({
         frase_tematica: '',
         eixo_tematico: '',
@@ -62,11 +92,23 @@ export const TemaForm = () => {
         texto_3: '',
         imagem_texto_4_url: ''
       });
+
     } catch (error: any) {
       console.error('Erro completo ao salvar tema:', error);
+      
+      let errorMessage = 'Erro desconhecido ao salvar tema.';
+      
+      if (error.message?.includes('row-level security')) {
+        errorMessage = 'Erro de permissão: Verifique se você está logado como administrador.';
+      } else if (error.message?.includes('not-null violation')) {
+        errorMessage = 'Erro: Todos os campos obrigatórios devem ser preenchidos.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao salvar tema.",
+        title: "❌ Erro ao salvar",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -77,7 +119,7 @@ export const TemaForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <Label htmlFor="frase_tematica">Frase Temática</Label>
+        <Label htmlFor="frase_tematica">Frase Temática *</Label>
         <Input
           id="frase_tematica"
           value={formData.frase_tematica}
@@ -88,7 +130,7 @@ export const TemaForm = () => {
       </div>
 
       <div>
-        <Label htmlFor="eixo_tematico">Eixo Temático</Label>
+        <Label htmlFor="eixo_tematico">Eixo Temático *</Label>
         <Input
           id="eixo_tematico"
           value={formData.eixo_tematico}
@@ -132,7 +174,7 @@ export const TemaForm = () => {
       </div>
 
       <div>
-        <Label htmlFor="imagem_texto_4_url">Imagem Motivadora - Texto 4 (URL)</Label>
+        <Label htmlFor="imagem_texto_4_url">URL da Imagem Motivadora (Texto 4) *</Label>
         <Input
           id="imagem_texto_4_url"
           type="url"
@@ -142,13 +184,20 @@ export const TemaForm = () => {
           required
         />
         <p className="text-sm text-gray-600 mt-1">
-          Cole a URL completa de uma imagem que servirá como texto motivador IV. A imagem deve estar hospedada online (ex: Unsplash, Imgur, etc.).
+          Cole a URL completa de uma imagem que servirá como texto motivador IV. 
+          Use serviços como Unsplash, Imgur ou faça upload no Supabase Storage.
         </p>
       </div>
 
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Salvando...' : 'Salvar Tema'}
+        {loading ? 'Salvando tema...' : 'Salvar Tema no Banco'}
       </Button>
+      
+      {loading && (
+        <p className="text-sm text-blue-600 text-center">
+          Conectando com Supabase e salvando dados...
+        </p>
+      )}
     </form>
   );
 };

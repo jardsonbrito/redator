@@ -9,19 +9,20 @@ const Temas = () => {
   const { data: temas, isLoading, error } = useQuery({
     queryKey: ['temas'],
     queryFn: async () => {
-      console.log('Fetching temas...');
+      console.log('Buscando temas no Supabase...');
       const { data, error } = await supabase
         .from('temas')
         .select('*')
         .order('publicado_em', { ascending: false });
       
       if (error) {
-        console.error('Error fetching temas:', error);
+        console.error('Erro ao buscar temas:', error);
         throw error;
       }
       
-      console.log('Temas fetched:', data);
-      return data;
+      console.log('Temas encontrados:', data?.length || 0);
+      console.log('Dados dos temas:', data);
+      return data || [];
     },
     refetchOnMount: true,
     refetchOnWindowFocus: true,
@@ -30,16 +31,28 @@ const Temas = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div>Carregando temas...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p>Carregando temas do banco de dados...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
-    console.error('Error in Temas component:', error);
+    console.error('Erro na página Temas:', error);
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div>Erro ao carregar temas. Verifique o console para mais detalhes.</div>
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">❌ Erro ao carregar temas</h2>
+          <p className="text-gray-600 mb-4">Erro: {error.message}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          >
+            Tentar novamente
+          </button>
+        </div>
       </div>
     );
   }
@@ -57,6 +70,11 @@ const Temas = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
               <p className="text-gray-600">Propostas de redação organizadas por eixo temático</p>
+              {temas && (
+                <p className="text-sm text-green-600">
+                  ✅ {temas.length} tema{temas.length !== 1 ? 's' : ''} encontrado{temas.length !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -67,15 +85,25 @@ const Temas = () => {
         {temas && temas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {temas.map((tema) => {
-              console.log('Rendering tema:', tema);
+              console.log('Renderizando tema:', {
+                id: tema.id,
+                frase_tematica: tema.frase_tematica,
+                eixo_tematico: tema.eixo_tematico,
+                imagem_url: tema.imagem_texto_4_url
+              });
+              
               return (
                 <Link key={tema.id} to={`/temas/${tema.id}`} className="group">
                   <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer">
                     <div className="aspect-video overflow-hidden rounded-t-lg">
                       <img 
-                        src={tema.imagem_texto_4_url || "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=300&h=200&fit=crop"} 
-                        alt={tema.frase_tematica || "Tema"}
+                        src={tema.imagem_texto_4_url || "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop"} 
+                        alt={tema.frase_tematica || "Tema de redação"}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        onError={(e) => {
+                          console.log('Erro ao carregar imagem, usando fallback');
+                          e.currentTarget.src = "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop";
+                        }}
                       />
                     </div>
                     <CardContent className="p-4">
@@ -91,6 +119,9 @@ const Temas = () => {
                           {tema.frase_tematica}
                         </h3>
                       )}
+                      <div className="mt-2 text-xs text-gray-500">
+                        📅 {new Date(tema.publicado_em).toLocaleDateString('pt-BR')}
+                      </div>
                     </CardContent>
                   </Card>
                 </Link>
@@ -99,7 +130,14 @@ const Temas = () => {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-600">Nenhum tema encontrado. Adicione temas através do painel administrativo.</p>
+            <div className="text-6xl mb-4">📝</div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Nenhum tema encontrado</h3>
+            <p className="text-gray-600 mb-4">
+              Os temas de redação ainda não foram cadastrados no banco de dados.
+            </p>
+            <p className="text-sm text-gray-500">
+              ℹ️ Use o painel administrativo para adicionar novos temas.
+            </p>
           </div>
         )}
       </main>

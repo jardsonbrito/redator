@@ -29,43 +29,101 @@ export const VideoForm = () => {
     return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '';
   };
 
+  const validateYouTubeUrl = (url: string) => {
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+    return youtubeRegex.test(url);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      console.log('Tentando salvar vídeo no Supabase:', formData);
+
+      // Verificar se o usuário está autenticado
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Sessão atual:', session);
+      
+      if (sessionError) {
+        console.error('Erro ao verificar sessão:', sessionError);
+        throw new Error('Erro de autenticação: ' + sessionError.message);
+      }
+
+      if (!session) {
+        throw new Error('Usuário não está autenticado. Faça login novamente.');
+      }
+
+      // Validar URL do YouTube
+      if (!validateYouTubeUrl(formData.youtube_url)) {
+        throw new Error('URL do YouTube inválida. Use um link válido do YouTube.');
+      }
+
+      // Gerar thumbnail automaticamente
       const thumbnailUrl = generateThumbnailUrl(formData.youtube_url);
       
-      const { error } = await supabase
+      // Preparar dados garantindo que são strings
+      const dataToInsert = {
+        titulo: String(formData.titulo || '').trim(),
+        youtube_url: String(formData.youtube_url || '').trim(),
+        categoria: String(formData.categoria || '').trim(),
+        thumbnail_url: thumbnailUrl || null,
+        created_at: new Date().toISOString()
+      };
+
+      console.log('Dados preparados para inserção:', dataToInsert);
+
+      // Inserir no Supabase
+      const { data, error } = await supabase
         .from('videos')
-        .insert([{
-          titulo: formData.titulo,
-          youtube_url: formData.youtube_url,
-          categoria: formData.categoria,
-          thumbnail_url: thumbnailUrl
-        }]);
+        .insert([dataToInsert])
+        .select('*')
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        console.error('Código do erro:', error.code);
+        console.error('Detalhes do erro:', error.details);
+        console.error('Dica do erro:', error.hint);
+        throw error;
+      }
 
-      // Invalidate and refetch videos query
-      await queryClient.invalidateQueries({ queryKey: ['videos'] });
+      console.log('Vídeo salvo com sucesso no Supabase:', data);
+
+      // Invalidar e recarregar queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['videos'] }),
+        queryClient.refetchQueries({ queryKey: ['videos'] }),
+      ]);
 
       toast({
-        title: "Sucesso!",
+        title: "✅ Sucesso!",
         description: "Vídeo adicionado com sucesso à videoteca.",
       });
 
-      // Reset form
+      // Limpar formulário
       setFormData({
         titulo: '',
         youtube_url: '',
         categoria: ''
       });
+
     } catch (error: any) {
-      console.error('Erro ao salvar vídeo:', error);
+      console.error('Erro completo ao salvar vídeo:', error);
+      
+      let errorMessage = 'Erro desconhecido ao salvar vídeo.';
+      
+      if (error.message?.includes('row-level security')) {
+        errorMessage = 'Erro de permissão: Verifique se você está logado como administrador.';
+      } else if (error.message?.includes('not-null violation')) {
+        errorMessage = 'Erro: Todos os campos obrigatórios devem ser preenchidos.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao salvar vídeo.",
+        title: "❌ Erro ao salvar",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -76,7 +134,7 @@ export const VideoForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <Label htmlFor="titulo">Assunto do Vídeo</Label>
+        <Label htmlFor="titulo">Título do Vídeo *</Label>
         <Input
           id="titulo"
           value={formData.titulo}
@@ -87,7 +145,7 @@ export const VideoForm = () => {
       </div>
 
       <div>
-        <Label htmlFor="categoria">Categoria</Label>
+        <Label htmlFor="categoria">Categoria *</Label>
         <Input
           id="categoria"
           value={formData.categoria}
@@ -98,7 +156,7 @@ export const VideoForm = () => {
       </div>
 
       <div>
-        <Label htmlFor="youtube_url">Link do YouTube</Label>
+        <Label htmlFor="youtube_url">Link do YouTube *</Label>
         <Input
           id="youtube_url"
           type="url"
@@ -113,8 +171,14 @@ export const VideoForm = () => {
       </div>
 
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Salvando...' : 'Salvar Vídeo na Videoteca'}
+        {loading ? 'Salvando vídeo...' : 'Salvar Vídeo na Videoteca'}
       </Button>
+      
+      {loading && (
+        <p className="text-sm text-blue-600 text-center">
+          Conectando com Supabase e salvando dados...
+        </p>
+      )}
     </form>
   );
 };
