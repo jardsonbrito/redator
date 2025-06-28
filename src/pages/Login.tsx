@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('jardsonbrito@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, user, isAdmin, loading: authLoading } = useAuth();
@@ -121,7 +121,7 @@ const Login = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jardsonbrito@gmail.com"
+                  placeholder="Digite seu email"
                   required
                 />
               </div>
@@ -145,12 +145,6 @@ const Login = () => {
                 {loading ? 'Fazendo login...' : 'Acessar Painel Admin'}
               </Button>
             </form>
-            
-            <div className="mt-4 text-xs text-gray-500 text-center">
-              <p>Credenciais de teste:</p>
-              <p>Email: jardsonbrito@gmail.com</p>
-              <p>Senha: !!Levy1902@</p>
-            </div>
           </CardContent>
         </Card>
       </div>
