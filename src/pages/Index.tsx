@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, Settings, PenTool } from "lucide-react";
+import { BookOpen, FileText, Video, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -41,13 +41,12 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <div className="p-3 rounded-full bg-redator-primary">
-                  <PenTool className="w-8 h-8 text-white" />
-                </div>
-                <h1 className="text-4xl font-bold text-redator-primary">
-                  Redator
-                </h1>
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <img 
+                  src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" 
+                  alt="Redator Logo" 
+                  className="h-16 w-auto"
+                />
               </div>
               {/* Slogan com destaque visual aprimorado */}
               <div className="max-w-3xl mx-auto">
