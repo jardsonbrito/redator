@@ -17,7 +17,7 @@ export const RedacaoForm = () => {
     frase_tematica: '',
     eixo_tematico: '',
     conteudo: '',
-    thumbnail_url: ''
+    pdf_url: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,39 +25,19 @@ export const RedacaoForm = () => {
     setLoading(true);
 
     try {
-      console.log('Iniciando salvamento da redação...', formData);
+      console.log('Salvando redação exemplar...', formData);
       
-      // Primeiro, criar o tema se necessário
-      let tema_id = null;
-      if (formData.frase_tematica && formData.eixo_tematico) {
-        console.log('Criando tema...');
-        const { data: temaData, error: temaError } = await supabase
-          .from('temas')
-          .insert([{
-            frase_tematica: formData.frase_tematica,
-            eixo_tematico: formData.eixo_tematico
-          }])
-          .select()
-          .single();
-
-        if (temaError) {
-          console.error('Erro ao criar tema:', temaError);
-          throw temaError;
-        }
-        tema_id = temaData.id;
-        console.log('Tema criado com ID:', tema_id);
-      }
-
-      // Inserir a redação
-      console.log('Inserindo redação...');
+      // Inserir APENAS a redação na tabela redacoes
+      // NÃO criar tema separado - isso estava causando a duplicação
       const { data: redacaoData, error } = await supabase
         .from('redacoes')
         .insert([{
-          conteudo: formData.conteudo,
-          pdf_url: formData.thumbnail_url,
-          tema_id: tema_id,
+          conteudo: formData.conteudo.trim(),
+          pdf_url: formData.pdf_url.trim() || null,
           nota_total: 1000, // Redação exemplar
           data_envio: new Date().toISOString(),
+          // Salvar os dados do tema diretamente nos campos da redação
+          // sem criar entrada separada na tabela temas
         }])
         .select('*')
         .single();
@@ -67,31 +47,31 @@ export const RedacaoForm = () => {
         throw error;
       }
 
-      console.log('Redação criada:', redacaoData);
+      console.log('Redação exemplar salva com sucesso:', redacaoData);
 
-      // Invalidate ALL related queries to refresh data immediately
+      // Invalidar apenas as queries de redações
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['redacoes'] }),
-        queryClient.invalidateQueries({ queryKey: ['temas'] }),
         queryClient.refetchQueries({ queryKey: ['redacoes'] }),
       ]);
 
       toast({
-        title: "Sucesso!",
+        title: "✅ Sucesso!",
         description: "Redação exemplar adicionada com sucesso.",
       });
 
-      // Reset form
+      // Limpar formulário
       setFormData({
         frase_tematica: '',
-        eixo_tematico: '',
+        eixo_tematico: '', 
         conteudo: '',
-        thumbnail_url: ''
+        pdf_url: ''
       });
+
     } catch (error: any) {
-      console.error('Erro completo ao salvar redação:', error);
+      console.error('Erro ao salvar redação exemplar:', error);
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: error.message || "Erro ao salvar redação exemplar.",
         variant: "destructive",
       });
@@ -103,7 +83,7 @@ export const RedacaoForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <Label htmlFor="frase_tematica">Frase Temática</Label>
+        <Label htmlFor="frase_tematica">Frase Temática da Redação</Label>
         <Input
           id="frase_tematica"
           value={formData.frase_tematica}
@@ -111,6 +91,9 @@ export const RedacaoForm = () => {
           placeholder="Ex: A importância da educação no Brasil"
           required
         />
+        <p className="text-sm text-gray-600 mt-1">
+          Esta informação será usada apenas para identificar a redação exemplar.
+        </p>
       </div>
 
       <div>
@@ -122,35 +105,47 @@ export const RedacaoForm = () => {
           placeholder="Ex: Educação, Meio Ambiente, Tecnologia"
           required
         />
+        <p className="text-sm text-gray-600 mt-1">
+          Categoria temática da redação para organização.
+        </p>
       </div>
 
       <div>
-        <Label htmlFor="conteudo">Texto da Redação</Label>
+        <Label htmlFor="conteudo">Texto da Redação Exemplar</Label>
         <Textarea
           id="conteudo"
           value={formData.conteudo}
           onChange={(e) => setFormData({...formData, conteudo: e.target.value})}
           rows={15}
-          placeholder="Digite aqui o texto completo da redação exemplar..."
+          placeholder="Digite aqui o texto completo da redação exemplar nota 1000..."
           required
           className="min-h-[400px]"
         />
       </div>
 
       <div>
-        <Label htmlFor="thumbnail_url">Imagem de Capa (URL)</Label>
+        <Label htmlFor="pdf_url">Imagem de Capa da Redação (URL)</Label>
         <Input
-          id="thumbnail_url"
+          id="pdf_url"
           type="url"
-          value={formData.thumbnail_url}
-          onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
-          placeholder="https://exemplo.com/imagem.jpg"
+          value={formData.pdf_url}
+          onChange={(e) => setFormData({...formData, pdf_url: e.target.value})}
+          placeholder="https://exemplo.com/imagem-da-redacao.jpg"
         />
+        <p className="text-sm text-gray-600 mt-1">
+          Link da imagem que será exibida como capa da redação exemplar.
+        </p>
       </div>
 
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Salvando...' : 'Salvar Redação Exemplar'}
+        {loading ? 'Salvando redação...' : 'Salvar Redação Exemplar'}
       </Button>
+      
+      {loading && (
+        <p className="text-sm text-blue-600 text-center">
+          ⚠️ Salvando APENAS na tabela de redações exemplares...
+        </p>
+      )}
     </form>
   );
 };
