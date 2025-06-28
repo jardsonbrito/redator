@@ -62,6 +62,15 @@ const Videoteca = () => {
     window.open(url, '_blank');
   };
 
+  // Função para extrair thumbnail do YouTube
+  const getYouTubeThumbnail = (url: string): string => {
+    const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+    if (videoId && videoId[1]) {
+      return `https://img.youtube.com/vi/${videoId[1]}/maxresdefault.jpg`;
+    }
+    return url;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
       {/* Header */}
@@ -103,17 +112,33 @@ const Videoteca = () => {
                 youtube_url: video.youtube_url
               });
               
+              // Usar thumbnail customizado ou extrair do YouTube
+              let imageUrl = video.thumbnail_url;
+              if (!imageUrl && video.youtube_url) {
+                imageUrl = getYouTubeThumbnail(video.youtube_url);
+              }
+              
+              // Fallback com URL única baseada no ID
+              const defaultImageUrl = `https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop&auto=format&q=80&sig=${video.id}`;
+              const finalImageUrl = imageUrl || defaultImageUrl;
+              
               return (
                 <div key={video.id} className="group cursor-pointer" onClick={() => openVideo(video.youtube_url)}>
                   <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 border-redator-accent/20 hover:border-redator-secondary/50">
                     <div className="aspect-video overflow-hidden rounded-t-lg relative">
                       <img 
-                        src={video.thumbnail_url || "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop"} 
+                        src={finalImageUrl}
                         alt={video.titulo || "Vídeo educativo"}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        key={`video-${video.id}-${finalImageUrl}`}
+                        loading="lazy"
+                        onLoad={() => console.log('Imagem carregada para vídeo:', video.id, finalImageUrl)}
                         onError={(e) => {
-                          console.log('Erro ao carregar thumbnail, usando fallback');
-                          e.currentTarget.src = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop";
+                          console.log('Erro ao carregar imagem do vídeo:', video.id, finalImageUrl);
+                          const fallbackUrl = `https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop&auto=format&q=80&sig=fallback-${video.id}`;
+                          if (e.currentTarget.src !== fallbackUrl) {
+                            e.currentTarget.src = fallbackUrl;
+                          }
                         }}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

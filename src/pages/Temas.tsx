@@ -109,17 +109,27 @@ const Temas = () => {
                 imagem_url: tema.imagem_texto_4_url
               });
               
+              // Gerar URL de imagem única para cada tema baseada no ID
+              const defaultImageUrl = `https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop&auto=format&q=80&sig=${tema.id}`;
+              const imageUrl = tema.imagem_texto_4_url || defaultImageUrl;
+              
               return (
                 <Link key={tema.id} to={`/temas/${tema.id}`} className="group">
                   <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-secondary/50">
                     <div className="aspect-video overflow-hidden rounded-t-lg">
                       <img 
-                        src={tema.imagem_texto_4_url || "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop"} 
+                        src={imageUrl}
                         alt={tema.frase_tematica || "Tema de redação"}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        key={`tema-${tema.id}-${imageUrl}`}
+                        loading="lazy"
+                        onLoad={() => console.log('Imagem carregada para tema:', tema.id, imageUrl)}
                         onError={(e) => {
-                          console.log('Erro ao carregar imagem, usando fallback');
-                          e.currentTarget.src = "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop";
+                          console.log('Erro ao carregar imagem do tema:', tema.id, imageUrl);
+                          const fallbackUrl = `https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop&auto=format&q=80&sig=fallback-${tema.id}`;
+                          if (e.currentTarget.src !== fallbackUrl) {
+                            e.currentTarget.src = fallbackUrl;
+                          }
                         }}
                       />
                     </div>

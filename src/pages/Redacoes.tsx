@@ -93,20 +93,31 @@ const Redacoes = () => {
                 id: redacao.id,
                 frase_tematica: redacao.frase_tematica,
                 eixo_tematico: redacao.eixo_tematico,
-                nota_total: redacao.nota_total
+                nota_total: redacao.nota_total,
+                pdf_url: redacao.pdf_url
               });
+              
+              // Gerar URL de imagem única para cada redação baseada no ID
+              const defaultImageUrl = `https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop&auto=format&q=80&sig=${redacao.id}`;
+              const imageUrl = redacao.pdf_url || defaultImageUrl;
               
               return (
                 <Link key={redacao.id} to={`/redacoes/${redacao.id}`} className="group">
                   <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-secondary/50">
                     <div className="aspect-video overflow-hidden rounded-t-lg">
                       <img 
-                        src={redacao.pdf_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop"} 
+                        src={imageUrl}
                         alt={redacao.frase_tematica || "Redação Exemplar"}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        key={`redacao-${redacao.id}-${imageUrl}`}
+                        loading="lazy"
+                        onLoad={() => console.log('Imagem carregada para redação:', redacao.id, imageUrl)}
                         onError={(e) => {
-                          console.log('Erro ao carregar imagem, usando fallback');
-                          e.currentTarget.src = "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop";
+                          console.log('Erro ao carregar imagem da redação:', redacao.id, imageUrl);
+                          const fallbackUrl = `https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=300&fit=crop&auto=format&q=80&sig=fallback-${redacao.id}`;
+                          if (e.currentTarget.src !== fallbackUrl) {
+                            e.currentTarget.src = fallbackUrl;
+                          }
                         }}
                       />
                     </div>
