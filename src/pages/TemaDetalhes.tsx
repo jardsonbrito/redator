@@ -88,26 +88,24 @@ const TemaDetalhes = () => {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="border-redator-accent/20">
           <CardContent className="p-8">
+            {/* 1. Frase Temática */}
             <h1 className="text-2xl font-bold text-redator-primary mb-8 leading-tight">
               {tema.frase_tematica}
             </h1>
 
             <div className="space-y-6">
-              {/* Imagem Motivadora (Texto Motivador 4) - PRIMEIRO */}
+              {/* 2. Imagem ampliada (sem rótulo técnico) */}
               {tema.imagem_texto_4_url && (
-                <div className="bg-purple-50 rounded-lg p-6 border-redator-accent/20">
-                  <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador IV</h3>
-                  <div className="rounded-lg overflow-hidden">
-                    <img 
-                      src={tema.imagem_texto_4_url} 
-                      alt="Imagem motivadora do tema"
-                      className="w-full h-auto"
-                    />
-                  </div>
+                <div className="rounded-lg overflow-hidden mb-6">
+                  <img 
+                    src={tema.imagem_texto_4_url} 
+                    alt="Imagem do tema"
+                    className="w-full h-auto"
+                  />
                 </div>
               )}
 
-              {/* Cabeçalho padrão */}
+              {/* 3. Cabeçalho padrão */}
               <div className="bg-redator-primary/5 rounded-lg p-6 border-l-4 border-redator-primary">
                 <p className="text-redator-primary leading-relaxed font-medium">
                   A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação, 
@@ -117,9 +115,9 @@ const TemaDetalhes = () => {
                 </p>
               </div>
 
-              {/* Texto Motivador 1 */}
+              {/* 4. Texto Motivador 1 */}
               {tema.texto_1 && (
-                <div className="bg-purple-50 rounded-lg p-6 border-redator-accent/20">
+                <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
                   <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador I</h3>
                   <p className="text-redator-accent leading-relaxed">
                     {tema.texto_1}
@@ -127,9 +125,9 @@ const TemaDetalhes = () => {
                 </div>
               )}
 
-              {/* Texto Motivador 2 */}
+              {/* 5. Texto Motivador 2 */}
               {tema.texto_2 && (
-                <div className="bg-purple-50 rounded-lg p-6 border-redator-accent/20">
+                <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
                   <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador II</h3>
                   <p className="text-redator-accent leading-relaxed">
                     {tema.texto_2}
@@ -137,25 +135,15 @@ const TemaDetalhes = () => {
                 </div>
               )}
 
-              {/* Texto Motivador 3 */}
+              {/* 6. Texto Motivador 3 */}
               {tema.texto_3 && (
-                <div className="bg-purple-50 rounded-lg p-6 border-redator-accent/20">
+                <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
                   <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador III</h3>
                   <p className="text-redator-accent leading-relaxed">
                     {tema.texto_3}
                   </p>
                 </div>
               )}
-
-              {/* Proposta */}
-              <div className="bg-redator-secondary/10 rounded-lg p-6 border-l-4 border-redator-secondary">
-                <h3 className="font-bold text-redator-primary mb-3">📝 Proposta de Redação</h3>
-                <p className="text-redator-accent leading-relaxed">
-                  Com base na leitura dos textos motivadores seguintes e nos conhecimentos construídos ao longo de sua formação, 
-                  redija texto dissertativo-argumentativo sobre o tema apresentado, desenvolvendo proposta de intervenção 
-                  que respeite os direitos humanos.
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>

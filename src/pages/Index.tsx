@@ -41,7 +41,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
-              <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="flex items-center justify-center gap-3 mb-4">
                 <div className="p-3 rounded-full bg-redator-primary">
                   <PenTool className="w-8 h-8 text-white" />
                 </div>
@@ -49,10 +49,12 @@ const Index = () => {
                   Redator
                 </h1>
               </div>
-              {/* Slogan com destaque visual reforçado */}
-              <p className="text-xl font-semibold text-redator-accent leading-relaxed tracking-wide">
-                Plataforma Redator: a base da sua aprovação — redação, tema e repertório.
-              </p>
+              {/* Slogan com destaque visual aprimorado */}
+              <div className="max-w-3xl mx-auto">
+                <p className="text-2xl font-bold text-redator-accent leading-relaxed tracking-wide px-4">
+                  Plataforma Redator: a base da sua aprovação — redação, tema e repertório.
+                </p>
+              </div>
             </div>
             {user && isAdmin ? (
               <Link 

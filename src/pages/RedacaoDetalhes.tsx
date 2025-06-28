@@ -91,9 +91,9 @@ const RedacaoDetalhes = () => {
 
             {/* Dica de Escrita */}
             {redacao.dica_de_escrita && (
-              <div className="mt-8 p-6 bg-purple-50 rounded-lg border-l-4 border-redator-secondary">
+              <div className="mt-8 p-6 bg-amber-50 rounded-lg border-l-4 border-amber-400">
                 <h3 className="font-semibold text-redator-primary mb-3 flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5" />
+                  <Lightbulb className="w-5 h-5 text-amber-500" />
                   Dica de Escrita
                 </h3>
                 <p className="text-redator-accent leading-relaxed">
@@ -103,7 +103,7 @@ const RedacaoDetalhes = () => {
             )}
 
             {redacao.nota_total && (
-              <div className="mt-6 p-4 bg-purple-50 rounded-lg border-redator-accent/20">
+              <div className="mt-6 p-4 bg-white rounded-lg border border-redator-accent/20">
                 <h3 className="font-semibold text-redator-primary mb-2">📊 Nota Total: {redacao.nota_total}</h3>
                 <div className="grid grid-cols-5 gap-2 text-sm text-redator-accent">
                   {redacao.nota_c1 && <div>C1: {redacao.nota_c1}</div>}
@@ -116,7 +116,7 @@ const RedacaoDetalhes = () => {
             )}
 
             <div className="mt-8 pt-6 border-t border-redator-accent/20">
-              <div className="bg-purple-50 rounded-lg p-4 border-redator-accent/20">
+              <div className="bg-white rounded-lg p-4 border border-redator-accent/20">
                 <h3 className="font-semibold text-redator-primary mb-2">💡 Dica de Estudo</h3>
                 <p className="text-redator-accent text-sm">
                   Observe como esta redação desenvolve cada argumento com exemplos concretos e conecta as ideias de forma coesa. 
