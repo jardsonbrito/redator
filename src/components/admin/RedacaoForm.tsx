@@ -6,10 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const RedacaoForm = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
     frase_tematica: '',
@@ -23,18 +25,37 @@ export const RedacaoForm = () => {
     setLoading(true);
 
     try {
-      // Inserir diretamente na tabela redacoes
+      // Primeiro, criar o tema se necessário
+      let tema_id = null;
+      if (formData.frase_tematica && formData.eixo_tematico) {
+        const { data: temaData, error: temaError } = await supabase
+          .from('temas')
+          .insert([{
+            frase_tematica: formData.frase_tematica,
+            eixo_tematico: formData.eixo_tematico
+          }])
+          .select()
+          .single();
+
+        if (temaError) throw temaError;
+        tema_id = temaData.id;
+      }
+
+      // Inserir a redação
       const { error } = await supabase
         .from('redacoes')
         .insert([{
           conteudo: formData.conteudo,
           pdf_url: formData.thumbnail_url,
-          // Adicionar campos extras se necessário
+          tema_id: tema_id,
           nota_total: 1000, // Redação exemplar
           data_envio: new Date().toISOString(),
         }]);
 
       if (error) throw error;
+
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['redacoes'] });
 
       toast({
         title: "Sucesso!",

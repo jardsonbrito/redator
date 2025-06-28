@@ -2,19 +2,54 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const TemaDetalhes = () => {
   const { id } = useParams();
   
-  // Mock data - será substituído pelos dados do Supabase
-  const tema = {
-    frase_tematica: "Os desafios da mobilidade urbana nas grandes cidades brasileiras",
-    eixo: "Urbanização e Transporte",
-    texto_motivador_1: "O Brasil possui 38 regiões metropolitanas oficialmente reconhecidas, que concentram cerca de 55% da população do país. Nessas áreas, os problemas de mobilidade urbana se intensificam devido ao crescimento populacional acelerado e à falta de planejamento urbano adequado.",
-    texto_motivador_2: "Segundo dados do IBGE, nas principais capitais brasileiras, o tempo médio de deslocamento casa-trabalho ultrapassa 1 hora diária. Em São Paulo, esse tempo pode chegar a 2 horas e 42 minutos para alguns trajetos, impactando diretamente a qualidade de vida dos cidadãos.",
-    texto_motivador_3: "A implementação de políticas públicas voltadas para o transporte sustentável, como ciclovias, BRT e sistemas de transporte sobre trilhos, tem se mostrado eficaz na redução do tempo de deslocamento e da poluição atmosférica em diversas cidades brasileiras.",
-    imagem_motivadora_url: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=600&h=400&fit=crop"
-  };
+  const { data: tema, isLoading, error } = useQuery({
+    queryKey: ['tema', id],
+    queryFn: async () => {
+      console.log('Fetching tema details for id:', id);
+      const { data, error } = await supabase
+        .from('temas')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching tema:', error);
+        throw error;
+      }
+      
+      console.log('Tema details fetched:', data);
+      return data;
+    },
+    enabled: !!id
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+        <div>Carregando tema...</div>
+      </div>
+    );
+  }
+
+  if (error || !tema) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Tema não encontrado</h2>
+          <p className="text-gray-600 mb-4">O tema solicitado não foi encontrado.</p>
+          <Link to="/temas" className="text-green-600 hover:text-green-700">
+            Voltar para temas
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
@@ -27,9 +62,11 @@ const TemaDetalhes = () => {
               <span>Voltar</span>
             </Link>
             <div>
-              <span className="text-sm font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
-                {tema.eixo}
-              </span>
+              {tema.eixo_tematico && (
+                <span className="text-sm font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
+                  {tema.eixo_tematico}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -45,40 +82,48 @@ const TemaDetalhes = () => {
 
             <div className="space-y-6">
               {/* Texto Motivador 1 */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador I</h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {tema.texto_motivador_1}
-                </p>
-              </div>
+              {tema.texto_1 && (
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador I</h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    {tema.texto_1}
+                  </p>
+                </div>
+              )}
 
               {/* Texto Motivador 2 */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador II</h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {tema.texto_motivador_2}
-                </p>
-              </div>
+              {tema.texto_2 && (
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador II</h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    {tema.texto_2}
+                  </p>
+                </div>
+              )}
 
               {/* Texto Motivador 3 */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador III</h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {tema.texto_motivador_3}
-                </p>
-              </div>
+              {tema.texto_3 && (
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador III</h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    {tema.texto_3}
+                  </p>
+                </div>
+              )}
 
               {/* Imagem Motivadora */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador IV</h3>
-                <div className="rounded-lg overflow-hidden">
-                  <img 
-                    src={tema.imagem_motivadora_url} 
-                    alt="Imagem motivadora do tema"
-                    className="w-full h-auto"
-                  />
+              {tema.imagem_texto_4_url && (
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador IV</h3>
+                  <div className="rounded-lg overflow-hidden">
+                    <img 
+                      src={tema.imagem_texto_4_url} 
+                      alt="Imagem motivadora do tema"
+                      className="w-full h-auto"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Proposta */}
               <div className="bg-green-50 rounded-lg p-6 border-l-4 border-green-500">

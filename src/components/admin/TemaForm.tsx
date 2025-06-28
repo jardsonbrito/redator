@@ -6,10 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const TemaForm = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
     frase_tematica: '',
@@ -30,6 +32,9 @@ export const TemaForm = () => {
         .insert([formData]);
 
       if (error) throw error;
+
+      // Invalidate and refetch temas query
+      await queryClient.invalidateQueries({ queryKey: ['temas'] });
 
       toast({
         title: "Sucesso!",
@@ -123,6 +128,9 @@ export const TemaForm = () => {
           onChange={(e) => setFormData({...formData, imagem_texto_4_url: e.target.value})}
           placeholder="https://exemplo.com/imagem-motivadora.jpg"
         />
+        <p className="text-sm text-gray-600 mt-1">
+          Cole a URL completa de uma imagem que servirá como texto motivador IV. A imagem deve estar hospedada online.
+        </p>
       </div>
 
       <Button type="submit" disabled={loading} className="w-full">

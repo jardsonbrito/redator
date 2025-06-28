@@ -2,24 +2,60 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const RedacaoDetalhes = () => {
   const { id } = useParams();
   
-  // Mock data - será substituído pelos dados do Supabase
-  const redacao = {
-    frase_tematica: "A importância da educação digital no século XXI",
-    eixo: "Educação e Tecnologia",
-    redacao: `A educação digital representa um dos pilares fundamentais para o desenvolvimento social e econômico no século XXI. Em uma era marcada pela constante evolução tecnológica, a capacidade de compreender, utilizar e criar com ferramentas digitais torna-se essencial para a formação de cidadãos críticos e preparados para os desafios contemporâneos.
+  const { data: redacao, isLoading, error } = useQuery({
+    queryKey: ['redacao', id],
+    queryFn: async () => {
+      console.log('Fetching redacao details for id:', id);
+      const { data, error } = await supabase
+        .from('redacoes')
+        .select(`
+          *,
+          temas (
+            frase_tematica,
+            eixo_tematico
+          )
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching redacao:', error);
+        throw error;
+      }
+      
+      console.log('Redacao details fetched:', data);
+      return data;
+    },
+    enabled: !!id
+  });
 
-Primeiramente, é importante reconhecer que a educação digital vai além do simples uso de computadores e internet. Ela engloba o desenvolvimento de habilidades como pensamento computacional, letramento digital e capacidade de análise crítica de informações online. Essas competências são fundamentais para que os indivíduos possam navegar de forma segura e eficiente no mundo digital, evitando armadilhas como fake news e crimes virtuais.
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div>Carregando redação...</div>
+      </div>
+    );
+  }
 
-Além disso, a educação digital promove a democratização do acesso ao conhecimento. Através de plataformas online, cursos à distância e recursos educacionais abertos, pessoas de diferentes regiões e condições socioeconômicas podem ter acesso a conteúdos de qualidade. Essa característica é particularmente relevante em um país de dimensões continentais como o Brasil, onde as desigualdades regionais ainda são uma realidade.
-
-Por outro lado, é necessário reconhecer os desafios que acompanham a implementação da educação digital. A exclusão digital, caracterizada pela falta de acesso à internet e equipamentos tecnológicos, ainda afeta milhões de brasileiros. Sem políticas públicas efetivas que garantam infraestrutura adequada e formação de professores, a educação digital pode se tornar mais um fator de aprofundamento das desigualdades sociais.
-
-Portanto, é fundamental que o poder público, em parceria com a sociedade civil e o setor privado, desenvolva estratégias integradas para promover a educação digital de forma inclusiva e democrática. Somente assim será possível formar uma geração preparada para os desafios do futuro e capaz de utilizar a tecnologia como ferramenta de transformação social positiva.`
-  };
+  if (error || !redacao) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Redação não encontrada</h2>
+          <p className="text-gray-600 mb-4">A redação solicitada não foi encontrada.</p>
+          <Link to="/redacoes" className="text-blue-600 hover:text-blue-700">
+            Voltar para redações
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -32,9 +68,11 @@ Portanto, é fundamental que o poder público, em parceria com a sociedade civil
               <span>Voltar</span>
             </Link>
             <div>
-              <span className="text-sm font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                {redacao.eixo}
-              </span>
+              {redacao.temas?.eixo_tematico && (
+                <span className="text-sm font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                  {redacao.temas.eixo_tematico}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -45,16 +83,29 @@ Portanto, é fundamental que o poder público, em parceria com a sociedade civil
         <Card>
           <CardContent className="p-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-6 leading-tight">
-              {redacao.frase_tematica}
+              {redacao.temas?.frase_tematica || "Redação Exemplar"}
             </h1>
             
             <div className="prose prose-lg max-w-none">
-              {redacao.redacao.split('\n\n').map((paragrafo, index) => (
+              {redacao.conteudo && redacao.conteudo.split('\n\n').map((paragrafo, index) => (
                 <p key={index} className="mb-4 text-gray-700 leading-relaxed">
                   {paragrafo}
                 </p>
               ))}
             </div>
+
+            {redacao.nota_total && (
+              <div className="mt-6 p-4 bg-green-50 rounded-lg">
+                <h3 className="font-semibold text-green-900 mb-2">📊 Nota Total: {redacao.nota_total}</h3>
+                <div className="grid grid-cols-5 gap-2 text-sm">
+                  {redacao.nota_c1 && <div>C1: {redacao.nota_c1}</div>}
+                  {redacao.nota_c2 && <div>C2: {redacao.nota_c2}</div>}
+                  {redacao.nota_c3 && <div>C3: {redacao.nota_c3}</div>}
+                  {redacao.nota_c4 && <div>C4: {redacao.nota_c4}</div>}
+                  {redacao.nota_c5 && <div>C5: {redacao.nota_c5}</div>}
+                </div>
+              </div>
+            )}
 
             <div className="mt-8 pt-6 border-t border-gray-200">
               <div className="bg-blue-50 rounded-lg p-4">
