@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const Redacoes = () => {
-  const { data: redacoes, isLoading } = useQuery({
+  const { data: redacoes, isLoading, error } = useQuery({
     queryKey: ['redacoes'],
     queryFn: async () => {
       console.log('Fetching redacoes...');
@@ -28,13 +28,24 @@ const Redacoes = () => {
       
       console.log('Redacoes fetched:', data);
       return data;
-    }
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div>Carregando redações...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error('Error in Redacoes component:', error);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div>Erro ao carregar redações. Verifique o console para mais detalhes.</div>
       </div>
     );
   }
@@ -85,6 +96,13 @@ const Redacoes = () => {
                         <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
                           {redacao.temas.frase_tematica}
                         </h3>
+                      )}
+                      {redacao.nota_total && (
+                        <div className="mt-2">
+                          <span className="text-sm text-green-600 font-medium">
+                            Nota: {redacao.nota_total}
+                          </span>
+                        </div>
                       )}
                     </CardContent>
                   </Card>

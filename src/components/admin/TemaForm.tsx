@@ -27,14 +27,26 @@ export const TemaForm = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase
+      console.log('Salvando tema:', formData);
+
+      const { data, error } = await supabase
         .from('temas')
-        .insert([formData]);
+        .insert([formData])
+        .select('*')
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao salvar tema:', error);
+        throw error;
+      }
 
-      // Invalidate and refetch temas query
-      await queryClient.invalidateQueries({ queryKey: ['temas'] });
+      console.log('Tema salvo com sucesso:', data);
+
+      // Invalidate and refetch queries immediately
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['temas'] }),
+        queryClient.refetchQueries({ queryKey: ['temas'] }),
+      ]);
 
       toast({
         title: "Sucesso!",
@@ -51,7 +63,7 @@ export const TemaForm = () => {
         imagem_texto_4_url: ''
       });
     } catch (error: any) {
-      console.error('Erro ao salvar tema:', error);
+      console.error('Erro completo ao salvar tema:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao salvar tema.",
@@ -120,16 +132,17 @@ export const TemaForm = () => {
       </div>
 
       <div>
-        <Label htmlFor="imagem_texto_4_url">Imagem Motivadora (URL)</Label>
+        <Label htmlFor="imagem_texto_4_url">Imagem Motivadora - Texto 4 (URL)</Label>
         <Input
           id="imagem_texto_4_url"
           type="url"
           value={formData.imagem_texto_4_url}
           onChange={(e) => setFormData({...formData, imagem_texto_4_url: e.target.value})}
           placeholder="https://exemplo.com/imagem-motivadora.jpg"
+          required
         />
         <p className="text-sm text-gray-600 mt-1">
-          Cole a URL completa de uma imagem que servirá como texto motivador IV. A imagem deve estar hospedada online.
+          Cole a URL completa de uma imagem que servirá como texto motivador IV. A imagem deve estar hospedada online (ex: Unsplash, Imgur, etc.).
         </p>
       </div>
 

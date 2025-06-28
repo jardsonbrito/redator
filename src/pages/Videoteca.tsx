@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const Videoteca = () => {
-  const { data: videos, isLoading } = useQuery({
+  const { data: videos, isLoading, error } = useQuery({
     queryKey: ['videos'],
     queryFn: async () => {
       console.log('Fetching videos...');
@@ -22,13 +22,24 @@ const Videoteca = () => {
       
       console.log('Videos fetched:', data);
       return data;
-    }
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center">
         <div>Carregando vídeos...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error('Error in Videoteca component:', error);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center">
+        <div>Erro ao carregar vídeos. Verifique o console para mais detalhes.</div>
       </div>
     );
   }
@@ -67,7 +78,7 @@ const Videoteca = () => {
                     <div className="aspect-video overflow-hidden rounded-t-lg relative">
                       <img 
                         src={video.thumbnail_url || "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=300&h=200&fit=crop"} 
-                        alt={video.titulo}
+                        alt={video.titulo || "Vídeo"}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -82,9 +93,11 @@ const Videoteca = () => {
                           </span>
                         </div>
                       )}
-                      <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                        {video.titulo}
-                      </h3>
+                      {video.titulo && (
+                        <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                          {video.titulo}
+                        </h3>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

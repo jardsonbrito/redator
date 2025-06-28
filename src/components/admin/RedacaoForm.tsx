@@ -25,9 +25,12 @@ export const RedacaoForm = () => {
     setLoading(true);
 
     try {
+      console.log('Iniciando salvamento da redação...', formData);
+      
       // Primeiro, criar o tema se necessário
       let tema_id = null;
       if (formData.frase_tematica && formData.eixo_tematico) {
+        console.log('Criando tema...');
         const { data: temaData, error: temaError } = await supabase
           .from('temas')
           .insert([{
@@ -37,12 +40,17 @@ export const RedacaoForm = () => {
           .select()
           .single();
 
-        if (temaError) throw temaError;
+        if (temaError) {
+          console.error('Erro ao criar tema:', temaError);
+          throw temaError;
+        }
         tema_id = temaData.id;
+        console.log('Tema criado com ID:', tema_id);
       }
 
       // Inserir a redação
-      const { error } = await supabase
+      console.log('Inserindo redação...');
+      const { data: redacaoData, error } = await supabase
         .from('redacoes')
         .insert([{
           conteudo: formData.conteudo,
@@ -50,12 +58,23 @@ export const RedacaoForm = () => {
           tema_id: tema_id,
           nota_total: 1000, // Redação exemplar
           data_envio: new Date().toISOString(),
-        }]);
+        }])
+        .select('*')
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao inserir redação:', error);
+        throw error;
+      }
 
-      // Invalidate queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ['redacoes'] });
+      console.log('Redação criada:', redacaoData);
+
+      // Invalidate ALL related queries to refresh data immediately
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['redacoes'] }),
+        queryClient.invalidateQueries({ queryKey: ['temas'] }),
+        queryClient.refetchQueries({ queryKey: ['redacoes'] }),
+      ]);
 
       toast({
         title: "Sucesso!",
@@ -70,7 +89,7 @@ export const RedacaoForm = () => {
         thumbnail_url: ''
       });
     } catch (error: any) {
-      console.error('Erro ao salvar redação:', error);
+      console.error('Erro completo ao salvar redação:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao salvar redação exemplar.",

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const Temas = () => {
-  const { data: temas, isLoading } = useQuery({
+  const { data: temas, isLoading, error } = useQuery({
     queryKey: ['temas'],
     queryFn: async () => {
       console.log('Fetching temas...');
@@ -22,13 +22,24 @@ const Temas = () => {
       
       console.log('Temas fetched:', data);
       return data;
-    }
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
         <div>Carregando temas...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error('Error in Temas component:', error);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+        <div>Erro ao carregar temas. Verifique o console para mais detalhes.</div>
       </div>
     );
   }
@@ -63,7 +74,7 @@ const Temas = () => {
                     <div className="aspect-video overflow-hidden rounded-t-lg">
                       <img 
                         src={tema.imagem_texto_4_url || "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=300&h=200&fit=crop"} 
-                        alt={tema.frase_tematica}
+                        alt={tema.frase_tematica || "Tema"}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                     </div>
