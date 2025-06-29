@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,31 +58,41 @@ export const RedacaoEnviadaForm = () => {
         throw error;
       }
       
+      console.log('Redações encontradas:', data);
       return data || [];
     },
   });
 
   const corrigirMutation = useMutation({
     mutationFn: async (dados: any) => {
-      console.log('Salvando correção com dados:', dados);
-      
-      // Validar se todas as notas estão presentes
-      const notaC1 = dados.nota_c1 ? parseInt(dados.nota_c1) : 0;
-      const notaC2 = dados.nota_c2 ? parseInt(dados.nota_c2) : 0;
-      const notaC3 = dados.nota_c3 ? parseInt(dados.nota_c3) : 0;
-      const notaC4 = dados.nota_c4 ? parseInt(dados.nota_c4) : 0;
-      const notaC5 = dados.nota_c5 ? parseInt(dados.nota_c5) : 0;
-      const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
-      
-      console.log('Notas calculadas:', { notaC1, notaC2, notaC3, notaC4, notaC5, notaTotal });
+      console.log('Iniciando correção com dados:', dados);
       
       const redacaoId = selectedRedacao?.id || editingRedacao?.id;
       if (!redacaoId) {
         throw new Error('ID da redação não encontrado');
       }
+
+      // Converter valores para números inteiros
+      const notaC1 = parseInt(dados.nota_c1) || 0;
+      const notaC2 = parseInt(dados.nota_c2) || 0;
+      const notaC3 = parseInt(dados.nota_c3) || 0;
+      const notaC4 = parseInt(dados.nota_c4) || 0;
+      const notaC5 = parseInt(dados.nota_c5) || 0;
+      const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
       
-      // Executar a atualização no Supabase
-      const { error } = await supabase
+      console.log('Valores a serem salvos:', {
+        redacaoId,
+        notaC1,
+        notaC2,
+        notaC3,
+        notaC4,
+        notaC5,
+        notaTotal,
+        comentario: dados.comentario_admin
+      });
+
+      // Atualizar no Supabase
+      const { data: updateData, error } = await supabase
         .from('redacoes_enviadas')
         .update({
           nota_c1: notaC1,
@@ -96,52 +105,57 @@ export const RedacaoEnviadaForm = () => {
           corrigida: true,
           data_correcao: new Date().toISOString(),
         })
-        .eq('id', redacaoId);
+        .eq('id', redacaoId)
+        .select();
 
       if (error) {
-        console.error('Erro detalhado ao salvar correção:', error);
-        throw new Error(`Falha ao salvar correção: ${error.message}`);
+        console.error('Erro detalhado ao salvar:', error);
+        throw new Error(`Erro ao salvar correção: ${error.message}`);
       }
-      
-      console.log('Correção salva com sucesso para redação ID:', redacaoId);
-      return { notaTotal, redacaoId };
+
+      console.log('Dados atualizados com sucesso:', updateData);
+      return { notaTotal, redacaoId, updateData };
     },
     onSuccess: (result) => {
-      console.log('Correção finalizada com sucesso. Nota total:', result.notaTotal);
+      console.log('Correção salva com sucesso:', result);
       toast({
-        title: "Correção salva com sucesso!",
-        description: `A redação foi corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
+        title: "Correção salva!",
+        description: `Redação corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
       });
       
-      // Invalidar as queries para atualizar a interface
+      // Invalidar queries para atualizar a interface
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas-admin'] });
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas'] });
       
-      // Limpar o formulário
-      setSelectedRedacao(null);
-      setEditingRedacao(null);
-      setFormData({
-        nota_c1: '',
-        nota_c2: '',
-        nota_c3: '',
-        nota_c4: '',
-        nota_c5: '',
-        nota_total: '',
-        comentario_admin: '',
-      });
+      // Limpar formulário
+      resetForm();
     },
     onError: (error: Error) => {
-      console.error('Erro ao salvar correção:', error);
+      console.error('Erro na mutação:', error);
       toast({
-        title: "Erro ao salvar correção",
-        description: `Ocorreu um erro: ${error.message}. A correção permanece pendente. Tente novamente.`,
+        title: "Erro ao salvar",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
+  const resetForm = () => {
+    setSelectedRedacao(null);
+    setEditingRedacao(null);
+    setFormData({
+      nota_c1: '',
+      nota_c2: '',
+      nota_c3: '',
+      nota_c4: '',
+      nota_c5: '',
+      nota_total: '',
+      comentario_admin: '',
+    });
+  };
+
   const handleEdit = (redacao: RedacaoEnviada) => {
-    console.log('Clicou em corrigir redação:', redacao.id);
+    console.log('Editando redação:', redacao.id);
     setSelectedRedacao(redacao);
     setEditingRedacao(null);
     setFormData({
@@ -179,26 +193,23 @@ export const RedacaoEnviadaForm = () => {
   const handleNotaChange = (competencia: string, valor: string) => {
     console.log(`Alterando ${competencia} para:`, valor);
     
-    // Limitar valores entre 0 e 200 e aceitar apenas números válidos
+    // Validar e limitar valores entre 0 e 200
     let nota = 0;
-    if (valor && !isNaN(parseInt(valor))) {
-      nota = Math.min(200, Math.max(0, parseInt(valor)));
+    const valorNumerico = parseInt(valor);
+    if (!isNaN(valorNumerico)) {
+      nota = Math.min(200, Math.max(0, valorNumerico));
     }
-    const valorFormatado = nota.toString();
     
-    const newFormData = { ...formData, [competencia]: valorFormatado };
+    const newFormData = { ...formData, [competencia]: nota.toString() };
     
-    // Calcular automaticamente a nota total
-    const notas = [
+    // Calcular total automaticamente
+    const total = [
       parseInt(newFormData.nota_c1) || 0,
       parseInt(newFormData.nota_c2) || 0,
       parseInt(newFormData.nota_c3) || 0,
       parseInt(newFormData.nota_c4) || 0,
       parseInt(newFormData.nota_c5) || 0,
-    ];
-    const total = notas.reduce((sum, nota) => sum + nota, 0);
-    
-    console.log('Notas atuais:', notas, 'Total:', total);
+    ].reduce((sum, n) => sum + n, 0);
     
     setFormData({
       ...newFormData,
@@ -208,32 +219,17 @@ export const RedacaoEnviadaForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!selectedRedacao && !editingRedacao) {
-      console.log('Nenhuma redação selecionada');
       toast({
         title: "Erro",
-        description: "Nenhuma redação foi selecionada para correção.",
+        description: "Nenhuma redação selecionada.",
         variant: "destructive",
       });
       return;
     }
 
-    // Validar se pelo menos uma nota foi atribuída
-    const temNotas = Object.values(formData).some(value => 
-      ['nota_c1', 'nota_c2', 'nota_c3', 'nota_c4', 'nota_c5'].includes(value) && 
-      parseInt(formData[value as keyof typeof formData]) > 0
-    );
-
-    if (!temNotas) {
-      toast({
-        title: "Aviso",
-        description: "Atribua pelo menos uma nota antes de salvar a correção.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    console.log('Salvando correção:', formData);
+    console.log('Submetendo formulário com dados:', formData);
     corrigirMutation.mutate(formData);
   };
 
@@ -262,7 +258,6 @@ ${redacao.redacao_texto}`;
         description: "O prompt de correção foi copiado para a área de transferência.",
       });
     } catch (err) {
-      // Fallback para dispositivos que não suportam navigator.clipboard
       const textArea = document.createElement('textarea');
       textArea.value = prompt;
       document.body.appendChild(textArea);
@@ -356,10 +351,7 @@ ${redacao.redacao_texto}`;
                       )}
 
                       <Button 
-                        onClick={() => {
-                          console.log('Botão corrigir clicado para redação:', redacao.id);
-                          handleEdit(redacao);
-                        }}
+                        onClick={() => handleEdit(redacao)}
                         variant={redacao.corrigida ? "outline" : "default"}
                         size="sm"
                         className={!redacao.corrigida ? "bg-redator-primary hover:bg-redator-primary/90" : ""}
@@ -461,7 +453,6 @@ ${redacao.redacao_texto}`;
                 {selectedRedacao?.frase_tematica || editingRedacao?.frase_tematica}
               </CardTitle>
               
-              {/* Botão de cópia no formulário de correção */}
               <Button 
                 onClick={() => copiarPromptCorrecao(selectedRedacao || editingRedacao!)}
                 variant="outline"
@@ -503,21 +494,18 @@ ${redacao.redacao_texto}`;
                         type="number"
                         min="0"
                         max="200"
-                        step="40"
+                        step="1"
                         placeholder="0-200"
                         value={formData[comp.key as keyof typeof formData]}
                         onChange={(e) => handleNotaChange(comp.key, e.target.value)}
                         className="w-full border-redator-accent/30 focus:border-redator-accent bg-white"
                       />
-                      <p className="text-xs text-redator-accent mt-1">
-                        Valores: 0, 40, 80, 120, 160, 200
-                      </p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Nota total - calculada automaticamente */}
+              {/* Nota total */}
               <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
                 <label className="block text-sm font-medium text-redator-primary mb-2">
                   Nota Total (Calculada Automaticamente)
@@ -560,20 +548,7 @@ ${redacao.redacao_texto}`;
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => {
-                    console.log('Cancelando correção');
-                    setSelectedRedacao(null);
-                    setEditingRedacao(null);
-                    setFormData({
-                      nota_c1: '',
-                      nota_c2: '',
-                      nota_c3: '',
-                      nota_c4: '',
-                      nota_c5: '',
-                      nota_total: '',
-                      comentario_admin: '',
-                    });
-                  }}
+                  onClick={resetForm}
                   className="border-redator-accent/50"
                 >
                   Cancelar
