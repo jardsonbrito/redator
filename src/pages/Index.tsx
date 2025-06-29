@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, Settings, Send } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -9,20 +8,20 @@ const Index = () => {
 
   const menuItems = [
     {
-      title: "Redações Exemplares",
-      description: "Acesse redações nota 1000 e aprenda com os melhores exemplos",
-      icon: FileText,
-      path: "/redacoes",
-      color: "bg-redator-primary",
-      hoverColor: "hover:bg-redator-primary"
-    },
-    {
       title: "Temas",
       description: "Explore propostas de redação organizadas por eixo temático",
       icon: BookOpen,
       path: "/temas",
       color: "bg-redator-accent",
       hoverColor: "hover:bg-redator-accent"
+    },
+    {
+      title: "Redações Exemplares",
+      description: "Acesse redações nota 1000 e aprenda com os melhores exemplos",
+      icon: FileText,
+      path: "/redacoes",
+      color: "bg-redator-primary",
+      hoverColor: "hover:bg-redator-primary"
     },
     {
       title: "Videoteca",
