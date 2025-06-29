@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,9 @@ export const RedacaoEnviadaForm = () => {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Valores oficiais do ENEM para cada competência
+  const notasDisponiveis = ['', '0', '40', '80', '120', '160', '200'];
 
   const { data: redacoes, isLoading } = useQuery({
     queryKey: ['redacoes-enviadas-admin'],
@@ -121,22 +125,28 @@ export const RedacaoEnviadaForm = () => {
     });
   };
 
+  const handleCompetenciaChange = (competencia: string, valor: string) => {
+    const newFormData = { ...formData, [competencia]: valor };
+    
+    // Calcular automaticamente a nota total
+    const notas = [
+      parseInt(newFormData.nota_c1) || 0,
+      parseInt(newFormData.nota_c2) || 0,
+      parseInt(newFormData.nota_c3) || 0,
+      parseInt(newFormData.nota_c4) || 0,
+      parseInt(newFormData.nota_c5) || 0,
+    ];
+    const total = notas.reduce((sum, nota) => sum + nota, 0);
+    
+    setFormData({
+      ...newFormData,
+      nota_total: total.toString()
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRedacao) return;
-
-    // Validar notas (devem ser múltiplos de 40 entre 0 e 200)
-    const notas = [formData.nota_c1, formData.nota_c2, formData.nota_c3, formData.nota_c4, formData.nota_c5];
-    for (const nota of notas) {
-      if (nota && (parseInt(nota) < 0 || parseInt(nota) > 200 || parseInt(nota) % 40 !== 0)) {
-        toast({
-          title: "Notas inválidas",
-          description: "As notas devem ser múltiplos de 40 entre 0 e 200.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
 
     corrigirMutation.mutate(formData);
   };
@@ -149,18 +159,6 @@ export const RedacaoEnviadaForm = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const calcularNotaTotal = () => {
-    const notas = [
-      parseInt(formData.nota_c1) || 0,
-      parseInt(formData.nota_c2) || 0,
-      parseInt(formData.nota_c3) || 0,
-      parseInt(formData.nota_c4) || 0,
-      parseInt(formData.nota_c5) || 0,
-    ];
-    const total = notas.reduce((sum, nota) => sum + nota, 0);
-    setFormData(prev => ({ ...prev, nota_total: total.toString() }));
   };
 
   if (isLoading) {
@@ -262,7 +260,7 @@ export const RedacaoEnviadaForm = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Notas por competência */}
+              {/* Notas por competência com dropdown */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {[
                   { key: 'nota_c1', label: 'Competência 1' },
@@ -272,48 +270,45 @@ export const RedacaoEnviadaForm = () => {
                   { key: 'nota_c5', label: 'Competência 5' },
                 ].map((comp) => (
                   <div key={comp.key}>
-                    <label className="block text-sm font-medium text-redator-primary mb-1">
+                    <label className="block text-sm font-medium text-redator-primary mb-2">
                       {comp.label}
                     </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="200"
-                      step="40"
-                      placeholder="0-200"
+                    <Select
                       value={formData[comp.key as keyof typeof formData]}
-                      onChange={(e) => setFormData(prev => ({ ...prev, [comp.key]: e.target.value }))}
-                      className="border-redator-accent/30 focus:border-redator-accent"
-                    />
+                      onValueChange={(value) => handleCompetenciaChange(comp.key, value)}
+                    >
+                      <SelectTrigger className="w-full border-redator-accent/30 focus:border-redator-accent bg-white">
+                        <SelectValue placeholder="Selecione a nota" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-redator-accent/30 shadow-lg z-50">
+                        {notasDisponiveis.map((nota) => (
+                          <SelectItem 
+                            key={nota} 
+                            value={nota}
+                            className="hover:bg-redator-accent/10 focus:bg-redator-accent/10 cursor-pointer"
+                          >
+                            {nota === '' ? 'Selecione' : `${nota} pontos`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 ))}
               </div>
 
-              {/* Nota total */}
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-redator-primary mb-1">
-                    Nota Total
-                  </label>
+              {/* Nota total - calculada automaticamente */}
+              <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
+                <label className="block text-sm font-medium text-redator-primary mb-2">
+                  Nota Total (Calculada Automaticamente)
+                </label>
+                <div className="flex items-center gap-3">
                   <Input
-                    type="number"
-                    min="0"
-                    max="1000"
-                    placeholder="0-1000"
-                    value={formData.nota_total}
-                    onChange={(e) => setFormData(prev => ({ ...prev, nota_total: e.target.value }))}
-                    className="border-redator-accent/30 focus:border-redator-accent"
+                    type="text"
+                    value={formData.nota_total ? `${formData.nota_total}/1000` : '0/1000'}
+                    readOnly
+                    className="bg-white border-redator-accent/30 font-semibold text-lg text-redator-primary"
                   />
-                </div>
-                <div className="flex items-end">
-                  <Button 
-                    type="button" 
-                    onClick={calcularNotaTotal}
-                    variant="outline"
-                    className="border-redator-accent/50"
-                  >
-                    Calcular Total
-                  </Button>
+                  <Award className="w-6 h-6 text-redator-accent" />
                 </div>
               </div>
 
