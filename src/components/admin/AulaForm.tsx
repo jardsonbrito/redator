@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +21,7 @@ const AulaForm = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: modules } = useQuery({
+  const { data: modules, isLoading } = useQuery({
     queryKey: ['aula-modules-admin'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -30,7 +29,10 @@ const AulaForm = () => {
         .select('*')
         .order('ordem');
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching modules:", error);
+        throw error;
+      }
       return data;
     }
   });
@@ -39,13 +41,20 @@ const AulaForm = () => {
 
   const createAulaMutation = useMutation({
     mutationFn: async (aulaData: any) => {
+      console.log("Creating aula with data:", aulaData);
+      
       const { data, error } = await supabase
         .from('aulas')
         .insert([aulaData])
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating aula:", error);
+        throw error;
+      }
+      
+      console.log("Aula created successfully:", data);
       return data;
     },
     onSuccess: () => {
@@ -62,15 +71,16 @@ const AulaForm = () => {
       setGoogleMeetUrl("");
       setAtivo(true);
       
+      queryClient.invalidateQueries({ queryKey: ['aulas-with-modules'] });
       queryClient.invalidateQueries({ queryKey: ['aulas'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Error in mutation:", error);
       toast({
         title: "Erro",
-        description: "Erro ao cadastrar aula. Tente novamente.",
+        description: `Erro ao cadastrar aula: ${error.message}`,
         variant: "destructive",
       });
-      console.error("Error creating aula:", error);
     }
   });
 
@@ -113,11 +123,22 @@ const AulaForm = () => {
       youtube_url: youtubeUrl || null,
       google_meet_url: googleMeetUrl || null,
       ativo,
-      ordem: 0, // Será ajustado automaticamente
+      ordem: 0,
     };
 
+    console.log("Submitting aula data:", aulaData);
     createAulaMutation.mutate(aulaData);
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">Carregando módulos...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

@@ -10,13 +10,19 @@ const Aulas = () => {
   const { data: modules, isLoading } = useQuery({
     queryKey: ['aula-modules'],
     queryFn: async () => {
+      console.log("Fetching aula modules...");
       const { data, error } = await supabase
         .from('aula_modules')
         .select('*')
         .eq('ativo', true)
         .order('ordem');
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching modules:", error);
+        throw error;
+      }
+      
+      console.log("Modules fetched:", data);
       return data;
     }
   });

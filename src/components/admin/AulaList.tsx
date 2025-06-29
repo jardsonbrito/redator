@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,26 +34,18 @@ const AulaList = () => {
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: modules } = useQuery({
-    queryKey: ['aula-modules-admin'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('aula_modules')
-        .select('*')
-        .order('ordem');
-      
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching aulas:", error);
+        throw error;
+      }
       return data;
     }
   });
 
   const updateAulaMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      console.log("Updating aula:", id, updates);
+      
       const { data, error } = await supabase
         .from('aulas')
         .update(updates)
@@ -62,7 +53,12 @@ const AulaList = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating aula:", error);
+        throw error;
+      }
+      
+      console.log("Aula updated successfully:", data);
       return data;
     },
     onSuccess: () => {
@@ -75,23 +71,30 @@ const AulaList = () => {
       queryClient.invalidateQueries({ queryKey: ['aulas-with-modules'] });
     },
     onError: (error) => {
+      console.error("Error in update mutation:", error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar aula. Tente novamente.",
         variant: "destructive",
       });
-      console.error("Error updating aula:", error);
     }
   });
 
   const deleteAulaMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log("Deleting aula:", id);
+      
       const { error } = await supabase
         .from('aulas')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting aula:", error);
+        throw error;
+      }
+      
+      console.log("Aula deleted successfully");
     },
     onSuccess: () => {
       toast({
@@ -101,12 +104,12 @@ const AulaList = () => {
       queryClient.invalidateQueries({ queryKey: ['aulas-with-modules'] });
     },
     onError: (error) => {
+      console.error("Error in delete mutation:", error);
       toast({
         title: "Erro",
         description: "Erro ao excluir aula. Tente novamente.",
         variant: "destructive",
       });
-      console.error("Error deleting aula:", error);
     }
   });
 
