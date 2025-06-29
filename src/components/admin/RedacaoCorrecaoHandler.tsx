@@ -35,27 +35,28 @@ export const useRedacaoCorrecaoHandler = () => {
       const userEmail = session.session.user.email;
       console.log('📧 Email do usuário logado:', userEmail);
 
-      // Verificação direta por email (método mais confiável)
+      // Para o email específico, sempre retorna true
       if (userEmail === 'jardsonbrito@gmail.com') {
-        console.log('✅ Admin verificado por email:', userEmail);
+        console.log('✅ Admin confirmado pelo email hardcoded');
         return true;
       }
 
-      // Verificação alternativa usando a função RPC
+      // Verificação adicional via RPC como fallback
       try {
         const { data: adminCheck, error: adminError } = await supabase
           .rpc('is_admin', { user_id: session.session.user.id });
 
         if (adminError) {
-          console.error('⚠️ Erro na função is_admin, mas email é admin:', adminError);
-          // Se a função RPC falhou mas o email é admin, permitir acesso
+          console.warn('⚠️ Erro na função RPC is_admin:', adminError);
+          // Para o admin principal, ignorar erro de RPC
           return userEmail === 'jardsonbrito@gmail.com';
         }
 
         console.log('✅ Status admin via RPC:', adminCheck);
         return adminCheck === true;
       } catch (rpcError) {
-        console.error('⚠️ Falha na verificação RPC, usando verificação por email:', rpcError);
+        console.warn('⚠️ Falha na verificação RPC:', rpcError);
+        // Para o admin principal, sempre permitir
         return userEmail === 'jardsonbrito@gmail.com';
       }
     } catch (error) {
@@ -111,6 +112,8 @@ export const useRedacaoCorrecaoHandler = () => {
 
   const executarCorrecao = async (redacaoId: string, dados: CorrecaoData): Promise<RedacaoCorrecaoResult> => {
     try {
+      console.log('🚀 Iniciando processo de correção para:', redacaoId);
+
       // 1. Verificar permissões de admin
       const isAdmin = await validarPermissaoAdmin();
       if (!isAdmin) {
@@ -120,71 +123,59 @@ export const useRedacaoCorrecaoHandler = () => {
       console.log('✅ Permissões de admin confirmadas');
 
       // 2. Verificar se a redação existe
-      await verificarExistenciaRedacao(redacaoId);
+      const redacaoExistente = await verificarExistenciaRedacao(redacaoId);
+      console.log('✅ Redação confirmada:', redacaoExistente.id);
 
       // 3. Preparar dados para correção
       const { updateData, notaTotal } = prepararDadosCorrecao(dados);
 
-      // 4. Executar UPDATE com retry
+      // 4. Executar UPDATE com lógica robusta
       console.log('🚀 Executando UPDATE da correção...');
       
-      let updateResult;
-      let attempts = 0;
-      const maxAttempts = 3;
+      // Primeiro, tentar o update normal
+      const { data: updateResult, error: updateError } = await supabase
+        .from('redacoes_enviadas')
+        .update(updateData)
+        .eq('id', redacaoId)
+        .select('*');
 
-      while (attempts < maxAttempts) {
-        attempts++;
-        console.log(`📡 Tentativa ${attempts} de ${maxAttempts}...`);
+      if (updateError) {
+        console.error('❌ Erro no UPDATE:', updateError);
+        throw new Error(`Erro ao salvar correção: ${updateError.message}`);
+      }
 
-        const { data, error } = await supabase
+      if (!updateResult || updateResult.length === 0) {
+        console.error('❌ UPDATE não retornou dados');
+        
+        // Tentar uma segunda verificação para ver se a redação ainda existe
+        const { data: recheck } = await supabase
           .from('redacoes_enviadas')
-          .update(updateData)
+          .select('id')
           .eq('id', redacaoId)
-          .select('*');
-
-        if (error) {
-          console.error(`❌ Erro na tentativa ${attempts}:`, error);
-          if (attempts === maxAttempts) {
-            throw new Error(`Erro ao atualizar redação: ${error.message}`);
-          }
-          // Aguardar 1 segundo antes da próxima tentativa
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          continue;
+          .single();
+        
+        if (!recheck) {
+          throw new Error('Redação não encontrada no momento da atualização');
         }
-
-        if (!data || data.length === 0) {
-          console.error(`❌ UPDATE não afetou registros na tentativa ${attempts}`);
-          if (attempts === maxAttempts) {
-            // Fazer uma última verificação se a redação ainda existe
-            const recheck = await verificarExistenciaRedacao(redacaoId);
-            throw new Error(`UPDATE não afetou registros. Redação existe: ${recheck.id}, mas não foi possível atualizar. Verifique as políticas RLS.`);
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          continue;
-        }
-
-        updateResult = data[0];
-        break;
+        
+        throw new Error(`UPDATE não afetou registros. Redação existe: ${recheck.id}, mas não foi possível atualizar. Verifique as políticas RLS.`);
       }
 
-      if (!updateResult) {
-        throw new Error('Falha ao atualizar redação após múltiplas tentativas');
-      }
+      const resultadoFinal = updateResult[0];
+      console.log('✅ Correção salva com sucesso!', resultadoFinal);
 
-      console.log('✅ Correção salva com sucesso!', updateResult);
-
-      // 5. Verificar se a correção foi realmente salva
-      const verificacao = await supabase
+      // 5. Verificação final para confirmar que foi salvo
+      const { data: verificacao } = await supabase
         .from('redacoes_enviadas')
         .select('id, corrigida, nota_total, nota_c1, nota_c2, nota_c3, nota_c4, nota_c5')
         .eq('id', redacaoId)
         .single();
 
-      if (verificacao.error || !verificacao.data?.corrigida) {
-        throw new Error('Correção não foi salva corretamente. Verificação falhou.');
+      if (!verificacao?.corrigida) {
+        throw new Error('Correção não foi persistida corretamente no banco de dados');
       }
 
-      console.log('✅ Verificação final bem-sucedida:', verificacao.data);
+      console.log('✅ Verificação final bem-sucedida:', verificacao);
 
       return {
         success: true,
