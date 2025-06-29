@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Save, Calendar, Award } from "lucide-react";
+import { Eye, Save, Calendar, Award, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type RedacaoEnviada = {
@@ -179,6 +178,36 @@ export const RedacaoEnviadaForm = () => {
     });
   };
 
+  const copiarPromptCorrecao = async (redacao: RedacaoEnviada) => {
+    const prompt = `Corrija a seguinte redação conforme os critérios do ENEM, atribuindo nota de 0 a 200 por competência (C1 a C5) e justificando cada uma. Utilize linguagem objetiva, mas pedagógica.
+
+Frase temática: "${redacao.frase_tematica}"
+
+Redação do aluno:
+${redacao.redacao_texto}`;
+
+    try {
+      await navigator.clipboard.writeText(prompt);
+      toast({
+        title: "Texto copiado!",
+        description: "O prompt de correção foi copiado para a área de transferência.",
+      });
+    } catch (err) {
+      // Fallback para dispositivos que não suportam navigator.clipboard
+      const textArea = document.createElement('textarea');
+      textArea.value = prompt;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      toast({
+        title: "Texto copiado!",
+        description: "O prompt de correção foi copiado para a área de transferência.",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="text-center py-8">
@@ -228,13 +257,22 @@ export const RedacaoEnviadaForm = () => {
                       )}
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => handleView(redacao)}
                       >
                         <Eye className="w-4 h-4" />
+                      </Button>
+
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => copiarPromptCorrecao(redacao)}
+                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Copy className="w-4 h-4" />
                       </Button>
 
                       <Button 
@@ -268,10 +306,21 @@ export const RedacaoEnviadaForm = () => {
             <DialogTitle>{viewRedacao?.frase_tematica}</DialogTitle>
           </DialogHeader>
           {viewRedacao && (
-            <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                {viewRedacao.redacao_texto}
-              </p>
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {viewRedacao.redacao_texto}
+                </p>
+              </div>
+              
+              {/* Botão de cópia também no dialog de visualização */}
+              <Button 
+                onClick={() => copiarPromptCorrecao(viewRedacao)}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copiar texto para correção
+              </Button>
             </div>
           )}
         </DialogContent>
@@ -281,9 +330,21 @@ export const RedacaoEnviadaForm = () => {
       {selectedRedacao && (
         <Card className="border-redator-primary/30">
           <CardHeader>
-            <CardTitle className="text-redator-primary">
-              Corrigindo: {selectedRedacao.frase_tematica}
-            </CardTitle>
+            <div className="flex items-start justify-between gap-4">
+              <CardTitle className="text-redator-primary">
+                Corrigindo: {selectedRedacao.frase_tematica}
+              </CardTitle>
+              
+              {/* Botão de cópia no formulário de correção */}
+              <Button 
+                onClick={() => copiarPromptCorrecao(selectedRedacao)}
+                variant="outline"
+                className="border-blue-300 text-blue-600 hover:bg-blue-50"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copiar para correção
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {/* Exibir o texto da redação */}
