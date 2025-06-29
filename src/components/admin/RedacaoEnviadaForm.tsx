@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,19 +66,43 @@ export const RedacaoEnviadaForm = () => {
 
   const corrigirMutation = useMutation({
     mutationFn: async (dados: any) => {
-      // Determinar qual redação está sendo corrigida
       const redacaoAtual = selectedRedacao || editingRedacao;
       
-      if (!redacaoAtual || !redacaoAtual.id) {
-        console.error('Redação não encontrada ou sem ID:', redacaoAtual);
-        throw new Error('ID da redação não encontrado. Por favor, selecione uma redação válida.');
+      if (!redacaoAtual) {
+        throw new Error('Nenhuma redação selecionada para correção.');
       }
 
-      const redacaoId = redacaoAtual.id;
-      console.log('Iniciando correção da redação com ID:', redacaoId);
-      console.log('Dados recebidos para correção:', dados);
+      if (!redacaoAtual.id || redacaoAtual.id.trim() === '') {
+        throw new Error('ID da redação está vazio ou inválido.');
+      }
 
-      // Validar e converter valores para números inteiros
+      const redacaoId = redacaoAtual.id.trim();
+      console.log('=== INICIANDO CORREÇÃO ===');
+      console.log('ID da redação:', redacaoId);
+      console.log('Redação completa:', redacaoAtual);
+      console.log('Dados do formulário:', dados);
+
+      // Primeiro, verificar se a redação realmente existe
+      console.log('Verificando existência da redação...');
+      const { data: redacaoExistente, error: checkError } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, frase_tematica, corrigida')
+        .eq('id', redacaoId)
+        .single();
+
+      if (checkError) {
+        console.error('Erro ao verificar redação:', checkError);
+        throw new Error(`Erro ao verificar redação: ${checkError.message}`);
+      }
+
+      if (!redacaoExistente) {
+        console.error('Redação não encontrada com ID:', redacaoId);
+        throw new Error(`Redação não encontrada. ID: ${redacaoId}`);
+      }
+
+      console.log('Redação encontrada:', redacaoExistente);
+
+      // Validar e converter notas
       const notaC1 = Math.min(200, Math.max(0, parseInt(dados.nota_c1) || 0));
       const notaC2 = Math.min(200, Math.max(0, parseInt(dados.nota_c2) || 0));
       const notaC3 = Math.min(200, Math.max(0, parseInt(dados.nota_c3) || 0));
@@ -85,18 +110,6 @@ export const RedacaoEnviadaForm = () => {
       const notaC5 = Math.min(200, Math.max(0, parseInt(dados.nota_c5) || 0));
       const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
       
-      console.log('Valores validados:', {
-        redacaoId,
-        notaC1,
-        notaC2,
-        notaC3,
-        notaC4,
-        notaC5,
-        notaTotal,
-        comentario: dados.comentario_admin
-      });
-
-      // Preparar dados para atualização
       const updateData = {
         nota_c1: notaC1,
         nota_c2: notaC2,
@@ -109,41 +122,31 @@ export const RedacaoEnviadaForm = () => {
         data_correcao: new Date().toISOString(),
       };
 
-      console.log('Executando UPDATE no Supabase para ID:', redacaoId);
-      console.log('Dados de atualização:', updateData);
+      console.log('Dados para atualização:', updateData);
 
-      // Executar update no Supabase com validação rigorosa do ID
-      const { data: updateResult, error } = await supabase
+      // Executar update
+      const { data: updateResult, error: updateError } = await supabase
         .from('redacoes_enviadas')
         .update(updateData)
         .eq('id', redacaoId)
         .select('*');
 
-      if (error) {
-        console.error('Erro detalhado ao salvar no Supabase:', error);
-        throw new Error(`Erro ao salvar correção: ${error.message}`);
+      if (updateError) {
+        console.error('Erro na atualização:', updateError);
+        throw new Error(`Falha ao atualizar: ${updateError.message}`);
       }
 
       if (!updateResult || updateResult.length === 0) {
-        console.error('Nenhuma linha foi atualizada para o ID:', redacaoId);
-        console.log('Verificando se a redação existe...');
+        console.error('Nenhuma linha foi atualizada');
+        console.log('Tentando buscar novamente a redação...');
         
-        // Verificar se a redação realmente existe
-        const { data: checkData, error: checkError } = await supabase
+        const { data: debugData } = await supabase
           .from('redacoes_enviadas')
-          .select('id')
+          .select('*')
           .eq('id', redacaoId);
-
-        if (checkError) {
-          console.error('Erro ao verificar existência da redação:', checkError);
-          throw new Error(`Erro ao verificar redação: ${checkError.message}`);
-        }
-
-        if (!checkData || checkData.length === 0) {
-          throw new Error(`Redação com ID ${redacaoId} não foi encontrada no banco de dados.`);
-        }
-
-        throw new Error(`Falha ao atualizar a redação. ID: ${redacaoId}. Nenhuma linha foi afetada.`);
+        
+        console.log('Dados da redação para debug:', debugData);
+        throw new Error(`Nenhuma redação foi atualizada. Verifique se o ID está correto: ${redacaoId}`);
       }
 
       console.log('Correção salva com sucesso:', updateResult[0]);
@@ -154,21 +157,21 @@ export const RedacaoEnviadaForm = () => {
       };
     },
     onSuccess: (result) => {
-      console.log('Correção salva com sucesso:', result);
+      console.log('Correção finalizada com sucesso:', result);
       toast({
         title: "Correção salva com sucesso!",
         description: `Redação corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
       });
       
-      // Invalidar queries para atualizar a interface
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas-admin'] });
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas'] });
       
-      // Limpar formulário
       resetForm();
     },
     onError: (error: Error) => {
-      console.error('Erro na mutação de correção:', error);
+      console.error('=== ERRO NA CORREÇÃO ===');
+      console.error('Mensagem:', error.message);
+      console.error('Stack:', error.stack);
       toast({
         title: "Erro ao salvar correção",
         description: error.message,
@@ -192,13 +195,14 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleEdit = (redacao: RedacaoEnviada) => {
-    console.log('Iniciando correção de redação ID:', redacao.id);
-    console.log('Dados da redação:', redacao);
+    console.log('=== INICIANDO CORREÇÃO DE REDAÇÃO ===');
+    console.log('Redação selecionada:', redacao);
     
-    if (!redacao.id) {
+    if (!redacao || !redacao.id || redacao.id.trim() === '') {
+      console.error('Redação inválida:', redacao);
       toast({
         title: "Erro",
-        description: "Redação sem ID válido. Não é possível corrigir.",
+        description: "Redação inválida. Não é possível corrigir.",
         variant: "destructive",
       });
       return;
@@ -218,13 +222,14 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleEditExisting = (redacao: RedacaoEnviada) => {
-    console.log('Editando correção existente ID:', redacao.id);
-    console.log('Dados da redação:', redacao);
+    console.log('=== EDITANDO CORREÇÃO EXISTENTE ===');
+    console.log('Redação para edição:', redacao);
     
-    if (!redacao.id) {
+    if (!redacao || !redacao.id || redacao.id.trim() === '') {
+      console.error('Redação inválida para edição:', redacao);
       toast({
         title: "Erro",
-        description: "Redação sem ID válido. Não é possível editar.",
+        description: "Redação inválida. Não é possível editar.",
         variant: "destructive",
       });
       return;
@@ -244,15 +249,12 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleView = (redacao: RedacaoEnviada) => {
-    console.log('Visualizando redação ID:', redacao.id);
+    console.log('Visualizando redação:', redacao);
     setViewRedacao(redacao);
     setIsViewDialogOpen(true);
   };
 
   const handleNotaChange = (competencia: string, valor: string) => {
-    console.log(`Alterando ${competencia} para:`, valor);
-    
-    // Validar e limitar valores entre 0 e 200
     let nota = '';
     if (valor !== '') {
       const valorNumerico = parseInt(valor);
@@ -263,7 +265,6 @@ export const RedacaoEnviadaForm = () => {
     
     const newFormData = { ...formData, [competencia]: nota };
     
-    // Calcular total automaticamente
     const total = [
       parseInt(newFormData.nota_c1) || 0,
       parseInt(newFormData.nota_c2) || 0,
@@ -283,6 +284,10 @@ export const RedacaoEnviadaForm = () => {
     
     const redacaoAtual = selectedRedacao || editingRedacao;
     
+    console.log('=== SUBMETENDO FORMULÁRIO ===');
+    console.log('Redação atual:', redacaoAtual);
+    console.log('Dados do formulário:', formData);
+    
     if (!redacaoAtual) {
       toast({
         title: "Erro",
@@ -292,7 +297,7 @@ export const RedacaoEnviadaForm = () => {
       return;
     }
 
-    if (!redacaoAtual.id) {
+    if (!redacaoAtual.id || redacaoAtual.id.trim() === '') {
       toast({
         title: "Erro",
         description: "ID da redação não encontrado. Não é possível salvar a correção.",
@@ -301,7 +306,6 @@ export const RedacaoEnviadaForm = () => {
       return;
     }
 
-    // Validar se pelo menos uma nota foi preenchida
     const todasNotasVazias = !formData.nota_c1 && !formData.nota_c2 && !formData.nota_c3 && !formData.nota_c4 && !formData.nota_c5;
     if (todasNotasVazias) {
       toast({
@@ -312,8 +316,6 @@ export const RedacaoEnviadaForm = () => {
       return;
     }
 
-    console.log('Submetendo correção para redação ID:', redacaoAtual.id);
-    console.log('Dados do formulário:', formData);
     corrigirMutation.mutate(formData);
   };
 
@@ -404,7 +406,6 @@ ${redacao.redacao_texto}`;
                         </div>
                       )}
                       
-                      {/* Debug: Mostrar ID da redação */}
                       <div className="text-xs text-gray-500 mt-1">
                         ID: {redacao.id}
                       </div>
@@ -519,7 +520,6 @@ ${redacao.redacao_texto}`;
                 </div>
               )}
               
-              {/* Botão de cópia também no dialog de visualização */}
               <Button 
                 onClick={() => copiarPromptCorrecao(viewRedacao)}
                 className="w-full bg-blue-600 hover:bg-blue-700"
@@ -552,7 +552,6 @@ ${redacao.redacao_texto}`;
               </Button>
             </div>
             
-            {/* Debug: Mostrar qual redação está sendo corrigida */}
             <div className="text-xs text-gray-500">
               Corrigindo redação ID: {selectedRedacao?.id || editingRedacao?.id}
             </div>
