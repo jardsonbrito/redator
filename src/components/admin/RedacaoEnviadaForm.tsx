@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Save, Calendar, Award, Copy } from "lucide-react";
+import { Eye, Save, Calendar, Award, Copy, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type RedacaoEnviada = {
@@ -29,6 +30,7 @@ type RedacaoEnviada = {
 export const RedacaoEnviadaForm = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoEnviada | null>(null);
   const [viewRedacao, setViewRedacao] = useState<RedacaoEnviada | null>(null);
+  const [editingRedacao, setEditingRedacao] = useState<RedacaoEnviada | null>(null);
   const [formData, setFormData] = useState({
     nota_c1: '',
     nota_c2: '',
@@ -77,7 +79,7 @@ export const RedacaoEnviadaForm = () => {
           corrigida: true,
           data_correcao: new Date().toISOString(),
         })
-        .eq('id', selectedRedacao?.id);
+        .eq('id', selectedRedacao?.id || editingRedacao?.id);
 
       if (error) {
         console.error('Erro ao salvar correção:', error);
@@ -92,6 +94,7 @@ export const RedacaoEnviadaForm = () => {
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas-admin'] });
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas'] });
       setSelectedRedacao(null);
+      setEditingRedacao(null);
       setFormData({
         nota_c1: '',
         nota_c2: '',
@@ -115,6 +118,22 @@ export const RedacaoEnviadaForm = () => {
   const handleEdit = (redacao: RedacaoEnviada) => {
     console.log('Clicou em corrigir redação:', redacao.id);
     setSelectedRedacao(redacao);
+    setEditingRedacao(null);
+    setFormData({
+      nota_c1: redacao.nota_c1?.toString() || '',
+      nota_c2: redacao.nota_c2?.toString() || '',
+      nota_c3: redacao.nota_c3?.toString() || '',
+      nota_c4: redacao.nota_c4?.toString() || '',
+      nota_c5: redacao.nota_c5?.toString() || '',
+      nota_total: redacao.nota_total?.toString() || '',
+      comentario_admin: redacao.comentario_admin || '',
+    });
+  };
+
+  const handleEditExisting = (redacao: RedacaoEnviada) => {
+    console.log('Editando correção existente:', redacao.id);
+    setEditingRedacao(redacao);
+    setSelectedRedacao(null);
     setFormData({
       nota_c1: redacao.nota_c1?.toString() || '',
       nota_c2: redacao.nota_c2?.toString() || '',
@@ -159,7 +178,7 @@ export const RedacaoEnviadaForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRedacao) {
+    if (!selectedRedacao && !editingRedacao) {
       console.log('Nenhuma redação selecionada');
       return;
     }
@@ -249,7 +268,7 @@ ${redacao.redacao_texto}`;
                         )}
                       </div>
 
-                      {redacao.corrigida && redacao.nota_total && (
+                      {redacao.corrigida && redacao.nota_total !== null && (
                         <div className="flex items-center gap-2">
                           <Award className="w-4 h-4 text-redator-accent" />
                           <span className="text-sm text-redator-accent">Nota Total: {redacao.nota_total}/1000</span>
@@ -275,6 +294,17 @@ ${redacao.redacao_texto}`;
                         <Copy className="w-4 h-4" />
                       </Button>
 
+                      {redacao.corrigida && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEditExisting(redacao)}
+                          className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+
                       <Button 
                         onClick={() => {
                           console.log('Botão corrigir clicado para redação:', redacao.id);
@@ -284,7 +314,7 @@ ${redacao.redacao_texto}`;
                         size="sm"
                         className={!redacao.corrigida ? "bg-redator-primary hover:bg-redator-primary/90" : ""}
                       >
-                        {redacao.corrigida ? "Editar" : "Corrigir"}
+                        {redacao.corrigida ? "Re-corrigir" : "Corrigir"}
                       </Button>
                     </div>
                   </div>
@@ -308,10 +338,55 @@ ${redacao.redacao_texto}`;
           {viewRedacao && (
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
+                <h4 className="font-medium text-redator-primary mb-2">Texto da Redação:</h4>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">
                   {viewRedacao.redacao_texto}
                 </p>
               </div>
+
+              {/* Exibir notas se corrigida */}
+              {viewRedacao.corrigida && (
+                <div className="space-y-4">
+                  <h4 className="font-medium text-redator-primary">Correção:</h4>
+                  
+                  <div className="grid grid-cols-5 gap-4">
+                    {[
+                      { label: 'C1', value: viewRedacao.nota_c1 },
+                      { label: 'C2', value: viewRedacao.nota_c2 },
+                      { label: 'C3', value: viewRedacao.nota_c3 },
+                      { label: 'C4', value: viewRedacao.nota_c4 },
+                      { label: 'C5', value: viewRedacao.nota_c5 },
+                    ].map((comp) => (
+                      <div key={comp.label} className="text-center">
+                        <div className="text-sm font-medium text-redator-primary mb-1">{comp.label}</div>
+                        <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
+                          {comp.value ?? '0'}/200
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="w-5 h-5 text-green-600" />
+                      <span className="font-medium text-green-800">Nota Total: {viewRedacao.nota_total ?? 0}/1000</span>
+                    </div>
+                  </div>
+
+                  {viewRedacao.comentario_admin && (
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <h5 className="font-medium text-blue-800 mb-2">Dica de Escrita:</h5>
+                      <p className="text-sm text-blue-700">{viewRedacao.comentario_admin}</p>
+                    </div>
+                  )}
+
+                  {viewRedacao.data_correcao && (
+                    <div className="text-sm text-gray-600">
+                      Corrigida em: {formatDate(viewRedacao.data_correcao)}
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Botão de cópia também no dialog de visualização */}
               <Button 
@@ -327,17 +402,18 @@ ${redacao.redacao_texto}`;
       </Dialog>
 
       {/* Formulário de correção */}
-      {selectedRedacao && (
+      {(selectedRedacao || editingRedacao) && (
         <Card className="border-redator-primary/30">
           <CardHeader>
             <div className="flex items-start justify-between gap-4">
               <CardTitle className="text-redator-primary">
-                Corrigindo: {selectedRedacao.frase_tematica}
+                {editingRedacao ? 'Editando Correção: ' : 'Corrigindo: '}
+                {selectedRedacao?.frase_tematica || editingRedacao?.frase_tematica}
               </CardTitle>
               
               {/* Botão de cópia no formulário de correção */}
               <Button 
-                onClick={() => copiarPromptCorrecao(selectedRedacao)}
+                onClick={() => copiarPromptCorrecao(selectedRedacao || editingRedacao!)}
                 variant="outline"
                 className="border-blue-300 text-blue-600 hover:bg-blue-50"
               >
@@ -352,7 +428,7 @@ ${redacao.redacao_texto}`;
               <h4 className="font-medium text-redator-primary mb-2">Texto da Redação:</h4>
               <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20 max-h-60 overflow-y-auto">
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {selectedRedacao.redacao_texto}
+                  {selectedRedacao?.redacao_texto || editingRedacao?.redacao_texto}
                 </p>
               </div>
             </div>
@@ -428,7 +504,7 @@ ${redacao.redacao_texto}`;
                   className="bg-redator-primary hover:bg-redator-primary/90 text-white"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  {corrigirMutation.isPending ? "Salvando..." : "Salvar Correção"}
+                  {corrigirMutation.isPending ? "Salvando..." : (editingRedacao ? "Salvar Alterações" : "Salvar Correção")}
                 </Button>
                 
                 <Button 
@@ -437,6 +513,7 @@ ${redacao.redacao_texto}`;
                   onClick={() => {
                     console.log('Cancelando correção');
                     setSelectedRedacao(null);
+                    setEditingRedacao(null);
                     setFormData({
                       nota_c1: '',
                       nota_c2: '',

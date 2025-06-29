@@ -76,7 +76,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Notas por competência */}
+        {/* Notas por competência - só exibir se corrigida */}
         {redacao.corrigida && (
           <div className="space-y-3">
             <div className="grid grid-cols-5 gap-2">
@@ -90,7 +90,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                 <div key={competencia.label} className="text-center">
                   <div className="text-xs text-redator-accent mb-1">{competencia.label}</div>
                   <Badge className={`w-full justify-center ${getNotaColor(competencia.value)}`}>
-                    {competencia.value ?? '—'}
+                    {competencia.value ?? '0'}
                   </Badge>
                 </div>
               ))}
@@ -101,7 +101,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
               <Award className="w-5 h-5 text-redator-accent" />
               <span className="text-sm text-redator-accent">Nota Total:</span>
               <Badge className={`px-3 py-1 ${getTotalNotaColor(redacao.nota_total)}`}>
-                {redacao.nota_total ?? '—'}/1000
+                {redacao.nota_total ?? 0}/1000
               </Badge>
             </div>
           </div>
@@ -136,6 +136,40 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                 </div>
               </div>
 
+              {/* Correção detalhada - só exibir se corrigida */}
+              {redacao.corrigida && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-redator-primary">Correção</h3>
+                  
+                  {/* Notas por competência em formato detalhado */}
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                    {[
+                      { label: 'Competência 1', key: 'C1', value: redacao.nota_c1 },
+                      { label: 'Competência 2', key: 'C2', value: redacao.nota_c2 },
+                      { label: 'Competência 3', key: 'C3', value: redacao.nota_c3 },
+                      { label: 'Competência 4', key: 'C4', value: redacao.nota_c4 },
+                      { label: 'Competência 5', key: 'C5', value: redacao.nota_c5 },
+                    ].map((comp) => (
+                      <div key={comp.key} className="text-center bg-blue-50 p-3 rounded-lg">
+                        <div className="text-xs text-blue-600 mb-1">{comp.key}</div>
+                        <div className="text-lg font-bold text-blue-800">{comp.value ?? 0}</div>
+                        <div className="text-xs text-blue-600">/200</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Nota total destacada */}
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Award className="w-6 h-6 text-green-600" />
+                      <span className="text-lg font-bold text-green-800">
+                        Nota Final: {redacao.nota_total ?? 0}/1000
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Comentário do admin */}
               {redacao.comentario_admin && (
                 <div>
@@ -152,10 +186,10 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
               )}
 
               {/* Detalhes da correção */}
-              {redacao.corrigida && (
+              {redacao.corrigida && redacao.data_correcao && (
                 <div className="border-t pt-4">
                   <div className="text-sm text-redator-accent">
-                    Corrigida em: {redacao.data_correcao ? formatDate(redacao.data_correcao) : 'Data não disponível'}
+                    Corrigida em: {formatDate(redacao.data_correcao)}
                   </div>
                 </div>
               )}
