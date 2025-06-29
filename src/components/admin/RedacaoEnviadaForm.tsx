@@ -72,7 +72,7 @@ export const RedacaoEnviadaForm = () => {
       }
 
       const redacaoId = redacaoAtual.id;
-      console.log('=== CORREÇÃO SIMPLIFICADA ===');
+      console.log('=== CORREÇÃO FINAL ===');
       console.log('ID da redação:', redacaoId);
       console.log('Dados enviados:', dados);
 
@@ -98,33 +98,33 @@ export const RedacaoEnviadaForm = () => {
 
       console.log('Dados para update:', updateData);
 
-      // Fazer update direto
-      const { data: result, error } = await supabase
+      // Fazer update sem .single() para evitar erro
+      const { data: result, error, count } = await supabase
         .from('redacoes_enviadas')
         .update(updateData)
         .eq('id', redacaoId)
-        .select('*')
-        .single();
+        .select('*');
+
+      console.log('Resultado do update:', { result, error, count });
 
       if (error) {
         console.error('Erro no update:', error);
         throw new Error(`Erro ao atualizar: ${error.message}`);
       }
 
-      if (!result) {
+      if (!result || result.length === 0) {
         // Verificar se o registro existe
         const { data: checkData } = await supabase
           .from('redacoes_enviadas')
           .select('id, frase_tematica')
-          .eq('id', redacaoId)
-          .single();
+          .eq('id', redacaoId);
         
         console.log('Verificação do registro:', checkData);
-        throw new Error(`Redação não encontrada ou não atualizada. ID: ${redacaoId}`);
+        throw new Error(`Nenhuma redação foi atualizada. ID consultado: ${redacaoId}`);
       }
 
-      console.log('Update realizado com sucesso:', result);
-      return { notaTotal, redacaoId, result };
+      console.log('Update realizado com sucesso:', result[0]);
+      return { notaTotal, redacaoId, result: result[0] };
     },
     onSuccess: (result) => {
       console.log('Correção salva com sucesso:', result);
