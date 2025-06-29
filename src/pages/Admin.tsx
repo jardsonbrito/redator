@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -9,10 +8,10 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Componentes Admin
-import RedacaoList from '@/components/admin/RedacaoList';
-import TemaList from '@/components/admin/TemaList';
-import VideoList from '@/components/admin/VideoList';
+// Componentes Admin - usando importações nomeadas
+import { RedacaoList } from '@/components/admin/RedacaoList';
+import { TemaList } from '@/components/admin/TemaList';
+import { VideoList } from '@/components/admin/VideoList';
 import AdminPasswordChange from '@/components/admin/AdminPasswordChange';
 
 const Admin = () => {
