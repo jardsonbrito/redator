@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Save, Calendar, Award } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type RedacaoEnviada = {
   id: string;
@@ -45,9 +44,6 @@ export const RedacaoEnviadaForm = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Valores oficiais do ENEM para cada competência
-  const notasDisponiveis = ['', '0', '40', '80', '120', '160', '200'];
-
   const { data: redacoes, isLoading } = useQuery({
     queryKey: ['redacoes-enviadas-admin'],
     queryFn: async () => {
@@ -68,6 +64,7 @@ export const RedacaoEnviadaForm = () => {
 
   const corrigirMutation = useMutation({
     mutationFn: async (dados: any) => {
+      console.log('Salvando correção com dados:', dados);
       const { error } = await supabase
         .from('redacoes_enviadas')
         .update({
@@ -83,7 +80,10 @@ export const RedacaoEnviadaForm = () => {
         })
         .eq('id', selectedRedacao?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao salvar correção:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -114,7 +114,7 @@ export const RedacaoEnviadaForm = () => {
   });
 
   const handleEdit = (redacao: RedacaoEnviada) => {
-    console.log('Editando redação:', redacao.id);
+    console.log('Clicou em corrigir redação:', redacao.id);
     setSelectedRedacao(redacao);
     setFormData({
       nota_c1: redacao.nota_c1?.toString() || '',
@@ -133,8 +133,14 @@ export const RedacaoEnviadaForm = () => {
     setIsViewDialogOpen(true);
   };
 
-  const handleCompetenciaChange = (competencia: string, valor: string) => {
-    const newFormData = { ...formData, [competencia]: valor };
+  const handleNotaChange = (competencia: string, valor: string) => {
+    console.log(`Alterando ${competencia} para:`, valor);
+    
+    // Limitar valores entre 0 e 200
+    const nota = Math.min(200, Math.max(0, parseInt(valor) || 0));
+    const valorFormatado = nota.toString();
+    
+    const newFormData = { ...formData, [competencia]: valorFormatado };
     
     // Calcular automaticamente a nota total
     const notas = [
@@ -154,7 +160,10 @@ export const RedacaoEnviadaForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRedacao) return;
+    if (!selectedRedacao) {
+      console.log('Nenhuma redação selecionada');
+      return;
+    }
 
     console.log('Salvando correção:', formData);
     corrigirMutation.mutate(formData);
@@ -229,7 +238,10 @@ export const RedacaoEnviadaForm = () => {
                       </Button>
 
                       <Button 
-                        onClick={() => handleEdit(redacao)}
+                        onClick={() => {
+                          console.log('Botão corrigir clicado para redação:', redacao.id);
+                          handleEdit(redacao);
+                        }}
                         variant={redacao.corrigida ? "outline" : "default"}
                         size="sm"
                         className={!redacao.corrigida ? "bg-redator-primary hover:bg-redator-primary/90" : ""}
@@ -270,7 +282,7 @@ export const RedacaoEnviadaForm = () => {
         <Card className="border-redator-primary/30">
           <CardHeader>
             <CardTitle className="text-redator-primary">
-              Corrigir: {selectedRedacao.frase_tematica}
+              Corrigindo: {selectedRedacao.frase_tematica}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -285,9 +297,9 @@ export const RedacaoEnviadaForm = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Tabela de competências */}
+              {/* Campos de notas por competência */}
               <div>
-                <h4 className="font-medium text-redator-primary mb-3">Notas por Competência:</h4>
+                <h4 className="font-medium text-redator-primary mb-3">Notas por Competência (0 a 200 pontos cada):</h4>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {[
                     { key: 'nota_c1', label: 'Competência 1' },
@@ -300,25 +312,19 @@ export const RedacaoEnviadaForm = () => {
                       <label className="block text-sm font-medium text-redator-primary mb-2">
                         {comp.label}
                       </label>
-                      <Select
+                      <Input
+                        type="number"
+                        min="0"
+                        max="200"
+                        step="40"
+                        placeholder="0-200"
                         value={formData[comp.key as keyof typeof formData]}
-                        onValueChange={(value) => handleCompetenciaChange(comp.key, value)}
-                      >
-                        <SelectTrigger className="w-full border-redator-accent/30 focus:border-redator-accent bg-white">
-                          <SelectValue placeholder="Selecione a nota" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border border-redator-accent/30 shadow-lg z-50">
-                          {notasDisponiveis.map((nota) => (
-                            <SelectItem 
-                              key={nota} 
-                              value={nota}
-                              className="hover:bg-redator-accent/10 focus:bg-redator-accent/10 cursor-pointer"
-                            >
-                              {nota === '' ? 'Selecione' : `${nota} pontos`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onChange={(e) => handleNotaChange(comp.key, e.target.value)}
+                        className="w-full border-redator-accent/30 focus:border-redator-accent bg-white"
+                      />
+                      <p className="text-xs text-redator-accent mt-1">
+                        Valores: 0, 40, 80, 120, 160, 200
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -332,7 +338,7 @@ export const RedacaoEnviadaForm = () => {
                 <div className="flex items-center gap-3">
                   <Input
                     type="text"
-                    value={formData.nota_total ? `${formData.nota_total}/1000` : '0/1000'}
+                    value={`${formData.nota_total || '0'}/1000`}
                     readOnly
                     className="bg-white border-redator-accent/30 font-semibold text-lg text-redator-primary"
                   />
@@ -367,7 +373,19 @@ export const RedacaoEnviadaForm = () => {
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => setSelectedRedacao(null)}
+                  onClick={() => {
+                    console.log('Cancelando correção');
+                    setSelectedRedacao(null);
+                    setFormData({
+                      nota_c1: '',
+                      nota_c2: '',
+                      nota_c3: '',
+                      nota_c4: '',
+                      nota_c5: '',
+                      nota_total: '',
+                      comentario_admin: '',
+                    });
+                  }}
                   className="border-redator-accent/50"
                 >
                   Cancelar
