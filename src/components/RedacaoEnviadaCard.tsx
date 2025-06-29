@@ -142,7 +142,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                   <h3 className="font-semibold text-redator-primary">Nota por competência</h3>
                   
                   {/* Notas por competência em formato detalhado */}
-                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     {[
                       { label: 'Competência 1', key: 'C1', value: redacao.nota_c1, description: 'Demonstrar domínio da modalidade escrita formal da língua portuguesa.' },
                       { label: 'Competência 2', key: 'C2', value: redacao.nota_c2, description: 'Compreender a proposta de redação e aplicar conceitos das várias áreas de conhecimento.' },
@@ -156,7 +156,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                           <div className="text-lg font-bold text-redator-primary">{comp.value ?? 0}</div>
                           <div className="text-xs text-redator-accent">/200</div>
                         </div>
-                        <div className="text-xs text-redator-accent text-center">
+                        <div className="text-xs text-redator-accent text-center leading-relaxed">
                           {comp.description}
                         </div>
                       </div>
@@ -186,7 +186,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                     Correção pedagógica detalhada – Plataforma App do Redator
                   </h3>
                   <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
-                    <div className="text-sm leading-relaxed text-redator-primary whitespace-pre-wrap">
+                    <div className="text-sm leading-relaxed text-redator-primary whitespace-pre-wrap break-words">
                       {redacao.comentario_admin}
                     </div>
                   </div>
@@ -195,12 +195,12 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
 
               {/* Mensagem para redações não corrigidas */}
               {!redacao.corrigida && (
-                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="w-5 h-5 text-yellow-600" />
-                    <span className="font-medium text-yellow-800">Aguardando Correção</span>
+                    <Calendar className="w-5 h-5 text-redator-accent" />
+                    <span className="font-medium text-redator-primary">Aguardando Correção</span>
                   </div>
-                  <p className="text-sm text-yellow-700">
+                  <p className="text-sm text-redator-accent">
                     Sua redação foi enviada em {formatDate(redacao.data_envio)} e está aguardando correção. 
                     Assim que for corrigida, você verá suas notas e o feedback do corretor aqui.
                   </p>
