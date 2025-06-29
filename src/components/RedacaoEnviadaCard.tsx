@@ -139,7 +139,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
               {/* Correção detalhada - só exibir se corrigida */}
               {redacao.corrigida && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-redator-primary">Sua Correção</h3>
+                  <h3 className="font-semibold text-redator-primary">Nota por competência</h3>
                   
                   {/* Notas por competência em formato detalhado */}
                   <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
@@ -150,13 +150,13 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                       { label: 'Competência 4', key: 'C4', value: redacao.nota_c4, description: 'Demonstrar conhecimento dos mecanismos linguísticos necessários para a construção da argumentação.' },
                       { label: 'Competência 5', key: 'C5', value: redacao.nota_c5, description: 'Elaborar proposta de intervenção para o problema abordado.' },
                     ].map((comp) => (
-                      <div key={comp.key} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                      <div key={comp.key} className="bg-redator-accent/5 p-3 rounded-lg border border-redator-accent/20">
                         <div className="text-center mb-2">
-                          <div className="text-xs text-blue-600 mb-1">{comp.key}</div>
-                          <div className="text-lg font-bold text-blue-800">{comp.value ?? 0}</div>
-                          <div className="text-xs text-blue-600">/200</div>
+                          <div className="text-xs text-redator-accent mb-1">{comp.key}</div>
+                          <div className="text-lg font-bold text-redator-primary">{comp.value ?? 0}</div>
+                          <div className="text-xs text-redator-accent">/200</div>
                         </div>
-                        <div className="text-xs text-blue-700 text-center">
+                        <div className="text-xs text-redator-accent text-center">
                           {comp.description}
                         </div>
                       </div>
@@ -164,14 +164,14 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                   </div>
 
                   {/* Nota total destacada */}
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200 text-center">
+                  <div className="bg-redator-secondary/10 p-4 rounded-lg border border-redator-secondary/20 text-center">
                     <div className="flex items-center justify-center gap-2 mb-2">
-                      <Award className="w-6 h-6 text-green-600" />
-                      <span className="text-lg font-bold text-green-800">
+                      <Award className="w-6 h-6 text-redator-primary" />
+                      <span className="text-lg font-bold text-redator-primary">
                         Nota Final: {redacao.nota_total ?? 0}/1000
                       </span>
                     </div>
-                    <div className="text-sm text-green-700">
+                    <div className="text-sm text-redator-accent">
                       {redacao.data_correcao && `Corrigida em: ${formatDate(redacao.data_correcao)}`}
                     </div>
                   </div>
@@ -183,12 +183,12 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                 <div>
                   <h3 className="font-semibold text-redator-primary mb-3 flex items-center gap-2">
                     <MessageCircle className="w-5 h-5" />
-                    Dica de Escrita do Corretor
+                    Correção pedagógica detalhada – Plataforma App do Redator
                   </h3>
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p className="text-sm leading-relaxed text-blue-900">
+                  <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
+                    <div className="text-sm leading-relaxed text-redator-primary whitespace-pre-wrap">
                       {redacao.comentario_admin}
-                    </p>
+                    </div>
                   </div>
                 </div>
               )}
