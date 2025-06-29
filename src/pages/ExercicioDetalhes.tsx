@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Home, ArrowLeft, ExternalLink, FileText, Send } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +16,8 @@ const ExercicioDetalhes = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [redacaoTexto, setRedacaoTexto] = useState("");
+  const [nomeCompleto, setNomeCompleto] = useState("");
+  const [email, setEmail] = useState("");
 
   const { data: exercicio, isLoading } = useQuery({
     queryKey: ['exercicio', id],
@@ -34,13 +37,21 @@ const ExercicioDetalhes = () => {
   });
 
   const enviarRedacaoMutation = useMutation({
-    mutationFn: async ({ texto, fraseOriginal, exercicioId }: { texto: string, fraseOriginal: string, exercicioId: string }) => {
+    mutationFn: async ({ texto, fraseOriginal, exercicioId, nome, emailAluno }: { 
+      texto: string, 
+      fraseOriginal: string, 
+      exercicioId: string,
+      nome: string,
+      emailAluno: string
+    }) => {
       const { error } = await supabase
         .from('redacoes_enviadas')
         .insert({
           redacao_texto: texto,
           frase_tematica: fraseOriginal,
           id_exercicio: exercicioId,
+          nome_aluno: nome,
+          email_aluno: emailAluno,
           data_envio: new Date().toISOString()
         });
       
@@ -65,6 +76,24 @@ const ExercicioDetalhes = () => {
   });
 
   const handleEnviarRedacao = () => {
+    if (!nomeCompleto.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Por favor, preencha seu nome completo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!email.trim()) {
+      toast({
+        title: "E-mail obrigatório",
+        description: "Por favor, preencha seu e-mail.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!redacaoTexto.trim()) {
       toast({
         title: "Redação vazia",
@@ -79,7 +108,9 @@ const ExercicioDetalhes = () => {
     enviarRedacaoMutation.mutate({
       texto: redacaoTexto,
       fraseOriginal: exercicio.frase_tematica || '',
-      exercicioId: exercicio.id
+      exercicioId: exercicio.id,
+      nome: nomeCompleto,
+      emailAluno: email
     });
   };
 
@@ -108,7 +139,7 @@ const ExercicioDetalhes = () => {
   }
 
   const criarCabecalhoEnem = (fraseTematica: string) => {
-    return `A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo da sua formação, redija texto dissertativo-argumentativo em norma padrão da língua portuguesa sobre o tema "${fraseTematica}", apresentando proposta de intervenção para o problema abordado, respeitando os direitos humanos.`;
+    return `A partir da leitura da frase temática abaixo e com base nos conhecimentos construídos ao longo de sua formação, redija um texto dissertativo-argumentativo em norma padrão da língua portuguesa sobre o tema "${fraseTematica}", apresentando proposta de intervenção para o problema abordado, respeitando os direitos humanos.`;
   };
 
   return (
@@ -218,6 +249,39 @@ const ExercicioDetalhes = () => {
 
             <Card className="border-redator-accent/20">
               <CardHeader>
+                <CardTitle className="text-redator-primary">Dados do Aluno</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-redator-primary mb-2">
+                      Nome Completo *
+                    </label>
+                    <Input
+                      placeholder="Digite seu nome completo"
+                      value={nomeCompleto}
+                      onChange={(e) => setNomeCompleto(e.target.value)}
+                      className="border-redator-accent/30 focus:border-redator-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-redator-primary mb-2">
+                      E-mail *
+                    </label>
+                    <Input
+                      type="email"
+                      placeholder="Digite seu e-mail"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="border-redator-accent/30 focus:border-redator-accent"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-redator-accent/20">
+              <CardHeader>
                 <CardTitle className="text-redator-primary">Escreva sua redação</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -235,7 +299,7 @@ const ExercicioDetalhes = () => {
                     className="bg-orange-600 hover:bg-orange-700"
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    {enviarRedacaoMutation.isPending ? 'Enviando...' : 'Salvar Redação'}
+                    {enviarRedacaoMutation.isPending ? 'Enviando...' : 'Enviar Redação'}
                   </Button>
                 </div>
               </CardContent>

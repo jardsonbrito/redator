@@ -17,6 +17,7 @@ import AulaList from '@/components/admin/AulaList';
 import ExercicioForm from '@/components/admin/ExercicioForm';
 import ExercicioList from '@/components/admin/ExercicioList';
 import { useToast } from '@/hooks/use-toast';
+import { RedacaoExercicioForm } from '@/components/admin/RedacaoExercicioForm';
 
 const Admin = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
@@ -121,7 +122,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="redacoes" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6 bg-white border border-redator-accent/20 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 bg-white border border-redator-accent/20 h-auto">
             <TabsTrigger value="redacoes" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
               <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="text-center">Redações Exemplares</span>
@@ -145,6 +146,10 @@ const Admin = () => {
             <TabsTrigger value="correcoes" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
               <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="text-center">Correções</span>
+            </TabsTrigger>
+            <TabsTrigger value="redacoes-exercicios" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center">Redações Exercícios</span>
             </TabsTrigger>
           </TabsList>
 
@@ -406,6 +411,23 @@ const Admin = () => {
               </CardHeader>
               <CardContent>
                 <RedacaoEnviadaForm />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="redacoes-exercicios">
+            <Card className="border-indigo-600/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-redator-primary">
+                  <FileText className="w-5 h-5" />
+                  Redações Enviadas via Exercícios
+                </CardTitle>
+                <p className="text-redator-accent">
+                  Corrija redações enviadas através dos exercícios com frase temática
+                </p>
+              </CardHeader>
+              <CardContent>
+                <RedacaoExercicioForm />
               </CardContent>
             </Card>
           </TabsContent>
