@@ -126,6 +126,54 @@ export type Database = {
           },
         ]
       }
+      redacoes_enviadas: {
+        Row: {
+          comentario_admin: string | null
+          corrigida: boolean | null
+          data_correcao: string | null
+          data_envio: string
+          frase_tematica: string
+          id: string
+          nota_c1: number | null
+          nota_c2: number | null
+          nota_c3: number | null
+          nota_c4: number | null
+          nota_c5: number | null
+          nota_total: number | null
+          redacao_texto: string
+        }
+        Insert: {
+          comentario_admin?: string | null
+          corrigida?: boolean | null
+          data_correcao?: string | null
+          data_envio?: string
+          frase_tematica: string
+          id?: string
+          nota_c1?: number | null
+          nota_c2?: number | null
+          nota_c3?: number | null
+          nota_c4?: number | null
+          nota_c5?: number | null
+          nota_total?: number | null
+          redacao_texto: string
+        }
+        Update: {
+          comentario_admin?: string | null
+          corrigida?: boolean | null
+          data_correcao?: string | null
+          data_envio?: string
+          frase_tematica?: string
+          id?: string
+          nota_c1?: number | null
+          nota_c2?: number | null
+          nota_c3?: number | null
+          nota_c4?: number | null
+          nota_c5?: number | null
+          nota_total?: number | null
+          redacao_texto?: string
+        }
+        Relationships: []
+      }
       temas: {
         Row: {
           eixo_tematico: string

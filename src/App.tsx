@@ -11,6 +11,7 @@ import RedacaoDetalhes from "./pages/RedacaoDetalhes";
 import Temas from "./pages/Temas";
 import TemaDetalhes from "./pages/TemaDetalhes";
 import Videoteca from "./pages/Videoteca";
+import EnvieRedacao from "./pages/EnvieRedacao";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/temas" element={<Temas />} />
             <Route path="/temas/:id" element={<TemaDetalhes />} />
             <Route path="/videoteca" element={<Videoteca />} />
+            <Route path="/envie-redacao" element={<EnvieRedacao />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<Admin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

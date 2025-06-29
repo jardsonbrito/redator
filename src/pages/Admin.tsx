@@ -5,10 +5,11 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, FileText, BookOpen, Video, Shield } from 'lucide-react';
+import { LogOut, FileText, BookOpen, Video, Shield, CheckCircle } from 'lucide-react';
 import { TemaForm } from '@/components/admin/TemaForm';
 import { RedacaoForm } from '@/components/admin/RedacaoForm';
 import { VideoForm } from '@/components/admin/VideoForm';
+import { RedacaoEnviadaForm } from '@/components/admin/RedacaoEnviadaForm';
 import { useToast } from '@/hooks/use-toast';
 
 const Admin = () => {
@@ -86,7 +87,7 @@ const Admin = () => {
                 Painel Administrativo - App do Laboratório do Redator
               </h1>
               <p className="text-redator-accent mt-1">
-                Gerencie conteúdos: Redações Exemplares, Temas e Videoteca
+                Gerencie conteúdos: Redações Exemplares, Temas, Videoteca e Correções
               </p>
               <p className="text-sm text-redator-secondary font-medium mt-1">
                 ✅ Logado como administrador: {user.email}
@@ -114,7 +115,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="redacoes" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white border border-redator-accent/20">
+          <TabsList className="grid w-full grid-cols-4 bg-white border border-redator-accent/20">
             <TabsTrigger value="redacoes" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
               <FileText className="w-4 h-4" />
               Redações Exemplares
@@ -126,6 +127,10 @@ const Admin = () => {
             <TabsTrigger value="videoteca" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
               <Video className="w-4 h-4" />
               Videoteca
+            </TabsTrigger>
+            <TabsTrigger value="correcoes" className="flex items-center gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+              <CheckCircle className="w-4 h-4" />
+              Correções
             </TabsTrigger>
           </TabsList>
 
@@ -176,6 +181,23 @@ const Admin = () => {
               </CardHeader>
               <CardContent>
                 <VideoForm />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="correcoes">
+            <Card className="border-purple-600/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-redator-primary">
+                  <CheckCircle className="w-5 h-5" />
+                  Corrigir Redações Enviadas
+                </CardTitle>
+                <p className="text-redator-accent">
+                  Corrija as redações enviadas pelos usuários atribuindo notas por competência e comentários pedagógicos
+                </p>
+              </CardHeader>
+              <CardContent>
+                <RedacaoEnviadaForm />
               </CardContent>
             </Card>
           </TabsContent>
