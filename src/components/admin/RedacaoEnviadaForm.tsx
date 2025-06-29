@@ -129,25 +129,59 @@ export const RedacaoEnviadaForm = () => {
       console.log('Dados para update:', updateData);
       console.log('ID para o where:', redacaoId);
 
+      // Vamos testar primeiro uma query simples para ter certeza que conseguimos acessar o registro
+      console.log('=== TESTE DE ACESSO DIRETO ===');
+      const { data: testeAcesso, error: erroAcesso } = await supabase
+        .from('redacoes_enviadas')
+        .select('*')
+        .eq('id', redacaoId);
+      
+      console.log('Teste de acesso - Resultado:', testeAcesso);
+      console.log('Teste de acesso - Erro:', erroAcesso);
+
+      // Agora vamos tentar o update mais simples possível primeiro
+      console.log('=== TENTATIVA DE UPDATE SIMPLES ===');
+      const { data: updateSimples, error: erroUpdateSimples, count: countSimples } = await supabase
+        .from('redacoes_enviadas')
+        .update({ corrigida: true })
+        .eq('id', redacaoId)
+        .select('*');
+
+      console.log('Update simples - Resultado:', updateSimples);
+      console.log('Update simples - Erro:', erroUpdateSimples);
+      console.log('Update simples - Count:', countSimples);
+
+      if (erroUpdateSimples) {
+        console.error('Erro no update simples:', erroUpdateSimples);
+        throw new Error(`Erro no update simples: ${erroUpdateSimples.message}`);
+      }
+
+      if (!updateSimples || updateSimples.length === 0) {
+        console.error('CRÍTICO: Nem mesmo o update simples funcionou');
+        throw new Error(`Update simples falhou. ID: ${redacaoId}`);
+      }
+
+      // Se o update simples funcionou, vamos tentar o update completo
+      console.log('=== UPDATE COMPLETO ===');
       const { data: result, error: updateError, count } = await supabase
         .from('redacoes_enviadas')
         .update(updateData)
         .eq('id', redacaoId)
         .select('*');
 
-      console.log('=== RESULTADO DO UPDATE ===');
+      console.log('=== RESULTADO DO UPDATE COMPLETO ===');
       console.log('Result:', result);
       console.log('Error:', updateError);
       console.log('Count:', count);
 
       if (updateError) {
-        console.error('Erro no update:', updateError);
+        console.error('Erro no update completo:', updateError);
         throw new Error(`Erro ao atualizar: ${updateError.message}`);
       }
 
       if (!result || result.length === 0) {
-        console.error('CRÍTICO: Update não afetou nenhum registro');
-        throw new Error(`Update não afetou nenhum registro. ID: ${redacaoId}`);
+        console.error('CRÍTICO: Update completo não afetou nenhum registro');
+        throw new Error(`Update completo não afetou nenhum registro. ID: ${redacaoId}`);
       }
 
       console.log('✅ Update realizado com sucesso:', result[0]);
