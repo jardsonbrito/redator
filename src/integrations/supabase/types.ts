@@ -95,6 +95,45 @@ export type Database = {
           },
         ]
       }
+      exercicios: {
+        Row: {
+          ativo: boolean | null
+          atualizado_em: string
+          criado_em: string
+          embed_formulario: boolean | null
+          frase_tematica: string | null
+          id: string
+          imagem_thumbnail: string | null
+          tipo: string
+          titulo: string
+          url_formulario: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          atualizado_em?: string
+          criado_em?: string
+          embed_formulario?: boolean | null
+          frase_tematica?: string | null
+          id?: string
+          imagem_thumbnail?: string | null
+          tipo: string
+          titulo: string
+          url_formulario?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          atualizado_em?: string
+          criado_em?: string
+          embed_formulario?: boolean | null
+          frase_tematica?: string | null
+          id?: string
+          imagem_thumbnail?: string | null
+          tipo?: string
+          titulo?: string
+          url_formulario?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           email: string
@@ -223,6 +262,7 @@ export type Database = {
           data_envio: string
           frase_tematica: string
           id: string
+          id_exercicio: string | null
           nota_c1: number | null
           nota_c2: number | null
           nota_c3: number | null
@@ -238,6 +278,7 @@ export type Database = {
           data_envio?: string
           frase_tematica: string
           id?: string
+          id_exercicio?: string | null
           nota_c1?: number | null
           nota_c2?: number | null
           nota_c3?: number | null
@@ -253,6 +294,7 @@ export type Database = {
           data_envio?: string
           frase_tematica?: string
           id?: string
+          id_exercicio?: string | null
           nota_c1?: number | null
           nota_c2?: number | null
           nota_c3?: number | null
@@ -261,7 +303,15 @@ export type Database = {
           nota_total?: number | null
           redacao_texto?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_redacoes_enviadas_exercicio"
+            columns: ["id_exercicio"]
+            isOneToOne: false
+            referencedRelation: "exercicios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       temas: {
         Row: {
