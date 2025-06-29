@@ -104,20 +104,20 @@ const Index = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm text-redator-accent">
               <div>
-                <div className="font-medium text-redator-primary mb-2">1. Explore</div>
-                <p>Analise criticamente redações exemplares com alto potencial de nota 1000.</p>
+                <div className="font-medium text-redator-accent mb-2">1. Explore os temas</div>
+                <p>Acesse propostas de redação atuais, organizadas por eixo temático, e reflita criticamente sobre os problemas sociais.</p>
               </div>
               <div>
-                <div className="font-medium text-redator-accent mb-2">2. Aprenda</div>
-                <p>Acesse propostas de redação organizadas por eixo temático e treine diferentes tipos de abordagem.</p>
+                <div className="font-medium text-redator-primary mb-2">2. Aprenda com redações exemplares</div>
+                <p>Estude textos com alto potencial de nota 1000 e compreenda estratégias eficazes de escrita argumentativa.</p>
               </div>
               <div>
-                <div className="font-medium text-redator-secondary mb-2">3. Pratique</div>
-                <p>Assista a vídeos e aprofunde seu repertório sociocultural para enriquecer seus argumentos.</p>
+                <div className="font-medium text-redator-secondary mb-2">3. Aprofunde seu repertório</div>
+                <p>Assista aos vídeos da Videoteca e amplie seus conhecimentos socioculturais para enriquecer seus argumentos.</p>
               </div>
               <div>
-                <div className="font-medium text-purple-600 mb-2">4. Envie</div>
-                <p>Escreva sua redação e receba correção detalhada com notas por competência.</p>
+                <div className="font-medium text-purple-600 mb-2">4. Pratique e envie sua redação</div>
+                <p>Escreva sua proposta e receba uma correção pedagógica detalhada com nota por competência.</p>
               </div>
             </div>
           </div>
