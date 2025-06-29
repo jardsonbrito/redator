@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,41 +67,16 @@ export const RedacaoEnviadaForm = () => {
     mutationFn: async (dados: any) => {
       const redacaoAtual = selectedRedacao || editingRedacao;
       
-      if (!redacaoAtual) {
-        throw new Error('Nenhuma redação selecionada para correção.');
+      if (!redacaoAtual?.id) {
+        throw new Error('ID da redação não encontrado');
       }
 
-      if (!redacaoAtual.id || redacaoAtual.id.trim() === '') {
-        throw new Error('ID da redação está vazio ou inválido.');
-      }
-
-      const redacaoId = redacaoAtual.id.trim();
-      console.log('=== INICIANDO CORREÇÃO ===');
+      const redacaoId = redacaoAtual.id;
+      console.log('=== CORREÇÃO SIMPLIFICADA ===');
       console.log('ID da redação:', redacaoId);
-      console.log('Redação completa:', redacaoAtual);
-      console.log('Dados do formulário:', dados);
+      console.log('Dados enviados:', dados);
 
-      // Primeiro, verificar se a redação realmente existe
-      console.log('Verificando existência da redação...');
-      const { data: redacaoExistente, error: checkError } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, frase_tematica, corrigida')
-        .eq('id', redacaoId)
-        .single();
-
-      if (checkError) {
-        console.error('Erro ao verificar redação:', checkError);
-        throw new Error(`Erro ao verificar redação: ${checkError.message}`);
-      }
-
-      if (!redacaoExistente) {
-        console.error('Redação não encontrada com ID:', redacaoId);
-        throw new Error(`Redação não encontrada. ID: ${redacaoId}`);
-      }
-
-      console.log('Redação encontrada:', redacaoExistente);
-
-      // Validar e converter notas
+      // Converter e validar notas
       const notaC1 = Math.min(200, Math.max(0, parseInt(dados.nota_c1) || 0));
       const notaC2 = Math.min(200, Math.max(0, parseInt(dados.nota_c2) || 0));
       const notaC3 = Math.min(200, Math.max(0, parseInt(dados.nota_c3) || 0));
@@ -122,42 +96,38 @@ export const RedacaoEnviadaForm = () => {
         data_correcao: new Date().toISOString(),
       };
 
-      console.log('Dados para atualização:', updateData);
+      console.log('Dados para update:', updateData);
 
-      // Executar update
-      const { data: updateResult, error: updateError } = await supabase
+      // Fazer update direto
+      const { data: result, error } = await supabase
         .from('redacoes_enviadas')
         .update(updateData)
         .eq('id', redacaoId)
-        .select('*');
+        .select('*')
+        .single();
 
-      if (updateError) {
-        console.error('Erro na atualização:', updateError);
-        throw new Error(`Falha ao atualizar: ${updateError.message}`);
+      if (error) {
+        console.error('Erro no update:', error);
+        throw new Error(`Erro ao atualizar: ${error.message}`);
       }
 
-      if (!updateResult || updateResult.length === 0) {
-        console.error('Nenhuma linha foi atualizada');
-        console.log('Tentando buscar novamente a redação...');
-        
-        const { data: debugData } = await supabase
+      if (!result) {
+        // Verificar se o registro existe
+        const { data: checkData } = await supabase
           .from('redacoes_enviadas')
-          .select('*')
-          .eq('id', redacaoId);
+          .select('id, frase_tematica')
+          .eq('id', redacaoId)
+          .single();
         
-        console.log('Dados da redação para debug:', debugData);
-        throw new Error(`Nenhuma redação foi atualizada. Verifique se o ID está correto: ${redacaoId}`);
+        console.log('Verificação do registro:', checkData);
+        throw new Error(`Redação não encontrada ou não atualizada. ID: ${redacaoId}`);
       }
 
-      console.log('Correção salva com sucesso:', updateResult[0]);
-      return { 
-        notaTotal, 
-        redacaoId, 
-        updateData: updateResult[0] 
-      };
+      console.log('Update realizado com sucesso:', result);
+      return { notaTotal, redacaoId, result };
     },
     onSuccess: (result) => {
-      console.log('Correção finalizada com sucesso:', result);
+      console.log('Correção salva com sucesso:', result);
       toast({
         title: "Correção salva com sucesso!",
         description: `Redação corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
@@ -171,7 +141,6 @@ export const RedacaoEnviadaForm = () => {
     onError: (error: Error) => {
       console.error('=== ERRO NA CORREÇÃO ===');
       console.error('Mensagem:', error.message);
-      console.error('Stack:', error.stack);
       toast({
         title: "Erro ao salvar correção",
         description: error.message,
@@ -198,8 +167,7 @@ export const RedacaoEnviadaForm = () => {
     console.log('=== INICIANDO CORREÇÃO DE REDAÇÃO ===');
     console.log('Redação selecionada:', redacao);
     
-    if (!redacao || !redacao.id || redacao.id.trim() === '') {
-      console.error('Redação inválida:', redacao);
+    if (!redacao?.id) {
       toast({
         title: "Erro",
         description: "Redação inválida. Não é possível corrigir.",
@@ -225,8 +193,7 @@ export const RedacaoEnviadaForm = () => {
     console.log('=== EDITANDO CORREÇÃO EXISTENTE ===');
     console.log('Redação para edição:', redacao);
     
-    if (!redacao || !redacao.id || redacao.id.trim() === '') {
-      console.error('Redação inválida para edição:', redacao);
+    if (!redacao?.id) {
       toast({
         title: "Erro",
         description: "Redação inválida. Não é possível editar.",
@@ -279,46 +246,6 @@ export const RedacaoEnviadaForm = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const redacaoAtual = selectedRedacao || editingRedacao;
-    
-    console.log('=== SUBMETENDO FORMULÁRIO ===');
-    console.log('Redação atual:', redacaoAtual);
-    console.log('Dados do formulário:', formData);
-    
-    if (!redacaoAtual) {
-      toast({
-        title: "Erro",
-        description: "Nenhuma redação selecionada.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!redacaoAtual.id || redacaoAtual.id.trim() === '') {
-      toast({
-        title: "Erro",
-        description: "ID da redação não encontrado. Não é possível salvar a correção.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const todasNotasVazias = !formData.nota_c1 && !formData.nota_c2 && !formData.nota_c3 && !formData.nota_c4 && !formData.nota_c5;
-    if (todasNotasVazias) {
-      toast({
-        title: "Erro de validação",
-        description: "É necessário preencher pelo menos uma competência.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    corrigirMutation.mutate(formData);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -356,6 +283,37 @@ ${redacao.redacao_texto}`;
         description: "O prompt de correção foi copiado para a área de transferência.",
       });
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const redacaoAtual = selectedRedacao || editingRedacao;
+    
+    console.log('=== SUBMETENDO FORMULÁRIO ===');
+    console.log('Redação atual:', redacaoAtual);
+    console.log('Dados do formulário:', formData);
+    
+    if (!redacaoAtual?.id) {
+      toast({
+        title: "Erro",
+        description: "Nenhuma redação selecionada ou ID inválido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const todasNotasVazias = !formData.nota_c1 && !formData.nota_c2 && !formData.nota_c3 && !formData.nota_c4 && !formData.nota_c5;
+    if (todasNotasVazias) {
+      toast({
+        title: "Erro de validação",
+        description: "É necessário preencher pelo menos uma competência.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    corrigirMutation.mutate(formData);
   };
 
   if (isLoading) {
