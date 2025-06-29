@@ -47,18 +47,18 @@ export const RedacaoEnviadaForm = () => {
   const { data: redacoes, isLoading } = useQuery({
     queryKey: ['redacoes-enviadas-admin'],
     queryFn: async () => {
-      console.log('Buscando redações para admin...');
+      console.log('🔍 Buscando redações para admin...');
       const { data, error } = await supabase
         .from('redacoes_enviadas')
         .select('*')
         .order('data_envio', { ascending: false });
       
       if (error) {
-        console.error('Erro ao buscar redações:', error);
+        console.error('❌ Erro ao buscar redações:', error);
         throw error;
       }
       
-      console.log('Redações encontradas:', data);
+      console.log(`✅ ${data?.length || 0} redações encontradas`);
       return data || [];
     },
   });
@@ -67,7 +67,10 @@ export const RedacaoEnviadaForm = () => {
     mutationFn: async (dados: any) => {
       const redacaoAtual = selectedRedacao || editingRedacao;
       
-      console.log('Iniciando correção da redação:', redacaoAtual?.id);
+      console.log('🚀 Iniciando correção da redação:', {
+        id: redacaoAtual?.id,
+        formData: dados
+      });
       
       if (!redacaoAtual?.id) {
         throw new Error('ID da redação não encontrado');
@@ -75,49 +78,84 @@ export const RedacaoEnviadaForm = () => {
 
       const redacaoId = redacaoAtual.id;
 
-      // Converter e validar notas
-      const notaC1 = Math.min(200, Math.max(0, parseInt(dados.nota_c1) || 0));
-      const notaC2 = Math.min(200, Math.max(0, parseInt(dados.nota_c2) || 0));
-      const notaC3 = Math.min(200, Math.max(0, parseInt(dados.nota_c3) || 0));
-      const notaC4 = Math.min(200, Math.max(0, parseInt(dados.nota_c4) || 0));
-      const notaC5 = Math.min(200, Math.max(0, parseInt(dados.nota_c5) || 0));
-      const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
+      // Converter e validar notas com mais rigor
+      const notas = {
+        nota_c1: dados.nota_c1 ? Math.min(200, Math.max(0, parseInt(dados.nota_c1))) : 0,
+        nota_c2: dados.nota_c2 ? Math.min(200, Math.max(0, parseInt(dados.nota_c2))) : 0,
+        nota_c3: dados.nota_c3 ? Math.min(200, Math.max(0, parseInt(dados.nota_c3))) : 0,
+        nota_c4: dados.nota_c4 ? Math.min(200, Math.max(0, parseInt(dados.nota_c4))) : 0,
+        nota_c5: dados.nota_c5 ? Math.min(200, Math.max(0, parseInt(dados.nota_c5))) : 0,
+      };
+
+      const notaTotal = notas.nota_c1 + notas.nota_c2 + notas.nota_c3 + notas.nota_c4 + notas.nota_c5;
       
       const updateData = {
-        nota_c1: notaC1,
-        nota_c2: notaC2,
-        nota_c3: notaC3,
-        nota_c4: notaC4,
-        nota_c5: notaC5,
+        ...notas,
         nota_total: notaTotal,
         comentario_admin: dados.comentario_admin?.trim() || null,
         corrigida: true,
         data_correcao: new Date().toISOString(),
       };
 
-      console.log('Executando update com dados:', updateData);
+      console.log('📝 Dados para update:', updateData);
+      console.log('🎯 ID da redação:', redacaoId);
 
-      const { data: result, error: updateError } = await supabase
+      // Primeiro, vamos verificar se conseguimos fazer SELECT na redação
+      const { data: verificacao, error: selectError } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, frase_tematica')
+        .eq('id', redacaoId)
+        .single();
+
+      if (selectError) {
+        console.error('❌ Erro no SELECT de verificação:', selectError);
+        throw new Error(`Erro ao verificar redação: ${selectError.message}`);
+      }
+
+      console.log('✅ Redação encontrada para update:', verificacao);
+
+      // Agora fazer o UPDATE
+      const { data: result, error: updateError, count } = await supabase
         .from('redacoes_enviadas')
         .update(updateData)
         .eq('id', redacaoId)
         .select('*');
 
+      console.log('📊 Resultado do UPDATE:', {
+        data: result,
+        error: updateError,
+        count: count,
+        affectedRows: result?.length || 0
+      });
+
       if (updateError) {
-        console.error('Erro no update:', updateError);
+        console.error('❌ Erro no UPDATE:', updateError);
         throw new Error(`Erro ao atualizar: ${updateError.message}`);
       }
 
       if (!result || result.length === 0) {
-        console.error('Update não afetou nenhum registro');
-        throw new Error(`Update não afetou nenhum registro. ID: ${redacaoId}`);
+        console.error('❌ UPDATE não afetou nenhum registro');
+        
+        // Verificar se ainda conseguimos acessar a redação após o UPDATE
+        const { data: posUpdate, error: posUpdateError } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('id', redacaoId)
+          .single();
+
+        console.log('🔍 Estado da redação pós-UPDATE:', {
+          data: posUpdate,
+          error: posUpdateError
+        });
+
+        throw new Error(`UPDATE não afetou registros. ID: ${redacaoId}. Verifique permissões RLS.`);
       }
 
-      console.log('✅ Correção salva com sucesso:', result[0]);
+      console.log('✅ Correção salva com sucesso!', result[0]);
       return { notaTotal, redacaoId, result: result[0] };
     },
     onSuccess: (result) => {
-      console.log('✅ Correção salva com sucesso:', result);
+      console.log('🎉 Correção salva com sucesso:', result);
       toast({
         title: "Correção salva com sucesso!",
         description: `Redação corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
@@ -129,7 +167,7 @@ export const RedacaoEnviadaForm = () => {
       resetForm();
     },
     onError: (error: Error) => {
-      console.error('Erro na correção:', error);
+      console.error('💥 Erro na correção:', error);
       toast({
         title: "Erro ao salvar correção",
         description: error.message,
@@ -153,7 +191,7 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleEdit = (redacao: RedacaoEnviada) => {
-    console.log('Iniciando correção de redação:', redacao.id);
+    console.log('✏️ Iniciando correção de redação:', redacao.id);
     
     if (!redacao?.id) {
       toast({
@@ -178,7 +216,7 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleEditExisting = (redacao: RedacaoEnviada) => {
-    console.log('Editando correção existente:', redacao.id);
+    console.log('📝 Editando correção existente:', redacao.id);
     
     if (!redacao?.id) {
       toast({
@@ -203,12 +241,15 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleView = (redacao: RedacaoEnviada) => {
-    console.log('Visualizando redação:', redacao);
+    console.log('👁️ Visualizando redação:', redacao);
     setViewRedacao(redacao);
     setIsViewDialogOpen(true);
   };
 
   const handleNotaChange = (competencia: string, valor: string) => {
+    console.log(`📊 Alterando ${competencia}:`, valor);
+    
+    // Permitir string vazia ou números válidos
     let nota = '';
     if (valor !== '') {
       const valorNumerico = parseInt(valor);
@@ -219,18 +260,24 @@ export const RedacaoEnviadaForm = () => {
     
     const newFormData = { ...formData, [competencia]: nota };
     
+    // Calcular total apenas com valores válidos
     const total = [
-      parseInt(newFormData.nota_c1) || 0,
-      parseInt(newFormData.nota_c2) || 0,
-      parseInt(newFormData.nota_c3) || 0,
-      parseInt(newFormData.nota_c4) || 0,
-      parseInt(newFormData.nota_c5) || 0,
-    ].reduce((sum, n) => sum + n, 0);
+      newFormData.nota_c1,
+      newFormData.nota_c2,
+      newFormData.nota_c3,
+      newFormData.nota_c4,
+      newFormData.nota_c5,
+    ].reduce((sum, n) => {
+      const num = parseInt(n) || 0;
+      return sum + num;
+    }, 0);
     
     setFormData({
       ...newFormData,
       nota_total: total.toString()
     });
+
+    console.log('📈 Novas notas:', newFormData, 'Total:', total);
   };
 
   const formatDate = (dateString: string) => {
@@ -277,7 +324,10 @@ ${redacao.redacao_texto}`;
     
     const redacaoAtual = selectedRedacao || editingRedacao;
     
-    console.log('Submetendo formulário para redação:', redacaoAtual?.id);
+    console.log('🚀 Submetendo formulário:', {
+      redacaoId: redacaoAtual?.id,
+      formData: formData
+    });
     
     if (!redacaoAtual?.id) {
       toast({
@@ -288,8 +338,9 @@ ${redacao.redacao_texto}`;
       return;
     }
 
-    const todasNotasVazias = !formData.nota_c1 && !formData.nota_c2 && !formData.nota_c3 && !formData.nota_c4 && !formData.nota_c5;
-    if (todasNotasVazias) {
+    // Verificar se pelo menos uma nota foi preenchida
+    const temNota = formData.nota_c1 || formData.nota_c2 || formData.nota_c3 || formData.nota_c4 || formData.nota_c5;
+    if (!temNota) {
       toast({
         title: "Erro de validação",
         description: "É necessário preencher pelo menos uma competência.",
@@ -298,6 +349,7 @@ ${redacao.redacao_texto}`;
       return;
     }
 
+    console.log('✅ Validação OK, enviando mutação...');
     corrigirMutation.mutate(formData);
   };
 
