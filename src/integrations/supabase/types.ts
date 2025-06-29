@@ -9,6 +9,92 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      aula_modules: {
+        Row: {
+          ativo: boolean
+          competencia_numero: number | null
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          ordem: number
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          competencia_numero?: number | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          ordem: number
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          competencia_numero?: number | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      aulas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          google_meet_url: string | null
+          id: string
+          module_id: string
+          ordem: number
+          thumbnail_url: string | null
+          titulo: string
+          updated_at: string
+          youtube_url: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          google_meet_url?: string | null
+          id?: string
+          module_id: string
+          ordem?: number
+          thumbnail_url?: string | null
+          titulo: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          google_meet_url?: string | null
+          id?: string
+          module_id?: string
+          ordem?: number
+          thumbnail_url?: string | null
+          titulo?: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aulas_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "aula_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           email: string

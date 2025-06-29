@@ -1,5 +1,6 @@
+
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, Settings, Send } from "lucide-react";
+import { BookOpen, FileText, Video, Settings, Send, GraduationCap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -30,6 +31,14 @@ const Index = () => {
       path: "/videoteca",
       color: "bg-redator-secondary",
       hoverColor: "hover:bg-redator-secondary"
+    },
+    {
+      title: "Aulas",
+      description: "Assista às aulas da plataforma e domine cada competência",
+      icon: GraduationCap,
+      path: "/aulas",
+      color: "bg-green-600",
+      hoverColor: "hover:bg-green-600"
     },
     {
       title: "Envie sua Redação",
@@ -74,7 +83,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
           {menuItems.map((item, index) => (
             <Link key={index} to={item.path} className="group">
               <Card className="h-full transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-secondary/50">
@@ -102,7 +111,7 @@ const Index = () => {
             <h2 className="text-2xl font-semibold text-redator-primary mb-4">
               Como usar o App do Redator
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm text-redator-accent">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 text-sm text-redator-accent">
               <div>
                 <div className="font-medium text-redator-accent mb-2">1. Explore os temas</div>
                 <p>Acesse propostas de redação atuais, organizadas por eixo temático, e reflita criticamente sobre os problemas sociais.</p>
@@ -116,7 +125,11 @@ const Index = () => {
                 <p>Assista aos vídeos da Videoteca e amplie seus conhecimentos socioculturais para enriquecer seus argumentos.</p>
               </div>
               <div>
-                <div className="font-medium text-purple-600 mb-2">4. Pratique e envie sua redação</div>
+                <div className="font-medium text-green-600 mb-2">4. Assista às aulas</div>
+                <p>Domine cada competência através das aulas organizadas e participe das aulas ao vivo com o professor.</p>
+              </div>
+              <div>
+                <div className="font-medium text-purple-600 mb-2">5. Pratique e envie sua redação</div>
                 <p>Escreva sua proposta e receba uma correção pedagógica detalhada com nota por competência.</p>
               </div>
             </div>

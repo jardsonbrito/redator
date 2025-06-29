@@ -1,11 +1,10 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, FileText, BookOpen, Video, Shield, CheckCircle, List, Plus } from 'lucide-react';
+import { LogOut, FileText, BookOpen, Video, Shield, CheckCircle, List, Plus, GraduationCap } from 'lucide-react';
 import { TemaForm } from '@/components/admin/TemaForm';
 import { RedacaoForm } from '@/components/admin/RedacaoForm';
 import { VideoForm } from '@/components/admin/VideoForm';
@@ -13,6 +12,8 @@ import { RedacaoEnviadaForm } from '@/components/admin/RedacaoEnviadaForm';
 import { RedacaoList } from '@/components/admin/RedacaoList';
 import { TemaList } from '@/components/admin/TemaList';
 import { VideoList } from '@/components/admin/VideoList';
+import AulaForm from '@/components/admin/AulaForm';
+import AulaList from '@/components/admin/AulaList';
 import { useToast } from '@/hooks/use-toast';
 
 const Admin = () => {
@@ -90,7 +91,7 @@ const Admin = () => {
                 Painel Administrativo - App do Laboratório do Redator
               </h1>
               <p className="text-sm sm:text-base text-redator-accent mt-1">
-                Gerencie conteúdos: Redações Exemplares, Temas, Videoteca e Correções
+                Gerencie conteúdos: Redações Exemplares, Temas, Videoteca, Aulas e Correções
               </p>
               <p className="text-xs sm:text-sm text-redator-secondary font-medium mt-1">
                 ✅ Logado como administrador: {user.email}
@@ -118,7 +119,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="redacoes" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white border border-redator-accent/20 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 bg-white border border-redator-accent/20 h-auto">
             <TabsTrigger value="redacoes" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
               <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="text-center">Redações Exemplares</span>
@@ -130,6 +131,10 @@ const Admin = () => {
             <TabsTrigger value="videoteca" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
               <Video className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="text-center">Videoteca</span>
+            </TabsTrigger>
+            <TabsTrigger value="aulas" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+              <GraduationCap className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center">Aulas</span>
             </TabsTrigger>
             <TabsTrigger value="correcoes" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
               <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -278,6 +283,55 @@ const Admin = () => {
                   </CardHeader>
                   <CardContent>
                     <VideoList />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="aulas" className="space-y-6">
+            <Tabs defaultValue="novo" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-white border border-green-600/20">
+                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                  <Plus className="w-4 h-4" />
+                  Cadastrar Nova
+                </TabsTrigger>
+                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                  <List className="w-4 h-4" />
+                  Gerenciar Existentes
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="novo">
+                <Card className="border-redator-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-redator-primary">
+                      <GraduationCap className="w-5 h-5" />
+                      Cadastrar Nova Aula
+                    </CardTitle>
+                    <p className="text-redator-accent">
+                      Adicione aulas gravadas (YouTube) ou configure aulas ao vivo (Google Meet)
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <AulaForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="gerenciar">
+                <Card className="border-redator-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-redator-primary">
+                      <List className="w-5 h-5" />
+                      Gerenciar Aulas
+                    </CardTitle>
+                    <p className="text-redator-accent">
+                      Edite ou exclua aulas já cadastradas
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <AulaList />
                   </CardContent>
                 </Card>
               </TabsContent>
