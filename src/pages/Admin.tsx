@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { RedacaoList } from '@/components/admin/RedacaoList';
 import { TemaList } from '@/components/admin/TemaList';
 import { VideoList } from '@/components/admin/VideoList';
+import { RedacaoEnviadaForm } from '@/components/admin/RedacaoEnviadaForm';
 import AdminPasswordChange from '@/components/admin/AdminPasswordChange';
 
 const Admin = () => {
@@ -81,8 +83,11 @@ const Admin = () => {
         {/* Main Content */}
         <Card className="border-redator-accent/20">
           <CardContent className="p-6">
-            <Tabs defaultValue="redacoes" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5 bg-redator-accent/10">
+            <Tabs defaultValue="correcoes" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-6 bg-redator-accent/10">
+                <TabsTrigger value="correcoes" className="data-[state=active]:bg-redator-primary data-[state=active]:text-white">
+                  Correções
+                </TabsTrigger>
                 <TabsTrigger value="redacoes" className="data-[state=active]:bg-redator-primary data-[state=active]:text-white">
                   Redações
                 </TabsTrigger>
@@ -99,6 +104,10 @@ const Admin = () => {
                   Estatísticas
                 </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="correcoes">
+                <RedacaoEnviadaForm />
+              </TabsContent>
 
               <TabsContent value="redacoes">
                 <RedacaoList />
