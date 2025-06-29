@@ -41,7 +41,7 @@ const Redacoes = () => {
   if (error) {
     console.error('Erro na página Redações:', error);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center p-4">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-red-600 mb-2">❌ Erro ao carregar redações</h2>
           <p className="text-redator-accent mb-4">Erro: {error.message}</p>
@@ -61,33 +61,33 @@ const Redacoes = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-                <ArrowLeft className="w-5 h-5" />
-                <span>Voltar</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-4 w-full sm:w-auto">
+              <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors mt-1">
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">Voltar</span>
               </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-redator-primary">Redações Exemplares</h1>
-                <p className="text-redator-accent">Aprenda com redações nota 1000</p>
+              <div className="flex-1">
+                <h1 className="text-xl sm:text-2xl font-bold text-redator-primary">Redações Exemplares</h1>
+                <p className="text-sm sm:text-base text-redator-accent">Aprenda com redações nota 1000</p>
                 {redacoes && (
-                  <p className="text-sm text-redator-secondary">
+                  <p className="text-xs sm:text-sm text-redator-secondary">
                     ✅ {redacoes.length} redação{redacoes.length !== 1 ? 'ões' : ''} exemplar{redacoes.length !== 1 ? 'es' : ''} encontrada{redacoes.length !== 1 ? 's' : ''}
                   </p>
                 )}
               </div>
             </div>
-            <Link to="/" className="hover:opacity-80 transition-opacity">
-              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-8 w-auto max-w-[120px] object-contain" />
+            <Link to="/" className="hover:opacity-80 transition-opacity w-full sm:w-auto flex justify-center sm:justify-end">
+              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-6 sm:h-8 w-auto max-w-[100px] sm:max-w-[120px] object-contain" />
             </Link>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {redacoes && redacoes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {redacoes.map((redacao) => {
               console.log('Renderizando redação:', {
                 id: redacao.id,
@@ -121,20 +121,20 @@ const Redacoes = () => {
                         }}
                       />
                     </div>
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                       <div className="mb-2">
                         <span className="text-xs font-medium text-white bg-redator-primary px-2 py-1 rounded">
                           {redacao.eixo_tematico || 'Redação Exemplar'}
                         </span>
                       </div>
                       
-                      <h3 className="font-semibold text-redator-primary line-clamp-2 group-hover:text-redator-accent transition-colors mb-2">
+                      <h3 className="font-semibold text-sm sm:text-base text-redator-primary line-clamp-2 group-hover:text-redator-accent transition-colors mb-2">
                         {redacao.frase_tematica || 'Redação Exemplar - Nota 1000'}
                       </h3>
                       
                       <div className="flex items-center justify-between">
                         {redacao.nota_total && (
-                          <span className="text-sm text-redator-secondary font-medium">
+                          <span className="text-xs sm:text-sm text-redator-secondary font-medium">
                             ⭐ Nota: {redacao.nota_total}
                           </span>
                         )}
@@ -149,13 +149,13 @@ const Redacoes = () => {
             })}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📝</div>
-            <h3 className="text-xl font-semibold text-redator-primary mb-2">Nenhuma redação exemplar encontrada</h3>
-            <p className="text-redator-accent mb-4">
+          <div className="text-center py-12 px-4">
+            <div className="text-4xl sm:text-6xl mb-4">📝</div>
+            <h3 className="text-lg sm:text-xl font-semibold text-redator-primary mb-2">Nenhuma redação exemplar encontrada</h3>
+            <p className="text-sm sm:text-base text-redator-accent mb-4">
               As redações exemplares ainda não foram cadastradas.
             </p>
-            <p className="text-sm text-redator-accent/70">
+            <p className="text-xs sm:text-sm text-redator-accent/70">
               ℹ️ Use o painel administrativo para adicionar redações nota 1000.
             </p>
           </div>

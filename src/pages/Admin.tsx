@@ -5,11 +5,14 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, FileText, BookOpen, Video, Shield, CheckCircle } from 'lucide-react';
+import { LogOut, FileText, BookOpen, Video, Shield, CheckCircle, List, Plus } from 'lucide-react';
 import { TemaForm } from '@/components/admin/TemaForm';
 import { RedacaoForm } from '@/components/admin/RedacaoForm';
 import { VideoForm } from '@/components/admin/VideoForm';
 import { RedacaoEnviadaForm } from '@/components/admin/RedacaoEnviadaForm';
+import { RedacaoList } from '@/components/admin/RedacaoList';
+import { TemaList } from '@/components/admin/TemaList';
+import { VideoList } from '@/components/admin/VideoList';
 import { useToast } from '@/hooks/use-toast';
 
 const Admin = () => {
@@ -80,20 +83,20 @@ const Admin = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <Shield className="w-6 h-6 text-redator-primary" />
+              <h1 className="text-xl sm:text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-redator-primary" />
                 Painel Administrativo - App do Laboratório do Redator
               </h1>
-              <p className="text-redator-accent mt-1">
+              <p className="text-sm sm:text-base text-redator-accent mt-1">
                 Gerencie conteúdos: Redações Exemplares, Temas, Videoteca e Correções
               </p>
-              <p className="text-sm text-redator-secondary font-medium mt-1">
+              <p className="text-xs sm:text-sm text-redator-secondary font-medium mt-1">
                 ✅ Logado como administrador: {user.email}
               </p>
             </div>
-            <Button onClick={handleSignOut} variant="outline" className="flex items-center gap-2 border-redator-accent text-redator-primary hover:bg-redator-accent/10">
+            <Button onClick={handleSignOut} variant="outline" className="flex items-center gap-2 border-redator-accent text-redator-primary hover:bg-redator-accent/10 w-full sm:w-auto">
               <LogOut className="w-4 h-4" />
               Sair
             </Button>
@@ -101,88 +104,184 @@ const Admin = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <div className="bg-white border border-redator-secondary/20 rounded-lg p-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="mb-4 sm:mb-6">
+          <div className="bg-white border border-redator-secondary/20 rounded-lg p-3 sm:p-4">
             <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-redator-secondary" />
-              <span className="font-medium text-redator-primary">Painel Administrativo Ativo</span>
+              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-redator-secondary" />
+              <span className="font-medium text-redator-primary text-sm sm:text-base">Painel Administrativo Ativo</span>
             </div>
-            <p className="text-redator-accent text-sm mt-1">
+            <p className="text-redator-accent text-xs sm:text-sm mt-1">
               Você está autenticado como administrador e pode gerenciar todos os conteúdos do app.
             </p>
           </div>
         </div>
 
         <Tabs defaultValue="redacoes" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-white border border-redator-accent/20">
-            <TabsTrigger value="redacoes" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
-              <FileText className="w-4 h-4" />
-              Redações Exemplares
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white border border-redator-accent/20 h-auto">
+            <TabsTrigger value="redacoes" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center">Redações Exemplares</span>
             </TabsTrigger>
-            <TabsTrigger value="temas" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
-              <BookOpen className="w-4 h-4" />
-              Temas
+            <TabsTrigger value="temas" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+              <BookOpen className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center">Temas</span>
             </TabsTrigger>
-            <TabsTrigger value="videoteca" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
-              <Video className="w-4 h-4" />
-              Videoteca
+            <TabsTrigger value="videoteca" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+              <Video className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center">Videoteca</span>
             </TabsTrigger>
-            <TabsTrigger value="correcoes" className="flex items-center gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white">
-              <CheckCircle className="w-4 h-4" />
-              Correções
+            <TabsTrigger value="correcoes" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
+              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center">Correções</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="redacoes">
-            <Card className="border-redator-accent/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-redator-primary">
-                  <FileText className="w-5 h-5" />
-                  Cadastrar Nova Redação Exemplar
-                </CardTitle>
-                <p className="text-redator-accent">
-                  Adicione redações nota 1000 que servirão de exemplo para os estudantes
-                </p>
-              </CardHeader>
-              <CardContent>
-                <RedacaoForm />
-              </CardContent>
-            </Card>
+          <TabsContent value="redacoes" className="space-y-6">
+            <Tabs defaultValue="novo" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-primary/20">
+                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
+                  <Plus className="w-4 h-4" />
+                  Cadastrar Nova
+                </TabsTrigger>
+                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
+                  <List className="w-4 h-4" />
+                  Gerenciar Existentes
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="novo">
+                <Card className="border-redator-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-redator-primary">
+                      <FileText className="w-5 h-5" />
+                      Cadastrar Nova Redação Exemplar
+                    </CardTitle>
+                    <p className="text-redator-accent">
+                      Adicione redações nota 1000 que servirão de exemplo para os estudantes
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <RedacaoForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="gerenciar">
+                <Card className="border-redator-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-redator-primary">
+                      <List className="w-5 h-5" />
+                      Gerenciar Redações Exemplares
+                    </CardTitle>
+                    <p className="text-redator-accent">
+                      Edite ou exclua redações exemplares já cadastradas
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <RedacaoList />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
-          <TabsContent value="temas">
-            <Card className="border-redator-accent/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-redator-primary">
-                  <BookOpen className="w-5 h-5" />
-                  Cadastrar Novo Tema
-                </CardTitle>
-                <p className="text-redator-accent">
-                  Crie temas com textos motivadores para prática de redação dos alunos
-                </p>
-              </CardHeader>
-              <CardContent>
-                <TemaForm />
-              </CardContent>
-            </Card>
+          <TabsContent value="temas" className="space-y-6">
+            <Tabs defaultValue="novo" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-accent/20">
+                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
+                  <Plus className="w-4 h-4" />
+                  Cadastrar Novo
+                </TabsTrigger>
+                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
+                  <List className="w-4 h-4" />
+                  Gerenciar Existentes
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="novo">
+                <Card className="border-redator-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-redator-primary">
+                      <BookOpen className="w-5 h-5" />
+                      Cadastrar Novo Tema
+                    </CardTitle>
+                    <p className="text-redator-accent">
+                      Crie temas com textos motivadores para prática de redação dos alunos
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <TemaForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="gerenciar">
+                <Card className="border-redator-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-redator-primary">
+                      <List className="w-5 h-5" />
+                      Gerenciar Temas
+                    </CardTitle>
+                    <p className="text-redator-accent">
+                      Edite ou exclua temas já cadastrados
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <TemaList />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
-          <TabsContent value="videoteca">
-            <Card className="border-redator-accent/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-redator-primary">
-                  <Video className="w-5 h-5" />
-                  Cadastrar Novo Vídeo
-                </CardTitle>
-                <p className="text-redator-accent">
-                  Adicione vídeos educativos do YouTube à videoteca do app
-                </p>
-              </CardHeader>
-              <CardContent>
-                <VideoForm />
-              </CardContent>
-            </Card>
+          <TabsContent value="videoteca" className="space-y-6">
+            <Tabs defaultValue="novo" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-secondary/20">
+                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
+                  <Plus className="w-4 h-4" />
+                  Cadastrar Novo
+                </TabsTrigger>
+                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
+                  <List className="w-4 h-4" />
+                  Gerenciar Existentes
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="novo">
+                <Card className="border-redator-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-redator-primary">
+                      <Video className="w-5 h-5" />
+                      Cadastrar Novo Vídeo
+                    </CardTitle>
+                    <p className="text-redator-accent">
+                      Adicione vídeos educativos do YouTube à videoteca do app
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <VideoForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="gerenciar">
+                <Card className="border-redator-accent/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-redator-primary">
+                      <List className="w-5 h-5" />
+                      Gerenciar Vídeos
+                    </CardTitle>
+                    <p className="text-redator-accent">
+                      Edite ou exclua vídeos já cadastrados
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <VideoList />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="correcoes">

@@ -54,7 +54,7 @@ const Temas = () => {
   if (error) {
     console.error('Erro na página Temas:', error);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center p-4">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-red-600 mb-2">❌ Erro ao carregar temas</h2>
           <p className="text-redator-accent mb-4">Erro: {error.message}</p>
@@ -74,33 +74,33 @@ const Temas = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
-                <ArrowLeft className="w-5 h-5" />
-                <span>Voltar</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-4 w-full sm:w-auto">
+              <Link to="/" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors mt-1">
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">Voltar</span>
               </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-redator-primary">Temas</h1>
-                <p className="text-redator-accent">Propostas de redação organizadas por eixo temático</p>
+              <div className="flex-1">
+                <h1 className="text-xl sm:text-2xl font-bold text-redator-primary">Temas</h1>
+                <p className="text-sm sm:text-base text-redator-accent">Propostas de redação organizadas por eixo temático</p>
                 {temas && (
-                  <p className="text-sm text-redator-secondary">
+                  <p className="text-xs sm:text-sm text-redator-secondary">
                     ✅ {temas.length} tema{temas.length !== 1 ? 's' : ''} encontrado{temas.length !== 1 ? 's' : ''}
                   </p>
                 )}
               </div>
             </div>
-            <Link to="/" className="hover:opacity-80 transition-opacity">
-              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-8 w-auto max-w-[120px] object-contain" />
+            <Link to="/" className="hover:opacity-80 transition-opacity w-full sm:w-auto flex justify-center sm:justify-end">
+              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-6 sm:h-8 w-auto max-w-[100px] sm:max-w-[120px] object-contain" />
             </Link>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {temas && temas.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {temas.map((tema) => {
               console.log('Renderizando tema:', {
                 id: tema.id,
@@ -133,7 +133,7 @@ const Temas = () => {
                         }}
                       />
                     </div>
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                       {tema.eixo_tematico && (
                         <div className="mb-2">
                           <span className="text-xs font-medium text-white bg-redator-accent px-2 py-1 rounded">
@@ -142,7 +142,7 @@ const Temas = () => {
                         </div>
                       )}
                       {tema.frase_tematica && (
-                        <h3 className="font-semibold text-redator-primary line-clamp-2 group-hover:text-redator-accent transition-colors">
+                        <h3 className="font-semibold text-sm sm:text-base text-redator-primary line-clamp-2 group-hover:text-redator-accent transition-colors">
                           {tema.frase_tematica}
                         </h3>
                       )}
@@ -156,13 +156,13 @@ const Temas = () => {
             })}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📝</div>
-            <h3 className="text-xl font-semibold text-redator-primary mb-2">Nenhum tema encontrado</h3>
-            <p className="text-redator-accent mb-4">
+          <div className="text-center py-12 px-4">
+            <div className="text-4xl sm:text-6xl mb-4">📝</div>
+            <h3 className="text-lg sm:text-xl font-semibold text-redator-primary mb-2">Nenhum tema encontrado</h3>
+            <p className="text-sm sm:text-base text-redator-accent mb-4">
               Os temas de redação ainda não foram cadastrados no banco de dados.
             </p>
-            <p className="text-sm text-redator-accent/70">
+            <p className="text-xs sm:text-sm text-redator-accent/70">
               ℹ️ Use o painel administrativo para adicionar novos temas.
             </p>
           </div>
