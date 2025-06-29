@@ -39,21 +39,30 @@ export const TemaList = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      console.log('Tentando excluir tema com ID:', id);
+      
       const { error } = await supabase
         .from('temas')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase ao excluir tema:', error);
+        throw error;
+      }
 
+      console.log('Tema excluído com sucesso, invalidando queries...');
+      
+      // Invalidar as queries para atualizar a interface
       await queryClient.invalidateQueries({ queryKey: ['temas'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
 
       toast({
         title: "✅ Sucesso!",
-        description: "Tema excluído com sucesso.",
+        description: "Item excluído com sucesso.",
       });
     } catch (error: any) {
+      console.error('Erro completo ao excluir tema:', error);
       toast({
         title: "❌ Erro",
         description: "Erro ao excluir tema: " + error.message,

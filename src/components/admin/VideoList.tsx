@@ -39,21 +39,30 @@ export const VideoList = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      console.log('Tentando excluir vídeo com ID:', id);
+      
       const { error } = await supabase
         .from('videos')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase ao excluir vídeo:', error);
+        throw error;
+      }
 
+      console.log('Vídeo excluído com sucesso, invalidando queries...');
+      
+      // Invalidar as queries para atualizar a interface
       await queryClient.invalidateQueries({ queryKey: ['videos'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-videos'] });
 
       toast({
         title: "✅ Sucesso!",
-        description: "Vídeo excluído com sucesso.",
+        description: "Item excluído com sucesso.",
       });
     } catch (error: any) {
+      console.error('Erro completo ao excluir vídeo:', error);
       toast({
         title: "❌ Erro",
         description: "Erro ao excluir vídeo: " + error.message,

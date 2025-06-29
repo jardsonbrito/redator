@@ -39,21 +39,30 @@ export const RedacaoList = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      console.log('Tentando excluir redação com ID:', id);
+      
       const { error } = await supabase
         .from('redacoes')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase ao excluir redação:', error);
+        throw error;
+      }
 
+      console.log('Redação excluída com sucesso, invalidando queries...');
+      
+      // Invalidar as queries para atualizar a interface
       await queryClient.invalidateQueries({ queryKey: ['redacoes'] });
       await queryClient.invalidateQueries({ queryKey: ['admin-redacoes'] });
 
       toast({
         title: "✅ Sucesso!",
-        description: "Redação exemplar excluída com sucesso.",
+        description: "Item excluído com sucesso.",
       });
     } catch (error: any) {
+      console.error('Erro completo ao excluir redação:', error);
       toast({
         title: "❌ Erro",
         description: "Erro ao excluir redação: " + error.message,
