@@ -30,6 +30,7 @@ type RedacaoEnviada = {
 
 export const RedacaoEnviadaForm = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoEnviada | null>(null);
+  const [viewRedacao, setViewRedacao] = useState<RedacaoEnviada | null>(null);
   const [formData, setFormData] = useState({
     nota_c1: '',
     nota_c2: '',
@@ -39,7 +40,7 @@ export const RedacaoEnviadaForm = () => {
     nota_total: '',
     comentario_admin: '',
   });
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -113,6 +114,7 @@ export const RedacaoEnviadaForm = () => {
   });
 
   const handleEdit = (redacao: RedacaoEnviada) => {
+    console.log('Editando redação:', redacao.id);
     setSelectedRedacao(redacao);
     setFormData({
       nota_c1: redacao.nota_c1?.toString() || '',
@@ -123,6 +125,12 @@ export const RedacaoEnviadaForm = () => {
       nota_total: redacao.nota_total?.toString() || '',
       comentario_admin: redacao.comentario_admin || '',
     });
+  };
+
+  const handleView = (redacao: RedacaoEnviada) => {
+    console.log('Visualizando redação:', redacao.id);
+    setViewRedacao(redacao);
+    setIsViewDialogOpen(true);
   };
 
   const handleCompetenciaChange = (competencia: string, valor: string) => {
@@ -148,6 +156,7 @@ export const RedacaoEnviadaForm = () => {
     e.preventDefault();
     if (!selectedRedacao) return;
 
+    console.log('Salvando correção:', formData);
     corrigirMutation.mutate(formData);
   };
 
@@ -211,23 +220,13 @@ export const RedacaoEnviadaForm = () => {
                     </div>
 
                     <div className="flex gap-2">
-                      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>{redacao.frase_tematica}</DialogTitle>
-                          </DialogHeader>
-                          <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                              {redacao.redacao_texto}
-                            </p>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleView(redacao)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
 
                       <Button 
                         onClick={() => handleEdit(redacao)}
@@ -250,6 +249,22 @@ export const RedacaoEnviadaForm = () => {
         )}
       </div>
 
+      {/* Dialog de visualização */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{viewRedacao?.frase_tematica}</DialogTitle>
+          </DialogHeader>
+          {viewRedacao && (
+            <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                {viewRedacao.redacao_texto}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Formulário de correção */}
       {selectedRedacao && (
         <Card className="border-redator-primary/30">
@@ -259,41 +274,54 @@ export const RedacaoEnviadaForm = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Exibir o texto da redação */}
+            <div className="mb-6">
+              <h4 className="font-medium text-redator-primary mb-2">Texto da Redação:</h4>
+              <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20 max-h-60 overflow-y-auto">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {selectedRedacao.redacao_texto}
+                </p>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Notas por competência com dropdown */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                {[
-                  { key: 'nota_c1', label: 'Competência 1' },
-                  { key: 'nota_c2', label: 'Competência 2' },
-                  { key: 'nota_c3', label: 'Competência 3' },
-                  { key: 'nota_c4', label: 'Competência 4' },
-                  { key: 'nota_c5', label: 'Competência 5' },
-                ].map((comp) => (
-                  <div key={comp.key}>
-                    <label className="block text-sm font-medium text-redator-primary mb-2">
-                      {comp.label}
-                    </label>
-                    <Select
-                      value={formData[comp.key as keyof typeof formData]}
-                      onValueChange={(value) => handleCompetenciaChange(comp.key, value)}
-                    >
-                      <SelectTrigger className="w-full border-redator-accent/30 focus:border-redator-accent bg-white">
-                        <SelectValue placeholder="Selecione a nota" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border border-redator-accent/30 shadow-lg z-50">
-                        {notasDisponiveis.map((nota) => (
-                          <SelectItem 
-                            key={nota} 
-                            value={nota}
-                            className="hover:bg-redator-accent/10 focus:bg-redator-accent/10 cursor-pointer"
-                          >
-                            {nota === '' ? 'Selecione' : `${nota} pontos`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+              {/* Tabela de competências */}
+              <div>
+                <h4 className="font-medium text-redator-primary mb-3">Notas por Competência:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {[
+                    { key: 'nota_c1', label: 'Competência 1' },
+                    { key: 'nota_c2', label: 'Competência 2' },
+                    { key: 'nota_c3', label: 'Competência 3' },
+                    { key: 'nota_c4', label: 'Competência 4' },
+                    { key: 'nota_c5', label: 'Competência 5' },
+                  ].map((comp) => (
+                    <div key={comp.key}>
+                      <label className="block text-sm font-medium text-redator-primary mb-2">
+                        {comp.label}
+                      </label>
+                      <Select
+                        value={formData[comp.key as keyof typeof formData]}
+                        onValueChange={(value) => handleCompetenciaChange(comp.key, value)}
+                      >
+                        <SelectTrigger className="w-full border-redator-accent/30 focus:border-redator-accent bg-white">
+                          <SelectValue placeholder="Selecione a nota" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-redator-accent/30 shadow-lg z-50">
+                          {notasDisponiveis.map((nota) => (
+                            <SelectItem 
+                              key={nota} 
+                              value={nota}
+                              className="hover:bg-redator-accent/10 focus:bg-redator-accent/10 cursor-pointer"
+                            >
+                              {nota === '' ? 'Selecione' : `${nota} pontos`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Nota total - calculada automaticamente */}
