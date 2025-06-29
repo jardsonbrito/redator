@@ -66,33 +66,58 @@ export const RedacaoEnviadaForm = () => {
   const corrigirMutation = useMutation({
     mutationFn: async (dados: any) => {
       console.log('Salvando correção com dados:', dados);
+      
+      // Validar se todas as notas estão presentes
+      const notaC1 = dados.nota_c1 ? parseInt(dados.nota_c1) : 0;
+      const notaC2 = dados.nota_c2 ? parseInt(dados.nota_c2) : 0;
+      const notaC3 = dados.nota_c3 ? parseInt(dados.nota_c3) : 0;
+      const notaC4 = dados.nota_c4 ? parseInt(dados.nota_c4) : 0;
+      const notaC5 = dados.nota_c5 ? parseInt(dados.nota_c5) : 0;
+      const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
+      
+      console.log('Notas calculadas:', { notaC1, notaC2, notaC3, notaC4, notaC5, notaTotal });
+      
+      const redacaoId = selectedRedacao?.id || editingRedacao?.id;
+      if (!redacaoId) {
+        throw new Error('ID da redação não encontrado');
+      }
+      
+      // Executar a atualização no Supabase
       const { error } = await supabase
         .from('redacoes_enviadas')
         .update({
-          nota_c1: dados.nota_c1 ? parseInt(dados.nota_c1) : null,
-          nota_c2: dados.nota_c2 ? parseInt(dados.nota_c2) : null,
-          nota_c3: dados.nota_c3 ? parseInt(dados.nota_c3) : null,
-          nota_c4: dados.nota_c4 ? parseInt(dados.nota_c4) : null,
-          nota_c5: dados.nota_c5 ? parseInt(dados.nota_c5) : null,
-          nota_total: dados.nota_total ? parseInt(dados.nota_total) : null,
+          nota_c1: notaC1,
+          nota_c2: notaC2,
+          nota_c3: notaC3,
+          nota_c4: notaC4,
+          nota_c5: notaC5,
+          nota_total: notaTotal,
           comentario_admin: dados.comentario_admin || null,
           corrigida: true,
           data_correcao: new Date().toISOString(),
         })
-        .eq('id', selectedRedacao?.id || editingRedacao?.id);
+        .eq('id', redacaoId);
 
       if (error) {
-        console.error('Erro ao salvar correção:', error);
-        throw error;
+        console.error('Erro detalhado ao salvar correção:', error);
+        throw new Error(`Falha ao salvar correção: ${error.message}`);
       }
+      
+      console.log('Correção salva com sucesso para redação ID:', redacaoId);
+      return { notaTotal, redacaoId };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      console.log('Correção finalizada com sucesso. Nota total:', result.notaTotal);
       toast({
         title: "Correção salva com sucesso!",
-        description: "A redação foi corrigida e as notas foram atualizadas.",
+        description: `A redação foi corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
       });
+      
+      // Invalidar as queries para atualizar a interface
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas-admin'] });
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas'] });
+      
+      // Limpar o formulário
       setSelectedRedacao(null);
       setEditingRedacao(null);
       setFormData({
@@ -105,11 +130,11 @@ export const RedacaoEnviadaForm = () => {
         comentario_admin: '',
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Erro ao salvar correção:', error);
       toast({
         title: "Erro ao salvar correção",
-        description: "Ocorreu um erro ao salvar a correção. Tente novamente.",
+        description: `Ocorreu um erro: ${error.message}. A correção permanece pendente. Tente novamente.`,
         variant: "destructive",
       });
     },
@@ -154,8 +179,11 @@ export const RedacaoEnviadaForm = () => {
   const handleNotaChange = (competencia: string, valor: string) => {
     console.log(`Alterando ${competencia} para:`, valor);
     
-    // Limitar valores entre 0 e 200
-    const nota = Math.min(200, Math.max(0, parseInt(valor) || 0));
+    // Limitar valores entre 0 e 200 e aceitar apenas números válidos
+    let nota = 0;
+    if (valor && !isNaN(parseInt(valor))) {
+      nota = Math.min(200, Math.max(0, parseInt(valor)));
+    }
     const valorFormatado = nota.toString();
     
     const newFormData = { ...formData, [competencia]: valorFormatado };
@@ -170,6 +198,8 @@ export const RedacaoEnviadaForm = () => {
     ];
     const total = notas.reduce((sum, nota) => sum + nota, 0);
     
+    console.log('Notas atuais:', notas, 'Total:', total);
+    
     setFormData({
       ...newFormData,
       nota_total: total.toString()
@@ -180,6 +210,26 @@ export const RedacaoEnviadaForm = () => {
     e.preventDefault();
     if (!selectedRedacao && !editingRedacao) {
       console.log('Nenhuma redação selecionada');
+      toast({
+        title: "Erro",
+        description: "Nenhuma redação foi selecionada para correção.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar se pelo menos uma nota foi atribuída
+    const temNotas = Object.values(formData).some(value => 
+      ['nota_c1', 'nota_c2', 'nota_c3', 'nota_c4', 'nota_c5'].includes(value) && 
+      parseInt(formData[value as keyof typeof formData]) > 0
+    );
+
+    if (!temNotas) {
+      toast({
+        title: "Aviso",
+        description: "Atribua pelo menos uma nota antes de salvar a correção.",
+        variant: "destructive",
+      });
       return;
     }
 
