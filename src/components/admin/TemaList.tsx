@@ -39,20 +39,51 @@ export const TemaList = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      console.log('Tentando excluir tema com ID:', id);
+      console.log('Iniciando exclusão do tema com ID:', id);
       
-      const { error } = await supabase
+      // Primeiro, verificar se o tema existe
+      const { data: existingTema, error: checkError } = await supabase
+        .from('temas')
+        .select('id, frase_tematica')
+        .eq('id', id)
+        .single();
+
+      if (checkError) {
+        console.error('Erro ao verificar existência do tema:', checkError);
+        throw new Error('Tema não encontrado ou erro ao verificar existência');
+      }
+
+      console.log('Tema encontrado:', existingTema);
+
+      // Executar a exclusão
+      const { error: deleteError, count } = await supabase
         .from('temas')
         .delete()
         .eq('id', id);
 
-      if (error) {
-        console.error('Erro do Supabase ao excluir tema:', error);
-        throw error;
+      if (deleteError) {
+        console.error('Erro do Supabase ao excluir tema:', deleteError);
+        throw deleteError;
       }
 
-      console.log('Tema excluído com sucesso, atualizando lista...');
-      
+      console.log('Exclusão executada. Count:', count);
+
+      // Verificar se realmente foi excluído
+      const { data: checkDeleted, error: verifyError } = await supabase
+        .from('temas')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (verifyError) {
+        console.error('Erro ao verificar exclusão:', verifyError);
+      } else if (checkDeleted) {
+        console.error('ERRO: Tema ainda existe após exclusão!', checkDeleted);
+        throw new Error('Falha na exclusão - item ainda existe no banco');
+      } else {
+        console.log('Confirmado: Tema foi excluído com sucesso');
+      }
+
       // Forçar recarregamento da lista
       await refetch();
       
@@ -68,7 +99,7 @@ export const TemaList = () => {
       console.error('Erro completo ao excluir tema:', error);
       toast({
         title: "❌ Erro",
-        description: "Erro ao excluir tema: " + error.message,
+        description: error.message || "Erro ao excluir tema",
         variant: "destructive",
       });
     }

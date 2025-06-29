@@ -39,20 +39,51 @@ export const RedacaoList = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      console.log('Tentando excluir redação com ID:', id);
+      console.log('Iniciando exclusão da redação com ID:', id);
       
-      const { error } = await supabase
+      // Primeiro, verificar se a redação existe
+      const { data: existingRedacao, error: checkError } = await supabase
+        .from('redacoes')
+        .select('id, frase_tematica')
+        .eq('id', id)
+        .single();
+
+      if (checkError) {
+        console.error('Erro ao verificar existência da redação:', checkError);
+        throw new Error('Redação não encontrada ou erro ao verificar existência');
+      }
+
+      console.log('Redação encontrada:', existingRedacao);
+
+      // Executar a exclusão
+      const { error: deleteError, count } = await supabase
         .from('redacoes')
         .delete()
         .eq('id', id);
 
-      if (error) {
-        console.error('Erro do Supabase ao excluir redação:', error);
-        throw error;
+      if (deleteError) {
+        console.error('Erro do Supabase ao excluir redação:', deleteError);
+        throw deleteError;
       }
 
-      console.log('Redação excluída com sucesso, atualizando lista...');
-      
+      console.log('Exclusão executada. Count:', count);
+
+      // Verificar se realmente foi excluído
+      const { data: checkDeleted, error: verifyError } = await supabase
+        .from('redacoes')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (verifyError) {
+        console.error('Erro ao verificar exclusão:', verifyError);
+      } else if (checkDeleted) {
+        console.error('ERRO: Redação ainda existe após exclusão!', checkDeleted);
+        throw new Error('Falha na exclusão - item ainda existe no banco');
+      } else {
+        console.log('Confirmado: Redação foi excluída com sucesso');
+      }
+
       // Forçar recarregamento da lista
       await refetch();
       
@@ -68,7 +99,7 @@ export const RedacaoList = () => {
       console.error('Erro completo ao excluir redação:', error);
       toast({
         title: "❌ Erro",
-        description: "Erro ao excluir redação: " + error.message,
+        description: error.message || "Erro ao excluir redação",
         variant: "destructive",
       });
     }

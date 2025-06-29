@@ -39,20 +39,51 @@ export const VideoList = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      console.log('Tentando excluir vídeo com ID:', id);
+      console.log('Iniciando exclusão do vídeo com ID:', id);
       
-      const { error } = await supabase
+      // Primeiro, verificar se o vídeo existe
+      const { data: existingVideo, error: checkError } = await supabase
+        .from('videos')
+        .select('id, titulo')
+        .eq('id', id)
+        .single();
+
+      if (checkError) {
+        console.error('Erro ao verificar existência do vídeo:', checkError);
+        throw new Error('Vídeo não encontrado ou erro ao verificar existência');
+      }
+
+      console.log('Vídeo encontrado:', existingVideo);
+
+      // Executar a exclusão
+      const { error: deleteError, count } = await supabase
         .from('videos')
         .delete()
         .eq('id', id);
 
-      if (error) {
-        console.error('Erro do Supabase ao excluir vídeo:', error);
-        throw error;
+      if (deleteError) {
+        console.error('Erro do Supabase ao excluir vídeo:', deleteError);
+        throw deleteError;
       }
 
-      console.log('Vídeo excluído com sucesso, atualizando lista...');
-      
+      console.log('Exclusão executada. Count:', count);
+
+      // Verificar se realmente foi excluído
+      const { data: checkDeleted, error: verifyError } = await supabase
+        .from('videos')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (verifyError) {
+        console.error('Erro ao verificar exclusão:', verifyError);
+      } else if (checkDeleted) {
+        console.error('ERRO: Vídeo ainda existe após exclusão!', checkDeleted);
+        throw new Error('Falha na exclusão - item ainda existe no banco');
+      } else {
+        console.log('Confirmado: Vídeo foi excluído com sucesso');
+      }
+
       // Forçar recarregamento da lista
       await refetch();
       
@@ -68,7 +99,7 @@ export const VideoList = () => {
       console.error('Erro completo ao excluir vídeo:', error);
       toast({
         title: "❌ Erro",
-        description: "Erro ao excluir vídeo: " + error.message,
+        description: error.message || "Erro ao excluir vídeo",
         variant: "destructive",
       });
     }
