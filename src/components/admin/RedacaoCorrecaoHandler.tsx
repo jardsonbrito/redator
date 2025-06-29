@@ -35,30 +35,17 @@ export const useRedacaoCorrecaoHandler = () => {
       const userEmail = session.session.user.email;
       console.log('📧 Email do usuário logado:', userEmail);
 
-      // Para o email específico, sempre retorna true
-      if (userEmail === 'jardsonbrito@gmail.com') {
-        console.log('✅ Admin confirmado pelo email hardcoded');
-        return true;
+      // Usar a nova função RLS is_main_admin
+      const { data: isMainAdmin, error: adminError } = await supabase
+        .rpc('is_main_admin');
+
+      if (adminError) {
+        console.error('❌ Erro ao verificar admin:', adminError);
+        return false;
       }
 
-      // Verificação adicional via RPC como fallback
-      try {
-        const { data: adminCheck, error: adminError } = await supabase
-          .rpc('is_admin', { user_id: session.session.user.id });
-
-        if (adminError) {
-          console.warn('⚠️ Erro na função RPC is_admin:', adminError);
-          // Para o admin principal, ignorar erro de RPC
-          return userEmail === 'jardsonbrito@gmail.com';
-        }
-
-        console.log('✅ Status admin via RPC:', adminCheck);
-        return adminCheck === true;
-      } catch (rpcError) {
-        console.warn('⚠️ Falha na verificação RPC:', rpcError);
-        // Para o admin principal, sempre permitir
-        return userEmail === 'jardsonbrito@gmail.com';
-      }
+      console.log('✅ Status admin via RLS:', isMainAdmin);
+      return isMainAdmin === true;
     } catch (error) {
       console.error('❌ Erro na validação de admin:', error);
       return false;
@@ -129,10 +116,9 @@ export const useRedacaoCorrecaoHandler = () => {
       // 3. Preparar dados para correção
       const { updateData, notaTotal } = prepararDadosCorrecao(dados);
 
-      // 4. Executar UPDATE com lógica robusta
+      // 4. Executar UPDATE com as novas políticas RLS
       console.log('🚀 Executando UPDATE da correção...');
       
-      // Primeiro, tentar o update normal
       const { data: updateResult, error: updateError } = await supabase
         .from('redacoes_enviadas')
         .update(updateData)
@@ -146,19 +132,7 @@ export const useRedacaoCorrecaoHandler = () => {
 
       if (!updateResult || updateResult.length === 0) {
         console.error('❌ UPDATE não retornou dados');
-        
-        // Tentar uma segunda verificação para ver se a redação ainda existe
-        const { data: recheck } = await supabase
-          .from('redacoes_enviadas')
-          .select('id')
-          .eq('id', redacaoId)
-          .single();
-        
-        if (!recheck) {
-          throw new Error('Redação não encontrada no momento da atualização');
-        }
-        
-        throw new Error(`UPDATE não afetou registros. Redação existe: ${recheck.id}, mas não foi possível atualizar. Verifique as políticas RLS.`);
+        throw new Error('Erro: UPDATE não afetou nenhum registro. Verifique as políticas RLS.');
       }
 
       const resultadoFinal = updateResult[0];

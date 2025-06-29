@@ -258,6 +258,10 @@ export type Database = {
         Args: { user_id?: string }
         Returns: boolean
       }
+      is_main_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       competencia_type: "C1" | "C2" | "C3" | "C4" | "C5"
