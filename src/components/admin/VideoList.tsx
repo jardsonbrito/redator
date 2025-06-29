@@ -48,14 +48,19 @@ export const VideoList = () => {
       }
       console.log('✅ Usuário autenticado:', user.email);
 
-      // Verificar se é admin
+      // Verificar se é admin com query corrigida
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('user_type')
         .eq('id', user.id)
         .single();
 
-      if (profileError || !profile || profile.user_type !== 'admin') {
+      if (profileError) {
+        console.error('❌ Erro ao verificar perfil:', profileError);
+        throw new Error('Erro ao verificar permissões do usuário');
+      }
+
+      if (!profile || profile.user_type !== 'admin') {
         throw new Error('Usuário não tem permissões de administrador');
       }
       console.log('✅ Usuário confirmado como admin');
@@ -74,7 +79,7 @@ export const VideoList = () => {
 
       console.log('✅ Vídeo encontrado para exclusão:', existingVideo.titulo);
 
-      // Executar a exclusão com RLS bypass se necessário
+      // Executar a exclusão
       const { error: deleteError, data: deleteData } = await supabase
         .from('videos')
         .delete()
@@ -104,11 +109,9 @@ export const VideoList = () => {
         console.log('✅ CONFIRMADO: Vídeo foi excluído permanentemente do banco');
       }
 
-      // Invalidar todas as queries relacionadas para forçar atualização
+      // Invalidar queries e forçar refetch
       await queryClient.invalidateQueries({ queryKey: ['admin-videos'] });
       await queryClient.invalidateQueries({ queryKey: ['videos'] });
-      
-      // Forçar refetch da lista atual
       await refetch();
 
       toast({
