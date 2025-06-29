@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Save, Calendar, Award, Copy, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useRedacaoCorrecaoHandler, type CorrecaoData } from "./RedacaoCorrecaoHandler";
 
 type RedacaoEnviada = {
   id: string;
@@ -44,6 +44,7 @@ export const RedacaoEnviadaForm = () => {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { executarCorrecao } = useRedacaoCorrecaoHandler();
 
   const { data: redacoes, isLoading } = useQuery({
     queryKey: ['redacoes-enviadas-admin'],
@@ -65,106 +66,32 @@ export const RedacaoEnviadaForm = () => {
   });
 
   const corrigirMutation = useMutation({
-    mutationFn: async (dados: any) => {
+    mutationFn: async (dados: CorrecaoData) => {
       const redacaoAtual = selectedRedacao || editingRedacao;
-      
-      console.log('🚀 Iniciando processo de correção:', {
-        redacaoId: redacaoAtual?.id,
-        dados: dados
-      });
       
       if (!redacaoAtual?.id) {
         throw new Error('ID da redação não encontrado');
       }
 
-      const redacaoId = redacaoAtual.id;
-
-      // Primeiro, verificar se a redação ainda existe
-      console.log('🔍 Verificando existência da redação...');
-      const { data: existeRedacao, error: selectError } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, frase_tematica, corrigida')
-        .eq('id', redacaoId)
-        .single();
-
-      if (selectError) {
-        console.error('❌ Erro ao verificar redação:', selectError);
-        throw new Error(`Redação não encontrada: ${selectError.message}`);
-      }
-
-      console.log('✅ Redação encontrada:', existeRedacao);
-
-      // Validar e converter notas
-      const notas = {
-        nota_c1: dados.nota_c1 ? Math.min(200, Math.max(0, parseInt(dados.nota_c1))) : null,
-        nota_c2: dados.nota_c2 ? Math.min(200, Math.max(0, parseInt(dados.nota_c2))) : null,
-        nota_c3: dados.nota_c3 ? Math.min(200, Math.max(0, parseInt(dados.nota_c3))) : null,
-        nota_c4: dados.nota_c4 ? Math.min(200, Math.max(0, parseInt(dados.nota_c4))) : null,
-        nota_c5: dados.nota_c5 ? Math.min(200, Math.max(0, parseInt(dados.nota_c5))) : null,
-      };
-
-      // Calcular nota total apenas com notas válidas
-      const notaTotal = Object.values(notas).reduce((sum, nota) => sum + (nota || 0), 0);
+      console.log('🚀 Iniciando correção para redação:', redacaoAtual.id);
       
-      const updateData = {
-        ...notas,
-        nota_total: notaTotal,
-        comentario_admin: dados.comentario_admin?.trim() || null,
-        corrigida: true,
-        data_correcao: new Date().toISOString(),
-      };
-
-      console.log('📝 Dados preparados para UPDATE:', updateData);
-
-      // Executar UPDATE com verificação de autenticação
-      const { data: session } = await supabase.auth.getSession();
-      console.log('🔐 Sessão atual:', { 
-        user: session.session?.user?.email, 
-        isAuthenticated: !!session.session?.user 
-      });
-
-      const { data: updateResult, error: updateError } = await supabase
-        .from('redacoes_enviadas')
-        .update(updateData)
-        .eq('id', redacaoId)
-        .select('*');
-
-      console.log('📊 Resultado do UPDATE:', {
-        data: updateResult,
-        error: updateError,
-        rowsAffected: updateResult?.length || 0
-      });
-
-      if (updateError) {
-        console.error('❌ Erro no UPDATE:', updateError);
-        throw new Error(`Erro ao atualizar redação: ${updateError.message}`);
+      const resultado = await executarCorrecao(redacaoAtual.id, dados);
+      
+      if (!resultado.success) {
+        throw new Error(resultado.error || 'Erro desconhecido na correção');
       }
 
-      if (!updateResult || updateResult.length === 0) {
-        console.error('❌ UPDATE não afetou nenhum registro');
-        
-        // Verificar novamente se a redação ainda existe
-        const { data: recheck } = await supabase
-          .from('redacoes_enviadas')
-          .select('id, corrigida')
-          .eq('id', redacaoId)
-          .single();
-
-        console.log('🔍 Verificação pós-UPDATE:', recheck);
-        
-        throw new Error(`UPDATE não afetou registros. Verifique se você tem permissões de admin.`);
-      }
-
-      console.log('✅ Correção salva com sucesso!', updateResult[0]);
-      return { notaTotal, redacaoId, result: updateResult[0] };
+      return resultado;
     },
     onSuccess: (result) => {
-      console.log('🎉 Correção salva com sucesso:', result);
+      console.log('🎉 Correção concluída com sucesso:', result);
+      
       toast({
         title: "Correção salva com sucesso!",
         description: `Redação corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
       });
       
+      // Invalidar queries para atualizar a interface
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas-admin'] });
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas'] });
       
@@ -353,7 +280,7 @@ ${redacao.redacao_texto}`;
       return;
     }
 
-    console.log('✅ Validação OK, enviando mutação...');
+    console.log('✅ Validação OK, enviando correção...');
     corrigirMutation.mutate(formData);
   };
 
