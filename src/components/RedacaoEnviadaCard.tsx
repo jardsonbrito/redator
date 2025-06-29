@@ -128,7 +128,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
             <div className="space-y-6">
               {/* Texto da redação */}
               <div>
-                <h3 className="font-semibold text-redator-primary mb-3">Texto da Redação</h3>
+                <h3 className="font-semibold text-redator-primary mb-3">Sua Redação</h3>
                 <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
                   <p className="whitespace-pre-wrap text-sm leading-relaxed">
                     {redacao.redacao_texto}
@@ -139,21 +139,26 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
               {/* Correção detalhada - só exibir se corrigida */}
               {redacao.corrigida && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-redator-primary">Correção</h3>
+                  <h3 className="font-semibold text-redator-primary">Sua Correção</h3>
                   
                   {/* Notas por competência em formato detalhado */}
                   <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
                     {[
-                      { label: 'Competência 1', key: 'C1', value: redacao.nota_c1 },
-                      { label: 'Competência 2', key: 'C2', value: redacao.nota_c2 },
-                      { label: 'Competência 3', key: 'C3', value: redacao.nota_c3 },
-                      { label: 'Competência 4', key: 'C4', value: redacao.nota_c4 },
-                      { label: 'Competência 5', key: 'C5', value: redacao.nota_c5 },
+                      { label: 'Competência 1', key: 'C1', value: redacao.nota_c1, description: 'Demonstrar domínio da modalidade escrita formal da língua portuguesa.' },
+                      { label: 'Competência 2', key: 'C2', value: redacao.nota_c2, description: 'Compreender a proposta de redação e aplicar conceitos das várias áreas de conhecimento.' },
+                      { label: 'Competência 3', key: 'C3', value: redacao.nota_c3, description: 'Selecionar, relacionar, organizar e interpretar informações, fatos, opiniões e argumentos.' },
+                      { label: 'Competência 4', key: 'C4', value: redacao.nota_c4, description: 'Demonstrar conhecimento dos mecanismos linguísticos necessários para a construção da argumentação.' },
+                      { label: 'Competência 5', key: 'C5', value: redacao.nota_c5, description: 'Elaborar proposta de intervenção para o problema abordado.' },
                     ].map((comp) => (
-                      <div key={comp.key} className="text-center bg-blue-50 p-3 rounded-lg">
-                        <div className="text-xs text-blue-600 mb-1">{comp.key}</div>
-                        <div className="text-lg font-bold text-blue-800">{comp.value ?? 0}</div>
-                        <div className="text-xs text-blue-600">/200</div>
+                      <div key={comp.key} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="text-center mb-2">
+                          <div className="text-xs text-blue-600 mb-1">{comp.key}</div>
+                          <div className="text-lg font-bold text-blue-800">{comp.value ?? 0}</div>
+                          <div className="text-xs text-blue-600">/200</div>
+                        </div>
+                        <div className="text-xs text-blue-700 text-center">
+                          {comp.description}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -166,6 +171,9 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                         Nota Final: {redacao.nota_total ?? 0}/1000
                       </span>
                     </div>
+                    <div className="text-sm text-green-700">
+                      {redacao.data_correcao && `Corrigida em: ${formatDate(redacao.data_correcao)}`}
+                    </div>
                   </div>
                 </div>
               )}
@@ -175,7 +183,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                 <div>
                   <h3 className="font-semibold text-redator-primary mb-3 flex items-center gap-2">
                     <MessageCircle className="w-5 h-5" />
-                    Dica de Escrita
+                    Dica de Escrita do Corretor
                   </h3>
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                     <p className="text-sm leading-relaxed text-blue-900">
@@ -185,12 +193,17 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                 </div>
               )}
 
-              {/* Detalhes da correção */}
-              {redacao.corrigida && redacao.data_correcao && (
-                <div className="border-t pt-4">
-                  <div className="text-sm text-redator-accent">
-                    Corrigida em: {formatDate(redacao.data_correcao)}
+              {/* Mensagem para redações não corrigidas */}
+              {!redacao.corrigida && (
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="w-5 h-5 text-yellow-600" />
+                    <span className="font-medium text-yellow-800">Aguardando Correção</span>
                   </div>
+                  <p className="text-sm text-yellow-700">
+                    Sua redação foi enviada em {formatDate(redacao.data_envio)} e está aguardando correção. 
+                    Assim que for corrigida, você verá suas notas e o feedback do corretor aqui.
+                  </p>
                 </div>
               )}
             </div>

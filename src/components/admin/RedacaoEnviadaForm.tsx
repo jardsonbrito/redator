@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,15 +73,15 @@ export const RedacaoEnviadaForm = () => {
         throw new Error('ID da redação não encontrado');
       }
 
-      // Converter valores para números inteiros
-      const notaC1 = parseInt(dados.nota_c1) || 0;
-      const notaC2 = parseInt(dados.nota_c2) || 0;
-      const notaC3 = parseInt(dados.nota_c3) || 0;
-      const notaC4 = parseInt(dados.nota_c4) || 0;
-      const notaC5 = parseInt(dados.nota_c5) || 0;
+      // Validar e converter valores para números inteiros
+      const notaC1 = Math.min(200, Math.max(0, parseInt(dados.nota_c1) || 0));
+      const notaC2 = Math.min(200, Math.max(0, parseInt(dados.nota_c2) || 0));
+      const notaC3 = Math.min(200, Math.max(0, parseInt(dados.nota_c3) || 0));
+      const notaC4 = Math.min(200, Math.max(0, parseInt(dados.nota_c4) || 0));
+      const notaC5 = Math.min(200, Math.max(0, parseInt(dados.nota_c5) || 0));
       const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
       
-      console.log('Valores a serem salvos:', {
+      console.log('Valores validados a serem salvos:', {
         redacaoId,
         notaC1,
         notaC2,
@@ -91,39 +92,49 @@ export const RedacaoEnviadaForm = () => {
         comentario: dados.comentario_admin
       });
 
-      // Atualizar no Supabase
-      const { data: updateData, error } = await supabase
+      // Preparar dados para atualização - usando os nomes exatos das colunas
+      const updateData = {
+        nota_c1: notaC1,
+        nota_c2: notaC2,
+        nota_c3: notaC3,
+        nota_c4: notaC4,
+        nota_c5: notaC5,
+        nota_total: notaTotal,
+        comentario_admin: dados.comentario_admin?.trim() || null,
+        corrigida: true,
+        data_correcao: new Date().toISOString(),
+      };
+
+      console.log('Dados de atualização preparados:', updateData);
+
+      // Executar update no Supabase
+      const { data: updateResult, error } = await supabase
         .from('redacoes_enviadas')
-        .update({
-          nota_c1: notaC1,
-          nota_c2: notaC2,
-          nota_c3: notaC3,
-          nota_c4: notaC4,
-          nota_c5: notaC5,
-          nota_total: notaTotal,
-          comentario_admin: dados.comentario_admin || null,
-          corrigida: true,
-          data_correcao: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', redacaoId)
-        .select();
+        .select('*');
 
       if (error) {
-        console.error('Erro detalhado ao salvar:', error);
+        console.error('Erro detalhado ao salvar no Supabase:', error);
         throw new Error(`Erro ao salvar correção: ${error.message}`);
       }
 
-      console.log('Dados atualizados com sucesso:', updateData);
-      return { notaTotal, redacaoId, updateData };
+      if (!updateResult || updateResult.length === 0) {
+        console.error('Nenhuma linha foi atualizada');
+        throw new Error('Nenhuma redação foi atualizada. Verifique se o ID está correto.');
+      }
+
+      console.log('Correção salva com sucesso no banco:', updateResult[0]);
+      return { notaTotal, redacaoId, updateData: updateResult[0] };
     },
     onSuccess: (result) => {
       console.log('Correção salva com sucesso:', result);
       toast({
-        title: "Correção salva!",
+        title: "Correção salva com sucesso!",
         description: `Redação corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
       });
       
-      // Invalidar queries para atualizar a interface
+      // Invalidar todas as queries relacionadas para atualizar a interface
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas-admin'] });
       queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas'] });
       
@@ -131,9 +142,9 @@ export const RedacaoEnviadaForm = () => {
       resetForm();
     },
     onError: (error: Error) => {
-      console.error('Erro na mutação:', error);
+      console.error('Erro na mutação de correção:', error);
       toast({
-        title: "Erro ao salvar",
+        title: "Erro ao salvar correção",
         description: error.message,
         variant: "destructive",
       });
@@ -155,17 +166,17 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleEdit = (redacao: RedacaoEnviada) => {
-    console.log('Editando redação:', redacao.id);
+    console.log('Iniciando correção de redação:', redacao.id);
     setSelectedRedacao(redacao);
     setEditingRedacao(null);
     setFormData({
-      nota_c1: redacao.nota_c1?.toString() || '',
-      nota_c2: redacao.nota_c2?.toString() || '',
-      nota_c3: redacao.nota_c3?.toString() || '',
-      nota_c4: redacao.nota_c4?.toString() || '',
-      nota_c5: redacao.nota_c5?.toString() || '',
-      nota_total: redacao.nota_total?.toString() || '',
-      comentario_admin: redacao.comentario_admin || '',
+      nota_c1: '',
+      nota_c2: '',
+      nota_c3: '',
+      nota_c4: '',
+      nota_c5: '',
+      nota_total: '',
+      comentario_admin: '',
     });
   };
 
@@ -194,13 +205,15 @@ export const RedacaoEnviadaForm = () => {
     console.log(`Alterando ${competencia} para:`, valor);
     
     // Validar e limitar valores entre 0 e 200
-    let nota = 0;
-    const valorNumerico = parseInt(valor);
-    if (!isNaN(valorNumerico)) {
-      nota = Math.min(200, Math.max(0, valorNumerico));
+    let nota = '';
+    if (valor !== '') {
+      const valorNumerico = parseInt(valor);
+      if (!isNaN(valorNumerico)) {
+        nota = Math.min(200, Math.max(0, valorNumerico)).toString();
+      }
     }
     
-    const newFormData = { ...formData, [competencia]: nota.toString() };
+    const newFormData = { ...formData, [competencia]: nota };
     
     // Calcular total automaticamente
     const total = [
@@ -229,7 +242,18 @@ export const RedacaoEnviadaForm = () => {
       return;
     }
 
-    console.log('Submetendo formulário com dados:', formData);
+    // Validar se pelo menos uma nota foi preenchida
+    const todasNotasVazias = !formData.nota_c1 && !formData.nota_c2 && !formData.nota_c3 && !formData.nota_c4 && !formData.nota_c5;
+    if (todasNotasVazias) {
+      toast({
+        title: "Erro de validação",
+        description: "É necessário preencher pelo menos uma competência.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('Submetendo correção com dados:', formData);
     corrigirMutation.mutate(formData);
   };
 
@@ -309,7 +333,7 @@ ${redacao.redacao_texto}`;
                         {redacao.corrigida ? (
                           <Badge className="bg-green-100 text-green-800">Corrigida</Badge>
                         ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">Pendente</Badge>
+                          <Badge className="bg-yellow-100 text-yellow-800">Aguardando</Badge>
                         )}
                       </div>
 
