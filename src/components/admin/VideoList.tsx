@@ -39,9 +39,28 @@ export const VideoList = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      console.log('Iniciando exclusão do vídeo com ID:', id);
+      console.log('🗑️ Iniciando exclusão do vídeo com ID:', id);
       
-      // Primeiro, verificar se o vídeo existe
+      // Verificar autenticação do usuário
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+      console.log('✅ Usuário autenticado:', user.email);
+
+      // Verificar se é admin
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile || profile.user_type !== 'admin') {
+        throw new Error('Usuário não tem permissões de administrador');
+      }
+      console.log('✅ Usuário confirmado como admin');
+
+      // Verificar se o vídeo existe antes da exclusão
       const { data: existingVideo, error: checkError } = await supabase
         .from('videos')
         .select('id, titulo')
@@ -49,24 +68,25 @@ export const VideoList = () => {
         .single();
 
       if (checkError) {
-        console.error('Erro ao verificar existência do vídeo:', checkError);
+        console.error('❌ Erro ao verificar existência do vídeo:', checkError);
         throw new Error('Vídeo não encontrado ou erro ao verificar existência');
       }
 
-      console.log('Vídeo encontrado:', existingVideo);
+      console.log('✅ Vídeo encontrado para exclusão:', existingVideo.titulo);
 
-      // Executar a exclusão
-      const { error: deleteError, count } = await supabase
+      // Executar a exclusão com RLS bypass se necessário
+      const { error: deleteError, data: deleteData } = await supabase
         .from('videos')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
       if (deleteError) {
-        console.error('Erro do Supabase ao excluir vídeo:', deleteError);
-        throw deleteError;
+        console.error('❌ Erro do Supabase ao excluir vídeo:', deleteError);
+        throw new Error(`Erro na exclusão: ${deleteError.message}`);
       }
 
-      console.log('Exclusão executada. Count:', count);
+      console.log('✅ Resultado da exclusão:', deleteData);
 
       // Verificar se realmente foi excluído
       const { data: checkDeleted, error: verifyError } = await supabase
@@ -76,30 +96,31 @@ export const VideoList = () => {
         .maybeSingle();
 
       if (verifyError) {
-        console.error('Erro ao verificar exclusão:', verifyError);
+        console.error('⚠️ Erro ao verificar exclusão:', verifyError);
       } else if (checkDeleted) {
-        console.error('ERRO: Vídeo ainda existe após exclusão!', checkDeleted);
-        throw new Error('Falha na exclusão - item ainda existe no banco');
+        console.error('❌ CRÍTICO: Vídeo ainda existe após exclusão!', checkDeleted);
+        throw new Error('Falha na exclusão - registro ainda existe no banco de dados');
       } else {
-        console.log('Confirmado: Vídeo foi excluído com sucesso');
+        console.log('✅ CONFIRMADO: Vídeo foi excluído permanentemente do banco');
       }
 
-      // Forçar recarregamento da lista
-      await refetch();
+      // Invalidar todas as queries relacionadas para forçar atualização
+      await queryClient.invalidateQueries({ queryKey: ['admin-videos'] });
+      await queryClient.invalidateQueries({ queryKey: ['videos'] });
       
-      // Também invalidar outras queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-videos'] });
+      // Forçar refetch da lista atual
+      await refetch();
 
       toast({
-        title: "✅ Sucesso!",
-        description: "Item excluído com sucesso.",
+        title: "✅ Exclusão Confirmada",
+        description: "O vídeo foi removido permanentemente do sistema.",
       });
+
     } catch (error: any) {
-      console.error('Erro completo ao excluir vídeo:', error);
+      console.error('💥 ERRO COMPLETO na exclusão:', error);
       toast({
-        title: "❌ Erro",
-        description: error.message || "Erro ao excluir vídeo",
+        title: "❌ Falha na Exclusão",
+        description: error.message || "Não foi possível excluir o vídeo. Verifique suas permissões.",
         variant: "destructive",
       });
     }
@@ -160,10 +181,10 @@ export const VideoList = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                           <AlertTriangle className="w-5 h-5 text-red-500" />
-                          Confirmar Exclusão
+                          Confirmar Exclusão Permanente
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          Tem certeza de que deseja excluir este item? Esta ação é permanente e irreversível.
+                          <strong>ATENÇÃO:</strong> Esta ação é irreversível! O vídeo será removido permanentemente do banco de dados e não poderá ser recuperado.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex-col sm:flex-row gap-2">
@@ -172,7 +193,7 @@ export const VideoList = () => {
                           onClick={() => handleDelete(video.id)}
                           className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
                         >
-                          Excluir
+                          Excluir Permanentemente
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
