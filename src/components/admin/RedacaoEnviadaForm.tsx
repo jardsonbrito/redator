@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,9 +68,9 @@ export const RedacaoEnviadaForm = () => {
     mutationFn: async (dados: any) => {
       const redacaoAtual = selectedRedacao || editingRedacao;
       
-      console.log('🚀 Iniciando correção da redação:', {
-        id: redacaoAtual?.id,
-        formData: dados
+      console.log('🚀 Iniciando processo de correção:', {
+        redacaoId: redacaoAtual?.id,
+        dados: dados
       });
       
       if (!redacaoAtual?.id) {
@@ -78,16 +79,32 @@ export const RedacaoEnviadaForm = () => {
 
       const redacaoId = redacaoAtual.id;
 
-      // Converter e validar notas com mais rigor
+      // Primeiro, verificar se a redação ainda existe
+      console.log('🔍 Verificando existência da redação...');
+      const { data: existeRedacao, error: selectError } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, frase_tematica, corrigida')
+        .eq('id', redacaoId)
+        .single();
+
+      if (selectError) {
+        console.error('❌ Erro ao verificar redação:', selectError);
+        throw new Error(`Redação não encontrada: ${selectError.message}`);
+      }
+
+      console.log('✅ Redação encontrada:', existeRedacao);
+
+      // Validar e converter notas
       const notas = {
-        nota_c1: dados.nota_c1 ? Math.min(200, Math.max(0, parseInt(dados.nota_c1))) : 0,
-        nota_c2: dados.nota_c2 ? Math.min(200, Math.max(0, parseInt(dados.nota_c2))) : 0,
-        nota_c3: dados.nota_c3 ? Math.min(200, Math.max(0, parseInt(dados.nota_c3))) : 0,
-        nota_c4: dados.nota_c4 ? Math.min(200, Math.max(0, parseInt(dados.nota_c4))) : 0,
-        nota_c5: dados.nota_c5 ? Math.min(200, Math.max(0, parseInt(dados.nota_c5))) : 0,
+        nota_c1: dados.nota_c1 ? Math.min(200, Math.max(0, parseInt(dados.nota_c1))) : null,
+        nota_c2: dados.nota_c2 ? Math.min(200, Math.max(0, parseInt(dados.nota_c2))) : null,
+        nota_c3: dados.nota_c3 ? Math.min(200, Math.max(0, parseInt(dados.nota_c3))) : null,
+        nota_c4: dados.nota_c4 ? Math.min(200, Math.max(0, parseInt(dados.nota_c4))) : null,
+        nota_c5: dados.nota_c5 ? Math.min(200, Math.max(0, parseInt(dados.nota_c5))) : null,
       };
 
-      const notaTotal = notas.nota_c1 + notas.nota_c2 + notas.nota_c3 + notas.nota_c4 + notas.nota_c5;
+      // Calcular nota total apenas com notas válidas
+      const notaTotal = Object.values(notas).reduce((sum, nota) => sum + (nota || 0), 0);
       
       const updateData = {
         ...notas,
@@ -97,62 +114,49 @@ export const RedacaoEnviadaForm = () => {
         data_correcao: new Date().toISOString(),
       };
 
-      console.log('📝 Dados para update:', updateData);
-      console.log('🎯 ID da redação:', redacaoId);
+      console.log('📝 Dados preparados para UPDATE:', updateData);
 
-      // Primeiro, vamos verificar se conseguimos fazer SELECT na redação
-      const { data: verificacao, error: selectError } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, frase_tematica')
-        .eq('id', redacaoId)
-        .single();
+      // Executar UPDATE com verificação de autenticação
+      const { data: session } = await supabase.auth.getSession();
+      console.log('🔐 Sessão atual:', { 
+        user: session.session?.user?.email, 
+        isAuthenticated: !!session.session?.user 
+      });
 
-      if (selectError) {
-        console.error('❌ Erro no SELECT de verificação:', selectError);
-        throw new Error(`Erro ao verificar redação: ${selectError.message}`);
-      }
-
-      console.log('✅ Redação encontrada para update:', verificacao);
-
-      // Agora fazer o UPDATE
-      const { data: result, error: updateError, count } = await supabase
+      const { data: updateResult, error: updateError } = await supabase
         .from('redacoes_enviadas')
         .update(updateData)
         .eq('id', redacaoId)
         .select('*');
 
       console.log('📊 Resultado do UPDATE:', {
-        data: result,
+        data: updateResult,
         error: updateError,
-        count: count,
-        affectedRows: result?.length || 0
+        rowsAffected: updateResult?.length || 0
       });
 
       if (updateError) {
         console.error('❌ Erro no UPDATE:', updateError);
-        throw new Error(`Erro ao atualizar: ${updateError.message}`);
+        throw new Error(`Erro ao atualizar redação: ${updateError.message}`);
       }
 
-      if (!result || result.length === 0) {
+      if (!updateResult || updateResult.length === 0) {
         console.error('❌ UPDATE não afetou nenhum registro');
         
-        // Verificar se ainda conseguimos acessar a redação após o UPDATE
-        const { data: posUpdate, error: posUpdateError } = await supabase
+        // Verificar novamente se a redação ainda existe
+        const { data: recheck } = await supabase
           .from('redacoes_enviadas')
-          .select('*')
+          .select('id, corrigida')
           .eq('id', redacaoId)
           .single();
 
-        console.log('🔍 Estado da redação pós-UPDATE:', {
-          data: posUpdate,
-          error: posUpdateError
-        });
-
-        throw new Error(`UPDATE não afetou registros. ID: ${redacaoId}. Verifique permissões RLS.`);
+        console.log('🔍 Verificação pós-UPDATE:', recheck);
+        
+        throw new Error(`UPDATE não afetou registros. Verifique se você tem permissões de admin.`);
       }
 
-      console.log('✅ Correção salva com sucesso!', result[0]);
-      return { notaTotal, redacaoId, result: result[0] };
+      console.log('✅ Correção salva com sucesso!', updateResult[0]);
+      return { notaTotal, redacaoId, result: updateResult[0] };
     },
     onSuccess: (result) => {
       console.log('🎉 Correção salva com sucesso:', result);
