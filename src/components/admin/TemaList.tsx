@@ -24,7 +24,7 @@ export const TemaList = () => {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { data: temas, isLoading } = useQuery({
+  const { data: temas, isLoading, refetch } = useQuery({
     queryKey: ['admin-temas'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,11 +51,14 @@ export const TemaList = () => {
         throw error;
       }
 
-      console.log('Tema excluído com sucesso, invalidando queries...');
+      console.log('Tema excluído com sucesso, atualizando lista...');
       
-      // Invalidar as queries para atualizar a interface
-      await queryClient.invalidateQueries({ queryKey: ['temas'] });
-      await queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
+      // Forçar recarregamento da lista
+      await refetch();
+      
+      // Também invalidar outras queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['temas'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
 
       toast({
         title: "✅ Sucesso!",

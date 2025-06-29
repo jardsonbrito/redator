@@ -24,7 +24,7 @@ export const VideoList = () => {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { data: videos, isLoading } = useQuery({
+  const { data: videos, isLoading, refetch } = useQuery({
     queryKey: ['admin-videos'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,11 +51,14 @@ export const VideoList = () => {
         throw error;
       }
 
-      console.log('Vídeo excluído com sucesso, invalidando queries...');
+      console.log('Vídeo excluído com sucesso, atualizando lista...');
       
-      // Invalidar as queries para atualizar a interface
-      await queryClient.invalidateQueries({ queryKey: ['videos'] });
-      await queryClient.invalidateQueries({ queryKey: ['admin-videos'] });
+      // Forçar recarregamento da lista
+      await refetch();
+      
+      // Também invalidar outras queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-videos'] });
 
       toast({
         title: "✅ Sucesso!",

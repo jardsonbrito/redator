@@ -24,7 +24,7 @@ export const RedacaoList = () => {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { data: redacoes, isLoading } = useQuery({
+  const { data: redacoes, isLoading, refetch } = useQuery({
     queryKey: ['admin-redacoes'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,11 +51,14 @@ export const RedacaoList = () => {
         throw error;
       }
 
-      console.log('Redação excluída com sucesso, invalidando queries...');
+      console.log('Redação excluída com sucesso, atualizando lista...');
       
-      // Invalidar as queries para atualizar a interface
-      await queryClient.invalidateQueries({ queryKey: ['redacoes'] });
-      await queryClient.invalidateQueries({ queryKey: ['admin-redacoes'] });
+      // Forçar recarregamento da lista
+      await refetch();
+      
+      // Também invalidar outras queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-redacoes'] });
 
       toast({
         title: "✅ Sucesso!",
