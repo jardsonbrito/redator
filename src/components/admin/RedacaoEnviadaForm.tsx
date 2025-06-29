@@ -67,43 +67,13 @@ export const RedacaoEnviadaForm = () => {
     mutationFn: async (dados: any) => {
       const redacaoAtual = selectedRedacao || editingRedacao;
       
-      console.log('=== DEBUG INÍCIO DA CORREÇÃO ===');
-      console.log('Redação atual completa:', redacaoAtual);
-      console.log('Selected redacao:', selectedRedacao);
-      console.log('Editing redacao:', editingRedacao);
+      console.log('Iniciando correção da redação:', redacaoAtual?.id);
       
       if (!redacaoAtual?.id) {
-        console.error('ERRO: ID da redação não encontrado');
         throw new Error('ID da redação não encontrado');
       }
 
       const redacaoId = redacaoAtual.id;
-      console.log('=== VERIFICAÇÃO PRÉVIA DO ID ===');
-      console.log('ID que será usado:', redacaoId);
-      console.log('Tipo do ID:', typeof redacaoId);
-      console.log('Tamanho do ID:', redacaoId.length);
-      
-      // Primeiro, verificar se o registro realmente existe
-      console.log('=== VERIFICANDO SE O REGISTRO EXISTE ===');
-      const { data: existeRegistro, error: erroVerificacao } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, frase_tematica, corrigida')
-        .eq('id', redacaoId);
-      
-      console.log('Verificação de existência - Dados:', existeRegistro);
-      console.log('Verificação de existência - Erro:', erroVerificacao);
-      
-      if (erroVerificacao) {
-        console.error('Erro na verificação prévia:', erroVerificacao);
-        throw new Error(`Erro na verificação: ${erroVerificacao.message}`);
-      }
-      
-      if (!existeRegistro || existeRegistro.length === 0) {
-        console.error('CRÍTICO: Registro não encontrado na base de dados');
-        throw new Error(`Redação com ID ${redacaoId} não encontrada na base de dados`);
-      }
-      
-      console.log('✅ Registro encontrado:', existeRegistro[0]);
 
       // Converter e validar notas
       const notaC1 = Math.min(200, Math.max(0, parseInt(dados.nota_c1) || 0));
@@ -125,66 +95,25 @@ export const RedacaoEnviadaForm = () => {
         data_correcao: new Date().toISOString(),
       };
 
-      console.log('=== EXECUTANDO UPDATE ===');
-      console.log('Dados para update:', updateData);
-      console.log('ID para o where:', redacaoId);
+      console.log('Executando update com dados:', updateData);
 
-      // Vamos testar primeiro uma query simples para ter certeza que conseguimos acessar o registro
-      console.log('=== TESTE DE ACESSO DIRETO ===');
-      const { data: testeAcesso, error: erroAcesso } = await supabase
-        .from('redacoes_enviadas')
-        .select('*')
-        .eq('id', redacaoId);
-      
-      console.log('Teste de acesso - Resultado:', testeAcesso);
-      console.log('Teste de acesso - Erro:', erroAcesso);
-
-      // Agora vamos tentar o update mais simples possível primeiro
-      console.log('=== TENTATIVA DE UPDATE SIMPLES ===');
-      const { data: updateSimples, error: erroUpdateSimples, count: countSimples } = await supabase
-        .from('redacoes_enviadas')
-        .update({ corrigida: true })
-        .eq('id', redacaoId)
-        .select('*');
-
-      console.log('Update simples - Resultado:', updateSimples);
-      console.log('Update simples - Erro:', erroUpdateSimples);
-      console.log('Update simples - Count:', countSimples);
-
-      if (erroUpdateSimples) {
-        console.error('Erro no update simples:', erroUpdateSimples);
-        throw new Error(`Erro no update simples: ${erroUpdateSimples.message}`);
-      }
-
-      if (!updateSimples || updateSimples.length === 0) {
-        console.error('CRÍTICO: Nem mesmo o update simples funcionou');
-        throw new Error(`Update simples falhou. ID: ${redacaoId}`);
-      }
-
-      // Se o update simples funcionou, vamos tentar o update completo
-      console.log('=== UPDATE COMPLETO ===');
-      const { data: result, error: updateError, count } = await supabase
+      const { data: result, error: updateError } = await supabase
         .from('redacoes_enviadas')
         .update(updateData)
         .eq('id', redacaoId)
         .select('*');
 
-      console.log('=== RESULTADO DO UPDATE COMPLETO ===');
-      console.log('Result:', result);
-      console.log('Error:', updateError);
-      console.log('Count:', count);
-
       if (updateError) {
-        console.error('Erro no update completo:', updateError);
+        console.error('Erro no update:', updateError);
         throw new Error(`Erro ao atualizar: ${updateError.message}`);
       }
 
       if (!result || result.length === 0) {
-        console.error('CRÍTICO: Update completo não afetou nenhum registro');
-        throw new Error(`Update completo não afetou nenhum registro. ID: ${redacaoId}`);
+        console.error('Update não afetou nenhum registro');
+        throw new Error(`Update não afetou nenhum registro. ID: ${redacaoId}`);
       }
 
-      console.log('✅ Update realizado com sucesso:', result[0]);
+      console.log('✅ Correção salva com sucesso:', result[0]);
       return { notaTotal, redacaoId, result: result[0] };
     },
     onSuccess: (result) => {
@@ -200,9 +129,7 @@ export const RedacaoEnviadaForm = () => {
       resetForm();
     },
     onError: (error: Error) => {
-      console.error('=== ERRO NA CORREÇÃO ===');
-      console.error('Mensagem:', error.message);
-      console.error('Stack:', error.stack);
+      console.error('Erro na correção:', error);
       toast({
         title: "Erro ao salvar correção",
         description: error.message,
@@ -226,8 +153,7 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleEdit = (redacao: RedacaoEnviada) => {
-    console.log('=== INICIANDO CORREÇÃO DE REDAÇÃO ===');
-    console.log('Redação selecionada:', redacao);
+    console.log('Iniciando correção de redação:', redacao.id);
     
     if (!redacao?.id) {
       toast({
@@ -252,8 +178,7 @@ export const RedacaoEnviadaForm = () => {
   };
 
   const handleEditExisting = (redacao: RedacaoEnviada) => {
-    console.log('=== EDITANDO CORREÇÃO EXISTENTE ===');
-    console.log('Redação para edição:', redacao);
+    console.log('Editando correção existente:', redacao.id);
     
     if (!redacao?.id) {
       toast({
@@ -352,9 +277,7 @@ ${redacao.redacao_texto}`;
     
     const redacaoAtual = selectedRedacao || editingRedacao;
     
-    console.log('=== SUBMETENDO FORMULÁRIO ===');
-    console.log('Redação atual:', redacaoAtual);
-    console.log('Dados do formulário:', formData);
+    console.log('Submetendo formulário para redação:', redacaoAtual?.id);
     
     if (!redacaoAtual?.id) {
       toast({
