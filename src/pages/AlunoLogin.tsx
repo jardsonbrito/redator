@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { User, UserPlus, Lock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 const AlunoLogin = () => {
   const [turmaSelecionada, setTurmaSelecionada] = useState("");
@@ -18,6 +19,7 @@ const AlunoLogin = () => {
   const [isVisitanteDialogOpen, setIsVisitanteDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { loginAsStudent, loginAsVisitante } = useStudentAuth();
 
   const turmas = [
     { value: "Turma A (LRA2025)", label: "Turma A (LRA2025)", senha: "LRA2025" },
@@ -57,17 +59,15 @@ const AlunoLogin = () => {
       return;
     }
 
-    // Salva a turma no localStorage
-    localStorage.setItem("alunoTurma", turmaSelecionada);
-    localStorage.setItem("userType", "aluno");
-    localStorage.removeItem("visitanteData"); // Remove dados de visitante se houver
+    // Login usando o novo sistema
+    loginAsStudent(turmaSelecionada);
     
     toast({
       title: "Acesso liberado!",
       description: `Bem-vindo à ${turmaSelecionada}!`,
     });
 
-    navigate("/app");
+    navigate("/app", { replace: true });
   };
 
   const handleAcessoVisitante = () => {
@@ -91,16 +91,8 @@ const AlunoLogin = () => {
       return;
     }
 
-    // Salva os dados do visitante
-    const visitanteData = {
-      nome: nomeVisitante.trim(),
-      email: emailVisitante.trim().toLowerCase(),
-      tipo: "visitante"
-    };
-
-    localStorage.setItem("visitanteData", JSON.stringify(visitanteData));
-    localStorage.setItem("userType", "visitante");
-    localStorage.setItem("alunoTurma", "visitante");
+    // Login como visitante usando o novo sistema
+    loginAsVisitante(nomeVisitante.trim(), emailVisitante.trim());
 
     toast({
       title: "Bem-vindo, visitante!",
@@ -108,7 +100,7 @@ const AlunoLogin = () => {
     });
 
     setIsVisitanteDialogOpen(false);
-    navigate("/app");
+    navigate("/app", { replace: true });
   };
 
   return (
