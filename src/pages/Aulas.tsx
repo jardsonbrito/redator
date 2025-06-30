@@ -77,7 +77,7 @@ const Aulas = () => {
                 <div className="text-center">
                   <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 group-hover:scale-110 transition-transform ${
                     module.tipo === 'ao_vivo' 
-                      ? 'bg-red-500' 
+                      ? 'bg-redator-secondary' 
                       : 'bg-redator-primary'
                   }`}>
                     {module.tipo === 'ao_vivo' ? (
@@ -97,7 +97,7 @@ const Aulas = () => {
 
                   {module.tipo === 'ao_vivo' ? (
                     <Link to={`/aulas/ao-vivo`}>
-                      <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
+                      <Button className="w-full bg-redator-secondary hover:bg-redator-secondary/90 text-white">
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Acessar Aula ao Vivo
                       </Button>

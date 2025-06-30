@@ -98,8 +98,8 @@ const Exercicios = () => {
                   <div className="text-center">
                     <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 group-hover:scale-110 transition-transform ${
                       exercicio.tipo === 'formulario' 
-                        ? 'bg-orange-500' 
-                        : 'bg-orange-600'
+                        ? 'bg-redator-accent' 
+                        : 'bg-redator-secondary'
                     }`}>
                       {exercicio.tipo === 'formulario' ? (
                         <ExternalLink className="w-6 h-6 text-white" />
@@ -117,7 +117,11 @@ const Exercicios = () => {
                     </p>
 
                     <Link to={`/exercicios/${exercicio.id}`}>
-                      <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+                      <Button className={`w-full text-white ${
+                        exercicio.tipo === 'formulario' 
+                          ? 'bg-redator-accent hover:bg-redator-accent/90' 
+                          : 'bg-redator-secondary hover:bg-redator-secondary/90'
+                      }`}>
                         {exercicio.tipo === 'formulario' ? (
                           <>
                             <ExternalLink className="w-4 h-4 mr-2" />

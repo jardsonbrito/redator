@@ -121,7 +121,7 @@ const AulaModulo = () => {
                   {aula.youtube_url && (
                     <Button 
                       asChild 
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      className="w-full bg-redator-secondary hover:bg-redator-secondary/90 text-white"
                     >
                       <a href={aula.youtube_url} target="_blank" rel="noopener noreferrer">
                         <Play className="w-4 h-4 mr-2" />
@@ -143,7 +143,7 @@ const AulaModulo = () => {
               As aulas para este módulo ainda não foram adicionadas.
             </p>
             <Link to="/aulas">
-              <Button variant="outline">
+              <Button variant="outline" className="border-redator-accent text-redator-primary hover:bg-redator-accent/10">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar aos Módulos
               </Button>

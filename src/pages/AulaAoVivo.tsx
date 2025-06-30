@@ -37,7 +37,7 @@ const AulaAoVivo = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
         <div className="text-center">
-          <ExternalLink className="w-12 h-12 text-red-500 mx-auto mb-4 animate-pulse" />
+          <ExternalLink className="w-12 h-12 text-redator-secondary mx-auto mb-4 animate-pulse" />
           <p className="text-redator-accent">Carregando aula ao vivo...</p>
         </div>
       </div>
@@ -63,7 +63,7 @@ const AulaAoVivo = () => {
               </Link>
               <div className="hidden sm:block w-px h-6 bg-redator-accent/20"></div>
               <h1 className="text-xl sm:text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <ExternalLink className="w-6 h-6 text-red-500" />
+                <ExternalLink className="w-6 h-6 text-redator-secondary" />
                 Aula ao Vivo
               </h1>
             </div>
@@ -83,9 +83,9 @@ const AulaAoVivo = () => {
         </div>
 
         {activeAula ? (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-redator-secondary/30 bg-purple-50">
             <CardContent className="p-8 text-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-500 mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-redator-secondary mb-6">
                 <ExternalLink className="w-10 h-10 text-white" />
               </div>
               
@@ -113,7 +113,7 @@ const AulaAoVivo = () => {
               <Button 
                 asChild 
                 size="lg"
-                className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 text-lg"
+                className="bg-redator-secondary hover:bg-redator-secondary/90 text-white px-8 py-4 text-lg"
               >
                 <a href={activeAula.google_meet_url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="w-5 h-5 mr-3" />
@@ -143,7 +143,7 @@ const AulaAoVivo = () => {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/aulas">
-                  <Button variant="outline" size="lg">
+                  <Button variant="outline" size="lg" className="border-redator-accent text-redator-primary hover:bg-redator-accent/10">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Ver Aulas Gravadas
                   </Button>
