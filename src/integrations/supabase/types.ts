@@ -278,6 +278,9 @@ export type Database = {
           nota_c5: number | null
           nota_total: number | null
           redacao_texto: string
+          status: string | null
+          tipo_envio: string | null
+          turma: string | null
         }
         Insert: {
           comentario_admin?: string | null
@@ -296,6 +299,9 @@ export type Database = {
           nota_c5?: number | null
           nota_total?: number | null
           redacao_texto: string
+          status?: string | null
+          tipo_envio?: string | null
+          turma?: string | null
         }
         Update: {
           comentario_admin?: string | null
@@ -314,6 +320,9 @@ export type Database = {
           nota_c5?: number | null
           nota_total?: number | null
           redacao_texto?: string
+          status?: string | null
+          tipo_envio?: string | null
+          turma?: string | null
         }
         Relationships: [
           {
@@ -515,6 +524,34 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: number
       }
+      get_redacoes_by_turma: {
+        Args: { p_turma: string }
+        Returns: {
+          id: string
+          frase_tematica: string
+          nome_aluno: string
+          tipo_envio: string
+          data_envio: string
+          status: string
+          corrigida: boolean
+        }[]
+      }
+      get_redacoes_by_turma_and_email: {
+        Args: { p_turma: string; p_email: string }
+        Returns: {
+          id: string
+          frase_tematica: string
+          nome_aluno: string
+          email_aluno: string
+          tipo_envio: string
+          data_envio: string
+          status: string
+          corrigida: boolean
+          nota_total: number
+          comentario_admin: string
+          data_correcao: string
+        }[]
+      }
       is_admin: {
         Args: { user_id?: string }
         Returns: boolean
@@ -530,6 +567,7 @@ export type Database = {
     }
     Enums: {
       competencia_type: "C1" | "C2" | "C3" | "C4" | "C5"
+      tipo_envio_enum: "regular" | "exercicio" | "simulado" | "visitante"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -646,6 +684,7 @@ export const Constants = {
   public: {
     Enums: {
       competencia_type: ["C1", "C2", "C3", "C4", "C5"],
+      tipo_envio_enum: ["regular", "exercicio", "simulado", "visitante"],
     },
   },
 } as const

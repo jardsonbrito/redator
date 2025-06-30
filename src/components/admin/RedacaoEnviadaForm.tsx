@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Save, Calendar, Award, Copy, Edit } from "lucide-react";
+import { Eye, Save, Calendar, Award, Copy, Edit, User, Mail, Filter } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRedacaoCorrecaoHandler, type CorrecaoData } from "./RedacaoCorrecaoHandler";
 
 type RedacaoEnviada = {
@@ -25,12 +26,20 @@ type RedacaoEnviada = {
   comentario_admin: string | null;
   corrigida: boolean;
   data_correcao: string | null;
+  nome_aluno: string | null;
+  email_aluno: string | null;
+  tipo_envio: string | null;
+  status: string | null;
+  turma: string | null;
 };
 
 export const RedacaoEnviadaForm = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoEnviada | null>(null);
   const [viewRedacao, setViewRedacao] = useState<RedacaoEnviada | null>(null);
   const [editingRedacao, setEditingRedacao] = useState<RedacaoEnviada | null>(null);
+  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [filtroStatus, setFiltroStatus] = useState<string>("todos");
+  const [filtroTurma, setFiltroTurma] = useState<string>("todas");
   const [formData, setFormData] = useState({
     nota_c1: '',
     nota_c2: '',
@@ -120,6 +129,20 @@ export const RedacaoEnviadaForm = () => {
       comentario_admin: '',
     });
   };
+
+  // Aplicar filtros
+  const redacoesFiltradas = redacoes?.filter(redacao => {
+    if (filtroTipo !== "todos" && redacao.tipo_envio !== filtroTipo) return false;
+    if (filtroStatus !== "todos") {
+      if (filtroStatus === "corrigida" && !redacao.corrigida) return false;
+      if (filtroStatus === "aguardando" && redacao.corrigida) return false;
+    }
+    if (filtroTurma !== "todas" && redacao.turma !== filtroTurma) return false;
+    return true;
+  }) || [];
+
+  // Extrair turmas únicas para o filtro
+  const turmasUnicas = [...new Set(redacoes?.map(r => r.turma).filter(Boolean))];
 
   const handleEdit = (redacao: RedacaoEnviada) => {
     console.log('✏️ Iniciando correção de redação:', redacao.id);
@@ -221,10 +244,34 @@ export const RedacaoEnviadaForm = () => {
     });
   };
 
+  const getTipoEnvioLabel = (tipo: string | null) => {
+    if (!tipo) return "Regular";
+    const tipos = {
+      'regular': 'Regular',
+      'exercicio': 'Exercício',
+      'simulado': 'Simulado',
+      'visitante': 'Visitante'
+    };
+    return tipos[tipo as keyof typeof tipos] || tipo;
+  };
+
+  const getTipoEnvioColor = (tipo: string | null) => {
+    if (!tipo || tipo === 'regular') return "bg-blue-100 text-blue-800";
+    if (tipo === 'exercicio') return "bg-purple-100 text-purple-800";
+    if (tipo === 'simulado') return "bg-orange-100 text-orange-800";
+    if (tipo === 'visitante') return "bg-gray-100 text-gray-800";
+    return "bg-blue-100 text-blue-800";
+  };
+
   const copiarPromptCorrecao = async (redacao: RedacaoEnviada) => {
     const prompt = `Corrija a seguinte redação conforme os critérios do ENEM, atribuindo nota de 0 a 200 por competência (C1 a C5) e justificando cada uma. Utilize linguagem objetiva, mas pedagógica.
 
 Frase temática: "${redacao.frase_tematica}"
+
+Autor: ${redacao.nome_aluno || 'Não informado'}
+E-mail: ${redacao.email_aluno || 'Não informado'}
+Tipo de envio: ${getTipoEnvioLabel(redacao.tipo_envio)}
+${redacao.turma && redacao.turma !== 'visitante' ? `Turma: ${redacao.turma}` : ''}
 
 Redação do aluno:
 ${redacao.redacao_texto}`;
@@ -295,15 +342,73 @@ ${redacao.redacao_texto}`;
 
   return (
     <div className="space-y-6">
+      {/* Filtros */}
+      <Card className="border-redator-accent/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-redator-primary">
+            <Filter className="w-5 h-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-redator-primary mb-2">Tipo de Envio</label>
+              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os tipos</SelectItem>
+                  <SelectItem value="regular">Regular</SelectItem>
+                  <SelectItem value="exercicio">Exercício</SelectItem>
+                  <SelectItem value="simulado">Simulado</SelectItem>
+                  <SelectItem value="visitante">Visitante</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-redator-primary mb-2">Status</label>
+              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os status</SelectItem>
+                  <SelectItem value="aguardando">Aguardando correção</SelectItem>
+                  <SelectItem value="corrigida">Corrigidas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-redator-primary mb-2">Turma</label>
+              <Select value={filtroTurma} onValueChange={setFiltroTurma}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as turmas</SelectItem>
+                  {turmasUnicas.map(turma => (
+                    <SelectItem key={turma} value={turma!}>{turma}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Lista de redações */}
       <div>
         <h3 className="text-lg font-semibold text-redator-primary mb-4">
-          Redações Enviadas ({redacoes?.length || 0})
+          Redações Enviadas ({redacoesFiltradas.length})
         </h3>
         
-        {redacoes && redacoes.length > 0 ? (
+        {redacoesFiltradas.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
-            {redacoes.map((redacao) => (
+            {redacoesFiltradas.map((redacao) => (
               <Card key={redacao.id} className="border-redator-accent/20">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-4">
@@ -312,16 +417,40 @@ ${redacao.redacao_texto}`;
                         {redacao.frase_tematica}
                       </h4>
                       
-                      <div className="flex items-center gap-4 text-sm text-redator-accent mb-2">
+                      {/* Informações do autor */}
+                      <div className="space-y-1 text-sm text-redator-accent mb-3">
+                        {redacao.nome_aluno && (
+                          <div className="flex items-center gap-2">
+                            <User className="w-3 h-3" />
+                            <span>{redacao.nome_aluno}</span>
+                          </div>
+                        )}
+                        {redacao.email_aluno && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-3 h-3" />
+                            <span>{redacao.email_aluno}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-redator-accent mb-2 flex-wrap">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
                           {formatDate(redacao.data_envio)}
                         </div>
                         
+                        <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
+                          {getTipoEnvioLabel(redacao.tipo_envio)}
+                        </Badge>
+                        
                         {redacao.corrigida ? (
                           <Badge className="bg-green-100 text-green-800">Corrigida</Badge>
                         ) : (
                           <Badge className="bg-yellow-100 text-yellow-800">Aguardando</Badge>
+                        )}
+
+                        {redacao.turma && redacao.turma !== 'visitante' && (
+                          <Badge variant="outline">{redacao.turma}</Badge>
                         )}
                       </div>
 
@@ -382,7 +511,7 @@ ${redacao.redacao_texto}`;
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="text-redator-accent">Nenhuma redação encontrada.</p>
+            <p className="text-redator-accent">Nenhuma redação encontrada com os filtros selecionados.</p>
           </div>
         )}
       </div>

@@ -12,11 +12,43 @@ import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
 
 const EnvieRedacao = () => {
+  const [nomeCompleto, setNomeCompleto] = useState("");
+  const [email, setEmail] = useState("");
   const [fraseTematica, setFraseTematica] = useState("");
   const [redacaoTexto, setRedacaoTexto] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(true);
   const { toast } = useToast();
+
+  // Recupera dados do usuário
+  const userType = localStorage.getItem("userType");
+  const alunoTurma = localStorage.getItem("alunoTurma");
+  const visitanteData = localStorage.getItem("visitanteData");
+
+  // Determina o tipo de envio e turma
+  let tipoEnvio = "visitante";
+  let turmaCode = "visitante";
+  
+  if (userType === "aluno" && alunoTurma) {
+    tipoEnvio = "regular";
+    const turmasMap = {
+      "Turma A": "LRA2025",
+      "Turma B": "LRB2025", 
+      "Turma C": "LRC2025",
+      "Turma D": "LRD2025",
+      "Turma E": "LRE2025"
+    };
+    turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
+  }
+
+  // Pré-preencher dados se for visitante cadastrado
+  useState(() => {
+    if (userType === "visitante" && visitanteData) {
+      const dados = JSON.parse(visitanteData);
+      setNomeCompleto(dados.nome || "");
+      setEmail(dados.email || "");
+    }
+  });
 
   const { data: redacoesEnviadas, isLoading, refetch } = useQuery({
     queryKey: ['redacoes-enviadas'],
@@ -40,10 +72,21 @@ const EnvieRedacao = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!fraseTematica.trim() || !redacaoTexto.trim()) {
+    if (!nomeCompleto.trim() || !email.trim() || !fraseTematica.trim() || !redacaoTexto.trim()) {
       toast({
         title: "Campos obrigatórios",
-        description: "Por favor, preencha tanto a frase temática quanto o texto da redação.",
+        description: "Por favor, preencha todos os campos obrigatórios: nome completo, e-mail, frase temática e texto da redação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validação básica de e-mail
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "E-mail inválido",
+        description: "Por favor, digite um e-mail válido.",
         variant: "destructive",
       });
       return;
@@ -55,8 +98,13 @@ const EnvieRedacao = () => {
       const { error } = await supabase
         .from('redacoes_enviadas')
         .insert({
+          nome_aluno: nomeCompleto.trim(),
+          email_aluno: email.trim(),
           frase_tematica: fraseTematica.trim(),
           redacao_texto: redacaoTexto.trim(),
+          tipo_envio: tipoEnvio,
+          turma: turmaCode,
+          status: 'aguardando'
         });
 
       if (error) {
@@ -66,10 +114,16 @@ const EnvieRedacao = () => {
 
       toast({
         title: "Redação enviada com sucesso!",
-        description: "Sua redação foi salva e estará disponível para correção. Você pode visualizá-la na lista abaixo.",
+        description: `Sua redação foi salva e estará disponível para correção. ${
+          tipoEnvio === 'regular' ? 'Você poderá visualizá-la no card "Minhas Redações" na página inicial.' : 'Você pode visualizá-la na lista abaixo.'
+        }`,
       });
 
       // Limpar formulário
+      if (userType !== "visitante") {
+        setNomeCompleto("");
+        setEmail("");
+      }
       setFraseTematica("");
       setRedacaoTexto("");
       
@@ -123,14 +177,16 @@ const EnvieRedacao = () => {
             <Send className="w-4 h-4" />
             Enviar Redação
           </Button>
-          <Button
-            onClick={() => setShowForm(false)}
-            variant={!showForm ? "default" : "outline"}
-            className="flex items-center gap-2"
-          >
-            <Eye className="w-4 h-4" />
-            Ver Redações Enviadas
-          </Button>
+          {tipoEnvio === "visitante" && (
+            <Button
+              onClick={() => setShowForm(false)}
+              variant={!showForm ? "default" : "outline"}
+              className="flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              Ver Redações Enviadas
+            </Button>
+          )}
         </div>
 
         {showForm ? (
@@ -142,11 +198,45 @@ const EnvieRedacao = () => {
                 Envie sua Redação
               </CardTitle>
               <p className="text-redator-accent">
-                Preencha os campos abaixo para enviar sua redação. Ela será corrigida e você poderá visualizar as notas e comentários na seção "Ver Redações Enviadas".
+                Preencha todos os campos abaixo para enviar sua redação. Ela será corrigida e você poderá visualizar as notas e comentários {
+                  tipoEnvio === 'regular' ? 'no card "Minhas Redações" na página inicial' : 'na seção "Ver Redações Enviadas"'
+                }.
               </p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="nome-completo" className="block text-sm font-medium text-redator-primary mb-2">
+                      Nome Completo *
+                    </label>
+                    <Input
+                      id="nome-completo"
+                      type="text"
+                      placeholder="Digite seu nome completo..."
+                      value={nomeCompleto}
+                      onChange={(e) => setNomeCompleto(e.target.value)}
+                      className="border-redator-accent/30 focus:border-redator-accent"
+                      maxLength={100}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-redator-primary mb-2">
+                      E-mail *
+                    </label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Digite seu e-mail..."
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="border-redator-accent/30 focus:border-redator-accent"
+                      maxLength={100}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="frase-tematica" className="block text-sm font-medium text-redator-primary mb-2">
                     Frase Temática *
@@ -181,24 +271,38 @@ const EnvieRedacao = () => {
                   </p>
                 </div>
 
+                {/* Informações sobre tipo de envio */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    <strong>Tipo de envio:</strong> {
+                      tipoEnvio === 'regular' ? `Aluno da ${alunoTurma}` : 'Visitante'
+                    }
+                  </p>
+                  {tipoEnvio === 'regular' && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Sua redação ficará disponível no card "Minhas Redações" na página inicial, protegida por e-mail.
+                    </p>
+                  )}
+                </div>
+
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
                   className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
                 >
-                  {isSubmitting ? "Salvando..." : "Salvar Redação"}
+                  {isSubmitting ? "Salvando..." : "Enviar Redação"}
                 </Button>
               </form>
             </CardContent>
           </Card>
         ) : (
-          /* Lista de redações enviadas */
+          /* Lista de redações enviadas - apenas para visitantes */
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-redator-primary">Redações Enviadas</h2>
+              <h2 className="text-xl font-semibold text-redator-primary">Redações Enviadas (Visitantes)</h2>
               {redacoesEnviadas && (
                 <p className="text-sm text-redator-accent">
-                  {redacoesEnviadas.length} redação{redacoesEnviadas.length !== 1 ? 'ões' : ''} encontrada{redacoesEnviadas.length !== 1 ? 's' : ''}
+                  {redacoesEnviadas.filter(r => r.tipo_envio === 'visitante').length} redação{redacoesEnviadas.filter(r => r.tipo_envio === 'visitante').length !== 1 ? 'ões' : ''} encontrada{redacoesEnviadas.filter(r => r.tipo_envio === 'visitante').length !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
@@ -210,16 +314,18 @@ const EnvieRedacao = () => {
               </div>
             ) : redacoesEnviadas && redacoesEnviadas.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {redacoesEnviadas.map((redacao) => (
-                  <RedacaoEnviadaCard key={redacao.id} redacao={redacao} />
-                ))}
+                {redacoesEnviadas
+                  .filter(redacao => redacao.tipo_envio === 'visitante')
+                  .map((redacao) => (
+                    <RedacaoEnviadaCard key={redacao.id} redacao={redacao} />
+                  ))}
               </div>
             ) : (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📝</div>
                 <h3 className="text-xl font-semibold text-redator-primary mb-2">Nenhuma redação encontrada</h3>
                 <p className="text-redator-accent mb-4">
-                  Ainda não há redações enviadas. Seja o primeiro a compartilhar seu texto!
+                  Ainda não há redações enviadas por visitantes.
                 </p>
                 <Button 
                   onClick={() => setShowForm(true)}

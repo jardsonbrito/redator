@@ -1,11 +1,12 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList, ClipboardCheck, Home, Award } from "lucide-react";
+import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList, ClipboardCheck, Home, Award, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -121,6 +122,25 @@ const Index = () => {
     }
   });
 
+  // Verifica se há redações da turma (para "Minhas Redações")
+  const { data: hasRedacoesTurma } = useQuery({
+    queryKey: ['has-redacoes-turma', turmaCode],
+    queryFn: async () => {
+      if (!turmaCode || turmaCode === "visitante") return false;
+      
+      const { data, error } = await supabase
+        .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
+      
+      if (error) {
+        console.error('Error checking redacoes turma:', error);
+        return false;
+      }
+      
+      return data && data.length > 0;
+    },
+    enabled: !!turmaCode && turmaCode !== "visitante"
+  });
+
   const menuItems = [
     {
       title: "Temas",
@@ -199,6 +219,9 @@ const Index = () => {
     nomeUsuario = `Aluno da ${alunoTurma}`;
   }
 
+  // Determinar se deve mostrar seção "Minhas Redações"
+  const showMinhasRedacoes = userType === "aluno" && alunoTurma && hasRedacoesTurma;
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
@@ -247,33 +270,50 @@ const Index = () => {
             
             <p className="text-xl text-redator-accent font-medium mb-12">Redação na prática, aprovação na certa!</p>
             
-            <h2 className="text-2xl font-semibold text-redator-primary mb-12">
-              Escolha por onde começar:
-            </h2>
+            {!showMinhasRedacoes && (
+              <h2 className="text-2xl font-semibold text-redator-primary mb-12">
+                Escolha por onde começar:
+              </h2>
+            )}
           </div>
 
+          {/* Seção "Minhas Redações" - apenas para alunos de turma com redações */}
+          {showMinhasRedacoes && (
+            <div className="mb-16">
+              <MinhasRedacoes />
+            </div>
+          )}
+
           {/* Menu Principal Horizontal */}
-          <div className={`grid grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto ${
-            visibleMenuItems.length <= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-6'
-          }`}>
-            {visibleMenuItems.map((item, index) => (
-              <Tooltip key={index}>
-                <TooltipTrigger asChild>
-                  <Link to={item.path} className="group flex flex-col items-center p-6 bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 border border-redator-accent/10 hover:border-redator-secondary/30">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-redator-primary group-hover:bg-redator-secondary transition-colors duration-300 mb-4">
-                      <item.icon className="w-8 h-8 text-white" />
-                    </div>
-                    
-                    <h3 className="text-sm font-semibold text-redator-primary text-center leading-tight group-hover:text-redator-secondary transition-colors">
-                      {item.title}
-                    </h3>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs text-center p-3 bg-redator-primary text-white border-redator-primary">
-                  <p className="text-sm">{item.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
+          <div className="space-y-8">
+            {showMinhasRedacoes && (
+              <h2 className="text-2xl font-semibold text-redator-primary text-center">
+                Explorar outras seções:
+              </h2>
+            )}
+            
+            <div className={`grid grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto ${
+              visibleMenuItems.length <= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-6'
+            }`}>
+              {visibleMenuItems.map((item, index) => (
+                <Tooltip key={index}>
+                  <TooltipTrigger asChild>
+                    <Link to={item.path} className="group flex flex-col items-center p-6 bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 border border-redator-accent/10 hover:border-redator-secondary/30">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-redator-primary group-hover:bg-redator-secondary transition-colors duration-300 mb-4">
+                        <item.icon className="w-8 h-8 text-white" />
+                      </div>
+                      
+                      <h3 className="text-sm font-semibold text-redator-primary text-center leading-tight group-hover:text-redator-secondary transition-colors">
+                        {item.title}
+                      </h3>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs text-center p-3 bg-redator-primary text-white border-redator-primary">
+                    <p className="text-sm">{item.tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
           </div>
         </main>
       </div>

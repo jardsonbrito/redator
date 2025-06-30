@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Calendar, Award, MessageCircle } from "lucide-react";
+import { Eye, Calendar, Award, MessageCircle, User, Mail } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 type RedacaoEnviada = {
@@ -20,13 +20,19 @@ type RedacaoEnviada = {
   comentario_admin: string | null;
   corrigida: boolean;
   data_correcao: string | null;
+  nome_aluno?: string | null;
+  email_aluno?: string | null;
+  tipo_envio?: string | null;
+  status?: string | null;
+  turma?: string | null;
 };
 
 interface RedacaoEnviadaCardProps {
   redacao: RedacaoEnviada;
+  showAuthorInfo?: boolean;
 }
 
-export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
+export const RedacaoEnviadaCard = ({ redacao, showAuthorInfo = false }: RedacaoEnviadaCardProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const formatDate = (dateString: string) => {
@@ -55,6 +61,25 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
     return "bg-red-500 text-white";
   };
 
+  const getTipoEnvioLabel = (tipo: string | null | undefined) => {
+    if (!tipo) return "Regular";
+    const tipos = {
+      'regular': 'Regular',
+      'exercicio': 'Exercício',
+      'simulado': 'Simulado',
+      'visitante': 'Visitante'
+    };
+    return tipos[tipo as keyof typeof tipos] || tipo;
+  };
+
+  const getTipoEnvioColor = (tipo: string | null | undefined) => {
+    if (!tipo || tipo === 'regular') return "bg-blue-100 text-blue-800";
+    if (tipo === 'exercicio') return "bg-purple-100 text-purple-800";
+    if (tipo === 'simulado') return "bg-orange-100 text-orange-800";
+    if (tipo === 'visitante') return "bg-gray-100 text-gray-800";
+    return "bg-blue-100 text-blue-800";
+  };
+
   return (
     <Card className="border-redator-accent/20 hover:shadow-lg transition-shadow">
       <CardHeader className="pb-3">
@@ -73,6 +98,29 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
           <Calendar className="w-4 h-4" />
           <span>Enviada em {formatDate(redacao.data_envio)}</span>
         </div>
+
+        {/* Informações do autor - mostrar apenas se for para admin ou visitante */}
+        {showAuthorInfo && (redacao.nome_aluno || redacao.email_aluno) && (
+          <div className="space-y-1 text-sm text-redator-accent bg-redator-accent/5 p-2 rounded">
+            {redacao.nome_aluno && (
+              <div className="flex items-center gap-1">
+                <User className="w-3 h-3" />
+                <span>{redacao.nome_aluno}</span>
+              </div>
+            )}
+            {redacao.email_aluno && (
+              <div className="flex items-center gap-1">
+                <Mail className="w-3 h-3" />
+                <span>{redacao.email_aluno}</span>
+              </div>
+            )}
+            {redacao.tipo_envio && (
+              <Badge className={`text-xs ${getTipoEnvioColor(redacao.tipo_envio)}`}>
+                {getTipoEnvioLabel(redacao.tipo_envio)}
+              </Badge>
+            )}
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -126,9 +174,40 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
             </DialogHeader>
             
             <div className="space-y-6">
+              {/* Informações do autor no modal */}
+              {showAuthorInfo && (redacao.nome_aluno || redacao.email_aluno) && (
+                <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
+                  <h4 className="font-medium text-redator-primary mb-2">Informações do Autor</h4>
+                  <div className="space-y-1 text-sm text-redator-accent">
+                    {redacao.nome_aluno && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        <span><strong>Nome:</strong> {redacao.nome_aluno}</span>
+                      </div>
+                    )}
+                    {redacao.email_aluno && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        <span><strong>E-mail:</strong> {redacao.email_aluno}</span>
+                      </div>
+                    )}
+                    {redacao.tipo_envio && (
+                      <div>
+                        <strong>Tipo de envio:</strong> {getTipoEnvioLabel(redacao.tipo_envio)}
+                      </div>
+                    )}
+                    {redacao.turma && redacao.turma !== 'visitante' && (
+                      <div>
+                        <strong>Turma:</strong> {redacao.turma}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Texto da redação */}
               <div>
-                <h3 className="font-semibold text-redator-primary mb-3">Sua Redação</h3>
+                <h3 className="font-semibold text-redator-primary mb-3">Texto da Redação</h3>
                 <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
                   <p className="whitespace-pre-wrap text-sm leading-relaxed">
                     {redacao.redacao_texto}
@@ -201,8 +280,8 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                     <span className="font-medium text-redator-primary">Aguardando Correção</span>
                   </div>
                   <p className="text-sm text-redator-accent">
-                    Sua redação foi enviada em {formatDate(redacao.data_envio)} e está aguardando correção. 
-                    Assim que for corrigida, você verá suas notas e o feedback do corretor aqui.
+                    Esta redação foi enviada em {formatDate(redacao.data_envio)} e está aguardando correção. 
+                    Assim que for corrigida, você verá as notas e o feedback do corretor aqui.
                   </p>
                 </div>
               )}
