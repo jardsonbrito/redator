@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, UserPlus } from "lucide-react";
+import { User, UserPlus, Lock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const AlunoLogin = () => {
   const [turmaSelecionada, setTurmaSelecionada] = useState("");
+  const [senhaDigitada, setSenhaDigitada] = useState("");
   const [nomeVisitante, setNomeVisitante] = useState("");
   const [emailVisitante, setEmailVisitante] = useState("");
   const [isVisitanteDialogOpen, setIsVisitanteDialogOpen] = useState(false);
@@ -19,11 +20,11 @@ const AlunoLogin = () => {
   const { toast } = useToast();
 
   const turmas = [
-    { value: "Turma A", label: "Turma A" },
-    { value: "Turma B", label: "Turma B" },
-    { value: "Turma C", label: "Turma C" },
-    { value: "Turma D", label: "Turma D" },
-    { value: "Turma E", label: "Turma E" }
+    { value: "Turma A", label: "Turma A", senha: "LRA2025" },
+    { value: "Turma B", label: "Turma B", senha: "LRB2025" },
+    { value: "Turma C", label: "Turma C", senha: "LRC2025" },
+    { value: "Turma D", label: "Turma D", senha: "LRD2025" },
+    { value: "Turma E", label: "Turma E", senha: "LRE2025" }
   ];
 
   const handleAcessoTurma = () => {
@@ -31,6 +32,26 @@ const AlunoLogin = () => {
       toast({
         title: "Selecione uma turma",
         description: "Por favor, escolha sua turma para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!senhaDigitada) {
+      toast({
+        title: "Digite a senha",
+        description: "A senha da turma é obrigatória.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verifica se a senha está correta para a turma selecionada
+    const turmaEncontrada = turmas.find(turma => turma.value === turmaSelecionada);
+    if (!turmaEncontrada || senhaDigitada !== turmaEncontrada.senha) {
+      toast({
+        title: "Senha incorreta",
+        description: "A senha digitada não confere com a senha da turma selecionada.",
         variant: "destructive",
       });
       return;
@@ -107,7 +128,7 @@ const AlunoLogin = () => {
             Acesso do Aluno
           </h1>
           <p className="text-redator-accent">
-            Selecione sua turma para continuar
+            Selecione sua turma e digite a senha
           </p>
         </div>
 
@@ -136,6 +157,27 @@ const AlunoLogin = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Campo de Senha */}
+            <div className="space-y-3">
+              <Label htmlFor="senha" className="text-redator-primary font-medium">
+                Senha da Turma
+              </Label>
+              <div className="relative">
+                <Input
+                  id="senha"
+                  type="password"
+                  value={senhaDigitada}
+                  onChange={(e) => setSenhaDigitada(e.target.value)}
+                  placeholder="Digite a senha da sua turma"
+                  className="border-redator-accent/30 pl-10"
+                />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              </div>
+              <p className="text-xs text-gray-500">
+                A senha é fornecida pelo seu professor
+              </p>
             </div>
 
             {/* Botão de Acesso por Turma */}

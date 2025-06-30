@@ -34,22 +34,44 @@ const SimuladoForm = () => {
     { value: "LRC2025", label: "Turma C (LRC2025)" },
     { value: "LRD2025", label: "Turma D (LRD2025)" },
     { value: "LRE2025", label: "Turma E (LRE2025)" },
-    { value: "visitante", label: "Visitantes" }
+    { value: "visitante", label: "Visitante" }
   ];
 
   const criarSimulado = useMutation({
     mutationFn: async (dadosSimulado: SimuladoFormData) => {
       const permiteVisitante = turmasSelecionadas.includes("visitante");
       
+      console.log('Dados do simulado para inserir:', {
+        titulo: dadosSimulado.titulo,
+        frase_tematica: dadosSimulado.frase_tematica,
+        data_inicio: dadosSimulado.data_inicio,
+        hora_inicio: dadosSimulado.hora_inicio,
+        data_fim: dadosSimulado.data_fim,
+        hora_fim: dadosSimulado.hora_fim,
+        turmas_autorizadas: turmasSelecionadas,
+        permite_visitante: permiteVisitante,
+        ativo: true
+      });
+
       const { data, error } = await supabase
         .from('simulados')
         .insert([{
-          ...dadosSimulado,
+          titulo: dadosSimulado.titulo,
+          frase_tematica: dadosSimulado.frase_tematica,
+          data_inicio: dadosSimulado.data_inicio,
+          hora_inicio: dadosSimulado.hora_inicio,
+          data_fim: dadosSimulado.data_fim,
+          hora_fim: dadosSimulado.hora_fim,
           turmas_autorizadas: turmasSelecionadas,
-          permite_visitante: permiteVisitante
-        }]);
+          permite_visitante: permiteVisitante,
+          ativo: true
+        }])
+        .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado ao criar simulado:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -60,14 +82,15 @@ const SimuladoForm = () => {
       reset();
       setTurmasSelecionadas([]);
       queryClient.invalidateQueries({ queryKey: ['simulados'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Erro detalhado ao criar simulado:", error);
       toast({
         title: "Erro ao criar simulado",
-        description: "Verifique os dados e tente novamente.",
+        description: `Erro: ${error.message || 'Verifique os dados e tente novamente.'}`,
         variant: "destructive",
       });
-      console.error("Erro ao criar simulado:", error);
     }
   });
 
