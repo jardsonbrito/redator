@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList } from "lucide-react";
+import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -37,24 +37,24 @@ const Index = () => {
       description: "Assista às aulas da plataforma e domine cada competência",
       icon: GraduationCap,
       path: "/aulas",
-      color: "bg-green-600",
-      hoverColor: "hover:bg-green-600"
+      color: "bg-redator-primary",
+      hoverColor: "hover:bg-redator-primary"
     },
     {
       title: "Exercícios",
       description: "Pratique com exercícios direcionados e formulários especializados",
       icon: ClipboardList,
       path: "/exercicios",
-      color: "bg-orange-600",
-      hoverColor: "hover:bg-orange-600"
+      color: "bg-redator-accent",
+      hoverColor: "hover:bg-redator-accent"
     },
     {
       title: "Envie sua Redação",
       description: "Escreva sua redação e receba correção personalizada",
       icon: Send,
       path: "/envie-redacao",
-      color: "bg-purple-600",
-      hoverColor: "hover:bg-purple-600"
+      color: "bg-redator-secondary",
+      hoverColor: "hover:bg-redator-secondary"
     }
   ];
 
@@ -66,7 +66,12 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
               <div className="flex items-center justify-center gap-3 mb-6">
-                <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="Redator Logo" className="h-16 w-auto" />
+                <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+                  <Home className="w-5 h-5" />
+                  <span className="hidden sm:inline">Voltar ao início</span>
+                </Link>
+                <div className="hidden sm:block w-px h-6 bg-redator-accent/20 ml-4"></div>
+                <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="Redator Logo" className="h-16 w-auto ml-4" />
               </div>
               {/* Slogan com destaque visual aprimorado */}
               <div className="max-w-3xl mx-auto">
@@ -133,15 +138,15 @@ const Index = () => {
                 <p>Assista aos vídeos da Videoteca e amplie seus conhecimentos socioculturais para enriquecer seus argumentos.</p>
               </div>
               <div>
-                <div className="font-medium text-green-600 mb-2">4. Assista às aulas</div>
+                <div className="font-medium text-redator-primary mb-2">4. Assista às aulas</div>
                 <p>Domine cada competência através das aulas organizadas e participe das aulas ao vivo com o professor.</p>
               </div>
               <div>
-                <div className="font-medium text-orange-600 mb-2">5. Pratique exercícios</div>
+                <div className="font-medium text-redator-accent mb-2">5. Pratique exercícios</div>
                 <p>Resolva exercícios direcionados e pratique com formulários especializados para aprimorar suas habilidades.</p>
               </div>
               <div>
-                <div className="font-medium text-purple-600 mb-2">6. Pratique e envie sua redação</div>
+                <div className="font-medium text-redator-secondary mb-2">6. Pratique e envie sua redação</div>
                 <p>Escreva sua proposta e receba uma correção pedagógica detalhada com nota por competência.</p>
               </div>
             </div>
