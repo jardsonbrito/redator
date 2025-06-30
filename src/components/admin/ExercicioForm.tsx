@@ -17,9 +17,18 @@ const ExercicioForm = () => {
   const [embedFormulario, setEmbedFormulario] = useState(false);
   const [fraseTematica, setFraseTematica] = useState('');
   const [imagemThumbnail, setImagemThumbnail] = useState('');
+  const [selectedTurmas, setSelectedTurmas] = useState<string[]>([]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const turmasDisponiveis = [
+    { id: "LRA2025", nome: "Turma A (LRA2025)" },
+    { id: "LRB2025", nome: "Turma B (LRB2025)" },
+    { id: "LRC2025", nome: "Turma C (LRC2025)" },
+    { id: "LRD2025", nome: "Turma D (LRD2025)" },
+    { id: "LRE2025", nome: "Turma E (LRE2025)" }
+  ];
 
   const createExercicioMutation = useMutation({
     mutationFn: async (exercicioData: any) => {
@@ -51,6 +60,7 @@ const ExercicioForm = () => {
       setEmbedFormulario(false);
       setFraseTematica('');
       setImagemThumbnail('');
+      setSelectedTurmas([]);
       
       queryClient.invalidateQueries({ queryKey: ['exercicios'] });
     },
@@ -64,6 +74,14 @@ const ExercicioForm = () => {
     }
   });
 
+  const handleTurmaChange = (turmaId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedTurmas([...selectedTurmas, turmaId]);
+    } else {
+      setSelectedTurmas(selectedTurmas.filter(id => id !== turmaId));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -71,6 +89,15 @@ const ExercicioForm = () => {
       toast({
         title: "Erro de validação",
         description: "O título é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedTurmas.length === 0) {
+      toast({
+        title: "Erro de validação",
+        description: "Selecione pelo menos uma turma para ter acesso a este exercício.",
         variant: "destructive",
       });
       return;
@@ -101,7 +128,8 @@ const ExercicioForm = () => {
       embed_formulario: tipo === 'formulario' ? embedFormulario : false,
       frase_tematica: tipo === 'frase_tematica' ? fraseTematica.trim() : null,
       imagem_thumbnail: imagemThumbnail.trim() || null,
-      ativo: true
+      ativo: true,
+      turmas: selectedTurmas
     };
 
     createExercicioMutation.mutate(exercicioData);
@@ -132,6 +160,27 @@ const ExercicioForm = () => {
             <Label htmlFor="frase_tematica">Redação com Frase Temática</Label>
           </div>
         </RadioGroup>
+      </div>
+
+      <div>
+        <Label>Turmas com Acesso *</Label>
+        <div className="grid grid-cols-2 gap-3 mt-2 p-4 border rounded-lg">
+          {turmasDisponiveis.map((turma) => (
+            <div key={turma.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={`turma-${turma.id}`}
+                checked={selectedTurmas.includes(turma.id)}
+                onCheckedChange={(checked) => handleTurmaChange(turma.id, checked as boolean)}
+              />
+              <Label htmlFor={`turma-${turma.id}`} className="text-sm">
+                {turma.nome}
+              </Label>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-600 mt-1">
+          Selecione as turmas que terão acesso a este exercício
+        </p>
       </div>
 
       {tipo === 'formulario' && (

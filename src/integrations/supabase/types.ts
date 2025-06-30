@@ -56,6 +56,7 @@ export type Database = {
           ordem: number
           thumbnail_url: string | null
           titulo: string
+          turmas: string[] | null
           updated_at: string
           youtube_url: string | null
         }
@@ -69,6 +70,7 @@ export type Database = {
           ordem?: number
           thumbnail_url?: string | null
           titulo: string
+          turmas?: string[] | null
           updated_at?: string
           youtube_url?: string | null
         }
@@ -82,6 +84,7 @@ export type Database = {
           ordem?: number
           thumbnail_url?: string | null
           titulo?: string
+          turmas?: string[] | null
           updated_at?: string
           youtube_url?: string | null
         }
@@ -106,6 +109,7 @@ export type Database = {
           imagem_thumbnail: string | null
           tipo: string
           titulo: string
+          turmas: string[] | null
           url_formulario: string | null
         }
         Insert: {
@@ -118,6 +122,7 @@ export type Database = {
           imagem_thumbnail?: string | null
           tipo: string
           titulo: string
+          turmas?: string[] | null
           url_formulario?: string | null
         }
         Update: {
@@ -130,6 +135,7 @@ export type Database = {
           imagem_thumbnail?: string | null
           tipo?: string
           titulo?: string
+          turmas?: string[] | null
           url_formulario?: string | null
         }
         Relationships: []

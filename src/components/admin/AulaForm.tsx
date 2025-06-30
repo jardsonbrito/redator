@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
 
 const AulaForm = () => {
@@ -18,8 +20,17 @@ const AulaForm = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [googleMeetUrl, setGoogleMeetUrl] = useState("");
   const [ativo, setAtivo] = useState(true);
+  const [selectedTurmas, setSelectedTurmas] = useState<string[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const turmasDisponiveis = [
+    { id: "LRA2025", nome: "Turma A (LRA2025)" },
+    { id: "LRB2025", nome: "Turma B (LRB2025)" },
+    { id: "LRC2025", nome: "Turma C (LRC2025)" },
+    { id: "LRD2025", nome: "Turma D (LRD2025)" },
+    { id: "LRE2025", nome: "Turma E (LRE2025)" }
+  ];
 
   const { data: modules, isLoading } = useQuery({
     queryKey: ['aula-modules-admin'],
@@ -70,6 +81,7 @@ const AulaForm = () => {
       setYoutubeUrl("");
       setGoogleMeetUrl("");
       setAtivo(true);
+      setSelectedTurmas([]);
       
       queryClient.invalidateQueries({ queryKey: ['aulas-with-modules'] });
       queryClient.invalidateQueries({ queryKey: ['aulas'] });
@@ -84,6 +96,14 @@ const AulaForm = () => {
     }
   });
 
+  const handleTurmaChange = (turmaId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedTurmas([...selectedTurmas, turmaId]);
+    } else {
+      setSelectedTurmas(selectedTurmas.filter(id => id !== turmaId));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -91,6 +111,15 @@ const AulaForm = () => {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedTurmas.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Selecione pelo menos uma turma para ter acesso a esta aula.",
         variant: "destructive",
       });
       return;
@@ -124,6 +153,7 @@ const AulaForm = () => {
       google_meet_url: googleMeetUrl || null,
       ativo,
       ordem: 0,
+      turmas: selectedTurmas,
     };
 
     console.log("Submitting aula data:", aulaData);
@@ -185,6 +215,27 @@ const AulaForm = () => {
               placeholder="Descreva o conteúdo da aula..."
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label>Turmas com Acesso *</Label>
+            <div className="grid grid-cols-2 gap-3 mt-2 p-4 border rounded-lg">
+              {turmasDisponiveis.map((turma) => (
+                <div key={turma.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={turma.id}
+                    checked={selectedTurmas.includes(turma.id)}
+                    onCheckedChange={(checked) => handleTurmaChange(turma.id, checked as boolean)}
+                  />
+                  <Label htmlFor={turma.id} className="text-sm">
+                    {turma.nome}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              Selecione as turmas que terão acesso a esta aula
+            </p>
           </div>
 
           {selectedModule?.tipo === 'competencia' && (

@@ -7,24 +7,61 @@ import { GraduationCap, BookOpen, Video, Home, ExternalLink } from "lucide-react
 import { Button } from "@/components/ui/button";
 
 const Aulas = () => {
+  // Recupera a turma do localStorage
+  const alunoTurma = localStorage.getItem("alunoTurma");
+  const turmasMap = {
+    "Turma A": "LRA2025",
+    "Turma B": "LRB2025", 
+    "Turma C": "LRC2025",
+    "Turma D": "LRD2025",
+    "Turma E": "LRE2025"
+  };
+  const turmaCode = alunoTurma ? turmasMap[alunoTurma as keyof typeof turmasMap] : null;
+
   const { data: modules, isLoading } = useQuery({
-    queryKey: ['aula-modules'],
+    queryKey: ['aula-modules', turmaCode],
     queryFn: async () => {
-      console.log("Fetching aula modules...");
-      const { data, error } = await supabase
+      console.log("Fetching aula modules for turma:", turmaCode);
+      
+      // Buscar todos os módulos ativos
+      const { data: allModules, error: modulesError } = await supabase
         .from('aula_modules')
         .select('*')
         .eq('ativo', true)
         .order('ordem');
       
-      if (error) {
-        console.error("Error fetching modules:", error);
-        throw error;
+      if (modulesError) {
+        console.error("Error fetching modules:", modulesError);
+        throw modulesError;
+      }
+
+      // Para cada módulo, verificar se há aulas disponíveis para a turma
+      const modulesWithAulas = [];
+      
+      for (const module of allModules) {
+        const { data: aulas, error: aulasError } = await supabase
+          .from('aulas')
+          .select('id')
+          .eq('module_id', module.id)
+          .eq('ativo', true)
+          .or(`turmas.cs.{${turmaCode}},turmas.is.null`)
+          .limit(1);
+        
+        if (aulasError) {
+          console.error("Error fetching aulas for module:", module.id, aulasError);
+          continue;
+        }
+
+        // Se há pelo menos uma aula disponível, incluir o módulo
+        if (aulas && aulas.length > 0) {
+          modulesWithAulas.push(module);
+        }
       }
       
-      console.log("Modules fetched:", data);
-      return data;
-    }
+      console.log("Modules with aulas for turma:", modulesWithAulas);
+      return modulesWithAulas;
+    },
+    enabled: !!turmaCode
   });
 
   if (isLoading) {
@@ -45,7 +82,7 @@ const Aulas = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
                 <Home className="w-5 h-5" />
                 <span className="hidden sm:inline">Voltar ao início</span>
               </Link>
@@ -70,51 +107,63 @@ const Aulas = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules?.map((module) => (
-            <Card key={module.id} className="group hover:shadow-xl transition-all duration-300 hover:scale-105 border-redator-accent/20">
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 group-hover:scale-110 transition-transform ${
-                    module.tipo === 'ao_vivo' 
-                      ? 'bg-redator-secondary' 
-                      : 'bg-redator-primary'
-                  }`}>
+        {!modules || modules.length === 0 ? (
+          <div className="text-center py-12">
+            <GraduationCap className="w-16 h-16 text-redator-accent mx-auto mb-4 opacity-50" />
+            <h3 className="text-xl font-semibold text-redator-primary mb-2">
+              Nenhuma aula disponível para sua turma
+            </h3>
+            <p className="text-redator-accent">
+              As aulas aparecerão aqui quando forem cadastradas para sua turma pelo professor.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {modules.map((module) => (
+              <Card key={module.id} className="group hover:shadow-xl transition-all duration-300 hover:scale-105 border-redator-accent/20">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 group-hover:scale-110 transition-transform ${
+                      module.tipo === 'ao_vivo' 
+                        ? 'bg-redator-secondary' 
+                        : 'bg-redator-primary'
+                    }`}>
+                      {module.tipo === 'ao_vivo' ? (
+                        <ExternalLink className="w-6 h-6 text-white" />
+                      ) : (
+                        <BookOpen className="w-6 h-6 text-white" />
+                      )}
+                    </div>
+                    
+                    <h3 className="text-lg font-semibold text-redator-primary mb-2">
+                      {module.nome}
+                    </h3>
+                    
+                    <p className="text-redator-accent text-sm mb-4 line-clamp-2">
+                      {module.descricao}
+                    </p>
+
                     {module.tipo === 'ao_vivo' ? (
-                      <ExternalLink className="w-6 h-6 text-white" />
+                      <Link to={`/aulas/ao-vivo`}>
+                        <Button className="w-full bg-redator-secondary hover:bg-redator-secondary/90 text-white">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Acessar Aula ao Vivo
+                        </Button>
+                      </Link>
                     ) : (
-                      <BookOpen className="w-6 h-6 text-white" />
+                      <Link to={`/aulas/modulo/${module.id}`}>
+                        <Button className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white">
+                          <Video className="w-4 h-4 mr-2" />
+                          Ver Aulas
+                        </Button>
+                      </Link>
                     )}
                   </div>
-                  
-                  <h3 className="text-lg font-semibold text-redator-primary mb-2">
-                    {module.nome}
-                  </h3>
-                  
-                  <p className="text-redator-accent text-sm mb-4 line-clamp-2">
-                    {module.descricao}
-                  </p>
-
-                  {module.tipo === 'ao_vivo' ? (
-                    <Link to={`/aulas/ao-vivo`}>
-                      <Button className="w-full bg-redator-secondary hover:bg-redator-secondary/90 text-white">
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Acessar Aula ao Vivo
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link to={`/aulas/modulo/${module.id}`}>
-                      <Button className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white">
-                        <Video className="w-4 h-4 mr-2" />
-                        Ver Aulas
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

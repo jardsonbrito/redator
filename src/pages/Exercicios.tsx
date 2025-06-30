@@ -7,14 +7,44 @@ import { ClipboardList, Home, ExternalLink, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Exercicios = () => {
+  // Recupera a turma do localStorage
+  const alunoTurma = localStorage.getItem("alunoTurma");
+  const turmasMap = {
+    "Turma A": "LRA2025",
+    "Turma B": "LRB2025", 
+    "Turma C": "LRC2025",
+    "Turma D": "LRD2025",
+    "Turma E": "LRE2025"
+  };
+  const turmaCode = alunoTurma ? turmasMap[alunoTurma as keyof typeof turmasMap] : null;
+
   const { data: exercicios, isLoading } = useQuery({
-    queryKey: ['exercicios'],
+    queryKey: ['exercicios', turmaCode],
     queryFn: async () => {
-      console.log("Fetching exercicios...");
+      console.log("Fetching exercicios for turma:", turmaCode);
+      
+      if (!turmaCode) {
+        // Se não há código de turma, retorna exercícios sem filtro de turma (conteúdo legado)
+        const { data, error } = await supabase
+          .from('exercicios')
+          .select('*')
+          .eq('ativo', true)
+          .is('turmas', null)
+          .order('criado_em', { ascending: false });
+        
+        if (error) {
+          console.error("Error fetching exercicios:", error);
+          throw error;
+        }
+        
+        return data;
+      }
+
       const { data, error } = await supabase
         .from('exercicios')
         .select('*')
         .eq('ativo', true)
+        .or(`turmas.cs.{${turmaCode}},turmas.is.null`)
         .order('criado_em', { ascending: false });
       
       if (error) {
@@ -22,7 +52,7 @@ const Exercicios = () => {
         throw error;
       }
       
-      console.log("Exercicios fetched:", data);
+      console.log("Exercicios fetched for turma:", data);
       return data;
     }
   });
@@ -45,7 +75,7 @@ const Exercicios = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
                 <Home className="w-5 h-5" />
                 <span className="hidden sm:inline">Voltar ao início</span>
               </Link>
@@ -74,10 +104,10 @@ const Exercicios = () => {
           <div className="text-center py-12">
             <ClipboardList className="w-16 h-16 text-redator-accent mx-auto mb-4 opacity-50" />
             <h3 className="text-xl font-semibold text-redator-primary mb-2">
-              Nenhum exercício disponível
+              Nenhum exercício disponível para sua turma
             </h3>
             <p className="text-redator-accent">
-              Os exercícios aparecerão aqui quando forem cadastrados pelo professor.
+              Os exercícios aparecerão aqui quando forem cadastrados para sua turma pelo professor.
             </p>
           </div>
         ) : (
