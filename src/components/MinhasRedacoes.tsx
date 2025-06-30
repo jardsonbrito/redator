@@ -130,10 +130,10 @@ export const MinhasRedacoes = () => {
         throw errorCompleta;
       }
 
-      // Mostrar redação completa em modal
-      const redacaoComTexto = {
+      // Preparar dados completos da redação com redacao_texto obrigatório
+      const redacaoComTexto: RedacaoTurma & { redacao_texto: string } = {
         ...redacaoAutenticada,
-        redacao_texto: redacaoCompleta.redacao_texto,
+        redacao_texto: redacaoCompleta.redacao_texto || "",
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
         nota_c3: redacaoCompleta.nota_c3,
@@ -141,9 +141,17 @@ export const MinhasRedacoes = () => {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
-      // Fechar dialog de autenticação e abrir visualização
+      // Fechar dialog de autenticação
       setIsDialogOpen(false);
-      setSelectedRedacao(redacaoComTexto);
+      
+      // Criar e abrir modal de visualização da redação
+      const redacaoParaCard = {
+        ...redacaoComTexto,
+        data_envio: redacaoComTexto.data_envio,
+        corrigida: redacaoComTexto.corrigida,
+      };
+      
+      setSelectedRedacao(redacaoParaCard);
       
       // Mostrar toast de sucesso
       toast({
@@ -374,9 +382,24 @@ export const MinhasRedacoes = () => {
             <div className="space-y-6">
               <RedacaoEnviadaCard 
                 redacao={{
-                  ...selectedRedacao,
+                  id: selectedRedacao.id,
+                  frase_tematica: selectedRedacao.frase_tematica,
+                  redacao_texto: selectedRedacao.redacao_texto,
                   data_envio: selectedRedacao.data_envio,
+                  nota_c1: selectedRedacao.nota_c1,
+                  nota_c2: selectedRedacao.nota_c2,
+                  nota_c3: selectedRedacao.nota_c3,
+                  nota_c4: selectedRedacao.nota_c4,
+                  nota_c5: selectedRedacao.nota_c5,
+                  nota_total: selectedRedacao.nota_total,
+                  comentario_admin: selectedRedacao.comentario_admin,
                   corrigida: selectedRedacao.corrigida,
+                  data_correcao: selectedRedacao.data_correcao,
+                  nome_aluno: selectedRedacao.nome_aluno,
+                  email_aluno: selectedRedacao.email_aluno,
+                  tipo_envio: selectedRedacao.tipo_envio,
+                  status: selectedRedacao.status,
+                  turma: turmaCode,
                 }} 
               />
             </div>
