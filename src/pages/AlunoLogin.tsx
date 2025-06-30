@@ -20,11 +20,11 @@ const AlunoLogin = () => {
   const { toast } = useToast();
 
   const turmas = [
-    { value: "Turma A", label: "Turma A", senha: "LRA2025" },
-    { value: "Turma B", label: "Turma B", senha: "LRB2025" },
-    { value: "Turma C", label: "Turma C", senha: "LRC2025" },
-    { value: "Turma D", label: "Turma D", senha: "LRD2025" },
-    { value: "Turma E", label: "Turma E", senha: "LRE2025" }
+    { value: "Turma A (LRA2025)", label: "Turma A (LRA2025)", senha: "LRA2025" },
+    { value: "Turma B (LRB2025)", label: "Turma B (LRB2025)", senha: "LRB2025" },
+    { value: "Turma C (LRC2025)", label: "Turma C (LRC2025)", senha: "LRC2025" },
+    { value: "Turma D (LRD2025)", label: "Turma D (LRD2025)", senha: "LRD2025" },
+    { value: "Turma E (LRE2025)", label: "Turma E (LRE2025)", senha: "LRE2025" }
   ];
 
   const handleAcessoTurma = () => {
@@ -101,7 +101,6 @@ const AlunoLogin = () => {
     localStorage.setItem("visitanteData", JSON.stringify(visitanteData));
     localStorage.setItem("userType", "visitante");
     localStorage.setItem("alunoTurma", "visitante");
-    localStorage.removeItem("alunoTurma"); // Remove turma se houver
 
     toast({
       title: "Bem-vindo, visitante!",
