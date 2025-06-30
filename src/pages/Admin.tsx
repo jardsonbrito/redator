@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, FileText, BookOpen, Video, Shield, CheckCircle, List, Plus, GraduationCap, ClipboardList } from 'lucide-react';
+import { LogOut, FileText, BookOpen, Video, Shield, CheckCircle, List, Plus, GraduationCap, ClipboardList, FileCheck } from 'lucide-react';
 import { TemaForm } from '@/components/admin/TemaForm';
 import { RedacaoForm } from '@/components/admin/RedacaoForm';
 import { VideoForm } from '@/components/admin/VideoForm';
@@ -17,6 +17,7 @@ import AulaForm from '@/components/admin/AulaForm';
 import AulaList from '@/components/admin/AulaList';
 import ExercicioForm from '@/components/admin/ExercicioForm';
 import ExercicioList from '@/components/admin/ExercicioList';
+import { RedacaoExercicioForm } from '@/components/admin/RedacaoExercicioForm';
 import { useToast } from '@/hooks/use-toast';
 
 const Admin = () => {
@@ -114,18 +115,25 @@ const Admin = () => {
       hoverColor: 'hover:bg-redator-accent/90'
     },
     {
+      id: 'redacoes-exercicios',
+      title: 'Redações Exercícios',
+      icon: FileCheck,
+      color: 'bg-redator-primary',
+      hoverColor: 'hover:bg-redator-primary/90'
+    },
+    {
       id: 'aulas',
       title: 'Aulas',
       icon: GraduationCap,
-      color: 'bg-redator-primary',
-      hoverColor: 'hover:bg-redator-primary/90'
+      color: 'bg-redator-secondary',
+      hoverColor: 'hover:bg-redator-secondary/90'
     },
     {
       id: 'correcoes',
       title: 'Correções',
       icon: CheckCircle,
-      color: 'bg-redator-secondary',
-      hoverColor: 'hover:bg-redator-secondary/90'
+      color: 'bg-redator-accent',
+      hoverColor: 'hover:bg-redator-accent/90'
     }
   ];
 
@@ -409,6 +417,40 @@ const Admin = () => {
               </Card>
             </TabsContent>
           </Tabs>
+        );
+
+      case 'redacoes-exercicios':
+        return (
+          <div className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <FileCheck className="w-6 h-6" />
+                Redações de Exercícios
+              </h2>
+              <Button 
+                onClick={() => setActiveSection(null)}
+                variant="outline" 
+                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
+              >
+                Voltar ao Menu
+              </Button>
+            </div>
+            
+            <Card className="border-redator-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-redator-primary">
+                  <FileCheck className="w-5 h-5" />
+                  Redações Enviadas via Exercícios
+                </CardTitle>
+                <p className="text-redator-accent">
+                  Corrija as redações enviadas pelos alunos através dos exercícios de redação com frase temática
+                </p>
+              </CardHeader>
+              <CardContent>
+                <RedacaoExercicioForm />
+              </CardContent>
+            </Card>
+          </div>
         );
 
       case 'aulas':
