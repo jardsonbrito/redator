@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck, Clock, Calendar, Users, ArrowLeft, Send } from "lucide-react";
+import { ClipboardCheck, Clock, Calendar, Users, ArrowLeft, Send, AlertCircle } from "lucide-react";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +61,25 @@ const SimuladoDetalhes = () => {
       if (error) throw error;
       return data;
     }
+  });
+
+  // Verifica se já existe uma redação enviada para este simulado
+  const { data: redacaoExistente } = useQuery({
+    queryKey: ['redacao-existente', id, emailAluno],
+    queryFn: async () => {
+      if (!emailAluno || !id) return null;
+      
+      const { data, error } = await supabase
+        .from('redacoes_simulado')
+        .select('id')
+        .eq('id_simulado', id)
+        .eq('email_aluno', emailAluno.toLowerCase())
+        .limit(1);
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0] : null;
+    },
+    enabled: !!emailAluno && !!id
   });
 
   const enviarRedacao = useMutation({
@@ -130,6 +149,15 @@ const SimuladoDetalhes = () => {
       return;
     }
 
+    if (redacaoExistente) {
+      toast({
+        title: "Redação já enviada",
+        description: "Você já enviou uma redação para este simulado com este e-mail.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     enviarRedacao.mutate();
   };
 
@@ -177,6 +205,8 @@ const SimuladoDetalhes = () => {
   const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
   const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
   const simuladoAtivo = isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado });
+  const simuladoFuturo = agora < inicioSimulado;
+  const simuladoEncerrado = agora > fimSimulado;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
@@ -201,14 +231,19 @@ const SimuladoDetalhes = () => {
               <div>
                 <CardTitle className="text-2xl mb-2">{simulado.titulo}</CardTitle>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge variant={simuladoAtivo ? "default" : "secondary"}>
+                  <Badge variant={simuladoAtivo ? "default" : simuladoFuturo ? "secondary" : "outline"}>
                     <ClipboardCheck className="w-3 h-3 mr-1" />
-                    {simuladoAtivo ? "Em andamento" : "Fora do período"}
+                    {simuladoAtivo ? "Em andamento" : simuladoFuturo ? "Em breve" : "Encerrado"}
                   </Badge>
                   <Badge variant="outline">
                     <Users className="w-3 h-3 mr-1" />
                     {simulado.turmas_autorizadas?.length || 0} turma(s)
                   </Badge>
+                  {simulado.permite_visitante && (
+                    <Badge variant="outline" className="text-redator-secondary">
+                      Aceita visitantes
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -238,15 +273,15 @@ const SimuladoDetalhes = () => {
 
             {/* Status do Simulado */}
             {!simuladoAtivo && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-2 text-yellow-800">
+              <div className={`${simuladoFuturo ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200'} border rounded-lg p-4 mb-6`}>
+                <div className={`flex items-center gap-2 ${simuladoFuturo ? 'text-blue-800' : 'text-red-800'}`}>
                   <Clock className="w-5 h-5" />
                   <span className="font-medium">
-                    {agora < inicioSimulado ? "Simulado ainda não iniciado" : "Simulado encerrado"}
+                    {simuladoFuturo ? "Simulado ainda não iniciado" : "Simulado encerrado"}
                   </span>
                 </div>
-                <p className="text-yellow-700 text-sm mt-1">
-                  {agora < inicioSimulado 
+                <p className={`${simuladoFuturo ? 'text-blue-700' : 'text-red-700'} text-sm mt-1`}>
+                  {simuladoFuturo 
                     ? `Início em ${format(inicioSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}` 
                     : `Encerrado em ${format(fimSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
                   }
@@ -254,8 +289,21 @@ const SimuladoDetalhes = () => {
               </div>
             )}
 
+            {/* Alerta de redação já enviada */}
+            {redacaoExistente && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="font-medium">Redação já enviada</span>
+                </div>
+                <p className="text-yellow-700 text-sm mt-1">
+                  Você já enviou uma redação para este simulado com o e-mail informado.
+                </p>
+              </div>
+            )}
+
             {/* Formulário de Envio */}
-            {simuladoAtivo && (
+            {simuladoAtivo && !redacaoExistente && (
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold text-redator-primary">Envie sua Redação</h3>
                 
@@ -305,13 +353,26 @@ const SimuladoDetalhes = () => {
 
                 <Button
                   onClick={handleEnviarRedacao}
-                  disabled={enviarRedacao.isPending}
+                  disabled={enviarRedacao.isPending || redacaoExistente}
                   className="w-full bg-redator-primary hover:bg-redator-primary/90"
                   size="lg"
                 >
                   <Send className="w-5 h-5 mr-2" />
                   {enviarRedacao.isPending ? "Enviando..." : "Enviar Redação"}
                 </Button>
+              </div>
+            )}
+
+            {/* Informações adicionais quando não pode enviar */}
+            {!simuladoAtivo && (
+              <div className="text-center py-6">
+                <p className="text-gray-500 mb-4">
+                  O formulário de envio estará disponível apenas durante o período do simulado.
+                </p>
+                <p className="text-sm text-gray-400">
+                  Simulado disponível entre {format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })} 
+                  {" e "} {format(fimSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
+                </p>
               </div>
             )}
           </CardContent>

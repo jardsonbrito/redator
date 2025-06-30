@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList, ClipboardCheck, Home, Award, User } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -7,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
+import { SimuladoAtivo } from "@/components/SimuladoAtivo";
+import { MeusSimuladosCard } from "@/components/MeusSimuladosCard";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -269,12 +270,11 @@ const Index = () => {
             )}
             
             <p className="text-xl text-redator-accent font-medium mb-12">Redação na prática, aprovação na certa!</p>
-            
-            {!showMinhasRedacoes && (
-              <h2 className="text-2xl font-semibold text-redator-primary mb-12">
-                Escolha por onde começar:
-              </h2>
-            )}
+          </div>
+
+          {/* Simulado Ativo - aparece no topo se houver um ativo */}
+          <div className="mb-8">
+            <SimuladoAtivo turmaCode={turmaCode} />
           </div>
 
           {/* Seção "Minhas Redações" - apenas para alunos de turma com redações */}
@@ -284,13 +284,18 @@ const Index = () => {
             </div>
           )}
 
+          {/* Card "Meus Simulados" - sempre visível para alunos de turma */}
+          {userType === "aluno" && alunoTurma && (
+            <div className="mb-16">
+              <MeusSimuladosCard turmaCode={turmaCode} />
+            </div>
+          )}
+
           {/* Menu Principal Horizontal */}
           <div className="space-y-8">
-            {showMinhasRedacoes && (
-              <h2 className="text-2xl font-semibold text-redator-primary text-center">
-                Explorar outras seções:
-              </h2>
-            )}
+            <h2 className="text-2xl font-semibold text-redator-primary text-center">
+              {showMinhasRedacoes || (userType === "aluno" && alunoTurma) ? "Explorar outras seções:" : "Escolha por onde começar:"}
+            </h2>
             
             <div className={`grid grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto ${
               visibleMenuItems.length <= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-6'
