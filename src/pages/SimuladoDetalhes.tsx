@@ -77,7 +77,7 @@ const SimuladoDetalhes = () => {
         .limit(1);
       
       if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
+      return data && data.length > 0;
     },
     enabled: !!emailAluno && !!id
   });
@@ -353,7 +353,7 @@ const SimuladoDetalhes = () => {
 
                 <Button
                   onClick={handleEnviarRedacao}
-                  disabled={enviarRedacao.isPending || redacaoExistente}
+                  disabled={enviarRedacao.isPending || !!redacaoExistente}
                   className="w-full bg-redator-primary hover:bg-redator-primary/90"
                   size="lg"
                 >
