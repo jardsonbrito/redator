@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -41,7 +40,21 @@ const SimuladoForm = () => {
     mutationFn: async (dadosSimulado: SimuladoFormData) => {
       const permiteVisitante = turmasSelecionadas.includes("visitante");
       
-      console.log('Dados do simulado para inserir:', {
+      console.log('Verificando sessão do usuário...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Erro ao obter sessão:', sessionError);
+        throw new Error('Erro de autenticação. Faça login novamente.');
+      }
+      
+      if (!session) {
+        throw new Error('Usuário não autenticado. Faça login novamente.');
+      }
+      
+      console.log('Usuário autenticado:', session.user.email);
+      
+      const dadosParaInserir = {
         titulo: dadosSimulado.titulo,
         frase_tematica: dadosSimulado.frase_tematica,
         data_inicio: dadosSimulado.data_inicio,
@@ -51,27 +64,24 @@ const SimuladoForm = () => {
         turmas_autorizadas: turmasSelecionadas,
         permite_visitante: permiteVisitante,
         ativo: true
-      });
+      };
+      
+      console.log('Dados do simulado para inserir:', dadosParaInserir);
 
       const { data, error } = await supabase
         .from('simulados')
-        .insert([{
-          titulo: dadosSimulado.titulo,
-          frase_tematica: dadosSimulado.frase_tematica,
-          data_inicio: dadosSimulado.data_inicio,
-          hora_inicio: dadosSimulado.hora_inicio,
-          data_fim: dadosSimulado.data_fim,
-          hora_fim: dadosSimulado.hora_fim,
-          turmas_autorizadas: turmasSelecionadas,
-          permite_visitante: permiteVisitante,
-          ativo: true
-        }])
+        .insert([dadosParaInserir])
         .select();
       
       if (error) {
         console.error('Erro detalhado ao criar simulado:', error);
+        console.error('Código do erro:', error.code);
+        console.error('Detalhes do erro:', error.details);
+        console.error('Hint do erro:', error.hint);
         throw error;
       }
+      
+      console.log('Simulado criado com sucesso:', data);
       return data;
     },
     onSuccess: () => {
@@ -86,9 +96,20 @@ const SimuladoForm = () => {
     },
     onError: (error: any) => {
       console.error("Erro detalhado ao criar simulado:", error);
+      
+      let mensagemErro = "Verifique os dados e tente novamente.";
+      
+      if (error.message?.includes('permission denied')) {
+        mensagemErro = "Erro de permissão. Verifique se você tem acesso de administrador.";
+      } else if (error.message?.includes('users')) {
+        mensagemErro = "Erro de acesso à tabela de usuários. Contate o suporte técnico.";
+      } else if (error.message?.includes('authentication') || error.message?.includes('autenticação')) {
+        mensagemErro = error.message;
+      }
+      
       toast({
         title: "Erro ao criar simulado",
-        description: `Erro: ${error.message || 'Verifique os dados e tente novamente.'}`,
+        description: `${mensagemErro} Detalhes: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive",
       });
     }

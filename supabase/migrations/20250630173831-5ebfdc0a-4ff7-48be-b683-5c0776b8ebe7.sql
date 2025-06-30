@@ -1,4 +1,5 @@
 
+
 -- Remover política existente se houver conflito e criar nova política para inserção de simulados
 DROP POLICY IF EXISTS "Allow insert for authenticated" ON public.simulados;
 DROP POLICY IF EXISTS "Simulados ativos são visíveis para todos" ON public.simulados;
@@ -34,3 +35,4 @@ CREATE POLICY "Simulados ativos são visíveis para todos"
   ON public.simulados 
   FOR SELECT 
   USING (ativo = true);
+
