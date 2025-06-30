@@ -11,7 +11,7 @@ const Welcome = () => {
           {/* Logo oficial do App do Redator */}
           <div className="flex items-center justify-center mb-8">
             <img 
-              src="/lovable-uploads/a8dcc0bb-bfc4-4252-bbb5-1b118faa51f0.png" 
+              src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" 
               alt="App do Redator Logo" 
               className="h-24 w-24 sm:h-32 sm:w-32 mb-6" 
             />
