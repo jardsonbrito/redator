@@ -260,9 +260,11 @@ export type Database = {
           corrigida: boolean | null
           data_correcao: string | null
           data_envio: string
+          email_aluno: string | null
           frase_tematica: string
           id: string
           id_exercicio: string | null
+          nome_aluno: string | null
           nota_c1: number | null
           nota_c2: number | null
           nota_c3: number | null
@@ -276,9 +278,11 @@ export type Database = {
           corrigida?: boolean | null
           data_correcao?: string | null
           data_envio?: string
+          email_aluno?: string | null
           frase_tematica: string
           id?: string
           id_exercicio?: string | null
+          nome_aluno?: string | null
           nota_c1?: number | null
           nota_c2?: number | null
           nota_c3?: number | null
@@ -292,9 +296,11 @@ export type Database = {
           corrigida?: boolean | null
           data_correcao?: string | null
           data_envio?: string
+          email_aluno?: string | null
           frase_tematica?: string
           id?: string
           id_exercicio?: string | null
+          nome_aluno?: string | null
           nota_c1?: number | null
           nota_c2?: number | null
           nota_c3?: number | null

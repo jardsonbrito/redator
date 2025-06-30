@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 type RedacaoExercicio = {
   id: string;
-  nome_aluno: string;
-  email_aluno: string;
+  nome_aluno: string | null;
+  email_aluno: string | null;
   frase_tematica: string;
   redacao_texto: string;
   data_envio: string;
@@ -179,8 +179,8 @@ export const RedacaoExercicioForm = () => {
     const correcaoTexto = `
 CORREÇÃO DE REDAÇÃO - EXERCÍCIO
 
-Nome do Aluno: ${redacao.nome_aluno}
-E-mail: ${redacao.email_aluno}
+Nome do Aluno: ${redacao.nome_aluno || 'Não informado'}
+E-mail: ${redacao.email_aluno || 'Não informado'}
 Frase Temática: ${redacao.frase_tematica}
 
 NOTAS POR COMPETÊNCIA:
@@ -276,10 +276,10 @@ ${redacao.comentario_admin || 'Nenhum comentário adicional.'}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <h4 className="font-medium text-redator-primary mb-2">
-                        {redacao.nome_aluno}
+                        {redacao.nome_aluno || 'Nome não informado'}
                       </h4>
                       <p className="text-sm text-redator-accent mb-1">
-                        📧 {redacao.email_aluno}
+                        📧 {redacao.email_aluno || 'E-mail não informado'}
                       </p>
                       <p className="text-sm text-redator-accent mb-2 line-clamp-2">
                         📝 {redacao.frase_tematica}
@@ -352,16 +352,16 @@ ${redacao.comentario_admin || 'Nenhum comentário adicional.'}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{viewRedacao?.nome_aluno} - {viewRedacao?.frase_tematica}</DialogTitle>
+            <DialogTitle>{viewRedacao?.nome_aluno || 'Aluno'} - {viewRedacao?.frase_tematica}</DialogTitle>
           </DialogHeader>
           {viewRedacao && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <strong>Nome:</strong> {viewRedacao.nome_aluno}
+                  <strong>Nome:</strong> {viewRedacao.nome_aluno || 'Não informado'}
                 </div>
                 <div>
-                  <strong>E-mail:</strong> {viewRedacao.email_aluno}
+                  <strong>E-mail:</strong> {viewRedacao.email_aluno || 'Não informado'}
                 </div>
               </div>
 
@@ -426,7 +426,7 @@ ${redacao.comentario_admin || 'Nenhum comentário adicional.'}
         <Card className="border-redator-primary/30">
           <CardHeader>
             <CardTitle className="text-redator-primary">
-              Corrigindo: {selectedRedacao.nome_aluno} - {selectedRedacao.frase_tematica}
+              Corrigindo: {selectedRedacao.nome_aluno || 'Aluno'} - {selectedRedacao.frase_tematica}
             </CardTitle>
           </CardHeader>
           <CardContent>
