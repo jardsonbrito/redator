@@ -1,6 +1,7 @@
+
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,12 +18,12 @@ import AulaList from '@/components/admin/AulaList';
 import ExercicioForm from '@/components/admin/ExercicioForm';
 import ExercicioList from '@/components/admin/ExercicioList';
 import { useToast } from '@/hooks/use-toast';
-import { RedacaoExercicioForm } from '@/components/admin/RedacaoExercicioForm';
 
 const Admin = () => {
   const { user, isAdmin, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [activeSection, setActiveSection] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('Admin page - Loading:', loading, 'User:', user?.email, 'IsAdmin:', isAdmin);
@@ -83,6 +84,436 @@ const Admin = () => {
     }
   };
 
+  const menuItems = [
+    {
+      id: 'temas',
+      title: 'Temas',
+      icon: BookOpen,
+      color: 'bg-redator-accent',
+      hoverColor: 'hover:bg-redator-accent/90'
+    },
+    {
+      id: 'redacoes',
+      title: 'Redações',
+      icon: FileText,
+      color: 'bg-redator-primary',
+      hoverColor: 'hover:bg-redator-primary/90'
+    },
+    {
+      id: 'videoteca',
+      title: 'Videoteca',
+      icon: Video,
+      color: 'bg-redator-secondary',
+      hoverColor: 'hover:bg-redator-secondary/90'
+    },
+    {
+      id: 'exercicios',
+      title: 'Exercícios',
+      icon: ClipboardList,
+      color: 'bg-redator-accent',
+      hoverColor: 'hover:bg-redator-accent/90'
+    },
+    {
+      id: 'aulas',
+      title: 'Aulas',
+      icon: GraduationCap,
+      color: 'bg-redator-primary',
+      hoverColor: 'hover:bg-redator-primary/90'
+    },
+    {
+      id: 'correcoes',
+      title: 'Correções',
+      icon: CheckCircle,
+      color: 'bg-redator-secondary',
+      hoverColor: 'hover:bg-redator-secondary/90'
+    }
+  ];
+
+  const renderMenuGrid = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      {menuItems.map((item) => (
+        <Card 
+          key={item.id}
+          className="transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-secondary/50"
+          onClick={() => setActiveSection(item.id)}
+        >
+          <CardContent className="p-8 text-center">
+            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${item.color} ${item.hoverColor} transition-colors duration-300 mb-6`}>
+              <item.icon className="w-8 h-8 text-white" />
+            </div>
+            
+            <h3 className="text-xl font-semibold text-redator-primary mb-2">
+              {item.title}
+            </h3>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderSectionContent = () => {
+    if (!activeSection) return null;
+
+    switch (activeSection) {
+      case 'temas':
+        return (
+          <Tabs defaultValue="novo" className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <BookOpen className="w-6 h-6" />
+                Gerenciar Temas
+              </h2>
+              <Button 
+                onClick={() => setActiveSection(null)}
+                variant="outline" 
+                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
+              >
+                Voltar ao Menu
+              </Button>
+            </div>
+            
+            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-accent/20">
+              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
+                <Plus className="w-4 h-4" />
+                Cadastrar Novo
+              </TabsTrigger>
+              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
+                <List className="w-4 h-4" />
+                Gerenciar Existentes
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="novo">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <BookOpen className="w-5 h-5" />
+                    Cadastrar Novo Tema
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Crie temas com textos motivadores para prática de redação dos alunos
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <TemaForm />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="gerenciar">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <List className="w-5 h-5" />
+                    Gerenciar Temas
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Edite ou exclua temas já cadastrados
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <TemaList />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        );
+
+      case 'redacoes':
+        return (
+          <Tabs defaultValue="novo" className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <FileText className="w-6 h-6" />
+                Gerenciar Redações Exemplares
+              </h2>
+              <Button 
+                onClick={() => setActiveSection(null)}
+                variant="outline" 
+                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
+              >
+                Voltar ao Menu
+              </Button>
+            </div>
+            
+            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-primary/20">
+              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
+                <Plus className="w-4 h-4" />
+                Cadastrar Nova
+              </TabsTrigger>
+              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
+                <List className="w-4 h-4" />
+                Gerenciar Existentes
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="novo">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <FileText className="w-5 h-5" />
+                    Cadastrar Nova Redação Exemplar
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Adicione redações nota 1000 que servirão de exemplo para os estudantes
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <RedacaoForm />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="gerenciar">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <List className="w-5 h-5" />
+                    Gerenciar Redações Exemplares
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Edite ou exclua redações exemplares já cadastradas
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <RedacaoList />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        );
+
+      case 'videoteca':
+        return (
+          <Tabs defaultValue="novo" className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <Video className="w-6 h-6" />
+                Gerenciar Videoteca
+              </h2>
+              <Button 
+                onClick={() => setActiveSection(null)}
+                variant="outline" 
+                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
+              >
+                Voltar ao Menu
+              </Button>
+            </div>
+            
+            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-secondary/20">
+              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
+                <Plus className="w-4 h-4" />
+                Cadastrar Novo
+              </TabsTrigger>
+              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
+                <List className="w-4 h-4" />
+                Gerenciar Existentes
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="novo">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <Video className="w-5 h-5" />
+                    Cadastrar Novo Vídeo
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Adicione vídeos educativos do YouTube à videoteca do app
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <VideoForm />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="gerenciar">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <List className="w-5 h-5" />
+                    Gerenciar Vídeos
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Edite ou exclua vídeos já cadastrados
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <VideoList />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        );
+
+      case 'exercicios':
+        return (
+          <Tabs defaultValue="novo" className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <ClipboardList className="w-6 h-6" />
+                Gerenciar Exercícios
+              </h2>
+              <Button 
+                onClick={() => setActiveSection(null)}
+                variant="outline" 
+                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
+              >
+                Voltar ao Menu
+              </Button>
+            </div>
+            
+            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-accent/20">
+              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
+                <Plus className="w-4 h-4" />
+                Cadastrar Novo
+              </TabsTrigger>
+              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
+                <List className="w-4 h-4" />
+                Gerenciar Existentes
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="novo">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <ClipboardList className="w-5 h-5" />
+                    Cadastrar Novo Exercício
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Crie exercícios com formulários Google ou propostas de redação com frase temática
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <ExercicioForm />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="gerenciar">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <List className="w-5 h-5" />
+                    Gerenciar Exercícios
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Edite ou exclua exercícios já cadastrados
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <ExercicioList />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        );
+
+      case 'aulas':
+        return (
+          <Tabs defaultValue="novo" className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <GraduationCap className="w-6 h-6" />
+                Gerenciar Aulas
+              </h2>
+              <Button 
+                onClick={() => setActiveSection(null)}
+                variant="outline" 
+                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
+              >
+                Voltar ao Menu
+              </Button>
+            </div>
+            
+            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-primary/20">
+              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
+                <Plus className="w-4 h-4" />
+                Cadastrar Nova
+              </TabsTrigger>
+              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
+                <List className="w-4 h-4" />
+                Gerenciar Existentes
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="novo">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <GraduationCap className="w-5 h-5" />
+                    Cadastrar Nova Aula
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Adicione aulas gravadas (YouTube) ou configure aulas ao vivo (Google Meet)
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <AulaForm />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="gerenciar">
+              <Card className="border-redator-accent/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-redator-primary">
+                    <List className="w-5 h-5" />
+                    Gerenciar Aulas
+                  </CardTitle>
+                  <p className="text-redator-accent">
+                    Edite ou exclua aulas já cadastradas
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <AulaList />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        );
+
+      case 'correcoes':
+        return (
+          <div className="w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
+                <CheckCircle className="w-6 h-6" />
+                Gerenciar Correções
+              </h2>
+              <Button 
+                onClick={() => setActiveSection(null)}
+                variant="outline" 
+                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
+              >
+                Voltar ao Menu
+              </Button>
+            </div>
+            
+            <Card className="border-redator-secondary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-redator-primary">
+                  <CheckCircle className="w-5 h-5" />
+                  Corrigir Redações Enviadas
+                </CardTitle>
+                <p className="text-redator-accent">
+                  Corrija as redações enviadas pelos usuários atribuindo notas por competência e comentários pedagógicos
+                </p>
+              </CardHeader>
+              <CardContent>
+                <RedacaoEnviadaForm />
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
@@ -91,7 +522,7 @@ const Admin = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-redator-primary flex items-center gap-2">
                 <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-redator-primary" />
-                Painel Administrativo - App do Laboratório do Redator
+                Painel Administrativo - App do Redator
               </h1>
               <p className="text-sm sm:text-base text-redator-accent mt-1">
                 Gerencie conteúdos: Redações Exemplares, Temas, Videoteca, Aulas, Exercícios e Correções
@@ -109,329 +540,27 @@ const Admin = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="mb-4 sm:mb-6">
-          <div className="bg-white border border-redator-secondary/20 rounded-lg p-3 sm:p-4">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-redator-secondary" />
-              <span className="font-medium text-redator-primary text-sm sm:text-base">Painel Administrativo Ativo</span>
+        {!activeSection ? (
+          <>
+            {/* Welcome Section */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-redator-primary rounded-full mb-4">
+                <BookOpen className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-redator-primary mb-2">
+                👋 Bem-vindo, professor!
+              </h2>
+              <p className="text-lg text-redator-accent">
+                Selecione o menu que deseja gerenciar abaixo.
+              </p>
             </div>
-            <p className="text-redator-accent text-xs sm:text-sm mt-1">
-              Você está autenticado como administrador e pode gerenciar todos os conteúdos do app.
-            </p>
-          </div>
-        </div>
 
-        <Tabs defaultValue="redacoes" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 bg-white border border-redator-accent/20 h-auto">
-            <TabsTrigger value="redacoes" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
-              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-center">Redações Exemplares</span>
-            </TabsTrigger>
-            <TabsTrigger value="temas" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
-              <BookOpen className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-center">Temas</span>
-            </TabsTrigger>
-            <TabsTrigger value="videoteca" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
-              <Video className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-center">Videoteca</span>
-            </TabsTrigger>
-            <TabsTrigger value="aulas" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
-              <GraduationCap className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-center">Aulas</span>
-            </TabsTrigger>
-            <TabsTrigger value="exercicios" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
-              <ClipboardList className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-center">Exercícios</span>
-            </TabsTrigger>
-            <TabsTrigger value="correcoes" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
-              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-center">Correções</span>
-            </TabsTrigger>
-            <TabsTrigger value="redacoes-exercicios" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-xs sm:text-sm p-2 sm:p-3">
-              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-center">Redações Exercícios</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="redacoes" className="space-y-6">
-            <Tabs defaultValue="novo" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-primary/20">
-                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
-                  <Plus className="w-4 h-4" />
-                  Cadastrar Nova
-                </TabsTrigger>
-                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
-                  <List className="w-4 h-4" />
-                  Gerenciar Existentes
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="novo">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <FileText className="w-5 h-5" />
-                      Cadastrar Nova Redação Exemplar
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Adicione redações nota 1000 que servirão de exemplo para os estudantes
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <RedacaoForm />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="gerenciar">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <List className="w-5 h-5" />
-                      Gerenciar Redações Exemplares
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Edite ou exclua redações exemplares já cadastradas
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <RedacaoList />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          <TabsContent value="temas" className="space-y-6">
-            <Tabs defaultValue="novo" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-accent/20">
-                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
-                  <Plus className="w-4 h-4" />
-                  Cadastrar Novo
-                </TabsTrigger>
-                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
-                  <List className="w-4 h-4" />
-                  Gerenciar Existentes
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="novo">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <BookOpen className="w-5 h-5" />
-                      Cadastrar Novo Tema
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Crie temas com textos motivadores para prática de redação dos alunos
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <TemaForm />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="gerenciar">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <List className="w-5 h-5" />
-                      Gerenciar Temas
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Edite ou exclua temas já cadastrados
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <TemaList />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          <TabsContent value="videoteca" className="space-y-6">
-            <Tabs defaultValue="novo" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-secondary/20">
-                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
-                  <Plus className="w-4 h-4" />
-                  Cadastrar Novo
-                </TabsTrigger>
-                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
-                  <List className="w-4 h-4" />
-                  Gerenciar Existentes
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="novo">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <Video className="w-5 h-5" />
-                      Cadastrar Novo Vídeo
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Adicione vídeos educativos do YouTube à videoteca do app
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <VideoForm />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="gerenciar">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <List className="w-5 h-5" />
-                      Gerenciar Vídeos
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Edite ou exclua vídeos já cadastrados
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <VideoList />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          <TabsContent value="aulas" className="space-y-6">
-            <Tabs defaultValue="novo" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-white border border-green-600/20">
-                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
-                  <Plus className="w-4 h-4" />
-                  Cadastrar Nova
-                </TabsTrigger>
-                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white">
-                  <List className="w-4 h-4" />
-                  Gerenciar Existentes
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="novo">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <GraduationCap className="w-5 h-5" />
-                      Cadastrar Nova Aula
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Adicione aulas gravadas (YouTube) ou configure aulas ao vivo (Google Meet)
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <AulaForm />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="gerenciar">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <List className="w-5 h-5" />
-                      Gerenciar Aulas
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Edite ou exclua aulas já cadastradas
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <AulaList />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          <TabsContent value="exercicios" className="space-y-6">
-            <Tabs defaultValue="novo" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-white border border-orange-600/20">
-                <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                  <Plus className="w-4 h-4" />
-                  Cadastrar Novo
-                </TabsTrigger>
-                <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                  <List className="w-4 h-4" />
-                  Gerenciar Existentes
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="novo">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <ClipboardList className="w-5 h-5" />
-                      Cadastrar Novo Exercício
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Crie exercícios com formulários Google ou propostas de redação com frase temática
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <ExercicioForm />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="gerenciar">
-                <Card className="border-redator-accent/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-redator-primary">
-                      <List className="w-5 h-5" />
-                      Gerenciar Exercícios
-                    </CardTitle>
-                    <p className="text-redator-accent">
-                      Edite ou exclua exercícios já cadastrados
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <ExercicioList />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          <TabsContent value="correcoes">
-            <Card className="border-purple-600/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-redator-primary">
-                  <CheckCircle className="w-5 h-5" />
-                  Corrigir Redações Enviadas
-                </CardTitle>
-                <p className="text-redator-accent">
-                  Corrija as redações enviadas pelos usuários atribuindo notas por competência e comentários pedagógicos
-                </p>
-              </CardHeader>
-              <CardContent>
-                <RedacaoEnviadaForm />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="redacoes-exercicios">
-            <Card className="border-indigo-600/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-redator-primary">
-                  <FileText className="w-5 h-5" />
-                  Redações Enviadas via Exercícios
-                </CardTitle>
-                <p className="text-redator-accent">
-                  Corrija redações enviadas através dos exercícios com frase temática
-                </p>
-              </CardHeader>
-              <CardContent>
-                <RedacaoExercicioForm />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            {/* Menu Grid */}
+            {renderMenuGrid()}
+          </>
+        ) : (
+          renderSectionContent()
+        )}
       </main>
     </div>
   );
