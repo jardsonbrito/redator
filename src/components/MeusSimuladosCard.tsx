@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Award, Calendar, Eye, Lock, AlertCircle, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface MeusSimuladosCardProps {
   turmaCode: string;
@@ -299,14 +297,18 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
                         <div className="text-lg font-bold text-green-800">{selectedRedacao.nota_total}</div>
                         <div className="text-xs text-green-600">Total</div>
                       </div>
-                      {[1, 2, 3, 4, 5].map(num => (
-                        <div key={num} className="text-center">
-                          <div className="text-lg font-bold text-green-800">
-                            {selectedRedacao[`nota_c${num}` as keyof RedacaoSimulado] || 0}
+                      {[1, 2, 3, 4, 5].map(num => {
+                        const notaKey = `nota_c${num}` as keyof RedacaoSimulado;
+                        const nota = selectedRedacao[notaKey];
+                        return (
+                          <div key={num} className="text-center">
+                            <div className="text-lg font-bold text-green-800">
+                              {typeof nota === 'number' ? nota : 0}
+                            </div>
+                            <div className="text-xs text-green-600">C{num}</div>
                           </div>
-                          <div className="text-xs text-green-600">C{num}</div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
