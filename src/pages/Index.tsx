@@ -223,67 +223,67 @@ const Index = () => {
           {/* Main Content */}
           <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             {/* Logo e Saudação Centralizada */}
-            <div className="text-center mb-16">
-              <div className="flex justify-center mb-8">
-                <img src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" alt="App do Redator" className="h-24 w-auto" />
+            <div className="text-center mb-12">
+              <div className="flex justify-center mb-6">
+                <img src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" alt="App do Redator" className="h-20 w-auto" />
               </div>
               
-              <h1 className="text-3xl font-bold text-redator-primary mb-6 leading-relaxed">
+              <h1 className="text-3xl font-bold text-redator-primary mb-4 leading-relaxed">
                 Bem-vindo ao App do Redator
               </h1>
               
               {studentData.userType && (
-                <p className="text-lg text-redator-accent font-medium mb-4">
+                <p className="text-lg text-redator-accent font-medium mb-2">
                   Olá, {studentData.nomeUsuario}!
                 </p>
               )}
               
-              <p className="text-xl text-redator-accent font-medium mb-12">Redação na prática, aprovação na certa!</p>
+              <p className="text-xl text-redator-accent font-medium mb-8">Redação na prática, aprovação na certa!</p>
             </div>
 
-            {/* Simulado Ativo - aparece no topo se houver um ativo */}
-            <div className="mb-8">
+            {/* Simulado Ativo - Em destaque no topo */}
+            <div className="mb-12">
               <SimuladoAtivo turmaCode={turmaCode} />
             </div>
 
             {/* Seção "Minhas Redações" - apenas para alunos de turma com redações */}
             {showMinhasRedacoes && (
-              <div className="mb-16">
+              <div className="mb-12">
                 <MinhasRedacoes />
               </div>
             )}
 
             {/* Card "Meus Simulados" - sempre visível para alunos de turma */}
             {studentData.userType === "aluno" && studentData.turma && (
-              <div className="mb-16">
+              <div className="mb-12">
                 <MeusSimuladosCard turmaCode={turmaCode} />
               </div>
             )}
 
             {/* Menu Principal Horizontal */}
-            <div className="space-y-8">
+            <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-redator-primary text-center">
                 {showMinhasRedacoes || (studentData.userType === "aluno" && studentData.turma) ? "Explorar outras seções:" : "Escolha por onde começar:"}
               </h2>
               
-              <div className={`grid grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto ${
+              <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 max-w-5xl mx-auto ${
                 visibleMenuItems.length <= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-6'
               }`}>
                 {visibleMenuItems.map((item, index) => (
                   <Tooltip key={index}>
                     <TooltipTrigger asChild>
-                      <Link to={item.path} className="group flex flex-col items-center p-6 bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 border border-redator-accent/10 hover:border-redator-secondary/30">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-redator-primary group-hover:bg-redator-secondary transition-colors duration-300 mb-4">
-                          <item.icon className="w-8 h-8 text-white" />
+                      <Link to={item.path} className="group flex flex-col items-center p-4 bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 border border-redator-accent/10 hover:border-redator-secondary/30">
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-redator-primary group-hover:bg-redator-secondary transition-colors duration-300 mb-3">
+                          <item.icon className="w-6 h-6 text-white" />
                         </div>
                         
-                        <h3 className="text-sm font-semibold text-redator-primary text-center leading-tight group-hover:text-redator-secondary transition-colors">
+                        <h3 className="text-xs font-semibold text-redator-primary text-center leading-tight group-hover:text-redator-secondary transition-colors">
                           {item.title}
                         </h3>
                       </Link>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs text-center p-3 bg-redator-primary text-white border-redator-primary">
-                      <p className="text-sm">{item.tooltip}</p>
+                    <TooltipContent side="bottom" className="max-w-xs text-center p-2 bg-redator-primary text-white border-redator-primary">
+                      <p className="text-xs">{item.tooltip}</p>
                     </TooltipContent>
                   </Tooltip>
                 ))}
