@@ -20,6 +20,7 @@ import Exercicios from "./pages/Exercicios";
 import ExercicioDetalhes from "./pages/ExercicioDetalhes";
 import Simulados from "./pages/Simulados";
 import SimuladoDetalhes from "./pages/SimuladoDetalhes";
+import MeusSimulados from "./pages/MeusSimulados";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/exercicios/:id" element={<ExercicioDetalhes />} />
             <Route path="/simulados" element={<Simulados />} />
             <Route path="/simulados/:id" element={<SimuladoDetalhes />} />
+            <Route path="/meus-simulados" element={<MeusSimulados />} />
             <Route path="/envie-redacao" element={<EnvieRedacao />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<Admin />} />

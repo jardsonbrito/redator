@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList, ClipboardCheck, Home } from "lucide-react";
+import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList, ClipboardCheck, Home, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -10,18 +10,25 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const Index = () => {
   const { isAdmin, user } = useAuth();
   
-  // Recupera a turma do localStorage
+  // Recupera dados do usuário (aluno ou visitante)
+  const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
-  const turmasMap = {
-    "Turma A": "LRA2025",
-    "Turma B": "LRB2025", 
-    "Turma C": "LRC2025",
-    "Turma D": "LRD2025",
-    "Turma E": "LRE2025"
-  };
-  const turmaCode = alunoTurma ? turmasMap[alunoTurma as keyof typeof turmasMap] : "visitante";
+  const visitanteData = localStorage.getItem("visitanteData");
+  
+  // Determina a turma/código do usuário
+  let turmaCode = "visitante";
+  if (userType === "aluno" && alunoTurma) {
+    const turmasMap = {
+      "Turma A": "LRA2025",
+      "Turma B": "LRB2025", 
+      "Turma C": "LRC2025",
+      "Turma D": "LRD2025",
+      "Turma E": "LRE2025"
+    };
+    turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
+  }
 
-  // Verifica se há aulas disponíveis para a turma do aluno
+  // Verifica se há aulas disponíveis
   const { data: hasAulas } = useQuery({
     queryKey: ['has-aulas', turmaCode],
     queryFn: async () => {
@@ -44,7 +51,7 @@ const Index = () => {
     enabled: !!turmaCode
   });
 
-  // Verifica se há exercícios disponíveis para a turma do aluno
+  // Verifica se há exercícios disponíveis
   const { data: hasExercicios } = useQuery({
     queryKey: ['has-exercicios', turmaCode],
     queryFn: async () => {
@@ -67,7 +74,7 @@ const Index = () => {
     enabled: !!turmaCode
   });
 
-  // Verifica se há simulados disponíveis para a turma do aluno
+  // Verifica se há simulados disponíveis
   const { data: hasSimulados } = useQuery({
     queryKey: ['has-simulados', turmaCode],
     queryFn: async () => {
@@ -80,6 +87,33 @@ const Index = () => {
       
       if (error) {
         console.error('Error checking simulados:', error);
+        return false;
+      }
+      
+      return data && data.length > 0;
+    }
+  });
+
+  // Verifica se há redações corrigidas para "Meus Simulados"
+  const { data: hasRedacoesCorrigidas } = useQuery({
+    queryKey: ['has-redacoes-corrigidas', turmaCode],
+    queryFn: async () => {
+      let query = supabase
+        .from('redacoes_simulado')
+        .select('id')
+        .eq('corrigida', true)
+        .limit(1);
+
+      if (turmaCode !== "visitante") {
+        query = query.eq('turma', turmaCode);
+      } else {
+        query = query.eq('turma', 'visitante');
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error checking redacoes corrigidas:', error);
         return false;
       }
       
@@ -134,6 +168,14 @@ const Index = () => {
       showCondition: hasSimulados
     },
     {
+      title: "Meus Simulados",
+      path: "/meus-simulados",
+      icon: Award,
+      tooltip: "Veja suas redações de simulados corrigidas e pontuadas.",
+      showAlways: false,
+      showCondition: hasRedacoesCorrigidas
+    },
+    {
       title: "Enviar Redação",
       path: "/envie-redacao",
       icon: Send,
@@ -147,6 +189,15 @@ const Index = () => {
     if (item.showAlways) return true;
     return item.showCondition === true;
   });
+
+  // Nome de exibição do usuário
+  let nomeUsuario = "Usuário";
+  if (userType === "visitante" && visitanteData) {
+    const dados = JSON.parse(visitanteData);
+    nomeUsuario = dados.nome;
+  } else if (userType === "aluno" && alunoTurma) {
+    nomeUsuario = `Aluno da ${alunoTurma}`;
+  }
 
   return (
     <TooltipProvider>
@@ -187,6 +238,13 @@ const Index = () => {
             <h1 className="text-3xl font-bold text-redator-primary mb-6 leading-relaxed">
               Bem-vindo ao App do Redator
             </h1>
+            
+            {userType && (
+              <p className="text-lg text-redator-accent font-medium mb-4">
+                Olá, {nomeUsuario}!
+              </p>
+            )}
+            
             <p className="text-xl text-redator-accent font-medium mb-12">Redação na prática, aprovação na certa!</p>
             
             <h2 className="text-2xl font-semibold text-redator-primary mb-12">

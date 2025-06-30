@@ -1,164 +1,178 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "react-router-dom";
-import { ClipboardCheck, Home, Clock } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format, isAfter, isBefore, parseISO } from "date-fns";
+import { ClipboardCheck, Calendar, Clock, Users, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { format, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Simulados = () => {
-  // Recupera a turma do localStorage
+  // Recupera dados do usuário
+  const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
-  const turmasMap = {
-    "Turma A": "LRA2025",
-    "Turma B": "LRB2025", 
-    "Turma C": "LRC2025",
-    "Turma D": "LRD2025",
-    "Turma E": "LRE2025"
-  };
-  const turmaCode = alunoTurma ? turmasMap[alunoTurma as keyof typeof turmasMap] : "visitante";
+  
+  let turmaCode = "visitante";
+  if (userType === "aluno" && alunoTurma) {
+    const turmasMap = {
+      "Turma A": "LRA2025",
+      "Turma B": "LRB2025", 
+      "Turma C": "LRC2025",
+      "Turma D": "LRD2025",
+      "Turma E": "LRE2025"
+    };
+    turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
+  }
 
   const { data: simulados, isLoading } = useQuery({
     queryKey: ['simulados', turmaCode],
     queryFn: async () => {
-      console.log("Fetching simulados for turma:", turmaCode);
-      
-      const { data, error } = await supabase
+      let query = supabase
         .from('simulados')
         .select('*')
         .eq('ativo', true)
-        .or(`turmas_autorizadas.cs.{${turmaCode}},turmas_autorizadas.cs.{visitante}`)
-        .order('criado_em', { ascending: false });
-      
-      if (error) {
-        console.error("Error fetching simulados:", error);
-        throw error;
+        .order('data_inicio', { ascending: true });
+
+      // Filtra simulados baseado na turma do usuário
+      if (turmaCode === "visitante") {
+        query = query.eq('permite_visitante', true);
+      } else {
+        query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
       }
       
-      console.log("Simulados fetched:", data);
+      const { data, error } = await query;
+      
+      if (error) throw error;
       return data;
     }
   });
 
-  const isSimuladoAtivo = (simulado: any) => {
-    const now = new Date();
-    const inicio = new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-    const fim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
-    
-    return isAfter(now, inicio) && isBefore(now, fim);
-  };
-
-  const getStatusMessage = (simulado: any) => {
-    const now = new Date();
-    const inicio = new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-    const fim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
-    
-    if (isBefore(now, inicio)) {
-      return `Disponível a partir de ${format(inicio, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`;
-    }
-    
-    if (isAfter(now, fim)) {
-      return "Simulado encerrado";
-    }
-    
-    return `Disponível até ${format(fim, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`;
-  };
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
-        <div className="text-center">
-          <ClipboardCheck className="w-12 h-12 text-redator-primary mx-auto mb-4 animate-pulse" />
-          <p className="text-redator-accent">Carregando simulados...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+        <header className="bg-white shadow-sm border-b border-redator-accent/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+                <ClipboardCheck className="w-5 h-5" />
+                <span>Voltar ao App</span>
+              </Link>
+              <h1 className="text-2xl font-bold text-redator-primary">Simulados</h1>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">Carregando simulados...</div>
+        </main>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-                <Home className="w-5 h-5" />
-                <span className="hidden sm:inline">Voltar ao início</span>
-              </Link>
-              <div className="hidden sm:block w-px h-6 bg-redator-accent/20"></div>
-              <h1 className="text-xl sm:text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <ClipboardCheck className="w-6 h-6" />
-                Simulados
-              </h1>
-            </div>
+            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+              <ClipboardCheck className="w-5 h-5" />
+              <span>Voltar ao App</span>
+            </Link>
+            <h1 className="text-2xl font-bold text-redator-primary">Simulados</h1>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-redator-primary mb-2">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-redator-primary mb-2">
             Simulados Disponíveis
           </h2>
           <p className="text-redator-accent">
-            Pratique com simulados em horários específicos e receba correção detalhada
+            Participe dos simulados de redação com horário controlado e correção detalhada.
           </p>
         </div>
 
         {!simulados || simulados.length === 0 ? (
-          <div className="text-center py-12">
-            <ClipboardCheck className="w-16 h-16 text-redator-accent mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-semibold text-redator-primary mb-2">
-              Nenhum simulado disponível para sua turma
-            </h3>
-            <p className="text-redator-accent">
-              Os simulados aparecerão aqui quando forem cadastrados para sua turma pelo professor.
-            </p>
-          </div>
+          <Card>
+            <CardContent className="text-center py-12">
+              <ClipboardCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                Nenhum simulado disponível
+              </h3>
+              <p className="text-gray-500">
+                Não há simulados disponíveis para sua turma no momento.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid gap-6">
             {simulados.map((simulado) => {
-              const ativo = isSimuladoAtivo(simulado);
-              const statusMessage = getStatusMessage(simulado);
-              
+              const agora = new Date();
+              const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+              const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+              const simuladoAtivo = isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado });
+              const simuladoFuturo = agora < inicioSimulado;
+              const simuladoEncerrado = agora > fimSimulado;
+
               return (
-                <Card key={simulado.id} className="group hover:shadow-xl transition-all duration-300 hover:scale-105 border-redator-accent/20">
-                  <CardContent className="p-6">
-                    <div className="text-center">
-                      <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-4 group-hover:scale-110 transition-transform ${
-                        ativo ? 'bg-redator-primary' : 'bg-gray-400'
-                      }`}>
-                        <ClipboardCheck className="w-6 h-6 text-white" />
+                <Card key={simulado.id} className="border-l-4 border-l-redator-primary hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl mb-2">{simulado.titulo}</CardTitle>
+                        <p className="text-gray-600 mb-4">{simulado.frase_tematica}</p>
+                        
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <Badge 
+                            variant={simuladoAtivo ? "default" : simuladoFuturo ? "secondary" : "outline"}
+                            className={simuladoAtivo ? "bg-green-500" : simuladoFuturo ? "bg-blue-500" : ""}
+                          >
+                            {simuladoAtivo ? "Em andamento" : simuladoFuturo ? "Em breve" : "Encerrado"}
+                          </Badge>
+                          <Badge variant="outline">
+                            <Users className="w-3 h-3 mr-1" />
+                            {simulado.turmas_autorizadas?.length || 0} turma(s)
+                          </Badge>
+                          {simulado.permite_visitante && (
+                            <Badge variant="outline" className="text-redator-secondary">
+                              Aceita visitantes
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            <span>
+                              Início: {format(inicioSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            <span>
+                              Término: {format(fimSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                       
-                      <h3 className="text-lg font-semibold text-redator-primary mb-2">
-                        {simulado.titulo}
-                      </h3>
-                      
-                      <p className="text-redator-accent text-sm mb-4 flex items-center justify-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        {statusMessage}
-                      </p>
-
-                      {ativo ? (
+                      <div className="ml-4">
                         <Link to={`/simulados/${simulado.id}`}>
-                          <Button className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white">
-                            <ClipboardCheck className="w-4 h-4 mr-2" />
-                            Iniciar Simulado
+                          <Button 
+                            variant={simuladoAtivo ? "default" : "outline"}
+                            size="sm"
+                            className={simuladoAtivo ? "bg-redator-primary" : ""}
+                            disabled={simuladoEncerrado}
+                          >
+                            {simuladoEncerrado ? "Encerrado" : simuladoAtivo ? "Participar" : "Ver Detalhes"}
+                            <ArrowRight className="w-4 h-4 ml-1" />
                           </Button>
                         </Link>
-                      ) : (
-                        <Button disabled className="w-full bg-gray-400 text-white cursor-not-allowed">
-                          <Clock className="w-4 h-4 mr-2" />
-                          Indisponível
-                        </Button>
-                      )}
+                      </div>
                     </div>
-                  </CardContent>
+                  </CardHeader>
                 </Card>
               );
             })}

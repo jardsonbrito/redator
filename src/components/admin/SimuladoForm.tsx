@@ -39,11 +39,14 @@ const SimuladoForm = () => {
 
   const criarSimulado = useMutation({
     mutationFn: async (dadosSimulado: SimuladoFormData) => {
+      const permiteVisitante = turmasSelecionadas.includes("visitante");
+      
       const { data, error } = await supabase
         .from('simulados')
         .insert([{
           ...dadosSimulado,
-          turmas_autorizadas: turmasSelecionadas
+          turmas_autorizadas: turmasSelecionadas,
+          permite_visitante: permiteVisitante
         }]);
       
       if (error) throw error;

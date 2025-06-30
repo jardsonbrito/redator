@@ -329,6 +329,7 @@ export type Database = {
         Row: {
           comentario_pedagogico: string | null
           corrigida: boolean | null
+          dados_visitante: Json | null
           data_correcao: string | null
           data_envio: string
           email_aluno: string
@@ -347,6 +348,7 @@ export type Database = {
         Insert: {
           comentario_pedagogico?: string | null
           corrigida?: boolean | null
+          dados_visitante?: Json | null
           data_correcao?: string | null
           data_envio?: string
           email_aluno: string
@@ -365,6 +367,7 @@ export type Database = {
         Update: {
           comentario_pedagogico?: string | null
           corrigida?: boolean | null
+          dados_visitante?: Json | null
           data_correcao?: string | null
           data_envio?: string
           email_aluno?: string
@@ -401,6 +404,7 @@ export type Database = {
           hora_fim: string
           hora_inicio: string
           id: string
+          permite_visitante: boolean | null
           titulo: string
           turmas_autorizadas: string[] | null
         }
@@ -414,6 +418,7 @@ export type Database = {
           hora_fim: string
           hora_inicio: string
           id?: string
+          permite_visitante?: boolean | null
           titulo: string
           turmas_autorizadas?: string[] | null
         }
@@ -427,6 +432,7 @@ export type Database = {
           hora_fim?: string
           hora_inicio?: string
           id?: string
+          permite_visitante?: boolean | null
           titulo?: string
           turmas_autorizadas?: string[] | null
         }
