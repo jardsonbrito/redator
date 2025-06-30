@@ -29,8 +29,8 @@ const Welcome = () => {
 
           {/* Botões de navegação */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-md mx-auto">
-            {/* Botão Sou Aluno */}
-            <Link to="/app" className="group">
+            {/* Botão Sou Aluno - agora redireciona para login de turma */}
+            <Link to="/aluno-login" className="group">
               <Card className="h-full transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-primary/50">
                 <CardContent className="p-8 text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-redator-primary hover:bg-redator-primary/90 transition-colors duration-300 mb-6 group-hover:scale-110">

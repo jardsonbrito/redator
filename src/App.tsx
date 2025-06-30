@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Welcome from "./pages/Welcome";
+import AlunoLogin from "./pages/AlunoLogin";
 import Index from "./pages/Index";
 import Redacoes from "./pages/Redacoes";
 import RedacaoDetalhes from "./pages/RedacaoDetalhes";
@@ -33,6 +34,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Welcome />} />
+            <Route path="/aluno-login" element={<AlunoLogin />} />
             <Route path="/app" element={<Index />} />
             <Route path="/redacoes" element={<Redacoes />} />
             <Route path="/redacoes/:id" element={<RedacaoDetalhes />} />
