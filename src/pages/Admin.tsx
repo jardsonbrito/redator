@@ -1,608 +1,254 @@
 
-import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, FileText, BookOpen, Video, Shield, CheckCircle, List, Plus, GraduationCap, ClipboardList, FileCheck } from 'lucide-react';
-import { TemaForm } from '@/components/admin/TemaForm';
-import { RedacaoForm } from '@/components/admin/RedacaoForm';
-import { VideoForm } from '@/components/admin/VideoForm';
-import { RedacaoEnviadaForm } from '@/components/admin/RedacaoEnviadaForm';
-import { RedacaoList } from '@/components/admin/RedacaoList';
-import { TemaList } from '@/components/admin/TemaList';
-import { VideoList } from '@/components/admin/VideoList';
-import AulaForm from '@/components/admin/AulaForm';
-import AulaList from '@/components/admin/AulaList';
-import ExercicioForm from '@/components/admin/ExercicioForm';
-import ExercicioList from '@/components/admin/ExercicioList';
-import { RedacaoExercicioForm } from '@/components/admin/RedacaoExercicioForm';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { 
+  BookOpen, 
+  FileText, 
+  Video,
+  GraduationCap,
+  ClipboardList,
+  ClipboardCheck,
+  Send,
+  LogOut,
+  Home
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+
+// Import existing admin components
+import TemaForm from "@/components/admin/TemaForm";
+import TemaList from "@/components/admin/TemaList";
+import RedacaoForm from "@/components/admin/RedacaoForm";
+import RedacaoList from "@/components/admin/RedacaoList";
+import VideoForm from "@/components/admin/VideoForm";
+import VideoList from "@/components/admin/VideoList";
+import AulaForm from "@/components/admin/AulaForm";
+import AulaList from "@/components/admin/AulaList";
+import ExercicioForm from "@/components/admin/ExercicioForm";
+import ExercicioList from "@/components/admin/ExercicioList";
+import RedacaoEnviadaForm from "@/components/admin/RedacaoEnviadaForm";
+
+// Import new simulado components
+import SimuladoForm from "@/components/admin/SimuladoForm";
+import SimuladoList from "@/components/admin/SimuladoList";
+import RedacaoSimuladoList from "@/components/admin/RedacaoSimuladoList";
 
 const Admin = () => {
-  const { user, isAdmin, signOut, loading } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const { user, isAdmin, logout } = useAuth();
+  const [activeView, setActiveView] = useState("dashboard");
 
-  useEffect(() => {
-    console.log('Admin page - Loading:', loading, 'User:', user?.email, 'IsAdmin:', isAdmin);
-    
-    if (!loading) {
-      if (!user) {
-        console.log('No user found, redirecting to login');
-        toast({
-          title: "Acesso negado",
-          description: "É necessário fazer login para acessar esta página.",
-          variant: "destructive",
-        });
-        navigate('/login', { replace: true });
-      } else if (!isAdmin) {
-        console.log('User is not admin, redirecting to home');
-        toast({
-          title: "Acesso negado", 
-          description: "Você não tem permissão para acessar o painel administrativo.",
-          variant: "destructive",
-        });
-        navigate('/', { replace: true });
-      }
-    }
-  }, [user, isAdmin, loading, navigate, toast]);
-
-  // Show loading while checking authentication
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 animate-pulse text-redator-primary" />
-          <span className="text-lg text-redator-accent">Verificando permissões administrativas...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render anything if not authenticated or not admin
   if (!user || !isAdmin) {
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Logout realizado",
-        description: "Você foi desconectado com sucesso.",
-      });
-      navigate('/', { replace: true });
-    } catch (error) {
-      console.error('Error signing out:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao fazer logout. Tente novamente.",
-        variant: "destructive",
-      });
-    }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    logout();
   };
 
   const menuItems = [
-    {
-      id: 'temas',
-      title: 'Temas',
-      icon: BookOpen,
-      color: 'bg-redator-accent',
-      hoverColor: 'hover:bg-redator-accent/90'
-    },
-    {
-      id: 'redacoes',
-      title: 'Redações',
-      icon: FileText,
-      color: 'bg-redator-primary',
-      hoverColor: 'hover:bg-redator-primary/90'
-    },
-    {
-      id: 'videoteca',
-      title: 'Videoteca',
-      icon: Video,
-      color: 'bg-redator-secondary',
-      hoverColor: 'hover:bg-redator-secondary/90'
-    },
-    {
-      id: 'exercicios',
-      title: 'Exercícios',
-      icon: ClipboardList,
-      color: 'bg-redator-accent',
-      hoverColor: 'hover:bg-redator-accent/90'
-    },
-    {
-      id: 'redacoes-exercicios',
-      title: 'Redações Exercícios',
-      icon: FileCheck,
-      color: 'bg-redator-primary',
-      hoverColor: 'hover:bg-redator-primary/90'
-    },
-    {
-      id: 'aulas',
-      title: 'Aulas',
-      icon: GraduationCap,
-      color: 'bg-redator-secondary',
-      hoverColor: 'hover:bg-redator-secondary/90'
-    },
-    {
-      id: 'correcoes',
-      title: 'Correções',
-      icon: CheckCircle,
-      color: 'bg-redator-accent',
-      hoverColor: 'hover:bg-redator-accent/90'
-    }
+    { id: "temas", label: "Temas", icon: BookOpen },
+    { id: "redacoes", label: "Redações", icon: FileText },
+    { id: "videos", label: "Vídeos", icon: Video },
+    { id: "aulas", label: "Aulas", icon: GraduationCap },
+    { id: "exercicios", label: "Exercícios", icon: ClipboardList },
+    { id: "simulados", label: "Simulados", icon: ClipboardCheck },
+    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
   ];
 
-  const renderMenuGrid = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
-      {menuItems.map((item) => (
-        <Card 
-          key={item.id}
-          className="transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-secondary/50"
-          onClick={() => setActiveSection(item.id)}
-        >
-          <CardContent className="p-8 text-center">
-            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${item.color} ${item.hoverColor} transition-colors duration-300 mb-6`}>
-              <item.icon className="w-8 h-8 text-white" />
-            </div>
-            
-            <h3 className="text-xl font-semibold text-redator-primary mb-2">
-              {item.title}
-            </h3>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-
-  const renderSectionContent = () => {
-    if (!activeSection) return null;
-
-    switch (activeSection) {
-      case 'temas':
+  const renderContent = () => {
+    switch (activeView) {
+      case "temas":
         return (
-          <Tabs defaultValue="novo" className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <BookOpen className="w-6 h-6" />
-                Gerenciar Temas
-              </h2>
-              <Button 
-                onClick={() => setActiveSection(null)}
-                variant="outline" 
-                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
-              >
-                Voltar ao Menu
-              </Button>
-            </div>
-            
-            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-accent/20">
-              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
-                <Plus className="w-4 h-4" />
-                Cadastrar Novo
-              </TabsTrigger>
-              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
-                <List className="w-4 h-4" />
-                Gerenciar Existentes
-              </TabsTrigger>
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Temas</TabsTrigger>
+              <TabsTrigger value="create">Criar Tema</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="novo">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <BookOpen className="w-5 h-5" />
-                    Cadastrar Novo Tema
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Crie temas com textos motivadores para prática de redação dos alunos
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <TemaForm />
-                </CardContent>
-              </Card>
+            <TabsContent value="list">
+              <TemaList />
             </TabsContent>
-            
-            <TabsContent value="gerenciar">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <List className="w-5 h-5" />
-                    Gerenciar Temas
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Edite ou exclua temas já cadastrados
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <TemaList />
-                </CardContent>
-              </Card>
+            <TabsContent value="create">
+              <TemaForm />
             </TabsContent>
           </Tabs>
         );
-
-      case 'redacoes':
+      
+      case "redacoes":
         return (
-          <Tabs defaultValue="novo" className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <FileText className="w-6 h-6" />
-                Gerenciar Redações Exemplares
-              </h2>
-              <Button 
-                onClick={() => setActiveSection(null)}
-                variant="outline" 
-                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
-              >
-                Voltar ao Menu
-              </Button>
-            </div>
-            
-            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-primary/20">
-              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
-                <Plus className="w-4 h-4" />
-                Cadastrar Nova
-              </TabsTrigger>
-              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
-                <List className="w-4 h-4" />
-                Gerenciar Existentes
-              </TabsTrigger>
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Redações</TabsTrigger>
+              <TabsTrigger value="create">Criar Redação</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="novo">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <FileText className="w-5 h-5" />
-                    Cadastrar Nova Redação Exemplar
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Adicione redações nota 1000 que servirão de exemplo para os estudantes
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <RedacaoForm />
-                </CardContent>
-              </Card>
+            <TabsContent value="list">
+              <RedacaoList />
             </TabsContent>
-            
-            <TabsContent value="gerenciar">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <List className="w-5 h-5" />
-                    Gerenciar Redações Exemplares
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Edite ou exclua redações exemplares já cadastradas
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <RedacaoList />
-                </CardContent>
-              </Card>
+            <TabsContent value="create">
+              <RedacaoForm />
             </TabsContent>
           </Tabs>
         );
-
-      case 'videoteca':
+      
+      case "videos":
         return (
-          <Tabs defaultValue="novo" className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <Video className="w-6 h-6" />
-                Gerenciar Videoteca
-              </h2>
-              <Button 
-                onClick={() => setActiveSection(null)}
-                variant="outline" 
-                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
-              >
-                Voltar ao Menu
-              </Button>
-            </div>
-            
-            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-secondary/20">
-              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
-                <Plus className="w-4 h-4" />
-                Cadastrar Novo
-              </TabsTrigger>
-              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-secondary data-[state=active]:text-white">
-                <List className="w-4 h-4" />
-                Gerenciar Existentes
-              </TabsTrigger>
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Vídeos</TabsTrigger>
+              <TabsTrigger value="create">Criar Vídeo</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="novo">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <Video className="w-5 h-5" />
-                    Cadastrar Novo Vídeo
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Adicione vídeos educativos do YouTube à videoteca do app
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <VideoForm />
-                </CardContent>
-              </Card>
+            <TabsContent value="list">
+              <VideoList />
             </TabsContent>
-            
-            <TabsContent value="gerenciar">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <List className="w-5 h-5" />
-                    Gerenciar Vídeos
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Edite ou exclua vídeos já cadastrados
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <VideoList />
-                </CardContent>
-              </Card>
+            <TabsContent value="create">
+              <VideoForm />
             </TabsContent>
           </Tabs>
         );
-
-      case 'exercicios':
+      
+      case "aulas":
         return (
-          <Tabs defaultValue="novo" className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <ClipboardList className="w-6 h-6" />
-                Gerenciar Exercícios
-              </h2>
-              <Button 
-                onClick={() => setActiveSection(null)}
-                variant="outline" 
-                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
-              >
-                Voltar ao Menu
-              </Button>
-            </div>
-            
-            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-accent/20">
-              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
-                <Plus className="w-4 h-4" />
-                Cadastrar Novo
-              </TabsTrigger>
-              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-accent data-[state=active]:text-white">
-                <List className="w-4 h-4" />
-                Gerenciar Existentes
-              </TabsTrigger>
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Aulas</TabsTrigger>
+              <TabsTrigger value="create">Criar Aula</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="novo">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <ClipboardList className="w-5 h-5" />
-                    Cadastrar Novo Exercício
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Crie exercícios com formulários Google ou propostas de redação com frase temática
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <ExercicioForm />
-                </CardContent>
-              </Card>
+            <TabsContent value="list">
+              <AulaList />
             </TabsContent>
-            
-            <TabsContent value="gerenciar">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <List className="w-5 h-5" />
-                    Gerenciar Exercícios
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Edite ou exclua exercícios já cadastrados
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <ExercicioList />
-                </CardContent>
-              </Card>
+            <TabsContent value="create">
+              <AulaForm />
             </TabsContent>
           </Tabs>
         );
-
-      case 'redacoes-exercicios':
+      
+      case "exercicios":
         return (
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <FileCheck className="w-6 h-6" />
-                Redações de Exercícios
-              </h2>
-              <Button 
-                onClick={() => setActiveSection(null)}
-                variant="outline" 
-                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
-              >
-                Voltar ao Menu
-              </Button>
-            </div>
-            
-            <Card className="border-redator-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-redator-primary">
-                  <FileCheck className="w-5 h-5" />
-                  Redações Enviadas via Exercícios
-                </CardTitle>
-                <p className="text-redator-accent">
-                  Corrija as redações enviadas pelos alunos através dos exercícios de redação com frase temática
-                </p>
-              </CardHeader>
-              <CardContent>
-                <RedacaoExercicioForm />
-              </CardContent>
-            </Card>
-          </div>
-        );
-
-      case 'aulas':
-        return (
-          <Tabs defaultValue="novo" className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <GraduationCap className="w-6 h-6" />
-                Gerenciar Aulas
-              </h2>
-              <Button 
-                onClick={() => setActiveSection(null)}
-                variant="outline" 
-                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
-              >
-                Voltar ao Menu
-              </Button>
-            </div>
-            
-            <TabsList className="grid w-full grid-cols-2 bg-white border border-redator-primary/20">
-              <TabsTrigger value="novo" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
-                <Plus className="w-4 h-4" />
-                Cadastrar Nova
-              </TabsTrigger>
-              <TabsTrigger value="gerenciar" className="flex items-center gap-2 data-[state=active]:bg-redator-primary data-[state=active]:text-white">
-                <List className="w-4 h-4" />
-                Gerenciar Existentes
-              </TabsTrigger>
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Exercícios</TabsTrigger>
+              <TabsTrigger value="create">Criar Exercício</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="novo">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <GraduationCap className="w-5 h-5" />
-                    Cadastrar Nova Aula
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Adicione aulas gravadas (YouTube) ou configure aulas ao vivo (Google Meet)
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <AulaForm />
-                </CardContent>
-              </Card>
+            <TabsContent value="list">
+              <ExercicioList />
             </TabsContent>
-            
-            <TabsContent value="gerenciar">
-              <Card className="border-redator-accent/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-redator-primary">
-                    <List className="w-5 h-5" />
-                    Gerenciar Aulas
-                  </CardTitle>
-                  <p className="text-redator-accent">
-                    Edite ou exclua aulas já cadastradas
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <AulaList />
-                </CardContent>
-              </Card>
+            <TabsContent value="create">
+              <ExercicioForm />
             </TabsContent>
           </Tabs>
         );
-
-      case 'correcoes':
+      
+      case "simulados":
         return (
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <CheckCircle className="w-6 h-6" />
-                Gerenciar Correções
-              </h2>
-              <Button 
-                onClick={() => setActiveSection(null)}
-                variant="outline" 
-                className="border-redator-accent text-redator-primary hover:bg-redator-accent/10"
-              >
-                Voltar ao Menu
-              </Button>
-            </div>
-            
-            <Card className="border-redator-secondary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-redator-primary">
-                  <CheckCircle className="w-5 h-5" />
-                  Corrigir Redações Enviadas
-                </CardTitle>
-                <p className="text-redator-accent">
-                  Corrija as redações enviadas pelos usuários atribuindo notas por competência e comentários pedagógicos
-                </p>
-              </CardHeader>
-              <CardContent>
-                <RedacaoEnviadaForm />
-              </CardContent>
-            </Card>
-          </div>
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Simulados</TabsTrigger>
+              <TabsTrigger value="create">Criar Simulado</TabsTrigger>
+            </TabsList>
+            <TabsContent value="list">
+              <SimuladoList />
+            </TabsContent>
+            <TabsContent value="create">
+              <SimuladoForm />
+            </TabsContent>
+          </Tabs>
         );
-
+      
+      case "redacoes-enviadas":
+        return (
+          <Tabs defaultValue="avulsas" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="avulsas">Redações Avulsas</TabsTrigger>
+              <TabsTrigger value="exercicios">Exercícios</TabsTrigger>
+              <TabsTrigger value="simulados">Simulados</TabsTrigger>
+            </TabsList>
+            <TabsContent value="avulsas">
+              <RedacaoEnviadaForm />
+            </TabsContent>
+            <TabsContent value="exercicios">
+              <div className="text-center py-8 text-gray-500">
+                Correções de exercícios em desenvolvimento
+              </div>
+            </TabsContent>
+            <TabsContent value="simulados">
+              <RedacaoSimuladoList />
+            </TabsContent>
+          </Tabs>
+        );
+      
       default:
-        return null;
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {menuItems.map((item) => (
+              <Card key={item.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveView(item.id)}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <item.icon className="w-5 h-5 text-redator-primary" />
+                    {item.label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">
+                    Gerenciar {item.label.toLowerCase()}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      <header className="bg-white shadow-sm border-b border-redator-accent/20">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-redator-primary flex items-center gap-2">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-redator-primary" />
-                Painel Administrativo - App do Redator
-              </h1>
-              <p className="text-sm sm:text-base text-redator-accent mt-1">
-                Gerencie conteúdos: Redações Exemplares, Temas, Videoteca, Aulas, Exercícios e Correções
-              </p>
-              <p className="text-xs sm:text-sm text-redator-secondary font-medium mt-1">
-                ✅ Logado como administrador: {user.email}
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+                <Home className="w-5 h-5" />
+                <span>Voltar ao App</span>
+              </Link>
+              <div className="w-px h-6 bg-gray-300"></div>
+              <h1 className="text-2xl font-bold text-redator-primary">Painel Administrativo</h1>
             </div>
-            <Button onClick={handleSignOut} variant="outline" className="flex items-center gap-2 border-redator-accent text-redator-primary hover:bg-redator-accent/10 w-full sm:w-auto">
-              <LogOut className="w-4 h-4" />
-              Sair
-            </Button>
+            
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">Olá, {user.email}</span>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {!activeSection ? (
-          <>
-            {/* Welcome Section */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-redator-primary rounded-full mb-4">
-                <BookOpen className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-redator-primary mb-2">
-                👋 Bem-vindo, professor!
-              </h2>
-              <p className="text-lg text-redator-accent">
-                Selecione o menu que deseja gerenciar abaixo.
-              </p>
+      {/* Navigation */}
+      {activeView !== "dashboard" && (
+        <nav className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-1 py-2">
+              <Button variant="ghost" size="sm" onClick={() => setActiveView("dashboard")}>
+                Dashboard
+              </Button>
+              <span className="text-gray-400">/</span>
+              <span className="text-redator-primary font-medium">
+                {menuItems.find(item => item.id === activeView)?.label}
+              </span>
             </div>
+          </div>
+        </nav>
+      )}
 
-            {/* Menu Grid */}
-            {renderMenuGrid()}
-          </>
-        ) : (
-          renderSectionContent()
-        )}
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {renderContent()}
       </main>
     </div>
   );

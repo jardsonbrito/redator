@@ -325,6 +325,113 @@ export type Database = {
           },
         ]
       }
+      redacoes_simulado: {
+        Row: {
+          comentario_pedagogico: string | null
+          corrigida: boolean | null
+          data_correcao: string | null
+          data_envio: string
+          email_aluno: string
+          id: string
+          id_simulado: string
+          nome_aluno: string
+          nota_c1: number | null
+          nota_c2: number | null
+          nota_c3: number | null
+          nota_c4: number | null
+          nota_c5: number | null
+          nota_total: number | null
+          texto: string
+          turma: string
+        }
+        Insert: {
+          comentario_pedagogico?: string | null
+          corrigida?: boolean | null
+          data_correcao?: string | null
+          data_envio?: string
+          email_aluno: string
+          id?: string
+          id_simulado: string
+          nome_aluno: string
+          nota_c1?: number | null
+          nota_c2?: number | null
+          nota_c3?: number | null
+          nota_c4?: number | null
+          nota_c5?: number | null
+          nota_total?: number | null
+          texto: string
+          turma: string
+        }
+        Update: {
+          comentario_pedagogico?: string | null
+          corrigida?: boolean | null
+          data_correcao?: string | null
+          data_envio?: string
+          email_aluno?: string
+          id?: string
+          id_simulado?: string
+          nome_aluno?: string
+          nota_c1?: number | null
+          nota_c2?: number | null
+          nota_c3?: number | null
+          nota_c4?: number | null
+          nota_c5?: number | null
+          nota_total?: number | null
+          texto?: string
+          turma?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redacoes_simulado_id_simulado_fkey"
+            columns: ["id_simulado"]
+            isOneToOne: false
+            referencedRelation: "simulados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulados: {
+        Row: {
+          ativo: boolean | null
+          atualizado_em: string
+          criado_em: string
+          data_fim: string
+          data_inicio: string
+          frase_tematica: string
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          titulo: string
+          turmas_autorizadas: string[] | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          atualizado_em?: string
+          criado_em?: string
+          data_fim: string
+          data_inicio: string
+          frase_tematica: string
+          hora_fim: string
+          hora_inicio: string
+          id?: string
+          titulo: string
+          turmas_autorizadas?: string[] | null
+        }
+        Update: {
+          ativo?: boolean | null
+          atualizado_em?: string
+          criado_em?: string
+          data_fim?: string
+          data_inicio?: string
+          frase_tematica?: string
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          titulo?: string
+          turmas_autorizadas?: string[] | null
+        }
+        Relationships: []
+      }
       temas: {
         Row: {
           eixo_tematico: string

@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList, Home } from "lucide-react";
+import { BookOpen, FileText, Video, Settings, Send, GraduationCap, ClipboardList, ClipboardCheck, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -12,13 +12,14 @@ const Index = () => {
   
   // Recupera a turma do localStorage
   const alunoTurma = localStorage.getItem("alunoTurma");
-  const turmaCode = alunoTurma ? {
+  const turmasMap = {
     "Turma A": "LRA2025",
     "Turma B": "LRB2025", 
     "Turma C": "LRC2025",
     "Turma D": "LRD2025",
     "Turma E": "LRE2025"
-  }[alunoTurma as keyof typeof turmasMap] : null;
+  };
+  const turmaCode = alunoTurma ? turmasMap[alunoTurma as keyof typeof turmasMap] : "visitante";
 
   // Verifica se há aulas disponíveis para a turma do aluno
   const { data: hasAulas } = useQuery({
@@ -66,13 +67,25 @@ const Index = () => {
     enabled: !!turmaCode
   });
 
-  const turmasMap = {
-    "Turma A": "LRA2025",
-    "Turma B": "LRB2025", 
-    "Turma C": "LRC2025",
-    "Turma D": "LRD2025",
-    "Turma E": "LRE2025"
-  };
+  // Verifica se há simulados disponíveis para a turma do aluno
+  const { data: hasSimulados } = useQuery({
+    queryKey: ['has-simulados', turmaCode],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('simulados')
+        .select('id')
+        .eq('ativo', true)
+        .or(`turmas_autorizadas.cs.{${turmaCode}},turmas_autorizadas.cs.{visitante}`)
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking simulados:', error);
+        return false;
+      }
+      
+      return data && data.length > 0;
+    }
+  });
 
   const menuItems = [
     {
@@ -111,6 +124,14 @@ const Index = () => {
       tooltip: "Pratique com formulários e atividades direcionadas.",
       showAlways: false,
       showCondition: hasExercicios
+    },
+    {
+      title: "Simulados",
+      path: "/simulados",
+      icon: ClipboardCheck,
+      tooltip: "Participe de simulados com horário controlado e correção detalhada.",
+      showAlways: false,
+      showCondition: hasSimulados
     },
     {
       title: "Enviar Redação",

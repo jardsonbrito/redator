@@ -18,6 +18,8 @@ import AulaModulo from "./pages/AulaModulo";
 import AulaAoVivo from "./pages/AulaAoVivo";
 import Exercicios from "./pages/Exercicios";
 import ExercicioDetalhes from "./pages/ExercicioDetalhes";
+import Simulados from "./pages/Simulados";
+import SimuladoDetalhes from "./pages/SimuladoDetalhes";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
@@ -46,6 +48,8 @@ const App = () => (
             <Route path="/aulas/ao-vivo" element={<AulaAoVivo />} />
             <Route path="/exercicios" element={<Exercicios />} />
             <Route path="/exercicios/:id" element={<ExercicioDetalhes />} />
+            <Route path="/simulados" element={<Simulados />} />
+            <Route path="/simulados/:id" element={<SimuladoDetalhes />} />
             <Route path="/envie-redacao" element={<EnvieRedacao />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<Admin />} />
