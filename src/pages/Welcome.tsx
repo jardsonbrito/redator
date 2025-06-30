@@ -1,12 +1,12 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { User, UserCheck } from "lucide-react";
+import { User, UserCheck, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Welcome = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
-      <div className="w-full max-w-2xl px-4">
+      <div className="w-full max-w-3xl px-4">
         <div className="text-center">
           {/* Logo oficial do App do Redator */}
           <div className="flex items-center justify-center mb-8">
@@ -27,9 +27,9 @@ const Welcome = () => {
             Redação na prática, aprovação na certa!
           </p>
 
-          {/* Botões de navegação */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-md mx-auto">
-            {/* Botão Sou Aluno - agora redireciona para login de turma */}
+          {/* Botões de navegação - agora com 3 opções */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {/* Botão Sou Aluno */}
             <Link to="/aluno-login" className="group">
               <Card className="h-full transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-redator-primary/50">
                 <CardContent className="p-8 text-center">
@@ -42,7 +42,26 @@ const Welcome = () => {
                   </h3>
                   
                   <p className="text-redator-accent text-sm">
-                    Acesse os conteúdos, temas e exercícios
+                    Acesse com sua turma e senha
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* Botão Sou Visitante */}
+            <Link to="/visitante-login" className="group">
+              <Card className="h-full transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer border-redator-accent/20 hover:border-green-500/50">
+                <CardContent className="p-8 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-600 hover:bg-green-700 transition-colors duration-300 mb-6 group-hover:scale-110">
+                    <UserPlus className="w-8 h-8 text-white" />
+                  </div>
+                  
+                  <h3 className="text-xl font-semibold text-redator-primary mb-2">
+                    Sou Visitante
+                  </h3>
+                  
+                  <p className="text-redator-accent text-sm">
+                    Acesse com nome e e-mail
                   </p>
                 </CardContent>
               </Card>

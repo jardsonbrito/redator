@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { StudentAuthProvider } from "@/hooks/useStudentAuth";
 import Welcome from "./pages/Welcome";
 import AlunoLogin from "./pages/AlunoLogin";
+import VisitanteLogin from "./pages/VisitanteLogin";
 import Index from "./pages/Index";
 import Redacoes from "./pages/Redacoes";
 import RedacaoDetalhes from "./pages/RedacaoDetalhes";
@@ -40,6 +41,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Welcome />} />
               <Route path="/aluno-login" element={<AlunoLogin />} />
+              <Route path="/visitante-login" element={<VisitanteLogin />} />
               <Route path="/app" element={<Index />} />
               <Route path="/redacoes" element={<Redacoes />} />
               <Route path="/redacoes/:id" element={<RedacaoDetalhes />} />

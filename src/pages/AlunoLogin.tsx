@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, UserPlus, Lock } from "lucide-react";
+import { User, Lock, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -14,19 +13,16 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 const AlunoLogin = () => {
   const [turmaSelecionada, setTurmaSelecionada] = useState("");
   const [senhaDigitada, setSenhaDigitada] = useState("");
-  const [nomeVisitante, setNomeVisitante] = useState("");
-  const [emailVisitante, setEmailVisitante] = useState("");
-  const [isVisitanteDialogOpen, setIsVisitanteDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { loginAsStudent, loginAsVisitante } = useStudentAuth();
+  const { loginAsStudent } = useStudentAuth();
 
   const turmas = [
-    { value: "Turma A (LRA2025)", label: "Turma A (LRA2025)", senha: "LRA2025" },
-    { value: "Turma B (LRB2025)", label: "Turma B (LRB2025)", senha: "LRB2025" },
-    { value: "Turma C (LRC2025)", label: "Turma C (LRC2025)", senha: "LRC2025" },
-    { value: "Turma D (LRD2025)", label: "Turma D (LRD2025)", senha: "LRD2025" },
-    { value: "Turma E (LRE2025)", label: "Turma E (LRE2025)", senha: "LRE2025" }
+    { value: "Turma A", label: "Turma A", senha: "LRA2025" },
+    { value: "Turma B", label: "Turma B", senha: "LRB2025" },
+    { value: "Turma C", label: "Turma C", senha: "LRC2025" },
+    { value: "Turma D", label: "Turma D", senha: "LRD2025" },
+    { value: "Turma E", label: "Turma E", senha: "LRE2025" }
   ];
 
   const handleAcessoTurma = () => {
@@ -59,7 +55,7 @@ const AlunoLogin = () => {
       return;
     }
 
-    // Login usando o novo sistema
+    // Login usando o sistema de autenticação
     loginAsStudent(turmaSelecionada);
     
     toast({
@@ -70,42 +66,16 @@ const AlunoLogin = () => {
     navigate("/app", { replace: true });
   };
 
-  const handleAcessoVisitante = () => {
-    if (!nomeVisitante.trim() || !emailVisitante.trim()) {
-      toast({
-        title: "Preencha todos os campos",
-        description: "Nome e e-mail são obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validação básica de e-mail
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailVisitante)) {
-      toast({
-        title: "E-mail inválido",
-        description: "Por favor, insira um e-mail válido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Login como visitante usando o novo sistema
-    loginAsVisitante(nomeVisitante.trim(), emailVisitante.trim());
-
-    toast({
-      title: "Bem-vindo, visitante!",
-      description: `Olá, ${nomeVisitante}! Acesso liberado.`,
-    });
-
-    setIsVisitanteDialogOpen(false);
-    navigate("/app", { replace: true });
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
       <div className="w-full max-w-md px-4">
+        <div className="mb-6">
+          <Link to="/" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+            <span>Voltar ao início</span>
+          </Link>
+        </div>
+
         <div className="text-center mb-8">
           <Link to="/" className="inline-block mb-6">
             <img 
@@ -125,13 +95,14 @@ const AlunoLogin = () => {
 
         <Card className="shadow-xl border-redator-accent/20">
           <CardHeader className="space-y-4">
-            <CardTitle className="text-center text-redator-primary">
-              Faça seu login
+            <CardTitle className="text-center text-redator-primary flex items-center justify-center gap-2">
+              <User className="w-5 h-5" />
+              Login por Turma
             </CardTitle>
           </CardHeader>
           
           <CardContent className="space-y-6">
-            {/* Seleção de Turma */}
+            {/* Seleção de Turma - SEM mostrar as senhas */}
             <div className="space-y-3">
               <Label htmlFor="turma" className="text-redator-primary font-medium">
                 Sua Turma
@@ -171,7 +142,7 @@ const AlunoLogin = () => {
               </p>
             </div>
 
-            {/* Botão de Acesso por Turma */}
+            {/* Botão de Acesso */}
             <Button 
               onClick={handleAcessoTurma}
               className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
@@ -181,89 +152,23 @@ const AlunoLogin = () => {
               Acessar como Aluno
             </Button>
 
-            {/* Divisor */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-redator-accent/30" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-redator-accent">ou</span>
-              </div>
-            </div>
-
-            {/* Botão Visitante */}
-            <Dialog open={isVisitanteDialogOpen} onOpenChange={setIsVisitanteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="w-full border-redator-secondary text-redator-secondary hover:bg-redator-secondary hover:text-white"
-                  size="lg"
-                >
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Sou Visitante
-                </Button>
-              </DialogTrigger>
-              
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-redator-primary">Acesso de Visitante</DialogTitle>
-                </DialogHeader>
-                
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="nome-visitante">Nome Completo *</Label>
-                    <Input
-                      id="nome-visitante"
-                      value={nomeVisitante}
-                      onChange={(e) => setNomeVisitante(e.target.value)}
-                      placeholder="Digite seu nome completo"
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="email-visitante">E-mail *</Label>
-                    <Input
-                      id="email-visitante"
-                      type="email"
-                      value={emailVisitante}
-                      onChange={(e) => setEmailVisitante(e.target.value)}
-                      placeholder="Digite seu e-mail"
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <Button 
-                    onClick={handleAcessoVisitante}
-                    className="w-full bg-redator-secondary hover:bg-redator-secondary/90"
-                  >
-                    Acessar como Visitante
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* Link para Professor */}
-            <div className="text-center">
+            {/* Links para outras opções */}
+            <div className="text-center space-y-2">
+              <Link 
+                to="/visitante-login" 
+                className="block text-sm text-redator-accent hover:text-redator-primary transition-colors"
+              >
+                Sou visitante - Acessar sem turma
+              </Link>
               <Link 
                 to="/login" 
-                className="text-sm text-redator-accent hover:text-redator-primary transition-colors"
+                className="block text-sm text-redator-accent hover:text-redator-primary transition-colors"
               >
-                Sou professor - Fazer login
+                Sou professor - Acessar painel administrativo
               </Link>
             </div>
           </CardContent>
         </Card>
-
-        {/* Link para voltar */}
-        <div className="text-center mt-6">
-          <Link 
-            to="/" 
-            className="text-sm text-redator-accent hover:text-redator-primary transition-colors"
-          >
-            ← Voltar ao início
-          </Link>
-        </div>
       </div>
     </div>
   );
