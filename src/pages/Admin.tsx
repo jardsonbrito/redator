@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
@@ -19,18 +18,18 @@ import {
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-// Import existing admin components
-import TemaForm from "@/components/admin/TemaForm";
-import TemaList from "@/components/admin/TemaList";
-import RedacaoForm from "@/components/admin/RedacaoForm";
-import RedacaoList from "@/components/admin/RedacaoList";
-import VideoForm from "@/components/admin/VideoForm";
-import VideoList from "@/components/admin/VideoList";
+// Import existing admin components with correct named imports
+import { TemaForm } from "@/components/admin/TemaForm";
+import { TemaList } from "@/components/admin/TemaList";
+import { RedacaoForm } from "@/components/admin/RedacaoForm";
+import { RedacaoList } from "@/components/admin/RedacaoList";
+import { VideoForm } from "@/components/admin/VideoForm";
+import { VideoList } from "@/components/admin/VideoList";
 import AulaForm from "@/components/admin/AulaForm";
 import AulaList from "@/components/admin/AulaList";
 import ExercicioForm from "@/components/admin/ExercicioForm";
 import ExercicioList from "@/components/admin/ExercicioList";
-import RedacaoEnviadaForm from "@/components/admin/RedacaoEnviadaForm";
+import { RedacaoEnviadaForm } from "@/components/admin/RedacaoEnviadaForm";
 
 // Import new simulado components
 import SimuladoForm from "@/components/admin/SimuladoForm";
@@ -38,7 +37,7 @@ import SimuladoList from "@/components/admin/SimuladoList";
 import RedacaoSimuladoList from "@/components/admin/RedacaoSimuladoList";
 
 const Admin = () => {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
 
   if (!user || !isAdmin) {
@@ -47,7 +46,7 @@ const Admin = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    logout();
+    signOut();
   };
 
   const menuItems = [
