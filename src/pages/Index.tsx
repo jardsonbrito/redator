@@ -23,40 +23,28 @@ const Index = () => {
     turmaCode = studentData.turma; // Usar o nome real da turma (ex: "Turma A")
   }
 
-  // Verifica se há aulas disponíveis - corrigir a lógica
+  // Verifica se há aulas disponíveis - lógica simplificada
   const { data: hasAulas } = useQuery({
     queryKey: ['has-aulas', turmaCode],
     queryFn: async () => {
       console.log("Checking aulas for turma:", turmaCode);
       
-      // Se for visitante, verificar aulas que permitem visitante
-      if (turmaCode === "Visitante") {
-        const { data, error } = await supabase
-          .from('aulas')
-          .select('id')
-          .eq('ativo', true)
-          .eq('permite_visitante', true)
-          .limit(1);
-        
-        if (error) {
-          console.error('Error checking aulas for visitante:', error);
-          return false;
-        }
-        
-        console.log("Aulas found for visitante:", data);
-        return data && data.length > 0;
-      }
-      
-      // Se for aluno, verificar aulas da sua turma
-      const { data, error } = await supabase
+      let query = supabase
         .from('aulas')
         .select('id')
         .eq('ativo', true)
-        .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
         .limit(1);
+
+      if (turmaCode === "Visitante") {
+        query = query.eq('permite_visitante', true);
+      } else {
+        query = query.or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
-        console.error('Error checking aulas for turma:', error);
+        console.error('Error checking aulas:', error);
         return false;
       }
       
@@ -66,35 +54,25 @@ const Index = () => {
     enabled: !!turmaCode
   });
 
-  // Verifica se há exercícios disponíveis
+  // Verifica se há exercícios disponíveis - lógica simplificada
   const { data: hasExercicios } = useQuery({
     queryKey: ['has-exercicios', turmaCode],
     queryFn: async () => {
       if (!turmaCode) return false;
       
-      // Se for visitante, verificar exercícios que permitem visitante
-      if (turmaCode === "Visitante") {
-        const { data, error } = await supabase
-          .from('exercicios')
-          .select('id')
-          .eq('ativo', true)
-          .eq('permite_visitante', true)
-          .limit(1);
-        
-        if (error) {
-          console.error('Error checking exercicios for visitante:', error);
-          return false;
-        }
-        
-        return data && data.length > 0;
-      }
-      
-      const { data, error } = await supabase
+      let query = supabase
         .from('exercicios')
         .select('id')
         .eq('ativo', true)
-        .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
         .limit(1);
+
+      if (turmaCode === "Visitante") {
+        query = query.eq('permite_visitante', true);
+      } else {
+        query = query.or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         console.error('Error checking exercicios:', error);
