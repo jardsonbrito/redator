@@ -52,7 +52,7 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
 
       return simuladosRelevantes || [];
     },
-    refetchInterval: 5000, // Atualiza a cada 5 segundos para controle preciso
+    refetchInterval: 30000, // Atualiza a cada 30 segundos para controle menos agressivo
   });
 
   // Se não há simulados, não renderiza nada

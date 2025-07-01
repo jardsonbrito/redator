@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -10,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
+import { RedacaoTextarea } from "@/components/RedacaoTextarea";
 
 const EnvieRedacao = () => {
   const [nomeCompleto, setNomeCompleto] = useState("");
@@ -18,6 +18,7 @@ const EnvieRedacao = () => {
   const [redacaoTexto, setRedacaoTexto] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(true);
+  const [isRedacaoValid, setIsRedacaoValid] = useState(false);
   const { toast } = useToast();
 
   // Recupera dados do usuário
@@ -76,6 +77,15 @@ const EnvieRedacao = () => {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos obrigatórios: nome completo, e-mail, frase temática e texto da redação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isRedacaoValid) {
+      toast({
+        title: "Redação inválida",
+        description: "Sua redação deve ter entre 7 e 30 linhas.",
         variant: "destructive",
       });
       return;
@@ -149,7 +159,7 @@ const EnvieRedacao = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
+              <Link to="/app" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
                 <ArrowLeft className="w-5 h-5" />
                 <span>Voltar</span>
               </Link>
@@ -158,7 +168,7 @@ const EnvieRedacao = () => {
                 <p className="text-redator-accent">Escreva sua redação e receba correção personalizada</p>
               </div>
             </div>
-            <Link to="/" className="hover:opacity-80 transition-opacity">
+            <Link to="/app" className="hover:opacity-80 transition-opacity">
               <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-8 w-auto max-w-[120px] object-contain" />
             </Link>
           </div>
@@ -255,21 +265,11 @@ const EnvieRedacao = () => {
                   </p>
                 </div>
 
-                <div>
-                  <label htmlFor="redacao-texto" className="block text-sm font-medium text-redator-primary mb-2">
-                    Texto da Redação *
-                  </label>
-                  <Textarea
-                    id="redacao-texto"
-                    placeholder="Escreva sua redação completa aqui..."
-                    value={redacaoTexto}
-                    onChange={(e) => setRedacaoTexto(e.target.value)}
-                    className="min-h-[400px] border-redator-accent/30 focus:border-redator-accent resize-y"
-                  />
-                  <p className="text-xs text-redator-accent mt-1">
-                    {redacaoTexto.length} caracteres
-                  </p>
-                </div>
+                <RedacaoTextarea
+                  value={redacaoTexto}
+                  onChange={setRedacaoTexto}
+                  onValidChange={setIsRedacaoValid}
+                />
 
                 {/* Informações sobre tipo de envio */}
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -287,7 +287,7 @@ const EnvieRedacao = () => {
 
                 <Button 
                   type="submit" 
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !isRedacaoValid}
                   className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
                 >
                   {isSubmitting ? "Salvando..." : "Enviar Redação"}

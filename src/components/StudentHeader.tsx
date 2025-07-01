@@ -38,16 +38,11 @@ export const StudentHeader = () => {
               </span>
             )}
             
-            {/* Link para Professor se aplicável */}
-            {user && isAdmin ? (
+            {/* Link para Professor apenas se for admin autenticado */}
+            {user && isAdmin && (
               <Link to="/admin" className="flex items-center gap-2 bg-redator-primary text-white px-3 py-1.5 rounded-md hover:bg-redator-primary/90 transition-colors text-sm">
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Admin</span>
-              </Link>
-            ) : (
-              <Link to="/login" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors text-sm">
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Professor</span>
               </Link>
             )}
             
