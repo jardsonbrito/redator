@@ -99,7 +99,7 @@ const Exercicios = () => {
       }
       
       // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
-      if (!isVisitante && userTurma) {
+      if (!isVisitante && userTurma && userTurma !== "visitante") {
         const turmasAutorizadas = exercicio.turmas_autorizadas || [];
         const hasAccess = turmasAutorizadas.length === 0 || turmasAutorizadas.includes(userTurma);
         console.log('👤 Verificando acesso do aluno:', { userTurma, turmasAutorizadas, hasAccess });
@@ -244,16 +244,6 @@ const Exercicios = () => {
                           >
                             <Edit className="w-4 h-4 mr-2" />
                             Escrever Redação
-                          </Button>
-                        )}
-                        {exercicio.imagem_capa_url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(exercicio.imagem_capa_url, '_blank')}
-                          >
-                            <FileText className="w-4 h-4 mr-2" />
-                            Ver Imagem
                           </Button>
                         )}
                       </div>

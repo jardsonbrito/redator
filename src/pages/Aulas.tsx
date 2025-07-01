@@ -92,7 +92,7 @@ const Aulas = () => {
       }
       
       // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
-      if (!isVisitante && userTurma) {
+      if (!isVisitante && userTurma && userTurma !== "visitante") {
         const turmasAutorizadas = aula.turmas_autorizadas || [];
         const hasAccess = turmasAutorizadas.length === 0 || turmasAutorizadas.includes(userTurma);
         console.log('👤 Verificando acesso do aluno:', { userTurma, turmasAutorizadas, hasAccess });
