@@ -9,95 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      aula_modules: {
-        Row: {
-          ativo: boolean
-          competencia_numero: number | null
-          created_at: string
-          descricao: string | null
-          id: string
-          nome: string
-          ordem: number
-          tipo: string
-          updated_at: string
-        }
-        Insert: {
-          ativo?: boolean
-          competencia_numero?: number | null
-          created_at?: string
-          descricao?: string | null
-          id?: string
-          nome: string
-          ordem: number
-          tipo: string
-          updated_at?: string
-        }
-        Update: {
-          ativo?: boolean
-          competencia_numero?: number | null
-          created_at?: string
-          descricao?: string | null
-          id?: string
-          nome?: string
-          ordem?: number
-          tipo?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      aulas: {
-        Row: {
-          ativo: boolean
-          created_at: string
-          descricao: string | null
-          google_meet_url: string | null
-          id: string
-          module_id: string
-          ordem: number
-          thumbnail_url: string | null
-          titulo: string
-          turmas: string[] | null
-          updated_at: string
-          youtube_url: string | null
-        }
-        Insert: {
-          ativo?: boolean
-          created_at?: string
-          descricao?: string | null
-          google_meet_url?: string | null
-          id?: string
-          module_id: string
-          ordem?: number
-          thumbnail_url?: string | null
-          titulo: string
-          turmas?: string[] | null
-          updated_at?: string
-          youtube_url?: string | null
-        }
-        Update: {
-          ativo?: boolean
-          created_at?: string
-          descricao?: string | null
-          google_meet_url?: string | null
-          id?: string
-          module_id?: string
-          ordem?: number
-          thumbnail_url?: string | null
-          titulo?: string
-          turmas?: string[] | null
-          updated_at?: string
-          youtube_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "aulas_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "aula_modules"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       biblioteca_materiais: {
         Row: {
           arquivo_nome: string
@@ -140,48 +51,6 @@ export type Database = {
           status?: string | null
           titulo?: string
           turmas_autorizadas?: string[] | null
-        }
-        Relationships: []
-      }
-      exercicios: {
-        Row: {
-          ativo: boolean | null
-          atualizado_em: string
-          criado_em: string
-          embed_formulario: boolean | null
-          frase_tematica: string | null
-          id: string
-          imagem_thumbnail: string | null
-          tipo: string
-          titulo: string
-          turmas: string[] | null
-          url_formulario: string | null
-        }
-        Insert: {
-          ativo?: boolean | null
-          atualizado_em?: string
-          criado_em?: string
-          embed_formulario?: boolean | null
-          frase_tematica?: string | null
-          id?: string
-          imagem_thumbnail?: string | null
-          tipo: string
-          titulo: string
-          turmas?: string[] | null
-          url_formulario?: string | null
-        }
-        Update: {
-          ativo?: boolean | null
-          atualizado_em?: string
-          criado_em?: string
-          embed_formulario?: boolean | null
-          frase_tematica?: string | null
-          id?: string
-          imagem_thumbnail?: string | null
-          tipo?: string
-          titulo?: string
-          turmas?: string[] | null
-          url_formulario?: string | null
         }
         Relationships: []
       }
@@ -314,7 +183,6 @@ export type Database = {
           email_aluno: string | null
           frase_tematica: string
           id: string
-          id_exercicio: string | null
           nome_aluno: string | null
           nota_c1: number | null
           nota_c2: number | null
@@ -335,7 +203,6 @@ export type Database = {
           email_aluno?: string | null
           frase_tematica: string
           id?: string
-          id_exercicio?: string | null
           nome_aluno?: string | null
           nota_c1?: number | null
           nota_c2?: number | null
@@ -356,7 +223,6 @@ export type Database = {
           email_aluno?: string | null
           frase_tematica?: string
           id?: string
-          id_exercicio?: string | null
           nome_aluno?: string | null
           nota_c1?: number | null
           nota_c2?: number | null
@@ -369,15 +235,7 @@ export type Database = {
           tipo_envio?: string | null
           turma?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_redacoes_enviadas_exercicio"
-            columns: ["id_exercicio"]
-            isOneToOne: false
-            referencedRelation: "exercicios"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       redacoes_simulado: {
         Row: {
