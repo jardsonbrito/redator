@@ -98,6 +98,51 @@ export type Database = {
           },
         ]
       }
+      biblioteca_materiais: {
+        Row: {
+          arquivo_nome: string
+          arquivo_url: string
+          atualizado_em: string | null
+          competencia: string
+          criado_em: string | null
+          data_publicacao: string | null
+          descricao: string | null
+          id: string
+          permite_visitante: boolean | null
+          status: string | null
+          titulo: string
+          turmas_autorizadas: string[] | null
+        }
+        Insert: {
+          arquivo_nome: string
+          arquivo_url: string
+          atualizado_em?: string | null
+          competencia: string
+          criado_em?: string | null
+          data_publicacao?: string | null
+          descricao?: string | null
+          id?: string
+          permite_visitante?: boolean | null
+          status?: string | null
+          titulo: string
+          turmas_autorizadas?: string[] | null
+        }
+        Update: {
+          arquivo_nome?: string
+          arquivo_url?: string
+          atualizado_em?: string | null
+          competencia?: string
+          criado_em?: string | null
+          data_publicacao?: string | null
+          descricao?: string | null
+          id?: string
+          permite_visitante?: boolean | null
+          status?: string | null
+          titulo?: string
+          turmas_autorizadas?: string[] | null
+        }
+        Relationships: []
+      }
       exercicios: {
         Row: {
           ativo: boolean | null

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
@@ -14,7 +13,8 @@ import {
   ClipboardCheck,
   Send,
   LogOut,
-  Home
+  Home,
+  File
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,10 +32,14 @@ import ExercicioForm from "@/components/admin/ExercicioForm";
 import ExercicioList from "@/components/admin/ExercicioList";
 import { RedacaoEnviadaForm } from "@/components/admin/RedacaoEnviadaForm";
 
-// Import new simulado components with correct named imports
+// Import simulado components
 import { SimuladoForm } from "@/components/admin/SimuladoForm";
 import SimuladoList from "@/components/admin/SimuladoList";
 import RedacaoSimuladoList from "@/components/admin/RedacaoSimuladoList";
+
+// Import biblioteca components
+import { BibliotecaForm } from "@/components/admin/BibliotecaForm";
+import BibliotecaList from "@/components/admin/BibliotecaList";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -54,6 +58,7 @@ const Admin = () => {
     { id: "temas", label: "Temas", icon: BookOpen },
     { id: "redacoes", label: "Redações", icon: FileText },
     { id: "videos", label: "Vídeos", icon: Video },
+    { id: "biblioteca", label: "Biblioteca", icon: File },
     { id: "aulas", label: "Aulas", icon: GraduationCap },
     { id: "exercicios", label: "Exercícios", icon: ClipboardList },
     { id: "simulados", label: "Simulados", icon: ClipboardCheck },
@@ -106,6 +111,22 @@ const Admin = () => {
             </TabsContent>
             <TabsContent value="create">
               <VideoForm />
+            </TabsContent>
+          </Tabs>
+        );
+      
+      case "biblioteca":
+        return (
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Materiais</TabsTrigger>
+              <TabsTrigger value="create">Cadastrar Material</TabsTrigger>
+            </TabsList>
+            <TabsContent value="list">
+              <BibliotecaList />
+            </TabsContent>
+            <TabsContent value="create">
+              <BibliotecaForm />
             </TabsContent>
           </Tabs>
         );

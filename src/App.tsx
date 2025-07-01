@@ -15,6 +15,7 @@ import RedacaoDetalhes from "./pages/RedacaoDetalhes";
 import Temas from "./pages/Temas";
 import TemaDetalhes from "./pages/TemaDetalhes";
 import Videoteca from "./pages/Videoteca";
+import Biblioteca from "./pages/Biblioteca";
 import Aulas from "./pages/Aulas";
 import AulaModulo from "./pages/AulaModulo";
 import AulaAoVivo from "./pages/AulaAoVivo";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/temas" element={<Temas />} />
               <Route path="/temas/:id" element={<TemaDetalhes />} />
               <Route path="/videoteca" element={<Videoteca />} />
+              <Route path="/biblioteca" element={<Biblioteca />} />
               <Route path="/aulas" element={<Aulas />} />
               <Route path="/aulas/modulo/:moduleId" element={<AulaModulo />} />
               <Route path="/aulas/ao-vivo" element={<AulaAoVivo />} />

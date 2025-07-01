@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send } from "lucide-react";
+import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send, File } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -108,6 +108,26 @@ const Index = () => {
     enabled: !!turmaCode && turmaCode !== "Visitante"
   });
 
+  // Verifica se há materiais da biblioteca disponíveis
+  const { data: hasBiblioteca } = useQuery({
+    queryKey: ['has-biblioteca', turmaCode],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('biblioteca_materiais')
+        .select('id')
+        .eq('status', 'publicado')
+        .or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`)
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking biblioteca:', error);
+        return false;
+      }
+      
+      return data && data.length > 0;
+    }
+  });
+
   const menuItems = [
     {
       title: "Temas",
@@ -129,6 +149,14 @@ const Index = () => {
       icon: Video,
       tooltip: "Acesse vídeos para enriquecer seu repertório sociocultural.",
       showAlways: true
+    },
+    {
+      title: "Biblioteca",
+      path: "/biblioteca",
+      icon: File,
+      tooltip: "Acesse materiais em PDF organizados por competência.",
+      showAlways: false,
+      showCondition: hasBiblioteca
     },
     {
       title: "Aulas",
