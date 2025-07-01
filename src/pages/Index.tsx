@@ -17,30 +17,50 @@ const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
   
-  // Determina a turma/código do usuário - NOMES CORRETOS DAS TURMAS (sem anos)
+  // Determina a turma/código do usuário
   let turmaCode = "Visitante";
   if (studentData.userType === "aluno" && studentData.turma) {
-    turmaCode = studentData.turma; // Usar o nome real da turma
+    turmaCode = studentData.turma; // Usar o nome real da turma (ex: "Turma A")
   }
 
-  // Verifica se há aulas disponíveis
+  // Verifica se há aulas disponíveis - corrigir a lógica
   const { data: hasAulas } = useQuery({
     queryKey: ['has-aulas', turmaCode],
     queryFn: async () => {
-      if (!turmaCode) return false;
+      console.log("Checking aulas for turma:", turmaCode);
       
+      // Se for visitante, verificar aulas que permitem visitante
+      if (turmaCode === "Visitante") {
+        const { data, error } = await supabase
+          .from('aulas')
+          .select('id')
+          .eq('ativo', true)
+          .eq('permite_visitante', true)
+          .limit(1);
+        
+        if (error) {
+          console.error('Error checking aulas for visitante:', error);
+          return false;
+        }
+        
+        console.log("Aulas found for visitante:", data);
+        return data && data.length > 0;
+      }
+      
+      // Se for aluno, verificar aulas da sua turma
       const { data, error } = await supabase
         .from('aulas')
         .select('id')
         .eq('ativo', true)
-        .or(`turmas.cs.{${turmaCode}},turmas.is.null`)
+        .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
         .limit(1);
       
       if (error) {
-        console.error('Error checking aulas:', error);
+        console.error('Error checking aulas for turma:', error);
         return false;
       }
       
+      console.log("Aulas found for turma:", turmaCode, data);
       return data && data.length > 0;
     },
     enabled: !!turmaCode
@@ -52,11 +72,28 @@ const Index = () => {
     queryFn: async () => {
       if (!turmaCode) return false;
       
+      // Se for visitante, verificar exercícios que permitem visitante
+      if (turmaCode === "Visitante") {
+        const { data, error } = await supabase
+          .from('exercicios')
+          .select('id')
+          .eq('ativo', true)
+          .eq('permite_visitante', true)
+          .limit(1);
+        
+        if (error) {
+          console.error('Error checking exercicios for visitante:', error);
+          return false;
+        }
+        
+        return data && data.length > 0;
+      }
+      
       const { data, error } = await supabase
         .from('exercicios')
         .select('id')
         .eq('ativo', true)
-        .or(`turmas.cs.{${turmaCode}},turmas.is.null`)
+        .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
         .limit(1);
       
       if (error) {
@@ -199,6 +236,14 @@ const Index = () => {
 
   // Determinar se deve mostrar seção "Minhas Redações"
   const showMinhasRedacoes = studentData.userType === "aluno" && studentData.turma && hasRedacoesTurma;
+
+  console.log("Debug info:", {
+    turmaCode,
+    hasAulas,
+    hasExercicios,
+    hasSimulados,
+    visibleMenuItems: visibleMenuItems.map(item => item.title)
+  });
 
   return (
     <ProtectedRoute>

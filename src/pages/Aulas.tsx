@@ -9,14 +9,9 @@ import { Button } from "@/components/ui/button";
 const Aulas = () => {
   // Recupera a turma do localStorage
   const alunoTurma = localStorage.getItem("alunoTurma");
-  const turmasMap = {
-    "Turma A": "LRA2025",
-    "Turma B": "LRB2025", 
-    "Turma C": "LRC2025",
-    "Turma D": "LRD2025",
-    "Turma E": "LRE2025"
-  };
-  const turmaCode = alunoTurma ? turmasMap[alunoTurma as keyof typeof turmasMap] : null;
+  const turmaCode = alunoTurma || "Visitante";
+
+  console.log("Aulas page - turmaCode:", turmaCode);
 
   const { data: modules, isLoading } = useQuery({
     queryKey: ['aula-modules', turmaCode],
@@ -35,21 +30,44 @@ const Aulas = () => {
         throw modulesError;
       }
 
-      // Para cada módulo, verificar se há aulas disponíveis para a turma
+      // Para cada módulo, verificar se há aulas disponíveis
       const modulesWithAulas = [];
       
       for (const module of allModules) {
-        const { data: aulas, error: aulasError } = await supabase
-          .from('aulas')
-          .select('id')
-          .eq('module_id', module.id)
-          .eq('ativo', true)
-          .or(`turmas.cs.{${turmaCode}},turmas.is.null`)
-          .limit(1);
+        let aulas;
         
-        if (aulasError) {
-          console.error("Error fetching aulas for module:", module.id, aulasError);
-          continue;
+        // Se for visitante, verificar aulas que permitem visitante
+        if (turmaCode === "Visitante") {
+          const { data: aulasData, error: aulasError } = await supabase
+            .from('aulas')
+            .select('id')
+            .eq('module_id', module.id)
+            .eq('ativo', true)
+            .eq('permite_visitante', true)
+            .limit(1);
+          
+          if (aulasError) {
+            console.error("Error fetching aulas for visitante:", aulasError);
+            continue;
+          }
+          
+          aulas = aulasData;
+        } else {
+          // Se for aluno, verificar aulas da sua turma ou que permitem visitante
+          const { data: aulasData, error: aulasError } = await supabase
+            .from('aulas')
+            .select('id')
+            .eq('module_id', module.id)
+            .eq('ativo', true)
+            .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
+            .limit(1);
+          
+          if (aulasError) {
+            console.error("Error fetching aulas for turma:", turmaCode, aulasError);
+            continue;
+          }
+          
+          aulas = aulasData;
         }
 
         // Se há pelo menos uma aula disponível, incluir o módulo
@@ -58,7 +76,7 @@ const Aulas = () => {
         }
       }
       
-      console.log("Modules with aulas for turma:", modulesWithAulas);
+      console.log("Modules with aulas for turma:", turmaCode, modulesWithAulas);
       return modulesWithAulas;
     },
     enabled: !!turmaCode
@@ -111,10 +129,13 @@ const Aulas = () => {
           <div className="text-center py-12">
             <GraduationCap className="w-16 h-16 text-redator-accent mx-auto mb-4 opacity-50" />
             <h3 className="text-xl font-semibold text-redator-primary mb-2">
-              Nenhuma aula disponível para sua turma
+              {turmaCode === "Visitante" 
+                ? "Nenhuma aula disponível para visitantes" 
+                : "Nenhuma aula disponível para sua turma"
+              }
             </h3>
             <p className="text-redator-accent">
-              As aulas aparecerão aqui quando forem cadastradas para sua turma pelo professor.
+              As aulas aparecerão aqui quando forem cadastradas pelo professor.
             </p>
           </div>
         ) : (
