@@ -58,7 +58,6 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
 
         // Verifica se o simulado ainda está no período de exibição
         const fimData = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
-        const agora = new Date();
         
         if (agora > fimData) {
           console.log('Simulado já encerrado, não será exibido');
