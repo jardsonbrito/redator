@@ -15,7 +15,8 @@ import {
   Home,
   File,
   GraduationCap,
-  NotebookPen
+  NotebookPen,
+  MessageSquare
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,9 +46,15 @@ import { ExercicioForm } from "@/components/admin/ExercicioForm";
 import { SimpleExercicioList } from "@/components/admin/SimpleExercicioList";
 import { RedacaoExercicioList } from "@/components/admin/RedacaoExercicioList";
 
+// Import avisos components
+import { AvisoForm } from "@/components/admin/AvisoForm";
+import { AvisoList } from "@/components/admin/AvisoList";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
+  const [refreshAvisos, setRefreshAvisos] = useState(false);
+  const [avisoEditando, setAvisoEditando] = useState(null);
 
   console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
 
@@ -69,6 +76,7 @@ const Admin = () => {
     { id: "simulados", label: "Simulados", icon: ClipboardCheck },
     { id: "aulas", label: "Aulas", icon: GraduationCap },
     { id: "exercicios", label: "Exercícios", icon: NotebookPen },
+    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
   ];
 
@@ -184,6 +192,33 @@ const Admin = () => {
               <ExercicioForm />
             </TabsContent>
           </Tabs>
+        );
+
+      case "avisos":
+        const handleAvisoSuccess = () => {
+          setRefreshAvisos(!refreshAvisos);
+        };
+
+        const handleEditAviso = (aviso: any) => {
+          setAvisoEditando(aviso);
+        };
+
+        const handleCancelEdit = () => {
+          setAvisoEditando(null);
+        };
+
+        return (
+          <div className="space-y-6">
+            <AvisoForm 
+              onSuccess={handleAvisoSuccess}
+              avisoEditando={avisoEditando}
+              onCancelEdit={handleCancelEdit}
+            />
+            <AvisoList 
+              refresh={refreshAvisos}
+              onEdit={handleEditAviso}
+            />
+          </div>
         );
       
       case "redacoes-enviadas":

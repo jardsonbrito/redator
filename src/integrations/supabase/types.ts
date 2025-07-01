@@ -51,6 +51,89 @@ export type Database = {
         }
         Relationships: []
       }
+      avisos: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          criado_em: string
+          data_agendamento: string | null
+          descricao: string
+          id: string
+          imagem_url: string | null
+          link_externo: string | null
+          prioridade: string
+          status: string
+          titulo: string
+          turmas_autorizadas: string[] | null
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          data_agendamento?: string | null
+          descricao: string
+          id?: string
+          imagem_url?: string | null
+          link_externo?: string | null
+          prioridade?: string
+          status?: string
+          titulo: string
+          turmas_autorizadas?: string[] | null
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          data_agendamento?: string | null
+          descricao?: string
+          id?: string
+          imagem_url?: string | null
+          link_externo?: string | null
+          prioridade?: string
+          status?: string
+          titulo?: string
+          turmas_autorizadas?: string[] | null
+        }
+        Relationships: []
+      }
+      avisos_leitura: {
+        Row: {
+          aviso_id: string
+          data_leitura: string
+          email_aluno: string | null
+          id: string
+          nome_aluno: string
+          sobrenome_aluno: string
+          turma: string
+        }
+        Insert: {
+          aviso_id: string
+          data_leitura?: string
+          email_aluno?: string | null
+          id?: string
+          nome_aluno: string
+          sobrenome_aluno: string
+          turma: string
+        }
+        Update: {
+          aviso_id?: string
+          data_leitura?: string
+          email_aluno?: string | null
+          id?: string
+          nome_aluno?: string
+          sobrenome_aluno?: string
+          turma?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avisos_leitura_aviso_id_fkey"
+            columns: ["aviso_id"]
+            isOneToOne: false
+            referencedRelation: "avisos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       biblioteca_materiais: {
         Row: {
           arquivo_nome: string

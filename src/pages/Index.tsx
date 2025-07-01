@@ -10,6 +10,7 @@ import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
+import { MuralAvisos } from "@/components/MuralAvisos";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -113,6 +114,9 @@ const Index = () => {
 
             {/* Simulado Ativo - SEMPRE em destaque no topo */}
             <SimuladoAtivo turmaCode={turmaCode} />
+
+            {/* Mural de Avisos */}
+            <MuralAvisos turmaCode={turmaCode} />
 
             {/* Seção "Minhas Redações" - apenas para alunos de turma */}
             {showMinhasRedacoes && (
