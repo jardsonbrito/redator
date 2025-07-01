@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useContentAvailability = (turmaCode: string) => {
-  // Verifica se há aulas disponíveis
-  const aulasQuery = useQuery<boolean>({
+  const aulasQuery = useQuery({
     queryKey: ['has-aulas', turmaCode],
     queryFn: async () => {
       if (!turmaCode) return false;
@@ -35,8 +34,7 @@ export const useContentAvailability = (turmaCode: string) => {
     enabled: Boolean(turmaCode)
   });
 
-  // Verifica se há exercícios disponíveis
-  const exerciciosQuery = useQuery<boolean>({
+  const exerciciosQuery = useQuery({
     queryKey: ['has-exercicios', turmaCode],
     queryFn: async () => {
       if (!turmaCode) return false;
@@ -67,8 +65,7 @@ export const useContentAvailability = (turmaCode: string) => {
     enabled: Boolean(turmaCode)
   });
 
-  // Verifica se há simulados disponíveis
-  const simuladosQuery = useQuery<boolean>({
+  const simuladosQuery = useQuery({
     queryKey: ['has-simulados', turmaCode],
     queryFn: async () => {
       if (!turmaCode) return false;
@@ -89,8 +86,7 @@ export const useContentAvailability = (turmaCode: string) => {
     enabled: Boolean(turmaCode)
   });
 
-  // Verifica se há redações da turma
-  const redacoesTurmaQuery = useQuery<boolean>({
+  const redacoesTurmaQuery = useQuery({
     queryKey: ['has-redacoes-turma', turmaCode],
     queryFn: async () => {
       if (!turmaCode || turmaCode === "Visitante") return false;
@@ -107,8 +103,7 @@ export const useContentAvailability = (turmaCode: string) => {
     enabled: Boolean(turmaCode && turmaCode !== "Visitante")
   });
 
-  // Verifica se há materiais da biblioteca disponíveis
-  const bibliotecaQuery = useQuery<boolean>({
+  const bibliotecaQuery = useQuery({
     queryKey: ['has-biblioteca', turmaCode],
     queryFn: async () => {
       if (!turmaCode) return false;
