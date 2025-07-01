@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, Calendar, User, Mail, FileText, CheckCircle, Award } from "lucide-react";
+import { Eye, Calendar, User, Mail, FileText, CheckCircle, ClipboardCheck } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -20,9 +20,12 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
   const { toast } = useToast();
   const [emailVerificacao, setEmailVerificacao] = useState<{[key: string]: string}>({});
   const [redacaoVisivel, setRedacaoVisivel] = useState<{[key: string]: boolean}>({});
+  const [filtroNome, setFiltroNome] = useState("");
+  const [filtroEmail, setFiltroEmail] = useState("");
+  const [filtroTema, setFiltroTema] = useState("");
 
   const { data: redacoesCorrigidas, isLoading } = useQuery({
-    queryKey: ['meus-simulados-fixo', turmaCode],
+    queryKey: ['simulados-corrigidos', turmaCode],
     queryFn: async () => {
       let query = supabase
         .from('redacoes_simulado')
@@ -82,17 +85,25 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     return null;
   }
 
+  // Filtrar redações
+  const redacoesFiltradas = redacoesCorrigidas.filter(redacao => {
+    const nomeMatch = !filtroNome || redacao.nome_aluno.toLowerCase().includes(filtroNome.toLowerCase());
+    const emailMatch = !filtroEmail || redacao.email_aluno.toLowerCase().includes(filtroEmail.toLowerCase());
+    const temaMatch = !filtroTema || redacao.simulados.titulo.toLowerCase().includes(filtroTema.toLowerCase());
+    return nomeMatch && emailMatch && temaMatch;
+  });
+
   return (
     <div className="mb-8">
       <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-indigo-50 shadow-lg">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600">
-              <Award className="w-6 h-6 text-white" />
+              <ClipboardCheck className="w-6 h-6 text-white" />
             </div>
             <div>
               <CardTitle className="text-xl font-bold text-purple-800">
-                Meus Simulados
+                Simulados
               </CardTitle>
               <p className="text-sm text-gray-600">Veja suas redações de simulados corrigidas</p>
             </div>
@@ -100,7 +111,26 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          {redacoesCorrigidas.map((redacao) => (
+          {/* Filtros */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+            <Input
+              placeholder="Filtrar por nome..."
+              value={filtroNome}
+              onChange={(e) => setFiltroNome(e.target.value)}
+            />
+            <Input
+              placeholder="Filtrar por e-mail..."
+              value={filtroEmail}
+              onChange={(e) => setFiltroEmail(e.target.value)}
+            />
+            <Input
+              placeholder="Filtrar por tema..."
+              value={filtroTema}
+              onChange={(e) => setFiltroTema(e.target.value)}
+            />
+          </div>
+
+          {redacoesFiltradas.map((redacao) => (
             <Card key={redacao.id} className="border border-gray-200">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">

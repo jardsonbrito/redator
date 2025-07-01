@@ -75,12 +75,6 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
     staleTime: 0,
   });
 
-  // Log de debug
-  console.log('SimuladoAtivo - turmaCode:', turmaCode);
-  console.log('SimuladoAtivo - simuladoAtivo:', simuladoAtivo);
-  console.log('SimuladoAtivo - error:', error);
-  console.log('SimuladoAtivo - isLoading:', isLoading);
-
   // Se não há simulado ou está carregando, não renderiza nada
   if (isLoading || !simuladoAtivo) {
     return null;
@@ -102,32 +96,17 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
   // Determina o status visual
   let statusBadge;
   let cardClass;
-  let buttonClass;
   let statusText;
 
   if (simuladoDisponivel) {
     statusBadge = <Badge className="bg-green-500 text-white font-bold animate-pulse">EM PROGRESSO</Badge>;
     cardClass = "border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-emerald-50 shadow-xl";
-    buttonClass = "w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-lg py-3 shadow-lg transform hover:scale-105 transition-all duration-200";
     statusText = "em progresso";
   } else if (simuladoFuturo) {
     statusBadge = <Badge className="bg-blue-500 text-white">AGENDADO</Badge>;
     cardClass = "border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-lg";
-    buttonClass = "w-full bg-gray-400 text-gray-200 cursor-not-allowed font-bold text-lg py-3";
     statusText = "agendado";
   }
-
-  const handleTentativaParticipacao = () => {
-    if (!simuladoDisponivel) {
-      if (simuladoFuturo) {
-        toast({
-          title: "Simulado ainda não disponível",
-          description: `O simulado estará disponível a partir de ${format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}`,
-          variant: "destructive",
-        });
-      }
-    }
-  };
 
   return (
     <div className="mb-8">
@@ -155,8 +134,8 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
               {simuladoAtivo.titulo}
             </h3>
             
-            {/* Informações do simulado - sem frase temática */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            {/* Informações do simulado - turma e horários */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
               <div className={`flex items-center gap-2 p-3 rounded-lg ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
                 <Calendar className="w-5 h-5" />
                 <span>
@@ -170,26 +149,25 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
                 </span>
               </div>
             </div>
+
+            {/* Informação da turma */}
+            <div className={`p-3 rounded-lg ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
+              <span className="font-medium">
+                Turma: {turmaCode === "visitante" ? "Visitantes" : turmaCode}
+              </span>
+            </div>
           </div>
 
           <div className="pt-2">
             {simuladoDisponivel ? (
               <Link to={`/simulados/${simuladoAtivo.id}`}>
-                <Button className={buttonClass}>
+                <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-lg py-3 shadow-lg transform hover:scale-105 transition-all duration-200">
                   <ClipboardCheck className="w-6 h-6 mr-3" />
                   🚀 PARTICIPAR AGORA!
                 </Button>
               </Link>
             ) : (
               <div className="space-y-3">
-                <Button 
-                  onClick={handleTentativaParticipacao}
-                  disabled={!simuladoDisponivel}
-                  className={buttonClass}
-                >
-                  <Clock className="w-5 h-5 mr-2" />
-                  Participar
-                </Button>
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-600 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
                   <AlertCircle className="w-5 h-5 text-yellow-600" />
                   <span className="font-medium">
