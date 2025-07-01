@@ -173,19 +173,15 @@ const Admin = () => {
       case "exercicios":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="list">Listar Exercícios</TabsTrigger>
               <TabsTrigger value="create">Criar Exercício</TabsTrigger>
-              <TabsTrigger value="redacoes">Redações</TabsTrigger>
             </TabsList>
             <TabsContent value="list">
               <SimpleExercicioList />
             </TabsContent>
             <TabsContent value="create">
               <ExercicioForm />
-            </TabsContent>
-            <TabsContent value="redacoes">
-              <RedacaoExercicioList />
             </TabsContent>
           </Tabs>
         );

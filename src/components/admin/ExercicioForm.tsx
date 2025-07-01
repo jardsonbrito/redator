@@ -33,8 +33,7 @@ export const ExercicioForm = () => {
   ];
 
   const turmasDisponiveis = [
-    'TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E',
-    'TURMA F', 'TURMA G', 'TURMA H', 'TURMA I', 'TURMA J'
+    'TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E'
   ];
 
   useEffect(() => {
