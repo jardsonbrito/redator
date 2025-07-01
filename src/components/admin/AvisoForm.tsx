@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,16 +32,43 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
   const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
-    titulo: avisoEditando?.titulo || "",
-    descricao: avisoEditando?.descricao || "",
-    turmas_autorizadas: avisoEditando?.turmas_autorizadas || [],
-    data_agendamento: avisoEditando?.data_agendamento ? 
-      new Date(avisoEditando.data_agendamento).toISOString().slice(0, 16) : "",
-    status: avisoEditando?.status || "rascunho",
-    imagem_url: avisoEditando?.imagem_url || "",
-    link_externo: avisoEditando?.link_externo || "",
-    prioridade: avisoEditando?.prioridade || "comum",
+    titulo: "",
+    descricao: "",
+    turmas_autorizadas: [],
+    data_agendamento: "",
+    status: "rascunho",
+    imagem_url: "",
+    link_externo: "",
+    prioridade: "comum",
   });
+
+  // Sincronizar formData quando avisoEditando mudar
+  useEffect(() => {
+    if (avisoEditando) {
+      setFormData({
+        titulo: avisoEditando.titulo || "",
+        descricao: avisoEditando.descricao || "",
+        turmas_autorizadas: avisoEditando.turmas_autorizadas || [],
+        data_agendamento: avisoEditando.data_agendamento ? 
+          new Date(avisoEditando.data_agendamento).toISOString().slice(0, 16) : "",
+        status: avisoEditando.status || "rascunho",
+        imagem_url: avisoEditando.imagem_url || "",
+        link_externo: avisoEditando.link_externo || "",
+        prioridade: avisoEditando.prioridade || "comum",
+      });
+    } else {
+      setFormData({
+        titulo: "",
+        descricao: "",
+        turmas_autorizadas: [],
+        data_agendamento: "",
+        status: "rascunho",
+        imagem_url: "",
+        link_externo: "",
+        prioridade: "comum",
+      });
+    }
+  }, [avisoEditando]);
 
   const handleTurmaChange = (turma: string, checked: boolean) => {
     if (checked) {
@@ -105,8 +132,8 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
         prioridade: "comum",
       });
 
-      onSuccess();
       if (onCancelEdit) onCancelEdit();
+      onSuccess();
     } catch (error) {
       console.error("Erro ao salvar aviso:", error);
       toast({
