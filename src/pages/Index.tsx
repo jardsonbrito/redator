@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send, File } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -23,63 +22,92 @@ const Index = () => {
     turmaCode = studentData.turma; // Usar o nome real da turma (ex: "Turma A")
   }
 
-  // Verifica se há aulas disponíveis - lógica simplificada
-  const { data: hasAulas } = useQuery({
+  // Verifica se há aulas disponíveis - lógica simplificada com typing explícito
+  const { data: hasAulas } = useQuery<boolean>({
     queryKey: ['has-aulas', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       console.log("Checking aulas for turma:", turmaCode);
       
-      let query = supabase
-        .from('aulas')
-        .select('id')
-        .eq('ativo', true)
-        .limit(1);
-
-      if (turmaCode === "Visitante") {
-        query = query.eq('permite_visitante', true);
-      } else {
-        query = query.or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error checking aulas:', error);
+      try {
+        if (turmaCode === "Visitante") {
+          const { data, error } = await supabase
+            .from('aulas')
+            .select('id')
+            .eq('ativo', true)
+            .eq('permite_visitante', true)
+            .limit(1);
+          
+          if (error) {
+            console.error('Error checking aulas for visitante:', error);
+            return false;
+          }
+          
+          console.log("Aulas found for visitante:", data);
+          return Boolean(data && data.length > 0);
+        } else {
+          const { data, error } = await supabase
+            .from('aulas')
+            .select('id')
+            .eq('ativo', true)
+            .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
+            .limit(1);
+          
+          if (error) {
+            console.error('Error checking aulas for turma:', turmaCode, error);
+            return false;
+          }
+          
+          console.log("Aulas found for turma:", turmaCode, data);
+          return Boolean(data && data.length > 0);
+        }
+      } catch (error) {
+        console.error('Error in hasAulas query:', error);
         return false;
       }
-      
-      console.log("Aulas found for turma:", turmaCode, data);
-      return data && data.length > 0;
     },
     enabled: !!turmaCode
   });
 
-  // Verifica se há exercícios disponíveis - lógica simplificada
-  const { data: hasExercicios } = useQuery({
+  // Verifica se há exercícios disponíveis - lógica simplificada com typing explícito
+  const { data: hasExercicios } = useQuery<boolean>({
     queryKey: ['has-exercicios', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
-      let query = supabase
-        .from('exercicios')
-        .select('id')
-        .eq('ativo', true)
-        .limit(1);
-
-      if (turmaCode === "Visitante") {
-        query = query.eq('permite_visitante', true);
-      } else {
-        query = query.or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error checking exercicios:', error);
+      try {
+        if (turmaCode === "Visitante") {
+          const { data, error } = await supabase
+            .from('exercicios')
+            .select('id')
+            .eq('ativo', true)
+            .eq('permite_visitante', true)
+            .limit(1);
+          
+          if (error) {
+            console.error('Error checking exercicios for visitante:', error);
+            return false;
+          }
+          
+          return Boolean(data && data.length > 0);
+        } else {
+          const { data, error } = await supabase
+            .from('exercicios')
+            .select('id')
+            .eq('ativo', true)
+            .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
+            .limit(1);
+          
+          if (error) {
+            console.error('Error checking exercicios for turma:', turmaCode, error);
+            return false;
+          }
+          
+          return Boolean(data && data.length > 0);
+        }
+      } catch (error) {
+        console.error('Error in hasExercicios query:', error);
         return false;
       }
-      
-      return data && data.length > 0;
     },
     enabled: !!turmaCode
   });
