@@ -32,6 +32,11 @@ export const SimuladoForm = () => {
   const [buscaTema, setBuscaTema] = useState('');
   const [turmaSelecionada, setTurmaSelecionada] = useState('');
 
+  // Lista oficial de turmas do sistema
+  const turmasOficiais = [
+    'LRA2025', 'LRB2025', 'LRC2025', 'LRD2025', 'LRE2025'
+  ];
+
   // Buscar temas disponíveis (incluindo rascunhos para uso em simulados)
   const { data: temas, isLoading: loadingTemas } = useQuery({
     queryKey: ['admin-temas-simulado', buscaTema],
@@ -86,6 +91,7 @@ export const SimuladoForm = () => {
     setLoading(true);
 
     try {
+      // Não publicar o tema aqui - manter como está
       const dataToInsert = {
         titulo: formData.titulo,
         tema_id: formData.tema_id,
@@ -107,7 +113,7 @@ export const SimuladoForm = () => {
 
       toast({
         title: "✅ Simulado criado!",
-        description: "O simulado foi cadastrado com sucesso.",
+        description: "O simulado foi cadastrado com sucesso. O tema será publicado automaticamente quando o simulado iniciar.",
       });
 
       queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
@@ -199,6 +205,11 @@ export const SimuladoForm = () => {
                   Eixo: {temaEscolhido.eixo_tematico}
                 </span>
               </div>
+              {temaEscolhido.status === 'rascunho' && (
+                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                  📝 Este tema será automaticamente publicado quando o simulado iniciar
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -258,10 +269,9 @@ export const SimuladoForm = () => {
               <SelectValue placeholder="Selecionar turma" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2024A">2024A</SelectItem>
-              <SelectItem value="2024B">2024B</SelectItem>
-              <SelectItem value="2024C">2024C</SelectItem>
-              <SelectItem value="2025A">2025A</SelectItem>
+              {turmasOficiais.map((turma) => (
+                <SelectItem key={turma} value={turma}>{turma}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button type="button" onClick={adicionarTurma} variant="outline">

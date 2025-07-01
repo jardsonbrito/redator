@@ -64,6 +64,17 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
           return null;
         }
 
+        // Publicar tema automaticamente se simulado iniciou e tema está em rascunho
+        const inicioData = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+        if (agora >= inicioData && simulado.tema_id) {
+          console.log('Verificando se tema precisa ser publicado...');
+          try {
+            await supabase.rpc('check_and_publish_expired_simulados');
+          } catch (error) {
+            console.error('Erro ao publicar tema:', error);
+          }
+        }
+
         return simulado;
       } catch (error) {
         console.error('Erro na busca de simulado:', error);

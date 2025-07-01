@@ -84,7 +84,7 @@ const Index = () => {
         .from('simulados')
         .select('id')
         .eq('ativo', true)
-        .or(`turmas_autorizadas.cs.{${turmaCode}},turmas_autorizadas.cs.{visitante}`)
+        .or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`)
         .limit(1);
       
       if (error) {
@@ -217,7 +217,7 @@ const Index = () => {
               </div>
             )}
 
-            {/* Card "Meus Simulados" - apenas se houver redações corrigidas */}
+            {/* Card "Meus Simulados" - SEMPRE FIXO */}
             <MeusSimuladosFixo turmaCode={turmaCode} />
 
             {/* Menu Principal Horizontal */}
