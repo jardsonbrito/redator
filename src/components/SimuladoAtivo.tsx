@@ -121,7 +121,7 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
                 <CardTitle className={`text-2xl font-bold ${simuladoDisponivel ? 'text-green-800' : 'text-blue-800'}`}>
                   🎯 Simulado Disponível
                 </CardTitle>
-                <p className="text-base text-gray-700 font-medium">Atividade agendada para sua turma</p>
+                <p className="text-base text-gray-700 font-medium">Atividade para sua turma</p>
               </div>
             </div>
             {statusBadge}
@@ -130,11 +130,7 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
         
         <CardContent className="space-y-6">
           <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-            <h3 className={`font-bold text-xl mb-3 ${simuladoDisponivel ? 'text-green-800' : 'text-blue-800'}`}>
-              {simuladoAtivo.titulo}
-            </h3>
-            
-            {/* Informações do simulado - turma e horários */}
+            {/* Informações do simulado - apenas turma e horários */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
               <div className={`flex items-center gap-2 p-3 rounded-lg ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
                 <Calendar className="w-5 h-5" />

@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Edit, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -36,6 +37,35 @@ export const TemaList = () => {
       return data || [];
     },
   });
+
+  const toggleStatus = async (id: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'publicado' ? 'rascunho' : 'publicado';
+      
+      const { error } = await supabase
+        .from('temas')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Status alterado",
+        description: `Tema agora está ${newStatus === 'publicado' ? 'publicado' : 'como rascunho'}.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
+      queryClient.invalidateQueries({ queryKey: ['temas'] }); // Para atualizar área pública
+      
+    } catch (error: any) {
+      console.error('Erro ao alterar status:', error);
+      toast({
+        title: "❌ Erro ao alterar status",
+        description: error.message || "Não foi possível alterar o status do tema.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -152,12 +182,24 @@ export const TemaList = () => {
           {temas.map((tema) => (
             <Card key={tema.id} className="border-redator-accent/20">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base text-redator-primary line-clamp-2">
-                  {tema.frase_tematica}
-                </CardTitle>
-                <span className="text-xs bg-redator-accent text-white px-2 py-1 rounded w-fit">
-                  {tema.eixo_tematico}
-                </span>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-base text-redator-primary line-clamp-2 mb-2">
+                      {tema.frase_tematica}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {tema.eixo_tematico}
+                      </Badge>
+                      <Badge 
+                        variant={tema.status === 'publicado' ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {tema.status === 'publicado' ? 'Publicado' : 'Rascunho'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="pt-2">
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
@@ -169,6 +211,25 @@ export const TemaList = () => {
                   >
                     <Edit className="w-4 h-4" />
                     Editar
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleStatus(tema.id, tema.status || 'publicado')}
+                    className="flex items-center gap-2 flex-1 sm:flex-none"
+                  >
+                    {tema.status === 'publicado' ? (
+                      <>
+                        <EyeOff className="w-4 h-4" />
+                        Tornar Rascunho
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4" />
+                        Publicar
+                      </>
+                    )}
                   </Button>
                   
                   <AlertDialog>

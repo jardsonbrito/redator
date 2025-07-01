@@ -1,267 +1,301 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
 
-interface SimuladoFormData {
-  titulo: string;
-  frase_tematica: string;
-  data_inicio: string;
-  hora_inicio: string;
-  data_fim: string;
-  hora_fim: string;
-  turmas_autorizadas: string[];
-}
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { X, Search } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
-const SimuladoForm = () => {
+export const SimuladoForm = () => {
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
+  
+  const [formData, setFormData] = useState({
+    titulo: '',
+    tema_id: '',
+    data_inicio: '',
+    hora_inicio: '',
+    data_fim: '',
+    hora_fim: '',
+    turmas_autorizadas: [] as string[],
+    permite_visitante: false,
+    ativo: true
+  });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<SimuladoFormData>();
+  const [buscaTema, setBuscaTema] = useState('');
+  const [turmaSelecionada, setTurmaSelecionada] = useState('');
 
-  const turmasDisponiveis = [
-    { value: "LRA2025", label: "Turma A (LRA2025)" },
-    { value: "LRB2025", label: "Turma B (LRB2025)" },
-    { value: "LRC2025", label: "Turma C (LRC2025)" },
-    { value: "LRD2025", label: "Turma D (LRD2025)" },
-    { value: "LRE2025", label: "Turma E (LRE2025)" },
-    { value: "visitante", label: "Visitante" }
-  ];
+  // Buscar temas disponíveis (incluindo rascunhos para uso em simulados)
+  const { data: temas, isLoading: loadingTemas } = useQuery({
+    queryKey: ['admin-temas-simulado', buscaTema],
+    queryFn: async () => {
+      let query = supabase
+        .from('temas')
+        .select('*')
+        .order('publicado_em', { ascending: false });
 
-  const criarSimulado = useMutation({
-    mutationFn: async (dadosSimulado: SimuladoFormData) => {
-      const permiteVisitante = turmasSelecionadas.includes("visitante");
-      
-      console.log('Verificando sessão do usuário...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('Erro ao obter sessão:', sessionError);
-        throw new Error('Erro de autenticação. Faça login novamente.');
+      if (buscaTema) {
+        query = query.ilike('frase_tematica', `%${buscaTema}%`);
       }
       
-      if (!session) {
-        throw new Error('Usuário não autenticado. Faça login novamente.');
-      }
+      const { data, error } = await query;
       
-      console.log('Usuário autenticado:', session.user.email);
-      
-      const dadosParaInserir = {
-        titulo: dadosSimulado.titulo,
-        frase_tematica: dadosSimulado.frase_tematica,
-        data_inicio: dadosSimulado.data_inicio,
-        hora_inicio: dadosSimulado.hora_inicio,
-        data_fim: dadosSimulado.data_fim,
-        hora_fim: dadosSimulado.hora_fim,
-        turmas_autorizadas: turmasSelecionadas,
-        permite_visitante: permiteVisitante,
-        ativo: true
-      };
-      
-      console.log('Dados do simulado para inserir:', dadosParaInserir);
-
-      const { data, error } = await supabase
-        .from('simulados')
-        .insert([dadosParaInserir])
-        .select();
-      
-      if (error) {
-        console.error('Erro detalhado ao criar simulado:', error);
-        console.error('Código do erro:', error.code);
-        console.error('Detalhes do erro:', error.details);
-        console.error('Hint do erro:', error.hint);
-        throw error;
-      }
-      
-      console.log('Simulado criado com sucesso:', data);
-      return data;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Simulado criado com sucesso!",
-        description: "O simulado foi cadastrado e está disponível para as turmas selecionadas.",
-      });
-      reset();
-      setTurmasSelecionadas([]);
-      queryClient.invalidateQueries({ queryKey: ['simulados'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
-    },
-    onError: (error: any) => {
-      console.error("Erro detalhado ao criar simulado:", error);
-      
-      let mensagemErro = "Verifique os dados e tente novamente.";
-      
-      if (error.message?.includes('permission denied')) {
-        mensagemErro = "Erro de permissão. Verifique se você tem acesso de administrador.";
-      } else if (error.message?.includes('users')) {
-        mensagemErro = "Erro de acesso à tabela de usuários. Contate o suporte técnico.";
-      } else if (error.message?.includes('authentication') || error.message?.includes('autenticação')) {
-        mensagemErro = error.message;
-      }
-      
-      toast({
-        title: "Erro ao criar simulado",
-        description: `${mensagemErro} Detalhes: ${error.message || 'Erro desconhecido'}`,
-        variant: "destructive",
-      });
+      if (error) throw error;
+      return data || [];
     }
   });
 
-  const onSubmit = (data: SimuladoFormData) => {
-    if (turmasSelecionadas.length === 0) {
-      toast({
-        title: "Selecione pelo menos uma turma",
-        description: "É necessário selecionar pelo menos uma turma para o simulado.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const temaEscolhido = temas?.find(tema => tema.id === formData.tema_id);
 
-    // Validar se a data/hora de fim é posterior à de início
-    const inicio = new Date(`${data.data_inicio}T${data.hora_inicio}`);
-    const fim = new Date(`${data.data_fim}T${data.hora_fim}`);
-    
-    if (fim <= inicio) {
-      toast({
-        title: "Datas inválidas",
-        description: "A data/hora de término deve ser posterior à de início.",
-        variant: "destructive",
-      });
-      return;
+  const adicionarTurma = () => {
+    if (turmaSelecionada && !formData.turmas_autorizadas.includes(turmaSelecionada)) {
+      setFormData(prev => ({
+        ...prev,
+        turmas_autorizadas: [...prev.turmas_autorizadas, turmaSelecionada]
+      }));
+      setTurmaSelecionada('');
     }
-
-    criarSimulado.mutate(data);
   };
 
-  const handleTurmaChange = (turma: string, checked: boolean) => {
-    if (checked) {
-      setTurmasSelecionadas([...turmasSelecionadas, turma]);
-    } else {
-      setTurmasSelecionadas(turmasSelecionadas.filter(t => t !== turma));
+  const removerTurma = (turma: string) => {
+    setFormData(prev => ({
+      ...prev,
+      turmas_autorizadas: prev.turmas_autorizadas.filter(t => t !== turma)
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.tema_id) {
+      toast({
+        title: "Erro",
+        description: "Selecione um tema para o simulado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const dataToInsert = {
+        titulo: formData.titulo,
+        tema_id: formData.tema_id,
+        frase_tematica: temaEscolhido?.frase_tematica || '',
+        data_inicio: formData.data_inicio,
+        hora_inicio: formData.hora_inicio,
+        data_fim: formData.data_fim,
+        hora_fim: formData.hora_fim,
+        turmas_autorizadas: formData.turmas_autorizadas,
+        permite_visitante: formData.permite_visitante,
+        ativo: formData.ativo
+      };
+
+      const { error } = await supabase
+        .from('simulados')
+        .insert([dataToInsert]);
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Simulado criado!",
+        description: "O simulado foi cadastrado com sucesso.",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
+
+      // Limpar formulário
+      setFormData({
+        titulo: '',
+        tema_id: '',
+        data_inicio: '',
+        hora_inicio: '',
+        data_fim: '',
+        hora_fim: '',
+        turmas_autorizadas: [],
+        permite_visitante: false,
+        ativo: true
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao criar simulado:', error);
+      toast({
+        title: "❌ Erro ao criar simulado",
+        description: error.message || "Não foi possível criar o simulado.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Cadastrar Novo Simulado</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <Label htmlFor="titulo">Título do Simulado *</Label>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <Label htmlFor="titulo">Título do Simulado *</Label>
+        <Input
+          id="titulo"
+          value={formData.titulo}
+          onChange={(e) => setFormData({...formData, titulo: e.target.value})}
+          placeholder="Ex: Simulado ENEM - Novembro 2024"
+          required
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="tema">Selecionar Tema *</Label>
+        <div className="space-y-3">
+          <div className="flex gap-2">
             <Input
-              id="titulo"
-              {...register("titulo", { required: "Título é obrigatório" })}
-              placeholder="Ex: Simulado ENEM 2025 - 1ª Aplicação"
+              placeholder="Buscar tema pela frase temática..."
+              value={buscaTema}
+              onChange={(e) => setBuscaTema(e.target.value)}
+              className="flex-1"
             />
-            {errors.titulo && (
-              <span className="text-red-500 text-sm">{errors.titulo.message}</span>
-            )}
+            <Button type="button" variant="outline" size="icon">
+              <Search className="w-4 h-4" />
+            </Button>
           </div>
+          
+          {loadingTemas ? (
+            <div className="text-sm text-gray-500">Carregando temas...</div>
+          ) : (
+            <Select value={formData.tema_id} onValueChange={(value) => setFormData({...formData, tema_id: value})}>
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha um tema" />
+              </SelectTrigger>
+              <SelectContent>
+                {temas?.map((tema) => (
+                  <SelectItem key={tema.id} value={tema.id}>
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{tema.frase_tematica}</span>
+                      <Badge variant={tema.status === 'rascunho' ? 'secondary' : 'default'} className="text-xs">
+                        {tema.status === 'rascunho' ? 'Rascunho' : 'Publicado'}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
-          <div>
-            <Label htmlFor="frase_tematica">Frase Temática *</Label>
-            <Textarea
-              id="frase_tematica"
-              {...register("frase_tematica", { required: "Frase temática é obrigatória" })}
-              placeholder="Ex: Os desafios da educação digital no Brasil contemporâneo"
-              className="min-h-[100px]"
-            />
-            {errors.frase_tematica && (
-              <span className="text-red-500 text-sm">{errors.frase_tematica.message}</span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="data_inicio">Data de Início *</Label>
-              <Input
-                id="data_inicio"
-                type="date"
-                {...register("data_inicio", { required: "Data de início é obrigatória" })}
-              />
-              {errors.data_inicio && (
-                <span className="text-red-500 text-sm">{errors.data_inicio.message}</span>
-              )}
+          {temaEscolhido && (
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <h4 className="font-medium text-sm mb-2">Tema Selecionado:</h4>
+              <p className="text-sm text-gray-700 mb-2">{temaEscolhido.frase_tematica}</p>
+              <div className="flex items-center gap-2">
+                <Badge variant={temaEscolhido.status === 'rascunho' ? 'secondary' : 'default'}>
+                  {temaEscolhido.status === 'rascunho' ? 'Rascunho' : 'Publicado'}
+                </Badge>
+                <span className="text-xs text-gray-500">
+                  Eixo: {temaEscolhido.eixo_tematico}
+                </span>
+              </div>
             </div>
+          )}
+        </div>
+      </div>
 
-            <div>
-              <Label htmlFor="hora_inicio">Hora de Início *</Label>
-              <Input
-                id="hora_inicio"
-                type="time"
-                {...register("hora_inicio", { required: "Hora de início é obrigatória" })}
-              />
-              {errors.hora_inicio && (
-                <span className="text-red-500 text-sm">{errors.hora_inicio.message}</span>
-              )}
-            </div>
-          </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="data_inicio">Data de Início *</Label>
+          <Input
+            id="data_inicio"
+            type="date"
+            value={formData.data_inicio}
+            onChange={(e) => setFormData({...formData, data_inicio: e.target.value})}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="hora_inicio">Hora de Início *</Label>
+          <Input
+            id="hora_inicio"
+            type="time"
+            value={formData.hora_inicio}
+            onChange={(e) => setFormData({...formData, hora_inicio: e.target.value})}
+            required
+          />
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="data_fim">Data de Término *</Label>
-              <Input
-                id="data_fim"
-                type="date"
-                {...register("data_fim", { required: "Data de término é obrigatória" })}
-              />
-              {errors.data_fim && (
-                <span className="text-red-500 text-sm">{errors.data_fim.message}</span>
-              )}
-            </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="data_fim">Data de Término *</Label>
+          <Input
+            id="data_fim"
+            type="date"
+            value={formData.data_fim}
+            onChange={(e) => setFormData({...formData, data_fim: e.target.value})}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="hora_fim">Hora de Término *</Label>
+          <Input
+            id="hora_fim"
+            type="time"
+            value={formData.hora_fim}
+            onChange={(e) => setFormData({...formData, hora_fim: e.target.value})}
+            required
+          />
+        </div>
+      </div>
 
-            <div>
-              <Label htmlFor="hora_fim">Hora de Término *</Label>
-              <Input
-                id="hora_fim"
-                type="time"
-                {...register("hora_fim", { required: "Hora de término é obrigatória" })}
-              />
-              {errors.hora_fim && (
-                <span className="text-red-500 text-sm">{errors.hora_fim.message}</span>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label>Turmas Autorizadas *</Label>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              {turmasDisponiveis.map((turma) => (
-                <div key={turma.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={turma.value}
-                    checked={turmasSelecionadas.includes(turma.value)}
-                    onCheckedChange={(checked) => handleTurmaChange(turma.value, checked as boolean)}
-                  />
-                  <Label htmlFor={turma.value} className="text-sm">
-                    {turma.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full bg-redator-primary hover:bg-redator-primary/90"
-            disabled={criarSimulado.isPending}
-          >
-            {criarSimulado.isPending ? "Criando..." : "Publicar Simulado"}
+      <div>
+        <Label>Turmas Autorizadas</Label>
+        <div className="flex gap-2 mt-2">
+          <Select value={turmaSelecionada} onValueChange={setTurmaSelecionada}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Selecionar turma" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2024A">2024A</SelectItem>
+              <SelectItem value="2024B">2024B</SelectItem>
+              <SelectItem value="2024C">2024C</SelectItem>
+              <SelectItem value="2025A">2025A</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button type="button" onClick={adicionarTurma} variant="outline">
+            Adicionar
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+        
+        {formData.turmas_autorizadas.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {formData.turmas_autorizadas.map((turma) => (
+              <Badge key={turma} variant="secondary" className="flex items-center gap-1">
+                {turma}
+                <X 
+                  className="w-3 h-3 cursor-pointer hover:text-red-500" 
+                  onClick={() => removerTurma(turma)}
+                />
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="permite_visitante"
+          checked={formData.permite_visitante}
+          onCheckedChange={(checked) => setFormData({...formData, permite_visitante: !!checked})}
+        />
+        <Label htmlFor="permite_visitante">Permitir visitantes</Label>
+      </div>
+
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? 'Criando simulado...' : 'Criar Simulado'}
+      </Button>
+    </form>
   );
 };
-
-export default SimuladoForm;

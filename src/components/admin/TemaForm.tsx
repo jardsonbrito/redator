@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,7 +20,9 @@ export const TemaForm = () => {
     texto_1: '',
     texto_2: '',
     texto_3: '',
-    imagem_texto_4_url: ''
+    imagem_texto_4_url: '',
+    status: 'publicado',
+    cabecalho_enem: 'Com base na leitura dos textos motivadores e nos conhecimentos construídos ao longo de sua formação, redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema apresentado, apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,6 +53,8 @@ export const TemaForm = () => {
         texto_2: formData.texto_2 ? String(formData.texto_2).trim() : null,
         texto_3: formData.texto_3 ? String(formData.texto_3).trim() : null,
         imagem_texto_4_url: formData.imagem_texto_4_url ? String(formData.imagem_texto_4_url).trim() : null,
+        status: formData.status,
+        cabecalho_enem: String(formData.cabecalho_enem || '').trim(),
         publicado_em: new Date().toISOString()
       };
 
@@ -75,12 +80,13 @@ export const TemaForm = () => {
       // Invalidar e recarregar queries
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['temas'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-temas'] }),
         queryClient.refetchQueries({ queryKey: ['temas'] }),
       ]);
 
       toast({
         title: "✅ Sucesso!",
-        description: "Tema cadastrado com sucesso no banco de dados.",
+        description: `Tema cadastrado como ${formData.status === 'rascunho' ? 'rascunho' : 'publicado'} no banco de dados.`,
       });
 
       // Limpar formulário
@@ -90,7 +96,9 @@ export const TemaForm = () => {
         texto_1: '',
         texto_2: '',
         texto_3: '',
-        imagem_texto_4_url: ''
+        imagem_texto_4_url: '',
+        status: 'publicado',
+        cabecalho_enem: 'Com base na leitura dos textos motivadores e nos conhecimentos construídos ao longo de sua formação, redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema apresentado, apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.'
       });
 
     } catch (error: any) {
@@ -137,6 +145,33 @@ export const TemaForm = () => {
           onChange={(e) => setFormData({...formData, eixo_tematico: e.target.value})}
           placeholder="Ex: Meio Ambiente, Educação, Tecnologia"
           required
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="status">Status de Publicação *</Label>
+        <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="publicado">Publicado (visível para todos)</SelectItem>
+            <SelectItem value="rascunho">Rascunho (apenas para simulados)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-gray-600 mt-1">
+          Temas em rascunho ficam ocultos do público, mas podem ser usados em simulados.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="cabecalho_enem">Cabeçalho ENEM</Label>
+        <Textarea
+          id="cabecalho_enem"
+          value={formData.cabecalho_enem}
+          onChange={(e) => setFormData({...formData, cabecalho_enem: e.target.value})}
+          rows={4}
+          placeholder="Instruções padrão do ENEM para a redação..."
         />
       </div>
 

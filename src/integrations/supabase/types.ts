@@ -414,6 +414,7 @@ export type Database = {
           hora_inicio: string
           id: string
           permite_visitante: boolean | null
+          tema_id: string | null
           titulo: string
           turmas_autorizadas: string[] | null
         }
@@ -428,6 +429,7 @@ export type Database = {
           hora_inicio: string
           id?: string
           permite_visitante?: boolean | null
+          tema_id?: string | null
           titulo: string
           turmas_autorizadas?: string[] | null
         }
@@ -442,38 +444,53 @@ export type Database = {
           hora_inicio?: string
           id?: string
           permite_visitante?: boolean | null
+          tema_id?: string | null
           titulo?: string
           turmas_autorizadas?: string[] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "simulados_tema_id_fkey"
+            columns: ["tema_id"]
+            isOneToOne: false
+            referencedRelation: "temas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       temas: {
         Row: {
+          cabecalho_enem: string | null
           eixo_tematico: string
           frase_tematica: string
           id: string
           imagem_texto_4_url: string | null
           publicado_em: string | null
+          status: string | null
           texto_1: string | null
           texto_2: string | null
           texto_3: string | null
         }
         Insert: {
+          cabecalho_enem?: string | null
           eixo_tematico: string
           frase_tematica: string
           id?: string
           imagem_texto_4_url?: string | null
           publicado_em?: string | null
+          status?: string | null
           texto_1?: string | null
           texto_2?: string | null
           texto_3?: string | null
         }
         Update: {
+          cabecalho_enem?: string | null
           eixo_tematico?: string
           frase_tematica?: string
           id?: string
           imagem_texto_4_url?: string | null
           publicado_em?: string | null
+          status?: string | null
           texto_1?: string | null
           texto_2?: string | null
           texto_3?: string | null
@@ -519,6 +536,10 @@ export type Database = {
           admin_user_id?: string
         }
         Returns: boolean
+      }
+      check_and_publish_expired_simulados: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       consume_credit_safe: {
         Args: { target_user_id: string }
