@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Home, Send, Eye } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
 import { RedacaoTextarea } from "@/components/RedacaoTextarea";
 
 const EnvieRedacao = () => {
+  const [searchParams] = useSearchParams();
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
   const [fraseTematica, setFraseTematica] = useState("");
@@ -20,6 +21,10 @@ const EnvieRedacao = () => {
   const [showForm, setShowForm] = useState(true);
   const [isRedacaoValid, setIsRedacaoValid] = useState(false);
   const { toast } = useToast();
+
+  // Parâmetros da URL para pré-preenchimento
+  const temaFromUrl = searchParams.get('tema');
+  const fonteFromUrl = searchParams.get('fonte');
 
   // Recupera dados do usuário
   const userType = localStorage.getItem("userType");
@@ -42,12 +47,17 @@ const EnvieRedacao = () => {
     turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
   }
 
-  // Pré-preencher dados se for visitante cadastrado
+  // Pré-preencher dados se for visitante cadastrado ou se vier da URL
   useState(() => {
     if (userType === "visitante" && visitanteData) {
       const dados = JSON.parse(visitanteData);
       setNomeCompleto(dados.nome || "");
       setEmail(dados.email || "");
+    }
+    
+    // Pré-preencher frase temática se vier da URL
+    if (temaFromUrl) {
+      setFraseTematica(decodeURIComponent(temaFromUrl));
     }
   });
 
@@ -158,19 +168,13 @@ const EnvieRedacao = () => {
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/app" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
-                <Home className="w-5 h-5" />
-                <span>Início</span>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-redator-primary">Envie sua Redação</h1>
-                <p className="text-redator-accent">Escreva sua redação e receba correção personalizada</p>
-              </div>
-            </div>
-            <Link to="/app" className="hover:opacity-80 transition-opacity">
-              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-8 w-auto max-w-[120px] object-contain" />
+            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+              <Home className="w-5 h-5" />
+              <span>Início</span>
             </Link>
+            <h1 className="text-2xl font-bold text-redator-primary">
+              {fonteFromUrl === 'tema' ? 'Redação sobre Tema' : 'Envie sua Redação'}
+            </h1>
           </div>
         </div>
       </header>
@@ -205,12 +209,15 @@ const EnvieRedacao = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-redator-primary">
                 <Send className="w-5 h-5" />
-                Envie sua Redação
+                {fonteFromUrl === 'tema' ? 'Redação sobre o Tema Selecionado' : 'Envie sua Redação'}
               </CardTitle>
               <p className="text-redator-accent">
-                Preencha todos os campos abaixo para enviar sua redação. Ela será corrigida e você poderá visualizar as notas e comentários {
-                  tipoEnvio === 'regular' ? 'no card "Minhas Redações" na página inicial' : 'na seção "Ver Redações Enviadas"'
-                }.
+                {fonteFromUrl === 'tema' 
+                  ? 'Complete os dados abaixo para enviar sua redação sobre o tema escolhido. A frase temática já foi preenchida automaticamente.'
+                  : `Preencha todos os campos abaixo para enviar sua redação. Ela será corrigida e você poderá visualizar as notas e comentários ${
+                      tipoEnvio === 'regular' ? 'no card "Minhas Redações" na página inicial' : 'na seção "Ver Redações Enviadas"'
+                    }.`
+                }
               </p>
             </CardHeader>
             <CardContent>
@@ -250,6 +257,9 @@ const EnvieRedacao = () => {
                 <div>
                   <label htmlFor="frase-tematica" className="block text-sm font-medium text-redator-primary mb-2">
                     Frase Temática *
+                    {fonteFromUrl === 'tema' && (
+                      <span className="text-xs text-green-600 ml-2">(Preenchida automaticamente)</span>
+                    )}
                   </label>
                   <Input
                     id="frase-tematica"
@@ -259,9 +269,13 @@ const EnvieRedacao = () => {
                     onChange={(e) => setFraseTematica(e.target.value)}
                     className="border-redator-accent/30 focus:border-redator-accent"
                     maxLength={200}
+                    readOnly={fonteFromUrl === 'tema'}
                   />
                   <p className="text-xs text-redator-accent mt-1">
                     {fraseTematica.length}/200 caracteres
+                    {fonteFromUrl === 'tema' && (
+                      <span className="text-green-600 ml-2">✓ Tema selecionado automaticamente</span>
+                    )}
                   </p>
                 </div>
 

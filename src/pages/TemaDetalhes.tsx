@@ -1,9 +1,11 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Home } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Home, Edit } from "lucide-react";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 // Type extension para incluir o campo imagem_texto_4_url
 type TemaWithImage = {
@@ -19,6 +21,18 @@ type TemaWithImage = {
 
 const TemaDetalhes = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { studentData } = useStudentAuth();
+  
+  // Verificar se é aluno (não visitante)
+  const isStudent = studentData.userType === "aluno" && studentData.turma && studentData.turma !== "visitante";
+  
+  const handleEscreverRedacao = () => {
+    if (tema) {
+      // Redirecionar para página de envio com parâmetros
+      navigate(`/envie-redacao?tema=${encodeURIComponent(tema.frase_tematica)}&fonte=tema&temaId=${id}`);
+    }
+  };
   
   const { data: tema, isLoading, error } = useQuery({
     queryKey: ['tema', id],
@@ -147,6 +161,26 @@ const TemaDetalhes = () => {
                   <p className="text-redator-accent leading-relaxed">
                     {tema.texto_3}
                   </p>
+                </div>
+              )}
+              
+              {/* Botão para escrever redação - apenas para alunos */}
+              {isStudent && (
+                <div className="bg-redator-primary/5 rounded-lg p-6 border border-redator-primary/20 text-center">
+                  <h3 className="font-semibold text-redator-primary mb-3">
+                    Gostou do tema? Pratique agora mesmo!
+                  </h3>
+                  <p className="text-redator-accent mb-4 text-sm">
+                    Escreva uma redação sobre este tema e receba correção personalizada.
+                  </p>
+                  <Button
+                    onClick={handleEscreverRedacao}
+                    className="bg-redator-primary hover:bg-redator-primary/90 text-white px-6 py-3"
+                    size="lg"
+                  >
+                    <Edit className="w-5 h-5 mr-2" />
+                    ✍️ Escreva sobre este tema
+                  </Button>
                 </div>
               )}
             </div>
