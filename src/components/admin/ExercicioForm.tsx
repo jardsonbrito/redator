@@ -86,7 +86,7 @@ export const ExercicioForm = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("exercicios")
         .insert({
           titulo,
