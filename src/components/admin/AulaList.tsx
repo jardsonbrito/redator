@@ -17,7 +17,7 @@ interface Aula {
   link_conteudo: string;
   pdf_url?: string;
   pdf_nome?: string;
-  turmas_autorizadas: string[];
+  turmas_autorizadas: string[] | null;
   permite_visitante: boolean;
   ativo: boolean;
   criado_em: string;
@@ -224,19 +224,19 @@ export const AulaList = () => {
               <CardContent>
                 <p className="text-gray-600 mb-4">{aula.descricao}</p>
                 
-                <div className="space-y-2">
-                  {aula.turmas_autorizadas.length > 0 && (
-                    <div>
-                      <strong>Turmas Autorizadas:</strong>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {aula.turmas_autorizadas.map((turma) => (
-                          <Badge key={turma} variant="secondary" className="text-xs">
-                            {turma}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                 <div className="space-y-2">
+                   {aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0 && (
+                     <div>
+                       <strong>Turmas Autorizadas:</strong>
+                       <div className="flex flex-wrap gap-1 mt-1">
+                         {aula.turmas_autorizadas.map((turma) => (
+                           <Badge key={turma} variant="secondary" className="text-xs">
+                             {turma}
+                           </Badge>
+                         ))}
+                       </div>
+                     </div>
+                   )}
                   
                   {aula.permite_visitante && (
                     <div>

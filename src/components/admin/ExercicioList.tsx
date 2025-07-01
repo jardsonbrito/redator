@@ -16,7 +16,7 @@ interface Exercicio {
   link_forms?: string;
   tema_id?: string;
   imagem_capa_url?: string;
-  turmas_autorizadas: string[];
+  turmas_autorizadas: string[] | null;
   permite_visitante: boolean;
   ativo: boolean;
   criado_em: string;
@@ -242,18 +242,18 @@ export const ExercicioList = () => {
                     </div>
                   )}
                   
-                  {exercicio.turmas_autorizadas.length > 0 && (
-                    <div>
-                      <strong>Turmas Autorizadas:</strong>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {exercicio.turmas_autorizadas.map((turma) => (
-                          <Badge key={turma} variant="secondary" className="text-xs">
-                            {turma}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                   {exercicio.turmas_autorizadas && exercicio.turmas_autorizadas.length > 0 && (
+                     <div>
+                       <strong>Turmas Autorizadas:</strong>
+                       <div className="flex flex-wrap gap-1 mt-1">
+                         {exercicio.turmas_autorizadas.map((turma) => (
+                           <Badge key={turma} variant="secondary" className="text-xs">
+                             {turma}
+                           </Badge>
+                         ))}
+                       </div>
+                     </div>
+                   )}
                   
                   {exercicio.permite_visitante && (
                     <div>
