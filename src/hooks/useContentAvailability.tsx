@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useContentAvailability = (turmaCode: string) => {
   // Verifica se há aulas disponíveis
-  const aulasQuery = useQuery({
+  const aulasQuery = useQuery<boolean>({
     queryKey: ['has-aulas', turmaCode],
-    queryFn: async (): Promise<boolean> => {
+    queryFn: async () => {
       if (!turmaCode) return false;
       
       try {
@@ -36,9 +36,9 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   // Verifica se há exercícios disponíveis
-  const exerciciosQuery = useQuery({
+  const exerciciosQuery = useQuery<boolean>({
     queryKey: ['has-exercicios', turmaCode],
-    queryFn: async (): Promise<boolean> => {
+    queryFn: async () => {
       if (!turmaCode) return false;
       
       try {
@@ -68,9 +68,9 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   // Verifica se há simulados disponíveis
-  const simuladosQuery = useQuery({
+  const simuladosQuery = useQuery<boolean>({
     queryKey: ['has-simulados', turmaCode],
-    queryFn: async (): Promise<boolean> => {
+    queryFn: async () => {
       if (!turmaCode) return false;
       
       try {
@@ -90,9 +90,9 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   // Verifica se há redações da turma
-  const redacoesTurmaQuery = useQuery({
+  const redacoesTurmaQuery = useQuery<boolean>({
     queryKey: ['has-redacoes-turma', turmaCode],
-    queryFn: async (): Promise<boolean> => {
+    queryFn: async () => {
       if (!turmaCode || turmaCode === "Visitante") return false;
       
       try {
@@ -108,9 +108,9 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   // Verifica se há materiais da biblioteca disponíveis
-  const bibliotecaQuery = useQuery({
+  const bibliotecaQuery = useQuery<boolean>({
     queryKey: ['has-biblioteca', turmaCode],
-    queryFn: async (): Promise<boolean> => {
+    queryFn: async () => {
       if (!turmaCode) return false;
       
       try {
