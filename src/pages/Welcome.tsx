@@ -169,9 +169,7 @@ const Welcome = () => {
           <CardContent className="p-6 space-y-6">
             {/* Botões de perfil */}
             <div className="grid grid-cols-3 gap-2">
-              <Button variant={selectedProfile === "professor" ? "default" : "outline"} onClick={() => setSelectedProfile("professor")} className={`h-16 text-xs ${selectedProfile === "professor" ? "bg-redator-primary hover:bg-redator-primary/90 text-white" : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"}`}>
-                Sou Professor
-              </Button>
+              <Button variant={selectedProfile === "professor" ? "default" : "outline"} onClick={() => setSelectedProfile("professor")} className={`h-16 text-xs ${selectedProfile === "professor" ? "bg-redator-primary hover:bg-redator-primary/90 text-white" : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"}`}>Professor</Button>
               <Button variant={selectedProfile === "aluno" ? "default" : "outline"} onClick={() => setSelectedProfile("aluno")} className={`h-16 text-xs ${selectedProfile === "aluno" ? "bg-redator-primary hover:bg-redator-primary/90 text-white" : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"}`}>
                 Sou Aluno
               </Button>
