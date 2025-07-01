@@ -1,17 +1,16 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send, File } from "lucide-react";
-import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { SimuladoAtivo } from "@/components/SimuladoAtivo";
 import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useContentAvailability } from "@/hooks/useContentAvailability";
+import { MenuGrid } from "@/components/MenuGrid";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -23,154 +22,14 @@ const Index = () => {
     turmaCode = studentData.turma;
   }
 
-  // Verifica se há aulas disponíveis
-  const { data: hasAulas } = useQuery({
-    queryKey: ['has-aulas', turmaCode],
-    queryFn: async (): Promise<boolean> => {
-      console.log("Checking aulas for turma:", turmaCode);
-      
-      try {
-        if (turmaCode === "Visitante") {
-          const { data, error } = await supabase
-            .from('aulas')
-            .select('id')
-            .eq('ativo', true)
-            .eq('permite_visitante', true)
-            .limit(1);
-          
-          if (error) {
-            console.error('Error checking aulas for visitante:', error);
-            return false;
-          }
-          
-          console.log("Aulas found for visitante:", data);
-          return Boolean(data && data.length > 0);
-        } else {
-          const { data, error } = await supabase
-            .from('aulas')
-            .select('id')
-            .eq('ativo', true)
-            .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
-            .limit(1);
-          
-          if (error) {
-            console.error('Error checking aulas for turma:', turmaCode, error);
-            return false;
-          }
-          
-          console.log("Aulas found for turma:", turmaCode, data);
-          return Boolean(data && data.length > 0);
-        }
-      } catch (error) {
-        console.error('Error in hasAulas query:', error);
-        return false;
-      }
-    },
-    enabled: !!turmaCode
-  });
-
-  // Verifica se há exercícios disponíveis
-  const { data: hasExercicios } = useQuery({
-    queryKey: ['has-exercicios', turmaCode],
-    queryFn: async (): Promise<boolean> => {
-      if (!turmaCode) return false;
-      
-      try {
-        if (turmaCode === "Visitante") {
-          const { data, error } = await supabase
-            .from('exercicios')
-            .select('id')
-            .eq('ativo', true)
-            .eq('permite_visitante', true)
-            .limit(1);
-          
-          if (error) {
-            console.error('Error checking exercicios for visitante:', error);
-            return false;
-          }
-          
-          return Boolean(data && data.length > 0);
-        } else {
-          const { data, error } = await supabase
-            .from('exercicios')
-            .select('id')
-            .eq('ativo', true)
-            .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
-            .limit(1);
-          
-          if (error) {
-            console.error('Error checking exercicios for turma:', turmaCode, error);
-            return false;
-          }
-          
-          return Boolean(data && data.length > 0);
-        }
-      } catch (error) {
-        console.error('Error in hasExercicios query:', error);
-        return false;
-      }
-    },
-    enabled: !!turmaCode
-  });
-
-  // Verifica se há simulados disponíveis
-  const { data: hasSimulados } = useQuery({
-    queryKey: ['has-simulados', turmaCode],
-    queryFn: async (): Promise<boolean> => {
-      const { data, error } = await supabase
-        .from('simulados')
-        .select('id')
-        .eq('ativo', true)
-        .or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`)
-        .limit(1);
-      
-      if (error) {
-        console.error('Error checking simulados:', error);
-        return false;
-      }
-      
-      return data && data.length > 0;
-    }
-  });
-
-  // Verifica se há redações da turma (para "Minhas Redações")
-  const { data: hasRedacoesTurma } = useQuery({
-    queryKey: ['has-redacoes-turma', turmaCode],
-    queryFn: async (): Promise<boolean> => {
-      if (!turmaCode || turmaCode === "Visitante") return false;
-      
-      const { data, error } = await supabase
-        .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
-      
-      if (error) {
-        console.error('Error checking redacoes turma:', error);
-        return false;
-      }
-      
-      return data && data.length > 0;
-    },
-    enabled: !!turmaCode && turmaCode !== "Visitante"
-  });
-
-  // Verifica se há materiais da biblioteca disponíveis
-  const { data: hasBiblioteca } = useQuery({
-    queryKey: ['has-biblioteca', turmaCode],
-    queryFn: async (): Promise<boolean> => {
-      const { data, error } = await supabase
-        .from('biblioteca_materiais')
-        .select('id')
-        .eq('status', 'publicado')
-        .or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`)
-        .limit(1);
-      
-      if (error) {
-        console.error('Error checking biblioteca:', error);
-        return false;
-      }
-      
-      return data && data.length > 0;
-    }
-  });
+  // Usa o hook personalizado para verificar disponibilidade de conteúdo
+  const {
+    hasAulas,
+    hasExercicios,
+    hasSimulados,
+    hasRedacoesTurma,
+    hasBiblioteca
+  } = useContentAvailability(turmaCode);
 
   const menuItems = [
     {
@@ -235,12 +94,6 @@ const Index = () => {
     }
   ];
 
-  // Filtra os itens do menu baseado na disponibilidade de conteúdo
-  const visibleMenuItems = menuItems.filter(item => {
-    if (item.showAlways) return true;
-    return item.showCondition === true;
-  });
-
   // Determinar se deve mostrar seção "Minhas Redações"
   const showMinhasRedacoes = studentData.userType === "aluno" && studentData.turma && hasRedacoesTurma;
 
@@ -248,8 +101,7 @@ const Index = () => {
     turmaCode,
     hasAulas,
     hasExercicios,
-    hasSimulados,
-    visibleMenuItems: visibleMenuItems.map(item => item.title)
+    hasSimulados
   });
 
   return (
@@ -294,34 +146,10 @@ const Index = () => {
             <MeusSimuladosFixo turmaCode={turmaCode} />
 
             {/* Menu Principal Horizontal */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-semibold text-redator-primary text-center">
-                {showMinhasRedacoes ? "Explorar outras seções:" : "Escolha por onde começar:"}
-              </h2>
-              
-              <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 max-w-5xl mx-auto ${
-                visibleMenuItems.length <= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-6'
-              }`}>
-                {visibleMenuItems.map((item, index) => (
-                  <Tooltip key={index}>
-                    <TooltipTrigger asChild>
-                      <Link to={item.path} className="group flex flex-col items-center p-4 bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 border border-redator-accent/10 hover:border-redator-secondary/30">
-                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-redator-primary group-hover:bg-redator-secondary transition-colors duration-300 mb-3">
-                          <item.icon className="w-6 h-6 text-white" />
-                        </div>
-                        
-                        <h3 className="text-xs font-semibold text-redator-primary text-center leading-tight group-hover:text-redator-secondary transition-colors">
-                          {item.title}
-                        </h3>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs text-center p-2 bg-redator-primary text-white border-redator-primary">
-                      <p className="text-xs">{item.tooltip}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            </div>
+            <MenuGrid 
+              menuItems={menuItems} 
+              showMinhasRedacoes={showMinhasRedacoes} 
+            />
           </main>
         </div>
       </TooltipProvider>
