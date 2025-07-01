@@ -117,7 +117,7 @@ const Exercicios = () => {
       );
     }
 
-    if (tipoFilter) {
+    if (tipoFilter && tipoFilter !== "todos") {
       filtered = filtered.filter(exercicio => exercicio.tipo === tipoFilter);
     }
 
@@ -181,7 +181,7 @@ const Exercicios = () => {
                       <SelectValue placeholder="Filtrar por tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os tipos</SelectItem>
+                      <SelectItem value="todos">Todos os tipos</SelectItem>
                       {tiposDisponiveis.map((tipo) => (
                         <SelectItem key={tipo} value={tipo}>
                           {tipo}

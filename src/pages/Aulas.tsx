@@ -111,7 +111,7 @@ const Aulas = () => {
       );
     }
 
-    if (moduloFilter) {
+    if (moduloFilter && moduloFilter !== "todos") {
       filtered = filtered.filter(aula => aula.modulo === moduloFilter);
     }
 
@@ -168,7 +168,7 @@ const Aulas = () => {
                       <SelectValue placeholder="Filtrar por módulo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os módulos</SelectItem>
+                      <SelectItem value="todos">Todos os módulos</SelectItem>
                       {modulosDisponiveis.map((modulo) => (
                         <SelectItem key={modulo} value={modulo}>
                           {modulo}
