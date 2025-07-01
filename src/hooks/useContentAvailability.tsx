@@ -2,7 +2,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const checkAulas = async (turmaCode: string): Promise<boolean> => {
+// Simple async functions with explicit return types
+async function checkAulas(turmaCode: string): Promise<boolean> {
   if (!turmaCode) return false;
   
   try {
@@ -27,9 +28,9 @@ const checkAulas = async (turmaCode: string): Promise<boolean> => {
     console.error('Error checking aulas:', error);
     return false;
   }
-};
+}
 
-const checkExercicios = async (turmaCode: string): Promise<boolean> => {
+async function checkExercicios(turmaCode: string): Promise<boolean> {
   if (!turmaCode) return false;
   
   try {
@@ -54,9 +55,9 @@ const checkExercicios = async (turmaCode: string): Promise<boolean> => {
     console.error('Error checking exercicios:', error);
     return false;
   }
-};
+}
 
-const checkSimulados = async (turmaCode: string): Promise<boolean> => {
+async function checkSimulados(turmaCode: string): Promise<boolean> {
   if (!turmaCode) return false;
   
   try {
@@ -71,9 +72,9 @@ const checkSimulados = async (turmaCode: string): Promise<boolean> => {
     console.error('Error checking simulados:', error);
     return false;
   }
-};
+}
 
-const checkRedacoesTurma = async (turmaCode: string): Promise<boolean> => {
+async function checkRedacoesTurma(turmaCode: string): Promise<boolean> {
   if (!turmaCode || turmaCode === "Visitante") return false;
   
   try {
@@ -84,9 +85,9 @@ const checkRedacoesTurma = async (turmaCode: string): Promise<boolean> => {
     console.error('Error checking redacoes turma:', error);
     return false;
   }
-};
+}
 
-const checkBiblioteca = async (turmaCode: string): Promise<boolean> => {
+async function checkBiblioteca(turmaCode: string): Promise<boolean> {
   if (!turmaCode) return false;
   
   try {
@@ -101,42 +102,50 @@ const checkBiblioteca = async (turmaCode: string): Promise<boolean> => {
     console.error('Error checking biblioteca:', error);
     return false;
   }
-};
+}
 
-export const useContentAvailability = (turmaCode: string) => {
+interface ContentAvailability {
+  hasAulas: boolean;
+  hasExercicios: boolean;
+  hasSimulados: boolean;
+  hasRedacoesTurma: boolean;
+  hasBiblioteca: boolean;
+}
+
+export const useContentAvailability = (turmaCode: string): ContentAvailability => {
   const aulasQuery = useQuery({
     queryKey: ['has-aulas', turmaCode],
     queryFn: () => checkAulas(turmaCode),
     enabled: Boolean(turmaCode),
-    staleTime: 300000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const exerciciosQuery = useQuery({
     queryKey: ['has-exercicios', turmaCode],
     queryFn: () => checkExercicios(turmaCode),
     enabled: Boolean(turmaCode),
-    staleTime: 300000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const simuladosQuery = useQuery({
     queryKey: ['has-simulados', turmaCode],
     queryFn: () => checkSimulados(turmaCode),
     enabled: Boolean(turmaCode),
-    staleTime: 300000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const redacoesTurmaQuery = useQuery({
     queryKey: ['has-redacoes-turma', turmaCode],
     queryFn: () => checkRedacoesTurma(turmaCode),
     enabled: Boolean(turmaCode && turmaCode !== "Visitante"),
-    staleTime: 300000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const bibliotecaQuery = useQuery({
     queryKey: ['has-biblioteca', turmaCode],
     queryFn: () => checkBiblioteca(turmaCode),
     enabled: Boolean(turmaCode),
-    staleTime: 300000,
+    staleTime: 5 * 60 * 1000,
   });
 
   return {
