@@ -30,55 +30,78 @@ export const BibliotecaList = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: materiais, isLoading } = useQuery({
+  const { data: materiais, isLoading, error } = useQuery({
     queryKey: ['admin-biblioteca', busca, competenciaFiltro, statusFiltro],
     queryFn: async () => {
-      let query = supabase
-        .from('biblioteca_materiais')
-        .select('*')
-        .order('data_publicacao', { ascending: false });
+      try {
+        let query = supabase
+          .from('biblioteca_materiais')
+          .select('*')
+          .order('data_publicacao', { ascending: false });
 
-      if (busca) {
-        query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
+        if (busca) {
+          query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
+        }
+
+        if (competenciaFiltro && competenciaFiltro !== 'todas') {
+          query = query.eq('competencia', competenciaFiltro);
+        }
+
+        if (statusFiltro && statusFiltro !== 'todos') {
+          query = query.eq('status', statusFiltro);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+          console.error('Query error:', error);
+          throw error;
+        }
+        return data || [];
+      } catch (error) {
+        console.error('Erro ao buscar materiais:', error);
+        throw error;
       }
-
-      if (competenciaFiltro && competenciaFiltro !== 'todas') {
-        query = query.eq('competencia', competenciaFiltro);
-      }
-
-      if (statusFiltro && statusFiltro !== 'todos') {
-        query = query.eq('status', statusFiltro);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Primeiro, buscar o material para obter a URL do arquivo
-      const { data: material } = await supabase
-        .from('biblioteca_materiais')
-        .select('arquivo_url')
-        .eq('id', id)
-        .single();
+      try {
+        // Primeiro, buscar o material para obter a URL do arquivo
+        const { data: material, error: fetchError } = await supabase
+          .from('biblioteca_materiais')
+          .select('arquivo_url')
+          .eq('id', id)
+          .single();
 
-      // Deletar o arquivo do storage
-      if (material?.arquivo_url) {
-        await supabase.storage
-          .from('biblioteca-pdfs')
-          .remove([material.arquivo_url]);
+        if (fetchError) {
+          throw new Error(`Erro ao buscar material: ${fetchError.message}`);
+        }
+
+        // Deletar o arquivo do storage
+        if (material?.arquivo_url) {
+          const { error: storageError } = await supabase.storage
+            .from('biblioteca-pdfs')
+            .remove([material.arquivo_url]);
+          
+          if (storageError) {
+            console.warn('Erro ao deletar arquivo do storage:', storageError);
+          }
+        }
+
+        // Deletar o registro do banco
+        const { error } = await supabase
+          .from('biblioteca_materiais')
+          .delete()
+          .eq('id', id);
+
+        if (error) {
+          throw new Error(`Erro ao deletar material: ${error.message}`);
+        }
+      } catch (error) {
+        console.error('Erro na deleção:', error);
+        throw error;
       }
-
-      // Deletar o registro do banco
-      const { error } = await supabase
-        .from('biblioteca_materiais')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
     },
     onSuccess: () => {
       toast({
@@ -103,7 +126,9 @@ export const BibliotecaList = () => {
         .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(`Erro ao alterar status: ${error.message}`);
+      }
     },
     onSuccess: (_, { novoStatus }) => {
       toast({
@@ -127,7 +152,9 @@ export const BibliotecaList = () => {
         .from('biblioteca-pdfs')
         .download(arquivoUrl);
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(`Erro no download: ${error.message}`);
+      }
 
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
@@ -137,11 +164,11 @@ export const BibliotecaList = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao baixar arquivo:', error);
       toast({
         title: "❌ Erro ao baixar",
-        description: "Não foi possível baixar o arquivo.",
+        description: error.message || "Não foi possível baixar o arquivo.",
         variant: "destructive",
       });
     }
@@ -149,6 +176,15 @@ export const BibliotecaList = () => {
 
   if (isLoading) {
     return <div className="text-center py-8">Carregando materiais...</div>;
+  }
+
+  if (error) {
+    console.error('Erro ao carregar biblioteca:', error);
+    return (
+      <div className="text-center py-8 text-red-600">
+        Erro ao carregar materiais. Tente novamente.
+      </div>
+    );
   }
 
   return (
@@ -237,7 +273,7 @@ export const BibliotecaList = () => {
                           Visitantes
                         </Badge>
                       )}
-                      {material.turmas_autorizadas.length > 0 && (
+                      {material.turmas_autorizadas && material.turmas_autorizadas.length > 0 && (
                         <Badge variant="outline">
                           {material.turmas_autorizadas.length} turma(s)
                         </Badge>

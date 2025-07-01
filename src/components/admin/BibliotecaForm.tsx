@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,7 +76,7 @@ export const BibliotecaForm = () => {
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
-      throw uploadError;
+      throw new Error(`Erro no upload: ${uploadError.message}`);
     }
 
     return {
@@ -99,6 +100,12 @@ export const BibliotecaForm = () => {
     setLoading(true);
 
     try {
+      // Verificar se o usuário está autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
       // Upload do arquivo
       const { url: arquivo_url, nome: arquivo_nome } = await uploadArquivo(arquivo);
 
@@ -118,7 +125,7 @@ export const BibliotecaForm = () => {
 
       if (error) {
         console.error('Database error:', error);
-        throw error;
+        throw new Error(`Erro no banco de dados: ${error.message}`);
       }
 
       toast({
@@ -138,6 +145,12 @@ export const BibliotecaForm = () => {
         status: 'publicado'
       });
       setArquivo(null);
+      
+      // Limpar input de arquivo
+      const fileInput = document.getElementById('arquivo') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
 
     } catch (error: any) {
       console.error('Erro ao cadastrar material:', error);
