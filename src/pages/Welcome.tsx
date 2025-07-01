@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -153,7 +153,7 @@ const Welcome = () => {
           <div className="text-center mb-8">
             {/* Logo no topo */}
             <div className="flex justify-center mb-6">
-              <img alt="Logo da plataforma" className="w-20 h-20 object-contain" src="/lovable-uploads/cc2c1bdd-271b-4b30-911f-a93be2306b7a.png" />
+              <img alt="Logo da plataforma" className="w-20 h-20 object-contain" src="/lovable-uploads/b95bdcfe-ba6c-4d51-9298-831a8bcb48a9.png" />
             </div>
           
           {/* Texto de boas-vindas */}
