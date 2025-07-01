@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { File, Download, Search, Calendar } from "lucide-react";
+import { Home, Download, Search, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -95,8 +95,8 @@ const Biblioteca = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-                <File className="w-5 h-5" />
-                <span>Voltar ao App</span>
+                <Home className="w-5 h-5" />
+                <span>Início</span>
               </Link>
               <h1 className="text-2xl font-bold text-redator-primary">Biblioteca</h1>
             </div>
@@ -119,8 +119,8 @@ const Biblioteca = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-              <File className="w-5 h-5" />
-              <span>Voltar ao App</span>
+              <Home className="w-5 h-5" />
+              <span>Início</span>
             </Link>
             <h1 className="text-2xl font-bold text-redator-primary">Biblioteca</h1>
           </div>
@@ -174,7 +174,7 @@ const Biblioteca = () => {
         {!materiais || materiais.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
-              <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-600 mb-2">
                 Nenhum material disponível
               </h3>

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText } from "lucide-react";
+import { Home, BookOpen, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Temas() {
@@ -44,67 +44,85 @@ export default function Temas() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-redator-primary mb-4">
-          <BookOpen className="inline-block w-10 h-10 mr-3" />
-          Temas de Redação
-        </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Explore nossa coleção de temas de redação cuidadosamente selecionados para sua preparação.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-redator-accent/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+              <Home className="w-5 h-5" />
+              <span>Início</span>
+            </Link>
+            <h1 className="text-2xl font-bold text-redator-primary">Temas de Redação</h1>
+            <Link to="/" className="hover:opacity-80 transition-opacity">
+              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator" className="h-8 w-auto max-w-[120px] object-contain" />
+            </Link>
+          </div>
+        </div>
+      </header>
 
-      {!temas || temas.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-700 mb-2">Nenhum tema disponível</h2>
-          <p className="text-gray-500">
-            Novos temas serão adicionados em breve. Volte mais tarde!
+      {/* Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <h2 className="text-xl font-semibold text-redator-primary mb-2">
+            Explore nossa coleção de temas
+          </h2>
+          <p className="text-redator-accent">
+            Temas de redação cuidadosamente selecionados para sua preparação.
           </p>
         </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {temas.map((tema) => (
-            <Card key={tema.id} className="hover:shadow-lg transition-shadow border-redator-accent/20">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-bold text-redator-primary line-clamp-3 mb-3">
-                      {tema.frase_tematica}
-                    </CardTitle>
-                    <Badge className="bg-redator-accent text-white">
-                      {tema.eixo_tematico}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {tema.imagem_texto_4_url && (
-                    <div className="aspect-video overflow-hidden rounded-md">
-                      <img 
-                        src={tema.imagem_texto_4_url} 
-                        alt="Imagem do tema" 
-                        className="w-full h-full object-cover"
-                      />
+
+        {!temas || temas.length === 0 ? (
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-redator-primary mb-2">Nenhum tema disponível</h3>
+            <p className="text-redator-accent">
+              Novos temas serão adicionados em breve. Volte mais tarde!
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {temas.map((tema) => (
+              <Card key={tema.id} className="hover:shadow-lg transition-shadow border-redator-accent/20">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg font-bold text-redator-primary line-clamp-3 mb-3">
+                        {tema.frase_tematica}
+                      </CardTitle>
+                      <Badge className="bg-redator-accent text-white">
+                        {tema.eixo_tematico}
+                      </Badge>
                     </div>
-                  )}
-                  
-                  <div className="pt-2">
-                    <Link to={`/temas/${tema.id}`}>
-                      <Button className="w-full bg-redator-primary hover:bg-redator-primary/90">
-                        <FileText className="w-4 h-4 mr-2" />
-                        Ver Tema Completo
-                      </Button>
-                    </Link>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {tema.imagem_texto_4_url && (
+                      <div className="aspect-video overflow-hidden rounded-md">
+                        <img 
+                          src={tema.imagem_texto_4_url} 
+                          alt="Imagem do tema" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="pt-2">
+                      <Link to={`/temas/${tema.id}`}>
+                        <Button className="w-full bg-redator-primary hover:bg-redator-primary/90">
+                          <FileText className="w-4 h-4 mr-2" />
+                          Ver Tema Completo
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

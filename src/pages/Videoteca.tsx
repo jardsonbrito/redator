@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Play } from "lucide-react";
+import { Home, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,9 +78,9 @@ const Videoteca = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-4 w-full sm:w-auto">
-              <Link to="/" className="flex items-center gap-2 text-redator-secondary hover:text-redator-primary transition-colors mt-1">
-                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-sm sm:text-base">Voltar</span>
+              <Link to="/app" className="flex items-center gap-2 text-redator-secondary hover:text-redator-primary transition-colors mt-1">
+                <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">Início</span>
               </Link>
               <div className="flex-1">
                 <h1 className="text-xl sm:text-2xl font-bold text-redator-primary">Videoteca</h1>

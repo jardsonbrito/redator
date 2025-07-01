@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { Home } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,9 +70,9 @@ const TemaDetalhes = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to="/temas" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
-                <ArrowLeft className="w-5 h-5" />
-                <span>Voltar</span>
+              <Link to="/app" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
+                <Home className="w-5 h-5" />
+                <span>Início</span>
               </Link>
               <div>
                 {tema.eixo_tematico && (
