@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send, File } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +9,6 @@ import { SimuladoAtivo } from "@/components/SimuladoAtivo";
 import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useContentAvailability } from "@/hooks/useContentAvailability";
 import { MenuGrid } from "@/components/MenuGrid";
 
 const Index = () => {
@@ -21,15 +20,6 @@ const Index = () => {
   if (studentData.userType === "aluno" && studentData.turma) {
     turmaCode = studentData.turma;
   }
-
-  // Usa o hook personalizado para verificar disponibilidade de conteúdo
-  const {
-    hasAulas,
-    hasExercicios,
-    hasSimulados,
-    hasRedacoesTurma,
-    hasBiblioteca
-  } = useContentAvailability(turmaCode);
 
   const menuItems = [
     {
@@ -58,32 +48,14 @@ const Index = () => {
       path: "/biblioteca",
       icon: File,
       tooltip: "Acesse materiais em PDF organizados por competência.",
-      showAlways: false,
-      showCondition: hasBiblioteca
-    },
-    {
-      title: "Aulas",
-      path: "/aulas",
-      icon: GraduationCap,
-      tooltip: "Estude cada competência com aulas gravadas e ao vivo.",
-      showAlways: false,
-      showCondition: hasAulas
-    },
-    {
-      title: "Exercícios",
-      path: "/exercicios",
-      icon: ClipboardList,
-      tooltip: "Pratique com formulários e atividades direcionadas.",
-      showAlways: false,
-      showCondition: hasExercicios
+      showAlways: true
     },
     {
       title: "Simulados",
       path: "/simulados",
       icon: ClipboardCheck,
       tooltip: "Participe de simulados com horário controlado e correção detalhada.",
-      showAlways: false,
-      showCondition: hasSimulados
+      showAlways: true
     },
     {
       title: "Enviar Redação (Avulsa)",
@@ -95,14 +67,7 @@ const Index = () => {
   ];
 
   // Determinar se deve mostrar seção "Minhas Redações"
-  const showMinhasRedacoes = studentData.userType === "aluno" && studentData.turma && hasRedacoesTurma;
-
-  console.log("Debug info:", {
-    turmaCode,
-    hasAulas,
-    hasExercicios,
-    hasSimulados
-  });
+  const showMinhasRedacoes = studentData.userType === "aluno" && studentData.turma;
 
   return (
     <ProtectedRoute>
@@ -135,7 +100,7 @@ const Index = () => {
             {/* Simulado Ativo - SEMPRE em destaque no topo */}
             <SimuladoAtivo turmaCode={turmaCode} />
 
-            {/* Seção "Minhas Redações" - apenas para alunos de turma com redações */}
+            {/* Seção "Minhas Redações" - apenas para alunos de turma */}
             {showMinhasRedacoes && (
               <div className="mb-8">
                 <MinhasRedacoes />

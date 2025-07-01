@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
@@ -8,8 +9,6 @@ import {
   BookOpen, 
   FileText, 
   Video,
-  GraduationCap,
-  ClipboardList,
   ClipboardCheck,
   Send,
   LogOut,
@@ -26,10 +25,6 @@ import { RedacaoForm } from "@/components/admin/RedacaoForm";
 import { RedacaoList } from "@/components/admin/RedacaoList";
 import { VideoForm } from "@/components/admin/VideoForm";
 import { VideoList } from "@/components/admin/VideoList";
-import AulaForm from "@/components/admin/AulaForm";
-import AulaList from "@/components/admin/AulaList";
-import ExercicioForm from "@/components/admin/ExercicioForm";
-import ExercicioList from "@/components/admin/ExercicioList";
 import { RedacaoEnviadaForm } from "@/components/admin/RedacaoEnviadaForm";
 
 // Import simulado components
@@ -59,8 +54,6 @@ const Admin = () => {
     { id: "redacoes", label: "Redações", icon: FileText },
     { id: "videos", label: "Vídeos", icon: Video },
     { id: "biblioteca", label: "Biblioteca", icon: File },
-    { id: "aulas", label: "Aulas", icon: GraduationCap },
-    { id: "exercicios", label: "Exercícios", icon: ClipboardList },
     { id: "simulados", label: "Simulados", icon: ClipboardCheck },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
   ];
@@ -131,38 +124,6 @@ const Admin = () => {
           </Tabs>
         );
       
-      case "aulas":
-        return (
-          <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="list">Listar Aulas</TabsTrigger>
-              <TabsTrigger value="create">Criar Aula</TabsTrigger>
-            </TabsList>
-            <TabsContent value="list">
-              <AulaList />
-            </TabsContent>
-            <TabsContent value="create">
-              <AulaForm />
-            </TabsContent>
-          </Tabs>
-        );
-      
-      case "exercicios":
-        return (
-          <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="list">Listar Exercícios</TabsTrigger>
-              <TabsTrigger value="create">Criar Exercício</TabsTrigger>
-            </TabsList>
-            <TabsContent value="list">
-              <ExercicioList />
-            </TabsContent>
-            <TabsContent value="create">
-              <ExercicioForm />
-            </TabsContent>
-          </Tabs>
-        );
-      
       case "simulados":
         return (
           <Tabs defaultValue="list" className="w-full">
@@ -182,18 +143,12 @@ const Admin = () => {
       case "redacoes-enviadas":
         return (
           <Tabs defaultValue="avulsas" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="avulsas">Redações Avulsas</TabsTrigger>
-              <TabsTrigger value="exercicios">Exercícios</TabsTrigger>
               <TabsTrigger value="simulados">Simulados</TabsTrigger>
             </TabsList>
             <TabsContent value="avulsas">
               <RedacaoEnviadaForm />
-            </TabsContent>
-            <TabsContent value="exercicios">
-              <div className="text-center py-8 text-gray-500">
-                Correções de exercícios em desenvolvimento
-              </div>
             </TabsContent>
             <TabsContent value="simulados">
               <RedacaoSimuladoList />

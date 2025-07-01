@@ -16,11 +16,6 @@ import Temas from "./pages/Temas";
 import TemaDetalhes from "./pages/TemaDetalhes";
 import Videoteca from "./pages/Videoteca";
 import Biblioteca from "./pages/Biblioteca";
-import Aulas from "./pages/Aulas";
-import AulaModulo from "./pages/AulaModulo";
-import AulaAoVivo from "./pages/AulaAoVivo";
-import Exercicios from "./pages/Exercicios";
-import ExercicioDetalhes from "./pages/ExercicioDetalhes";
 import Simulados from "./pages/Simulados";
 import SimuladoDetalhes from "./pages/SimuladoDetalhes";
 import MeusSimulados from "./pages/MeusSimulados";
@@ -50,11 +45,6 @@ const App = () => (
               <Route path="/temas/:id" element={<TemaDetalhes />} />
               <Route path="/videoteca" element={<Videoteca />} />
               <Route path="/biblioteca" element={<Biblioteca />} />
-              <Route path="/aulas" element={<Aulas />} />
-              <Route path="/aulas/modulo/:moduleId" element={<AulaModulo />} />
-              <Route path="/aulas/ao-vivo" element={<AulaAoVivo />} />
-              <Route path="/exercicios" element={<Exercicios />} />
-              <Route path="/exercicios/:id" element={<ExercicioDetalhes />} />
               <Route path="/simulados" element={<Simulados />} />
               <Route path="/simulados/:id" element={<SimuladoDetalhes />} />
               <Route path="/meus-simulados" element={<MeusSimulados />} />
