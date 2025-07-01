@@ -53,10 +53,7 @@ export default function Temas() {
               <Home className="w-5 h-5" />
               <span>Início</span>
             </Link>
-            <h1 className="text-2xl font-bold text-redator-primary">Temas de Redação</h1>
-            <Link to="/" className="hover:opacity-80 transition-opacity">
-              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator" className="h-8 w-auto max-w-[120px] object-contain" />
-            </Link>
+            <h1 className="text-2xl font-bold text-redator-primary">Temas</h1>
           </div>
         </div>
       </header>

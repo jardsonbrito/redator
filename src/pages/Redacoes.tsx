@@ -61,25 +61,12 @@ const Redacoes = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-4 w-full sm:w-auto">
-              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors mt-1">
-                <Home className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-sm sm:text-base">Início</span>
-              </Link>
-              <div className="flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-redator-primary">Redações Exemplares</h1>
-                <p className="text-sm sm:text-base text-redator-accent">Aprenda com redações nota 1000</p>
-                {redacoes && (
-                  <p className="text-xs sm:text-sm text-redator-secondary">
-                    ✅ {redacoes.length} redação{redacoes.length !== 1 ? 'ões' : ''} exemplar{redacoes.length !== 1 ? 'es' : ''} encontrada{redacoes.length !== 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
-            </div>
-            <Link to="/" className="hover:opacity-80 transition-opacity w-full sm:w-auto flex justify-center sm:justify-end">
-              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-6 sm:h-8 w-auto max-w-[100px] sm:max-w-[120px] object-contain" />
+          <div className="flex items-center justify-between">
+            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+              <Home className="w-5 h-5" />
+              <span>Início</span>
             </Link>
+            <h1 className="text-2xl font-bold text-redator-primary">Redações Exemplares</h1>
           </div>
         </div>
       </header>
