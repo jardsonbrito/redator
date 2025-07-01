@@ -49,7 +49,7 @@ export const AulaList = () => {
 
   const fetchAulas = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("aulas")
         .select("*")
         .order("criado_em", { ascending: false });
@@ -85,7 +85,7 @@ export const AulaList = () => {
     if (!confirm("Tem certeza que deseja excluir esta aula?")) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("aulas")
         .delete()
         .eq("id", id);
@@ -102,7 +102,7 @@ export const AulaList = () => {
 
   const toggleAtivo = async (id: string, ativo: boolean) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("aulas")
         .update({ ativo: !ativo })
         .eq("id", id);

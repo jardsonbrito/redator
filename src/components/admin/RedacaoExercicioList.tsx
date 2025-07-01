@@ -6,16 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, Edit, Search, Calendar, User, FileText } from "lucide-react";
+import { Search, Edit, Save, X } from "lucide-react";
 
 interface RedacaoExercicio {
   id: string;
+  exercicio_id: string;
   nome_aluno: string;
   email_aluno: string;
-  turma?: string;
+  turma: string;
   redacao_texto: string;
   data_envio: string;
   corrigida: boolean;
@@ -27,7 +28,6 @@ interface RedacaoExercicio {
   nota_total?: number;
   comentario_admin?: string;
   data_correcao?: string;
-  exercicio_id: string;
   exercicios?: {
     titulo: string;
     tipo: string;
@@ -40,17 +40,8 @@ export const RedacaoExercicioList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [turmaFilter, setTurmaFilter] = useState("");
-  const [selectedRedacao, setSelectedRedacao] = useState<RedacaoExercicio | null>(null);
-  const [isCorreting, setIsCorreting] = useState(false);
-
-  // Estados para correção
-  const [notaC1, setNotaC1] = useState(0);
-  const [notaC2, setNotaC2] = useState(0);
-  const [notaC3, setNotaC3] = useState(0);
-  const [notaC4, setNotaC4] = useState(0);
-  const [notaC5, setNotaC5] = useState(0);
-  const [comentarioAdmin, setComentarioAdmin] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<any>({});
 
   useEffect(() => {
     fetchRedacoes();
@@ -58,11 +49,11 @@ export const RedacaoExercicioList = () => {
 
   useEffect(() => {
     filterRedacoes();
-  }, [redacoes, searchTerm, statusFilter, turmaFilter]);
+  }, [redacoes, searchTerm, statusFilter]);
 
   const fetchRedacoes = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("redacoes_exercicio")
         .select(`
           *,
@@ -94,67 +85,63 @@ export const RedacaoExercicioList = () => {
     }
 
     if (statusFilter) {
-      filtered = filtered.filter(redacao => {
-        if (statusFilter === "corrigida") return redacao.corrigida;
-        if (statusFilter === "pendente") return !redacao.corrigida;
-        return true;
-      });
-    }
-
-    if (turmaFilter) {
-      filtered = filtered.filter(redacao => redacao.turma === turmaFilter);
+      filtered = filtered.filter(redacao => 
+        statusFilter === 'corrigida' ? redacao.corrigida : !redacao.corrigida
+      );
     }
 
     setFilteredRedacoes(filtered);
   };
 
-  const handleOpenCorrection = (redacao: RedacaoExercicio) => {
-    setSelectedRedacao(redacao);
-    setNotaC1(redacao.nota_c1 || 0);
-    setNotaC2(redacao.nota_c2 || 0);
-    setNotaC3(redacao.nota_c3 || 0);
-    setNotaC4(redacao.nota_c4 || 0);
-    setNotaC5(redacao.nota_c5 || 0);
-    setComentarioAdmin(redacao.comentario_admin || "");
+  const startEditing = (redacao: RedacaoExercicio) => {
+    setEditingId(redacao.id);
+    setEditData({
+      nota_c1: redacao.nota_c1 || 0,
+      nota_c2: redacao.nota_c2 || 0,
+      nota_c3: redacao.nota_c3 || 0,
+      nota_c4: redacao.nota_c4 || 0,
+      nota_c5: redacao.nota_c5 || 0,
+      comentario_admin: redacao.comentario_admin || ""
+    });
   };
 
-  const handleSaveCorrection = async () => {
-    if (!selectedRedacao) return;
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditData({});
+  };
 
-    setIsCorreting(true);
-
+  const saveCorrection = async (id: string) => {
     try {
-      const notaTotal = notaC1 + notaC2 + notaC3 + notaC4 + notaC5;
+      const notaTotal = (editData.nota_c1 || 0) + (editData.nota_c2 || 0) + 
+                       (editData.nota_c3 || 0) + (editData.nota_c4 || 0) + 
+                       (editData.nota_c5 || 0);
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("redacoes_exercicio")
         .update({
-          nota_c1: notaC1,
-          nota_c2: notaC2,
-          nota_c3: notaC3,
-          nota_c4: notaC4,
-          nota_c5: notaC5,
+          nota_c1: editData.nota_c1,
+          nota_c2: editData.nota_c2,
+          nota_c3: editData.nota_c3,
+          nota_c4: editData.nota_c4,
+          nota_c5: editData.nota_c5,
           nota_total: notaTotal,
-          comentario_admin: comentarioAdmin,
+          comentario_admin: editData.comentario_admin,
           corrigida: true,
           data_correcao: new Date().toISOString()
         })
-        .eq("id", selectedRedacao.id);
+        .eq("id", id);
 
       if (error) throw error;
 
       toast.success("Correção salva com sucesso!");
-      setSelectedRedacao(null);
+      setEditingId(null);
+      setEditData({});
       fetchRedacoes();
     } catch (error) {
       console.error("Erro ao salvar correção:", error);
       toast.error("Erro ao salvar correção");
-    } finally {
-      setIsCorreting(false);
     }
   };
-
-  const turmasUnicas = [...new Set(redacoes.map(r => r.turma).filter(Boolean))];
 
   if (isLoading) {
     return <div className="text-center py-8">Carregando redações...</div>;
@@ -171,35 +158,26 @@ export const RedacaoExercicioList = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              placeholder="Buscar por nome ou email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="corrigida">Corrigida</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={turmaFilter} onValueChange={setTurmaFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Turma" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todas</SelectItem>
-                {turmasUnicas.map((turma) => (
-                  <SelectItem key={turma} value={turma || ""}>
-                    {turma || "Sem turma"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Input
+                placeholder="Buscar por nome ou email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="pendente">Pendentes</SelectItem>
+                  <SelectItem value="corrigida">Corrigidas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -219,217 +197,116 @@ export const RedacaoExercicioList = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <User className="w-5 h-5" />
                       {redacao.nome_aluno}
                       <Badge variant={redacao.corrigida ? "default" : "secondary"}>
                         {redacao.corrigida ? "Corrigida" : "Pendente"}
                       </Badge>
                     </CardTitle>
-                    <div className="text-sm text-gray-600 mt-1">
-                      {redacao.email_aluno}
-                      {redacao.turma && ` • ${redacao.turma}`}
-                    </div>
+                    <p className="text-sm text-gray-600">
+                      {redacao.email_aluno} • {redacao.turma}
+                    </p>
                     {redacao.exercicios && (
-                      <Badge variant="outline" className="mt-2">
+                      <Badge variant="outline" className="mt-1">
                         {redacao.exercicios.titulo}
                       </Badge>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
+                    {editingId === redacao.id ? (
+                      <>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleOpenCorrection(redacao)}
+                          onClick={() => saveCorrection(redacao.id)}
                         >
-                          {redacao.corrigida ? <Eye className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                          <Save className="w-4 h-4" />
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>
-                            {redacao.corrigida ? "Visualizar" : "Corrigir"} Redação - {redacao.nome_aluno}
-                          </DialogTitle>
-                        </DialogHeader>
-                        
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="font-semibold mb-2">Informações do Aluno</h3>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div><strong>Nome:</strong> {redacao.nome_aluno}</div>
-                              <div><strong>Email:</strong> {redacao.email_aluno}</div>
-                              <div><strong>Turma:</strong> {redacao.turma || "Não informado"}</div>
-                              <div><strong>Data de Envio:</strong> {new Date(redacao.data_envio).toLocaleString('pt-BR')}</div>
-                            </div>
-                          </div>
-
-                          <div>
-                            <h3 className="font-semibold mb-2">Texto da Redação</h3>
-                            <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
-                              <pre className="whitespace-pre-wrap text-sm">{redacao.redacao_texto}</pre>
-                            </div>
-                          </div>
-
-                          {!redacao.corrigida && (
-                            <div className="space-y-4">
-                              <h3 className="font-semibold">Correção</h3>
-                              
-                              <div className="grid grid-cols-5 gap-4">
-                                <div>
-                                  <label className="text-sm font-medium">C1 (0-200)</label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    step="20"
-                                    value={notaC1}
-                                    onChange={(e) => setNotaC1(Number(e.target.value))}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium">C2 (0-200)</label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    step="20"
-                                    value={notaC2}
-                                    onChange={(e) => setNotaC2(Number(e.target.value))}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium">C3 (0-200)</label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    step="20"
-                                    value={notaC3}
-                                    onChange={(e) => setNotaC3(Number(e.target.value))}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium">C4 (0-200)</label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    step="20"
-                                    value={notaC4}
-                                    onChange={(e) => setNotaC4(Number(e.target.value))}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium">C5 (0-200)</label>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    step="20"
-                                    value={notaC5}
-                                    onChange={(e) => setNotaC5(Number(e.target.value))}
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <label className="text-sm font-medium">Comentário Administrativo</label>
-                                <Textarea
-                                  value={comentarioAdmin}
-                                  onChange={(e) => setComentarioAdmin(e.target.value)}
-                                  rows={4}
-                                  placeholder="Digite seus comentários sobre a redação..."
-                                />
-                              </div>
-
-                              <div className="flex justify-between items-center">
-                                <div className="text-lg font-semibold">
-                                  Nota Total: {notaC1 + notaC2 + notaC3 + notaC4 + notaC5}
-                                </div>
-                                <Button onClick={handleSaveCorrection} disabled={isCorreting}>
-                                  {isCorreting ? "Salvando..." : "Salvar Correção"}
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-
-                          {redacao.corrigida && (
-                            <div className="space-y-4">
-                              <h3 className="font-semibold">Correção Realizada</h3>
-                              
-                              <div className="grid grid-cols-5 gap-4">
-                                <div className="text-center">
-                                  <div className="text-sm font-medium">C1</div>
-                                  <div className="text-2xl font-bold text-blue-600">{redacao.nota_c1}</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-sm font-medium">C2</div>
-                                  <div className="text-2xl font-bold text-blue-600">{redacao.nota_c2}</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-sm font-medium">C3</div>
-                                  <div className="text-2xl font-bold text-blue-600">{redacao.nota_c3}</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-sm font-medium">C4</div>
-                                  <div className="text-2xl font-bold text-blue-600">{redacao.nota_c4}</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-sm font-medium">C5</div>
-                                  <div className="text-2xl font-bold text-blue-600">{redacao.nota_c5}</div>
-                                </div>
-                              </div>
-
-                              <div className="text-center">
-                                <div className="text-sm font-medium">Nota Total</div>
-                                <div className="text-3xl font-bold text-green-600">{redacao.nota_total}</div>
-                              </div>
-
-                              {redacao.comentario_admin && (
-                                <div>
-                                  <h4 className="font-medium mb-2">Comentário Administrativo</h4>
-                                  <div className="bg-gray-50 p-3 rounded">
-                                    {redacao.comentario_admin}
-                                  </div>
-                                </div>
-                              )}
-
-                              {redacao.data_correcao && (
-                                <div className="text-sm text-gray-500">
-                                  Corrigida em: {new Date(redacao.data_correcao).toLocaleString('pt-BR')}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={cancelEditing}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startEditing(redacao)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    Enviada em: {new Date(redacao.data_envio).toLocaleString('pt-BR')}
+                <div className="space-y-4">
+                  <div>
+                    <strong>Redação:</strong>
+                    <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                      <p className="whitespace-pre-wrap">{redacao.redacao_texto}</p>
+                    </div>
                   </div>
-                  
-                  {redacao.corrigida && redacao.nota_total !== null && (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default">
-                        Nota: {redacao.nota_total}/1000
-                      </Badge>
-                      {redacao.data_correcao && (
-                        <span className="text-sm text-gray-500">
-                          Corrigida em: {new Date(redacao.data_correcao).toLocaleString('pt-BR')}
-                        </span>
+
+                  {editingId === redacao.id ? (
+                    <div className="space-y-4 border-t pt-4">
+                      <div className="grid grid-cols-5 gap-2">
+                        {['C1', 'C2', 'C3', 'C4', 'C5'].map((comp, index) => (
+                          <div key={comp}>
+                            <Label htmlFor={`nota_${comp.toLowerCase()}`}>{comp}</Label>
+                            <Input
+                              id={`nota_${comp.toLowerCase()}`}
+                              type="number"
+                              min="0"
+                              max="200"
+                              value={editData[`nota_${comp.toLowerCase()}`] || 0}
+                              onChange={(e) => setEditData({
+                                ...editData,
+                                [`nota_${comp.toLowerCase()}`]: parseInt(e.target.value) || 0
+                              })}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div>
+                        <Label htmlFor="comentario">Comentário</Label>
+                        <Textarea
+                          id="comentario"
+                          value={editData.comentario_admin || ""}
+                          onChange={(e) => setEditData({
+                            ...editData,
+                            comentario_admin: e.target.value
+                          })}
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  ) : redacao.corrigida && (
+                    <div className="space-y-2 border-t pt-4">
+                      <div className="grid grid-cols-5 gap-2">
+                        <div>C1: {redacao.nota_c1 || 0}</div>
+                        <div>C2: {redacao.nota_c2 || 0}</div>
+                        <div>C3: {redacao.nota_c3 || 0}</div>
+                        <div>C4: {redacao.nota_c4 || 0}</div>
+                        <div>C5: {redacao.nota_c5 || 0}</div>
+                      </div>
+                      <div><strong>Total: {redacao.nota_total || 0}</strong></div>
+                      {redacao.comentario_admin && (
+                        <div>
+                          <strong>Comentário:</strong>
+                          <p className="mt-1">{redacao.comentario_admin}</p>
+                        </div>
                       )}
+                      <div className="text-sm text-gray-500">
+                        Corrigida em: {redacao.data_correcao ? new Date(redacao.data_correcao).toLocaleString('pt-BR') : '-'}
+                      </div>
                     </div>
                   )}
-                  
-                  <div className="text-sm text-gray-600">
-                    Texto: {redacao.redacao_texto.substring(0, 150)}...
+
+                  <div className="text-sm text-gray-500">
+                    Enviada em: {new Date(redacao.data_envio).toLocaleString('pt-BR')}
                   </div>
                 </div>
               </CardContent>

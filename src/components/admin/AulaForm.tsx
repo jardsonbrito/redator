@@ -55,7 +55,7 @@ export const AulaForm = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("aulas")
         .insert({
           titulo,

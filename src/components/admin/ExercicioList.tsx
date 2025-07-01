@@ -48,7 +48,7 @@ export const ExercicioList = () => {
 
   const fetchExercicios = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("exercicios")
         .select(`
           *,
@@ -89,7 +89,7 @@ export const ExercicioList = () => {
     if (!confirm("Tem certeza que deseja excluir este exercício?")) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("exercicios")
         .delete()
         .eq("id", id);
@@ -106,7 +106,7 @@ export const ExercicioList = () => {
 
   const toggleAtivo = async (id: string, ativo: boolean) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("exercicios")
         .update({ ativo: !ativo })
         .eq("id", id);
