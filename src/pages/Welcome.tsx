@@ -153,7 +153,7 @@ const Welcome = () => {
           <div className="text-center mb-8">
             {/* Logo no topo */}
             <div className="flex justify-center mb-6">
-              <img alt="Logo da plataforma" className="w-20 h-20 object-contain" src="/lovable-uploads/b95bdcfe-ba6c-4d51-9298-831a8bcb48a9.png" />
+              <img alt="Logo da plataforma" className="w-20 h-20 object-contain" src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" />
             </div>
           
           {/* Texto de boas-vindas */}
