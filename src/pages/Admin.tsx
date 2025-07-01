@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
@@ -31,8 +32,8 @@ import ExercicioForm from "@/components/admin/ExercicioForm";
 import ExercicioList from "@/components/admin/ExercicioList";
 import { RedacaoEnviadaForm } from "@/components/admin/RedacaoEnviadaForm";
 
-// Import new simulado components
-import SimuladoForm from "@/components/admin/SimuladoForm";
+// Import new simulado components with correct named imports
+import { SimuladoForm } from "@/components/admin/SimuladoForm";
 import SimuladoList from "@/components/admin/SimuladoList";
 import RedacaoSimuladoList from "@/components/admin/RedacaoSimuladoList";
 
