@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useContentAvailability = (turmaCode: string) => {
-  const checkAulas = async (): Promise<boolean> => {
+  const checkAulas = async () => {
     if (!turmaCode) return false;
     
     try {
@@ -30,7 +30,7 @@ export const useContentAvailability = (turmaCode: string) => {
     }
   };
 
-  const checkExercicios = async (): Promise<boolean> => {
+  const checkExercicios = async () => {
     if (!turmaCode) return false;
     
     try {
@@ -57,7 +57,7 @@ export const useContentAvailability = (turmaCode: string) => {
     }
   };
 
-  const checkSimulados = async (): Promise<boolean> => {
+  const checkSimulados = async () => {
     if (!turmaCode) return false;
     
     try {
@@ -74,7 +74,7 @@ export const useContentAvailability = (turmaCode: string) => {
     }
   };
 
-  const checkRedacoesTurma = async (): Promise<boolean> => {
+  const checkRedacoesTurma = async () => {
     if (!turmaCode || turmaCode === "Visitante") return false;
     
     try {
@@ -87,7 +87,7 @@ export const useContentAvailability = (turmaCode: string) => {
     }
   };
 
-  const checkBiblioteca = async (): Promise<boolean> => {
+  const checkBiblioteca = async () => {
     if (!turmaCode) return false;
     
     try {
@@ -107,31 +107,36 @@ export const useContentAvailability = (turmaCode: string) => {
   const aulasQuery = useQuery({
     queryKey: ['has-aulas', turmaCode],
     queryFn: checkAulas,
-    enabled: Boolean(turmaCode)
+    enabled: Boolean(turmaCode),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const exerciciosQuery = useQuery({
     queryKey: ['has-exercicios', turmaCode],
     queryFn: checkExercicios,
-    enabled: Boolean(turmaCode)
+    enabled: Boolean(turmaCode),
+    staleTime: 5 * 60 * 1000,
   });
 
   const simuladosQuery = useQuery({
     queryKey: ['has-simulados', turmaCode],
     queryFn: checkSimulados,
-    enabled: Boolean(turmaCode)
+    enabled: Boolean(turmaCode),
+    staleTime: 5 * 60 * 1000,
   });
 
   const redacoesTurmaQuery = useQuery({
     queryKey: ['has-redacoes-turma', turmaCode],
     queryFn: checkRedacoesTurma,
-    enabled: Boolean(turmaCode && turmaCode !== "Visitante")
+    enabled: Boolean(turmaCode && turmaCode !== "Visitante"),
+    staleTime: 5 * 60 * 1000,
   });
 
   const bibliotecaQuery = useQuery({
     queryKey: ['has-biblioteca', turmaCode],
     queryFn: checkBiblioteca,
-    enabled: Boolean(turmaCode)
+    enabled: Boolean(turmaCode),
+    staleTime: 5 * 60 * 1000,
   });
 
   return {
