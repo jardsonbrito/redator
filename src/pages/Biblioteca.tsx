@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,35 +23,44 @@ const Biblioteca = () => {
     turmaCode = studentData.turma;
   }
 
-  const { data: materiais, isLoading } = useQuery({
+  const { data: materiais, isLoading, error } = useQuery({
     queryKey: ['biblioteca-materiais', turmaCode, busca, competenciaFiltro],
     queryFn: async () => {
-      let query = supabase
-        .from('biblioteca_materiais')
-        .select('*')
-        .eq('status', 'publicado')
-        .order('data_publicacao', { ascending: false });
+      try {
+        let query = supabase
+          .from('biblioteca_materiais')
+          .select('*')
+          .eq('status', 'publicado')
+          .order('data_publicacao', { ascending: false });
 
-      // Filtra por turma ou visitante
-      if (turmaCode === "Visitante") {
-        query = query.eq('permite_visitante', true);
-      } else {
-        query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
-      }
+        // Filtra por turma ou visitante
+        if (turmaCode === "Visitante") {
+          query = query.eq('permite_visitante', true);
+        } else {
+          query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
+        }
 
-      // Aplica filtros de busca
-      if (busca) {
-        query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
-      }
+        // Aplica filtros de busca
+        if (busca) {
+          query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
+        }
 
-      if (competenciaFiltro && competenciaFiltro !== "todas") {
-        query = query.eq('competencia', competenciaFiltro);
+        if (competenciaFiltro && competenciaFiltro !== "todas") {
+          query = query.eq('competencia', competenciaFiltro);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error('Database error:', error);
+          throw error;
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.error('Query error:', error);
+        throw error;
       }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return data;
     }
   });
 
@@ -62,7 +70,10 @@ const Biblioteca = () => {
         .from('biblioteca-pdfs')
         .download(arquivoUrl);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Download error:', error);
+        throw error;
+      }
 
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
@@ -96,6 +107,10 @@ const Biblioteca = () => {
         </main>
       </div>
     );
+  }
+
+  if (error) {
+    console.error('Biblioteca error:', error);
   }
 
   return (

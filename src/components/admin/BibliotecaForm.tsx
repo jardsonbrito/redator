@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +73,10 @@ export const BibliotecaForm = () => {
       .from('biblioteca-pdfs')
       .upload(fileName, file);
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw uploadError;
+    }
 
     return {
       url: fileName,
@@ -114,7 +116,10 @@ export const BibliotecaForm = () => {
           status: formData.status
         }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       toast({
         title: "✅ Material cadastrado!",
