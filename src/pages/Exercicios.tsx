@@ -18,7 +18,7 @@ interface Exercicio {
   link_forms?: string;
   tema_id?: string;
   imagem_capa_url?: string;
-  turmas_autorizadas: string[];
+  turmas_autorizadas: string[] | null;
   permite_visitante: boolean;
   ativo: boolean;
   criado_em: string;
@@ -74,20 +74,39 @@ const Exercicios = () => {
   };
 
   const filterExercicios = () => {
+    console.log('🔍 Filtrando exercícios:', { 
+      totalExercicios: exercicios.length, 
+      userType: studentData.userType, 
+      userTurma: studentData.turma 
+    });
+
     let filtered = exercicios.filter(exercicio => {
+      console.log('📝 Verificando exercício:', { 
+        titulo: exercicio.titulo, 
+        turmasAutorizadas: exercicio.turmas_autorizadas, 
+        permiteVisitante: exercicio.permite_visitante,
+        ativo: exercicio.ativo
+      });
+
       // Verificar se o usuário tem acesso
       const isVisitante = studentData.userType === "visitante";
       const userTurma = studentData.turma;
 
       // Permitir se for visitante e exercício permite visitante
-      if (isVisitante && exercicio.permite_visitante) return true;
-      
-      // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio
-      if (!isVisitante && userTurma && 
-          (exercicio.turmas_autorizadas.length === 0 || exercicio.turmas_autorizadas.includes(userTurma))) {
+      if (isVisitante && exercicio.permite_visitante) {
+        console.log('✅ Acesso de visitante permitido');
         return true;
       }
+      
+      // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
+      if (!isVisitante && userTurma) {
+        const turmasAutorizadas = exercicio.turmas_autorizadas || [];
+        const hasAccess = turmasAutorizadas.length === 0 || turmasAutorizadas.includes(userTurma);
+        console.log('👤 Verificando acesso do aluno:', { userTurma, turmasAutorizadas, hasAccess });
+        return hasAccess;
+      }
 
+      console.log('❌ Acesso negado');
       return false;
     });
 
@@ -102,6 +121,7 @@ const Exercicios = () => {
       filtered = filtered.filter(exercicio => exercicio.tipo === tipoFilter);
     }
 
+    console.log('📊 Resultado da filtragem:', { totalFiltrados: filtered.length });
     setFilteredExercicios(filtered);
   };
 

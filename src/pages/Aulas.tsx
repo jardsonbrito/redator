@@ -18,7 +18,7 @@ interface Aula {
   link_conteudo: string;
   pdf_url?: string;
   pdf_nome?: string;
-  turmas_autorizadas: string[];
+  turmas_autorizadas: string[] | null;
   permite_visitante: boolean;
   ativo: boolean;
   criado_em: string;
@@ -67,20 +67,39 @@ const Aulas = () => {
   };
 
   const filterAulas = () => {
+    console.log('🔍 Filtrando aulas:', { 
+      totalAulas: aulas.length, 
+      userType: studentData.userType, 
+      userTurma: studentData.turma 
+    });
+
     let filtered = aulas.filter(aula => {
+      console.log('📚 Verificando aula:', { 
+        titulo: aula.titulo, 
+        turmasAutorizadas: aula.turmas_autorizadas, 
+        permiteVisitante: aula.permite_visitante,
+        ativo: aula.ativo
+      });
+
       // Verificar se o usuário tem acesso
       const isVisitante = studentData.userType === "visitante";
       const userTurma = studentData.turma;
 
       // Permitir se for visitante e aula permite visitante
-      if (isVisitante && aula.permite_visitante) return true;
-      
-      // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio
-      if (!isVisitante && userTurma && 
-          (aula.turmas_autorizadas.length === 0 || aula.turmas_autorizadas.includes(userTurma))) {
+      if (isVisitante && aula.permite_visitante) {
+        console.log('✅ Acesso de visitante permitido');
         return true;
       }
+      
+      // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
+      if (!isVisitante && userTurma) {
+        const turmasAutorizadas = aula.turmas_autorizadas || [];
+        const hasAccess = turmasAutorizadas.length === 0 || turmasAutorizadas.includes(userTurma);
+        console.log('👤 Verificando acesso do aluno:', { userTurma, turmasAutorizadas, hasAccess });
+        return hasAccess;
+      }
 
+      console.log('❌ Acesso negado');
       return false;
     });
 
@@ -96,6 +115,7 @@ const Aulas = () => {
       filtered = filtered.filter(aula => aula.modulo === moduloFilter);
     }
 
+    console.log('📊 Resultado da filtragem:', { totalFiltradas: filtered.length });
     setFilteredAulas(filtered);
   };
 
@@ -176,12 +196,21 @@ const Aulas = () => {
               </Card>
             ) : (
               filteredAulas.map((aula) => (
-                <Card key={aula.id} className="hover:shadow-lg transition-shadow">
+                <Card key={aula.id} className={`hover:shadow-lg transition-shadow ${
+                  aula.modulo === 'Aula ao vivo' ? 'border-l-4 border-l-red-500 bg-red-50' : ''
+                }`}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-xl mb-2">{aula.titulo}</CardTitle>
-                        <Badge variant="outline" className="mb-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`mb-2 ${
+                            aula.modulo === 'Aula ao vivo' 
+                              ? 'bg-red-100 text-red-800 border-red-300' 
+                              : ''
+                          }`}
+                        >
                           {aula.modulo}
                         </Badge>
                       </div>
