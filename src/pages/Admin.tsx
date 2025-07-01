@@ -40,9 +40,9 @@ import BibliotecaList from "@/components/admin/BibliotecaList";
 
 // Import new components for Aulas and Exercicios
 import { AulaForm } from "@/components/admin/AulaForm";
-import { AulaList } from "@/components/admin/AulaList";
+import { SimpleAulaList } from "@/components/admin/SimpleAulaList";
 import { ExercicioForm } from "@/components/admin/ExercicioForm";
-import { ExercicioList } from "@/components/admin/ExercicioList";
+import { SimpleExercicioList } from "@/components/admin/SimpleExercicioList";
 import { RedacaoExercicioList } from "@/components/admin/RedacaoExercicioList";
 
 const Admin = () => {
@@ -162,7 +162,7 @@ const Admin = () => {
               <TabsTrigger value="create">Criar Aula</TabsTrigger>
             </TabsList>
             <TabsContent value="list">
-              <AulaList />
+              <SimpleAulaList />
             </TabsContent>
             <TabsContent value="create">
               <AulaForm />
@@ -179,7 +179,7 @@ const Admin = () => {
               <TabsTrigger value="redacoes">Redações</TabsTrigger>
             </TabsList>
             <TabsContent value="list">
-              <ExercicioList />
+              <SimpleExercicioList />
             </TabsContent>
             <TabsContent value="create">
               <ExercicioForm />
