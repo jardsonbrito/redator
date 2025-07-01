@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send, Award, Home, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -17,17 +16,11 @@ const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
   
-  // Determina a turma/código do usuário
-  let turmaCode = "visitante";
+  // Determina a turma/código do usuário - NOMES CORRETOS DAS TURMAS
+  let turmaCode = "Visitante";
   if (studentData.userType === "aluno" && studentData.turma) {
-    const turmasMap = {
-      "Turma A": "LRA2025",
-      "Turma B": "LRB2025", 
-      "Turma C": "LRC2025",
-      "Turma D": "LRD2025",
-      "Turma E": "LRE2025"
-    };
-    turmaCode = turmasMap[studentData.turma as keyof typeof turmasMap] || "visitante";
+    // Manter os nomes originais das turmas sem códigos
+    turmaCode = studentData.turma;
   }
 
   // Verifica se há aulas disponíveis

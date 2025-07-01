@@ -34,8 +34,8 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
           .gte('data_fim', dataAtual)
           .order('data_inicio', { ascending: true });
 
-        // Filtra por turma ou permite visitantes
-        if (turmaCode === "visitante") {
+        // Filtra por turma ou permite visitantes - NOMES CORRETOS DAS TURMAS
+        if (turmaCode === "Visitante") {
           query = query.eq('permite_visitante', true);
         } else {
           query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
@@ -157,10 +157,10 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
               </div>
             </div>
 
-            {/* Informação da turma */}
+            {/* Informação da turma - NOMES CORRETOS */}
             <div className={`p-3 rounded-lg ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
               <span className="font-medium">
-                Turma: {turmaCode === "visitante" ? "Visitantes" : turmaCode}
+                Turma: {turmaCode === "Visitante" ? "Visitantes" : turmaCode}
               </span>
             </div>
           </div>

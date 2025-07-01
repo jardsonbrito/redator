@@ -32,9 +32,9 @@ export const SimuladoForm = () => {
   const [buscaTema, setBuscaTema] = useState('');
   const [turmaSelecionada, setTurmaSelecionada] = useState('');
 
-  // Lista oficial de turmas do sistema
+  // Lista oficial de turmas do sistema - NOMES CORRETOS
   const turmasOficiais = [
-    'LRA2025', 'LRB2025', 'LRC2025', 'LRD2025', 'LRE2025'
+    'Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'
   ];
 
   // Buscar temas disponíveis (incluindo rascunhos para uso em simulados)
@@ -93,7 +93,7 @@ export const SimuladoForm = () => {
     try {
       // Não publicar o tema aqui - manter como está
       const dataToInsert = {
-        titulo: formData.titulo,
+        titulo: formData.titulo || 'Simulado', // Valor padrão se não preenchido
         tema_id: formData.tema_id,
         frase_tematica: temaEscolhido?.frase_tematica || '',
         data_inicio: formData.data_inicio,
@@ -146,14 +146,14 @@ export const SimuladoForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <Label htmlFor="titulo">Título do Simulado *</Label>
+        <Label htmlFor="titulo">Título do Simulado (opcional)</Label>
         <Input
           id="titulo"
           value={formData.titulo}
           onChange={(e) => setFormData({...formData, titulo: e.target.value})}
           placeholder="Ex: Simulado ENEM - Novembro 2024"
-          required
         />
+        <p className="text-xs text-gray-500 mt-1">Se não preenchido, será usado "Simulado" como padrão</p>
       </div>
 
       <div>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -215,8 +214,8 @@ export default function SimuladoDetalhes() {
         </CardHeader>
       </Card>
 
-      {/* Conteúdo do Tema */}
-      {tema && (
+      {/* Conteúdo do Tema - SOMENTE SE SIMULADO ESTIVER EM PROGRESSO */}
+      {simuladoDisponivel && tema && (
         <Card className="mb-6">
           <CardContent className="p-6">
             {/* Cabeçalho ENEM */}
@@ -282,7 +281,7 @@ export default function SimuladoDetalhes() {
         </Card>
       )}
 
-      {/* Formulário de Envio */}
+      {/* Formulário de Envio - SOMENTE SE SIMULADO ESTIVER EM PROGRESSO */}
       {simuladoDisponivel && (
         <Card>
           <CardHeader>
@@ -365,6 +364,11 @@ export default function SimuladoDetalhes() {
             <p className="text-gray-600">
               Este simulado será aberto em {format(inicioSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </p>
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700 font-medium">
+                🔒 A frase temática será exibida apenas quando o simulado iniciar
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
