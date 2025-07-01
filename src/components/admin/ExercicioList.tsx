@@ -48,6 +48,7 @@ export const ExercicioList = () => {
 
   const fetchExercicios = async () => {
     try {
+      console.log('🔍 Buscando exercícios...');
       const { data, error } = await supabase
         .from("exercicios")
         .select(`
@@ -58,6 +59,9 @@ export const ExercicioList = () => {
           )
         `)
         .order("criado_em", { ascending: false });
+
+      console.log('✅ Dados recebidos:', data);
+      console.log('❌ Erro:', error);
 
       if (error) throw error;
       setExercicios(data || []);

@@ -49,7 +49,10 @@ const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
 
+  console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
+
   if (!user || !isAdmin) {
+    console.log('❌ Redirecionando para login - User:', !!user, 'IsAdmin:', isAdmin);
     return <Navigate to="/login" replace />;
   }
 

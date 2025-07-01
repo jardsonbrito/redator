@@ -55,6 +55,11 @@ export const AulaForm = () => {
     setIsLoading(true);
 
     try {
+      console.log('📝 Criando aula com dados:', {
+        titulo, descricao, modulo, linkConteudo,
+        turmasAutorizadas, permiteVisitante, ativo
+      });
+
       const { error } = await supabase
         .from("aulas")
         .insert({
@@ -68,6 +73,8 @@ export const AulaForm = () => {
           permite_visitante: permiteVisitante,
           ativo
         });
+
+      console.log('✅ Resultado da inserção:', { error });
 
       if (error) throw error;
 

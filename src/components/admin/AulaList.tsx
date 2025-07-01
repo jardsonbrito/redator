@@ -49,10 +49,14 @@ export const AulaList = () => {
 
   const fetchAulas = async () => {
     try {
+      console.log('🔍 Buscando aulas...');
       const { data, error } = await supabase
         .from("aulas")
         .select("*")
         .order("criado_em", { ascending: false });
+
+      console.log('✅ Dados recebidos:', data);
+      console.log('❌ Erro:', error);
 
       if (error) throw error;
       setAulas(data || []);
