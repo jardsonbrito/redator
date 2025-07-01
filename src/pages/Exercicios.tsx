@@ -5,10 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { ClipboardList, Home, ExternalLink, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 const Exercicios = () => {
-  // Recupera a turma do localStorage
-  const alunoTurma = localStorage.getItem("alunoTurma");
+  const { studentData } = useStudentAuth();
+  
+  // Mapear turma para código interno
   const turmasMap = {
     "Turma A": "LRA2025",
     "Turma B": "LRB2025", 
@@ -16,20 +18,25 @@ const Exercicios = () => {
     "Turma D": "LRD2025",
     "Turma E": "LRE2025"
   };
-  const turmaCode = alunoTurma ? turmasMap[alunoTurma as keyof typeof turmasMap] : null;
+  
+  let turmaCode = "Visitante";
+  if (studentData.userType === "aluno" && studentData.turma) {
+    turmaCode = turmasMap[studentData.turma as keyof typeof turmasMap] || "Visitante";
+  } else if (studentData.userType === "visitante") {
+    turmaCode = "Visitante";
+  }
 
   const { data: exercicios, isLoading } = useQuery({
     queryKey: ['exercicios', turmaCode],
     queryFn: async () => {
       console.log("Fetching exercicios for turma:", turmaCode);
       
-      if (!turmaCode) {
-        // Se não há código de turma, retorna exercícios sem filtro de turma (conteúdo legado)
+      if (turmaCode === "Visitante") {
         const { data, error } = await supabase
           .from('exercicios')
           .select('*')
           .eq('ativo', true)
-          .is('turmas', null)
+          .eq('permite_visitante', true)
           .order('criado_em', { ascending: false });
         
         if (error) {
@@ -44,7 +51,7 @@ const Exercicios = () => {
         .from('exercicios')
         .select('*')
         .eq('ativo', true)
-        .or(`turmas.cs.{${turmaCode}},turmas.is.null`)
+        .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
         .order('criado_em', { ascending: false });
       
       if (error) {
@@ -104,10 +111,13 @@ const Exercicios = () => {
           <div className="text-center py-12">
             <ClipboardList className="w-16 h-16 text-redator-accent mx-auto mb-4 opacity-50" />
             <h3 className="text-xl font-semibold text-redator-primary mb-2">
-              Nenhum exercício disponível para sua turma
+              Nenhum exercício disponível
             </h3>
             <p className="text-redator-accent">
-              Os exercícios aparecerão aqui quando forem cadastrados para sua turma pelo professor.
+              {studentData.userType === "visitante" 
+                ? "Não há exercícios disponíveis para visitantes no momento."
+                : "Os exercícios aparecerão aqui quando forem cadastrados para sua turma pelo professor."
+              }
             </p>
           </div>
         ) : (
