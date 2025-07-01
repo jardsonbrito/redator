@@ -20,6 +20,8 @@ import Simulados from "./pages/Simulados";
 import SimuladoDetalhes from "./pages/SimuladoDetalhes";
 import MeusSimulados from "./pages/MeusSimulados";
 import EnvieRedacao from "./pages/EnvieRedacao";
+import Aulas from "./pages/Aulas";
+import Exercicios from "./pages/Exercicios";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -48,6 +50,8 @@ const App = () => (
               <Route path="/simulados" element={<Simulados />} />
               <Route path="/simulados/:id" element={<SimuladoDetalhes />} />
               <Route path="/meus-simulados" element={<MeusSimulados />} />
+              <Route path="/aulas" element={<Aulas />} />
+              <Route path="/exercicios" element={<Exercicios />} />
               <Route path="/envie-redacao" element={<EnvieRedacao />} />
               <Route path="/login" element={<Login />} />
               <Route path="/admin" element={<Admin />} />

@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -55,6 +55,20 @@ const Index = () => {
       path: "/simulados",
       icon: ClipboardCheck,
       tooltip: "Participe de simulados com horário controlado e correção detalhada.",
+      showAlways: true
+    },
+    {
+      title: "Aulas",
+      path: "/aulas",
+      icon: GraduationCap,
+      tooltip: "Acesse aulas organizadas por competência.",
+      showAlways: true
+    },
+    {
+      title: "Exercícios",
+      path: "/exercicios", 
+      icon: NotebookPen,
+      tooltip: "Pratique com exercícios direcionados.",
       showAlways: true
     },
     {
