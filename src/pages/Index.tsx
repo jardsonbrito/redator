@@ -12,6 +12,87 @@ import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
+// Funções auxiliares para simplificar as queries
+const checkAulasDisponivel = async (turmaCode: string): Promise<boolean> => {
+  console.log("Checking aulas for turma:", turmaCode);
+  
+  try {
+    if (turmaCode === "Visitante") {
+      const { data, error } = await supabase
+        .from('aulas')
+        .select('id')
+        .eq('ativo', true)
+        .eq('permite_visitante', true)
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking aulas for visitante:', error);
+        return false;
+      }
+      
+      console.log("Aulas found for visitante:", data);
+      return Boolean(data && data.length > 0);
+    } else {
+      const { data, error } = await supabase
+        .from('aulas')
+        .select('id')
+        .eq('ativo', true)
+        .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking aulas for turma:', turmaCode, error);
+        return false;
+      }
+      
+      console.log("Aulas found for turma:", turmaCode, data);
+      return Boolean(data && data.length > 0);
+    }
+  } catch (error) {
+    console.error('Error in hasAulas query:', error);
+    return false;
+  }
+};
+
+const checkExerciciosDisponivel = async (turmaCode: string): Promise<boolean> => {
+  if (!turmaCode) return false;
+  
+  try {
+    if (turmaCode === "Visitante") {
+      const { data, error } = await supabase
+        .from('exercicios')
+        .select('id')
+        .eq('ativo', true)
+        .eq('permite_visitante', true)
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking exercicios for visitante:', error);
+        return false;
+      }
+      
+      return Boolean(data && data.length > 0);
+    } else {
+      const { data, error } = await supabase
+        .from('exercicios')
+        .select('id')
+        .eq('ativo', true)
+        .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking exercicios for turma:', turmaCode, error);
+        return false;
+      }
+      
+      return Boolean(data && data.length > 0);
+    }
+  } catch (error) {
+    console.error('Error in hasExercicios query:', error);
+    return false;
+  }
+};
+
 const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
@@ -22,93 +103,17 @@ const Index = () => {
     turmaCode = studentData.turma; // Usar o nome real da turma (ex: "Turma A")
   }
 
-  // Verifica se há aulas disponíveis - lógica simplificada com typing explícito
-  const { data: hasAulas } = useQuery<boolean>({
+  // Verifica se há aulas disponíveis - usando função auxiliar
+  const { data: hasAulas } = useQuery({
     queryKey: ['has-aulas', turmaCode],
-    queryFn: async (): Promise<boolean> => {
-      console.log("Checking aulas for turma:", turmaCode);
-      
-      try {
-        if (turmaCode === "Visitante") {
-          const { data, error } = await supabase
-            .from('aulas')
-            .select('id')
-            .eq('ativo', true)
-            .eq('permite_visitante', true)
-            .limit(1);
-          
-          if (error) {
-            console.error('Error checking aulas for visitante:', error);
-            return false;
-          }
-          
-          console.log("Aulas found for visitante:", data);
-          return Boolean(data && data.length > 0);
-        } else {
-          const { data, error } = await supabase
-            .from('aulas')
-            .select('id')
-            .eq('ativo', true)
-            .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
-            .limit(1);
-          
-          if (error) {
-            console.error('Error checking aulas for turma:', turmaCode, error);
-            return false;
-          }
-          
-          console.log("Aulas found for turma:", turmaCode, data);
-          return Boolean(data && data.length > 0);
-        }
-      } catch (error) {
-        console.error('Error in hasAulas query:', error);
-        return false;
-      }
-    },
+    queryFn: () => checkAulasDisponivel(turmaCode),
     enabled: !!turmaCode
   });
 
-  // Verifica se há exercícios disponíveis - lógica simplificada com typing explícito
-  const { data: hasExercicios } = useQuery<boolean>({
+  // Verifica se há exercícios disponíveis - usando função auxiliar
+  const { data: hasExercicios } = useQuery({
     queryKey: ['has-exercicios', turmaCode],
-    queryFn: async (): Promise<boolean> => {
-      if (!turmaCode) return false;
-      
-      try {
-        if (turmaCode === "Visitante") {
-          const { data, error } = await supabase
-            .from('exercicios')
-            .select('id')
-            .eq('ativo', true)
-            .eq('permite_visitante', true)
-            .limit(1);
-          
-          if (error) {
-            console.error('Error checking exercicios for visitante:', error);
-            return false;
-          }
-          
-          return Boolean(data && data.length > 0);
-        } else {
-          const { data, error } = await supabase
-            .from('exercicios')
-            .select('id')
-            .eq('ativo', true)
-            .or(`turmas.cs.{${turmaCode}},permite_visitante.eq.true`)
-            .limit(1);
-          
-          if (error) {
-            console.error('Error checking exercicios for turma:', turmaCode, error);
-            return false;
-          }
-          
-          return Boolean(data && data.length > 0);
-        }
-      } catch (error) {
-        console.error('Error in hasExercicios query:', error);
-        return false;
-      }
-    },
+    queryFn: () => checkExerciciosDisponivel(turmaCode),
     enabled: !!turmaCode
   });
 
