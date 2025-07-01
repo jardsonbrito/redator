@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { SimuladoAtivo } from "@/components/SimuladoAtivo";
-import { MeusSimuladosCard } from "@/components/MeusSimuladosCard";
+import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
@@ -96,33 +96,6 @@ const Index = () => {
     }
   });
 
-  // Verifica se há redações corrigidas para "Meus Simulados"
-  const { data: hasRedacoesCorrigidas } = useQuery({
-    queryKey: ['has-redacoes-corrigidas', turmaCode],
-    queryFn: async () => {
-      let query = supabase
-        .from('redacoes_simulado')
-        .select('id')
-        .eq('corrigida', true)
-        .limit(1);
-
-      if (turmaCode !== "visitante") {
-        query = query.eq('turma', turmaCode);
-      } else {
-        query = query.eq('turma', 'visitante');
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error checking redacoes corrigidas:', error);
-        return false;
-      }
-      
-      return data && data.length > 0;
-    }
-  });
-
   // Verifica se há redações da turma (para "Minhas Redações")
   const { data: hasRedacoesTurma } = useQuery({
     queryKey: ['has-redacoes-turma', turmaCode],
@@ -189,14 +162,6 @@ const Index = () => {
       showCondition: hasSimulados
     },
     {
-      title: "Meus Simulados",
-      path: "/meus-simulados",
-      icon: Award,
-      tooltip: "Veja suas redações de simulados corrigidas e pontuadas.",
-      showAlways: false,
-      showCondition: hasRedacoesCorrigidas
-    },
-    {
       title: "Enviar Redação (Avulsa)",
       path: "/envie-redacao",
       icon: Send,
@@ -242,29 +207,23 @@ const Index = () => {
               <p className="text-xl text-redator-accent font-medium mb-8">Redação na prática, aprovação na certa!</p>
             </div>
 
-            {/* Simulado Ativo - SEMPRE em destaque no topo, independente de turma */}
-            <div className="mb-12">
-              <SimuladoAtivo turmaCode={turmaCode} />
-            </div>
+            {/* Simulado Ativo - SEMPRE em destaque no topo */}
+            <SimuladoAtivo turmaCode={turmaCode} />
 
             {/* Seção "Minhas Redações" - apenas para alunos de turma com redações */}
             {showMinhasRedacoes && (
-              <div className="mb-12">
+              <div className="mb-8">
                 <MinhasRedacoes />
               </div>
             )}
 
-            {/* Card "Meus Simulados" - sempre visível para alunos de turma */}
-            {studentData.userType === "aluno" && studentData.turma && (
-              <div className="mb-12">
-                <MeusSimuladosCard turmaCode={turmaCode} />
-              </div>
-            )}
+            {/* Card "Meus Simulados" - apenas se houver redações corrigidas */}
+            <MeusSimuladosFixo turmaCode={turmaCode} />
 
             {/* Menu Principal Horizontal */}
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-redator-primary text-center">
-                {showMinhasRedacoes || (studentData.userType === "aluno" && studentData.turma) ? "Explorar outras seções:" : "Escolha por onde começar:"}
+                {showMinhasRedacoes ? "Explorar outras seções:" : "Escolha por onde começar:"}
               </h2>
               
               <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 max-w-5xl mx-auto ${
