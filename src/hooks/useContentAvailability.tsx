@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const useContentAvailability = (turmaCode: string) => {
   const aulasQuery = useQuery({
     queryKey: ['has-aulas', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
       try {
@@ -32,12 +32,12 @@ export const useContentAvailability = (turmaCode: string) => {
       }
     },
     enabled: Boolean(turmaCode),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 300000, // 5 minutes
   });
 
   const exerciciosQuery = useQuery({
     queryKey: ['has-exercicios', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
       try {
@@ -64,12 +64,12 @@ export const useContentAvailability = (turmaCode: string) => {
       }
     },
     enabled: Boolean(turmaCode),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 300000, // 5 minutes
   });
 
   const simuladosQuery = useQuery({
     queryKey: ['has-simulados', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
       try {
@@ -86,12 +86,12 @@ export const useContentAvailability = (turmaCode: string) => {
       }
     },
     enabled: Boolean(turmaCode),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 300000, // 5 minutes
   });
 
   const redacoesTurmaQuery = useQuery({
     queryKey: ['has-redacoes-turma', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode || turmaCode === "Visitante") return false;
       
       try {
@@ -104,12 +104,12 @@ export const useContentAvailability = (turmaCode: string) => {
       }
     },
     enabled: Boolean(turmaCode && turmaCode !== "Visitante"),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 300000, // 5 minutes
   });
 
   const bibliotecaQuery = useQuery({
     queryKey: ['has-biblioteca', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
       try {
@@ -126,7 +126,7 @@ export const useContentAvailability = (turmaCode: string) => {
       }
     },
     enabled: Boolean(turmaCode),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 300000, // 5 minutes
   });
 
   return {
