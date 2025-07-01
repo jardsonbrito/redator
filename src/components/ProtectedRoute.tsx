@@ -17,8 +17,12 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const loginPages = ['/aluno-login', '/visitante-login', '/login', '/'];
     const isLoginPage = loginPages.includes(location.pathname);
     
+    console.log('ProtectedRoute - isStudentLoggedIn:', isStudentLoggedIn);
+    console.log('ProtectedRoute - current path:', location.pathname);
+    console.log('ProtectedRoute - isLoginPage:', isLoginPage);
+    
     if (!isStudentLoggedIn && !isLoginPage) {
-      // Se não está logado e não está numa página de login, redirecionar
+      console.log('Redirecionando para login - usuário não logado');
       navigate('/aluno-login', { replace: true });
     }
   }, [isStudentLoggedIn, navigate, location.pathname]);

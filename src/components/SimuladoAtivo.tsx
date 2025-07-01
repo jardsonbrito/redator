@@ -18,42 +18,58 @@ interface SimuladoAtivoProps {
 export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
   const { toast } = useToast();
 
-  const { data: simulados, refetch } = useQuery({
+  const { data: simulados, refetch, error } = useQuery({
     queryKey: ['simulados-agendados', turmaCode],
     queryFn: async () => {
-      const agora = new Date();
-      const dataAtual = agora.toISOString().split('T')[0];
+      try {
+        const agora = new Date();
+        const dataAtual = agora.toISOString().split('T')[0];
 
-      let query = supabase
-        .from('simulados')
-        .select('*')
-        .eq('ativo', true)
-        .gte('data_fim', dataAtual);
+        let query = supabase
+          .from('simulados')
+          .select('*')
+          .eq('ativo', true)
+          .gte('data_fim', dataAtual);
 
-      // Filtra por turma ou permite visitantes
-      if (turmaCode === "visitante") {
-        query = query.eq('permite_visitante', true);
-      } else {
-        query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
-      }
-      
-      const { data, error } = await query.order('data_inicio', { ascending: true });
-      
-      if (error) throw error;
-      
-      // Filtra simulados que estão no período de exibição (desde hoje até o fim)
-      const simuladosRelevantes = data?.filter(simulado => {
-        const fimData = parseISO(simulado.data_fim);
-        const hoje = new Date();
-        hoje.setHours(23, 59, 59, 999); // Considera o dia inteiro
+        // Filtra por turma ou permite visitantes
+        if (turmaCode === "visitante") {
+          query = query.eq('permite_visitante', true);
+        } else {
+          query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
+        }
         
-        return hoje <= fimData;
-      });
+        const { data, error } = await query.order('data_inicio', { ascending: true });
+        
+        if (error) {
+          console.error('Erro ao buscar simulados:', error);
+          throw error;
+        }
+        
+        // Filtra simulados que estão no período de exibição (desde hoje até o fim)
+        const simuladosRelevantes = data?.filter(simulado => {
+          const fimData = parseISO(simulado.data_fim);
+          const hoje = new Date();
+          hoje.setHours(23, 59, 59, 999); // Considera o dia inteiro
+          
+          return hoje <= fimData;
+        });
 
-      return simuladosRelevantes || [];
+        console.log('Simulados encontrados:', simuladosRelevantes);
+        return simuladosRelevantes || [];
+      } catch (error) {
+        console.error('Erro na busca de simulados:', error);
+        throw error;
+      }
     },
-    refetchInterval: 30000, // Atualiza a cada 30 segundos para controle menos agressivo
+    refetchInterval: 30000, // Atualiza a cada 30 segundos
+    retry: 3,
+    staleTime: 0, // Sempre buscar dados frescos
   });
+
+  // Log de debug
+  console.log('SimuladoAtivo - turmaCode:', turmaCode);
+  console.log('SimuladoAtivo - simulados:', simulados);
+  console.log('SimuladoAtivo - error:', error);
 
   // Se não há simulados, não renderiza nada
   if (!simulados || simulados.length === 0) {

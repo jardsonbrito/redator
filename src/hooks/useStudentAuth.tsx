@@ -35,6 +35,10 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       const alunoTurma = localStorage.getItem("alunoTurma");
       const visitanteData = localStorage.getItem("visitanteData");
 
+      console.log('Verificando sessão - userType:', userType);
+      console.log('Verificando sessão - alunoTurma:', alunoTurma);
+      console.log('Verificando sessão - visitanteData:', visitanteData);
+
       if (userType === "aluno" && alunoTurma) {
         setIsStudentLoggedIn(true);
         setStudentData({
@@ -42,15 +46,30 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           turma: alunoTurma,
           nomeUsuario: `Aluno da ${alunoTurma}`
         });
+        console.log('Sessão de aluno restaurada');
       } else if (userType === "visitante" && visitanteData) {
-        const dados = JSON.parse(visitanteData);
-        setIsStudentLoggedIn(true);
-        setStudentData({
-          userType: "visitante",
-          turma: "visitante",
-          nomeUsuario: dados.nome,
-          visitanteInfo: dados
-        });
+        try {
+          const dados = JSON.parse(visitanteData);
+          setIsStudentLoggedIn(true);
+          setStudentData({
+            userType: "visitante",
+            turma: "visitante",
+            nomeUsuario: dados.nome,
+            visitanteInfo: dados
+          });
+          console.log('Sessão de visitante restaurada');
+        } catch (error) {
+          console.error('Erro ao parsear dados do visitante:', error);
+          // Limpar dados corrompidos
+          localStorage.removeItem("visitanteData");
+          localStorage.removeItem("userType");
+          setIsStudentLoggedIn(false);
+          setStudentData({
+            userType: null,
+            turma: null,
+            nomeUsuario: ''
+          });
+        }
       } else {
         setIsStudentLoggedIn(false);
         setStudentData({
@@ -58,6 +77,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           turma: null,
           nomeUsuario: ''
         });
+        console.log('Nenhuma sessão ativa encontrada');
       }
     };
 
@@ -66,6 +86,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     // Adicionar listener para mudanças no localStorage (caso seja modificado em outra aba)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "userType" || e.key === "alunoTurma" || e.key === "visitanteData") {
+        console.log('Mudança detectada no localStorage:', e.key);
         checkStudentSession();
       }
     };
@@ -75,6 +96,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
   }, []);
 
   const loginAsStudent = (turma: string) => {
+    console.log('Login como aluno - turma:', turma);
     localStorage.setItem("alunoTurma", turma);
     localStorage.setItem("userType", "aluno");
     localStorage.removeItem("visitanteData");
@@ -88,6 +110,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
   };
 
   const loginAsVisitante = (nome: string, email: string) => {
+    console.log('Login como visitante - nome:', nome, 'email:', email);
     const visitanteInfo = {
       nome: nome.trim(),
       email: email.trim().toLowerCase(),
@@ -108,6 +131,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
   };
 
   const logoutStudent = () => {
+    console.log('Logout do estudante');
     // Limpar todos os dados de sessão do estudante
     localStorage.removeItem("userType");
     localStorage.removeItem("alunoTurma");
