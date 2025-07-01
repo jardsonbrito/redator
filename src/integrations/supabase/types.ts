@@ -237,6 +237,63 @@ export type Database = {
         }
         Relationships: []
       }
+      redacoes_exercicio: {
+        Row: {
+          comentario_admin: string | null
+          corrigida: boolean | null
+          data_correcao: string | null
+          data_envio: string | null
+          email_aluno: string
+          exercicio_id: string
+          id: string
+          nome_aluno: string
+          nota_c1: number | null
+          nota_c2: number | null
+          nota_c3: number | null
+          nota_c4: number | null
+          nota_c5: number | null
+          nota_total: number | null
+          redacao_texto: string
+          turma: string | null
+        }
+        Insert: {
+          comentario_admin?: string | null
+          corrigida?: boolean | null
+          data_correcao?: string | null
+          data_envio?: string | null
+          email_aluno: string
+          exercicio_id: string
+          id?: string
+          nome_aluno: string
+          nota_c1?: number | null
+          nota_c2?: number | null
+          nota_c3?: number | null
+          nota_c4?: number | null
+          nota_c5?: number | null
+          nota_total?: number | null
+          redacao_texto: string
+          turma?: string | null
+        }
+        Update: {
+          comentario_admin?: string | null
+          corrigida?: boolean | null
+          data_correcao?: string | null
+          data_envio?: string | null
+          email_aluno?: string
+          exercicio_id?: string
+          id?: string
+          nome_aluno?: string
+          nota_c1?: number | null
+          nota_c2?: number | null
+          nota_c3?: number | null
+          nota_c4?: number | null
+          nota_c5?: number | null
+          nota_total?: number | null
+          redacao_texto?: string
+          turma?: string | null
+        }
+        Relationships: []
+      }
       redacoes_simulado: {
         Row: {
           comentario_pedagogico: string | null
