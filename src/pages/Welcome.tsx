@@ -139,13 +139,15 @@ const Welcome = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          {/* Logo no topo */}
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center">
-              <BookOpen className="w-10 h-10 text-redator-primary" />
+          <div className="text-center mb-8">
+            {/* Logo no topo */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src="/lovable-uploads/b95bdcfe-ba6c-4d51-9298-831a8bcb48a9.png" 
+                alt="Logo da plataforma"
+                className="w-20 h-20 object-contain"
+              />
             </div>
-          </div>
           
           {/* Texto de boas-vindas */}
           <h1 className="text-2xl font-bold text-redator-primary mb-2">
