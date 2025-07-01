@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Upload, FileText } from "lucide-react";
 
 export const AulaForm = () => {
   const [titulo, setTitulo] = useState("");
@@ -21,6 +22,8 @@ export const AulaForm = () => {
   const [permiteVisitante, setPermiteVisitante] = useState(false);
   const [ativo, setAtivo] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
 
   const modulosDisponiveis = [
     'Competência 1',
@@ -43,6 +46,40 @@ export const AulaForm = () => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error("Arquivo PDF muito grande. Máximo 10MB.");
+        return;
+      }
+      setPdfFile(file);
+      setPdfNome(file.name);
+    } else {
+      toast.error("Por favor, selecione um arquivo PDF válido.");
+    }
+  };
+
+  const uploadPdf = async (file: File): Promise<{ url: string; nome: string }> => {
+    const fileExt = 'pdf';
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('aula-pdfs')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('aula-pdfs')
+      .getPublicUrl(filePath);
+
+    return { url: publicUrl, nome: file.name };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -54,9 +91,22 @@ export const AulaForm = () => {
     setIsLoading(true);
 
     try {
+      let finalPdfUrl = pdfUrl;
+      let finalPdfNome = pdfNome;
+
+      // Se há arquivo para upload, fazer upload primeiro
+      if (uploadMethod === 'upload' && pdfFile) {
+        console.log('📤 Fazendo upload do PDF...');
+        const uploadResult = await uploadPdf(pdfFile);
+        finalPdfUrl = uploadResult.url;
+        finalPdfNome = uploadResult.nome;
+        console.log('✅ PDF enviado:', uploadResult);
+      }
+
       console.log('📝 Criando aula com dados:', {
         titulo, descricao, modulo, linkConteudo,
-        turmasAutorizadas, permiteVisitante, ativo
+        turmasAutorizadas, permiteVisitante, ativo,
+        finalPdfUrl, finalPdfNome
       });
 
       const { error } = await supabase
@@ -66,8 +116,8 @@ export const AulaForm = () => {
           descricao,
           modulo,
           link_conteudo: linkConteudo,
-          pdf_url: pdfUrl || null,
-          pdf_nome: pdfNome || null,
+          pdf_url: finalPdfUrl || null,
+          pdf_nome: finalPdfNome || null,
           turmas_autorizadas: turmasAutorizadas,
           permite_visitante: permiteVisitante,
           ativo
@@ -86,9 +136,11 @@ export const AulaForm = () => {
       setLinkConteudo("");
       setPdfUrl("");
       setPdfNome("");
+      setPdfFile(null);
       setTurmasAutorizadas([]);
       setPermiteVisitante(false);
       setAtivo(true);
+      setUploadMethod('url');
 
     } catch (error) {
       console.error("Erro ao criar aula:", error);
@@ -156,25 +208,71 @@ export const AulaForm = () => {
             />
           </div>
 
-          <div>
-            <Label htmlFor="pdfUrl">URL do PDF (opcional)</Label>
-            <Input
-              id="pdfUrl"
-              value={pdfUrl}
-              onChange={(e) => setPdfUrl(e.target.value)}
-              placeholder="https://..."
-              type="url"
-            />
-          </div>
+          {/* Seção PDF */}
+          <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+            <Label className="text-base font-semibold">Material PDF (opcional)</Label>
+            
+            <div className="flex gap-4">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  checked={uploadMethod === 'url'}
+                  onChange={() => setUploadMethod('url')}
+                />
+                <span>URL do PDF</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  checked={uploadMethod === 'upload'}
+                  onChange={() => setUploadMethod('upload')}
+                />
+                <span>Upload de Arquivo</span>
+              </label>
+            </div>
 
-          <div>
-            <Label htmlFor="pdfNome">Nome do PDF (opcional)</Label>
-            <Input
-              id="pdfNome"
-              value={pdfNome}
-              onChange={(e) => setPdfNome(e.target.value)}
-              placeholder="Nome do arquivo PDF"
-            />
+            {uploadMethod === 'url' ? (
+              <>
+                <div>
+                  <Label htmlFor="pdfUrl">URL do PDF</Label>
+                  <Input
+                    id="pdfUrl"
+                    value={pdfUrl}
+                    onChange={(e) => setPdfUrl(e.target.value)}
+                    placeholder="https://..."
+                    type="url"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pdfNome">Nome do PDF</Label>
+                  <Input
+                    id="pdfNome"
+                    value={pdfNome}
+                    onChange={(e) => setPdfNome(e.target.value)}
+                    placeholder="Nome do arquivo PDF"
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <Label htmlFor="pdfFile">Arquivo PDF (máx. 10MB)</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="pdfFile"
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                  />
+                  {pdfFile && (
+                    <div className="flex items-center text-sm text-green-600">
+                      <FileText className="w-4 h-4 mr-1" />
+                      {pdfFile.name}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
