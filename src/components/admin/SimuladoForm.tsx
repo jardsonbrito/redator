@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +31,7 @@ export const SimuladoForm = () => {
   const [buscaTema, setBuscaTema] = useState('');
   const [turmaSelecionada, setTurmaSelecionada] = useState('');
 
-  // Lista oficial de turmas do sistema - NOMES CORRETOS
+  // Lista oficial de turmas do sistema - NOMES CORRETOS (sem anos)
   const turmasOficiais = [
     'Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'
   ];
@@ -91,9 +90,8 @@ export const SimuladoForm = () => {
     setLoading(true);
 
     try {
-      // Não publicar o tema aqui - manter como está
       const dataToInsert = {
-        titulo: formData.titulo || 'Simulado', // Valor padrão se não preenchido
+        titulo: formData.titulo || 'Simulado', // Valor padrão se opcional não preenchido
         tema_id: formData.tema_id,
         frase_tematica: temaEscolhido?.frase_tematica || '',
         data_inicio: formData.data_inicio,
@@ -113,7 +111,7 @@ export const SimuladoForm = () => {
 
       toast({
         title: "✅ Simulado criado!",
-        description: "O simulado foi cadastrado com sucesso. O tema será publicado automaticamente quando o simulado iniciar.",
+        description: "O simulado foi cadastrado com sucesso.",
       });
 
       queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
@@ -151,7 +149,7 @@ export const SimuladoForm = () => {
           id="titulo"
           value={formData.titulo}
           onChange={(e) => setFormData({...formData, titulo: e.target.value})}
-          placeholder="Ex: Simulado ENEM - Novembro 2024"
+          placeholder="Ex: Simulado ENEM - Novembro"
         />
         <p className="text-xs text-gray-500 mt-1">Se não preenchido, será usado "Simulado" como padrão</p>
       </div>
@@ -205,11 +203,6 @@ export const SimuladoForm = () => {
                   Eixo: {temaEscolhido.eixo_tematico}
                 </span>
               </div>
-              {temaEscolhido.status === 'rascunho' && (
-                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-                  📝 Este tema será automaticamente publicado quando o simulado iniciar
-                </div>
-              )}
             </div>
           )}
         </div>

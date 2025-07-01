@@ -1,5 +1,6 @@
+
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send, Award, Home, Settings } from "lucide-react";
+import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -16,11 +17,10 @@ const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
   
-  // Determina a turma/código do usuário - NOMES CORRETOS DAS TURMAS
+  // Determina a turma/código do usuário - NOMES CORRETOS DAS TURMAS (sem anos)
   let turmaCode = "Visitante";
   if (studentData.userType === "aluno" && studentData.turma) {
-    // Manter os nomes originais das turmas sem códigos
-    turmaCode = studentData.turma;
+    turmaCode = studentData.turma; // Usar o nome real da turma
   }
 
   // Verifica se há aulas disponíveis
@@ -93,7 +93,7 @@ const Index = () => {
   const { data: hasRedacoesTurma } = useQuery({
     queryKey: ['has-redacoes-turma', turmaCode],
     queryFn: async () => {
-      if (!turmaCode || turmaCode === "visitante") return false;
+      if (!turmaCode || turmaCode === "Visitante") return false;
       
       const { data, error } = await supabase
         .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
@@ -105,7 +105,7 @@ const Index = () => {
       
       return data && data.length > 0;
     },
-    enabled: !!turmaCode && turmaCode !== "visitante"
+    enabled: !!turmaCode && turmaCode !== "Visitante"
   });
 
   const menuItems = [
@@ -210,7 +210,7 @@ const Index = () => {
               </div>
             )}
 
-            {/* Card "Meus Simulados" - SEMPRE FIXO */}
+            {/* Card "Meus Simulados" - SEMPRE FIXO E VISÍVEL */}
             <MeusSimuladosFixo turmaCode={turmaCode} />
 
             {/* Menu Principal Horizontal */}

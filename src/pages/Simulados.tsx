@@ -6,24 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Calendar, Clock, Users, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { format, isWithinInterval, parseISO } from "date-fns";
+import { format, isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 const Simulados = () => {
-  // Recupera dados do usuário
-  const userType = localStorage.getItem("userType");
-  const alunoTurma = localStorage.getItem("alunoTurma");
+  const { studentData } = useStudentAuth();
   
-  let turmaCode = "visitante";
-  if (userType === "aluno" && alunoTurma) {
-    const turmasMap = {
-      "Turma A": "LRA2025",
-      "Turma B": "LRB2025", 
-      "Turma C": "LRC2025",
-      "Turma D": "LRD2025",
-      "Turma E": "LRE2025"
-    };
-    turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
+  // Determina a turma do usuário - NOMES CORRETOS DAS TURMAS (sem anos)
+  let turmaCode = "Visitante";
+  if (studentData.userType === "aluno" && studentData.turma) {
+    turmaCode = studentData.turma; // Usar o nome real da turma
   }
 
   const { data: simulados, isLoading } = useQuery({
@@ -36,7 +29,7 @@ const Simulados = () => {
         .order('data_inicio', { ascending: true });
 
       // Filtra simulados baseado na turma do usuário
-      if (turmaCode === "visitante") {
+      if (turmaCode === "Visitante") {
         query = query.eq('permite_visitante', true);
       } else {
         query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
@@ -48,6 +41,20 @@ const Simulados = () => {
       return data;
     }
   });
+
+  const getStatusSimulado = (simulado: any) => {
+    const agora = new Date();
+    const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+    const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+    
+    if (isBefore(agora, inicioSimulado)) {
+      return { status: "Agendado", color: "bg-blue-500", canParticipate: false };
+    } else if (isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado })) {
+      return { status: "Em progresso", color: "bg-green-500", canParticipate: true };
+    } else {
+      return { status: "Encerrado", color: "bg-gray-500", canParticipate: false };
+    }
+  };
 
   if (isLoading) {
     return (
@@ -109,12 +116,9 @@ const Simulados = () => {
         ) : (
           <div className="grid gap-6">
             {simulados.map((simulado) => {
-              const agora = new Date();
+              const statusInfo = getStatusSimulado(simulado);
               const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
               const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
-              const simuladoAtivo = isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado });
-              const simuladoFuturo = agora < inicioSimulado;
-              const simuladoEncerrado = agora > fimSimulado;
 
               return (
                 <Card key={simulado.id} className="border-l-4 border-l-redator-primary hover:shadow-lg transition-shadow">
@@ -122,18 +126,15 @@ const Simulados = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <CardTitle className="text-xl mb-2">{simulado.titulo}</CardTitle>
-                        <p className="text-gray-600 mb-4">{simulado.frase_tematica}</p>
+                        {/* NÃO MOSTRAR frase temática na listagem conforme solicitado */}
                         
                         <div className="flex flex-wrap gap-2 mb-4">
-                          <Badge 
-                            variant={simuladoAtivo ? "default" : simuladoFuturo ? "secondary" : "outline"}
-                            className={simuladoAtivo ? "bg-green-500" : simuladoFuturo ? "bg-blue-500" : ""}
-                          >
-                            {simuladoAtivo ? "Em andamento" : simuladoFuturo ? "Em breve" : "Encerrado"}
+                          <Badge className={`${statusInfo.color} text-white font-medium`}>
+                            {statusInfo.status}
                           </Badge>
                           <Badge variant="outline">
                             <Users className="w-3 h-3 mr-1" />
-                            {simulado.turmas_autorizadas?.length || 0} turma(s)
+                            Turma: {turmaCode}
                           </Badge>
                           {simulado.permite_visitante && (
                             <Badge variant="outline" className="text-redator-secondary">
@@ -161,12 +162,12 @@ const Simulados = () => {
                       <div className="ml-4">
                         <Link to={`/simulados/${simulado.id}`}>
                           <Button 
-                            variant={simuladoAtivo ? "default" : "outline"}
+                            variant={statusInfo.canParticipate ? "default" : "outline"}
                             size="sm"
-                            className={simuladoAtivo ? "bg-redator-primary" : ""}
-                            disabled={simuladoEncerrado}
+                            className={statusInfo.canParticipate ? "bg-green-600 hover:bg-green-700" : ""}
                           >
-                            {simuladoEncerrado ? "Encerrado" : simuladoAtivo ? "Participar" : "Ver Detalhes"}
+                            {statusInfo.status === "Encerrado" ? "Ver Proposta" : 
+                             statusInfo.canParticipate ? "Participar" : "Ver Detalhes"}
                             <ArrowRight className="w-4 h-4 ml-1" />
                           </Button>
                         </Link>
