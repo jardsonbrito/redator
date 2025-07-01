@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, GraduationCap, ClipboardList, ClipboardCheck, Send, Award, Home, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -196,7 +197,7 @@ const Index = () => {
       showCondition: hasRedacoesCorrigidas
     },
     {
-      title: "Enviar Redação",
+      title: "Enviar Redação (Avulsa)",
       path: "/envie-redacao",
       icon: Send,
       tooltip: "Submeta seu texto para correção detalhada.",
