@@ -1,17 +1,21 @@
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Users, Calendar, Clock } from "lucide-react";
+import { Trash2, Users, Calendar, Clock, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { SimuladoForm } from "./SimuladoForm";
 
 const SimuladoList = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [simuladoEditando, setSimuladoEditando] = useState<any>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const { data: simulados, isLoading } = useQuery({
     queryKey: ['admin-simulados'],
@@ -66,13 +70,45 @@ const SimuladoList = () => {
     }
   };
 
+  const handleEdit = (simulado: any) => {
+    setSimuladoEditando(simulado);
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setSimuladoEditando(null);
+    setShowForm(false);
+  };
+
+  const handleSuccess = () => {
+    setSimuladoEditando(null);
+    setShowForm(false);
+  };
+
   if (isLoading) {
     return <div className="text-center py-8">Carregando simulados...</div>;
   }
 
+  if (showForm) {
+    return (
+      <div className="space-y-4">
+        <SimuladoForm 
+          simuladoEditando={simuladoEditando}
+          onSuccess={handleSuccess}
+          onCancelEdit={handleCancelEdit}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-redator-primary mb-6">Simulados Cadastrados</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-redator-primary">Simulados Cadastrados</h2>
+        <Button onClick={() => setShowForm(true)} variant="default" size="sm">
+          Novo Simulado
+        </Button>
+      </div>
       
       {!simulados || simulados.length === 0 ? (
         <Card>
@@ -107,14 +143,24 @@ const SimuladoList = () => {
                       </div>
                     </div>
                     
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deletarSimulado.mutate(simulado.id)}
-                      disabled={deletarSimulado.isPending}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(simulado)}
+                        title="Editar"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deletarSimulado.mutate(simulado.id)}
+                        disabled={deletarSimulado.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 

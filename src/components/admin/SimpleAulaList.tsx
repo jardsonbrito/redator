@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trash2, ExternalLink, FileText } from "lucide-react";
+import { Trash2, ExternalLink, FileText, Edit } from "lucide-react";
+import { AulaForm } from "./AulaForm";
 
 interface Aula {
   id: string;
@@ -24,6 +25,8 @@ export const SimpleAulaList = () => {
   const [aulas, setAulas] = useState<Aula[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [aulaEditando, setAulaEditando] = useState<Aula | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const fetchAulas = async () => {
     try {
@@ -83,6 +86,22 @@ export const SimpleAulaList = () => {
     }
   };
 
+  const handleEdit = (aula: Aula) => {
+    setAulaEditando(aula);
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setAulaEditando(null);
+    setShowForm(false);
+  };
+
+  const handleSuccess = () => {
+    setAulaEditando(null);
+    setShowForm(false);
+    fetchAulas();
+  };
+
   useEffect(() => {
     fetchAulas();
   }, []);
@@ -110,13 +129,30 @@ export const SimpleAulaList = () => {
     );
   }
 
+  if (showForm) {
+    return (
+      <div className="space-y-4">
+        <AulaForm 
+          aulaEditando={aulaEditando}
+          onSuccess={handleSuccess}
+          onCancelEdit={handleCancelEdit}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Aulas Cadastradas</h2>
-        <Button onClick={fetchAulas} variant="outline" size="sm">
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowForm(true)} variant="default" size="sm">
+            Nova Aula
+          </Button>
+          <Button onClick={fetchAulas} variant="outline" size="sm">
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {aulas.length === 0 ? (
@@ -161,6 +197,14 @@ export const SimpleAulaList = () => {
                         <FileText className="w-4 h-4" />
                       </Button>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(aula)}
+                      title="Editar"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

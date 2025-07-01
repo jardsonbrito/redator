@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,28 @@ import { X, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const SimuladoForm = () => {
+interface SimuladoEditando {
+  id: string;
+  titulo: string;
+  tema_id?: string;
+  data_inicio: string;
+  hora_inicio: string;
+  data_fim: string;
+  hora_fim: string;
+  turmas_autorizadas?: string[];
+  permite_visitante?: boolean;
+  ativo?: boolean;
+}
+
+interface SimuladoFormProps {
+  simuladoEditando?: SimuladoEditando | null;
+  onSuccess?: () => void;
+  onCancelEdit?: () => void;
+}
+
+export const SimuladoForm = ({ simuladoEditando, onSuccess, onCancelEdit }: SimuladoFormProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -30,6 +50,23 @@ export const SimuladoForm = () => {
 
   const [buscaTema, setBuscaTema] = useState('');
   const [turmaSelecionada, setTurmaSelecionada] = useState('');
+
+  // Preencher formulário ao editar
+  useEffect(() => {
+    if (simuladoEditando) {
+      setFormData({
+        titulo: simuladoEditando.titulo || '',
+        tema_id: simuladoEditando.tema_id || '',
+        data_inicio: simuladoEditando.data_inicio || '',
+        hora_inicio: simuladoEditando.hora_inicio || '',
+        data_fim: simuladoEditando.data_fim || '',
+        hora_fim: simuladoEditando.hora_fim || '',
+        turmas_autorizadas: simuladoEditando.turmas_autorizadas || [],
+        permite_visitante: simuladoEditando.permite_visitante || false,
+        ativo: simuladoEditando.ativo !== false
+      });
+    }
+  }, [simuladoEditando]);
 
   // Lista oficial de turmas do sistema - NOMES CORRETOS (sem anos)
   const turmasOficiais = [
@@ -103,31 +140,50 @@ export const SimuladoForm = () => {
         ativo: formData.ativo
       };
 
-      const { error } = await supabase
-        .from('simulados')
-        .insert([dataToInsert]);
+      let error;
+
+      if (simuladoEditando) {
+        // Atualizar simulado existente
+        const result = await supabase
+          .from('simulados')
+          .update(dataToInsert)
+          .eq('id', simuladoEditando.id);
+        error = result.error;
+      } else {
+        // Criar novo simulado
+        const result = await supabase
+          .from('simulados')
+          .insert([dataToInsert]);
+        error = result.error;
+      }
 
       if (error) throw error;
 
       toast({
-        title: "✅ Simulado criado!",
-        description: "O simulado foi cadastrado com sucesso.",
+        title: simuladoEditando ? "✅ Simulado atualizado!" : "✅ Simulado criado!",
+        description: simuladoEditando ? "O simulado foi atualizado com sucesso." : "O simulado foi cadastrado com sucesso.",
       });
 
       queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
 
-      // Limpar formulário
-      setFormData({
-        titulo: '',
-        tema_id: '',
-        data_inicio: '',
-        hora_inicio: '',
-        data_fim: '',
-        hora_fim: '',
-        turmas_autorizadas: [],
-        permite_visitante: false,
-        ativo: true
-      });
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      // Limpar formulário se não estiver editando
+      if (!simuladoEditando) {
+        setFormData({
+          titulo: '',
+          tema_id: '',
+          data_inicio: '',
+          hora_inicio: '',
+          data_fim: '',
+          hora_fim: '',
+          turmas_autorizadas: [],
+          permite_visitante: false,
+          ativo: true
+        });
+      }
 
     } catch (error: any) {
       console.error('Erro ao criar simulado:', error);
@@ -142,7 +198,19 @@ export const SimuladoForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          {simuladoEditando ? "Editar Simulado" : "Criar Novo Simulado"}
+          {simuladoEditando && onCancelEdit && (
+            <Button variant="outline" onClick={onCancelEdit} size="sm">
+              Cancelar
+            </Button>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <Label htmlFor="titulo">Título do Simulado (opcional)</Label>
         <Input
@@ -296,9 +364,14 @@ export const SimuladoForm = () => {
         <Label htmlFor="permite_visitante">Permitir visitantes</Label>
       </div>
 
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Criando simulado...' : 'Criar Simulado'}
-      </Button>
-    </form>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading 
+              ? (simuladoEditando ? 'Salvando...' : 'Criando simulado...')
+              : (simuladoEditando ? 'Salvar Alterações' : 'Criar Simulado')
+            }
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };

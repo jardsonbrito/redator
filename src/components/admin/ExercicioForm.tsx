@@ -15,7 +15,25 @@ interface Tema {
   eixo_tematico: string;
 }
 
-export const ExercicioForm = () => {
+interface ExercicioEditando {
+  id: string;
+  titulo: string;
+  tipo: string;
+  link_forms?: string;
+  tema_id?: string;
+  imagem_capa_url?: string;
+  turmas_autorizadas?: string[];
+  permite_visitante?: boolean;
+  ativo?: boolean;
+}
+
+interface ExercicioFormProps {
+  exercicioEditando?: ExercicioEditando | null;
+  onSuccess?: () => void;
+  onCancelEdit?: () => void;
+}
+
+export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: ExercicioFormProps) => {
   const [titulo, setTitulo] = useState("");
   const [tipo, setTipo] = useState("");
   const [linkForms, setLinkForms] = useState("");
@@ -39,6 +57,20 @@ export const ExercicioForm = () => {
   useEffect(() => {
     fetchTemas();
   }, []);
+
+  // Preencher formulário ao editar
+  useEffect(() => {
+    if (exercicioEditando) {
+      setTitulo(exercicioEditando.titulo || "");
+      setTipo(exercicioEditando.tipo || "");
+      setLinkForms(exercicioEditando.link_forms || "");
+      setTemaId(exercicioEditando.tema_id || "");
+      setImagemCapaUrl(exercicioEditando.imagem_capa_url || "");
+      setTurmasAutorizadas(exercicioEditando.turmas_autorizadas || []);
+      setPermiteVisitante(exercicioEditando.permite_visitante || false);
+      setAtivo(exercicioEditando.ativo !== false);
+    }
+  }, [exercicioEditando]);
 
   const fetchTemas = async () => {
     try {
@@ -85,32 +117,53 @@ export const ExercicioForm = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase
-        .from("exercicios")
-        .insert({
-          titulo,
-          tipo,
-          link_forms: tipo === 'Google Forms' ? linkForms : null,
-          tema_id: tipo === 'Redação com Frase Temática' ? temaId : null,
-          imagem_capa_url: imagemCapaUrl || null,
-          turmas_autorizadas: turmasAutorizadas,
-          permite_visitante: permiteVisitante,
-          ativo
-        });
+      const exercicioData = {
+        titulo,
+        tipo,
+        link_forms: tipo === 'Google Forms' ? linkForms : null,
+        tema_id: tipo === 'Redação com Frase Temática' ? temaId : null,
+        imagem_capa_url: imagemCapaUrl || null,
+        turmas_autorizadas: turmasAutorizadas,
+        permite_visitante: permiteVisitante,
+        ativo
+      };
+
+      let error;
+
+      if (exercicioEditando) {
+        // Atualizar exercício existente
+        const result = await supabase
+          .from("exercicios")
+          .update(exercicioData)
+          .eq("id", exercicioEditando.id);
+        error = result.error;
+      } else {
+        // Criar novo exercício
+        const result = await supabase
+          .from("exercicios")
+          .insert(exercicioData);
+        error = result.error;
+      }
 
       if (error) throw error;
 
-      toast.success("Exercício criado com sucesso!");
+      toast.success(exercicioEditando ? "Exercício atualizado com sucesso!" : "Exercício criado com sucesso!");
       
-      // Reset form
-      setTitulo("");
-      setTipo("");
-      setLinkForms("");
-      setTemaId("");
-      setImagemCapaUrl("");
-      setTurmasAutorizadas([]);
-      setPermiteVisitante(false);
-      setAtivo(true);
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      // Reset form se não estiver editando
+      if (!exercicioEditando) {
+        setTitulo("");
+        setTipo("");
+        setLinkForms("");
+        setTemaId("");
+        setImagemCapaUrl("");
+        setTurmasAutorizadas([]);
+        setPermiteVisitante(false);
+        setAtivo(true);
+      }
 
     } catch (error) {
       console.error("Erro ao criar exercício:", error);
@@ -123,7 +176,14 @@ export const ExercicioForm = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Criar Novo Exercício</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          {exercicioEditando ? "Editar Exercício" : "Criar Novo Exercício"}
+          {exercicioEditando && onCancelEdit && (
+            <Button variant="outline" onClick={onCancelEdit} size="sm">
+              Cancelar
+            </Button>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -238,7 +298,10 @@ export const ExercicioForm = () => {
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? "Criando..." : "Criar Exercício"}
+            {isLoading 
+              ? (exercicioEditando ? "Salvando..." : "Criando...")
+              : (exercicioEditando ? "Salvar Alterações" : "Criar Exercício")
+            }
           </Button>
         </form>
       </CardContent>

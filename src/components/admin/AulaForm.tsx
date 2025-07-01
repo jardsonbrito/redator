@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, FileText } from "lucide-react";
 
-export const AulaForm = () => {
+interface AulaEditando {
+  id: string;
+  titulo: string;
+  descricao: string;
+  modulo: string;
+  link_conteudo: string;
+  pdf_url?: string;
+  pdf_nome?: string;
+  turmas_autorizadas?: string[];
+  permite_visitante?: boolean;
+  ativo?: boolean;
+}
+
+interface AulaFormProps {
+  aulaEditando?: AulaEditando | null;
+  onSuccess?: () => void;
+  onCancelEdit?: () => void;
+}
+
+export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProps) => {
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [modulo, setModulo] = useState("");
@@ -24,6 +43,21 @@ export const AulaForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
+
+  // Preencher formulário ao editar
+  useEffect(() => {
+    if (aulaEditando) {
+      setTitulo(aulaEditando.titulo || "");
+      setDescricao(aulaEditando.descricao || "");
+      setModulo(aulaEditando.modulo || "");
+      setLinkConteudo(aulaEditando.link_conteudo || "");
+      setPdfUrl(aulaEditando.pdf_url || "");
+      setPdfNome(aulaEditando.pdf_nome || "");
+      setTurmasAutorizadas(aulaEditando.turmas_autorizadas || []);
+      setPermiteVisitante(aulaEditando.permite_visitante || false);
+      setAtivo(aulaEditando.ativo !== false);
+    }
+  }, [aulaEditando]);
 
   const modulosDisponiveis = [
     'Competência 1',
@@ -103,44 +137,57 @@ export const AulaForm = () => {
         console.log('✅ PDF enviado:', uploadResult);
       }
 
-      console.log('📝 Criando aula com dados:', {
-        titulo, descricao, modulo, linkConteudo,
-        turmasAutorizadas, permiteVisitante, ativo,
-        finalPdfUrl, finalPdfNome
-      });
+      const aulaData = {
+        titulo,
+        descricao,
+        modulo,
+        link_conteudo: linkConteudo,
+        pdf_url: finalPdfUrl || null,
+        pdf_nome: finalPdfNome || null,
+        turmas_autorizadas: turmasAutorizadas,
+        permite_visitante: permiteVisitante,
+        ativo
+      };
 
-      const { error } = await supabase
-        .from("aulas")
-        .insert({
-          titulo,
-          descricao,
-          modulo,
-          link_conteudo: linkConteudo,
-          pdf_url: finalPdfUrl || null,
-          pdf_nome: finalPdfNome || null,
-          turmas_autorizadas: turmasAutorizadas,
-          permite_visitante: permiteVisitante,
-          ativo
-        });
+      let error;
 
-      console.log('✅ Resultado da inserção:', { error });
+      if (aulaEditando) {
+        // Atualizar aula existente
+        const result = await supabase
+          .from("aulas")
+          .update(aulaData)
+          .eq("id", aulaEditando.id);
+        error = result.error;
+      } else {
+        // Criar nova aula
+        const result = await supabase
+          .from("aulas")
+          .insert(aulaData);
+        error = result.error;
+      }
 
       if (error) throw error;
 
-      toast.success("Aula criada com sucesso!");
+      toast.success(aulaEditando ? "Aula atualizada com sucesso!" : "Aula criada com sucesso!");
       
-      // Reset form
-      setTitulo("");
-      setDescricao("");
-      setModulo("");
-      setLinkConteudo("");
-      setPdfUrl("");
-      setPdfNome("");
-      setPdfFile(null);
-      setTurmasAutorizadas([]);
-      setPermiteVisitante(false);
-      setAtivo(true);
-      setUploadMethod('url');
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      // Reset form se não estiver editando
+      if (!aulaEditando) {
+        setTitulo("");
+        setDescricao("");
+        setModulo("");
+        setLinkConteudo("");
+        setPdfUrl("");
+        setPdfNome("");
+        setPdfFile(null);
+        setTurmasAutorizadas([]);
+        setPermiteVisitante(false);
+        setAtivo(true);
+        setUploadMethod('url');
+      }
 
     } catch (error) {
       console.error("Erro ao criar aula:", error);
@@ -153,7 +200,14 @@ export const AulaForm = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Criar Nova Aula</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          {aulaEditando ? "Editar Aula" : "Criar Nova Aula"}
+          {aulaEditando && onCancelEdit && (
+            <Button variant="outline" onClick={onCancelEdit} size="sm">
+              Cancelar
+            </Button>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -316,7 +370,10 @@ export const AulaForm = () => {
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? "Criando..." : "Criar Aula"}
+            {isLoading 
+              ? (aulaEditando ? "Salvando..." : "Criando...")
+              : (aulaEditando ? "Salvar Alterações" : "Criar Aula")
+            }
           </Button>
         </form>
       </CardContent>

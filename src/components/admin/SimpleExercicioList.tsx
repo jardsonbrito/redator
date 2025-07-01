@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trash2, ExternalLink, FileText } from "lucide-react";
+import { Trash2, ExternalLink, FileText, Edit } from "lucide-react";
+import { ExercicioForm } from "./ExercicioForm";
 
 interface Exercicio {
   id: string;
@@ -27,6 +28,8 @@ export const SimpleExercicioList = () => {
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exercicioEditando, setExercicioEditando] = useState<Exercicio | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const fetchExercicios = async () => {
     try {
@@ -92,6 +95,22 @@ export const SimpleExercicioList = () => {
     }
   };
 
+  const handleEdit = (exercicio: Exercicio) => {
+    setExercicioEditando(exercicio);
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setExercicioEditando(null);
+    setShowForm(false);
+  };
+
+  const handleSuccess = () => {
+    setExercicioEditando(null);
+    setShowForm(false);
+    fetchExercicios();
+  };
+
   useEffect(() => {
     fetchExercicios();
   }, []);
@@ -119,13 +138,30 @@ export const SimpleExercicioList = () => {
     );
   }
 
+  if (showForm) {
+    return (
+      <div className="space-y-4">
+        <ExercicioForm 
+          exercicioEditando={exercicioEditando}
+          onSuccess={handleSuccess}
+          onCancelEdit={handleCancelEdit}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Exercícios Cadastrados</h2>
-        <Button onClick={fetchExercicios} variant="outline" size="sm">
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowForm(true)} variant="default" size="sm">
+            Novo Exercício
+          </Button>
+          <Button onClick={fetchExercicios} variant="outline" size="sm">
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {exercicios.length === 0 ? (
@@ -179,6 +215,14 @@ export const SimpleExercicioList = () => {
                         <FileText className="w-4 h-4" />
                       </Button>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(exercicio)}
+                      title="Editar"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
