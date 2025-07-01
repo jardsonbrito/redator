@@ -12,18 +12,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
-export const BibliotecaForm = () => {
+interface BibliotecaFormProps {
+  materialEditando?: any;
+  onSuccess?: () => void;
+  onCancelEdit?: () => void;
+}
+
+export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: BibliotecaFormProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
-    titulo: '',
-    descricao: '',
-    competencia: '',
-    turmas_autorizadas: [] as string[],
-    permite_visitante: false,
-    status: 'publicado' as 'publicado' | 'rascunho'
+    titulo: materialEditando?.titulo || '',
+    descricao: materialEditando?.descricao || '',
+    competencia: materialEditando?.competencia || '',
+    turmas_autorizadas: materialEditando?.turmas_autorizadas || [] as string[],
+    permite_visitante: materialEditando?.permite_visitante || false,
+    status: materialEditando?.status || 'publicado' as 'publicado' | 'rascunho'
   });
 
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -88,10 +94,10 @@ export const BibliotecaForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.titulo || !formData.competencia || !arquivo) {
+    if (!formData.titulo || !formData.competencia || (!arquivo && !materialEditando)) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatórios e selecione um arquivo PDF.",
+        description: materialEditando ? "Preencha todos os campos obrigatórios." : "Preencha todos os campos obrigatórios e selecione um arquivo PDF.",
         variant: "destructive",
       });
       return;
@@ -106,50 +112,89 @@ export const BibliotecaForm = () => {
         throw new Error('Usuário não autenticado');
       }
 
-      // Upload do arquivo
-      const { url: arquivo_url, nome: arquivo_nome } = await uploadArquivo(arquivo);
+      let arquivo_url = materialEditando?.arquivo_url;
+      let arquivo_nome = materialEditando?.arquivo_nome;
 
-      // Inserir no banco
-      const { error } = await supabase
-        .from('biblioteca_materiais')
-        .insert([{
-          titulo: formData.titulo,
-          descricao: formData.descricao || null,
-          competencia: formData.competencia,
-          arquivo_url,
-          arquivo_nome,
-          turmas_autorizadas: formData.turmas_autorizadas,
-          permite_visitante: formData.permite_visitante,
-          status: formData.status
-        }]);
-
-      if (error) {
-        console.error('Database error:', error);
-        throw new Error(`Erro no banco de dados: ${error.message}`);
+      // Upload do arquivo apenas se um novo foi selecionado
+      if (arquivo) {
+        const uploadResult = await uploadArquivo(arquivo);
+        arquivo_url = uploadResult.url;
+        arquivo_nome = uploadResult.nome;
       }
 
-      toast({
-        title: "✅ Material cadastrado!",
-        description: "O material foi adicionado à biblioteca com sucesso.",
-      });
+      if (materialEditando) {
+        // Atualizar material existente
+        const { error } = await supabase
+          .from('biblioteca_materiais')
+          .update({
+            titulo: formData.titulo,
+            descricao: formData.descricao || null,
+            competencia: formData.competencia,
+            arquivo_url,
+            arquivo_nome,
+            turmas_autorizadas: formData.turmas_autorizadas,
+            permite_visitante: formData.permite_visitante,
+            status: formData.status,
+            atualizado_em: new Date().toISOString()
+          })
+          .eq('id', materialEditando.id);
+
+        if (error) {
+          console.error('Database error:', error);
+          throw new Error(`Erro ao atualizar: ${error.message}`);
+        }
+
+        toast({
+          title: "✅ Material atualizado!",
+          description: "O material foi atualizado com sucesso.",
+        });
+      } else {
+        // Inserir novo material
+        const { error } = await supabase
+          .from('biblioteca_materiais')
+          .insert([{
+            titulo: formData.titulo,
+            descricao: formData.descricao || null,
+            competencia: formData.competencia,
+            arquivo_url,
+            arquivo_nome,
+            turmas_autorizadas: formData.turmas_autorizadas,
+            permite_visitante: formData.permite_visitante,
+            status: formData.status
+          }]);
+
+        if (error) {
+          console.error('Database error:', error);
+          throw new Error(`Erro no banco de dados: ${error.message}`);
+        }
+
+        toast({
+          title: "✅ Material cadastrado!",
+          description: "O material foi adicionado à biblioteca com sucesso.",
+        });
+
+        // Limpar formulário apenas se for novo cadastro
+        setFormData({
+          titulo: '',
+          descricao: '',
+          competencia: '',
+          turmas_autorizadas: [],
+          permite_visitante: false,
+          status: 'publicado'
+        });
+        setArquivo(null);
+        
+        // Limpar input de arquivo
+        const fileInput = document.getElementById('arquivo') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.value = '';
+        }
+      }
 
       queryClient.invalidateQueries({ queryKey: ['admin-biblioteca'] });
 
-      // Limpar formulário
-      setFormData({
-        titulo: '',
-        descricao: '',
-        competencia: '',
-        turmas_autorizadas: [],
-        permite_visitante: false,
-        status: 'publicado'
-      });
-      setArquivo(null);
-      
-      // Limpar input de arquivo
-      const fileInput = document.getElementById('arquivo') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = '';
+      if (onSuccess) {
+        onSuccess();
       }
 
     } catch (error: any) {
@@ -165,7 +210,17 @@ export const BibliotecaForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
+      {materialEditando && onCancelEdit && (
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Editar Material</h2>
+          <Button type="button" onClick={onCancelEdit} variant="outline">
+            Cancelar
+          </Button>
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <Label htmlFor="titulo">Título do Material *</Label>
         <Input
@@ -205,7 +260,7 @@ export const BibliotecaForm = () => {
       </div>
 
       <div>
-        <Label htmlFor="arquivo">Arquivo PDF *</Label>
+        <Label htmlFor="arquivo">Arquivo PDF {materialEditando ? '(opcional - deixe vazio para manter o atual)' : '*'}</Label>
         <div className="flex items-center gap-2">
           <Input
             id="arquivo"
@@ -218,7 +273,12 @@ export const BibliotecaForm = () => {
         </div>
         {arquivo && (
           <p className="text-sm text-green-600 mt-1">
-            Arquivo selecionado: {arquivo.name}
+            Novo arquivo selecionado: {arquivo.name}
+          </p>
+        )}
+        {materialEditando && !arquivo && (
+          <p className="text-sm text-gray-600 mt-1">
+            Arquivo atual: {materialEditando.arquivo_nome}
           </p>
         )}
       </div>
@@ -279,8 +339,9 @@ export const BibliotecaForm = () => {
       </div>
 
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Cadastrando material...' : 'Cadastrar Material'}
+        {loading ? (materialEditando ? 'Atualizando...' : 'Cadastrando...') : (materialEditando ? 'Atualizar Material' : 'Cadastrar Material')}
       </Button>
     </form>
+    </div>
   );
 };

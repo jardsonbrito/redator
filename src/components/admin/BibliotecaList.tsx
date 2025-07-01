@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Download, Search, Calendar } from 'lucide-react';
+import { BibliotecaForm } from './BibliotecaForm';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -27,6 +28,8 @@ export const BibliotecaList = () => {
   const [busca, setBusca] = useState('');
   const [competenciaFiltro, setCompetenciaFiltro] = useState('todas');
   const [statusFiltro, setStatusFiltro] = useState('todos');
+  const [materialEditando, setMaterialEditando] = useState<any>(null);
+  const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -174,6 +177,21 @@ export const BibliotecaList = () => {
     }
   };
 
+  const handleEdit = (material: any) => {
+    setMaterialEditando(material);
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setMaterialEditando(null);
+    setShowForm(false);
+  };
+
+  const handleSuccess = () => {
+    setMaterialEditando(null);
+    setShowForm(false);
+  };
+
   if (isLoading) {
     return <div className="text-center py-8">Carregando materiais...</div>;
   }
@@ -183,6 +201,18 @@ export const BibliotecaList = () => {
     return (
       <div className="text-center py-8 text-red-600">
         Erro ao carregar materiais. Tente novamente.
+      </div>
+    );
+  }
+
+  if (showForm) {
+    return (
+      <div className="space-y-4">
+        <BibliotecaForm 
+          materialEditando={materialEditando}
+          onSuccess={handleSuccess}
+          onCancelEdit={handleCancelEdit}
+        />
       </div>
     );
   }
@@ -297,12 +327,22 @@ export const BibliotecaList = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleEdit(material)}
+                      title="Editar material"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => toggleStatusMutation.mutate({
                         id: material.id,
                         novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
                       })}
+                      title={material.status === 'publicado' ? 'Tornar rascunho' : 'Publicar'}
                     >
-                      <Edit className="w-4 h-4" />
+                      {material.status === 'publicado' ? '📝' : '✅'}
                     </Button>
 
                     <AlertDialog>
