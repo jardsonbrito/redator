@@ -171,9 +171,7 @@ const Welcome = () => {
             <div className="grid grid-cols-3 gap-2">
               <Button variant={selectedProfile === "professor" ? "default" : "outline"} onClick={() => setSelectedProfile("professor")} className={`h-16 text-xs ${selectedProfile === "professor" ? "bg-redator-primary hover:bg-redator-primary/90 text-white" : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"}`}>Professor</Button>
               <Button variant={selectedProfile === "aluno" ? "default" : "outline"} onClick={() => setSelectedProfile("aluno")} className={`h-16 text-xs ${selectedProfile === "aluno" ? "bg-redator-primary hover:bg-redator-primary/90 text-white" : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"}`}>Aluno</Button>
-              <Button variant={selectedProfile === "visitante" ? "default" : "outline"} onClick={() => setSelectedProfile("visitante")} className={`h-16 text-xs ${selectedProfile === "visitante" ? "bg-redator-primary hover:bg-redator-primary/90 text-white" : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"}`}>
-                Sou Visitante
-              </Button>
+              <Button variant={selectedProfile === "visitante" ? "default" : "outline"} onClick={() => setSelectedProfile("visitante")} className={`h-16 text-xs ${selectedProfile === "visitante" ? "bg-redator-primary hover:bg-redator-primary/90 text-white" : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"}`}>Visitante</Button>
             </div>
 
             {/* Campos dinâmicos baseados no perfil selecionado */}
