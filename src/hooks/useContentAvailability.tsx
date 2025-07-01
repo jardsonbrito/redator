@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useContentAvailability = (turmaCode: string) => {
   // Verifica se há aulas disponíveis
-  const { data: hasAulas = false } = useQuery({
+  const aulasQuery = useQuery({
     queryKey: ['has-aulas', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
       try {
@@ -36,9 +36,9 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   // Verifica se há exercícios disponíveis
-  const { data: hasExercicios = false } = useQuery({
+  const exerciciosQuery = useQuery({
     queryKey: ['has-exercicios', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
       try {
@@ -68,9 +68,9 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   // Verifica se há simulados disponíveis
-  const { data: hasSimulados = false } = useQuery({
+  const simuladosQuery = useQuery({
     queryKey: ['has-simulados', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
       try {
@@ -90,9 +90,9 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   // Verifica se há redações da turma
-  const { data: hasRedacoesTurma = false } = useQuery({
+  const redacoesTurmaQuery = useQuery({
     queryKey: ['has-redacoes-turma', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode || turmaCode === "Visitante") return false;
       
       try {
@@ -108,9 +108,9 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   // Verifica se há materiais da biblioteca disponíveis
-  const { data: hasBiblioteca = false } = useQuery({
+  const bibliotecaQuery = useQuery({
     queryKey: ['has-biblioteca', turmaCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<boolean> => {
       if (!turmaCode) return false;
       
       try {
@@ -130,10 +130,10 @@ export const useContentAvailability = (turmaCode: string) => {
   });
 
   return {
-    hasAulas,
-    hasExercicios,
-    hasSimulados,
-    hasRedacoesTurma,
-    hasBiblioteca
+    hasAulas: aulasQuery.data ?? false,
+    hasExercicios: exerciciosQuery.data ?? false,
+    hasSimulados: simuladosQuery.data ?? false,
+    hasRedacoesTurma: redacoesTurmaQuery.data ?? false,
+    hasBiblioteca: bibliotecaQuery.data ?? false
   };
 };
