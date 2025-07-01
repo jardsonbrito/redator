@@ -8,7 +8,8 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, FileText, Search } from "lucide-react";
+import { ExternalLink, FileText, Search, Home } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface Aula {
   id: string;
@@ -139,9 +140,24 @@ const Aulas = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader />
         
+        {/* Header com botão Home */}
+        <header className="bg-white shadow-sm border-b border-redator-accent/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+                <Home className="w-5 h-5" />
+                <span>Início</span>
+              </Link>
+              <h1 className="text-2xl font-bold text-redator-primary">Aulas</h1>
+              <Link to="/" className="hover:opacity-80 transition-opacity">
+                <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator" className="h-8 w-auto max-w-[120px] object-contain" />
+              </Link>
+            </div>
+          </div>
+        </header>
+
         <main className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
           <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-redator-primary mb-3 sm:mb-4">Aulas</h1>
             <p className="text-base sm:text-lg text-redator-accent px-2">
               Acesse conteúdos educacionais organizados por competência
             </p>

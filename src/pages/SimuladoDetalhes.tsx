@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Clock, Calendar, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import { Brain, Clock, Calendar, CheckCircle, AlertCircle, Home } from "lucide-react";
 import { format, isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -187,9 +187,9 @@ export default function SimuladoDetalhes() {
       <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/simulados" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span>Voltar aos Simulados</span>
+            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+              <Home className="w-5 h-5" />
+              <span>Início</span>
             </Link>
             <h1 className="text-2xl font-bold text-redator-primary">Simulado</h1>
           </div>

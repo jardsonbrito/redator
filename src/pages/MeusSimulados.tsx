@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, Calendar, User, Mail, FileText, CheckCircle } from "lucide-react";
+import { Eye, Calendar, User, Mail, FileText, CheckCircle, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -95,10 +95,10 @@ const MeusSimulados = () => {
         <header className="bg-white shadow-sm border-b border-redator-accent/20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
-              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-                <FileText className="w-5 h-5" />
-                <span>Voltar ao App</span>
-              </Link>
+            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+              <Home className="w-5 h-5" />
+              <span>Início</span>
+            </Link>
               <h1 className="text-2xl font-bold text-redator-primary">Meus Simulados</h1>
             </div>
           </div>
@@ -116,8 +116,8 @@ const MeusSimulados = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-              <FileText className="w-5 h-5" />
-              <span>Voltar ao App</span>
+              <Home className="w-5 h-5" />
+              <span>Início</span>
             </Link>
             <h1 className="text-2xl font-bold text-redator-primary">Meus Simulados</h1>
           </div>
