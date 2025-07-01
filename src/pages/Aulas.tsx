@@ -139,34 +139,35 @@ const Aulas = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader />
         
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-redator-primary mb-4">Aulas</h1>
-            <p className="text-lg text-redator-accent">
+        <main className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-redator-primary mb-3 sm:mb-4">Aulas</h1>
+            <p className="text-base sm:text-lg text-redator-accent px-2">
               Acesse conteúdos educacionais organizados por competência
             </p>
           </div>
 
           {/* Filtros */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="w-5 h-5" />
+          <Card className="mb-4 sm:mb-6 mx-1 sm:mx-0">
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                 Filtros
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Input
                     placeholder="Buscar por título ou descrição..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    className="text-sm sm:text-base"
                   />
                 </div>
                 <div>
                   <Select value={moduloFilter} onValueChange={setModuloFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm sm:text-base">
                       <SelectValue placeholder="Filtrar por módulo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -184,14 +185,14 @@ const Aulas = () => {
           </Card>
 
           {/* Lista de Aulas */}
-          <div className="grid gap-6">
+          <div className="grid gap-4 sm:gap-6 mx-1 sm:mx-0">
             {filteredAulas.length === 0 ? (
               <Card>
-                <CardContent className="text-center py-12">
-                  <h3 className="text-xl font-semibold text-redator-primary mb-2">
+                <CardContent className="text-center py-8 sm:py-12">
+                  <h3 className="text-lg sm:text-xl font-semibold text-redator-primary mb-2">
                     Nenhuma aula disponível no momento.
                   </h3>
-                  <p className="text-redator-accent">
+                  <p className="text-redator-accent text-sm sm:text-base">
                     Verifique novamente em breve ou entre em contato com sua coordenação.
                   </p>
                 </CardContent>
@@ -201,13 +202,13 @@ const Aulas = () => {
                 <Card key={aula.id} className={`hover:shadow-lg transition-shadow ${
                   aula.modulo === 'Aula ao vivo' ? 'border-l-4 border-l-red-500 bg-red-50' : ''
                 }`}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-xl mb-2">{aula.titulo}</CardTitle>
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg sm:text-xl mb-2 leading-tight">{aula.titulo}</CardTitle>
                         <Badge 
                           variant="outline" 
-                          className={`mb-2 ${
+                          className={`mb-2 text-xs sm:text-sm ${
                             aula.modulo === 'Aula ao vivo' 
                               ? 'bg-red-100 text-red-800 border-red-300' 
                               : ''
@@ -216,13 +217,14 @@ const Aulas = () => {
                           {aula.modulo}
                         </Badge>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <Button
                           variant="default"
                           size="sm"
                           onClick={() => window.open(aula.link_conteudo, '_blank')}
+                          className="w-full sm:w-auto text-xs sm:text-sm"
                         >
-                          <ExternalLink className="w-4 h-4 mr-2" />
+                          <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                           Acessar Aula
                         </Button>
                         {aula.pdf_url && (
@@ -230,19 +232,20 @@ const Aulas = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => window.open(aula.pdf_url, '_blank')}
+                            className="w-full sm:w-auto text-xs sm:text-sm"
                           >
-                            <FileText className="w-4 h-4 mr-2" />
+                            <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                             Material PDF
                           </Button>
                         )}
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-700 mb-4">{aula.descricao}</p>
+                  <CardContent className="pt-0">
+                    <p className="text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base leading-relaxed">{aula.descricao}</p>
                     
                     {aula.pdf_nome && (
-                      <div className="text-sm text-gray-600">
+                      <div className="text-xs sm:text-sm text-gray-600 p-2 sm:p-3 bg-gray-50 rounded-md">
                         <strong>Material complementar:</strong> {aula.pdf_nome}
                       </div>
                     )}
