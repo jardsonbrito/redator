@@ -94,8 +94,8 @@ const EnvieRedacao = () => {
 
     if (!isRedacaoValid) {
       toast({
-        title: "Redação inválida",
-        description: "Sua redação deve ter entre 7 e 30 linhas.",
+        title: "Redação obrigatória",
+        description: "Por favor, escreva sua redação.",
         variant: "destructive",
       });
       return;

@@ -26,16 +26,13 @@ export const RedacaoTextarea = ({
     const lines = value.split('\n').filter(line => line.trim().length > 0);
     setLineCount(lines.length);
     
-    // Valida se está entre 7 e 30 linhas
-    const valid = lines.length >= 7 && lines.length <= 30;
+    // Valida apenas se há texto (não mais mínimo de linhas)
+    const valid = value.trim().length > 0;
     setIsValid(valid);
     onValidChange(valid);
   }, [value, onValidChange]);
 
   const getStatusMessage = () => {
-    if (lineCount < 7) {
-      return "Sua redação precisa ter no mínimo 7 linhas.";
-    }
     if (lineCount > 30) {
       return "Sua redação ultrapassou o limite de 30 linhas.";
     }
@@ -43,7 +40,6 @@ export const RedacaoTextarea = ({
   };
 
   const getStatusColor = () => {
-    if (lineCount < 7) return "text-red-600";
     if (lineCount > 30) return "text-red-600";
     return "text-green-600";
   };
