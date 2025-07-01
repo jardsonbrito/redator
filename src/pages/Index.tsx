@@ -241,7 +241,7 @@ const Index = () => {
               <p className="text-xl text-redator-accent font-medium mb-8">Redação na prática, aprovação na certa!</p>
             </div>
 
-            {/* Simulado Ativo - Em destaque no topo */}
+            {/* Simulado Ativo - SEMPRE em destaque no topo, independente de turma */}
             <div className="mb-12">
               <SimuladoAtivo turmaCode={turmaCode} />
             </div>

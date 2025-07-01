@@ -18,8 +18,8 @@ interface SimuladoAtivoProps {
 export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
   const { toast } = useToast();
 
-  const { data: simuladoAtivo } = useQuery({
-    queryKey: ['simulado-ativo', turmaCode],
+  const { data: simulados, refetch } = useQuery({
+    queryKey: ['simulados-agendados', turmaCode],
     queryFn: async () => {
       const agora = new Date();
       const dataAtual = agora.toISOString().split('T')[0];
@@ -28,7 +28,6 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
         .from('simulados')
         .select('*')
         .eq('ativo', true)
-        .lte('data_inicio', dataAtual)
         .gte('data_fim', dataAtual);
 
       // Filtra por turma ou permite visitantes
@@ -42,24 +41,27 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
       
       if (error) throw error;
       
-      // Filtra simulados que estão no período de exibição (desde o dia de início até o fim)
+      // Filtra simulados que estão no período de exibição (desde hoje até o fim)
       const simuladosRelevantes = data?.filter(simulado => {
-        const inicioData = parseISO(simulado.data_inicio);
         const fimData = parseISO(simulado.data_fim);
         const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
+        hoje.setHours(23, 59, 59, 999); // Considera o dia inteiro
         
-        return hoje >= inicioData && hoje <= fimData;
+        return hoje <= fimData;
       });
 
-      return simuladosRelevantes?.[0] || null; // Retorna apenas o primeiro simulado relevante
+      return simuladosRelevantes || [];
     },
-    refetchInterval: 30000, // Atualiza a cada 30 segundos para controle preciso
+    refetchInterval: 5000, // Atualiza a cada 5 segundos para controle preciso
   });
 
-  if (!simuladoAtivo) {
+  // Se não há simulados, não renderiza nada
+  if (!simulados || simulados.length === 0) {
     return null;
   }
+
+  // Pega o primeiro simulado relevante
+  const simuladoAtivo = simulados[0];
 
   const agora = new Date();
   const inicioSimulado = parseISO(`${simuladoAtivo.data_inicio}T${simuladoAtivo.hora_inicio}`);
@@ -69,18 +71,24 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
   const simuladoFuturo = isBefore(agora, inicioSimulado);
   const simuladoEncerrado = isAfter(agora, fimSimulado);
 
+  // Se já encerrou, não mostra
+  if (simuladoEncerrado) {
+    return null;
+  }
+
   // Determina o status visual
   let statusBadge;
   let cardClass;
+  let statusText;
+
   if (simuladoDisponivel) {
-    statusBadge = <Badge className="bg-red-500 text-white animate-pulse font-bold">🔥 AO VIVO</Badge>;
-    cardClass = "border-l-4 border-l-red-500 bg-gradient-to-r from-red-50 to-orange-50 shadow-lg";
+    statusBadge = <Badge className="bg-green-500 text-white font-bold">EM PROGRESSO</Badge>;
+    cardClass = "border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg";
+    statusText = "em progresso";
   } else if (simuladoFuturo) {
-    statusBadge = <Badge className="bg-blue-500 text-white">📅 AGENDADO</Badge>;
+    statusBadge = <Badge className="bg-blue-500 text-white">AGENDADO</Badge>;
     cardClass = "border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-md";
-  } else {
-    // Simulado encerrado - não deveria aparecer aqui, mas por segurança
-    return null;
+    statusText = "agendado";
   }
 
   const handleTentativaParticipacao = () => {
@@ -89,12 +97,6 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
         toast({
           title: "Simulado ainda não disponível",
           description: `O simulado estará disponível a partir de ${format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Simulado encerrado",
-          description: "Este simulado já foi encerrado.",
           variant: "destructive",
         });
       }
@@ -110,8 +112,8 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
               <Flame className="w-6 h-6 text-white" />
             </div>
             <div>
-              <CardTitle className={`text-xl font-bold ${simuladoDisponivel ? 'text-red-800' : 'text-blue-800'}`}>
-                🎯 Simulado em Destaque
+              <CardTitle className={`text-xl font-bold ${simuladoDisponivel ? 'text-green-800' : 'text-blue-800'}`}>
+                🔥 Simulado
               </CardTitle>
               <p className="text-sm text-gray-600">Atividade agendada para sua turma</p>
             </div>
@@ -122,22 +124,26 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
       
       <CardContent className="space-y-4">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <h3 className={`font-bold text-lg mb-2 ${simuladoDisponivel ? 'text-red-800' : 'text-blue-800'}`}>
+          <h3 className={`font-bold text-lg mb-2 ${simuladoDisponivel ? 'text-green-800' : 'text-blue-800'}`}>
             {simuladoAtivo.titulo}
           </h3>
-          <p className={`text-sm p-3 rounded-md ${simuladoDisponivel ? 'text-red-700 bg-red-100' : 'text-blue-700 bg-blue-100'}`}>
-            <strong>Tema:</strong> {simuladoAtivo.frase_tematica}
-          </p>
+          
+          {/* Só mostra a frase temática se o simulado estiver disponível */}
+          {simuladoDisponivel && (
+            <p className={`text-sm p-3 rounded-md ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
+              <strong>Tema:</strong> {simuladoAtivo.frase_tematica}
+            </p>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className={`flex items-center gap-2 p-2 rounded ${simuladoDisponivel ? 'text-red-700 bg-red-50' : 'text-blue-700 bg-blue-50'}`}>
+          <div className={`flex items-center gap-2 p-2 rounded ${simuladoDisponivel ? 'text-green-700 bg-green-50' : 'text-blue-700 bg-blue-50'}`}>
             <Calendar className="w-4 h-4" />
             <span>
               <strong>Início:</strong> {format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
             </span>
           </div>
-          <div className={`flex items-center gap-2 p-2 rounded ${simuladoDisponivel ? 'text-red-700 bg-red-50' : 'text-blue-700 bg-blue-50'}`}>
+          <div className={`flex items-center gap-2 p-2 rounded ${simuladoDisponivel ? 'text-green-700 bg-green-50' : 'text-blue-700 bg-blue-50'}`}>
             <Clock className="w-4 h-4" />
             <span>
               <strong>Término:</strong> {format(fimSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
@@ -148,7 +154,7 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
         <div className="pt-2">
           {simuladoDisponivel ? (
             <Link to={`/simulados/${simuladoAtivo.id}`}>
-              <Button className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-bold text-lg py-3 shadow-lg">
+              <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-lg py-3 shadow-lg">
                 <ClipboardCheck className="w-5 h-5 mr-2" />
                 🚀 Participar Agora!
               </Button>
@@ -166,10 +172,7 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
               <div className="flex items-center justify-center gap-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
                 <AlertCircle className="w-4 h-4" />
                 <span>
-                  {simuladoFuturo 
-                    ? `Disponível a partir de ${format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}`
-                    : "Simulado encerrado"
-                  }
+                  Disponível a partir de {format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
                 </span>
               </div>
             </div>
