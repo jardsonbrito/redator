@@ -9,6 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      aulas: {
+        Row: {
+          ativo: boolean | null
+          criado_em: string | null
+          descricao: string | null
+          id: string
+          link_conteudo: string
+          modulo: string
+          pdf_nome: string | null
+          pdf_url: string | null
+          permite_visitante: boolean | null
+          titulo: string
+          turmas_autorizadas: string[] | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          criado_em?: string | null
+          descricao?: string | null
+          id?: string
+          link_conteudo: string
+          modulo: string
+          pdf_nome?: string | null
+          pdf_url?: string | null
+          permite_visitante?: boolean | null
+          titulo: string
+          turmas_autorizadas?: string[] | null
+        }
+        Update: {
+          ativo?: boolean | null
+          criado_em?: string | null
+          descricao?: string | null
+          id?: string
+          link_conteudo?: string
+          modulo?: string
+          pdf_nome?: string | null
+          pdf_url?: string | null
+          permite_visitante?: boolean | null
+          titulo?: string
+          turmas_autorizadas?: string[] | null
+        }
+        Relationships: []
+      }
       biblioteca_materiais: {
         Row: {
           arquivo_nome: string
@@ -53,6 +95,53 @@ export type Database = {
           turmas_autorizadas?: string[] | null
         }
         Relationships: []
+      }
+      exercicios: {
+        Row: {
+          ativo: boolean | null
+          criado_em: string | null
+          id: string
+          imagem_capa_url: string | null
+          link_forms: string | null
+          permite_visitante: boolean | null
+          tema_id: string | null
+          tipo: string
+          titulo: string
+          turmas_autorizadas: string[] | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          criado_em?: string | null
+          id?: string
+          imagem_capa_url?: string | null
+          link_forms?: string | null
+          permite_visitante?: boolean | null
+          tema_id?: string | null
+          tipo: string
+          titulo: string
+          turmas_autorizadas?: string[] | null
+        }
+        Update: {
+          ativo?: boolean | null
+          criado_em?: string | null
+          id?: string
+          imagem_capa_url?: string | null
+          link_forms?: string | null
+          permite_visitante?: boolean | null
+          tema_id?: string | null
+          tipo?: string
+          titulo?: string
+          turmas_autorizadas?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercicios_tema_id_fkey"
+            columns: ["tema_id"]
+            isOneToOne: false
+            referencedRelation: "temas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
