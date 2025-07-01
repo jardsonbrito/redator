@@ -13,7 +13,9 @@ import {
   Send,
   LogOut,
   Home,
-  File
+  File,
+  GraduationCap,
+  NotebookPen
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +38,13 @@ import RedacaoSimuladoList from "@/components/admin/RedacaoSimuladoList";
 import { BibliotecaForm } from "@/components/admin/BibliotecaForm";
 import BibliotecaList from "@/components/admin/BibliotecaList";
 
+// Import new components for Aulas and Exercicios
+import { AulaForm } from "@/components/admin/AulaForm";
+import { AulaList } from "@/components/admin/AulaList";
+import { ExercicioForm } from "@/components/admin/ExercicioForm";
+import { ExercicioList } from "@/components/admin/ExercicioList";
+import { RedacaoExercicioList } from "@/components/admin/RedacaoExercicioList";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
@@ -55,6 +64,8 @@ const Admin = () => {
     { id: "videos", label: "Vídeos", icon: Video },
     { id: "biblioteca", label: "Biblioteca", icon: File },
     { id: "simulados", label: "Simulados", icon: ClipboardCheck },
+    { id: "aulas", label: "Aulas", icon: GraduationCap },
+    { id: "exercicios", label: "Exercícios", icon: NotebookPen },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
   ];
 
@@ -136,6 +147,42 @@ const Admin = () => {
             </TabsContent>
             <TabsContent value="create">
               <SimuladoForm />
+            </TabsContent>
+          </Tabs>
+        );
+
+      case "aulas":
+        return (
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Aulas</TabsTrigger>
+              <TabsTrigger value="create">Criar Aula</TabsTrigger>
+            </TabsList>
+            <TabsContent value="list">
+              <AulaList />
+            </TabsContent>
+            <TabsContent value="create">
+              <AulaForm />
+            </TabsContent>
+          </Tabs>
+        );
+
+      case "exercicios":
+        return (
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="list">Listar Exercícios</TabsTrigger>
+              <TabsTrigger value="create">Criar Exercício</TabsTrigger>
+              <TabsTrigger value="redacoes">Redações</TabsTrigger>
+            </TabsList>
+            <TabsContent value="list">
+              <ExercicioList />
+            </TabsContent>
+            <TabsContent value="create">
+              <ExercicioForm />
+            </TabsContent>
+            <TabsContent value="redacoes">
+              <RedacaoExercicioList />
             </TabsContent>
           </Tabs>
         );
