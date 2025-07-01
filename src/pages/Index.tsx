@@ -113,7 +113,7 @@ const Index = () => {
             {/* Menu Principal Horizontal */}
             <MenuGrid 
               menuItems={menuItems} 
-              showMinhasRedacoes={showMinhasRedacoes} 
+              showMinhasRedacoes={!!showMinhasRedacoes} 
             />
           </main>
         </div>
