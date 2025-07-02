@@ -50,7 +50,7 @@ const RedacaoSimuladoList = () => {
 
   const corrigirRedacao = useMutation({
     mutationFn: async ({ id, dadosCorrecao }: { id: string, dadosCorrecao: any }) => {
-      const notaTotal = Object.values(notas).reduce((acc: number, nota: any) => acc + parseInt(nota || 0), 0);
+      const notaTotal = Object.values(notas).reduce((acc: number, nota: any) => acc + parseInt(nota), 0);
       
       const { data, error } = await supabase
         .from('redacoes_simulado')
@@ -60,8 +60,7 @@ const RedacaoSimuladoList = () => {
           corrigida: true,
           data_correcao: new Date().toISOString()
         })
-        .eq('id', id)
-        .select();
+        .eq('id', id);
       
       if (error) throw error;
       return data;
@@ -290,18 +289,17 @@ const RedacaoSimuladoList = () => {
                                 {[1, 2, 3, 4, 5].map(num => (
                                   <div key={num}>
                                     <Label>Competência {num}</Label>
-                                     <select
-                                       className="w-full p-2 border border-gray-300 rounded-md"
-                                       value={notas[`nota_c${num}` as keyof typeof notas]}
-                                       onChange={(e) => setNotas({
-                                         ...notas,
-                                         [`nota_c${num}`]: parseInt(e.target.value) || 0
-                                       })}
-                                     >
-                                       {[0, 40, 80, 120, 160, 200].map(valor => (
-                                         <option key={valor} value={valor}>{valor}</option>
-                                       ))}
-                                     </select>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="200"
+                                      step="20"
+                                      value={notas[`nota_c${num}` as keyof typeof notas]}
+                                      onChange={(e) => setNotas({
+                                        ...notas,
+                                        [`nota_c${num}`]: parseInt(e.target.value) || 0
+                                      })}
+                                    />
                                   </div>
                                 ))}
                               </div>
@@ -316,14 +314,14 @@ const RedacaoSimuladoList = () => {
                                 />
                               </div>
                               
-                               <div className="flex justify-between items-center">
+                              <div className="flex justify-between items-center">
                                 <div className="text-lg font-bold">
-                                  Nota Total: {Object.values(notas).reduce((acc: number, nota: any) => acc + parseInt(nota || 0), 0)}
+                                  Nota Total: {Object.values(notas).reduce((acc: number, nota: any) => acc + parseInt(nota), 0)}
                                 </div>
                                 <Button 
                                   onClick={handleCorrigir}
                                   disabled={corrigirRedacao.isPending}
-                                  className="bg-redator-primary hover:bg-redator-primary/90"
+                                  className="bg-redator-primary"
                                 >
                                   <CheckCircle className="w-4 h-4 mr-2" />
                                   {corrigirRedacao.isPending ? "Salvando..." : "Salvar Correção"}
