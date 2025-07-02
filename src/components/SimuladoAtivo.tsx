@@ -121,23 +121,37 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
 
   return (
     <div className="mb-8">
-      <Card className={cardClass}>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 shadow-lg">
-                <Brain className="w-7 h-7 text-white" />
+      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-2xl overflow-hidden">
+        <div className={`bg-gradient-to-r p-1 ${simuladoDisponivel ? 'from-green-400 to-emerald-500' : 'from-blue-400 to-cyan-500'}`}>
+          <CardHeader className="bg-white/95 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className={`absolute inset-0 rounded-2xl blur ${simuladoDisponivel ? 'bg-green-400' : 'bg-blue-400'} opacity-30`}></div>
+                  <div className={`relative flex items-center justify-center w-16 h-16 rounded-2xl shadow-xl ${simuladoDisponivel ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-blue-500 to-cyan-600'}`}>
+                    <Brain className="w-8 h-8 text-white drop-shadow-lg" />
+                  </div>
+                </div>
+                <div>
+                  <CardTitle className={`text-3xl font-extrabold ${simuladoDisponivel ? 'text-green-700' : 'text-blue-700'}`}>
+                    🎯 Simulado Disponível
+                  </CardTitle>
+                  <p className={`text-lg font-semibold ${simuladoDisponivel ? 'text-green-600' : 'text-blue-600'}`}>
+                    ⚡ Sua chance de brilhar está aqui!
+                  </p>
+                </div>
               </div>
-              <div>
-                <CardTitle className={`text-2xl font-bold ${simuladoDisponivel ? 'text-green-800' : 'text-blue-800'}`}>
-                  🎯 Simulado Disponível
-                </CardTitle>
-                <p className="text-base text-gray-700 font-medium">Atividade para sua turma</p>
+              <div className="flex flex-col items-end gap-2">
+                {statusBadge}
+                {simuladoDisponivel && (
+                  <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                    ⏰ ATIVO AGORA
+                  </div>
+                )}
               </div>
             </div>
-            {statusBadge}
-          </div>
-        </CardHeader>
+          </CardHeader>
+        </div>
         
         <CardContent className="space-y-6">
           <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">

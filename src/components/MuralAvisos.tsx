@@ -193,14 +193,16 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
   }
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
-          Mural de Avisos
+    <Card className="mb-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+      <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-t-lg">
+        <CardTitle className="flex items-center gap-3 text-primary">
+          <div className="p-2 bg-gradient-to-r from-primary to-secondary rounded-lg">
+            <MessageSquare className="w-6 h-6 text-white" />
+          </div>
+          <span className="text-xl font-bold">📢 Mural de Avisos</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-6">
         {avisos.map((aviso) => (
           <Card 
             key={aviso.id} 

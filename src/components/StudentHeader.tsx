@@ -22,25 +22,35 @@ export const StudentHeader = () => {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-redator-accent/20">
+    <header className="bg-white/90 backdrop-blur-md shadow-lg border-b border-white/20 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between">
-          <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-            <Home className="w-5 h-5" />
-            <span className="hidden sm:inline">Início</span>
+          <Link 
+            to="/app" 
+            className="group flex items-center gap-3 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent hover:from-secondary hover:to-primary transition-all duration-300"
+          >
+            <div className="p-2 bg-gradient-to-r from-primary to-secondary rounded-lg group-hover:from-secondary group-hover:to-primary transition-all duration-300 shadow-md">
+              <Home className="w-5 h-5 text-white" />
+            </div>
+            <span className="hidden sm:inline font-bold text-lg">Início</span>
           </Link>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {/* Informações do usuário */}
             {studentData.userType && (
-              <span className="text-sm text-redator-accent mr-2">
-                {studentData.nomeUsuario}
-              </span>
+              <div className="bg-gradient-to-r from-primary/10 to-secondary/10 px-4 py-2 rounded-full border border-primary/20">
+                <span className="text-sm font-medium text-primary">
+                  {studentData.nomeUsuario}
+                </span>
+              </div>
             )}
             
             {/* Link para Professor apenas se for admin autenticado */}
             {user && isAdmin && (
-              <Link to="/admin" className="flex items-center gap-2 bg-redator-primary text-white px-3 py-1.5 rounded-md hover:bg-redator-primary/90 transition-colors text-sm">
+              <Link 
+                to="/admin" 
+                className="flex items-center gap-2 bg-gradient-to-r from-primary to-secondary text-white px-4 py-2 rounded-full hover:from-secondary hover:to-primary transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl"
+              >
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Admin</span>
               </Link>
@@ -51,7 +61,7 @@ export const StudentHeader = () => {
               onClick={handleLogout}
               variant="outline" 
               size="sm"
-              className="flex items-center gap-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+              className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-full px-4 py-2 font-medium transition-all duration-300 hover:shadow-lg"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sair</span>

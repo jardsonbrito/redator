@@ -91,27 +91,36 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
 
   return (
     <div className="mb-8">
-      <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-indigo-50 shadow-lg">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600">
-                <ClipboardCheck className="w-6 h-6 text-white" />
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl overflow-hidden">
+        <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 p-1">
+          <CardHeader className="bg-white/90 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-2xl blur opacity-30"></div>
+                  <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-r from-primary to-secondary shadow-lg">
+                    <ClipboardCheck className="w-7 h-7 text-white" />
+                  </div>
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                    🏆 Meus Simulados
+                  </CardTitle>
+                  <p className="text-muted-foreground font-medium">Suas redações corrigidas com detalhes</p>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-xl font-bold text-purple-800">
-                  Meus Simulados
-                </CardTitle>
-                <p className="text-sm text-gray-600">Veja suas redações de simulados corrigidas</p>
-              </div>
+              <Link to="/meus-simulados">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30 hover:from-primary/20 hover:to-secondary/20 font-medium"
+                >
+                  Ver Todos
+                </Button>
+              </Link>
             </div>
-            <Link to="/meus-simulados">
-              <Button variant="outline" size="sm">
-                Ver Todos
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
+          </CardHeader>
+        </div>
         
         <CardContent className="space-y-4">
           {isLoading ? (

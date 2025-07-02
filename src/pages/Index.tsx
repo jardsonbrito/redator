@@ -87,29 +87,44 @@ const Index = () => {
   return (
     <ProtectedRoute>
       <TooltipProvider>
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+        <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50">
           {/* Header com botão Sair */}
           <StudentHeader />
 
           {/* Main Content */}
-          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             {/* Logo e Saudação Centralizada */}
-            <div className="text-center mb-12">
-              <div className="flex justify-center mb-6">
-                <img src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" alt="App do Redator" className="h-20 w-auto" />
+            <div className="text-center mb-10">
+              <div className="flex justify-center mb-8">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-full blur-2xl opacity-20 scale-150"></div>
+                  <img 
+                    src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" 
+                    alt="App do Redator" 
+                    className="h-24 w-auto relative z-10 drop-shadow-lg" 
+                  />
+                </div>
               </div>
               
-              <h1 className="text-3xl font-bold text-redator-primary mb-4 leading-relaxed">
-                Bem-vindo ao App do Redator
-              </h1>
-              
-              {studentData.userType && (
-                <p className="text-lg text-redator-accent font-medium mb-2">
-                  Olá, {studentData.nomeUsuario}!
-                </p>
-              )}
-              
-              <p className="text-xl text-redator-accent font-medium mb-8">Redação na prática, aprovação na certa!</p>
+              <div className="space-y-4">
+                <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent leading-tight">
+                  App do Redator
+                </h1>
+                
+                <div className="flex items-center justify-center gap-2 text-2xl font-bold text-primary/80">
+                  <span>✨</span>
+                  <span>Redação na prática, aprovação na certa!</span>
+                  <span>🚀</span>
+                </div>
+                
+                {studentData.userType && (
+                  <div className="bg-white/60 backdrop-blur-sm rounded-2xl px-6 py-3 inline-block shadow-lg border border-white/40">
+                    <p className="text-lg font-semibold text-accent">
+                      {studentData.userType === "aluno" ? "🎓" : "👋"} {studentData.nomeUsuario}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Simulado Ativo - SEMPRE em destaque no topo */}
