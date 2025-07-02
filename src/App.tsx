@@ -19,6 +19,7 @@ import Biblioteca from "./pages/Biblioteca";
 import Simulados from "./pages/Simulados";
 import SimuladoDetalhes from "./pages/SimuladoDetalhes";
 import MeusSimulados from "./pages/MeusSimulados";
+import Top5 from "./pages/Top5";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import Aulas from "./pages/Aulas";
 import Exercicios from "./pages/Exercicios";
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/simulados" element={<Simulados />} />
               <Route path="/simulados/:id" element={<SimuladoDetalhes />} />
               <Route path="/meus-simulados" element={<MeusSimulados />} />
+              <Route path="/top5" element={<Top5 />} />
               <Route path="/aulas" element={<Aulas />} />
               <Route path="/exercicios" element={<Exercicios />} />
               <Route path="/envie-redacao" element={<EnvieRedacao />} />

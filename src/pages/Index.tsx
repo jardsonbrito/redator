@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -77,6 +77,13 @@ const Index = () => {
       path: "/envie-redacao",
       icon: Send,
       tooltip: "Submeta seu texto para correção detalhada.",
+      showAlways: true
+    },
+    {
+      title: "Top 5",
+      path: "/top5",
+      icon: Trophy,
+      tooltip: "Veja o ranking dos melhores desempenhos em redações.",
       showAlways: true
     }
   ];
