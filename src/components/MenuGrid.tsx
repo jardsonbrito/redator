@@ -24,58 +24,52 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
     return item.showCondition === true;
   });
 
+  // Cores específicas para cada card baseadas na referência visual
+  const getCardColor = (index: number, title: string) => {
+    const colors = [
+      { bg: "bg-red-300", icon: "text-red-700", hover: "hover:bg-red-200" }, // Mural
+      { bg: "bg-teal-300", icon: "text-teal-700", hover: "hover:bg-teal-200" }, // Aulas
+      { bg: "bg-yellow-300", icon: "text-yellow-700", hover: "hover:bg-yellow-200" }, // Temas
+      { bg: "bg-purple-400", icon: "text-purple-800", hover: "hover:bg-purple-300" }, // Biblioteca
+      { bg: "bg-pink-300", icon: "text-pink-700", hover: "hover:bg-pink-200" }, // Redações
+      { bg: "bg-orange-300", icon: "text-orange-700", hover: "hover:bg-orange-200" }, // Videoteca
+      { bg: "bg-blue-300", icon: "text-blue-700", hover: "hover:bg-blue-200" }, // Simulados
+      { bg: "bg-green-300", icon: "text-green-700", hover: "hover:bg-green-200" }, // Exercícios
+      { bg: "bg-indigo-300", icon: "text-indigo-700", hover: "hover:bg-indigo-200" }, // Enviar Redação
+    ];
+    return colors[index % colors.length];
+  };
+
   return (
     <div className="space-y-8">
-      <div className="text-center space-y-4 mb-8">
-        <div className="relative">
-          <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-            {showMinhasRedacoes ? "🌟 Explore mais recursos" : "🎨 Escolha sua aventura"}
-          </h2>
-          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-16 h-0.5 bg-gradient-to-r from-primary to-secondary rounded-full opacity-60"></div>
-        </div>
-        <p className="text-base md:text-lg text-primary/70 max-w-2xl mx-auto font-medium">
-          {showMinhasRedacoes 
-            ? "Cada ferramenta foi criada especialmente para o seu sucesso! 💪" 
-            : "Transforme seus estudos numa jornada épica de aprendizado 📚✨"}
-        </p>
-      </div>
-      
-      <div className={`grid grid-cols-2 md:grid-cols-3 gap-6 max-w-6xl mx-auto ${
-        visibleMenuItems.length <= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-6'
-      }`}>
-        {visibleMenuItems.map((item, index) => (
-          <Tooltip key={index}>
-            <TooltipTrigger asChild>
-              <Link 
-                to={item.path} 
-                className="group relative flex flex-col items-center p-6 bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-2 border border-white/60 hover:border-primary/20 overflow-hidden"
-              >
-                {/* Efeito de brilho no hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-secondary/0 to-accent/0 group-hover:from-primary/5 group-hover:via-secondary/10 group-hover:to-accent/5 transition-all duration-500 rounded-3xl"></div>
-                
-                {/* Ícone com design flat moderno */}
-                <div className="relative mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center border border-primary/20 group-hover:border-primary/40 transition-colors duration-300">
-                    <item.icon className="w-7 h-7 text-primary group-hover:text-secondary transition-colors duration-300" />
+      {/* Grid de cards coloridos inspirado na referência */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+        {visibleMenuItems.map((item, index) => {
+          const cardColor = getCardColor(index, item.title);
+          return (
+            <Tooltip key={index}>
+              <TooltipTrigger asChild>
+                <Link 
+                  to={item.path} 
+                  className={`group relative flex flex-col items-center justify-center p-6 ${cardColor.bg} rounded-2xl shadow-lg ${cardColor.hover} transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px]`}
+                >
+                  {/* Ícone com estilo flat */}
+                  <div className="mb-3">
+                    <item.icon className={`w-8 h-8 ${cardColor.icon}`} />
                   </div>
-                  {/* Efeito de onda no hover */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-secondary opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
-                </div>
-                
-                {/* Título com tipografia moderna */}
-                <h3 className="relative text-sm font-bold text-primary/90 text-center leading-snug group-hover:text-primary transition-colors duration-300 tracking-wide">
-                  {item.title}
-                </h3>
-                
-                {/* Indicador visual de interação */}
-                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary group-hover:w-8 transition-all duration-500 rounded-full"></div>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-xs text-center p-4 bg-white/95 backdrop-blur-sm border border-primary/20 shadow-2xl rounded-2xl">
-              <p className="text-sm font-semibold text-primary/90">{item.tooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        ))}
+                  
+                  {/* Título do card */}
+                  <h3 className={`text-sm font-bold ${cardColor.icon} text-center leading-tight`}>
+                    {item.title}
+                  </h3>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs text-center p-3 bg-white border border-gray-200 shadow-lg rounded-xl">
+                <p className="text-xs font-medium text-gray-700">{item.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
       </div>
     </div>
   );

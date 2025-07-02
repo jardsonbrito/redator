@@ -87,51 +87,64 @@ const Index = () => {
   return (
     <ProtectedRoute>
       <TooltipProvider>
-        <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50">
+        <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-orange-50">
           {/* Header com botão Sair */}
           <StudentHeader />
 
           {/* Main Content */}
-          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            {/* Hero Section Moderna */}
+          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Hero Section com personagem estudantil */}
             <div className="text-center mb-12">
-              {/* Logo com efeito floating */}
-              <div className="flex justify-center mb-6">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-3xl blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
-                  <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border border-white/50">
-                    <img 
-                      src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" 
-                      alt="App do Redator" 
-                      className="h-20 w-auto drop-shadow-md" 
-                    />
+              {/* Ilustração principal com estudante */}
+              <div className="relative mb-8">
+                <div className="mx-auto max-w-md">
+                  {/* Fundo ilustrativo */}
+                  <div className="relative bg-gradient-to-br from-purple-200 to-orange-200 rounded-3xl p-8 shadow-xl">
+                    {/* Personagem estudante */}
+                    <div className="flex items-center justify-center mb-6">
+                      <div className="relative">
+                        {/* Avatar circular com gradiente */}
+                        <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                          <div className="w-16 h-16 bg-gradient-to-br from-orange-300 to-yellow-400 rounded-full flex items-center justify-center">
+                            <span className="text-2xl">👨‍🎓</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Elementos decorativos educacionais */}
+                    <div className="absolute top-4 left-4">
+                      <div className="w-10 h-10 bg-purple-300 rounded-xl flex items-center justify-center shadow-md">
+                        <BookOpen className="w-5 h-5 text-purple-700" />
+                      </div>
+                    </div>
+                    <div className="absolute top-4 right-4">
+                      <div className="w-10 h-10 bg-blue-300 rounded-xl flex items-center justify-center shadow-md">
+                        <span className="text-lg">🌍</span>
+                      </div>
+                    </div>
+                    
+                    {/* Mesa/ambiente de estudo */}
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3/4 h-6 bg-gradient-to-r from-yellow-300 to-orange-300 rounded-t-xl"></div>
                   </div>
                 </div>
               </div>
               
-              {/* Título principal com estilo moderno */}
-              <div className="space-y-6">
-                <div className="relative">
-                  <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent leading-tight tracking-tight">
-                    App do Redator
-                  </h1>
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-primary to-secondary rounded-full opacity-60"></div>
+              {/* Título com logo */}
+              <div className="space-y-4">
+                <div className="flex justify-center mb-4">
+                  <img 
+                    src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" 
+                    alt="App do Redator" 
+                    className="h-12 w-auto" 
+                  />
                 </div>
                 
-                {/* Tagline com design jovem */}
-                <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 backdrop-blur-sm rounded-2xl p-4 mx-auto max-w-lg border border-white/30 shadow-lg">
-                  <p className="text-lg md:text-xl font-bold text-primary/90 flex items-center justify-center gap-2">
-                    <span className="text-2xl">🎯</span>
-                    <span>Sua jornada rumo à nota 1000!</span>
-                    <span className="text-2xl">🚀</span>
-                  </p>
-                </div>
-                
-                {/* Badge da turma com design flat moderno */}
+                {/* Badge da turma */}
                 {studentData.userType && (
-                  <div className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg border border-white/40">
-                    <div className="w-3 h-3 bg-gradient-to-r from-primary to-secondary rounded-full animate-pulse"></div>
-                    <p className="text-base font-bold text-primary/90">
+                  <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-lg border border-purple-200">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <p className="text-sm font-semibold text-purple-700">
                       {studentData.userType === "aluno" && studentData.turma ? 
                         `Aluno da ${studentData.turma}` : 
                         "Visitante"
