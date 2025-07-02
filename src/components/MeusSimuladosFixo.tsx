@@ -21,36 +21,90 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
   const { toast } = useToast();
   const [emailVerificacao, setEmailVerificacao] = useState<{[key: string]: string}>({});
   const [redacaoVisivel, setRedacaoVisivel] = useState<{[key: string]: boolean}>({});
-  const [filtroNome, setFiltroNome] = useState("");
-  const [filtroEmail, setFiltroEmail] = useState("");
-  const [filtroTema, setFiltroTema] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState<string>("todas");
 
-  const { data: redacoesCorrigidas, isLoading } = useQuery({
-    queryKey: ['simulados-corrigidos', turmaCode],
+  // Buscar dados do usuário para determinar filtros
+  const userType = localStorage.getItem("userType");
+  const visitanteData = localStorage.getItem("visitanteData");
+  let visitanteEmail = "";
+  
+  if (userType === "visitante" && visitanteData) {
+    try {
+      const dados = JSON.parse(visitanteData);
+      visitanteEmail = dados.email;
+    } catch (error) {
+      console.error('Erro ao parsear dados do visitante:', error);
+    }
+  }
+
+  const { data: todasRedacoes, isLoading } = useQuery({
+    queryKey: ['minhas-redacoes', turmaCode, visitanteEmail],
     queryFn: async () => {
-      let query = supabase
+      const redacoes = [];
+      
+      // Buscar redações avulsas/regulares
+      if (userType === "aluno" && turmaCode !== "visitante") {
+        const { data: enviadasRes } = await supabase
+          .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
+        
+        if (enviadasRes) {
+          enviadasRes.forEach(r => {
+            redacoes.push({
+              ...r,
+              tipo_origem: r.tipo_envio || 'regular',
+              fonte: 'redacoes_enviadas'
+            });
+          });
+        }
+      } else if (userType === "visitante" && visitanteEmail) {
+        const { data: enviadasRes } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('email_aluno', visitanteEmail)
+          .eq('tipo_envio', 'visitante')
+          .order('data_envio', { ascending: false });
+        
+        if (enviadasRes) {
+          enviadasRes.forEach(r => {
+            redacoes.push({
+              ...r,
+              tipo_origem: 'avulsa',
+              fonte: 'redacoes_enviadas'
+            });
+          });
+        }
+      }
+
+      // Buscar redações de simulado
+      let simuladoQuery = supabase
         .from('redacoes_simulado')
         .select(`
           *,
-          simulados!inner(titulo, frase_tematica, turmas_autorizadas)
+          simulados!inner(titulo, frase_tematica)
         `)
-        .eq('corrigida', true)
         .order('data_envio', { ascending: false });
 
-      if (turmaCode !== "visitante") {
-        query = query.eq('turma', turmaCode);
-      } else {
-        query = query.eq('turma', 'visitante');
+      if (userType === "aluno" && turmaCode !== "visitante") {
+        simuladoQuery = simuladoQuery.eq('turma', turmaCode);
+      } else if (userType === "visitante") {
+        simuladoQuery = simuladoQuery.eq('email_aluno', visitanteEmail);
       }
       
-      const { data, error } = await query;
+      const { data: simuladoRes } = await simuladoQuery;
       
-      if (error) {
-        console.error('Erro ao buscar redações de simulados:', error);
-        return [];
+      if (simuladoRes) {
+        simuladoRes.forEach(r => {
+          redacoes.push({
+            ...r,
+            frase_tematica: r.simulados.frase_tematica,
+            tipo_origem: 'simulado',
+            fonte: 'redacoes_simulado'
+          });
+        });
       }
-      
-      return data || [];
+
+      // Ordenar por data de envio (mais recentes primeiro)
+      return redacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
     }
   });
 
@@ -81,12 +135,13 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     }
   };
 
-  // Filtrar redações
-  const redacoesFiltradas = redacoesCorrigidas?.filter(redacao => {
-    const nomeMatch = !filtroNome || redacao.nome_aluno.toLowerCase().includes(filtroNome.toLowerCase());
-    const emailMatch = !filtroEmail || redacao.email_aluno.toLowerCase().includes(filtroEmail.toLowerCase());
-    const temaMatch = !filtroTema || redacao.simulados.titulo.toLowerCase().includes(filtroTema.toLowerCase());
-    return nomeMatch && emailMatch && temaMatch;
+  // Filtrar redações por tipo
+  const redacoesFiltradas = todasRedacoes?.filter(redacao => {
+    if (filtroTipo === "todas") return true;
+    if (filtroTipo === "regular" && redacao.tipo_origem === "regular") return true;
+    if (filtroTipo === "avulsa" && redacao.tipo_origem === "avulsa") return true;
+    if (filtroTipo === "simulado" && redacao.tipo_origem === "simulado") return true;
+    return false;
   }) || [];
 
   return (
@@ -104,9 +159,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 </div>
                 <div>
                   <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    🏆 Meus Simulados
+                    📝 Minhas Redações
                   </CardTitle>
-                  <p className="text-muted-foreground font-medium">Suas redações corrigidas com detalhes</p>
+                  <p className="text-muted-foreground font-medium">Suas redações enviadas com detalhes</p>
                 </div>
               </div>
               <Link to="/meus-simulados">
@@ -128,33 +183,46 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
               <p className="mt-4 text-gray-600">Carregando simulados...</p>
             </div>
-          ) : !redacoesCorrigidas || redacoesCorrigidas.length === 0 ? (
+          ) : !todasRedacoes || todasRedacoes.length === 0 ? (
             <div className="text-center py-8">
               <ClipboardCheck className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">Nenhuma redação de simulado corrigida ainda</p>
+              <p className="text-gray-600 mb-2">Nenhuma redação enviada ainda</p>
               <p className="text-sm text-gray-500">
-                Suas correções aparecerão aqui quando estiverem prontas
+                Suas redações aparecerão aqui quando forem enviadas
               </p>
             </div>
           ) : (
             <>
-              {/* Filtros */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <Input
-                  placeholder="Filtrar por nome..."
-                  value={filtroNome}
-                  onChange={(e) => setFiltroNome(e.target.value)}
-                />
-                <Input
-                  placeholder="Filtrar por e-mail..."
-                  value={filtroEmail}
-                  onChange={(e) => setFiltroEmail(e.target.value)}
-                />
-                <Input
-                  placeholder="Filtrar por tema..."
-                  value={filtroTema}
-                  onChange={(e) => setFiltroTema(e.target.value)}
-                />
+              {/* Filtros por tipo */}
+              <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
+                <Button
+                  variant={filtroTipo === "todas" ? "default" : "outline"}
+                  onClick={() => setFiltroTipo("todas")}
+                  size="sm"
+                >
+                  Todas
+                </Button>
+                <Button
+                  variant={filtroTipo === "regular" ? "default" : "outline"}
+                  onClick={() => setFiltroTipo("regular")}
+                  size="sm"
+                >
+                  Regular
+                </Button>
+                <Button
+                  variant={filtroTipo === "avulsa" ? "default" : "outline"}
+                  onClick={() => setFiltroTipo("avulsa")}
+                  size="sm"
+                >
+                  Avulsa
+                </Button>
+                <Button
+                  variant={filtroTipo === "simulado" ? "default" : "outline"}
+                  onClick={() => setFiltroTipo("simulado")}
+                  size="sm"
+                >
+                  Simulado
+                </Button>
               </div>
 
               {redacoesFiltradas.slice(0, 3).map((redacao) => (
@@ -163,18 +231,24 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <h4 className="font-bold text-lg text-purple-800 mb-1">
-                          {redacao.simulados.titulo}
+                          {redacao.tipo_origem === 'simulado' ? redacao.simulados?.titulo : redacao.frase_tematica}
                         </h4>
-                        <p className="text-sm text-gray-600 mb-2">{redacao.simulados.frase_tematica}</p>
+                        <p className="text-sm text-gray-600 mb-2">{redacao.frase_tematica}</p>
                         
                         <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge className="bg-green-500">
+                          <Badge className={redacao.corrigida ? "bg-green-500" : "bg-yellow-500"}>
                             <CheckCircle className="w-3 h-3 mr-1" />
-                            Corrigida
+                            {redacao.corrigida ? "Corrigida" : "Aguardando"}
                           </Badge>
                           <Badge variant="outline">
-                            Nota: {redacao.nota_total}
+                            {redacao.tipo_origem === 'simulado' ? 'Simulado' : 
+                             redacao.tipo_origem === 'regular' ? 'Regular' : 'Avulsa'}
                           </Badge>
+                          {redacao.corrigida && redacao.nota_total && (
+                            <Badge variant="outline">
+                              Nota: {redacao.nota_total}
+                            </Badge>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
@@ -220,7 +294,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                         )}
 
                         {/* Mostrar correção se e-mail foi verificado */}
-                        {redacaoVisivel[redacao.id] && (
+                        {redacaoVisivel[redacao.id] && redacao.corrigida && (
                           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                             <div className="grid grid-cols-5 gap-4 mb-4">
                               <div className="text-center">
@@ -245,11 +319,11 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                               </div>
                             </div>
                             
-                            {redacao.comentario_pedagogico && (
+                            {(redacao.comentario_pedagogico || redacao.comentario_admin) && (
                               <div>
-                                <div className="font-medium text-purple-800 mb-2">Comentário Pedagógico:</div>
+                                <div className="font-medium text-purple-800 mb-2">Comentário da Correção:</div>
                                 <div className="p-3 bg-white rounded border text-sm">
-                                  {redacao.comentario_pedagogico}
+                                  {redacao.comentario_pedagogico || redacao.comentario_admin}
                                 </div>
                               </div>
                             )}
@@ -257,29 +331,6 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                         )}
                       </div>
                       
-                      <div className="ml-4">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Eye className="w-4 h-4 mr-1" />
-                              Ver Redação
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Redação - {redacao.nome_aluno}</DialogTitle>
-                            </DialogHeader>
-                            <div className="mt-4">
-                              <div className="bg-gray-50 p-4 rounded mb-4">
-                                <h3 className="font-bold text-purple-800 mb-2">{redacao.simulados.frase_tematica}</h3>
-                              </div>
-                              <div className="bg-white p-4 border rounded whitespace-pre-wrap">
-                                {redacao.texto}
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -289,7 +340,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 <div className="text-center pt-4">
                   <Link to="/meus-simulados">
                     <Button variant="outline">
-                      Ver todas as {redacoesFiltradas.length} redações corrigidas
+                      Ver todas as {redacoesFiltradas.length} redações enviadas
                     </Button>
                   </Link>
                 </div>
