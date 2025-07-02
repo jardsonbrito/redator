@@ -24,8 +24,8 @@ const TemaDetalhes = () => {
   const navigate = useNavigate();
   const { studentData } = useStudentAuth();
   
-  // Verificar se é aluno (não visitante)
-  const isStudent = studentData.userType === "aluno" && studentData.turma && studentData.turma !== "visitante";
+  // Permitir acesso tanto para alunos quanto visitantes
+  const canWriteRedacao = studentData.userType === "aluno" || studentData.userType === "visitante";
   
   const handleEscreverRedacao = () => {
     if (tema) {
@@ -164,8 +164,8 @@ const TemaDetalhes = () => {
                 </div>
               )}
               
-              {/* Botão para escrever redação - apenas para alunos */}
-              {isStudent && (
+              {/* Botão para escrever redação - para alunos e visitantes */}
+              {canWriteRedacao && (
                 <div className="bg-redator-primary/5 rounded-lg p-6 border border-redator-primary/20 text-center">
                   <h3 className="font-semibold text-redator-primary mb-3">
                     Gostou do tema? Pratique agora mesmo!

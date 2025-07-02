@@ -41,9 +41,12 @@ export const MinhasRedacoes = () => {
   // Recupera dados do usuário
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
+  const visitanteData = localStorage.getItem("visitanteData");
 
-  // Determinar código da turma
+  // Determinar código da turma ou email do visitante
   let turmaCode = "";
+  let visitanteEmail = "";
+  
   if (userType === "aluno" && alunoTurma) {
     const turmasMap = {
       "Turma A": "LRA2025",
@@ -53,26 +56,51 @@ export const MinhasRedacoes = () => {
       "Turma E": "LRE2025"
     };
     turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "";
+  } else if (userType === "visitante" && visitanteData) {
+    try {
+      const dados = JSON.parse(visitanteData);
+      visitanteEmail = dados.email;
+    } catch (error) {
+      console.error('Erro ao parsear dados do visitante:', error);
+    }
   }
 
   const { data: redacoesTurma, isLoading, error } = useQuery({
-    queryKey: ['redacoes-turma', turmaCode],
+    queryKey: ['redacoes-usuario', turmaCode, visitanteEmail],
     queryFn: async () => {
-      if (!turmaCode) return [];
-      
-      console.log('Buscando redações da turma:', turmaCode);
-      const { data, error } = await supabase
-        .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
-      
-      if (error) {
-        console.error('Erro ao buscar redações da turma:', error);
-        throw error;
+      if (userType === "aluno" && turmaCode) {
+        console.log('Buscando redações da turma:', turmaCode);
+        const { data, error } = await supabase
+          .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
+        
+        if (error) {
+          console.error('Erro ao buscar redações da turma:', error);
+          throw error;
+        }
+        
+        console.log('Redações da turma encontradas:', data);
+        return data as RedacaoTurma[] || [];
+      } else if (userType === "visitante" && visitanteEmail) {
+        console.log('Buscando redações do visitante:', visitanteEmail);
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('email_aluno', visitanteEmail)
+          .eq('tipo_envio', 'visitante')
+          .order('data_envio', { ascending: false });
+        
+        if (error) {
+          console.error('Erro ao buscar redações do visitante:', error);
+          throw error;
+        }
+        
+        console.log('Redações do visitante encontradas:', data);
+        return data as RedacaoTurma[] || [];
       }
       
-      console.log('Redações da turma encontradas:', data);
-      return data as RedacaoTurma[] || [];
+      return [];
     },
-    enabled: !!turmaCode,
+    enabled: !!(turmaCode || visitanteEmail),
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
@@ -95,11 +123,25 @@ export const MinhasRedacoes = () => {
 
     try {
       // Buscar redação específica com autenticação por email
-      const { data, error } = await supabase
-        .rpc('get_redacoes_by_turma_and_email', { 
-          p_turma: turmaCode, 
-          p_email: emailInput.trim() 
-        });
+      let data, error;
+      
+      if (userType === "aluno" && turmaCode) {
+        const response = await supabase
+          .rpc('get_redacoes_by_turma_and_email', { 
+            p_turma: turmaCode, 
+            p_email: emailInput.trim() 
+          });
+        data = response.data;
+        error = response.error;
+      } else if (userType === "visitante") {
+        const response = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('email_aluno', emailInput.trim())
+          .eq('tipo_envio', 'visitante');
+        data = response.data;
+        error = response.error;
+      }
 
       if (error) {
         console.error('Erro na autenticação:', error);
@@ -191,13 +233,13 @@ export const MinhasRedacoes = () => {
     return tipos[tipo as keyof typeof tipos] || tipo;
   };
 
-  if (!turmaCode) {
+  if (!turmaCode && !visitanteEmail) {
     return (
       <Card className="border-redator-accent/20">
         <CardContent className="text-center py-8">
           <Lock className="w-12 h-12 text-redator-accent mx-auto mb-4" />
           <p className="text-redator-accent">
-            Faça login como aluno de uma turma para visualizar suas redações.
+            Faça login como aluno ou visitante para visualizar suas redações.
           </p>
         </CardContent>
       </Card>
@@ -235,7 +277,10 @@ export const MinhasRedacoes = () => {
         </CardHeader>
         <CardContent className="text-center py-8">
           <p className="text-redator-accent mb-4">
-            Ainda não há redações da sua turma ({alunoTurma}).
+            {userType === "aluno" ? 
+              `Ainda não há redações da sua turma (${alunoTurma}).` : 
+              "Você ainda não enviou nenhuma redação."
+            }
           </p>
           <p className="text-sm text-redator-accent/70">
             Envie uma redação para começar a ver as correções aqui!
@@ -251,7 +296,10 @@ export const MinhasRedacoes = () => {
         <div className="flex items-center gap-2 mb-6">
           <FileText className="w-6 h-6 text-redator-primary" />
           <h2 className="text-2xl font-bold text-redator-primary">
-            Minhas Redações - {alunoTurma} ({redacoesTurma.length})
+            {userType === "aluno" ? 
+              `Minhas Redações - ${alunoTurma} (${redacoesTurma.length})` : 
+              `Minhas Redações (${redacoesTurma.length})`
+            }
           </h2>
         </div>
         
@@ -399,7 +447,7 @@ export const MinhasRedacoes = () => {
                   email_aluno: selectedRedacao.email_aluno,
                   tipo_envio: selectedRedacao.tipo_envio,
                   status: selectedRedacao.status,
-                  turma: turmaCode,
+                  turma: userType === "aluno" ? turmaCode : "visitante",
                 }} 
               />
             </div>

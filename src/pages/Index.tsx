@@ -81,8 +81,8 @@ const Index = () => {
     }
   ];
 
-  // Determinar se deve mostrar seção "Minhas Redações"
-  const showMinhasRedacoes = studentData.userType === "aluno" && studentData.turma;
+  // Determinar se deve mostrar seção "Minhas Redações" - tanto para alunos quanto visitantes
+  const showMinhasRedacoes = (studentData.userType === "aluno" && studentData.turma) || studentData.userType === "visitante";
 
   return (
     <ProtectedRoute>
