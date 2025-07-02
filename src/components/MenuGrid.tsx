@@ -24,18 +24,17 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
     return item.showCondition === true;
   });
 
-  // Cores específicas para cada card baseadas na referência visual
+  // Paleta harmonizada baseada em tons roxos/lilás
   const getCardColor = (index: number, title: string) => {
     const colors = [
-      { bg: "bg-red-300", icon: "text-red-700", hover: "hover:bg-red-200" }, // Mural
-      { bg: "bg-teal-300", icon: "text-teal-700", hover: "hover:bg-teal-200" }, // Aulas
-      { bg: "bg-yellow-300", icon: "text-yellow-700", hover: "hover:bg-yellow-200" }, // Temas
-      { bg: "bg-purple-400", icon: "text-purple-800", hover: "hover:bg-purple-300" }, // Biblioteca
-      { bg: "bg-pink-300", icon: "text-pink-700", hover: "hover:bg-pink-200" }, // Redações
-      { bg: "bg-orange-300", icon: "text-orange-700", hover: "hover:bg-orange-200" }, // Videoteca
-      { bg: "bg-blue-300", icon: "text-blue-700", hover: "hover:bg-blue-200" }, // Simulados
-      { bg: "bg-green-300", icon: "text-green-700", hover: "hover:bg-green-200" }, // Exercícios
-      { bg: "bg-indigo-300", icon: "text-indigo-700", hover: "hover:bg-indigo-200" }, // Enviar Redação
+      { bg: "bg-secondary/60", icon: "text-primary", hover: "hover:bg-secondary/70" }, // Temas
+      { bg: "bg-primary/20", icon: "text-primary", hover: "hover:bg-primary/30" }, // Redações
+      { bg: "bg-accent/40", icon: "text-primary", hover: "hover:bg-accent/50" }, // Videoteca
+      { bg: "bg-secondary/80", icon: "text-primary", hover: "hover:bg-secondary/90" }, // Biblioteca
+      { bg: "bg-primary/30", icon: "text-white", hover: "hover:bg-primary/40" }, // Simulados
+      { bg: "bg-accent/60", icon: "text-white", hover: "hover:bg-accent/70" }, // Aulas
+      { bg: "bg-secondary/40", icon: "text-primary", hover: "hover:bg-secondary/50" }, // Exercícios
+      { bg: "bg-primary/40", icon: "text-white", hover: "hover:bg-primary/50" }, // Enviar Redação
     ];
     return colors[index % colors.length];
   };
