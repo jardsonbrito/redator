@@ -105,21 +105,11 @@ export default function SimuladoDetalhes() {
       return;
     }
 
-    // Validar mínimo e máximo de linhas
-    const linhas = formData.texto.split('\n').filter(linha => linha.trim().length > 0);
-    if (linhas.length < 7) {
+    // Validar apenas se há texto
+    if (!formData.texto.trim()) {
       toast({
-        title: "Redação muito curta",
-        description: "Sua redação deve ter pelo menos 7 linhas completas.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (linhas.length > 30) {
-      toast({
-        title: "Redação muito longa",
-        description: "Sua redação deve ter no máximo 30 linhas.",
+        title: "Texto obrigatório",
+        description: "Por favor, escreva sua redação antes de enviar.",
         variant: "destructive",
       });
       return;
@@ -179,7 +169,7 @@ export default function SimuladoDetalhes() {
   const simuladoEncerrado = isAfter(agora, fimSimulado);
 
   const tema = simulado.temas;
-  const linhasTexto = formData.texto.split('\n').filter(linha => linha.trim().length > 0).length;
+  const palavrasTexto = formData.texto.trim().split(/\s+/).filter(palavra => palavra.length > 0).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
@@ -343,17 +333,7 @@ export default function SimuladoDetalhes() {
                   <div className="flex items-center justify-between mb-2">
                     <Label htmlFor="redacao">Sua Redação *</Label>
                     <div className="text-sm text-gray-600">
-                      {linhasTexto} linha{linhasTexto !== 1 ? 's' : ''} 
-                      {linhasTexto < 7 && (
-                        <span className="text-red-500 ml-1">
-                          (mínimo: 7 linhas)
-                        </span>
-                      )}
-                      {linhasTexto > 30 && (
-                        <span className="text-red-500 ml-1">
-                          (máximo: 30 linhas)
-                        </span>
-                      )}
+                      {palavrasTexto} palavra{palavrasTexto !== 1 ? 's' : ''}
                     </div>
                   </div>
                   <Textarea
@@ -369,7 +349,7 @@ export default function SimuladoDetalhes() {
 
                 <Button 
                   type="submit" 
-                  disabled={enviarRedacao.isPending || linhasTexto < 7 || linhasTexto > 30}
+                  disabled={enviarRedacao.isPending || !formData.texto.trim()}
                   className="w-full bg-purple-600 hover:bg-purple-700"
                 >
                   {enviarRedacao.isPending ? 'Enviando...' : 'Enviar Redação'}

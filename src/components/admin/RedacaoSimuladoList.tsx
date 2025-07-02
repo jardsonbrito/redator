@@ -50,17 +50,32 @@ const RedacaoSimuladoList = () => {
 
   const corrigirRedacao = useMutation({
     mutationFn: async ({ id, dadosCorrecao }: { id: string, dadosCorrecao: any }) => {
-      const notaTotal = Object.values(notas).reduce((acc: number, nota: any) => acc + parseInt(nota), 0);
+      const notaTotal = [
+        dadosCorrecao.nota_c1,
+        dadosCorrecao.nota_c2,
+        dadosCorrecao.nota_c3,
+        dadosCorrecao.nota_c4,
+        dadosCorrecao.nota_c5
+      ].reduce((acc: number, nota: any) => {
+        const notaNum = typeof nota === 'number' ? nota : parseInt(nota) || 0;
+        return acc + notaNum;
+      }, 0);
       
       const { data, error } = await supabase
         .from('redacoes_simulado')
         .update({
-          ...dadosCorrecao,
+          nota_c1: dadosCorrecao.nota_c1,
+          nota_c2: dadosCorrecao.nota_c2,
+          nota_c3: dadosCorrecao.nota_c3,
+          nota_c4: dadosCorrecao.nota_c4,
+          nota_c5: dadosCorrecao.nota_c5,
+          comentario_pedagogico: dadosCorrecao.comentario_pedagogico,
           nota_total: notaTotal,
           corrigida: true,
           data_correcao: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
       
       if (error) throw error;
       return data;
