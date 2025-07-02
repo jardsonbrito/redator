@@ -93,34 +93,49 @@ const Index = () => {
 
           {/* Main Content */}
           <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            {/* Logo e Saudação Centralizada */}
-            <div className="text-center mb-10">
-              <div className="flex justify-center mb-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-full blur-2xl opacity-20 scale-150"></div>
-                  <img 
-                    src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" 
-                    alt="App do Redator" 
-                    className="h-24 w-auto relative z-10 drop-shadow-lg" 
-                  />
+            {/* Hero Section Moderna */}
+            <div className="text-center mb-12">
+              {/* Logo com efeito floating */}
+              <div className="flex justify-center mb-6">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-3xl blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
+                  <div className="relative bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border border-white/50">
+                    <img 
+                      src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" 
+                      alt="App do Redator" 
+                      className="h-20 w-auto drop-shadow-md" 
+                    />
+                  </div>
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent leading-tight">
-                  App do Redator
-                </h1>
-                
-                <div className="flex items-center justify-center gap-2 text-2xl font-bold text-primary/80">
-                  <span>✨</span>
-                  <span>Redação na prática, aprovação na certa!</span>
-                  <span>🚀</span>
+              {/* Título principal com estilo moderno */}
+              <div className="space-y-6">
+                <div className="relative">
+                  <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent leading-tight tracking-tight">
+                    App do Redator
+                  </h1>
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-primary to-secondary rounded-full opacity-60"></div>
                 </div>
                 
+                {/* Tagline com design jovem */}
+                <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 backdrop-blur-sm rounded-2xl p-4 mx-auto max-w-lg border border-white/30 shadow-lg">
+                  <p className="text-lg md:text-xl font-bold text-primary/90 flex items-center justify-center gap-2">
+                    <span className="text-2xl">🎯</span>
+                    <span>Sua jornada rumo à nota 1000!</span>
+                    <span className="text-2xl">🚀</span>
+                  </p>
+                </div>
+                
+                {/* Badge da turma com design flat moderno */}
                 {studentData.userType && (
-                  <div className="bg-white/60 backdrop-blur-sm rounded-2xl px-6 py-3 inline-block shadow-lg border border-white/40">
-                    <p className="text-lg font-semibold text-accent">
-                      {studentData.userType === "aluno" ? "🎓" : "👋"} {studentData.nomeUsuario}
+                  <div className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg border border-white/40">
+                    <div className="w-3 h-3 bg-gradient-to-r from-primary to-secondary rounded-full animate-pulse"></div>
+                    <p className="text-base font-bold text-primary/90">
+                      {studentData.userType === "aluno" && studentData.turma ? 
+                        `Aluno da ${studentData.turma}` : 
+                        "Visitante"
+                      }
                     </p>
                   </div>
                 )}
