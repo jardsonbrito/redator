@@ -6,7 +6,11 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
-export const StudentHeader = () => {
+interface StudentHeaderProps {
+  pageTitle?: string;
+}
+
+export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   const { studentData, logoutStudent } = useStudentAuth();
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -32,8 +36,13 @@ export const StudentHeader = () => {
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <Home className="w-5 h-5" />
             </div>
-            <span className="hidden sm:inline font-semibold text-lg">Home</span>
+            <span className="hidden sm:inline font-semibold text-lg">Início</span>
           </Link>
+          
+          {/* Título da página no centro */}
+          {pageTitle && (
+            <h1 className="text-xl font-bold text-primary-foreground">{pageTitle}</h1>
+          )}
           
           <div className="flex items-center gap-3">
             {/* Link para Professor apenas se for admin autenticado */}

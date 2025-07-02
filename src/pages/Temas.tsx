@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Home, BookOpen, FileText } from "lucide-react";
+import { BookOpen, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
+import { StudentHeader } from "@/components/StudentHeader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 export default function Temas() {
   const { data: temas, isLoading, error } = useQuery({
@@ -44,19 +46,9 @@ export default function Temas() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-redator-accent/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-              <Home className="w-5 h-5" />
-              <span>Início</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-redator-primary">Temas</h1>
-          </div>
-        </div>
-      </header>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+        <StudentHeader pageTitle="Temas" />
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -121,5 +113,6 @@ export default function Temas() {
         )}
       </main>
     </div>
+    </ProtectedRoute>
   );
 }

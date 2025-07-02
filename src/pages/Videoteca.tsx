@@ -1,9 +1,10 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Home, Play } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Play } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { StudentHeader } from "@/components/StudentHeader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const Videoteca = () => {
   const { data: videos, isLoading, error } = useQuery({
@@ -72,19 +73,9 @@ const Videoteca = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-redator-accent/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-              <Home className="w-5 h-5" />
-              <span>Início</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-redator-primary">Videoteca</h1>
-          </div>
-        </div>
-      </header>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+        <StudentHeader pageTitle="Videoteca" />
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
@@ -171,6 +162,7 @@ const Videoteca = () => {
         )}
       </main>
     </div>
+    </ProtectedRoute>
   );
 };
 

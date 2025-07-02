@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Home, Calendar, Clock, Users, ArrowRight } from "lucide-react";
+import { Calendar, Clock, Users, ArrowRight, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { StudentHeader } from "@/components/StudentHeader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const Simulados = () => {
   const { studentData } = useStudentAuth();
@@ -58,38 +60,21 @@ const Simulados = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-        <header className="bg-white shadow-sm border-b border-redator-accent/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-                <Home className="w-5 h-5" />
-                <span>Início</span>
-              </Link>
-              <h1 className="text-2xl font-bold text-redator-primary">Simulados</h1>
-            </div>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">Carregando simulados...</div>
-        </main>
-      </div>
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+          <StudentHeader pageTitle="Simulados" />
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="text-center">Carregando simulados...</div>
+          </main>
+        </div>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      <header className="bg-white shadow-sm border-b border-redator-accent/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-              <Home className="w-5 h-5" />
-              <span>Início</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-redator-primary">Simulados</h1>
-          </div>
-        </div>
-      </header>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+        <StudentHeader pageTitle="Simulados" />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
@@ -104,7 +89,7 @@ const Simulados = () => {
         {!simulados || simulados.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
-              <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-600 mb-2">
                 Nenhum simulado disponível
               </h3>
@@ -181,6 +166,7 @@ const Simulados = () => {
         )}
       </main>
     </div>
+    </ProtectedRoute>
   );
 };
 
