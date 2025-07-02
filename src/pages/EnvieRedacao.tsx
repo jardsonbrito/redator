@@ -3,12 +3,10 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, Send, Eye } from "lucide-react";
+import { Home, Send } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
 import { RedacaoTextarea } from "@/components/RedacaoTextarea";
 
 const EnvieRedacao = () => {
@@ -18,7 +16,6 @@ const EnvieRedacao = () => {
   const [fraseTematica, setFraseTematica] = useState("");
   const [redacaoTexto, setRedacaoTexto] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showForm, setShowForm] = useState(true);
   const [isRedacaoValid, setIsRedacaoValid] = useState(false);
   const { toast } = useToast();
 
@@ -59,25 +56,6 @@ const EnvieRedacao = () => {
     if (temaFromUrl) {
       setFraseTematica(decodeURIComponent(temaFromUrl));
     }
-  });
-
-  const { data: redacoesEnviadas, isLoading, refetch } = useQuery({
-    queryKey: ['redacoes-enviadas'],
-    queryFn: async () => {
-      console.log('Buscando redações enviadas...');
-      const { data, error } = await supabase
-        .from('redacoes_enviadas')
-        .select('*')
-        .order('data_envio', { ascending: false });
-      
-      if (error) {
-        console.error('Erro ao buscar redações enviadas:', error);
-        throw error;
-      }
-      
-      console.log('Redações enviadas encontradas:', data?.length || 0);
-      return data || [];
-    },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,9 +112,7 @@ const EnvieRedacao = () => {
 
       toast({
         title: "Redação enviada com sucesso!",
-        description: `Sua redação foi salva e estará disponível para correção. ${
-          tipoEnvio === 'regular' ? 'Você poderá visualizá-la no card "Minhas Redações" na página inicial.' : 'Você pode visualizá-la na lista abaixo.'
-        }`,
+        description: `Sua redação foi salva e estará disponível para correção. Você poderá visualizá-la no card "Minhas Redações" na página inicial.`,
       });
 
       // Limpar formulário
@@ -146,9 +122,6 @@ const EnvieRedacao = () => {
       }
       setFraseTematica("");
       setRedacaoTexto("");
-      
-      // Recarregar lista de redações
-      refetch();
 
     } catch (error) {
       console.error('Erro ao enviar redação:', error);
@@ -181,176 +154,107 @@ const EnvieRedacao = () => {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Toggle entre formulário e lista */}
-        <div className="flex gap-4 mb-6">
-          <Button
-            onClick={() => setShowForm(true)}
-            variant={showForm ? "default" : "outline"}
-            className="flex items-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-            Enviar Redação
-          </Button>
-          {tipoEnvio === "visitante" && (
-            <Button
-              onClick={() => setShowForm(false)}
-              variant={!showForm ? "default" : "outline"}
-              className="flex items-center gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              Ver Redações Enviadas
-            </Button>
-          )}
-        </div>
-
-        {showForm ? (
-          /* Formulário de envio */
-          <Card className="max-w-4xl mx-auto border-redator-accent/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-redator-primary">
-                <Send className="w-5 h-5" />
-                {fonteFromUrl === 'tema' ? 'Redação sobre o Tema Selecionado' : 'Envie sua Redação'}
-              </CardTitle>
-              <p className="text-redator-accent">
-                {fonteFromUrl === 'tema' 
-                  ? 'Complete os dados abaixo para enviar sua redação sobre o tema escolhido. A frase temática já foi preenchida automaticamente.'
-                  : `Preencha todos os campos abaixo para enviar sua redação. Ela será corrigida e você poderá visualizar as notas e comentários ${
-                      tipoEnvio === 'regular' ? 'no card "Minhas Redações" na página inicial' : 'na seção "Ver Redações Enviadas"'
-                    }.`
-                }
-              </p>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="nome-completo" className="block text-sm font-medium text-redator-primary mb-2">
-                      Nome Completo *
-                    </label>
-                    <Input
-                      id="nome-completo"
-                      type="text"
-                      placeholder="Digite seu nome completo..."
-                      value={nomeCompleto}
-                      onChange={(e) => setNomeCompleto(e.target.value)}
-                      className="border-redator-accent/30 focus:border-redator-accent"
-                      maxLength={100}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-redator-primary mb-2">
-                      E-mail *
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Digite seu e-mail..."
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="border-redator-accent/30 focus:border-redator-accent"
-                      maxLength={100}
-                    />
-                  </div>
+        {/* Formulário de envio */}
+        <Card className="max-w-4xl mx-auto border-redator-accent/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-redator-primary">
+              <Send className="w-5 h-5" />
+              {fonteFromUrl === 'tema' ? 'Redação sobre o Tema Selecionado' : 'Envie sua Redação'}
+            </CardTitle>
+            <p className="text-redator-accent">
+              {fonteFromUrl === 'tema' 
+                ? 'Complete os dados abaixo para enviar sua redação sobre o tema escolhido. A frase temática já foi preenchida automaticamente.'
+                : 'Preencha todos os campos abaixo para enviar sua redação. Ela será corrigida e você poderá visualizar as notas e comentários no card "Minhas Redações" na página inicial.'
+              }
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="nome-completo" className="block text-sm font-medium text-redator-primary mb-2">
+                    Nome Completo *
+                  </label>
+                  <Input
+                    id="nome-completo"
+                    type="text"
+                    placeholder="Digite seu nome completo..."
+                    value={nomeCompleto}
+                    onChange={(e) => setNomeCompleto(e.target.value)}
+                    className="border-redator-accent/30 focus:border-redator-accent"
+                    maxLength={100}
+                  />
                 </div>
 
                 <div>
-                  <label htmlFor="frase-tematica" className="block text-sm font-medium text-redator-primary mb-2">
-                    Frase Temática *
-                    {fonteFromUrl === 'tema' && (
-                      <span className="text-xs text-green-600 ml-2">(Preenchida automaticamente)</span>
-                    )}
+                  <label htmlFor="email" className="block text-sm font-medium text-redator-primary mb-2">
+                    E-mail *
                   </label>
                   <Input
-                    id="frase-tematica"
-                    type="text"
-                    placeholder="Digite a frase temática da sua redação..."
-                    value={fraseTematica}
-                    onChange={(e) => setFraseTematica(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="Digite seu e-mail..."
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="border-redator-accent/30 focus:border-redator-accent"
-                    maxLength={200}
-                    readOnly={fonteFromUrl === 'tema'}
+                    maxLength={100}
                   />
-                  <p className="text-xs text-redator-accent mt-1">
-                    {fraseTematica.length}/200 caracteres
-                    {fonteFromUrl === 'tema' && (
-                      <span className="text-green-600 ml-2">✓ Tema selecionado automaticamente</span>
-                    )}
-                  </p>
                 </div>
+              </div>
 
-                <RedacaoTextarea
-                  value={redacaoTexto}
-                  onChange={setRedacaoTexto}
-                  onValidChange={setIsRedacaoValid}
-                />
-
-                {/* Informações sobre tipo de envio */}
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    <strong>Tipo de envio:</strong> {
-                      tipoEnvio === 'regular' ? `Aluno da ${alunoTurma}` : 'Visitante'
-                    }
-                  </p>
-                  {tipoEnvio === 'regular' && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Sua redação ficará disponível no card "Minhas Redações" na página inicial, protegida por e-mail.
-                    </p>
+              <div>
+                <label htmlFor="frase-tematica" className="block text-sm font-medium text-redator-primary mb-2">
+                  Frase Temática *
+                  {fonteFromUrl === 'tema' && (
+                    <span className="text-xs text-green-600 ml-2">(Preenchida automaticamente)</span>
                   )}
-                </div>
-
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting || !isRedacaoValid}
-                  className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
-                >
-                  {isSubmitting ? "Salvando..." : "Enviar Redação"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ) : (
-          /* Lista de redações enviadas - apenas para visitantes */
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-redator-primary">Redações Enviadas (Visitantes)</h2>
-              {redacoesEnviadas && (
-                <p className="text-sm text-redator-accent">
-                  {redacoesEnviadas.filter(r => r.tipo_envio === 'visitante').length} redação{redacoesEnviadas.filter(r => r.tipo_envio === 'visitante').length !== 1 ? 'ões' : ''} encontrada{redacoesEnviadas.filter(r => r.tipo_envio === 'visitante').length !== 1 ? 's' : ''}
+                </label>
+                <Input
+                  id="frase-tematica"
+                  type="text"
+                  placeholder="Digite a frase temática da sua redação..."
+                  value={fraseTematica}
+                  onChange={(e) => setFraseTematica(e.target.value)}
+                  className="border-redator-accent/30 focus:border-redator-accent"
+                  maxLength={200}
+                  readOnly={fonteFromUrl === 'tema'}
+                />
+                <p className="text-xs text-redator-accent mt-1">
+                  {fraseTematica.length}/200 caracteres
+                  {fonteFromUrl === 'tema' && (
+                    <span className="text-green-600 ml-2">✓ Tema selecionado automaticamente</span>
+                  )}
                 </p>
-              )}
-            </div>
+              </div>
 
-            {isLoading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-redator-accent mx-auto mb-4"></div>
-                <p className="text-redator-accent">Carregando redações...</p>
-              </div>
-            ) : redacoesEnviadas && redacoesEnviadas.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {redacoesEnviadas
-                  .filter(redacao => redacao.tipo_envio === 'visitante')
-                  .map((redacao) => (
-                    <RedacaoEnviadaCard key={redacao.id} redacao={redacao} />
-                  ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📝</div>
-                <h3 className="text-xl font-semibold text-redator-primary mb-2">Nenhuma redação encontrada</h3>
-                <p className="text-redator-accent mb-4">
-                  Ainda não há redações enviadas por visitantes.
+              <RedacaoTextarea
+                value={redacaoTexto}
+                onChange={setRedacaoTexto}
+                onValidChange={setIsRedacaoValid}
+              />
+
+              {/* Informações sobre tipo de envio */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  <strong>Tipo de envio:</strong> {
+                    tipoEnvio === 'regular' ? `Aluno da ${alunoTurma}` : 'Visitante'
+                  }
                 </p>
-                <Button 
-                  onClick={() => setShowForm(true)}
-                  className="bg-redator-primary hover:bg-redator-primary/90 text-white"
-                >
-                  Enviar Redação
-                </Button>
+                <p className="text-xs text-blue-600 mt-1">
+                  Sua redação ficará disponível no card "Minhas Redações" na página inicial.
+                </p>
               </div>
-            )}
-          </div>
-        )}
+
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || !isRedacaoValid}
+                className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
+              >
+                {isSubmitting ? "Salvando..." : "Enviar Redação"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
