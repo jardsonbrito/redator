@@ -16,15 +16,15 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Plataforma Redator Colors */
-    --primary: 258 100% 20%; /* #2D0066 - Roxo escuro (primária) */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF - Branco */
+    /* Paleta baseada na referência visual fornecida */
+    --primary: 258 84% 29%; /* Roxo escuro principal da paleta */
+    --primary-foreground: 0 0% 100%; /* Branco */
 
-    --secondary: 274 82% 73%; /* #B277F2 - Lilás vibrante (secundária) */
-    --secondary-foreground: 258 100% 20%; /* #2D0066 - Roxo escuro para contraste */
+    --secondary: 258 60% 78%; /* Lilás claro da paleta */
+    --secondary-foreground: 258 84% 29%; /* Roxo escuro para contraste */
 
-    --accent: 267 58% 43%; /* #6E32A7 - Roxo médio (acentos/bordas) */
-    --accent-foreground: 0 0% 100%; /* #FFFFFF - Branco */
+    --accent: 258 70% 55%; /* Tom médio entre as duas cores principais */
+    --accent-foreground: 0 0% 100%; /* Branco */
 
     --muted: 270 10% 95%;
     --muted-foreground: 258 20% 40%;
@@ -58,13 +58,13 @@
     --popover: 258 100% 4%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 274 82% 73%; /* #B277F2 - Lilás vibrante em modo escuro */
-    --primary-foreground: 258 100% 4%;
+    --primary: 258 60% 78%; /* Lilás claro em modo escuro */
+    --primary-foreground: 258 84% 29%;
 
-    --secondary: 258 100% 20%; /* #2D0066 - Roxo escuro em modo escuro */
+    --secondary: 258 84% 29%; /* Roxo escuro em modo escuro */
     --secondary-foreground: 0 0% 98%;
 
-    --accent: 267 58% 43%; /* #6E32A7 - Roxo médio */
+    --accent: 258 70% 55%; /* Tom médio */
     --accent-foreground: 0 0% 98%;
 
     --muted: 258 50% 10%;
@@ -99,53 +99,53 @@
   }
 }
 
-/* Custom Redator Platform Colors */
+/* Cores baseadas na paleta fornecida */
 @layer utilities {
   .bg-redator-primary {
-    background-color: #2D0066;
+    background-color: hsl(258, 84%, 29%);
   }
   
   .bg-redator-secondary {
-    background-color: #B277F2;
+    background-color: hsl(258, 60%, 78%);
   }
   
   .bg-redator-accent {
-    background-color: #6E32A7;
+    background-color: hsl(258, 70%, 55%);
   }
   
   .text-redator-primary {
-    color: #2D0066;
+    color: hsl(258, 84%, 29%);
   }
   
   .text-redator-secondary {
-    color: #B277F2;
+    color: hsl(258, 60%, 78%);
   }
   
   .text-redator-accent {
-    color: #6E32A7;
+    color: hsl(258, 70%, 55%);
   }
   
   .border-redator-primary {
-    border-color: #2D0066;
+    border-color: hsl(258, 84%, 29%);
   }
   
   .border-redator-secondary {
-    border-color: #B277F2;
+    border-color: hsl(258, 60%, 78%);
   }
   
   .border-redator-accent {
-    border-color: #6E32A7;
+    border-color: hsl(258, 70%, 55%);
   }
   
   .hover\:bg-redator-primary:hover {
-    background-color: #1F0047;
+    background-color: hsl(258, 84%, 24%);
   }
   
   .hover\:bg-redator-secondary:hover {
-    background-color: #9A5AE8;
+    background-color: hsl(258, 60%, 73%);
   }
   
   .hover\:bg-redator-accent:hover {
-    background-color: #5A2887;
+    background-color: hsl(258, 70%, 50%);
   }
 }
