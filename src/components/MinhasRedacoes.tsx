@@ -183,8 +183,23 @@ export const MinhasRedacoes = () => {
       });
 
       // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true
+      console.log('🔍 VALIDAÇÃO CRÍTICA MINHAS REDAÇÕES:', {
+        data: emailMatches.data,
+        error: emailMatches.error,
+        type: typeof emailMatches.data,
+        isStrictlyTrue: emailMatches.data === true,
+        emailRedacao: redacaoBasica.email_aluno,
+        emailDigitado: emailInput.trim()
+      });
+
       if (emailMatches.error || emailMatches.data !== true) {
-        console.error('❌ Falha na validação de acesso:', emailMatches.error);
+        console.error('❌ Falha na validação de acesso:', {
+          error: emailMatches.error,
+          data: emailMatches.data,
+          emailRedacao: redacaoBasica.email_aluno,
+          emailDigitado: emailInput.trim(),
+          motivo: emailMatches.error ? 'Erro na função' : 'Email não confere'
+        });
         toast({
           title: "E-mail incorreto. Acesso negado à redação.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",

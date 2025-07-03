@@ -110,8 +110,22 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
       }
 
       // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true
+      console.log('🔍 VALIDAÇÃO CRÍTICA CARD:', {
+        canAccess,
+        type: typeof canAccess,
+        isStrictlyTrue: canAccess === true,
+        emailRedacao: selectedRedacao.email_aluno,
+        emailDigitado: emailInput.trim(),
+        funcaoRetorno: canAccess
+      });
+
       if (canAccess !== true) {
-        console.log('🚫 ACESSO NEGADO CARD - Email não confere');
+        console.error('🚫 ACESSO NEGADO CARD - Email não confere ou validação falhou:', {
+          canAccess,
+          emailRedacao: selectedRedacao.email_aluno,
+          emailDigitado: emailInput.trim(),
+          motivo: canAccess === false ? 'Email diferente' : 'Resposta inesperada da função'
+        });
         toast({
           title: "E-mail incorreto. Acesso negado à correção.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",

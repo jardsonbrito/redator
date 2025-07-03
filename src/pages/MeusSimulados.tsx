@@ -106,8 +106,22 @@ const MeusSimulados = () => {
       }
 
       // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true
+      console.log('🔍 VALIDAÇÃO CRÍTICA:', {
+        canAccess,
+        type: typeof canAccess,
+        isStrictlyTrue: canAccess === true,
+        emailCorreto,
+        emailDigitado,
+        funcaoRetorno: canAccess
+      });
+
       if (canAccess !== true) {
-        console.log('🚫 ACESSO NEGADO - Email não confere');
+        console.error('🚫 ACESSO NEGADO - Email não confere ou validação falhou:', {
+          canAccess,
+          emailCorreto,
+          emailDigitado,
+          motivo: canAccess === false ? 'Email diferente' : 'Resposta inesperada da função'
+        });
         toast({
           title: "E-mail incorreto. Acesso negado à correção.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
