@@ -141,11 +141,30 @@ const AlunoAuth = () => {
       });
 
       if (error) {
-        toast({
-          title: "Erro no cadastro",
-          description: "Não foi possível concluir o cadastro. Tente novamente.",
-          variant: "destructive",
-        });
+        console.error('Erro na criação do perfil:', error);
+        
+        // Verificar tipos específicos de erro
+        if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+          toast({
+            title: "E-mail já cadastrado",
+            description: "Este e-mail já possui cadastro. Use a aba 'Entrar' para acessar.",
+            variant: "destructive",
+          });
+          setActiveTab("login");
+          setLoginEmail(signupData.email.trim());
+        } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
+          toast({
+            title: "Erro de permissão",
+            description: "Problema de acesso ao banco de dados. Tente novamente ou contate o suporte.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro no cadastro",
+            description: error.message || "Não foi possível concluir o cadastro. Tente novamente.",
+            variant: "destructive",
+          });
+        }
         return;
       }
 
