@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,11 +30,12 @@ interface AulaVirtual {
 }
 
 export const FrequenciaAulas = () => {
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const [frequencias, setFrequencias] = useState<FrequenciaData[]>([]);
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [filteredData, setFilteredData] = useState<FrequenciaData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [filters, setFilters] = useState({
     turma: "",
@@ -53,25 +55,35 @@ export const FrequenciaAulas = () => {
         .select('id, titulo, data_aula')
         .order('data_aula', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar aulas:', error);
+        throw error;
+      }
+      
       console.log('✅ Aulas carregadas:', data?.length || 0);
       setAulas(data || []);
     } catch (error: any) {
       console.error('❌ Erro ao buscar aulas:', error);
+      setError(`Erro ao carregar aulas: ${error.message}`);
     }
   };
 
   const fetchFrequencias = async () => {
     try {
       setIsLoading(true);
-      console.log('🔍 Buscando dados de frequência...');
+      setError(null);
+      console.log('🔍 Iniciando busca de dados de frequência...');
       
       // Buscar todas as aulas virtuais
       const { data: aulasData, error: aulasError } = await supabase
         .from('aulas_virtuais')
         .select('id, titulo, data_aula');
 
-      if (aulasError) throw aulasError;
+      if (aulasError) {
+        console.error('Erro ao buscar aulas virtuais:', aulasError);
+        throw aulasError;
+      }
+      
       console.log('✅ Aulas encontradas:', aulasData?.length || 0);
 
       // Buscar todos os registros de presença
@@ -87,7 +99,11 @@ export const FrequenciaAulas = () => {
           data_registro
         `);
 
-      if (presencaError) throw presencaError;
+      if (presencaError) {
+        console.error('Erro ao buscar registros de presença:', presencaError);
+        throw presencaError;
+      }
+      
       console.log('✅ Registros de presença encontrados:', presencaData?.length || 0);
 
       // Processar dados para criar relatório de frequência
@@ -148,14 +164,9 @@ export const FrequenciaAulas = () => {
       setFilteredData(frequenciaArray);
     } catch (error: any) {
       console.error('❌ Erro ao buscar frequências:', error);
-      console.error('❌ Detalhes do erro:', {
-        message: error?.message,
-        details: error?.details,
-        hint: error?.hint,
-        code: error?.code
-      });
-      toast.error(`Erro ao carregar dados de frequência: ${error?.message || 'Erro desconhecido'}`);
-      // Não fazer logout automático em caso de erro
+      const errorMessage = error?.message || 'Erro desconhecido';
+      setError(`Erro ao carregar dados de frequência: ${errorMessage}`);
+      toast.error(errorMessage);
       setFrequencias([]);
       setFilteredData([]);
     } finally {
@@ -224,17 +235,6 @@ export const FrequenciaAulas = () => {
     setFilteredData(filtered);
   }, [frequencias, filters]);
 
-  useEffect(() => {
-    // Só executa quando não está carregando a autenticação E é admin
-    if (!authLoading && isAdmin) {
-      fetchAulas();
-      fetchFrequencias();
-    } else if (!authLoading && !isAdmin) {
-      // Se não está carregando e não é admin, finaliza o loading
-      setIsLoading(false);
-    }
-  }, [isAdmin, authLoading]);
-
   // Aguarda carregamento da autenticação antes de decidir o que mostrar
   if (authLoading) {
     return (
@@ -247,12 +247,42 @@ export const FrequenciaAulas = () => {
     );
   }
 
-  if (!isAdmin) {
+  // Verificar se é admin - sem causar logout
+  if (!user || !isAdmin) {
     return (
       <Card>
         <CardContent className="text-center py-8">
           <Users className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Acesso restrito para administradores</p>
+          {!user && (
+            <p className="text-xs text-muted-foreground mt-1">Faça login para continuar</p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Carregar dados quando o componente é montado
+  useEffect(() => {
+    if (user && isAdmin) {
+      console.log('👤 Usuário admin detectado, carregando dados...');
+      fetchAulas();
+      fetchFrequencias();
+    }
+  }, [user, isAdmin]);
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <Users className="w-8 h-8 mx-auto mb-2 text-red-500" />
+          <p className="text-sm text-red-600 mb-2">{error}</p>
+          <Button onClick={() => {
+            setError(null);
+            fetchFrequencias();
+          }} variant="outline" size="sm">
+            Tentar Novamente
+          </Button>
         </CardContent>
       </Card>
     );
@@ -354,6 +384,9 @@ export const FrequenciaAulas = () => {
           <div className="text-center py-8 text-muted-foreground">
             <Users className="w-8 h-8 mx-auto mb-2" />
             <p>Nenhum registro de frequência encontrado</p>
+            {frequencias.length === 0 && (
+              <p className="text-xs mt-1">Tente atualizar os dados ou verifique se há aulas virtuais cadastradas</p>
+            )}
           </div>
         ) : (
           <div className="rounded-md border overflow-hidden">
