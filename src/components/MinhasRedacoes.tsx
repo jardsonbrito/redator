@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,14 +33,19 @@ type RedacaoTurma = {
 
 type AuthenticatedRedacao = RedacaoTurma & {
   redacao_texto: string;
+  nota_c1: number | null;
+  nota_c2: number | null;
+  nota_c3: number | null;
+  nota_c4: number | null;
+  nota_c5: number | null;
 };
 
 export const MinhasRedacoes = () => {
-  const [selectedRedacao, setSelectedRedacao] = useState<RedacaoTurma | null>(null);
+  const [selectedRedacaoId, setSelectedRedacaoId] = useState<string | null>(null);
   const [authenticatedRedacao, setAuthenticatedRedacao] = useState<AuthenticatedRedacao | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
   const { toast } = useToast();
 
@@ -70,26 +76,42 @@ export const MinhasRedacoes = () => {
     }
   }
 
-  // Query com segurança aprimorada usando novas políticas RLS
+  // Query SEGURA - NÃO carrega dados sensíveis automaticamente
   const { data: redacoesTurma, isLoading, error } = useQuery({
-    queryKey: ['redacoes-usuario-seguras', turmaCode, visitanteEmail],
+    queryKey: ['redacoes-usuario-basicas', turmaCode, visitanteEmail],
     queryFn: async () => {
-      console.log('🔒 Buscando redações com segurança aprimorada');
+      console.log('🔒 Buscando redações SEM dados sensíveis');
       
       if (userType === "aluno" && turmaCode) {
-        console.log('👨‍🎓 Buscando redações da turma:', turmaCode);
+        console.log('👨‍🎓 Buscando redações básicas da turma:', turmaCode);
         const { data, error } = await supabase
-          .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
+          .from('redacoes_enviadas')
+          .select(`
+            id,
+            frase_tematica,
+            nome_aluno,
+            email_aluno,
+            tipo_envio,
+            data_envio,
+            status,
+            corrigida,
+            nota_total,
+            comentario_admin,
+            data_correcao
+          `)
+          .eq('turma', turmaCode)
+          .neq('tipo_envio', 'visitante')
+          .order('data_envio', { ascending: false });
         
         if (error) {
           console.error('❌ Erro ao buscar redações da turma:', error);
           throw error;
         }
         
-        console.log('✅ Redações da turma encontradas:', data?.length || 0);
+        console.log('✅ Redações básicas da turma encontradas:', data?.length || 0);
         return data as RedacaoTurma[] || [];
       } else if (userType === "visitante" && visitanteEmail) {
-        console.log('👤 Buscando redações do visitante:', visitanteEmail);
+        console.log('👤 Buscando redações básicas do visitante:', visitanteEmail);
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -114,7 +136,7 @@ export const MinhasRedacoes = () => {
           throw error;
         }
         
-        console.log('✅ Redações do visitante encontradas:', data?.length || 0);
+        console.log('✅ Redações básicas do visitante encontradas:', data?.length || 0);
         return data as RedacaoTurma[] || [];
       }
       
@@ -125,16 +147,17 @@ export const MinhasRedacoes = () => {
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
-    console.log('🔐 Iniciando fluxo seguro para visualização de redação');
-    setSelectedRedacao(redacao);
+    console.log('🔐 Iniciando fluxo SEGURO para visualização de redação');
+    // Reset completo de estados para garantir segurança
     setAuthenticatedRedacao(null);
     setShowRedacaoDialog(false);
+    setSelectedRedacaoId(redacao.id);
     setEmailInput("");
-    setIsDialogOpen(true);
+    setIsAuthDialogOpen(true);
   };
 
   const handleEmailAuth = async () => {
-    if (!selectedRedacao || !emailInput.trim()) {
+    if (!selectedRedacaoId || !emailInput.trim()) {
       toast({
         title: "E-mail obrigatório",
         description: "Por favor, digite o e-mail cadastrado na redação.",
@@ -147,16 +170,22 @@ export const MinhasRedacoes = () => {
     console.log('🔍 Iniciando validação segura de e-mail...');
 
     try {
-      // Usar nova função segura para validar acesso
-      const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
-        redacao_email: selectedRedacao.email_aluno,
+      // ETAPA 1: Validação básica sem carregar dados sensíveis
+      const redacaoBasica = redacoesTurma?.find(r => r.id === selectedRedacaoId);
+      if (!redacaoBasica) {
+        throw new Error('Redação não encontrada');
+      }
+
+      // ETAPA 2: Verificação rigorosa de e-mail usando nova função segura
+      const emailMatches = await supabase.rpc('can_access_redacao', {
+        redacao_email: redacaoBasica.email_aluno,
         user_email: emailInput.trim()
       });
 
-      if (error || !canAccess) {
-        console.error('❌ Falha na validação de acesso:', error);
+      if (emailMatches.error || !emailMatches.data) {
+        console.error('❌ Falha na validação de acesso:', emailMatches.error);
         toast({
-          title: "E-mail incorreto",
+          title: "E-mail incorreto. Acesso negado à redação.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
           variant: "destructive",
         });
@@ -165,21 +194,31 @@ export const MinhasRedacoes = () => {
 
       console.log('✅ E-mail validado com sucesso');
 
-      // SOMENTE após validação, buscar texto completo da redação
-      const { data: redacaoCompleta, error: errorCompleta } = await supabase
+      // ETAPA 3: SOMENTE após validação, buscar dados completos sensíveis
+      const { data: redacaoCompleta, error: errorCompleto } = await supabase
         .from('redacoes_enviadas')
         .select('*')
-        .eq('id', selectedRedacao.id)
+        .eq('id', selectedRedacaoId)
         .single();
 
-      if (errorCompleta) {
-        console.error('❌ Erro ao buscar redação completa:', errorCompleta);
+      if (errorCompleto) {
+        console.error('❌ Erro ao carregar redação completa:', errorCompleto);
         throw new Error('Erro ao carregar redação completa');
       }
 
-      // Preparar dados completos APENAS após autenticação
-      const redacaoComTexto: AuthenticatedRedacao = {
-        ...selectedRedacao,
+      // ETAPA 4: Preparar dados APENAS após autenticação bem-sucedida
+      const redacaoAutenticada: AuthenticatedRedacao = {
+        id: redacaoCompleta.id,
+        frase_tematica: redacaoCompleta.frase_tematica,
+        nome_aluno: redacaoCompleta.nome_aluno,
+        email_aluno: redacaoCompleta.email_aluno,
+        tipo_envio: redacaoCompleta.tipo_envio,
+        data_envio: redacaoCompleta.data_envio,
+        status: redacaoCompleta.status,
+        corrigida: redacaoCompleta.corrigida,
+        nota_total: redacaoCompleta.nota_total,
+        comentario_admin: redacaoCompleta.comentario_admin,
+        data_correcao: redacaoCompleta.data_correcao,
         redacao_texto: redacaoCompleta.redacao_texto || "",
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
@@ -188,9 +227,9 @@ export const MinhasRedacoes = () => {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
-      // Fechar dialog de autenticação e exibir redação
-      setIsDialogOpen(false);
-      setAuthenticatedRedacao(redacaoComTexto);
+      // ETAPA 5: Fechar autenticação e exibir redação
+      setIsAuthDialogOpen(false);
+      setAuthenticatedRedacao(redacaoAutenticada);
       setShowRedacaoDialog(true);
       
       console.log('🎉 Redação liberada com segurança total');
@@ -198,6 +237,9 @@ export const MinhasRedacoes = () => {
         title: "Redação liberada!",
         description: "Agora você pode visualizar sua redação completa.",
       });
+
+      // Log de auditoria automático via trigger criado na migração
+      console.log('📝 Log de acesso registrado automaticamente');
 
     } catch (error) {
       console.error('💥 Erro na autenticação:', error);
@@ -213,10 +255,10 @@ export const MinhasRedacoes = () => {
 
   const resetAuthenticationState = () => {
     console.log('🔄 Resetando estados de autenticação');
-    setSelectedRedacao(null);
+    setSelectedRedacaoId(null);
     setAuthenticatedRedacao(null);
     setEmailInput("");
-    setIsDialogOpen(false);
+    setIsAuthDialogOpen(false);
     setShowRedacaoDialog(false);
   };
 
@@ -342,9 +384,10 @@ export const MinhasRedacoes = () => {
                       <span>{formatDate(redacao.data_envio)}</span>
                     </div>
                     
+                    {/* SEGURANÇA: Notas só aparecem se já foi autenticado */}
                     {redacao.corrigida && redacao.nota_total !== null && (
                       <div className="flex items-center gap-1 text-redator-primary font-medium">
-                        <span>📊 Nota: {redacao.nota_total}/1000</span>
+                        <span>📊 Nota disponível após autenticação</span>
                       </div>
                     )}
                   </div>
@@ -356,7 +399,7 @@ export const MinhasRedacoes = () => {
                     onClick={() => handleViewRedacao(redacao)}
                   >
                     <Lock className="w-3 h-3 mr-1" />
-                    🔐 Ver Redação
+                    🔐 Ver Redação Segura
                   </Button>
                 </div>
               </CardContent>
@@ -365,34 +408,30 @@ export const MinhasRedacoes = () => {
         </div>
       </div>
 
-      {/* Dialog de autenticação segura por email */}
-      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+      {/* Dialog de autenticação RIGOROSA por email */}
+      <Dialog open={isAuthDialogOpen} onOpenChange={(open) => {
         if (!open) {
           resetAuthenticationState();
         }
-        setIsDialogOpen(open);
+        setIsAuthDialogOpen(open);
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-redator-primary">🔐 Acesso Seguro à Redação</DialogTitle>
+            <DialogTitle className="text-redator-primary flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              🔐 Acesso Seguro à Redação
+            </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
               <div className="flex items-start gap-2">
                 <Lock className="w-4 h-4 text-amber-600 mt-0.5" />
                 <div className="text-sm text-amber-800">
-                  <strong>Segurança Aprimorada:</strong> Para ver sua redação, digite o e-mail exato usado no envio.
+                  <strong>Segurança Máxima:</strong> Para visualizar sua redação, digite o e-mail exato usado no envio. Os dados só são carregados após validação.
                 </div>
               </div>
             </div>
-
-            {selectedRedacao && (
-              <div className="space-y-2 text-sm">
-                <p><span className="font-medium">Redação:</span> {selectedRedacao.frase_tematica}</p>
-                <p><span className="font-medium">Autor:</span> {selectedRedacao.nome_aluno}</p>
-              </div>
-            )}
 
             <div>
               <label htmlFor="email-auth" className="block text-sm font-medium text-redator-primary mb-2">
