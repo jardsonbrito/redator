@@ -68,18 +68,23 @@ const Welcome = () => {
           return;
         }
 
-        console.log('Tentando login - Email:', emailAluno.trim().toLowerCase());
+        // Normalizar email de forma mais robusta
+        const emailNormalizado = emailAluno.trim().toLowerCase().replace(/\s+/g, '');
+        console.log('🔍 DEBUG - Email original:', emailAluno);
+        console.log('🔍 DEBUG - Email normalizado:', emailNormalizado);
+        console.log('🔍 DEBUG - User Agent:', navigator.userAgent);
 
         // Buscar aluno na base (mesma lógica do AlunoLogin.tsx)
         try {
           const { data: aluno, error } = await supabase
             .from("profiles")
             .select("id, nome, email, turma")
-            .eq("email", emailAluno.trim().toLowerCase())
+            .eq("email", emailNormalizado)
             .eq("user_type", "aluno")
             .maybeSingle();
 
-          console.log('Resultado da busca:', { aluno, error });
+          console.log('🔍 DEBUG - Resultado da busca:', { aluno, error });
+          console.log('🔍 DEBUG - Query executada:', `email = '${emailNormalizado}' AND user_type = 'aluno'`);
 
           if (error) {
             console.error('Erro na consulta:', error);
