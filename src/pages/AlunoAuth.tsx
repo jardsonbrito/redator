@@ -149,14 +149,15 @@ const AlunoAuth = () => {
         return;
       }
 
-      if (data) {
+      if (data && data.length > 0) {
+        const profile = data[0];
         toast({
           title: "Cadastro realizado com sucesso!",
-          description: `Bem-vindo(a), ${data.nome}! Entrando na sua área...`,
+          description: `Bem-vindo(a), ${profile.nome}! Entrando na sua área...`,
         });
         
         // Armazenar dados do usuário no localStorage
-        localStorage.setItem('user_profile', JSON.stringify(data));
+        localStorage.setItem('user_profile', JSON.stringify(profile));
         navigate("/app", { replace: true });
       }
     } catch (error: any) {

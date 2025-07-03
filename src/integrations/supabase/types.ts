@@ -695,6 +695,19 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: number
       }
+      create_simple_profile: {
+        Args: { p_nome: string; p_email: string; p_turma: string }
+        Returns: {
+          id: string
+          nome: string
+          sobrenome: string
+          email: string
+          turma: string
+          user_type: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       get_redacoes_by_turma: {
         Args: { p_turma: string }
         Returns: {
