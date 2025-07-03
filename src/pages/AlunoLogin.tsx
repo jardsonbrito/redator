@@ -30,7 +30,9 @@ const AlunoLogin = () => {
     setLoading(true);
 
     try {
-      // Verificar se o aluno existe na tabela profiles - SEM autenticação Supabase Auth
+      console.log('Buscando aluno com e-mail:', emailDigitado.trim().toLowerCase());
+
+      // Buscar aluno na tabela profiles
       const { data: aluno, error } = await supabase
         .from("profiles")
         .select("id, nome, email, turma")
@@ -38,20 +40,25 @@ const AlunoLogin = () => {
         .eq("user_type", "aluno")
         .maybeSingle();
 
+      console.log('Resultado da busca:', { aluno, error });
+
       if (error) {
+        console.error('Erro na consulta:', error);
         throw error;
       }
 
       if (!aluno) {
+        console.log('Aluno não encontrado para email:', emailDigitado.trim().toLowerCase());
         toast({
           title: "E-mail não encontrado",
-          description: "Verifique se você foi cadastrado pelo professor.",
+          description: "Verifique se você foi cadastrado pelo professor ou se o e-mail está correto.",
           variant: "destructive",
         });
         return;
       }
 
-      // Login bem-sucedido - sem validação de senha ou autenticação Supabase Auth
+      // Login bem-sucedido
+      console.log('Login bem-sucedido para:', aluno.nome, 'Turma:', aluno.turma);
       loginAsStudent(aluno.turma);
       
       toast({

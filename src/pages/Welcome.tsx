@@ -44,7 +44,7 @@ const Welcome = () => {
         if (!emailProfessor || !senhaProfessor) {
           toast({
             title: "Campos obrigatórios",
-            description: "Por favor, preencha email e senha.",
+            description: "Por favor, preencha email and senha.",
             variant: "destructive"
           });
           return;
@@ -76,31 +76,48 @@ const Welcome = () => {
           return;
         }
 
-        // Validação simples: verificar se o e-mail existe na turma selecionada
+        console.log('Tentando login - Turma:', turma, 'Email:', emailAluno.trim().toLowerCase());
+
+        // Buscar aluno com validação mais robusta
         try {
           const { data: aluno, error } = await supabase
             .from("profiles")
             .select("id, nome, email, turma")
             .eq("email", emailAluno.trim().toLowerCase())
-            .eq("turma", turma)
             .eq("user_type", "aluno")
             .maybeSingle();
 
+          console.log('Resultado da busca:', { aluno, error });
+
           if (error) {
+            console.error('Erro na consulta:', error);
             throw error;
           }
 
           if (!aluno) {
+            console.log('Aluno não encontrado para email:', emailAluno.trim().toLowerCase());
             toast({
-              title: "E-mail não encontrado na turma selecionada",
-              description: "Verifique se seu e-mail está correto ou se você selecionou a turma certa.",
+              title: "E-mail não encontrado",
+              description: "Verifique se você foi cadastrado pelo professor ou se o e-mail está correto.",
               variant: "destructive"
             });
             return;
           }
 
-          // Login bem-sucedido - sem autenticação Supabase Auth
-          loginAsStudent(turma);
+          // Verificar se a turma do aluno corresponde à turma selecionada
+          if (aluno.turma !== turma) {
+            console.log('Turma não confere - Aluno:', aluno.turma, 'Selecionada:', turma);
+            toast({
+              title: "Turma incorreta",
+              description: `Seu e-mail está cadastrado na ${aluno.turma}, mas você selecionou ${turma}. Por favor, selecione a turma correta.`,
+              variant: "destructive"
+            });
+            return;
+          }
+
+          // Login bem-sucedido
+          console.log('Login bem-sucedido para:', aluno.nome, 'Turma:', aluno.turma);
+          loginAsStudent(aluno.turma);
           toast({
             title: "Acesso liberado!",
             description: `Bem-vindo, ${aluno.nome}!`
@@ -159,7 +176,6 @@ const Welcome = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          {/* Logo no topo */}
           <div className="flex justify-center mb-6">
             <img 
               src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" 
@@ -168,7 +184,6 @@ const Welcome = () => {
             />
           </div>
           
-          {/* Texto de boas-vindas */}
           <h1 className="text-2xl font-bold text-redator-primary mb-2">
             Bem-vindo(a) à nossa plataforma
           </h1>
