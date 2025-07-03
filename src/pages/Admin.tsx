@@ -16,7 +16,8 @@ import {
   File,
   GraduationCap,
   NotebookPen,
-  MessageSquare
+  MessageSquare,
+  Radar
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +51,10 @@ import { RedacaoExercicioList } from "@/components/admin/RedacaoExercicioList";
 import { AvisoForm } from "@/components/admin/AvisoForm";
 import { AvisoList } from "@/components/admin/AvisoList";
 
+// Import radar components
+import { RadarUpload } from "@/components/admin/RadarUpload";
+import { RadarList } from "@/components/admin/RadarList";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
@@ -77,6 +82,7 @@ const Admin = () => {
     { id: "aulas", label: "Aulas", icon: GraduationCap },
     { id: "exercicios", label: "Exercícios", icon: NotebookPen },
     { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
+    { id: "radar", label: "Radar", icon: Radar },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
   ];
 
@@ -218,6 +224,21 @@ const Admin = () => {
               refresh={refreshAvisos}
               onEdit={handleEditAviso}
             />
+          </div>
+        );
+
+      case "radar":
+        return (
+          <div className="space-y-6">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Painel de Resultados - Radar</h3>
+              <p className="text-sm text-muted-foreground">
+                Acompanhe aqui o desempenho geral dos alunos nos exercícios. 
+                Importe dados de planilhas CSV/Excel com os resultados dos exercícios realizados.
+              </p>
+            </div>
+            <RadarUpload />
+            <RadarList />
           </div>
         );
       

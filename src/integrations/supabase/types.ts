@@ -328,6 +328,66 @@ export type Database = {
         }
         Relationships: []
       }
+      radar_dados: {
+        Row: {
+          created_at: string
+          data_realizacao: string
+          email_aluno: string
+          exercicio_id: string | null
+          id: string
+          importado_em: string
+          importado_por: string | null
+          nome_aluno: string
+          nota: number | null
+          titulo_exercicio: string
+          turma: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_realizacao: string
+          email_aluno: string
+          exercicio_id?: string | null
+          id?: string
+          importado_em?: string
+          importado_por?: string | null
+          nome_aluno: string
+          nota?: number | null
+          titulo_exercicio: string
+          turma: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_realizacao?: string
+          email_aluno?: string
+          exercicio_id?: string | null
+          id?: string
+          importado_em?: string
+          importado_por?: string | null
+          nome_aluno?: string
+          nota?: number | null
+          titulo_exercicio?: string
+          turma?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radar_dados_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radar_dados_importado_por_fkey"
+            columns: ["importado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       redacoes: {
         Row: {
           aluno_id: string | null
