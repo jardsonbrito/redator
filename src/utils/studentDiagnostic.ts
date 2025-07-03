@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeEmail } from "./emailValidator";
 
 interface StudentDiagnostic {
   totalStudents: number;
@@ -7,10 +8,11 @@ interface StudentDiagnostic {
   duplicateEmails: any[];
   emailsWithSpaces: any[];
   emailsWithSpecialChars: any[];
+  testResults: any[];
 }
 
 export const diagnoseStudentData = async (): Promise<StudentDiagnostic> => {
-  console.log('🔍 DIAGNÓSTICO - Iniciando análise dos dados dos alunos...');
+  console.log('🔍 DIAGNÓSTICO COMPLETO - Iniciando análise...');
   
   try {
     // Buscar todos os alunos
@@ -30,18 +32,14 @@ export const diagnoseStudentData = async (): Promise<StudentDiagnostic> => {
     // Analisar emails problemáticos
     const studentsWithProblematicEmails = students?.filter(student => {
       const email = student.email;
-      return (
-        email.includes(' ') || // Espaços
-        email !== email.trim() || // Espaços no início/fim
-        email !== email.toLowerCase() || // Maiúsculas
-        /[^\w@.-]/.test(email.replace(/[@.-]/g, '')) // Caracteres especiais
-      );
+      const normalized = normalizeEmail(email);
+      return email !== normalized;
     }) || [];
 
     // Buscar emails duplicados
     const emailCounts: { [key: string]: any[] } = {};
     students?.forEach(student => {
-      const normalizedEmail = student.email.trim().toLowerCase();
+      const normalizedEmail = normalizeEmail(student.email);
       if (!emailCounts[normalizedEmail]) {
         emailCounts[normalizedEmail] = [];
       }
@@ -62,12 +60,27 @@ export const diagnoseStudentData = async (): Promise<StudentDiagnostic> => {
       /[^\w@.-]/.test(student.email.replace(/[@.-]/g, ''))
     ) || [];
 
+    // Teste de conectividade com alguns emails
+    const testResults = [];
+    const testEmails = students?.slice(0, 5) || [];
+    
+    for (const student of testEmails) {
+      const testResult = await testStudentLogin(student.email);
+      testResults.push({
+        email: student.email,
+        nome: student.nome,
+        turma: student.turma,
+        testResult
+      });
+    }
+
     const diagnostic: StudentDiagnostic = {
       totalStudents,
       studentsWithProblematicEmails,
       duplicateEmails,
       emailsWithSpaces,
-      emailsWithSpecialChars
+      emailsWithSpecialChars,
+      testResults
     };
 
     console.log('📊 DIAGNÓSTICO COMPLETO:', diagnostic);
@@ -79,11 +92,41 @@ export const diagnoseStudentData = async (): Promise<StudentDiagnostic> => {
   }
 };
 
+const testStudentLogin = async (email: string) => {
+  try {
+    const normalizedEmail = normalizeEmail(email);
+    
+    const { data: student, error } = await supabase
+      .from("profiles")
+      .select("id, nome, email, turma")
+      .eq("email", normalizedEmail)
+      .eq("user_type", "aluno")
+      .maybeSingle();
+
+    return {
+      success: !!student,
+      error: error?.message || null,
+      found: !!student,
+      originalEmail: email,
+      normalizedEmail: normalizedEmail,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      found: false,
+      originalEmail: email,
+      normalizedEmail: normalizeEmail(email),
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
 export const fixStudentEmails = async (): Promise<boolean> => {
-  console.log('🔧 CORREÇÃO - Iniciando normalização dos emails dos alunos...');
+  console.log('🔧 CORREÇÃO - Iniciando normalização dos emails...');
   
   try {
-    // Buscar todos os alunos
     const { data: students, error } = await supabase
       .from("profiles")
       .select("id, nome, email, turma")
@@ -98,11 +141,7 @@ export const fixStudentEmails = async (): Promise<boolean> => {
 
     for (const student of students || []) {
       const originalEmail = student.email;
-      const normalizedEmail = originalEmail
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '')
-        .replace(/[^\w@.-]/g, '');
+      const normalizedEmail = normalizeEmail(originalEmail);
 
       if (originalEmail !== normalizedEmail) {
         console.log(`🔧 Corrigindo email: ${originalEmail} → ${normalizedEmail}`);
@@ -130,15 +169,13 @@ export const fixStudentEmails = async (): Promise<boolean> => {
   }
 };
 
-// Executar diagnóstico automaticamente em desenvolvimento
+// Executar diagnóstico automático em desenvolvimento
 if (process.env.NODE_ENV === 'development') {
   setTimeout(async () => {
     try {
       await diagnoseStudentData();
-      // Comentar a linha abaixo após confirmar que não há problemas
-      // await fixStudentEmails();
     } catch (error) {
       console.error('Erro no diagnóstico automático:', error);
     }
-  }, 3000);
+  }, 2000);
 }

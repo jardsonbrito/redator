@@ -16,6 +16,7 @@ const Welcome = () => {
   const { signIn } = useAuth();
 
   const handleLogin = async (profileType: "professor" | "aluno" | "visitante", data: any) => {
+    console.log('🔄 WELCOME - Login iniciado:', profileType, data);
     setLoading(true);
 
     try {
@@ -37,8 +38,7 @@ const Welcome = () => {
           }, 1000);
         }
       } else if (profileType === "aluno") {
-        // Login bem-sucedido - usar a turma do aluno encontrado
-        console.log('✅ Login bem-sucedido para aluno:', data.nome, 'Turma:', data.turma);
+        console.log('✅ WELCOME - Login bem-sucedido para aluno:', data.nome, 'Turma:', data.turma);
         loginAsStudent(data.turma);
         toast({
           title: "Acesso liberado!",
@@ -46,6 +46,7 @@ const Welcome = () => {
         });
         navigate("/app", { replace: true });
       } else if (profileType === "visitante") {
+        console.log('✅ WELCOME - Login bem-sucedido para visitante:', data.nome);
         loginAsVisitante(data.nome, data.email);
         toast({
           title: "Bem-vindo, visitante!",
@@ -54,7 +55,7 @@ const Welcome = () => {
         navigate("/app", { replace: true });
       }
     } catch (error: any) {
-      console.error('🚨 Erro no login:', error);
+      console.error('🚨 WELCOME - Erro no login:', error);
       toast({
         title: "Erro inesperado",
         description: "Ocorreu um erro inesperado. Tente novamente.",
@@ -86,13 +87,11 @@ const Welcome = () => {
         </div>
 
         <div className="space-y-6">
-          {/* Botões de perfil */}
           <ProfileSelector 
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
           />
 
-          {/* Formulário de login */}
           <LoginForm
             selectedProfile={selectedProfile}
             onLogin={handleLogin}
