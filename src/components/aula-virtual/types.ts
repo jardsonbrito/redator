@@ -10,6 +10,7 @@ export interface AulaVirtual {
   imagem_capa_url: string;
   link_meet: string;
   abrir_aba_externa: boolean;
+  permite_visitante: boolean;
   ativo: boolean;
 }
 

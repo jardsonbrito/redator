@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,8 +25,12 @@ export const useAulaVirtual = (turmaCode: string) => {
 
         // Filtrar por turma ou visitante
         if (turmaCode === "Visitante") {
-          query = query.or('permite_visitante.eq.true,turmas_autorizadas.cs.["Visitante"]');
+          console.log('Filtrando aulas para visitante...');
+          // Para visitantes, buscar aulas que permitem visitantes
+          query = query.eq('permite_visitante', true);
         } else {
+          console.log('Filtrando aulas para turma:', turmaCode);
+          // Para alunos, buscar por turma específica
           query = query.contains('turmas_autorizadas', [turmaCode]);
         }
         
@@ -39,7 +42,7 @@ export const useAulaVirtual = (turmaCode: string) => {
         }
         
         if (!data || data.length === 0) {
-          console.log('Nenhuma aula virtual ativa encontrada');
+          console.log('Nenhuma aula virtual ativa encontrada para:', turmaCode);
           return null;
         }
 
