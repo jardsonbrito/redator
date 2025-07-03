@@ -46,33 +46,25 @@ export const FrequenciaAulas = () => {
   const turmasDisponiveis = ["Turma A", "Turma B", "Turma C", "Turma D", "Turma E", "visitante"];
 
   const fetchAulas = async () => {
-    if (!isAdmin) {
-      console.log('❌ Usuário não é admin, evitando busca');
-      return;
-    }
-    
     try {
+      console.log('🔍 Buscando aulas virtuais...');
       const { data, error } = await supabase
         .from('aulas_virtuais')
         .select('id, titulo, data_aula')
         .order('data_aula', { ascending: false });
 
       if (error) throw error;
+      console.log('✅ Aulas carregadas:', data?.length || 0);
       setAulas(data || []);
     } catch (error: any) {
-      console.error('Erro ao buscar aulas:', error);
+      console.error('❌ Erro ao buscar aulas:', error);
     }
   };
 
   const fetchFrequencias = async () => {
-    if (!isAdmin) {
-      console.log('❌ Usuário não é admin, evitando busca');
-      setIsLoading(false);
-      return;
-    }
-    
     try {
       setIsLoading(true);
+      console.log('🔍 Buscando dados de frequência...');
       
       // Buscar todas as aulas virtuais
       const { data: aulasData, error: aulasError } = await supabase
@@ -80,6 +72,7 @@ export const FrequenciaAulas = () => {
         .select('id, titulo, data_aula');
 
       if (aulasError) throw aulasError;
+      console.log('✅ Aulas encontradas:', aulasData?.length || 0);
 
       // Buscar todos os registros de presença
       const { data: presencaData, error: presencaError } = await supabase
@@ -95,6 +88,7 @@ export const FrequenciaAulas = () => {
         `);
 
       if (presencaError) throw presencaError;
+      console.log('✅ Registros de presença encontrados:', presencaData?.length || 0);
 
       // Processar dados para criar relatório de frequência
       const frequenciaMap = new Map<string, any>();
@@ -149,6 +143,7 @@ export const FrequenciaAulas = () => {
         };
       });
 
+      console.log('✅ Dados processados:', frequenciaArray.length, 'registros');
       setFrequencias(frequenciaArray);
       setFilteredData(frequenciaArray);
     } catch (error: any) {
