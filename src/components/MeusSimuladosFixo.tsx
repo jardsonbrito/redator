@@ -91,6 +91,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             status,
             corrigida,
             nota_total,
+            comentario_admin,
             data_correcao
           `)
           .eq('email_aluno', dados.email)
@@ -123,6 +124,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             status,
             corrigida,
             nota_total,
+            comentario_admin,
             data_correcao
           `)
           .eq('turma', codigoTurma)
@@ -266,7 +268,6 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     setShowCorrecaoDialog(false);
   };
 
-  // ... keep existing code (getTipoEnvioLabel, getTipoEnvioColor functions)
   const getTipoEnvioLabel = (tipo: string) => {
     const tipos = {
       'regular': 'Regular',
