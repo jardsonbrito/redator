@@ -29,7 +29,7 @@ interface AulaVirtual {
 }
 
 export const FrequenciaAulas = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const [frequencias, setFrequencias] = useState<FrequenciaData[]>([]);
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [filteredData, setFilteredData] = useState<FrequenciaData[]>([]);
@@ -221,11 +221,27 @@ export const FrequenciaAulas = () => {
   }, [frequencias, filters]);
 
   useEffect(() => {
-    if (isAdmin) {
+    // Só executa quando não está carregando a autenticação E é admin
+    if (!authLoading && isAdmin) {
       fetchAulas();
       fetchFrequencias();
+    } else if (!authLoading && !isAdmin) {
+      // Se não está carregando e não é admin, finaliza o loading
+      setIsLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, authLoading]);
+
+  // Aguarda carregamento da autenticação antes de decidir o que mostrar
+  if (authLoading) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-sm text-muted-foreground mt-2">Verificando permissões...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!isAdmin) {
     return (
