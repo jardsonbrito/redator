@@ -50,7 +50,36 @@ export const RadarUpload = () => {
         const email = cols[emailIdx] || '';
         const turma = cols[turmaIdx] || 'Não informado';
         const tituloExercicio = cols[exercicioIdx] || 'Exercício importado';
-        const dataRealizacao = cols[dataIdx] ? new Date(cols[dataIdx]).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        
+        // Melhor tratamento de data
+        let dataRealizacao = new Date().toISOString().split('T')[0]; // data padrão
+        if (cols[dataIdx]) {
+          const dataString = cols[dataIdx].trim();
+          // Tentar diferentes formatos de data
+          let dataObj = null;
+          
+          // Formato DD/MM/YYYY ou DD-MM-YYYY
+          if (dataString.includes('/') || dataString.includes('-')) {
+            const separator = dataString.includes('/') ? '/' : '-';
+            const parts = dataString.split(separator);
+            if (parts.length === 3) {
+              // Assumir DD/MM/YYYY ou DD-MM-YYYY
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]) - 1; // JS months são 0-based
+              const year = parseInt(parts[2]);
+              dataObj = new Date(year, month, day);
+            }
+          } else {
+            // Tentar formato ISO ou outros
+            dataObj = new Date(dataString);
+          }
+          
+          // Verificar se a data é válida
+          if (dataObj && !isNaN(dataObj.getTime())) {
+            dataRealizacao = dataObj.toISOString().split('T')[0];
+          }
+        }
+        
         const nota = cols[notaIdx] ? parseFloat(cols[notaIdx]) : null;
 
         if (nome && email) {
