@@ -177,28 +177,53 @@ export const MinhasRedacoes = () => {
       }
 
       // ETAPA 2: Verificação rigorosa de e-mail usando nova função segura
+      console.log('🔒 TESTANDO VALIDAÇÃO:', {
+        emailRedacao: redacaoBasica.email_aluno,
+        emailDigitado: emailInput.trim(),
+        saoIguais: redacaoBasica.email_aluno.toLowerCase().trim() === emailInput.trim().toLowerCase(),
+        timestamp: new Date().toISOString()
+      });
+
       const emailMatches = await supabase.rpc('can_access_redacao', {
         redacao_email: redacaoBasica.email_aluno,
         user_email: emailInput.trim()
       });
 
-      // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true
-      console.log('🔍 VALIDAÇÃO CRÍTICA MINHAS REDAÇÕES:', {
+      // 🚨 VALIDAÇÃO CRÍTICA COM LOG DETALHADO
+      console.log('🔍 RESULTADO COMPLETO DA VALIDAÇÃO:', {
+        emailMatches,
         data: emailMatches.data,
         error: emailMatches.error,
         type: typeof emailMatches.data,
-        isStrictlyTrue: emailMatches.data === true,
+        isExactlyTrue: emailMatches.data === true,
+        isStrictEqual: Object.is(emailMatches.data, true),
         emailRedacao: redacaoBasica.email_aluno,
-        emailDigitado: emailInput.trim()
+        emailDigitado: emailInput.trim(),
+        comparison: {
+          raw: `"${redacaoBasica.email_aluno}" vs "${emailInput.trim()}"`,
+          lower: `"${redacaoBasica.email_aluno.toLowerCase()}" vs "${emailInput.trim().toLowerCase()}"`,
+          trimmed: `"${redacaoBasica.email_aluno.trim()}" vs "${emailInput.trim()}"`
+        }
       });
 
-      if (emailMatches.error || emailMatches.data !== true) {
-        console.error('❌ Falha na validação de acesso:', {
+      // 🚨 DUPLA VALIDAÇÃO DE SEGURANÇA
+      const emailsMatch = redacaoBasica.email_aluno.toLowerCase().trim() === emailInput.trim().toLowerCase();
+      const supabaseValidation = emailMatches.data === true && !emailMatches.error;
+      
+      console.log('🔐 VALIDAÇÃO DUPLA:', {
+        emailsMatch,
+        supabaseValidation,
+        finalDecision: emailsMatch && supabaseValidation
+      });
+
+      if (emailMatches.error || emailMatches.data !== true || !emailsMatch) {
+        console.error('❌ ACESSO NEGADO - VALIDAÇÃO FALHOU:', {
           error: emailMatches.error,
           data: emailMatches.data,
+          emailsMatch,
           emailRedacao: redacaoBasica.email_aluno,
           emailDigitado: emailInput.trim(),
-          motivo: emailMatches.error ? 'Erro na função' : 'Email não confere'
+          motivo: emailMatches.error ? 'Erro na função' : !emailsMatch ? 'Emails diferentes' : 'Resposta inesperada'
         });
         toast({
           title: "E-mail incorreto. Acesso negado à redação.",

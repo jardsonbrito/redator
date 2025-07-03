@@ -92,12 +92,30 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
       });
 
       // 🔒 VALIDAÇÃO SEGURA via Supabase function (não apenas front-end)
+      console.log('🔒 TESTANDO VALIDAÇÃO CARD:', {
+        emailRedacao: selectedRedacao.email_aluno,
+        emailDigitado: emailInput.trim(),
+        saoIguais: selectedRedacao.email_aluno.toLowerCase().trim() === emailInput.trim().toLowerCase(),
+        timestamp: new Date().toISOString()
+      });
+
       const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
         redacao_email: selectedRedacao.email_aluno,
         user_email: emailInput.trim()
       });
 
-      console.log('🔍 RESULTADO CARD:', { canAccess, error });
+      console.log('🔍 RESULTADO COMPLETO CARD:', {
+        canAccess,
+        error,
+        type: typeof canAccess,
+        isExactlyTrue: canAccess === true,
+        emailRedacao: selectedRedacao.email_aluno,
+        emailDigitado: emailInput.trim(),
+        comparison: {
+          raw: `"${selectedRedacao.email_aluno}" vs "${emailInput.trim()}"`,
+          lower: `"${selectedRedacao.email_aluno.toLowerCase()}" vs "${emailInput.trim().toLowerCase()}"`
+        }
+      });
 
       if (error) {
         console.error('❌ Erro na validação de acesso:', error);
@@ -109,22 +127,23 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
         return;
       }
 
-      // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true
-      console.log('🔍 VALIDAÇÃO CRÍTICA CARD:', {
-        canAccess,
-        type: typeof canAccess,
-        isStrictlyTrue: canAccess === true,
-        emailRedacao: selectedRedacao.email_aluno,
-        emailDigitado: emailInput.trim(),
-        funcaoRetorno: canAccess
+      // 🚨 DUPLA VALIDAÇÃO DE SEGURANÇA
+      const emailsMatch = selectedRedacao.email_aluno.toLowerCase().trim() === emailInput.trim().toLowerCase();
+      const supabaseValidation = canAccess === true;
+      
+      console.log('🔐 VALIDAÇÃO DUPLA CARD:', {
+        emailsMatch,
+        supabaseValidation,
+        finalDecision: emailsMatch && supabaseValidation
       });
 
-      if (canAccess !== true) {
-        console.error('🚫 ACESSO NEGADO CARD - Email não confere ou validação falhou:', {
+      if (canAccess !== true || !emailsMatch) {
+        console.error('🚫 ACESSO NEGADO CARD:', {
           canAccess,
+          emailsMatch,
           emailRedacao: selectedRedacao.email_aluno,
           emailDigitado: emailInput.trim(),
-          motivo: canAccess === false ? 'Email diferente' : 'Resposta inesperada da função'
+          motivo: !emailsMatch ? 'Emails diferentes' : 'Validação Supabase falhou'
         });
         toast({
           title: "E-mail incorreto. Acesso negado à correção.",

@@ -83,16 +83,30 @@ const MeusSimulados = () => {
       });
 
       // 🔒 VALIDAÇÃO SEGURA via Supabase function
+      console.log('🔒 TESTANDO VALIDAÇÃO SIMULADOS:', {
+        emailCorreto,
+        emailDigitado,
+        saoIguais: emailCorreto.toLowerCase().trim() === emailDigitado.trim().toLowerCase(),
+        timestamp: new Date().toISOString()
+      });
+
       const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
         redacao_email: emailCorreto,
         user_email: emailDigitado
       });
 
-      console.log('🔍 RESULTADO VALIDAÇÃO:', {
+      console.log('🔍 RESULTADO COMPLETO SIMULADOS:', {
         canAccess,
         error,
+        type: typeof canAccess,
+        isExactlyTrue: canAccess === true,
         emailCorreto,
-        emailDigitado
+        emailDigitado,
+        comparison: {
+          raw: `"${emailCorreto}" vs "${emailDigitado}"`,
+          lower: `"${emailCorreto.toLowerCase()}" vs "${emailDigitado.toLowerCase()}"`,
+          trimmed: `"${emailCorreto.trim()}" vs "${emailDigitado.trim()}"`
+        }
       });
 
       if (error) {
@@ -105,22 +119,23 @@ const MeusSimulados = () => {
         return;
       }
 
-      // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true
-      console.log('🔍 VALIDAÇÃO CRÍTICA:', {
-        canAccess,
-        type: typeof canAccess,
-        isStrictlyTrue: canAccess === true,
-        emailCorreto,
-        emailDigitado,
-        funcaoRetorno: canAccess
+      // 🚨 DUPLA VALIDAÇÃO DE SEGURANÇA
+      const emailsMatch = emailCorreto.toLowerCase().trim() === emailDigitado.trim().toLowerCase();
+      const supabaseValidation = canAccess === true;
+      
+      console.log('🔐 VALIDAÇÃO DUPLA SIMULADOS:', {
+        emailsMatch,
+        supabaseValidation,
+        finalDecision: emailsMatch && supabaseValidation
       });
 
-      if (canAccess !== true) {
-        console.error('🚫 ACESSO NEGADO - Email não confere ou validação falhou:', {
+      if (canAccess !== true || !emailsMatch) {
+        console.error('🚫 ACESSO NEGADO SIMULADOS:', {
           canAccess,
+          emailsMatch,
           emailCorreto,
           emailDigitado,
-          motivo: canAccess === false ? 'Email diferente' : 'Resposta inesperada da função'
+          motivo: !emailsMatch ? 'Emails diferentes' : 'Validação Supabase falhou'
         });
         toast({
           title: "E-mail incorreto. Acesso negado à correção.",
