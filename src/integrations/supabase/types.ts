@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      access_logs: {
+        Row: {
+          action: string
+          id: string
+          ip_address: unknown | null
+          record_id: string
+          table_name: string
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          id?: string
+          ip_address?: unknown | null
+          record_id: string
+          table_name: string
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string
+          table_name?: string
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       aulas: {
         Row: {
           ativo: boolean | null
@@ -359,6 +389,7 @@ export type Database = {
         Row: {
           comentario_admin: string | null
           corrigida: boolean | null
+          created_by_ip: unknown | null
           data_correcao: string | null
           data_envio: string
           email_aluno: string | null
@@ -380,6 +411,7 @@ export type Database = {
         Insert: {
           comentario_admin?: string | null
           corrigida?: boolean | null
+          created_by_ip?: unknown | null
           data_correcao?: string | null
           data_envio?: string
           email_aluno?: string | null
@@ -401,6 +433,7 @@ export type Database = {
         Update: {
           comentario_admin?: string | null
           corrigida?: boolean | null
+          created_by_ip?: unknown | null
           data_correcao?: string | null
           data_envio?: string
           email_aluno?: string | null
@@ -685,6 +718,10 @@ export type Database = {
           credit_amount: number
           admin_user_id?: string
         }
+        Returns: boolean
+      }
+      can_access_redacao: {
+        Args: { redacao_email: string; user_email: string }
         Returns: boolean
       }
       check_and_publish_expired_simulados: {

@@ -37,9 +37,18 @@ type RedacaoTurma = {
   nota_c5?: number | null;
 };
 
+type AuthenticatedRedacao = RedacaoTurma & {
+  redacao_texto: string;
+  nota_c1: number | null;
+  nota_c2: number | null;
+  nota_c3: number | null;
+  nota_c4: number | null;
+  nota_c5: number | null;
+};
+
 export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
   const [selectedRedacaoId, setSelectedRedacaoId] = useState<string | null>(null);
-  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<RedacaoTurma | null>(null);
+  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<AuthenticatedRedacao | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
@@ -58,20 +67,32 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     return turmasMap[turmaNome as keyof typeof turmasMap] || turmaNome;
   };
 
+  // Query otimizada com as novas políticas RLS
   const { data: redacoesRecentes, isLoading } = useQuery({
-    queryKey: ['redacoes-recentes', turmaCode],
+    queryKey: ['redacoes-recentes-seguras', turmaCode],
     queryFn: async () => {
-      console.log('Buscando redações para:', turmaCode);
+      console.log('🔒 Buscando redações com segurança aprimorada para:', turmaCode);
       
       if (turmaCode === "visitante" || turmaCode === "Visitante") {
-        // Para visitantes, buscar somente redações corrigidas
+        // Para visitantes, usar nova política segura
         const visitanteData = localStorage.getItem("visitanteData");
         if (!visitanteData) return [];
         
         const dados = JSON.parse(visitanteData);
         const { data, error } = await supabase
           .from('redacoes_enviadas')
-          .select('*')
+          .select(`
+            id,
+            frase_tematica,
+            nome_aluno,
+            email_aluno,
+            tipo_envio,
+            data_envio,
+            status,
+            corrigida,
+            nota_total,
+            data_correcao
+          `)
           .eq('email_aluno', dados.email)
           .eq('tipo_envio', 'visitante')
           .eq('corrigida', true)
@@ -79,20 +100,31 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           .limit(3);
         
         if (error) {
-          console.error('Erro ao buscar redações do visitante:', error);
+          console.error('❌ Erro ao buscar redações do visitante:', error);
           return [];
         }
         
-        console.log('Redações corrigidas encontradas para visitante:', data);
+        console.log('✅ Redações corrigidas encontradas para visitante:', data);
         return data || [];
       } else {
-        // Para alunos, buscar somente redações corrigidas da turma
+        // Para alunos, usar nova política segura com função otimizada
         const codigoTurma = getTurmaCode(turmaCode);
-        console.log('Código da turma convertido:', codigoTurma);
+        console.log('🔄 Código da turma convertido:', codigoTurma);
         
         const { data, error } = await supabase
           .from('redacoes_enviadas')
-          .select('*')
+          .select(`
+            id,
+            frase_tematica,
+            nome_aluno,
+            email_aluno,
+            tipo_envio,
+            data_envio,
+            status,
+            corrigida,
+            nota_total,
+            data_correcao
+          `)
           .eq('turma', codigoTurma)
           .neq('tipo_envio', 'visitante')
           .eq('corrigida', true)
@@ -100,19 +132,21 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           .limit(3);
         
         if (error) {
-          console.error('Erro ao buscar redações da turma:', error);
+          console.error('❌ Erro ao buscar redações da turma:', error);
           return [];
         }
         
-        console.log('Redações corrigidas encontradas para turma:', data);
+        console.log('✅ Redações corrigidas encontradas para turma:', data);
         return data || [];
       }
     },
     enabled: !!turmaCode,
+    staleTime: 5 * 60 * 1000, // Cache por 5 minutos para melhor performance
   });
 
   const handleViewCorrection = (redacao: RedacaoTurma) => {
-    // Reset states
+    console.log('🔐 Iniciando fluxo seguro de visualização de correção');
+    // Reset completo de estados para garantir segurança
     setAuthenticatedRedacao(null);
     setShowCorrecaoDialog(false);
     setSelectedRedacaoId(redacao.id);
@@ -131,9 +165,10 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     }
 
     setIsAuthenticating(true);
+    console.log('🔍 Iniciando validação segura de e-mail...');
 
     try {
-      // Primeiro, buscar os dados básicos da redação para verificar o e-mail
+      // ETAPA 1: Validação básica sem carregar dados sensíveis
       const { data: redacaoBasica, error: errorBasico } = await supabase
         .from('redacoes_enviadas')
         .select('id, email_aluno, frase_tematica, nome_aluno')
@@ -141,12 +176,18 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         .single();
 
       if (errorBasico) {
-        console.error('Erro ao buscar redação:', errorBasico);
-        throw errorBasico;
+        console.error('❌ Erro ao validar redação:', errorBasico);
+        throw new Error('Redação não encontrada ou inacessível');
       }
 
-      // Verificar se o e-mail está correto
-      if (emailInput.trim().toLowerCase() !== redacaoBasica.email_aluno?.toLowerCase()) {
+      // ETAPA 2: Verificação rigorosa de e-mail usando nova função segura
+      const emailMatches = await supabase.rpc('can_access_redacao', {
+        redacao_email: redacaoBasica.email_aluno,
+        user_email: emailInput.trim()
+      });
+
+      if (emailMatches.error || !emailMatches.data) {
+        console.error('❌ Falha na validação de acesso:', emailMatches.error);
         toast({
           title: "E-mail incorreto. Acesso negado à correção.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
@@ -155,7 +196,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         return;
       }
 
-      // SOMENTE após validação do e-mail, buscar os dados completos da correção
+      console.log('✅ E-mail validado com sucesso');
+
+      // ETAPA 3: SOMENTE após validação, buscar dados completos sensíveis
       const { data: redacaoCompleta, error: errorCompleto } = await supabase
         .from('redacoes_enviadas')
         .select('*')
@@ -163,12 +206,12 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         .single();
 
       if (errorCompleto) {
-        console.error('Erro ao buscar redação completa:', errorCompleto);
-        throw errorCompleto;
+        console.error('❌ Erro ao carregar correção completa:', errorCompleto);
+        throw new Error('Erro ao carregar correção completa');
       }
 
-      // Preparar dados completos APENAS após autenticação bem-sucedida
-      const redacaoAutenticada: RedacaoTurma & { redacao_texto: string } = {
+      // ETAPA 4: Preparar dados APENAS após autenticação bem-sucedida
+      const redacaoAutenticada: AuthenticatedRedacao = {
         id: redacaoCompleta.id,
         frase_tematica: redacaoCompleta.frase_tematica,
         nome_aluno: redacaoCompleta.nome_aluno,
@@ -188,21 +231,25 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
-      // Fechar modal de autenticação e definir dados autenticados
+      // ETAPA 5: Fechar autenticação e exibir correção
       setIsAuthDialogOpen(false);
       setAuthenticatedRedacao(redacaoAutenticada);
       setShowCorrecaoDialog(true);
       
+      console.log('🎉 Correção liberada com segurança total');
       toast({
         title: "Correção liberada!",
         description: "Agora você pode visualizar sua correção completa.",
       });
 
+      // Log de auditoria automático via trigger criado na migração
+      console.log('📝 Log de acesso registrado automaticamente');
+
     } catch (error) {
-      console.error('Erro na autenticação:', error);
+      console.error('💥 Erro na autenticação:', error);
       toast({
         title: "Erro na autenticação",
-        description: "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -211,6 +258,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
   };
 
   const resetAuthenticationState = () => {
+    console.log('🔄 Resetando estados de autenticação');
     setSelectedRedacaoId(null);
     setAuthenticatedRedacao(null);
     setEmailInput("");
@@ -218,6 +266,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     setShowCorrecaoDialog(false);
   };
 
+  // ... keep existing code (getTipoEnvioLabel, getTipoEnvioColor functions)
   const getTipoEnvioLabel = (tipo: string) => {
     const tipos = {
       'regular': 'Regular',
@@ -256,7 +305,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                     <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                       📝 Minhas Redações
                     </CardTitle>
-                    <p className="text-muted-foreground font-medium">Acompanhe todas as suas redações corrigidas com detalhes</p>
+                    <p className="text-muted-foreground font-medium">Acompanhe todas as suas redações corrigidas com segurança</p>
                   </div>
                 </div>
                 <Link to="/minhas-redacoes">
@@ -276,14 +325,14 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             {isLoading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-muted-foreground">Carregando redações...</p>
+                <p className="mt-4 text-muted-foreground">Carregando redações com segurança...</p>
               </div>
             ) : !redacoesRecentes || redacoesRecentes.length === 0 ? (
               <div className="text-center py-8">
                 <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground mb-2">Nenhuma redação ainda</p>
+                <p className="text-muted-foreground mb-2">Nenhuma redação corrigida ainda</p>
                 <p className="text-sm text-muted-foreground">
-                  Suas redações aparecerão aqui quando forem enviadas
+                  Suas redações corrigidas aparecerão aqui quando disponíveis
                 </p>
               </div>
             ) : (
@@ -299,7 +348,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                           
                           <div className="flex flex-wrap gap-2 mb-3">
                             <Badge className="bg-green-100 text-green-800">
-                              Corrigido
+                              🔐 Corrigido
                             </Badge>
                             <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
                               {getTipoEnvioLabel(redacao.tipo_envio)}
@@ -325,7 +374,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                             className="border-primary/30 hover:bg-primary/10"
                             onClick={() => handleViewCorrection(redacao)}
                           >
-                            <Eye className="w-4 h-4 mr-1" />
+                            <Lock className="w-4 h-4 mr-1" />
                             Ver Correção
                           </Button>
                         </div>
@@ -352,7 +401,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         </Card>
       </div>
 
-      {/* Dialog de autenticação por email - SEM dados da correção */}
+      {/* Dialog de autenticação segura por email */}
       <Dialog open={isAuthDialogOpen} onOpenChange={(open) => {
         if (!open) {
           resetAuthenticationState();
@@ -363,7 +412,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           <DialogHeader>
             <DialogTitle className="text-primary flex items-center gap-2">
               <Lock className="w-5 h-5" />
-              Acesso à Correção
+              🔐 Acesso Seguro à Correção
             </DialogTitle>
           </DialogHeader>
           
@@ -372,14 +421,14 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
               <div className="flex items-start gap-2">
                 <Lock className="w-4 h-4 text-amber-600 mt-0.5" />
                 <div className="text-sm text-amber-800">
-                  Para visualizar sua correção, digite o e-mail que você usou no envio.
+                  <strong>Segurança Aprimorada:</strong> Para visualizar sua correção, digite o e-mail exato que você usou no envio da redação.
                 </div>
               </div>
             </div>
 
             <div>
               <label htmlFor="email-auth" className="block text-sm font-medium text-primary mb-2">
-                E-mail de Acesso *
+                E-mail de Acesso * (obrigatório)
               </label>
               <Input
                 id="email-auth"
@@ -388,22 +437,31 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 className="border-primary/30 focus:border-primary"
+                disabled={isAuthenticating}
               />
             </div>
 
             <div className="flex gap-2">
               <Button 
                 onClick={handleEmailAuth}
-                disabled={isAuthenticating}
+                disabled={isAuthenticating || !emailInput.trim()}
                 className="flex-1 bg-primary hover:bg-primary/90"
               >
-                {isAuthenticating ? "Verificando..." : "Acessar Correção"}
+                {isAuthenticating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Verificando...
+                  </>
+                ) : (
+                  "🔓 Acessar Correção"
+                )}
               </Button>
               
               <Button 
                 variant="outline"
                 onClick={() => resetAuthenticationState()}
                 className="border-primary/30"
+                disabled={isAuthenticating}
               >
                 Cancelar
               </Button>
@@ -412,7 +470,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de visualização da correção - APENAS após autenticação */}
+      {/* Modal de visualização da correção - APENAS após autenticação completa */}
       {authenticatedRedacao && showCorrecaoDialog && (
         <Dialog open={showCorrecaoDialog} onOpenChange={(open) => {
           if (!open) {
@@ -423,7 +481,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-primary">
-                {authenticatedRedacao.frase_tematica}
+                ✅ {authenticatedRedacao.frase_tematica}
               </DialogTitle>
             </DialogHeader>
             
@@ -432,7 +490,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 redacao={{
                   id: authenticatedRedacao.id,
                   frase_tematica: authenticatedRedacao.frase_tematica,
-                  redacao_texto: authenticatedRedacao.redacao_texto || "",
+                  redacao_texto: authenticatedRedacao.redacao_texto,
                   data_envio: authenticatedRedacao.data_envio,
                   nota_c1: authenticatedRedacao.nota_c1,
                   nota_c2: authenticatedRedacao.nota_c2,

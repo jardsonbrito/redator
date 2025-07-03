@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Calendar, Eye, Lock, AlertCircle } from "lucide-react";
+import { FileText, Calendar, Eye, Lock, AlertCircle, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
 
@@ -31,14 +30,20 @@ type RedacaoTurma = {
   nota_c5?: number | null;
 };
 
+type AuthenticatedRedacao = RedacaoTurma & {
+  redacao_texto: string;
+};
+
 export const MinhasRedacoes = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoTurma | null>(null);
+  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<AuthenticatedRedacao | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
   const { toast } = useToast();
 
-  // Recupera dados do usuário
+  // Recupera dados do usuário com validação aprimorada
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
   const visitanteData = localStorage.getItem("visitanteData");
@@ -61,50 +66,69 @@ export const MinhasRedacoes = () => {
       const dados = JSON.parse(visitanteData);
       visitanteEmail = dados.email;
     } catch (error) {
-      console.error('Erro ao parsear dados do visitante:', error);
+      console.error('❌ Erro ao parsear dados do visitante:', error);
     }
   }
 
+  // Query com segurança aprimorada usando novas políticas RLS
   const { data: redacoesTurma, isLoading, error } = useQuery({
-    queryKey: ['redacoes-usuario', turmaCode, visitanteEmail],
+    queryKey: ['redacoes-usuario-seguras', turmaCode, visitanteEmail],
     queryFn: async () => {
+      console.log('🔒 Buscando redações com segurança aprimorada');
+      
       if (userType === "aluno" && turmaCode) {
-        console.log('Buscando redações da turma:', turmaCode);
+        console.log('👨‍🎓 Buscando redações da turma:', turmaCode);
         const { data, error } = await supabase
           .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
         
         if (error) {
-          console.error('Erro ao buscar redações da turma:', error);
+          console.error('❌ Erro ao buscar redações da turma:', error);
           throw error;
         }
         
-        console.log('Redações da turma encontradas:', data);
+        console.log('✅ Redações da turma encontradas:', data?.length || 0);
         return data as RedacaoTurma[] || [];
       } else if (userType === "visitante" && visitanteEmail) {
-        console.log('Buscando redações do visitante:', visitanteEmail);
+        console.log('👤 Buscando redações do visitante:', visitanteEmail);
         const { data, error } = await supabase
           .from('redacoes_enviadas')
-          .select('*')
+          .select(`
+            id,
+            frase_tematica,
+            nome_aluno,
+            email_aluno,
+            tipo_envio,
+            data_envio,
+            status,
+            corrigida,
+            nota_total,
+            comentario_admin,
+            data_correcao
+          `)
           .eq('email_aluno', visitanteEmail)
           .eq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
         
         if (error) {
-          console.error('Erro ao buscar redações do visitante:', error);
+          console.error('❌ Erro ao buscar redações do visitante:', error);
           throw error;
         }
         
-        console.log('Redações do visitante encontradas:', data);
+        console.log('✅ Redações do visitante encontradas:', data?.length || 0);
         return data as RedacaoTurma[] || [];
       }
       
       return [];
     },
     enabled: !!(turmaCode || visitanteEmail),
+    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
+    console.log('🔐 Iniciando fluxo seguro para visualização de redação');
     setSelectedRedacao(redacao);
+    setAuthenticatedRedacao(null);
+    setShowRedacaoDialog(false);
     setEmailInput("");
     setIsDialogOpen(true);
   };
@@ -120,38 +144,17 @@ export const MinhasRedacoes = () => {
     }
 
     setIsAuthenticating(true);
+    console.log('🔍 Iniciando validação segura de e-mail...');
 
     try {
-      // Buscar redação específica com autenticação por email
-      let data, error;
-      
-      if (userType === "aluno" && turmaCode) {
-        const response = await supabase
-          .rpc('get_redacoes_by_turma_and_email', { 
-            p_turma: turmaCode, 
-            p_email: emailInput.trim() 
-          });
-        data = response.data;
-        error = response.error;
-      } else if (userType === "visitante") {
-        const response = await supabase
-          .from('redacoes_enviadas')
-          .select('*')
-          .eq('email_aluno', emailInput.trim())
-          .eq('tipo_envio', 'visitante');
-        data = response.data;
-        error = response.error;
-      }
+      // Usar nova função segura para validar acesso
+      const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
+        redacao_email: selectedRedacao.email_aluno,
+        user_email: emailInput.trim()
+      });
 
-      if (error) {
-        console.error('Erro na autenticação:', error);
-        throw error;
-      }
-
-      // Verificar se a redação existe para este email
-      const redacaoAutenticada = data?.find(r => r.id === selectedRedacao.id);
-
-      if (!redacaoAutenticada) {
+      if (error || !canAccess) {
+        console.error('❌ Falha na validação de acesso:', error);
         toast({
           title: "E-mail incorreto",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
@@ -160,7 +163,9 @@ export const MinhasRedacoes = () => {
         return;
       }
 
-      // Buscar texto completo da redação
+      console.log('✅ E-mail validado com sucesso');
+
+      // SOMENTE após validação, buscar texto completo da redação
       const { data: redacaoCompleta, error: errorCompleta } = await supabase
         .from('redacoes_enviadas')
         .select('*')
@@ -168,13 +173,13 @@ export const MinhasRedacoes = () => {
         .single();
 
       if (errorCompleta) {
-        console.error('Erro ao buscar redação completa:', errorCompleta);
-        throw errorCompleta;
+        console.error('❌ Erro ao buscar redação completa:', errorCompleta);
+        throw new Error('Erro ao carregar redação completa');
       }
 
-      // Preparar dados completos da redação com redacao_texto obrigatório
-      const redacaoComTexto: RedacaoTurma & { redacao_texto: string } = {
-        ...redacaoAutenticada,
+      // Preparar dados completos APENAS após autenticação
+      const redacaoComTexto: AuthenticatedRedacao = {
+        ...selectedRedacao,
         redacao_texto: redacaoCompleta.redacao_texto || "",
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
@@ -183,34 +188,36 @@ export const MinhasRedacoes = () => {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
-      // Fechar dialog de autenticação
+      // Fechar dialog de autenticação e exibir redação
       setIsDialogOpen(false);
+      setAuthenticatedRedacao(redacaoComTexto);
+      setShowRedacaoDialog(true);
       
-      // Criar e abrir modal de visualização da redação
-      const redacaoParaCard = {
-        ...redacaoComTexto,
-        data_envio: redacaoComTexto.data_envio,
-        corrigida: redacaoComTexto.corrigida,
-      };
-      
-      setSelectedRedacao(redacaoParaCard);
-      
-      // Mostrar toast de sucesso
+      console.log('🎉 Redação liberada com segurança total');
       toast({
         title: "Redação liberada!",
         description: "Agora você pode visualizar sua redação completa.",
       });
 
     } catch (error) {
-      console.error('Erro na autenticação:', error);
+      console.error('💥 Erro na autenticação:', error);
       toast({
         title: "Erro na autenticação",
-        description: "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setIsAuthenticating(false);
     }
+  };
+
+  const resetAuthenticationState = () => {
+    console.log('🔄 Resetando estados de autenticação');
+    setSelectedRedacao(null);
+    setAuthenticatedRedacao(null);
+    setEmailInput("");
+    setIsDialogOpen(false);
+    setShowRedacaoDialog(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -237,9 +244,9 @@ export const MinhasRedacoes = () => {
     return (
       <Card className="border-redator-accent/20">
         <CardContent className="text-center py-8">
-          <Lock className="w-12 h-12 text-redator-accent mx-auto mb-4" />
+          <Shield className="w-12 h-12 text-redator-accent mx-auto mb-4" />
           <p className="text-redator-accent">
-            Faça login como aluno ou visitante para visualizar suas redações.
+            🔐 Faça login como aluno ou visitante para visualizar suas redações com segurança.
           </p>
         </CardContent>
       </Card>
@@ -250,7 +257,7 @@ export const MinhasRedacoes = () => {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-redator-accent mx-auto mb-4"></div>
-        <p className="text-redator-accent">Carregando suas redações...</p>
+        <p className="text-redator-accent">🔒 Carregando suas redações com segurança...</p>
       </div>
     );
   }
@@ -260,7 +267,7 @@ export const MinhasRedacoes = () => {
       <Card className="border-red-200">
         <CardContent className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600">Erro ao carregar suas redações. Tente novamente.</p>
+          <p className="text-red-600">❌ Erro ao carregar suas redações. Tente novamente.</p>
         </CardContent>
       </Card>
     );
@@ -272,7 +279,7 @@ export const MinhasRedacoes = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-redator-primary">
             <FileText className="w-5 h-5" />
-            Minhas Redações
+            📝 Minhas Redações
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-8">
@@ -294,11 +301,11 @@ export const MinhasRedacoes = () => {
     <>
       <div className="space-y-6">
         <div className="flex items-center gap-2 mb-6">
-          <FileText className="w-6 h-6 text-redator-primary" />
+          <Shield className="w-6 h-6 text-redator-primary" />
           <h2 className="text-2xl font-bold text-redator-primary">
             {userType === "aluno" ? 
-              `Minhas Redações - ${alunoTurma} (${redacoesTurma.length})` : 
-              `Minhas Redações (${redacoesTurma.length})`
+              `🔐 Minhas Redações - ${alunoTurma} (${redacoesTurma.length})` : 
+              `🔐 Minhas Redações (${redacoesTurma.length})`
             }
           </h2>
         </div>
@@ -313,9 +320,9 @@ export const MinhasRedacoes = () => {
                       {redacao.frase_tematica}
                     </h3>
                     {redacao.corrigida ? (
-                      <Badge className="bg-green-100 text-green-800 shrink-0 text-xs">Corrigida</Badge>
+                      <Badge className="bg-green-100 text-green-800 shrink-0 text-xs">✅ Corrigida</Badge>
                     ) : (
-                      <Badge className="bg-yellow-100 text-yellow-800 shrink-0 text-xs">Aguardando</Badge>
+                      <Badge className="bg-yellow-100 text-yellow-800 shrink-0 text-xs">⏳ Aguardando</Badge>
                     )}
                   </div>
                   
@@ -337,7 +344,7 @@ export const MinhasRedacoes = () => {
                     
                     {redacao.corrigida && redacao.nota_total !== null && (
                       <div className="flex items-center gap-1 text-redator-primary font-medium">
-                        <span>Nota: {redacao.nota_total}/1000</span>
+                        <span>📊 Nota: {redacao.nota_total}/1000</span>
                       </div>
                     )}
                   </div>
@@ -348,8 +355,8 @@ export const MinhasRedacoes = () => {
                     className="w-full border-redator-accent/50 text-redator-primary hover:bg-redator-accent/10"
                     onClick={() => handleViewRedacao(redacao)}
                   >
-                    <Eye className="w-3 h-3 mr-1" />
-                    Ver Redação
+                    <Lock className="w-3 h-3 mr-1" />
+                    🔐 Ver Redação
                   </Button>
                 </div>
               </CardContent>
@@ -358,11 +365,16 @@ export const MinhasRedacoes = () => {
         </div>
       </div>
 
-      {/* Dialog de autenticação por email */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Dialog de autenticação segura por email */}
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          resetAuthenticationState();
+        }
+        setIsDialogOpen(open);
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-redator-primary">Acesso à Redação</DialogTitle>
+            <DialogTitle className="text-redator-primary">🔐 Acesso Seguro à Redação</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -370,7 +382,7 @@ export const MinhasRedacoes = () => {
               <div className="flex items-start gap-2">
                 <Lock className="w-4 h-4 text-amber-600 mt-0.5" />
                 <div className="text-sm text-amber-800">
-                  Para ver sua redação, digite o e-mail que você usou no envio.
+                  <strong>Segurança Aprimorada:</strong> Para ver sua redação, digite o e-mail exato usado no envio.
                 </div>
               </div>
             </div>
@@ -384,7 +396,7 @@ export const MinhasRedacoes = () => {
 
             <div>
               <label htmlFor="email-auth" className="block text-sm font-medium text-redator-primary mb-2">
-                E-mail de Acesso
+                E-mail de Acesso * (obrigatório)
               </label>
               <Input
                 id="email-auth"
@@ -393,22 +405,31 @@ export const MinhasRedacoes = () => {
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 className="border-redator-accent/30 focus:border-redator-accent"
+                disabled={isAuthenticating}
               />
             </div>
 
             <div className="flex gap-2">
               <Button 
                 onClick={handleEmailAuth}
-                disabled={isAuthenticating}
+                disabled={isAuthenticating || !emailInput.trim()}
                 className="flex-1 bg-redator-primary hover:bg-redator-primary/90"
               >
-                {isAuthenticating ? "Verificando..." : "Acessar Redação"}
+                {isAuthenticating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Verificando...
+                  </>
+                ) : (
+                  "🔓 Acessar Redação"
+                )}
               </Button>
               
               <Button 
                 variant="outline"
-                onClick={() => setIsDialogOpen(false)}
+                onClick={() => resetAuthenticationState()}
                 className="border-redator-accent/50"
+                disabled={isAuthenticating}
               >
                 Cancelar
               </Button>
@@ -417,36 +438,41 @@ export const MinhasRedacoes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de visualização da redação autenticada */}
-      {selectedRedacao && selectedRedacao.redacao_texto && (
-        <Dialog open={!!selectedRedacao.redacao_texto} onOpenChange={() => setSelectedRedacao(null)}>
+      {/* Modal de visualização da redação - APENAS após autenticação completa */}
+      {authenticatedRedacao && showRedacaoDialog && (
+        <Dialog open={showRedacaoDialog} onOpenChange={(open) => {
+          if (!open) {
+            resetAuthenticationState();
+          }
+          setShowRedacaoDialog(open);
+        }}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-redator-primary">
-                {selectedRedacao.frase_tematica}
+                ✅ {authenticatedRedacao.frase_tematica}
               </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-6">
               <RedacaoEnviadaCard 
                 redacao={{
-                  id: selectedRedacao.id,
-                  frase_tematica: selectedRedacao.frase_tematica,
-                  redacao_texto: selectedRedacao.redacao_texto,
-                  data_envio: selectedRedacao.data_envio,
-                  nota_c1: selectedRedacao.nota_c1,
-                  nota_c2: selectedRedacao.nota_c2,
-                  nota_c3: selectedRedacao.nota_c3,
-                  nota_c4: selectedRedacao.nota_c4,
-                  nota_c5: selectedRedacao.nota_c5,
-                  nota_total: selectedRedacao.nota_total,
-                  comentario_admin: selectedRedacao.comentario_admin,
-                  corrigida: selectedRedacao.corrigida,
-                  data_correcao: selectedRedacao.data_correcao,
-                  nome_aluno: selectedRedacao.nome_aluno,
-                  email_aluno: selectedRedacao.email_aluno,
-                  tipo_envio: selectedRedacao.tipo_envio,
-                  status: selectedRedacao.status,
+                  id: authenticatedRedacao.id,
+                  frase_tematica: authenticatedRedacao.frase_tematica,
+                  redacao_texto: authenticatedRedacao.redacao_texto,
+                  data_envio: authenticatedRedacao.data_envio,
+                  nota_c1: authenticatedRedacao.nota_c1,
+                  nota_c2: authenticatedRedacao.nota_c2,
+                  nota_c3: authenticatedRedacao.nota_c3,
+                  nota_c4: authenticatedRedacao.nota_c4,
+                  nota_c5: authenticatedRedacao.nota_c5,
+                  nota_total: authenticatedRedacao.nota_total,
+                  comentario_admin: authenticatedRedacao.comentario_admin,
+                  corrigida: authenticatedRedacao.corrigida,
+                  data_correcao: authenticatedRedacao.data_correcao,
+                  nome_aluno: authenticatedRedacao.nome_aluno,
+                  email_aluno: authenticatedRedacao.email_aluno,
+                  tipo_envio: authenticatedRedacao.tipo_envio,
+                  status: authenticatedRedacao.status,
                   turma: userType === "aluno" ? turmaCode : "visitante",
                 }} 
               />
