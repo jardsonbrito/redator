@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { compareTurmas, extractTurmaLetter } from "@/utils/turmaUtils";
 
 const Welcome = () => {
   const [selectedProfile, setSelectedProfile] = useState<"professor" | "aluno" | "visitante">("aluno");
@@ -120,15 +121,15 @@ const Welcome = () => {
             return;
           }
 
-          // Verificar se a turma do aluno corresponde à turma selecionada (normalizado)
-          const turmaNormalizada = aluno.turma?.trim().replace(/\s+/g, ' ');
-          const turmaSelecionadaNormalizada = turma?.trim().replace(/\s+/g, ' ');
-          
-          if (turmaNormalizada !== turmaSelecionadaNormalizada) {
-            console.log('Turma não confere - Aluno:', `"${turmaNormalizada}"`, 'Selecionada:', `"${turmaSelecionadaNormalizada}"`);
+          // Verificar se a turma do aluno corresponde à turma selecionada usando função robusta
+          if (!compareTurmas(aluno.turma, turma)) {
+            const letraAluno = extractTurmaLetter(aluno.turma);
+            const letraSelecionada = extractTurmaLetter(turma);
+            
+            console.log('Turma não confere - Aluno:', `"${aluno.turma}" (${letraAluno})`, 'Selecionada:', `"${turma}" (${letraSelecionada})`);
             toast({
               title: "Turma incorreta",
-              description: `Seu e-mail está cadastrado na ${turmaNormalizada}, mas você selecionou ${turmaSelecionadaNormalizada}. Por favor, selecione a turma correta.`,
+              description: `Seu e-mail está cadastrado na Turma ${letraAluno}, mas você selecionou Turma ${letraSelecionada}. Por favor, selecione a turma correta.`,
               variant: "destructive"
             });
             return;
