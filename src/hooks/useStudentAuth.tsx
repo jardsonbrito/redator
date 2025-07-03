@@ -1,6 +1,5 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 interface StudentAuthContextType {
   isStudentLoggedIn: boolean;
@@ -8,14 +7,12 @@ interface StudentAuthContextType {
     userType: 'aluno' | 'visitante' | null;
     turma: string | null;
     nomeUsuario: string;
-    nomeCompleto?: string;
-    email?: string;
     visitanteInfo?: {
       nome: string;
       email: string;
     };
   };
-  loginAsStudent: (turma: string, email?: string) => void;
+  loginAsStudent: (turma: string) => void;
   loginAsVisitante: (nome: string, email: string) => void;
   logoutStudent: () => void;
 }
@@ -28,17 +25,14 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     userType: null,
     turma: null,
     nomeUsuario: '',
-    nomeCompleto: undefined,
-    email: undefined,
     visitanteInfo: undefined
   });
 
   useEffect(() => {
-  // Verificar se há uma sessão ativa de estudante no localStorage
-    const checkStudentSession = async () => {
+    // Verificar se há uma sessão ativa de estudante no localStorage
+    const checkStudentSession = () => {
       const userType = localStorage.getItem("userType");
       const alunoTurma = localStorage.getItem("alunoTurma");
-      const alunoEmail = localStorage.getItem("alunoEmail");
       const visitanteData = localStorage.getItem("visitanteData");
 
       console.log('Verificando sessão - userType:', userType);
@@ -46,37 +40,11 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       console.log('Verificando sessão - visitanteData:', visitanteData);
 
       if (userType === "aluno" && alunoTurma) {
-        let nomeCompleto = '';
-        let email = '';
-        
-        // Buscar dados do aluno no Supabase se temos o email
-        if (alunoEmail) {
-          try {
-            const { data: aluno } = await supabase
-              .from("profiles")
-              .select("nome, sobrenome, email")
-              .eq("email", alunoEmail)
-              .eq("turma", alunoTurma)
-              .eq("user_type", "aluno")
-              .eq("is_authenticated_student", true)
-              .maybeSingle();
-            
-            if (aluno) {
-              nomeCompleto = `${aluno.nome} ${aluno.sobrenome}`.trim();
-              email = aluno.email;
-            }
-          } catch (error) {
-            console.error('Erro ao buscar dados do aluno:', error);
-          }
-        }
-        
         setIsStudentLoggedIn(true);
         setStudentData({
           userType: "aluno",
           turma: alunoTurma,
-          nomeUsuario: nomeCompleto || `Aluno da ${alunoTurma}`,
-          nomeCompleto,
-          email
+          nomeUsuario: `Aluno da ${alunoTurma}`
         });
         console.log('Sessão de aluno restaurada');
       } else if (userType === "visitante" && visitanteData) {
@@ -102,14 +70,12 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
             nomeUsuario: ''
           });
         }
-        } else {
+      } else {
         setIsStudentLoggedIn(false);
         setStudentData({
           userType: null,
           turma: null,
-          nomeUsuario: '',
-          nomeCompleto: undefined,
-          email: undefined
+          nomeUsuario: ''
         });
         console.log('Nenhuma sessão ativa encontrada');
       }
@@ -119,7 +85,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
 
     // Adicionar listener para mudanças no localStorage (caso seja modificado em outra aba)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "userType" || e.key === "alunoTurma" || e.key === "alunoEmail" || e.key === "visitanteData") {
+      if (e.key === "userType" || e.key === "alunoTurma" || e.key === "visitanteData") {
         console.log('Mudança detectada no localStorage:', e.key);
         checkStudentSession();
       }
@@ -129,47 +95,17 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const loginAsStudent = async (turma: string, email?: string) => {
-    console.log('Login como aluno - turma:', turma, 'email:', email);
+  const loginAsStudent = (turma: string) => {
+    console.log('Login como aluno - turma:', turma);
     localStorage.setItem("alunoTurma", turma);
     localStorage.setItem("userType", "aluno");
     localStorage.removeItem("visitanteData");
-    
-    if (email) {
-      localStorage.setItem("alunoEmail", email);
-    }
-    
-    let nomeCompleto = '';
-    let studentEmail = email || '';
-    
-    // Buscar dados do aluno no Supabase se temos o email
-    if (email) {
-      try {
-        const { data: aluno } = await supabase
-          .from("profiles")
-          .select("nome, sobrenome, email")
-          .eq("email", email)
-          .eq("turma", turma)
-          .eq("user_type", "aluno")
-          .eq("is_authenticated_student", true)
-          .maybeSingle();
-        
-        if (aluno) {
-          nomeCompleto = `${aluno.nome} ${aluno.sobrenome}`.trim();
-          studentEmail = aluno.email;
-        }
-      } catch (error) {
-        console.error('Erro ao buscar dados do aluno:', error);
-      }
-    }
     
     setIsStudentLoggedIn(true);
     setStudentData({
       userType: "aluno",
       turma: turma,
-      nomeUsuario: nomeCompleto || `Aluno da ${turma}`,
-      nomeCompleto,
-      email: studentEmail
+      nomeUsuario: `Aluno da ${turma}`
     });
   };
 
@@ -199,16 +135,13 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     // Limpar todos os dados de sessão do estudante
     localStorage.removeItem("userType");
     localStorage.removeItem("alunoTurma");
-    localStorage.removeItem("alunoEmail");
     localStorage.removeItem("visitanteData");
     
     setIsStudentLoggedIn(false);
     setStudentData({
       userType: null,
       turma: null,
-      nomeUsuario: '',
-      nomeCompleto: undefined,
-      email: undefined
+      nomeUsuario: ''
     });
   };
 

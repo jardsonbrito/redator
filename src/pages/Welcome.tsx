@@ -119,8 +119,8 @@ const Welcome = () => {
             return;
           }
 
-          // Login bem-sucedido - passar email para carregar dados completos
-          await loginAsStudent(turma, senha.trim().toLowerCase());
+          // Login bem-sucedido
+          loginAsStudent(turma);
           toast({
             title: "Acesso liberado!",
             description: `Bem-vindo, ${aluno.nome}!`
