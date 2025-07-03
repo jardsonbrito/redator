@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 const Welcome = () => {
   const [selectedProfile, setSelectedProfile] = useState<"professor" | "aluno" | "visitante">("aluno");
   const [turma, setTurma] = useState("");
@@ -85,31 +86,58 @@ const Welcome = () => {
           }, 1000);
         }
       } else if (selectedProfile === "aluno") {
-        if (!turma || !senha) {
+        if (!turma || !senha.trim()) {
           toast({
             title: "Campos obrigatórios",
-            description: "Por favor, selecione sua turma e digite a senha.",
+            description: "Por favor, selecione sua turma e digite seu e-mail.",
             variant: "destructive"
           });
           return;
         }
-        const turmaEncontrada = turmas.find(t => t.value === turma);
-        if (!turmaEncontrada || senha !== turmaEncontrada.senha) {
+
+        // Nova lógica: verificar se o e-mail digitado no campo senha existe na turma selecionada
+        try {
+          const { data: aluno, error } = await supabase
+            .from("profiles")
+            .select("id, nome, email, turma")
+            .eq("email", senha.trim().toLowerCase())
+            .eq("turma", turma)
+            .eq("user_type", "aluno")
+            .eq("is_authenticated_student", true)
+            .maybeSingle();
+
+          if (error) {
+            throw error;
+          }
+
+          if (!aluno) {
+            toast({
+              title: "E-mail não encontrado na turma selecionada",
+              description: "Verifique se seu e-mail está correto ou se você selecionou a turma certa.",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          // Login bem-sucedido
+          loginAsStudent(turma);
           toast({
-            title: "Senha incorreta",
-            description: "A senha digitada não confere com a senha da turma selecionada.",
+            title: "Acesso liberado!",
+            description: `Bem-vindo, ${aluno.nome}!`
+          });
+          navigate("/app", {
+            replace: true
+          });
+
+        } catch (error: any) {
+          console.error("Erro na autenticação do aluno:", error);
+          toast({
+            title: "Erro na autenticação",
+            description: "Ocorreu um erro ao verificar seus dados. Tente novamente.",
             variant: "destructive"
           });
           return;
         }
-        loginAsStudent(turma);
-        toast({
-          title: "Acesso liberado!",
-          description: `Bem-vindo à ${turma}!`
-        });
-        navigate("/app", {
-          replace: true
-        });
       } else if (selectedProfile === "visitante") {
         if (!nomeVisitante.trim() || !emailVisitante.trim()) {
           toast({
