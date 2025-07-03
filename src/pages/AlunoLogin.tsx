@@ -49,9 +49,24 @@ const AlunoLogin = () => {
 
       if (!aluno) {
         console.log('Aluno não encontrado para email:', emailDigitado.trim().toLowerCase());
+        
+        // Tentar buscar emails similares para ajudar o usuário
+        const { data: emailsSimilares } = await supabase
+          .from("profiles")
+          .select("email, nome")
+          .eq("user_type", "aluno")
+          .ilike("email", `%${emailDigitado.split('@')[0]}%`);
+        
+        let descricaoErro = "Verifique se você foi cadastrado pelo professor ou se o e-mail está correto.";
+        
+        if (emailsSimilares && emailsSimilares.length > 0) {
+          const emailSugerido = emailsSimilares[0].email;
+          descricaoErro = `E-mail não encontrado. Você quis dizer: ${emailSugerido}?`;
+        }
+        
         toast({
           title: "E-mail não encontrado",
-          description: "Verifique se você foi cadastrado pelo professor ou se o e-mail está correto.",
+          description: descricaoErro,
           variant: "destructive",
         });
         return;
