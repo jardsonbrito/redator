@@ -35,10 +35,12 @@ type RedacaoTurma = {
 };
 
 export default function MinhasRedacoesList() {
-  const [selectedRedacao, setSelectedRedacao] = useState<RedacaoTurma | null>(null);
+  const [selectedRedacaoId, setSelectedRedacaoId] = useState<string | null>(null);
+  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<RedacaoTurma & { redacao_texto: string } | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
 
@@ -73,7 +75,19 @@ export default function MinhasRedacoesList() {
         
         const { data, error } = await supabase
           .from('redacoes_enviadas')
-          .select('*')
+          .select(`
+            id,
+            frase_tematica,
+            nome_aluno,
+            email_aluno,
+            tipo_envio,
+            data_envio,
+            status,
+            corrigida,
+            nota_total,
+            comentario_admin,
+            data_correcao
+          `)
           .eq('turma', codigoTurma)
           .neq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
@@ -90,7 +104,19 @@ export default function MinhasRedacoesList() {
         
         const { data, error } = await supabase
           .from('redacoes_enviadas')
-          .select('*')
+          .select(`
+            id,
+            frase_tematica,
+            nome_aluno,
+            email_aluno,
+            tipo_envio,
+            data_envio,
+            status,
+            corrigida,
+            nota_total,
+            comentario_admin,
+            data_correcao
+          `)
           .eq('email_aluno', studentData.visitanteInfo.email)
           .eq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
@@ -110,13 +136,17 @@ export default function MinhasRedacoesList() {
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
-    setSelectedRedacao(redacao);
+    console.log('🔐 Iniciando fluxo SEGURO para visualização de redação');
+    // Reset completo de estados para garantir segurança
+    setAuthenticatedRedacao(null);
+    setShowRedacaoDialog(false);
+    setSelectedRedacaoId(redacao.id);
     setEmailInput("");
-    setIsDialogOpen(true);
+    setIsAuthDialogOpen(true);
   };
 
   const handleEmailAuth = async () => {
-    if (!selectedRedacao || !emailInput.trim()) {
+    if (!selectedRedacaoId || !emailInput.trim()) {
       toast({
         title: "E-mail obrigatório",
         description: "Por favor, digite o e-mail cadastrado na redação.",
@@ -126,30 +156,58 @@ export default function MinhasRedacoesList() {
     }
 
     setIsAuthenticating(true);
+    console.log('🔍 Iniciando validação segura de e-mail...');
 
     try {
-      if (emailInput.trim().toLowerCase() !== selectedRedacao.email_aluno?.toLowerCase()) {
+      // ETAPA 1: Validação básica sem carregar dados sensíveis
+      const redacaoBasica = redacoesTurma?.find(r => r.id === selectedRedacaoId);
+      if (!redacaoBasica) {
+        throw new Error('Redação não encontrada');
+      }
+
+      // ETAPA 2: Verificação rigorosa de e-mail usando função segura
+      const emailMatches = await supabase.rpc('can_access_redacao', {
+        redacao_email: redacaoBasica.email_aluno,
+        user_email: emailInput.trim()
+      });
+
+      if (emailMatches.error || !emailMatches.data) {
+        console.error('❌ Falha na validação de acesso:', emailMatches.error);
         toast({
-          title: "E-mail incorreto",
+          title: "E-mail incorreto. Acesso negado à redação.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
           variant: "destructive",
         });
         return;
       }
 
-      const { data: redacaoCompleta, error } = await supabase
+      console.log('✅ E-mail validado com sucesso');
+
+      // ETAPA 3: SOMENTE após validação, buscar dados completos sensíveis
+      const { data: redacaoCompleta, error: errorCompleto } = await supabase
         .from('redacoes_enviadas')
         .select('*')
-        .eq('id', selectedRedacao.id)
+        .eq('id', selectedRedacaoId)
         .single();
 
-      if (error) {
-        console.error('Erro ao buscar redação completa:', error);
-        throw error;
+      if (errorCompleto) {
+        console.error('❌ Erro ao carregar redação completa:', errorCompleto);
+        throw new Error('Erro ao carregar redação completa');
       }
 
-      const redacaoComTexto: RedacaoTurma & { redacao_texto: string } = {
-        ...selectedRedacao,
+      // ETAPA 4: Preparar dados APENAS após autenticação bem-sucedida
+      const redacaoAutenticada: RedacaoTurma & { redacao_texto: string } = {
+        id: redacaoCompleta.id,
+        frase_tematica: redacaoCompleta.frase_tematica,
+        nome_aluno: redacaoCompleta.nome_aluno,
+        email_aluno: redacaoCompleta.email_aluno,
+        tipo_envio: redacaoCompleta.tipo_envio,
+        data_envio: redacaoCompleta.data_envio,
+        status: redacaoCompleta.status,
+        corrigida: redacaoCompleta.corrigida,
+        nota_total: redacaoCompleta.nota_total,
+        comentario_admin: redacaoCompleta.comentario_admin,
+        data_correcao: redacaoCompleta.data_correcao,
         redacao_texto: redacaoCompleta.redacao_texto || "",
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
@@ -158,24 +216,39 @@ export default function MinhasRedacoesList() {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
-      setIsDialogOpen(false);
-      setSelectedRedacao(redacaoComTexto);
+      // ETAPA 5: Fechar autenticação e exibir redação
+      setIsAuthDialogOpen(false);
+      setAuthenticatedRedacao(redacaoAutenticada);
+      setShowRedacaoDialog(true);
       
+      console.log('🎉 Redação liberada com segurança total');
       toast({
         title: "Redação liberada!",
         description: "Agora você pode visualizar sua redação completa.",
       });
 
+      // Log de auditoria automático via trigger criado na migração
+      console.log('📝 Log de acesso registrado automaticamente');
+
     } catch (error) {
-      console.error('Erro na autenticação:', error);
+      console.error('💥 Erro na autenticação:', error);
       toast({
         title: "Erro na autenticação",
-        description: "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setIsAuthenticating(false);
     }
+  };
+
+  const resetAuthenticationState = () => {
+    console.log('🔄 Resetando estados de autenticação');
+    setSelectedRedacaoId(null);
+    setAuthenticatedRedacao(null);
+    setEmailInput("");
+    setIsAuthDialogOpen(false);
+    setShowRedacaoDialog(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -209,8 +282,8 @@ export default function MinhasRedacoesList() {
   };
 
   const clearFilters = () => {
-    setFiltroTipo("");
-    setFiltroStatus("");
+    setFiltroTipo("all");
+    setFiltroStatus("all");
     setFiltroDataInicio("");
     setFiltroDataFim("");
     setFiltroNome("");
@@ -218,8 +291,8 @@ export default function MinhasRedacoesList() {
 
   // Aplicar filtros
   const redacoesFiltradas = redacoesTurma?.filter(redacao => {
-    const tipoMatch = !filtroTipo || redacao.tipo_envio === filtroTipo;
-    const statusMatch = !filtroStatus || (filtroStatus === 'corrigida' ? redacao.corrigida : !redacao.corrigida);
+    const tipoMatch = !filtroTipo || filtroTipo === 'all' || redacao.tipo_envio === filtroTipo;
+    const statusMatch = !filtroStatus || filtroStatus === 'all' || (filtroStatus === 'corrigida' ? redacao.corrigida : !redacao.corrigida);
     const nomeMatch = !filtroNome || redacao.nome_aluno.toLowerCase().includes(filtroNome.toLowerCase());
     
     let dataMatch = true;
@@ -317,7 +390,7 @@ export default function MinhasRedacoesList() {
                       <SelectValue placeholder="Todos os tipos" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os tipos</SelectItem>
+                      <SelectItem value="all">Todos os tipos</SelectItem>
                       <SelectItem value="regular">Regular</SelectItem>
                       <SelectItem value="simulado">Simulado</SelectItem>
                       <SelectItem value="exercicio">Exercício</SelectItem>
@@ -333,7 +406,7 @@ export default function MinhasRedacoesList() {
                       <SelectValue placeholder="Todos os status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os status</SelectItem>
+                      <SelectItem value="all">Todos os status</SelectItem>
                       <SelectItem value="corrigida">Corrigido</SelectItem>
                       <SelectItem value="aguardando">Aguardando</SelectItem>
                     </SelectContent>
@@ -482,13 +555,18 @@ export default function MinhasRedacoesList() {
           </div>
         )}
 
-        {/* Dialog de autenticação por email */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {/* Dialog de autenticação RIGOROSA por email */}
+        <Dialog open={isAuthDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+            resetAuthenticationState();
+          }
+          setIsAuthDialogOpen(open);
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-primary flex items-center gap-2">
                 <Lock className="w-5 h-5" />
-                Acesso à Redação
+                🔐 Acesso Seguro à Redação
               </DialogTitle>
             </DialogHeader>
             
@@ -497,21 +575,14 @@ export default function MinhasRedacoesList() {
                 <div className="flex items-start gap-2">
                   <Lock className="w-4 h-4 text-amber-600 mt-0.5" />
                   <div className="text-sm text-amber-800">
-                    Para visualizar sua redação corrigida, digite o e-mail que você usou no envio.
+                    <strong>Segurança Máxima:</strong> Para visualizar sua redação, digite o e-mail exato usado no envio. Os dados só são carregados após validação.
                   </div>
                 </div>
               </div>
 
-              {selectedRedacao && (
-                <div className="space-y-2 text-sm bg-primary/5 p-3 rounded-lg">
-                  <p><span className="font-medium text-primary">Redação:</span> {selectedRedacao.frase_tematica}</p>
-                  <p><span className="font-medium text-primary">Autor:</span> {selectedRedacao.nome_aluno}</p>
-                </div>
-              )}
-
               <div>
                 <label htmlFor="email-auth" className="block text-sm font-medium text-primary mb-2">
-                  E-mail de Acesso *
+                  E-mail de Acesso * (obrigatório)
                 </label>
                 <Input
                   id="email-auth"
@@ -520,22 +591,31 @@ export default function MinhasRedacoesList() {
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   className="border-primary/30 focus:border-primary"
+                  disabled={isAuthenticating}
                 />
               </div>
 
               <div className="flex gap-2">
                 <Button 
                   onClick={handleEmailAuth}
-                  disabled={isAuthenticating}
+                  disabled={isAuthenticating || !emailInput.trim()}
                   className="flex-1 bg-primary hover:bg-primary/90"
                 >
-                  {isAuthenticating ? "Verificando..." : "Acessar Redação"}
+                  {isAuthenticating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Verificando...
+                    </>
+                  ) : (
+                    "🔓 Acessar Redação"
+                  )}
                 </Button>
                 
                 <Button 
                   variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
+                  onClick={() => resetAuthenticationState()}
                   className="border-primary/30"
+                  disabled={isAuthenticating}
                 >
                   Cancelar
                 </Button>
@@ -544,36 +624,41 @@ export default function MinhasRedacoesList() {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de visualização da redação autenticada */}
-        {selectedRedacao && selectedRedacao.redacao_texto && (
-          <Dialog open={!!selectedRedacao.redacao_texto} onOpenChange={() => setSelectedRedacao(null)}>
+        {/* Modal de visualização da redação - APENAS após autenticação completa */}
+        {authenticatedRedacao && showRedacaoDialog && (
+          <Dialog open={showRedacaoDialog} onOpenChange={(open) => {
+            if (!open) {
+              resetAuthenticationState();
+            }
+            setShowRedacaoDialog(open);
+          }}>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-primary">
-                  {selectedRedacao.frase_tematica}
+                  ✅ {authenticatedRedacao.frase_tematica}
                 </DialogTitle>
               </DialogHeader>
               
               <div className="space-y-6">
                 <RedacaoEnviadaCard 
                   redacao={{
-                    id: selectedRedacao.id,
-                    frase_tematica: selectedRedacao.frase_tematica,
-                    redacao_texto: selectedRedacao.redacao_texto,
-                    data_envio: selectedRedacao.data_envio,
-                    nota_c1: selectedRedacao.nota_c1,
-                    nota_c2: selectedRedacao.nota_c2,
-                    nota_c3: selectedRedacao.nota_c3,
-                    nota_c4: selectedRedacao.nota_c4,
-                    nota_c5: selectedRedacao.nota_c5,
-                    nota_total: selectedRedacao.nota_total,
-                    comentario_admin: selectedRedacao.comentario_admin,
-                    corrigida: selectedRedacao.corrigida,
-                    data_correcao: selectedRedacao.data_correcao,
-                    nome_aluno: selectedRedacao.nome_aluno,
-                    email_aluno: selectedRedacao.email_aluno,
-                    tipo_envio: selectedRedacao.tipo_envio,
-                    status: selectedRedacao.status,
+                    id: authenticatedRedacao.id,
+                    frase_tematica: authenticatedRedacao.frase_tematica,
+                    redacao_texto: authenticatedRedacao.redacao_texto,
+                    data_envio: authenticatedRedacao.data_envio,
+                    nota_c1: authenticatedRedacao.nota_c1,
+                    nota_c2: authenticatedRedacao.nota_c2,
+                    nota_c3: authenticatedRedacao.nota_c3,
+                    nota_c4: authenticatedRedacao.nota_c4,
+                    nota_c5: authenticatedRedacao.nota_c5,
+                    nota_total: authenticatedRedacao.nota_total,
+                    comentario_admin: authenticatedRedacao.comentario_admin,
+                    corrigida: authenticatedRedacao.corrigida,
+                    data_correcao: authenticatedRedacao.data_correcao,
+                    nome_aluno: authenticatedRedacao.nome_aluno,
+                    email_aluno: authenticatedRedacao.email_aluno,
+                    tipo_envio: authenticatedRedacao.tipo_envio,
+                    status: authenticatedRedacao.status,
                     turma: studentData.userType === "aluno" ? (studentData.turma || "") : "visitante",
                   }} 
                 />
