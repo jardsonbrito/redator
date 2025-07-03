@@ -228,33 +228,24 @@ export type Database = {
       }
       profiles: {
         Row: {
-          created_at: string | null
           email: string
           id: string
           nome: string
           sobrenome: string
-          turma: string | null
-          updated_at: string | null
           user_type: string | null
         }
         Insert: {
-          created_at?: string | null
           email: string
           id: string
           nome: string
           sobrenome: string
-          turma?: string | null
-          updated_at?: string | null
           user_type?: string | null
         }
         Update: {
-          created_at?: string | null
           email?: string
           id?: string
           nome?: string
           sobrenome?: string
-          turma?: string | null
-          updated_at?: string | null
           user_type?: string | null
         }
         Relationships: []
@@ -375,7 +366,6 @@ export type Database = {
           status: string | null
           tipo_envio: string | null
           turma: string | null
-          user_id: string | null
         }
         Insert: {
           comentario_admin?: string | null
@@ -396,7 +386,6 @@ export type Database = {
           status?: string | null
           tipo_envio?: string | null
           turma?: string | null
-          user_id?: string | null
         }
         Update: {
           comentario_admin?: string | null
@@ -417,7 +406,6 @@ export type Database = {
           status?: string | null
           tipo_envio?: string | null
           turma?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -439,7 +427,6 @@ export type Database = {
           nota_total: number | null
           redacao_texto: string
           turma: string | null
-          user_id: string | null
         }
         Insert: {
           comentario_admin?: string | null
@@ -458,7 +445,6 @@ export type Database = {
           nota_total?: number | null
           redacao_texto: string
           turma?: string | null
-          user_id?: string | null
         }
         Update: {
           comentario_admin?: string | null
@@ -477,7 +463,6 @@ export type Database = {
           nota_total?: number | null
           redacao_texto?: string
           turma?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -500,7 +485,6 @@ export type Database = {
           nota_total: number | null
           texto: string
           turma: string
-          user_id: string | null
         }
         Insert: {
           comentario_pedagogico?: string | null
@@ -520,7 +504,6 @@ export type Database = {
           nota_total?: number | null
           texto: string
           turma: string
-          user_id?: string | null
         }
         Update: {
           comentario_pedagogico?: string | null
@@ -540,7 +523,6 @@ export type Database = {
           nota_total?: number | null
           texto?: string
           turma?: string
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -694,19 +676,6 @@ export type Database = {
       consume_credit_safe: {
         Args: { target_user_id: string }
         Returns: number
-      }
-      create_simple_profile: {
-        Args: { p_nome: string; p_email: string; p_turma: string }
-        Returns: {
-          id: string
-          nome: string
-          sobrenome: string
-          email: string
-          turma: string
-          user_type: string
-          created_at: string
-          updated_at: string
-        }[]
       }
       get_redacoes_by_turma: {
         Args: { p_turma: string }

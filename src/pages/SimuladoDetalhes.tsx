@@ -15,14 +15,12 @@ import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { useAuthUser } from "@/hooks/useAuthUser";
 
 export default function SimuladoDetalhes() {
   const { id } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { studentData } = useStudentAuth();
-  const { user, profile, isAuthenticated } = useAuthUser();
 
   const [formData, setFormData] = useState({
     nome_aluno: '',
@@ -140,7 +138,6 @@ export default function SimuladoDetalhes() {
       email_aluno: formData.email_aluno.trim().toLowerCase(),
       texto: formData.texto.trim(),
       turma: turmaUsuario,
-      user_id: isAuthenticated ? user?.id : null,
       data_envio: new Date().toISOString()
     };
 
