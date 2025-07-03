@@ -1,11 +1,15 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { UserPlus, Upload } from "lucide-react";
+import { AlunoCSVImport } from "./AlunoCSVImport";
 
 interface AlunoFormProps {
   onSuccess: () => void;
@@ -123,64 +127,66 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
     if (onCancelEdit) onCancelEdit();
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {alunoEditando ? "Editar Aluno" : "Cadastrar Novo Aluno"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="nome">Nome Completo *</Label>
-            <Input
-              id="nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Digite o nome completo do aluno"
-              required
-            />
-          </div>
+  // Se está editando, mostrar apenas o formulário manual
+  if (alunoEditando) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5" />
+            Editar Aluno
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="nome">Nome Completo *</Label>
+              <Input
+                id="nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Digite o nome completo do aluno"
+                required
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="email">E-mail *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Digite o e-mail do aluno"
-              required
-            />
-          </div>
+            <div>
+              <Label htmlFor="email">E-mail *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Digite o e-mail do aluno"
+                required
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="turma">Turma *</Label>
-            <Select value={turma} onValueChange={setTurma} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a turma" />
-              </SelectTrigger>
-              <SelectContent>
-                {turmas.map((turmaOption) => (
-                  <SelectItem key={turmaOption} value={turmaOption}>
-                    {turmaOption}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <Label htmlFor="turma">Turma *</Label>
+              <Select value={turma} onValueChange={setTurma} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a turma" />
+                </SelectTrigger>
+                <SelectContent>
+                  {turmas.map((turmaOption) => (
+                    <SelectItem key={turmaOption} value={turmaOption}>
+                      {turmaOption}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="flex gap-2">
-            <Button 
-              type="submit" 
-              disabled={!isFormValid || loading}
-              className="flex-1"
-            >
-              {loading ? "Salvando..." : (alunoEditando ? "Atualizar" : "Cadastrar")}
-            </Button>
-            
-            {alunoEditando && (
+            <div className="flex gap-2">
+              <Button 
+                type="submit" 
+                disabled={!isFormValid || loading}
+                className="flex-1"
+              >
+                {loading ? "Salvando..." : "Atualizar"}
+              </Button>
+              
               <Button 
                 type="button" 
                 variant="outline"
@@ -188,10 +194,87 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
               >
                 Cancelar
               </Button>
-            )}
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Tabs defaultValue="manual" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="manual" className="flex items-center gap-2">
+          <UserPlus className="w-4 h-4" />
+          Cadastro Manual
+        </TabsTrigger>
+        <TabsTrigger value="csv" className="flex items-center gap-2">
+          <Upload className="w-4 h-4" />
+          Importar via CSV
+        </TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="manual">
+        <Card>
+          <CardHeader>
+            <CardTitle>Cadastrar Novo Aluno</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="nome">Nome Completo *</Label>
+                <Input
+                  id="nome"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Digite o nome completo do aluno"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="email">E-mail *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Digite o e-mail do aluno"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="turma">Turma *</Label>
+                <Select value={turma} onValueChange={setTurma} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a turma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {turmas.map((turmaOption) => (
+                      <SelectItem key={turmaOption} value={turmaOption}>
+                        {turmaOption}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button 
+                type="submit" 
+                disabled={!isFormValid || loading}
+                className="w-full"
+              >
+                {loading ? "Salvando..." : "Cadastrar"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      
+      <TabsContent value="csv">
+        <AlunoCSVImport onSuccess={onSuccess} />
+      </TabsContent>
+    </Tabs>
   );
 };

@@ -340,6 +340,47 @@ export type Database = {
           },
         ]
       }
+      importacao_csv: {
+        Row: {
+          admin_id: string | null
+          data_importacao: string
+          detalhes_erros: Json | null
+          id: string
+          nome_arquivo: string
+          registros_importados: number
+          registros_rejeitados: number
+          total_registros: number
+        }
+        Insert: {
+          admin_id?: string | null
+          data_importacao?: string
+          detalhes_erros?: Json | null
+          id?: string
+          nome_arquivo: string
+          registros_importados: number
+          registros_rejeitados: number
+          total_registros: number
+        }
+        Update: {
+          admin_id?: string | null
+          data_importacao?: string
+          detalhes_erros?: Json | null
+          id?: string
+          nome_arquivo?: string
+          registros_importados?: number
+          registros_rejeitados?: number
+          total_registros?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "importacao_csv_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       presenca_aulas: {
         Row: {
           aula_id: string
