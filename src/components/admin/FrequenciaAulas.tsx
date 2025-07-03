@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Search, Download, Calendar, Clock, Users } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface FrequenciaData {
   id: string;
@@ -28,6 +29,7 @@ interface AulaVirtual {
 }
 
 export const FrequenciaAulas = () => {
+  const { isAdmin } = useAuth();
   const [frequencias, setFrequencias] = useState<FrequenciaData[]>([]);
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [filteredData, setFilteredData] = useState<FrequenciaData[]>([]);
@@ -41,9 +43,14 @@ export const FrequenciaAulas = () => {
     searchTerm: ""
   });
 
-  const turmasDisponiveis = ["Turma A", "Turma B", "Turma C", "Turma D", "Turma E"];
+  const turmasDisponiveis = ["Turma A", "Turma B", "Turma C", "Turma D", "Turma E", "visitante"];
 
   const fetchAulas = async () => {
+    if (!isAdmin) {
+      console.log('❌ Usuário não é admin, evitando busca');
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('aulas_virtuais')
@@ -58,6 +65,12 @@ export const FrequenciaAulas = () => {
   };
 
   const fetchFrequencias = async () => {
+    if (!isAdmin) {
+      console.log('❌ Usuário não é admin, evitando busca');
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       setIsLoading(true);
       
@@ -208,9 +221,22 @@ export const FrequenciaAulas = () => {
   }, [frequencias, filters]);
 
   useEffect(() => {
-    fetchAulas();
-    fetchFrequencias();
-  }, []);
+    if (isAdmin) {
+      fetchAulas();
+      fetchFrequencias();
+    }
+  }, [isAdmin]);
+
+  if (!isAdmin) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <Users className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Acesso restrito para administradores</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -327,9 +353,11 @@ export const FrequenciaAulas = () => {
               <TableBody>
                 {filteredData.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.nome_completo}</TableCell>
+                     <TableCell className="font-medium">{item.nome_completo}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{item.turma}</Badge>
+                      <Badge variant={item.turma === 'visitante' ? 'secondary' : 'outline'}>
+                        {item.turma === 'visitante' ? '👤 Visitante' : item.turma}
+                      </Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {item.aula_titulo}

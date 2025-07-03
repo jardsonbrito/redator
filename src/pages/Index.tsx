@@ -34,7 +34,7 @@ const Index = () => {
   if (studentData.userType === "aluno" && studentData.turma) {
     turmaCode = studentData.turma; // Usar nome da turma para display, código será mapeado internamente
   } else if (studentData.userType === "visitante") {
-    turmaCode = "visitante";
+    turmaCode = "Visitante"; // Corrigido para usar maiúscula consistente
   }
 
   const menuItems = [

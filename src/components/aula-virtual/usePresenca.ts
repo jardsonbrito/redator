@@ -20,17 +20,22 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
 
   const fetchRegistrosPresenca = async () => {
     try {
-      if (!studentData.visitanteInfo?.email && studentData.userType === 'visitante') return;
+      // Para visitantes, usar email se disponível, senão usar um identificador temporário
+      let email = 'email_nao_disponivel';
+      let turma = studentData.turma || 'visitante';
       
-      const email = studentData.userType === 'visitante' 
-        ? studentData.visitanteInfo?.email 
-        : 'email_nao_disponivel';
+      if (studentData.userType === 'visitante' && studentData.visitanteInfo?.email) {
+        email = studentData.visitanteInfo.email;
+        turma = 'visitante';
+      } else if (studentData.userType === 'aluno') {
+        email = 'aluno@exemplo.com'; // Placeholder para alunos
+      }
 
       const { data, error } = await supabase
         .from('presenca_aulas')
         .select('aula_id, tipo_registro')
         .eq('email_aluno', email)
-        .eq('turma', studentData.turma);
+        .eq('turma', turma);
 
       if (error) throw error;
       setRegistrosPresenca((data || []) as RegistroPresenca[]);
@@ -49,6 +54,8 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
       const email = studentData.userType === 'visitante' 
         ? studentData.visitanteInfo?.email || 'visitante@exemplo.com'
         : 'aluno@exemplo.com';
+      
+      const turma = studentData.userType === 'visitante' ? 'visitante' : studentData.turma;
 
       const { error } = await supabase
         .from('presenca_aulas')
@@ -57,7 +64,7 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
           nome_aluno: formData.nome.trim(),
           sobrenome_aluno: formData.sobrenome.trim(),
           email_aluno: email,
-          turma: studentData.turma,
+          turma: turma,
           tipo_registro: tipo
         }]);
 
