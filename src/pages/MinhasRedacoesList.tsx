@@ -460,15 +460,21 @@ export default function MinhasRedacoesList() {
                       </div>
                     </div>
                     
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="border-primary/30 hover:bg-primary/10 hover:border-primary shrink-0"
-                      onClick={() => handleViewRedacao(redacao)}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Ver Redação
-                    </Button>
+                    {redacao.corrigida ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="border-primary/30 hover:bg-primary/10 hover:border-primary shrink-0"
+                        onClick={() => handleViewRedacao(redacao)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Ver Correção
+                      </Button>
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-muted-foreground border border-muted rounded-md">
+                        Aguardando correção
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

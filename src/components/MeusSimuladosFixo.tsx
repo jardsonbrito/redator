@@ -32,7 +32,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
       console.log('Buscando redações para:', turmaCode);
       
       if (turmaCode === "visitante" || turmaCode === "Visitante") {
-        // Para visitantes, buscar redações pelo localStorage
+        // Para visitantes, buscar somente redações corrigidas
         const visitanteData = localStorage.getItem("visitanteData");
         if (!visitanteData) return [];
         
@@ -42,6 +42,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           .select('*')
           .eq('email_aluno', dados.email)
           .eq('tipo_envio', 'visitante')
+          .eq('corrigida', true)
           .order('data_envio', { ascending: false })
           .limit(3);
         
@@ -50,10 +51,10 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           return [];
         }
         
-        console.log('Redações encontradas para visitante:', data);
+        console.log('Redações corrigidas encontradas para visitante:', data);
         return data || [];
       } else {
-        // Para alunos, converter nome da turma para código e buscar redações
+        // Para alunos, buscar somente redações corrigidas da turma
         const codigoTurma = getTurmaCode(turmaCode);
         console.log('Código da turma convertido:', codigoTurma);
         
@@ -62,6 +63,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           .select('*')
           .eq('turma', codigoTurma)
           .neq('tipo_envio', 'visitante')
+          .eq('corrigida', true)
           .order('data_envio', { ascending: false })
           .limit(3);
         
@@ -70,7 +72,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           return [];
         }
         
-        console.log('Redações encontradas para turma:', data);
+        console.log('Redações corrigidas encontradas para turma:', data);
         return data || [];
       }
     },
@@ -184,9 +186,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                       
                       <div className="ml-4 shrink-0">
                         <Link to="/minhas-redacoes">
-                          <Button variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10">
+                           <Button variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10">
                             <Eye className="w-4 h-4 mr-1" />
-                            Ver Redação
+                            Ver Correção
                           </Button>
                         </Link>
                       </div>
