@@ -87,6 +87,16 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     return tipos[tipo as keyof typeof tipos] || tipo;
   };
 
+  const getTipoEnvioColor = (tipo: string) => {
+    const cores = {
+      'regular': 'bg-blue-100 text-blue-800',
+      'exercicio': 'bg-purple-100 text-purple-800',
+      'simulado': 'bg-orange-100 text-orange-800',
+      'visitante': 'bg-gray-100 text-gray-800'
+    };
+    return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
+  };
+
   return (
     <div className="mb-8">
       <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl overflow-hidden">
@@ -137,32 +147,27 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           ) : (
             <>
               {redacoesRecentes.slice(0, 3).map((redacao) => (
-                <Card key={redacao.id} className="border border-primary/20">
+                <Card key={redacao.id} className="border border-primary/20 hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="font-bold text-lg text-primary mb-1">
+                        <h4 className="font-bold text-lg text-primary mb-2 leading-tight">
                           {redacao.frase_tematica}
                         </h4>
                         
                         <div className="flex flex-wrap gap-2 mb-3">
                           {redacao.corrigida ? (
                             <Badge className="bg-green-100 text-green-800">
-                              Corrigida
+                              Corrigido
                             </Badge>
                           ) : (
                             <Badge className="bg-yellow-100 text-yellow-800">
                               Aguardando
                             </Badge>
                           )}
-                          <Badge variant="outline">
+                          <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
                             {getTipoEnvioLabel(redacao.tipo_envio)}
                           </Badge>
-                          {redacao.corrigida && redacao.nota_total && (
-                            <Badge className="bg-primary/10 text-primary">
-                              Nota: {redacao.nota_total}/1000
-                            </Badge>
-                          )}
                         </div>
                         
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
@@ -177,9 +182,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                         </div>
                       </div>
                       
-                      <div className="ml-4">
+                      <div className="ml-4 shrink-0">
                         <Link to="/minhas-redacoes">
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10">
                             <Eye className="w-4 h-4 mr-1" />
                             Ver Redação
                           </Button>
@@ -193,7 +198,10 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
               {redacoesRecentes.length >= 3 && (
                 <div className="text-center pt-4">
                   <Link to="/minhas-redacoes">
-                    <Button variant="outline">
+                    <Button 
+                      variant="outline"
+                      className="border-primary/30 hover:bg-primary/10"
+                    >
                       Ver todas as redações
                     </Button>
                   </Link>

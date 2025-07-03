@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Calendar, Eye, Lock, AlertCircle, ArrowLeft, Search, Filter } from "lucide-react";
+import { FileText, Calendar, Eye, Lock, AlertCircle, ArrowLeft, Search, Filter, FolderOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
 import { Link } from "react-router-dom";
@@ -44,10 +44,11 @@ export default function MinhasRedacoesList() {
 
   // Filtros
   const [filtroTipo, setFiltroTipo] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
   const [filtroNome, setFiltroNome] = useState("");
-  const [filtroEmail, setFiltroEmail] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Mapear nomes de turma para códigos corretos
   const getTurmaCode = (turmaNome: string) => {
@@ -127,7 +128,6 @@ export default function MinhasRedacoesList() {
     setIsAuthenticating(true);
 
     try {
-      // Verificar se o email corresponde ao da redação
       if (emailInput.trim().toLowerCase() !== selectedRedacao.email_aluno?.toLowerCase()) {
         toast({
           title: "E-mail incorreto",
@@ -137,7 +137,6 @@ export default function MinhasRedacoesList() {
         return;
       }
 
-      // Buscar texto completo da redação
       const { data: redacaoCompleta, error } = await supabase
         .from('redacoes_enviadas')
         .select('*')
@@ -149,7 +148,6 @@ export default function MinhasRedacoesList() {
         throw error;
       }
 
-      // Preparar dados completos da redação
       const redacaoComTexto: RedacaoTurma & { redacao_texto: string } = {
         ...selectedRedacao,
         redacao_texto: redacaoCompleta.redacao_texto || "",
@@ -160,7 +158,6 @@ export default function MinhasRedacoesList() {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
-      // Fechar dialog de autenticação e abrir visualização
       setIsDialogOpen(false);
       setSelectedRedacao(redacaoComTexto);
       
@@ -201,11 +198,29 @@ export default function MinhasRedacoesList() {
     return tipos[tipo as keyof typeof tipos] || tipo;
   };
 
+  const getTipoEnvioColor = (tipo: string) => {
+    const cores = {
+      'regular': 'bg-blue-100 text-blue-800',
+      'exercicio': 'bg-purple-100 text-purple-800',
+      'simulado': 'bg-orange-100 text-orange-800',
+      'visitante': 'bg-gray-100 text-gray-800'
+    };
+    return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
+  };
+
+  const clearFilters = () => {
+    setFiltroTipo("");
+    setFiltroStatus("");
+    setFiltroDataInicio("");
+    setFiltroDataFim("");
+    setFiltroNome("");
+  };
+
   // Aplicar filtros
   const redacoesFiltradas = redacoesTurma?.filter(redacao => {
     const tipoMatch = !filtroTipo || redacao.tipo_envio === filtroTipo;
+    const statusMatch = !filtroStatus || (filtroStatus === 'corrigida' ? redacao.corrigida : !redacao.corrigida);
     const nomeMatch = !filtroNome || redacao.nome_aluno.toLowerCase().includes(filtroNome.toLowerCase());
-    const emailMatch = !filtroEmail || redacao.email_aluno?.toLowerCase().includes(filtroEmail.toLowerCase());
     
     let dataMatch = true;
     if (filtroDataInicio || filtroDataFim) {
@@ -217,7 +232,7 @@ export default function MinhasRedacoesList() {
       if (dataFim && dataRedacao > dataFim) dataMatch = false;
     }
     
-    return tipoMatch && nomeMatch && emailMatch && dataMatch;
+    return tipoMatch && statusMatch && nomeMatch && dataMatch;
   }) || [];
 
   if (!studentData.userType) {
@@ -240,18 +255,24 @@ export default function MinhasRedacoesList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        {/* Header elegante */}
+        <div className="flex items-center justify-between mb-8">
           <Link to="/app">
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2 border-primary/30 hover:bg-primary/10">
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </Button>
           </Link>
-          <div className="flex items-center gap-3">
-            <FileText className="w-8 h-8 text-primary" />
-            <div>
-              <h1 className="text-3xl font-bold text-primary">
+          
+          <div className="flex items-center gap-3 flex-1 justify-center">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-2xl blur opacity-30"></div>
+              <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-r from-primary to-secondary shadow-lg">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="text-center">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Minhas Redações
               </h1>
               <p className="text-muted-foreground">
@@ -262,156 +283,187 @@ export default function MinhasRedacoesList() {
               </p>
             </div>
           </div>
+          
+          <div className="w-20"></div> {/* Spacer para centralização */}
         </div>
 
-        {/* Filtros */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Tipo</label>
-                <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os tipos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Todos os tipos</SelectItem>
-                    <SelectItem value="regular">Regular</SelectItem>
-                    <SelectItem value="simulado">Simulado</SelectItem>
-                    <SelectItem value="exercicio">Exercício</SelectItem>
-                    <SelectItem value="visitante">Avulsa</SelectItem>
-                  </SelectContent>
-                </Select>
+        {/* Botão de filtros */}
+        <div className="mb-6 flex justify-center">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2 border-primary/30 hover:bg-primary/10"
+          >
+            <Filter className="w-4 h-4" />
+            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+          </Button>
+        </div>
+
+        {/* Filtros colapsáveis */}
+        {showFilters && (
+          <Card className="mb-8 border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <Search className="w-5 h-5" />
+                Filtros de Pesquisa
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Tipo de Envio</label>
+                  <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                    <SelectTrigger className="border-primary/30">
+                      <SelectValue placeholder="Todos os tipos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todos os tipos</SelectItem>
+                      <SelectItem value="regular">Regular</SelectItem>
+                      <SelectItem value="simulado">Simulado</SelectItem>
+                      <SelectItem value="exercicio">Exercício</SelectItem>
+                      <SelectItem value="visitante">Avulsa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Status</label>
+                  <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                    <SelectTrigger className="border-primary/30">
+                      <SelectValue placeholder="Todos os status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todos os status</SelectItem>
+                      <SelectItem value="corrigida">Corrigido</SelectItem>
+                      <SelectItem value="aguardando">Aguardando</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Nome do Aluno</label>
+                  <Input
+                    placeholder="Buscar por nome..."
+                    value={filtroNome}
+                    onChange={(e) => setFiltroNome(e.target.value)}
+                    className="border-primary/30 focus:border-primary"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Data Início</label>
+                  <Input
+                    type="date"
+                    value={filtroDataInicio}
+                    onChange={(e) => setFiltroDataInicio(e.target.value)}
+                    className="border-primary/30 focus:border-primary"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Data Fim</label>
+                  <Input
+                    type="date"
+                    value={filtroDataFim}
+                    onChange={(e) => setFiltroDataFim(e.target.value)}
+                    className="border-primary/30 focus:border-primary"
+                  />
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-2">Data Início</label>
-                <Input
-                  type="date"
-                  value={filtroDataInicio}
-                  onChange={(e) => setFiltroDataInicio(e.target.value)}
-                />
+              <div className="flex justify-end mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={clearFilters}
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  Limpar Filtros
+                </Button>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Data Fim</label>
-                <Input
-                  type="date"
-                  value={filtroDataFim}
-                  onChange={(e) => setFiltroDataFim(e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Nome do Aluno</label>
-                <Input
-                  placeholder="Buscar por nome..."
-                  value={filtroNome}
-                  onChange={(e) => setFiltroNome(e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">E-mail</label>
-                <Input
-                  type="email"
-                  placeholder="Buscar por e-mail..."
-                  value={filtroEmail}
-                  onChange={(e) => setFiltroEmail(e.target.value)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Loading/Error/Empty States */}
         {isLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-primary">Carregando redações...</p>
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-primary text-lg">Carregando redações...</p>
           </div>
         ) : error ? (
           <Card className="border-red-200">
             <CardContent className="text-center py-8">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <p className="text-red-600">Erro ao carregar redações. Tente novamente.</p>
+              <p className="text-red-600 mb-4">Erro ao carregar redações.</p>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Tentar Novamente
+              </Button>
             </CardContent>
           </Card>
         ) : !redacoesFiltradas || redacoesFiltradas.length === 0 ? (
           <Card className="border-primary/20">
-            <CardContent className="text-center py-8">
-              <Search className="w-12 h-12 text-primary/50 mx-auto mb-4" />
-              <p className="text-primary/70 mb-4">
+            <CardContent className="text-center py-12">
+              <FolderOpen className="w-16 h-16 text-primary/50 mx-auto mb-4" />
+              <p className="text-primary/70 mb-4 text-lg">
                 Nenhuma redação encontrada.
               </p>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setFiltroTipo("");
-                  setFiltroDataInicio("");
-                  setFiltroDataFim("");
-                  setFiltroNome("");
-                  setFiltroEmail("");
-                }}
-              >
-                Limpar Filtros
-              </Button>
+              {(filtroTipo || filtroStatus || filtroNome || filtroDataInicio || filtroDataFim) && (
+                <Button 
+                  variant="outline" 
+                  onClick={clearFilters}
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  Limpar Filtros
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           /* Lista de Redações */
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-muted-foreground">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-muted-foreground text-lg">
                 {redacoesFiltradas.length} redação(ões) encontrada(s)
               </p>
             </div>
             
             {redacoesFiltradas.map((redacao) => (
-              <Card key={redacao.id} className="border-primary/20 hover:shadow-lg transition-shadow">
+              <Card key={redacao.id} className="border-primary/20 hover:shadow-xl transition-all duration-300 hover:border-primary/40">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-3">
+                    <div className="flex-1 space-y-4">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-semibold text-lg text-primary">
+                        <h3 className="font-bold text-xl text-primary leading-tight">
                           {redacao.frase_tematica}
                         </h3>
-                        {redacao.corrigida ? (
-                          <Badge className="bg-green-100 text-green-800">Corrigida</Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">Aguardando</Badge>
-                        )}
+                        <div className="flex gap-2 shrink-0">
+                          {redacao.corrigida ? (
+                            <Badge className="bg-green-100 text-green-800">Corrigido</Badge>
+                          ) : (
+                            <Badge className="bg-yellow-100 text-yellow-800">Aguardando</Badge>
+                          )}
+                          <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
+                            {getTipoEnvioLabel(redacao.tipo_envio)}
+                          </Badge>
+                        </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-muted-foreground">
-                        <div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-primary rounded-full"></div>
                           <span className="font-medium">Aluno:</span> {redacao.nome_aluno}
                         </div>
-                        <div>
-                          <span className="font-medium">Tipo:</span> {getTipoEnvioLabel(redacao.tipo_envio)}
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          <span className="font-medium">Enviado em:</span> {formatDate(redacao.data_envio)}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(redacao.data_envio)}
-                        </div>
-                        {redacao.corrigida && redacao.nota_total !== null && (
-                          <div className="text-primary font-medium">
-                            Nota: {redacao.nota_total}/1000
-                          </div>
-                        )}
                       </div>
                     </div>
                     
                     <Button 
                       variant="outline" 
                       size="sm"
-                      className="border-primary/30 hover:bg-primary/10"
+                      className="border-primary/30 hover:bg-primary/10 hover:border-primary shrink-0"
                       onClick={() => handleViewRedacao(redacao)}
                     >
                       <Eye className="w-4 h-4 mr-2" />
@@ -428,29 +480,32 @@ export default function MinhasRedacoesList() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-primary">Acesso à Redação</DialogTitle>
+              <DialogTitle className="text-primary flex items-center gap-2">
+                <Lock className="w-5 h-5" />
+                Acesso à Redação
+              </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4">
-              <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
                 <div className="flex items-start gap-2">
                   <Lock className="w-4 h-4 text-amber-600 mt-0.5" />
                   <div className="text-sm text-amber-800">
-                    Para ver sua redação, digite o e-mail que você usou no envio.
+                    Para visualizar sua redação corrigida, digite o e-mail que você usou no envio.
                   </div>
                 </div>
               </div>
 
               {selectedRedacao && (
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Redação:</span> {selectedRedacao.frase_tematica}</p>
-                  <p><span className="font-medium">Autor:</span> {selectedRedacao.nome_aluno}</p>
+                <div className="space-y-2 text-sm bg-primary/5 p-3 rounded-lg">
+                  <p><span className="font-medium text-primary">Redação:</span> {selectedRedacao.frase_tematica}</p>
+                  <p><span className="font-medium text-primary">Autor:</span> {selectedRedacao.nome_aluno}</p>
                 </div>
               )}
 
               <div>
                 <label htmlFor="email-auth" className="block text-sm font-medium text-primary mb-2">
-                  E-mail de Acesso
+                  E-mail de Acesso *
                 </label>
                 <Input
                   id="email-auth"
