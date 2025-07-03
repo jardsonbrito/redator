@@ -24,6 +24,7 @@ interface AulaVirtual {
   imagem_capa_url: string;
   link_meet: string;
   abrir_aba_externa: boolean;
+  permite_visitante: boolean;
   ativo: boolean;
 }
 
@@ -45,6 +46,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
     imagem_capa_url: "",
     link_meet: "",
     abrir_aba_externa: false,
+    permite_visitante: false,
     ativo: true
   });
 
@@ -60,6 +62,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         imagem_capa_url: aula.imagem_capa_url || "",
         link_meet: aula.link_meet,
         abrir_aba_externa: aula.abrir_aba_externa,
+        permite_visitante: aula.permite_visitante || false,
         ativo: aula.ativo
       });
     }
@@ -103,6 +106,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
           imagem_capa_url: formData.imagem_capa_url.trim(),
           link_meet: formData.link_meet.trim(),
           abrir_aba_externa: formData.abrir_aba_externa,
+          permite_visitante: formData.permite_visitante,
           ativo: formData.ativo
         })
         .eq('id', aula.id);
@@ -218,6 +222,17 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="permite_visitante"
+              checked={formData.permite_visitante}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, permite_visitante: checked as boolean }))}
+            />
+            <Label htmlFor="permite_visitante" className="text-sm">
+              Aceitar visitantes (usuários sem login por turma)
+            </Label>
           </div>
 
           <div>

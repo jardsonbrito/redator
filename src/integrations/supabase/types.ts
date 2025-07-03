@@ -124,6 +124,7 @@ export type Database = {
           id: string
           imagem_capa_url: string | null
           link_meet: string
+          permite_visitante: boolean
           titulo: string
           turmas_autorizadas: string[]
         }
@@ -139,6 +140,7 @@ export type Database = {
           id?: string
           imagem_capa_url?: string | null
           link_meet: string
+          permite_visitante?: boolean
           titulo: string
           turmas_autorizadas?: string[]
         }
@@ -154,6 +156,7 @@ export type Database = {
           id?: string
           imagem_capa_url?: string | null
           link_meet?: string
+          permite_visitante?: boolean
           titulo?: string
           turmas_autorizadas?: string[]
         }

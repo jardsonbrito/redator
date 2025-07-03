@@ -26,6 +26,7 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     imagem_capa_url: "",
     link_meet: "",
     abrir_aba_externa: false,
+    permite_visitante: false,
     ativo: true
   });
 
@@ -57,6 +58,7 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         imagem_capa_url: "",
         link_meet: "",
         abrir_aba_externa: false,
+        permite_visitante: false,
         ativo: true
       });
       
@@ -171,6 +173,17 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="permite_visitante"
+              checked={formData.permite_visitante}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, permite_visitante: checked as boolean }))}
+            />
+            <Label htmlFor="permite_visitante" className="text-sm">
+              Aceitar visitantes (usuários sem login por turma)
+            </Label>
           </div>
 
           <div>

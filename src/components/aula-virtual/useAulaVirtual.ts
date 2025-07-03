@@ -24,9 +24,9 @@ export const useAulaVirtual = (turmaCode: string) => {
           .gte('data_aula', dataAtual)
           .order('data_aula', { ascending: true });
 
-        // Filtrar por turma
+        // Filtrar por turma ou visitante
         if (turmaCode === "Visitante") {
-          query = query.contains('turmas_autorizadas', ['Visitante']);
+          query = query.or('permite_visitante.eq.true,turmas_autorizadas.cs.["Visitante"]');
         } else {
           query = query.contains('turmas_autorizadas', [turmaCode]);
         }
