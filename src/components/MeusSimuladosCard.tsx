@@ -85,17 +85,32 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
     setIsAuthenticating(true);
 
     try {
-      // Verificar se o email corresponde ao da redação
-      if (emailInput.trim().toLowerCase() !== selectedRedacao.email_aluno.toLowerCase()) {
+      // 🔒 VALIDAÇÃO SEGURA via Supabase function (não apenas front-end)
+      const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
+        redacao_email: selectedRedacao.email_aluno,
+        user_email: emailInput.trim()
+      });
+
+      if (error) {
+        console.error('❌ Erro na validação de acesso:', error);
         toast({
-          title: "E-mail incorreto",
+          title: "Erro na validação",
+          description: "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!canAccess) {
+        toast({
+          title: "E-mail incorreto. Acesso negado à correção.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
           variant: "destructive",
         });
         return;
       }
 
-      // Fechar dialog de autenticação e mostrar redação
+      // ✅ ACESSO LIBERADO apenas após validação rigorosa
       setIsDialogOpen(false);
       setShowRedacao(true);
       

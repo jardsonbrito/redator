@@ -261,9 +261,11 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          is_authenticated_student: boolean | null
           nome: string
           sobrenome: string
           turma: string | null
+          turma_codigo: string | null
           updated_at: string | null
           user_type: string | null
         }
@@ -271,9 +273,11 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          is_authenticated_student?: boolean | null
           nome: string
           sobrenome: string
           turma?: string | null
+          turma_codigo?: string | null
           updated_at?: string | null
           user_type?: string | null
         }
@@ -281,9 +285,11 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          is_authenticated_student?: boolean | null
           nome?: string
           sobrenome?: string
           turma?: string | null
+          turma_codigo?: string | null
           updated_at?: string | null
           user_type?: string | null
         }
@@ -773,11 +779,35 @@ export type Database = {
           data_correcao: string
         }[]
       }
+      get_student_redacoes: {
+        Args: { student_email: string }
+        Returns: {
+          id: string
+          frase_tematica: string
+          nome_aluno: string
+          email_aluno: string
+          tipo_envio: string
+          data_envio: string
+          status: string
+          corrigida: boolean
+          nota_total: number
+          comentario_admin: string
+          data_correcao: string
+        }[]
+      }
+      get_turma_codigo: {
+        Args: { turma_nome: string }
+        Returns: string
+      }
       is_admin: {
         Args: { user_id?: string }
         Returns: boolean
       }
       is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_authenticated_student: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }

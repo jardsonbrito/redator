@@ -62,8 +62,8 @@ const MeusSimulados = () => {
     }
   });
 
-  const verificarEmailEMostrarRedacao = (redacaoId: string, emailCorreto: string) => {
-    const emailDigitado = emailVerificacao[redacaoId]?.toLowerCase().trim();
+  const verificarEmailEMostrarRedacao = async (redacaoId: string, emailCorreto: string) => {
+    const emailDigitado = emailVerificacao[redacaoId]?.trim();
     
     if (!emailDigitado) {
       toast({
@@ -74,16 +74,44 @@ const MeusSimulados = () => {
       return;
     }
 
-    if (emailDigitado === emailCorreto.toLowerCase()) {
+    try {
+      // 🔒 VALIDAÇÃO SEGURA via Supabase function
+      const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
+        redacao_email: emailCorreto,
+        user_email: emailDigitado
+      });
+
+      if (error) {
+        console.error('❌ Erro na validação de acesso:', error);
+        toast({
+          title: "Erro na validação",
+          description: "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!canAccess) {
+        toast({
+          title: "E-mail incorreto. Acesso negado à correção.",
+          description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // ✅ ACESSO LIBERADO apenas após validação rigorosa
       setRedacaoVisivel(prev => ({ ...prev, [redacaoId]: true }));
       toast({
-        title: "Acesso liberado!",
+        title: "Redação liberada!",
         description: "E-mail confirmado. Você pode ver sua correção.",
       });
-    } else {
+
+    } catch (error) {
+      console.error('💥 Erro na autenticação:', error);
       toast({
-        title: "E-mail incorreto",
-        description: "O e-mail digitado não confere com o e-mail de envio.",
+        title: "Erro na autenticação", 
+        description: "Falha na verificação do e-mail. Tente novamente.",
         variant: "destructive",
       });
     }
