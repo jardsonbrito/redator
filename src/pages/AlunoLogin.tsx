@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Lock, ArrowLeft, Mail } from "lucide-react";
+import { User, ArrowLeft, Mail } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -12,20 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 const AlunoLogin = () => {
   const [emailDigitado, setEmailDigitado] = useState("");
-  const [senhaDigitada, setSenhaDigitada] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { loginAsStudent } = useStudentAuth();
-
-  // Mapeamento dos códigos de turma para validação
-  const codigosTurma = {
-    "Turma A": "LRA2025",
-    "Turma B": "LRB2025", 
-    "Turma C": "LRC2025",
-    "Turma D": "LRD2025",
-    "Turma E": "LRE2025"
-  };
 
   const handleLoginAluno = async () => {
     if (!emailDigitado.trim()) {
@@ -37,25 +27,15 @@ const AlunoLogin = () => {
       return;
     }
 
-    if (!senhaDigitada.trim()) {
-      toast({
-        title: "Digite a senha",
-        description: "A senha da turma é obrigatória.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // Verificar se o aluno existe na tabela profiles
+      // Verificar se o aluno existe na tabela profiles - SEM autenticação Supabase Auth
       const { data: aluno, error } = await supabase
         .from("profiles")
         .select("id, nome, email, turma")
         .eq("email", emailDigitado.toLowerCase().trim())
         .eq("user_type", "aluno")
-        .eq("is_authenticated_student", true)
         .maybeSingle();
 
       if (error) {
@@ -71,19 +51,7 @@ const AlunoLogin = () => {
         return;
       }
 
-      // Verificar se a senha digitada corresponde ao código da turma do aluno
-      const codigoEsperado = codigosTurma[aluno.turma as keyof typeof codigosTurma];
-      
-      if (!codigoEsperado || senhaDigitada.trim() !== codigoEsperado) {
-        toast({
-          title: "Senha incorreta para esta turma",
-          description: `Sua senha deve ser: ${codigoEsperado}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Login usando o sistema de autenticação
+      // Login bem-sucedido - sem validação de senha ou autenticação Supabase Auth
       loginAsStudent(aluno.turma);
       
       toast({
@@ -128,7 +96,7 @@ const AlunoLogin = () => {
             Acesso do Aluno
           </h1>
           <p className="text-redator-accent">
-            Digite seu e-mail e a senha da turma
+            Digite apenas seu e-mail cadastrado
           </p>
         </div>
 
@@ -155,32 +123,12 @@ const AlunoLogin = () => {
                     onChange={(e) => setEmailDigitado(e.target.value)}
                     placeholder="Digite seu e-mail cadastrado"
                     className="border-redator-accent/30 pl-10"
+                    onKeyPress={(e) => e.key === 'Enter' && handleLoginAluno()}
                   />
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 </div>
                 <p className="text-xs text-gray-500">
                   Use o e-mail que foi cadastrado pelo professor
-                </p>
-              </div>
-
-              {/* Campo de Senha */}
-              <div className="space-y-3">
-                <Label htmlFor="senha" className="text-redator-primary font-medium">
-                  Digite a senha da sua turma
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="senha"
-                    type="password"
-                    value={senhaDigitada}
-                    onChange={(e) => setSenhaDigitada(e.target.value)}
-                    placeholder="Ex: LRA2025, LRB2025, etc."
-                    className="border-redator-accent/30 pl-10"
-                  />
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                </div>
-                <p className="text-xs text-gray-500">
-                  Sua senha padrão é o código da sua turma (ex: LRA2025, LRB2025...)
                 </p>
               </div>
 

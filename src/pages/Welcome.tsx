@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 const Welcome = () => {
   const [selectedProfile, setSelectedProfile] = useState<"professor" | "aluno" | "visitante">("aluno");
   const [turma, setTurma] = useState("");
-  const [senha, setSenha] = useState("");
+  const [emailAluno, setEmailAluno] = useState("");
   const [nomeVisitante, setNomeVisitante] = useState("");
   const [emailVisitante, setEmailVisitante] = useState("");
   const [emailProfessor, setEmailProfessor] = useState("");
@@ -29,11 +29,11 @@ const Welcome = () => {
   const { signIn } = useAuth();
 
   const turmas = [
-    { value: "Turma A", label: "Turma A", senha: "LRA2025" },
-    { value: "Turma B", label: "Turma B", senha: "LRB2025" },
-    { value: "Turma C", label: "Turma C", senha: "LRC2025" },
-    { value: "Turma D", label: "Turma D", senha: "LRD2025" },
-    { value: "Turma E", label: "Turma E", senha: "LRE2025" }
+    { value: "Turma A", label: "Turma A" },
+    { value: "Turma B", label: "Turma B" },
+    { value: "Turma C", label: "Turma C" },
+    { value: "Turma D", label: "Turma D" },
+    { value: "Turma E", label: "Turma E" }
   ];
 
   const handleLogin = async () => {
@@ -67,7 +67,7 @@ const Welcome = () => {
           }, 1000);
         }
       } else if (selectedProfile === "aluno") {
-        if (!turma || !senha.trim()) {
+        if (!turma || !emailAluno.trim()) {
           toast({
             title: "Campos obrigatórios",
             description: "Por favor, selecione sua turma e digite seu e-mail.",
@@ -76,15 +76,14 @@ const Welcome = () => {
           return;
         }
 
-        // Nova lógica: verificar se o e-mail digitado no campo senha existe na turma selecionada
+        // Validação simples: verificar se o e-mail existe na turma selecionada
         try {
           const { data: aluno, error } = await supabase
             .from("profiles")
             .select("id, nome, email, turma")
-            .eq("email", senha.trim().toLowerCase())
+            .eq("email", emailAluno.trim().toLowerCase())
             .eq("turma", turma)
             .eq("user_type", "aluno")
-            .eq("is_authenticated_student", true)
             .maybeSingle();
 
           if (error) {
@@ -100,7 +99,7 @@ const Welcome = () => {
             return;
           }
 
-          // Login bem-sucedido
+          // Login bem-sucedido - sem autenticação Supabase Auth
           loginAsStudent(turma);
           toast({
             title: "Acesso liberado!",
@@ -109,9 +108,9 @@ const Welcome = () => {
           navigate("/app", { replace: true });
 
         } catch (error: any) {
-          console.error("Erro na autenticação do aluno:", error);
+          console.error("Erro na validação do aluno:", error);
           toast({
-            title: "Erro na autenticação",
+            title: "Erro na validação",
             description: "Ocorreu um erro ao verificar seus dados. Tente novamente.",
             variant: "destructive"
           });
@@ -266,18 +265,18 @@ const Welcome = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="senha-aluno" className="text-redator-primary font-medium">Senha</Label>
-                  <div className="relative">
-                    <Input
-                      id="senha-aluno"
-                      type="password"
-                      value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
-                      placeholder="Digite sua senha"
-                      className="mt-1 border-redator-accent/30 pl-10"
-                    />
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  </div>
+                  <Label htmlFor="email-aluno" className="text-redator-primary font-medium">E-mail</Label>
+                  <Input
+                    id="email-aluno"
+                    type="email"
+                    value={emailAluno}
+                    onChange={(e) => setEmailAluno(e.target.value)}
+                    placeholder="Digite seu e-mail cadastrado"
+                    className="mt-1 border-redator-accent/30"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use o e-mail que foi cadastrado pelo professor
+                  </p>
                 </div>
               </>
             )}
