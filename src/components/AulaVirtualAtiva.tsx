@@ -280,7 +280,7 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
             >
               <Video className="w-6 h-6 mr-3" />
               {aulaAtiva.abrir_aba_externa && <ExternalLink className="w-4 h-4 mr-2" />}
-              {aulaEmAndamento ? '🔴 ENTRAR NA AULA AO VIVO' : aulaFutura ? '📅 VER DETALHES DA AULA' : '📺 AULA ENCERRADA'}
+              {aulaEmAndamento ? '🔴 ENTRAR NA AULA AO VIVO' : aulaFutura ? '🎥 Entre na sala e aguarde o professor' : '📺 AULA ENCERRADA'}
             </Button>
 
             {(aulaEmAndamento || aulaEncerrada) && (
