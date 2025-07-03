@@ -171,7 +171,8 @@ export default function MinhasRedacoesList() {
         user_email: emailInput.trim()
       });
 
-      if (emailMatches.error || !emailMatches.data) {
+      // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true  
+      if (emailMatches.error || emailMatches.data !== true) {
         console.error('❌ Falha na validação de acesso:', emailMatches.error);
         toast({
           title: "E-mail incorreto. Acesso negado à redação.",

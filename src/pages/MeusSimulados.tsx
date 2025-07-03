@@ -75,10 +75,24 @@ const MeusSimulados = () => {
     }
 
     try {
+      console.log('🔍 VALIDAÇÃO INICIADA:', {
+        redacaoId,
+        emailCorreto,
+        emailDigitado,
+        timestamp: new Date().toISOString()
+      });
+
       // 🔒 VALIDAÇÃO SEGURA via Supabase function
       const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
         redacao_email: emailCorreto,
         user_email: emailDigitado
+      });
+
+      console.log('🔍 RESULTADO VALIDAÇÃO:', {
+        canAccess,
+        error,
+        emailCorreto,
+        emailDigitado
       });
 
       if (error) {
@@ -91,7 +105,9 @@ const MeusSimulados = () => {
         return;
       }
 
-      if (!canAccess) {
+      // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true
+      if (canAccess !== true) {
+        console.log('🚫 ACESSO NEGADO - Email não confere');
         toast({
           title: "E-mail incorreto. Acesso negado à correção.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
@@ -101,6 +117,7 @@ const MeusSimulados = () => {
       }
 
       // ✅ ACESSO LIBERADO apenas após validação rigorosa
+      console.log('✅ ACESSO LIBERADO');
       setRedacaoVisivel(prev => ({ ...prev, [redacaoId]: true }));
       toast({
         title: "Redação liberada!",

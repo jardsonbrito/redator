@@ -85,11 +85,19 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
     setIsAuthenticating(true);
 
     try {
+      console.log('🔍 VALIDAÇÃO CARD:', {
+        emailRedacao: selectedRedacao.email_aluno,
+        emailDigitado: emailInput.trim(),
+        timestamp: new Date().toISOString()
+      });
+
       // 🔒 VALIDAÇÃO SEGURA via Supabase function (não apenas front-end)
       const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
         redacao_email: selectedRedacao.email_aluno,
         user_email: emailInput.trim()
       });
+
+      console.log('🔍 RESULTADO CARD:', { canAccess, error });
 
       if (error) {
         console.error('❌ Erro na validação de acesso:', error);
@@ -101,7 +109,9 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
         return;
       }
 
-      if (!canAccess) {
+      // 🚨 VALIDAÇÃO RIGOROSA: deve ser exatamente true
+      if (canAccess !== true) {
+        console.log('🚫 ACESSO NEGADO CARD - Email não confere');
         toast({
           title: "E-mail incorreto. Acesso negado à correção.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
@@ -111,6 +121,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
       }
 
       // ✅ ACESSO LIBERADO apenas após validação rigorosa
+      console.log('✅ ACESSO LIBERADO CARD');
       setIsDialogOpen(false);
       setShowRedacao(true);
       
