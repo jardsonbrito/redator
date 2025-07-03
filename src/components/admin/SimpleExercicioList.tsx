@@ -18,6 +18,7 @@ interface Exercicio {
   permite_visitante: boolean | null;
   ativo: boolean | null;
   criado_em: string | null;
+  abrir_aba_externa: boolean | null;
   temas?: {
     frase_tematica: string;
     eixo_tematico: string;
@@ -264,6 +265,18 @@ export const SimpleExercicioList = () => {
                   {exercicio.permite_visitante && (
                     <Badge variant="outline" className="text-xs">
                       Permite Visitante
+                    </Badge>
+                  )}
+                  
+                  {exercicio.tipo === 'Google Forms' && !exercicio.abrir_aba_externa && (
+                    <Badge variant="outline" className="text-xs">
+                      Abre Embutido
+                    </Badge>
+                  )}
+                  
+                  {exercicio.tipo === 'Google Forms' && exercicio.abrir_aba_externa && (
+                    <Badge variant="outline" className="text-xs">
+                      Abre em Nova Aba
                     </Badge>
                   )}
                   

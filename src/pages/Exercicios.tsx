@@ -22,6 +22,7 @@ interface Exercicio {
   permite_visitante: boolean;
   ativo: boolean;
   criado_em: string;
+  abrir_aba_externa?: boolean;
   temas?: {
     frase_tematica: string;
     eixo_tematico: string;
@@ -228,14 +229,70 @@ const Exercicios = () => {
                       </div>
                       <div className="flex gap-2">
                         {exercicio.tipo === 'Google Forms' && exercicio.link_forms && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => window.open(exercicio.link_forms, '_blank')}
-                          >
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Abrir Formulário
-                          </Button>
+                          exercicio.abrir_aba_externa ? (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => window.open(exercicio.link_forms, '_blank')}
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Abrir Formulário
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => {
+                                // Criar modal ou iframe para exibir o formulário embutido
+                                const modal = document.createElement('div');
+                                modal.style.cssText = `
+                                  position: fixed;
+                                  top: 0;
+                                  left: 0;
+                                  width: 100vw;
+                                  height: 100vh;
+                                  background: rgba(0,0,0,0.8);
+                                  z-index: 9999;
+                                  display: flex;
+                                  align-items: center;
+                                  justify-content: center;
+                                `;
+                                modal.innerHTML = `
+                                  <div style="
+                                    width: 95%;
+                                    height: 95%;
+                                    background: white;
+                                    border-radius: 8px;
+                                    position: relative;
+                                    overflow: hidden;
+                                  ">
+                                    <button style="
+                                      position: absolute;
+                                      top: 10px;
+                                      right: 15px;
+                                      background: #f44336;
+                                      color: white;
+                                      border: none;
+                                      border-radius: 4px;
+                                      padding: 8px 12px;
+                                      cursor: pointer;
+                                      z-index: 10000;
+                                      font-size: 16px;
+                                    " onclick="this.parentElement.parentElement.remove()">✕ Fechar</button>
+                                    <iframe 
+                                      src="${exercicio.link_forms}" 
+                                      style="width: 100%; height: 100%; border: none;"
+                                      frameborder="0"
+                                    ></iframe>
+                                  </div>
+                                `;
+                                document.body.appendChild(modal);
+                              }}
+                            >
+                              <FileText className="w-4 h-4 mr-2" />
+                              Abrir Formulário
+                            </Button>
+                          )
                         )}
                         {exercicio.tipo === 'Redação com Frase Temática' && exercicio.tema_id && (
                           <Button

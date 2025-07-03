@@ -241,6 +241,7 @@ export type Database = {
       }
       exercicios: {
         Row: {
+          abrir_aba_externa: boolean | null
           ativo: boolean | null
           criado_em: string | null
           id: string
@@ -253,6 +254,7 @@ export type Database = {
           turmas_autorizadas: string[] | null
         }
         Insert: {
+          abrir_aba_externa?: boolean | null
           ativo?: boolean | null
           criado_em?: string | null
           id?: string
@@ -265,6 +267,7 @@ export type Database = {
           turmas_autorizadas?: string[] | null
         }
         Update: {
+          abrir_aba_externa?: boolean | null
           ativo?: boolean | null
           criado_em?: string | null
           id?: string

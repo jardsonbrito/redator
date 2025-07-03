@@ -25,6 +25,7 @@ interface ExercicioEditando {
   turmas_autorizadas?: string[];
   permite_visitante?: boolean;
   ativo?: boolean;
+  abrir_aba_externa?: boolean;
 }
 
 interface ExercicioFormProps {
@@ -42,6 +43,7 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
   const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>([]);
   const [permiteVisitante, setPermiteVisitante] = useState(false);
   const [ativo, setAtivo] = useState(true);
+  const [abrirAbaExterna, setAbrirAbaExterna] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [temas, setTemas] = useState<Tema[]>([]);
 
@@ -69,6 +71,7 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
       setTurmasAutorizadas(exercicioEditando.turmas_autorizadas || []);
       setPermiteVisitante(exercicioEditando.permite_visitante || false);
       setAtivo(exercicioEditando.ativo !== false);
+      setAbrirAbaExterna(exercicioEditando.abrir_aba_externa || false);
     }
   }, [exercicioEditando]);
 
@@ -125,7 +128,8 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
         imagem_capa_url: imagemCapaUrl || null,
         turmas_autorizadas: turmasAutorizadas,
         permite_visitante: permiteVisitante,
-        ativo
+        ativo,
+        abrir_aba_externa: abrirAbaExterna
       };
 
       let error;
@@ -163,6 +167,7 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
         setTurmasAutorizadas([]);
         setPermiteVisitante(false);
         setAtivo(true);
+        setAbrirAbaExterna(false);
       }
 
     } catch (error) {
@@ -225,24 +230,16 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
                 type="url"
                 required
               />
-            </div>
-          )}
-
-          {tipo === 'Redação com Frase Temática' && (
-            <div>
-              <Label htmlFor="tema">Tema *</Label>
-              <Select value={temaId} onValueChange={setTemaId} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um tema" />
-                </SelectTrigger>
-                <SelectContent>
-                  {temas.map((tema) => (
-                    <SelectItem key={tema.id} value={tema.id}>
-                      {tema.frase_tematica} ({tema.eixo_tematico})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center space-x-2 mt-2">
+                <Checkbox
+                  id="abrirAbaExterna"
+                  checked={abrirAbaExterna}
+                  onCheckedChange={(checked) => setAbrirAbaExterna(checked as boolean)}
+                />
+                <Label htmlFor="abrirAbaExterna">
+                  Permitir abrir em aba externa
+                </Label>
+              </div>
             </div>
           )}
 
