@@ -54,6 +54,7 @@ import { AvisoList } from "@/components/admin/AvisoList";
 // Import radar components
 import { RadarUpload } from "@/components/admin/RadarUpload";
 import { RadarList } from "@/components/admin/RadarList";
+import { RadarRedacoes } from "@/components/admin/RadarRedacoes";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -233,12 +234,22 @@ const Admin = () => {
             <div className="bg-muted/50 p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Painel de Resultados - Radar</h3>
               <p className="text-sm text-muted-foreground">
-                Acompanhe aqui o desempenho geral dos alunos nos exercícios. 
-                Importe dados de planilhas CSV/Excel com os resultados dos exercícios realizados.
+                Acompanhe aqui o desempenho geral dos alunos nos exercícios e redações corrigidas.
               </p>
             </div>
-            <RadarUpload />
-            <RadarList />
+            <Tabs defaultValue="exercicios" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="exercicios">Dados de Exercícios</TabsTrigger>
+                <TabsTrigger value="redacoes">Redações Corrigidas</TabsTrigger>
+              </TabsList>
+              <TabsContent value="exercicios" className="space-y-6">
+                <RadarUpload />
+                <RadarList />
+              </TabsContent>
+              <TabsContent value="redacoes">
+                <RadarRedacoes />
+              </TabsContent>
+            </Tabs>
           </div>
         );
       
