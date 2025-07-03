@@ -999,6 +999,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_app_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_authenticated_student: {
         Args: Record<PropertyKey, never>
         Returns: boolean

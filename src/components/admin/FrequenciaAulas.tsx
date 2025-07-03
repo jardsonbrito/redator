@@ -147,8 +147,17 @@ export const FrequenciaAulas = () => {
       setFrequencias(frequenciaArray);
       setFilteredData(frequenciaArray);
     } catch (error: any) {
-      console.error('Erro ao buscar frequências:', error);
-      toast.error('Erro ao carregar dados de frequência');
+      console.error('❌ Erro ao buscar frequências:', error);
+      console.error('❌ Detalhes do erro:', {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code
+      });
+      toast.error(`Erro ao carregar dados de frequência: ${error?.message || 'Erro desconhecido'}`);
+      // Não fazer logout automático em caso de erro
+      setFrequencias([]);
+      setFilteredData([]);
     } finally {
       setIsLoading(false);
     }
