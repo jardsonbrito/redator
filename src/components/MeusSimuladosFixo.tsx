@@ -14,10 +14,24 @@ interface MeusSimuladosFixoProps {
 }
 
 export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
+  // Mapear nomes de turma para códigos corretos
+  const getTurmaCode = (turmaNome: string) => {
+    const turmasMap = {
+      "Turma A": "LRA2025",
+      "Turma B": "LRB2025", 
+      "Turma C": "LRC2025",
+      "Turma D": "LRD2025",
+      "Turma E": "LRE2025"
+    };
+    return turmasMap[turmaNome as keyof typeof turmasMap] || turmaNome;
+  };
+
   const { data: redacoesRecentes, isLoading } = useQuery({
     queryKey: ['redacoes-recentes', turmaCode],
     queryFn: async () => {
-      if (turmaCode === "visitante") {
+      console.log('Buscando redações para:', turmaCode);
+      
+      if (turmaCode === "visitante" || turmaCode === "Visitante") {
         // Para visitantes, buscar redações pelo localStorage
         const visitanteData = localStorage.getItem("visitanteData");
         if (!visitanteData) return [];
@@ -36,11 +50,19 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           return [];
         }
         
+        console.log('Redações encontradas para visitante:', data);
         return data || [];
       } else {
-        // Para alunos, buscar redações da turma
+        // Para alunos, converter nome da turma para código e buscar redações
+        const codigoTurma = getTurmaCode(turmaCode);
+        console.log('Código da turma convertido:', codigoTurma);
+        
         const { data, error } = await supabase
-          .rpc('get_redacoes_by_turma', { p_turma: turmaCode })
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('turma', codigoTurma)
+          .neq('tipo_envio', 'visitante')
+          .order('data_envio', { ascending: false })
           .limit(3);
         
         if (error) {
@@ -48,6 +70,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           return [];
         }
         
+        console.log('Redações encontradas para turma:', data);
         return data || [];
       }
     },
@@ -135,9 +158,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                           <Badge variant="outline">
                             {getTipoEnvioLabel(redacao.tipo_envio)}
                           </Badge>
-                          {redacao.corrigida && (redacao as any).nota_total && (
+                          {redacao.corrigida && redacao.nota_total && (
                             <Badge className="bg-primary/10 text-primary">
-                              Nota: {(redacao as any).nota_total}/1000
+                              Nota: {redacao.nota_total}/1000
                             </Badge>
                           )}
                         </div>
@@ -167,7 +190,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 </Card>
               ))}
 
-              {redacoesRecentes.length > 3 && (
+              {redacoesRecentes.length >= 3 && (
                 <div className="text-center pt-4">
                   <Link to="/minhas-redacoes">
                     <Button variant="outline">

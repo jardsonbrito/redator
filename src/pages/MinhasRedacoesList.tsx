@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,11 +49,8 @@ export default function MinhasRedacoesList() {
   const [filtroNome, setFiltroNome] = useState("");
   const [filtroEmail, setFiltroEmail] = useState("");
 
-  // Determinar código da turma ou email do visitante
-  let turmaCode = "";
-  let visitanteEmail = "";
-  
-  if (studentData.userType === "aluno" && studentData.turma) {
+  // Mapear nomes de turma para códigos corretos
+  const getTurmaCode = (turmaNome: string) => {
     const turmasMap = {
       "Turma A": "LRA2025",
       "Turma B": "LRB2025", 
@@ -60,31 +58,39 @@ export default function MinhasRedacoesList() {
       "Turma D": "LRD2025",
       "Turma E": "LRE2025"
     };
-    turmaCode = turmasMap[studentData.turma as keyof typeof turmasMap] || "";
-  } else if (studentData.userType === "visitante") {
-    visitanteEmail = studentData.visitanteInfo?.email || "";
-  }
+    return turmasMap[turmaNome as keyof typeof turmasMap] || turmaNome;
+  };
 
   const { data: redacoesTurma, isLoading, error } = useQuery({
-    queryKey: ['redacoes-todas', turmaCode, visitanteEmail],
+    queryKey: ['redacoes-todas', studentData.userType, studentData.turma, studentData.visitanteInfo?.email],
     queryFn: async () => {
-      if (studentData.userType === "aluno" && turmaCode) {
-        console.log('Buscando todas as redações da turma:', turmaCode);
+      console.log('Carregando redações - Tipo:', studentData.userType, 'Turma:', studentData.turma);
+      
+      if (studentData.userType === "aluno" && studentData.turma) {
+        const codigoTurma = getTurmaCode(studentData.turma);
+        console.log('Código da turma convertido:', codigoTurma);
+        
         const { data, error } = await supabase
-          .rpc('get_redacoes_by_turma', { p_turma: turmaCode });
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('turma', codigoTurma)
+          .neq('tipo_envio', 'visitante')
+          .order('data_envio', { ascending: false });
         
         if (error) {
           console.error('Erro ao buscar redações da turma:', error);
           throw error;
         }
         
+        console.log('Redações encontradas:', data);
         return data as RedacaoTurma[] || [];
-      } else if (studentData.userType === "visitante" && visitanteEmail) {
-        console.log('Buscando redações do visitante:', visitanteEmail);
+      } else if (studentData.userType === "visitante" && studentData.visitanteInfo?.email) {
+        console.log('Buscando redações do visitante:', studentData.visitanteInfo.email);
+        
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select('*')
-          .eq('email_aluno', visitanteEmail)
+          .eq('email_aluno', studentData.visitanteInfo.email)
           .eq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
         
@@ -93,12 +99,13 @@ export default function MinhasRedacoesList() {
           throw error;
         }
         
+        console.log('Redações do visitante encontradas:', data);
         return data as RedacaoTurma[] || [];
       }
       
       return [];
     },
-    enabled: !!(turmaCode || visitanteEmail),
+    enabled: !!(studentData.userType && (studentData.turma || studentData.visitanteInfo?.email)),
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
@@ -120,36 +127,8 @@ export default function MinhasRedacoesList() {
     setIsAuthenticating(true);
 
     try {
-      // Buscar redação específica com autenticação por email
-      let data, error;
-      
-      if (studentData.userType === "aluno" && turmaCode) {
-        const response = await supabase
-          .rpc('get_redacoes_by_turma_and_email', { 
-            p_turma: turmaCode, 
-            p_email: emailInput.trim() 
-          });
-        data = response.data;
-        error = response.error;
-      } else if (studentData.userType === "visitante") {
-        const response = await supabase
-          .from('redacoes_enviadas')
-          .select('*')
-          .eq('email_aluno', emailInput.trim())
-          .eq('tipo_envio', 'visitante');
-        data = response.data;
-        error = response.error;
-      }
-
-      if (error) {
-        console.error('Erro na autenticação:', error);
-        throw error;
-      }
-
-      // Verificar se a redação existe para este email
-      const redacaoAutenticada = data?.find(r => r.id === selectedRedacao.id);
-
-      if (!redacaoAutenticada) {
+      // Verificar se o email corresponde ao da redação
+      if (emailInput.trim().toLowerCase() !== selectedRedacao.email_aluno?.toLowerCase()) {
         toast({
           title: "E-mail incorreto",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
@@ -159,20 +138,20 @@ export default function MinhasRedacoesList() {
       }
 
       // Buscar texto completo da redação
-      const { data: redacaoCompleta, error: errorCompleta } = await supabase
+      const { data: redacaoCompleta, error } = await supabase
         .from('redacoes_enviadas')
         .select('*')
         .eq('id', selectedRedacao.id)
         .single();
 
-      if (errorCompleta) {
-        console.error('Erro ao buscar redação completa:', errorCompleta);
-        throw errorCompleta;
+      if (error) {
+        console.error('Erro ao buscar redação completa:', error);
+        throw error;
       }
 
-      // Preparar dados completos da redação com redacao_texto obrigatório
+      // Preparar dados completos da redação
       const redacaoComTexto: RedacaoTurma & { redacao_texto: string } = {
-        ...redacaoAutenticada,
+        ...selectedRedacao,
         redacao_texto: redacaoCompleta.redacao_texto || "",
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
@@ -181,19 +160,10 @@ export default function MinhasRedacoesList() {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
-      // Fechar dialog de autenticação
+      // Fechar dialog de autenticação e abrir visualização
       setIsDialogOpen(false);
+      setSelectedRedacao(redacaoComTexto);
       
-      // Criar e abrir modal de visualização da redação
-      const redacaoParaCard = {
-        ...redacaoComTexto,
-        data_envio: redacaoComTexto.data_envio,
-        corrigida: redacaoComTexto.corrigida,
-      };
-      
-      setSelectedRedacao(redacaoParaCard);
-      
-      // Mostrar toast de sucesso
       toast({
         title: "Redação liberada!",
         description: "Agora você pode visualizar sua redação completa.",
@@ -235,7 +205,7 @@ export default function MinhasRedacoesList() {
   const redacoesFiltradas = redacoesTurma?.filter(redacao => {
     const tipoMatch = !filtroTipo || redacao.tipo_envio === filtroTipo;
     const nomeMatch = !filtroNome || redacao.nome_aluno.toLowerCase().includes(filtroNome.toLowerCase());
-    const emailMatch = !filtroEmail || redacao.email_aluno.toLowerCase().includes(filtroEmail.toLowerCase());
+    const emailMatch = !filtroEmail || redacao.email_aluno?.toLowerCase().includes(filtroEmail.toLowerCase());
     
     let dataMatch = true;
     if (filtroDataInicio || filtroDataFim) {
@@ -250,7 +220,7 @@ export default function MinhasRedacoesList() {
     return tipoMatch && nomeMatch && emailMatch && dataMatch;
   }) || [];
 
-  if (!turmaCode && !visitanteEmail) {
+  if (!studentData.userType) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
         <div className="max-w-6xl mx-auto px-4 py-8">
@@ -348,10 +318,10 @@ export default function MinhasRedacoesList() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">E-mail para Acesso</label>
+                <label className="block text-sm font-medium mb-2">E-mail</label>
                 <Input
                   type="email"
-                  placeholder="Digite o e-mail para autenticar..."
+                  placeholder="Buscar por e-mail..."
                   value={filtroEmail}
                   onChange={(e) => setFiltroEmail(e.target.value)}
                 />
@@ -360,7 +330,7 @@ export default function MinhasRedacoesList() {
           </CardContent>
         </Card>
 
-        {/* Loading/Error States */}
+        {/* Loading/Error/Empty States */}
         {isLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -378,7 +348,7 @@ export default function MinhasRedacoesList() {
             <CardContent className="text-center py-8">
               <Search className="w-12 h-12 text-primary/50 mx-auto mb-4" />
               <p className="text-primary/70 mb-4">
-                Nenhuma redação encontrada com os filtros aplicados.
+                Nenhuma redação encontrada.
               </p>
               <Button 
                 variant="outline" 
@@ -543,7 +513,7 @@ export default function MinhasRedacoesList() {
                     email_aluno: selectedRedacao.email_aluno,
                     tipo_envio: selectedRedacao.tipo_envio,
                     status: selectedRedacao.status,
-                    turma: studentData.userType === "aluno" ? turmaCode : "visitante",
+                    turma: studentData.userType === "aluno" ? (studentData.turma || "") : "visitante",
                   }} 
                 />
               </div>
