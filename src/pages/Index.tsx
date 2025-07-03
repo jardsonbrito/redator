@@ -131,12 +131,6 @@ const Index = () => {
             {/* Mural de Avisos */}
             <MuralAvisos turmaCode={turmaCode} />
 
-            {/* Seção "Minhas Redações" - apenas para alunos de turma */}
-            {showMinhasRedacoes && (
-              <div className="mb-8">
-                <MinhasRedacoes />
-              </div>
-            )}
 
             {/* Card "Meus Simulados" - SEMPRE FIXO E VISÍVEL */}
             <MeusSimuladosFixo turmaCode={turmaCode} />

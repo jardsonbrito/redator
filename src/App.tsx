@@ -23,6 +23,7 @@ import Top5 from "./pages/Top5";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import Aulas from "./pages/Aulas";
 import Exercicios from "./pages/Exercicios";
+import MinhasRedacoesList from "./pages/MinhasRedacoesList";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/simulados" element={<Simulados />} />
               <Route path="/simulados/:id" element={<SimuladoDetalhes />} />
               <Route path="/meus-simulados" element={<MeusSimulados />} />
+              <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
               <Route path="/top5" element={<Top5 />} />
               <Route path="/aulas" element={<Aulas />} />
               <Route path="/exercicios" element={<Exercicios />} />

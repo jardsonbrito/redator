@@ -3,14 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, Calendar, User, Mail, FileText, CheckCircle, ClipboardCheck } from "lucide-react";
+import { Eye, Calendar, User, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
 import { Link } from "react-router-dom";
 
 interface MeusSimuladosFixoProps {
@@ -18,76 +14,55 @@ interface MeusSimuladosFixoProps {
 }
 
 export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
-  const { toast } = useToast();
-  const [emailVerificacao, setEmailVerificacao] = useState<{[key: string]: string}>({});
-  const [redacaoVisivel, setRedacaoVisivel] = useState<{[key: string]: boolean}>({});
-  const [filtroNome, setFiltroNome] = useState("");
-  const [filtroEmail, setFiltroEmail] = useState("");
-  const [filtroTema, setFiltroTema] = useState("");
-
-  const { data: redacoesCorrigidas, isLoading } = useQuery({
-    queryKey: ['simulados-corrigidos', turmaCode],
+  const { data: redacoesRecentes, isLoading } = useQuery({
+    queryKey: ['redacoes-recentes', turmaCode],
     queryFn: async () => {
-      let query = supabase
-        .from('redacoes_simulado')
-        .select(`
-          *,
-          simulados!inner(titulo, frase_tematica, turmas_autorizadas)
-        `)
-        .eq('corrigida', true)
-        .order('data_envio', { ascending: false });
-
-      if (turmaCode !== "visitante") {
-        query = query.eq('turma', turmaCode);
+      if (turmaCode === "visitante") {
+        // Para visitantes, buscar redações pelo localStorage
+        const visitanteData = localStorage.getItem("visitanteData");
+        if (!visitanteData) return [];
+        
+        const dados = JSON.parse(visitanteData);
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('email_aluno', dados.email)
+          .eq('tipo_envio', 'visitante')
+          .order('data_envio', { ascending: false })
+          .limit(3);
+        
+        if (error) {
+          console.error('Erro ao buscar redações do visitante:', error);
+          return [];
+        }
+        
+        return data || [];
       } else {
-        query = query.eq('turma', 'visitante');
+        // Para alunos, buscar redações da turma
+        const { data, error } = await supabase
+          .rpc('get_redacoes_by_turma', { p_turma: turmaCode })
+          .limit(3);
+        
+        if (error) {
+          console.error('Erro ao buscar redações da turma:', error);
+          return [];
+        }
+        
+        return data || [];
       }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Erro ao buscar redações de simulados:', error);
-        return [];
-      }
-      
-      return data || [];
-    }
+    },
+    enabled: !!turmaCode,
   });
 
-  const verificarEmailEMostrarRedacao = (redacaoId: string, emailCorreto: string) => {
-    const emailDigitado = emailVerificacao[redacaoId]?.toLowerCase().trim();
-    
-    if (!emailDigitado) {
-      toast({
-        title: "Digite o e-mail",
-        description: "Por favor, digite o e-mail para verificar o acesso.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (emailDigitado === emailCorreto.toLowerCase()) {
-      setRedacaoVisivel(prev => ({ ...prev, [redacaoId]: true }));
-      toast({
-        title: "Acesso liberado!",
-        description: "E-mail confirmado. Você pode ver sua correção.",
-      });
-    } else {
-      toast({
-        title: "E-mail incorreto",
-        description: "O e-mail digitado não confere com o e-mail de envio.",
-        variant: "destructive",
-      });
-    }
+  const getTipoEnvioLabel = (tipo: string) => {
+    const tipos = {
+      'regular': 'Regular',
+      'exercicio': 'Exercício', 
+      'simulado': 'Simulado',
+      'visitante': 'Avulsa'
+    };
+    return tipos[tipo as keyof typeof tipos] || tipo;
   };
-
-  // Filtrar redações
-  const redacoesFiltradas = redacoesCorrigidas?.filter(redacao => {
-    const nomeMatch = !filtroNome || redacao.nome_aluno.toLowerCase().includes(filtroNome.toLowerCase());
-    const emailMatch = !filtroEmail || redacao.email_aluno.toLowerCase().includes(filtroEmail.toLowerCase());
-    const temaMatch = !filtroTema || redacao.simulados.titulo.toLowerCase().includes(filtroTema.toLowerCase());
-    return nomeMatch && emailMatch && temaMatch;
-  }) || [];
 
   return (
     <div className="mb-8">
@@ -99,23 +74,23 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-2xl blur opacity-30"></div>
                   <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-r from-primary to-secondary shadow-lg">
-                    <ClipboardCheck className="w-7 h-7 text-white" />
+                    <FileText className="w-7 h-7 text-white" />
                   </div>
                 </div>
                 <div>
                   <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    🏆 Meus Simulados
+                    📝 Minhas Redações
                   </CardTitle>
-                  <p className="text-muted-foreground font-medium">Suas redações corrigidas com detalhes</p>
+                  <p className="text-muted-foreground font-medium">Acompanhe todas as suas redações corrigidas com detalhes</p>
                 </div>
               </div>
-              <Link to="/meus-simulados">
+              <Link to="/minhas-redacoes">
                 <Button 
                   variant="outline" 
                   size="sm"
                   className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30 hover:from-primary/20 hover:to-secondary/20 font-medium"
                 >
-                  Ver Todos
+                  Ver Todas
                 </Button>
               </Link>
             </div>
@@ -125,59 +100,49 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         <CardContent className="space-y-4">
           {isLoading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Carregando simulados...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Carregando redações...</p>
             </div>
-          ) : !redacoesCorrigidas || redacoesCorrigidas.length === 0 ? (
+          ) : !redacoesRecentes || redacoesRecentes.length === 0 ? (
             <div className="text-center py-8">
-              <ClipboardCheck className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">Nenhuma redação de simulado corrigida ainda</p>
-              <p className="text-sm text-gray-500">
-                Suas correções aparecerão aqui quando estiverem prontas
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground mb-2">Nenhuma redação ainda</p>
+              <p className="text-sm text-muted-foreground">
+                Suas redações aparecerão aqui quando forem enviadas
               </p>
             </div>
           ) : (
             <>
-              {/* Filtros */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <Input
-                  placeholder="Filtrar por nome..."
-                  value={filtroNome}
-                  onChange={(e) => setFiltroNome(e.target.value)}
-                />
-                <Input
-                  placeholder="Filtrar por e-mail..."
-                  value={filtroEmail}
-                  onChange={(e) => setFiltroEmail(e.target.value)}
-                />
-                <Input
-                  placeholder="Filtrar por tema..."
-                  value={filtroTema}
-                  onChange={(e) => setFiltroTema(e.target.value)}
-                />
-              </div>
-
-              {redacoesFiltradas.slice(0, 3).map((redacao) => (
-                <Card key={redacao.id} className="border border-gray-200">
+              {redacoesRecentes.slice(0, 3).map((redacao) => (
+                <Card key={redacao.id} className="border border-primary/20">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="font-bold text-lg text-purple-800 mb-1">
-                          {redacao.simulados.titulo}
+                        <h4 className="font-bold text-lg text-primary mb-1">
+                          {redacao.frase_tematica}
                         </h4>
-                        <p className="text-sm text-gray-600 mb-2">{redacao.simulados.frase_tematica}</p>
                         
                         <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge className="bg-green-500">
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Corrigida
-                          </Badge>
+                          {redacao.corrigida ? (
+                            <Badge className="bg-green-100 text-green-800">
+                              Corrigida
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-yellow-100 text-yellow-800">
+                              Aguardando
+                            </Badge>
+                          )}
                           <Badge variant="outline">
-                            Nota: {redacao.nota_total}
+                            {getTipoEnvioLabel(redacao.tipo_envio)}
                           </Badge>
+                          {redacao.corrigida && (redacao as any).nota_total && (
+                            <Badge className="bg-primary/10 text-primary">
+                              Nota: {(redacao as any).nota_total}/1000
+                            </Badge>
+                          )}
                         </div>
                         
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                           <div className="flex items-center gap-1">
                             <User className="w-4 h-4" />
                             {redacao.nome_aluno}
@@ -187,109 +152,26 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                             {format(new Date(redacao.data_envio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </div>
                         </div>
-
-                        {/* Campo de verificação de e-mail */}
-                        {!redacaoVisivel[redacao.id] && (
-                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Mail className="w-4 h-4 text-yellow-600" />
-                              <span className="text-sm font-medium text-yellow-800">
-                                Digite seu e-mail para ver a correção
-                              </span>
-                            </div>
-                            <div className="flex gap-2">
-                              <Input
-                                type="email"
-                                placeholder="Digite o e-mail usado no envio"
-                                value={emailVerificacao[redacao.id] || ""}
-                                onChange={(e) => setEmailVerificacao(prev => ({
-                                  ...prev,
-                                  [redacao.id]: e.target.value
-                                }))}
-                                className="flex-1"
-                              />
-                              <Button
-                                onClick={() => verificarEmailEMostrarRedacao(redacao.id, redacao.email_aluno)}
-                                size="sm"
-                                className="bg-purple-600 hover:bg-purple-700"
-                              >
-                                Verificar
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Mostrar correção se e-mail foi verificado */}
-                        {redacaoVisivel[redacao.id] && (
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                            <div className="grid grid-cols-5 gap-4 mb-4">
-                              <div className="text-center">
-                                <div className="text-xs text-gray-600 mb-1">C1</div>
-                                <div className="font-bold text-lg text-purple-600">{redacao.nota_c1}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xs text-gray-600 mb-1">C2</div>
-                                <div className="font-bold text-lg text-purple-600">{redacao.nota_c2}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xs text-gray-600 mb-1">C3</div>
-                                <div className="font-bold text-lg text-purple-600">{redacao.nota_c3}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xs text-gray-600 mb-1">C4</div>
-                                <div className="font-bold text-lg text-purple-600">{redacao.nota_c4}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xs text-gray-600 mb-1">C5</div>
-                                <div className="font-bold text-lg text-purple-600">{redacao.nota_c5}</div>
-                              </div>
-                            </div>
-                            
-                            {redacao.comentario_pedagogico && (
-                              <div>
-                                <div className="font-medium text-purple-800 mb-2">Comentário Pedagógico:</div>
-                                <div className="p-3 bg-white rounded border text-sm">
-                                  {redacao.comentario_pedagogico}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
                       
                       <div className="ml-4">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Eye className="w-4 h-4 mr-1" />
-                              Ver Redação
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Redação - {redacao.nome_aluno}</DialogTitle>
-                            </DialogHeader>
-                            <div className="mt-4">
-                              <div className="bg-gray-50 p-4 rounded mb-4">
-                                <h3 className="font-bold text-purple-800 mb-2">{redacao.simulados.frase_tematica}</h3>
-                              </div>
-                              <div className="bg-white p-4 border rounded whitespace-pre-wrap">
-                                {redacao.texto}
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <Link to="/minhas-redacoes">
+                          <Button variant="outline" size="sm">
+                            <Eye className="w-4 h-4 mr-1" />
+                            Ver Redação
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
 
-              {redacoesFiltradas.length > 3 && (
+              {redacoesRecentes.length > 3 && (
                 <div className="text-center pt-4">
-                  <Link to="/meus-simulados">
+                  <Link to="/minhas-redacoes">
                     <Button variant="outline">
-                      Ver todas as {redacoesFiltradas.length} redações corrigidas
+                      Ver todas as redações
                     </Button>
                   </Link>
                 </div>
