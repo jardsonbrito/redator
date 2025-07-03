@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Search, Download, Calendar, Clock, Users } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 
 interface FrequenciaData {
   id: string;
@@ -30,12 +28,13 @@ interface AulaVirtual {
 }
 
 export const FrequenciaAulas = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
   const [frequencias, setFrequencias] = useState<FrequenciaData[]>([]);
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [filteredData, setFilteredData] = useState<FrequenciaData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  console.log('🟢 FrequenciaAulas component mounted');
   
   const [filters, setFilters] = useState({
     turma: "",
@@ -47,70 +46,47 @@ export const FrequenciaAulas = () => {
 
   const turmasDisponiveis = ["Turma A", "Turma B", "Turma C", "Turma D", "Turma E", "visitante"];
 
-  const fetchAulas = async () => {
-    try {
-      console.log('🔍 Buscando aulas virtuais...');
-      const { data, error } = await supabase
-        .from('aulas_virtuais')
-        .select('id, titulo, data_aula')
-        .order('data_aula', { ascending: false });
-
-      if (error) {
-        console.error('Erro ao buscar aulas:', error);
-        throw error;
-      }
-      
-      console.log('✅ Aulas carregadas:', data?.length || 0);
-      setAulas(data || []);
-    } catch (error: any) {
-      console.error('❌ Erro ao buscar aulas:', error);
-      setError(`Erro ao carregar aulas: ${error.message}`);
-    }
-  };
-
-  const fetchFrequencias = async () => {
+  const fetchData = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('🔍 Iniciando busca de dados de frequência...');
+      console.log('🔄 Carregando dados de frequência...');
       
-      // Buscar todas as aulas virtuais
-      const { data: aulasData, error: aulasError } = await supabase
-        .from('aulas_virtuais')
-        .select('id, titulo, data_aula');
+      // Buscar aulas virtuais e presença em paralelo
+      const [aulasResponse, presencaResponse] = await Promise.all([
+        supabase
+          .from('aulas_virtuais')
+          .select('id, titulo, data_aula')
+          .order('data_aula', { ascending: false }),
+        supabase
+          .from('presenca_aulas')
+          .select('*')
+      ]);
 
-      if (aulasError) {
-        console.error('Erro ao buscar aulas virtuais:', aulasError);
-        throw aulasError;
+      if (aulasResponse.error) {
+        console.error('❌ Erro ao buscar aulas:', aulasResponse.error);
+        throw new Error(`Erro ao carregar aulas: ${aulasResponse.error.message}`);
       }
-      
-      console.log('✅ Aulas encontradas:', aulasData?.length || 0);
 
-      // Buscar todos os registros de presença
-      const { data: presencaData, error: presencaError } = await supabase
-        .from('presenca_aulas')
-        .select(`
-          id,
-          aula_id,
-          nome_aluno,
-          sobrenome_aluno,
-          turma,
-          tipo_registro,
-          data_registro
-        `);
-
-      if (presencaError) {
-        console.error('Erro ao buscar registros de presença:', presencaError);
-        throw presencaError;
+      if (presencaResponse.error) {
+        console.error('❌ Erro ao buscar presença:', presencaResponse.error);
+        throw new Error(`Erro ao carregar presença: ${presencaResponse.error.message}`);
       }
-      
-      console.log('✅ Registros de presença encontrados:', presencaData?.length || 0);
 
-      // Processar dados para criar relatório de frequência
+      const aulasData = aulasResponse.data || [];
+      const presencaData = presencaResponse.data || [];
+
+      console.log('✅ Dados carregados:', {
+        aulas: aulasData.length,
+        registros: presencaData.length
+      });
+
+      setAulas(aulasData);
+
+      // Processar dados de frequência
       const frequenciaMap = new Map<string, any>();
 
-      // Agrupar registros por aluno e aula
-      (presencaData || []).forEach((registro) => {
+      presencaData.forEach((registro) => {
         const key = `${registro.aula_id}-${registro.nome_aluno}-${registro.sobrenome_aluno}-${registro.turma}`;
         
         if (!frequenciaMap.has(key)) {
@@ -131,9 +107,9 @@ export const FrequenciaAulas = () => {
         }
       });
 
-      // Converter para array e adicionar informações da aula
+      // Converter para array e processar
       const frequenciaArray: FrequenciaData[] = Array.from(frequenciaMap.values()).map((item) => {
-        const aula = (aulasData || []).find(a => a.id === item.aula_id);
+        const aula = aulasData.find(a => a.id === item.aula_id);
         let situacao: 'completa' | 'incompleta' | 'ausente' = 'ausente';
         let tempoTotal = null;
 
@@ -141,7 +117,7 @@ export const FrequenciaAulas = () => {
           situacao = 'completa';
           const entrada = new Date(item.entrada);
           const saida = new Date(item.saida);
-          tempoTotal = Math.round((saida.getTime() - entrada.getTime()) / (1000 * 60)); // minutos
+          tempoTotal = Math.round((saida.getTime() - entrada.getTime()) / (1000 * 60));
         } else if (item.entrada || item.saida) {
           situacao = 'incompleta';
         }
@@ -159,40 +135,45 @@ export const FrequenciaAulas = () => {
         };
       });
 
-      console.log('✅ Dados processados:', frequenciaArray.length, 'registros');
       setFrequencias(frequenciaArray);
       setFilteredData(frequenciaArray);
+      console.log('✅ Processamento concluído:', frequenciaArray.length, 'registros');
+
     } catch (error: any) {
-      console.error('❌ Erro ao buscar frequências:', error);
-      const errorMessage = error?.message || 'Erro desconhecido';
-      setError(`Erro ao carregar dados de frequência: ${errorMessage}`);
-      toast.error(errorMessage);
-      setFrequencias([]);
-      setFilteredData([]);
+      console.error('❌ Erro geral:', error);
+      setError(error.message || 'Erro ao carregar dados');
+      toast.error(error.message || 'Erro ao carregar dados');
     } finally {
       setIsLoading(false);
     }
   };
 
   const exportToCSV = () => {
-    const csvContent = [
-      'Nome Completo,Turma,Aula,Data,Entrada,Saída,Tempo Total (min),Situação',
-      ...filteredData.map(item => 
-        `"${item.nome_completo}","${item.turma}","${item.aula_titulo}","${new Date(item.data_aula).toLocaleDateString('pt-BR')}","${item.horario_entrada || ''}","${item.horario_saida || ''}","${item.tempo_total || ''}","${item.situacao}"`
-      )
-    ].join('\n');
+    try {
+      const csvContent = [
+        'Nome Completo,Turma,Aula,Data,Entrada,Saída,Tempo Total (min),Situação',
+        ...filteredData.map(item => 
+          `"${item.nome_completo}","${item.turma}","${item.aula_titulo}","${new Date(item.data_aula).toLocaleDateString('pt-BR')}","${item.horario_entrada || ''}","${item.horario_saida || ''}","${item.tempo_total || ''}","${item.situacao}"`
+        )
+      ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `frequencia_aulas_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `frequencia_aulas_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      
+      toast.success('Arquivo CSV exportado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast.error('Erro ao exportar arquivo CSV');
+    }
   };
 
   const getSituacaoBadge = (situacao: string) => {
     switch (situacao) {
       case 'completa':
-        return <Badge className="bg-green-100 text-green-800">✅ Presente</Badge>;
+        return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">✅ Presente</Badge>;
       case 'incompleta':
         return <Badge variant="secondary">⚠️ Incompleta</Badge>;
       case 'ausente':
@@ -202,6 +183,7 @@ export const FrequenciaAulas = () => {
     }
   };
 
+  // Aplicar filtros
   useEffect(() => {
     let filtered = frequencias;
 
@@ -210,7 +192,7 @@ export const FrequenciaAulas = () => {
     }
 
     if (filters.aula) {
-      filtered = filtered.filter(item => item.aula_titulo.includes(filters.aula));
+      filtered = filtered.filter(item => item.aula_titulo.toLowerCase().includes(filters.aula.toLowerCase()));
     }
 
     if (filters.dataInicio) {
@@ -235,35 +217,18 @@ export const FrequenciaAulas = () => {
     setFilteredData(filtered);
   }, [frequencias, filters]);
 
-  // Carregar dados quando o componente é montado
+  // Carregar dados na inicialização
   useEffect(() => {
-    console.log('🔄 Carregando dados de frequência...');
-    fetchAulas();
-    fetchFrequencias();
+    fetchData();
   }, []);
-
-  // Aguarda carregamento da autenticação antes de decidir o que mostrar
-  if (authLoading) {
-    return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-sm text-muted-foreground mt-2">Verificando permissões...</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (error) {
     return (
       <Card>
         <CardContent className="text-center py-8">
           <Users className="w-8 h-8 mx-auto mb-2 text-red-500" />
-          <p className="text-sm text-red-600 mb-2">{error}</p>
-          <Button onClick={() => {
-            setError(null);
-            fetchFrequencias();
-          }} variant="outline" size="sm">
+          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <Button onClick={fetchData} variant="outline" size="sm">
             Tentar Novamente
           </Button>
         </CardContent>
@@ -295,7 +260,7 @@ export const FrequenciaAulas = () => {
               <Download className="w-4 h-4 mr-2" />
               Exportar CSV
             </Button>
-            <Button onClick={fetchFrequencias} variant="outline" size="sm">
+            <Button onClick={fetchData} variant="outline" size="sm">
               Atualizar
             </Button>
           </div>
@@ -389,7 +354,7 @@ export const FrequenciaAulas = () => {
               <TableBody>
                 {filteredData.map((item) => (
                   <TableRow key={item.id}>
-                     <TableCell className="font-medium">{item.nome_completo}</TableCell>
+                    <TableCell className="font-medium">{item.nome_completo}</TableCell>
                     <TableCell>
                       <Badge variant={item.turma === 'visitante' ? 'secondary' : 'outline'}>
                         {item.turma === 'visitante' ? '👤 Visitante' : item.turma}
@@ -399,7 +364,7 @@ export const FrequenciaAulas = () => {
                       {item.aula_titulo}
                     </TableCell>
                     <TableCell>
-                      {new Date(item.data_aula).toLocaleDateString('pt-BR')}
+                      {item.data_aula ? new Date(item.data_aula).toLocaleDateString('pt-BR') : '-'}
                     </TableCell>
                     <TableCell>
                       {item.horario_entrada ? (
