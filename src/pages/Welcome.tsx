@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -12,11 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { compareTurmas, extractTurmaLetter } from "@/utils/turmaUtils";
 
 const Welcome = () => {
   const [selectedProfile, setSelectedProfile] = useState<"professor" | "aluno" | "visitante">("aluno");
-  const [turma, setTurma] = useState("");
+  
   const [emailAluno, setEmailAluno] = useState("");
   const [nomeVisitante, setNomeVisitante] = useState("");
   const [emailVisitante, setEmailVisitante] = useState("");
@@ -29,13 +27,6 @@ const Welcome = () => {
   const { loginAsStudent, loginAsVisitante } = useStudentAuth();
   const { signIn } = useAuth();
 
-  const turmas = [
-    { value: "Turma A", label: "Turma A" },
-    { value: "Turma B", label: "Turma B" },
-    { value: "Turma C", label: "Turma C" },
-    { value: "Turma D", label: "Turma D" },
-    { value: "Turma E", label: "Turma E" }
-  ];
 
   const handleLogin = async () => {
     setLoading(true);
@@ -68,18 +59,18 @@ const Welcome = () => {
           }, 1000);
         }
       } else if (selectedProfile === "aluno") {
-        if (!turma || !emailAluno.trim()) {
+        if (!emailAluno.trim()) {
           toast({
-            title: "Campos obrigatórios",
-            description: "Por favor, selecione sua turma e digite seu e-mail.",
+            title: "Campo obrigatório",
+            description: "Por favor, digite seu e-mail.",
             variant: "destructive"
           });
           return;
         }
 
-        console.log('Tentando login - Turma:', turma, 'Email:', emailAluno.trim().toLowerCase());
+        console.log('Tentando login - Email:', emailAluno.trim().toLowerCase());
 
-        // Buscar aluno com validação mais robusta
+        // Buscar aluno na base (mesma lógica do AlunoLogin.tsx)
         try {
           const { data: aluno, error } = await supabase
             .from("profiles")
@@ -103,7 +94,6 @@ const Welcome = () => {
               .from("profiles")
               .select("email, nome")
               .eq("user_type", "aluno")
-              .eq("turma", turma)
               .ilike("email", `%${emailAluno.split('@')[0]}%`);
             
             let descricaoErro = "Verifique se você foi cadastrado pelo professor ou se o e-mail está correto.";
@@ -121,21 +111,7 @@ const Welcome = () => {
             return;
           }
 
-          // Verificar se a turma do aluno corresponde à turma selecionada usando função robusta
-          if (!compareTurmas(aluno.turma, turma)) {
-            const letraAluno = extractTurmaLetter(aluno.turma);
-            const letraSelecionada = extractTurmaLetter(turma);
-            
-            console.log('Turma não confere - Aluno:', `"${aluno.turma}" (${letraAluno})`, 'Selecionada:', `"${turma}" (${letraSelecionada})`);
-            toast({
-              title: "Turma incorreta",
-              description: `Seu e-mail está cadastrado na Turma ${letraAluno}, mas você selecionou Turma ${letraSelecionada}. Por favor, selecione a turma correta.`,
-              variant: "destructive"
-            });
-            return;
-          }
-
-          // Login bem-sucedido
+          // Login bem-sucedido - usar a turma do aluno encontrado
           console.log('Login bem-sucedido para:', aluno.nome, 'Turma:', aluno.turma);
           loginAsStudent(aluno.turma);
           toast({
@@ -283,37 +259,20 @@ const Welcome = () => {
             )}
 
             {selectedProfile === "aluno" && (
-              <>
-                <div>
-                  <Label htmlFor="turma" className="text-redator-primary font-medium">Turma</Label>
-                  <Select value={turma} onValueChange={setTurma}>
-                    <SelectTrigger className="mt-1 border-redator-accent/30">
-                      <SelectValue placeholder="Selecione sua turma" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {turmas.map((turmaItem) => (
-                        <SelectItem key={turmaItem.value} value={turmaItem.value}>
-                          {turmaItem.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="email-aluno" className="text-redator-primary font-medium">E-mail</Label>
-                  <Input
-                    id="email-aluno"
-                    type="email"
-                    value={emailAluno}
-                    onChange={(e) => setEmailAluno(e.target.value)}
-                    placeholder="Digite seu e-mail cadastrado"
-                    className="mt-1 border-redator-accent/30"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Use o e-mail que foi cadastrado pelo professor
-                  </p>
-                </div>
-              </>
+              <div>
+                <Label htmlFor="email-aluno" className="text-redator-primary font-medium">E-mail</Label>
+                <Input
+                  id="email-aluno"
+                  type="email"
+                  value={emailAluno}
+                  onChange={(e) => setEmailAluno(e.target.value)}
+                  placeholder="Digite seu e-mail cadastrado"
+                  className="mt-1 border-redator-accent/30"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Use o e-mail que foi cadastrado pelo professor
+                </p>
+              </div>
             )}
 
             {selectedProfile === "visitante" && (
