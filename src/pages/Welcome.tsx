@@ -120,12 +120,15 @@ const Welcome = () => {
             return;
           }
 
-          // Verificar se a turma do aluno corresponde à turma selecionada
-          if (aluno.turma !== turma) {
-            console.log('Turma não confere - Aluno:', aluno.turma, 'Selecionada:', turma);
+          // Verificar se a turma do aluno corresponde à turma selecionada (normalizado)
+          const turmaNormalizada = aluno.turma?.trim().replace(/\s+/g, ' ');
+          const turmaSelecionadaNormalizada = turma?.trim().replace(/\s+/g, ' ');
+          
+          if (turmaNormalizada !== turmaSelecionadaNormalizada) {
+            console.log('Turma não confere - Aluno:', `"${turmaNormalizada}"`, 'Selecionada:', `"${turmaSelecionadaNormalizada}"`);
             toast({
               title: "Turma incorreta",
-              description: `Seu e-mail está cadastrado na ${aluno.turma}, mas você selecionou ${turma}. Por favor, selecione a turma correta.`,
+              description: `Seu e-mail está cadastrado na ${turmaNormalizada}, mas você selecionou ${turmaSelecionadaNormalizada}. Por favor, selecione a turma correta.`,
               variant: "destructive"
             });
             return;

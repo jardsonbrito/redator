@@ -36,7 +36,7 @@ const AlunoLogin = () => {
       const { data: aluno, error } = await supabase
         .from("profiles")
         .select("id, nome, email, turma")
-        .eq("email", emailDigitado.toLowerCase().trim())
+        .eq("email", emailDigitado.trim().toLowerCase())
         .eq("user_type", "aluno")
         .maybeSingle();
 
