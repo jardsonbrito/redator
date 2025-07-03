@@ -89,13 +89,16 @@ Pedro Santos,pedro@email.com,Turma C`;
       const alunosParaImportar = [];
       const erros = [];
       
+      // Primeiro, coletamos todos os e-mails do arquivo para verificar duplicatas internas
+      const emailsDoArquivo = [];
+      
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(',').map(c => c.trim());
         const nome = cols[nomeIndex]?.trim() || '';
         const email = cols[emailIndex]?.trim().toLowerCase() || '';
         const turma = cols[turmaIndex]?.trim() || '';
 
-        // Validações
+        // Validações básicas
         if (!nome) {
           erros.push(`Linha ${i + 1}: Nome não pode estar vazio`);
           continue;
@@ -111,47 +114,63 @@ Pedro Santos,pedro@email.com,Turma C`;
           continue;
         }
 
+        // Verificar duplicatas dentro do próprio arquivo
+        if (emailsDoArquivo.includes(email)) {
+          erros.push(`Linha ${i + 1}: E-mail duplicado no arquivo: ${email}`);
+          continue;
+        }
+
+        emailsDoArquivo.push(email);
         alunosParaImportar.push({
           nome,
           email,
-          turma
+          turma,
+          linha: i + 1
         });
       }
 
-      // Verificar e-mails duplicados no arquivo
-      const emailsNoArquivo = alunosParaImportar.map(a => a.email);
-      const emailsDuplicados = emailsNoArquivo.filter((email, index) => 
-        emailsNoArquivo.indexOf(email) !== index
-      );
-      
-      if (emailsDuplicados.length > 0) {
-        erros.push(`E-mails duplicados no arquivo: ${[...new Set(emailsDuplicados)].join(', ')}`);
-      }
-
-      // Verificar e-mails já existentes no banco
+      // Verificar e-mails já existentes no banco de dados
       if (alunosParaImportar.length > 0) {
-        const { data: existingEmails } = await supabase
+        const { data: existingProfiles, error: queryError } = await supabase
           .from('profiles')
           .select('email')
           .in('email', alunosParaImportar.map(a => a.email));
 
-        if (existingEmails && existingEmails.length > 0) {
-          const emailsExistentes = existingEmails.map(p => p.email);
-          erros.push(`E-mails já cadastrados: ${emailsExistentes.join(', ')}`);
+        if (queryError) {
+          console.error('Erro ao verificar emails existentes:', queryError);
+          throw new Error('Erro ao verificar e-mails existentes no banco de dados');
+        }
+
+        if (existingProfiles && existingProfiles.length > 0) {
+          const emailsExistentes = existingProfiles.map(p => p.email);
           
-          // Remover alunos com e-mails já existentes
-          alunosParaImportar.splice(0, alunosParaImportar.length, 
-            ...alunosParaImportar.filter(a => !emailsExistentes.includes(a.email))
-          );
+          // Remover alunos com e-mails já existentes e adicionar aos erros
+          const alunosValidos = [];
+          for (const aluno of alunosParaImportar) {
+            if (emailsExistentes.includes(aluno.email)) {
+              erros.push(`Linha ${aluno.linha}: E-mail já cadastrado: ${aluno.email}`);
+            } else {
+              alunosValidos.push(aluno);
+            }
+          }
+          
+          alunosParaImportar.splice(0, alunosParaImportar.length, ...alunosValidos);
         }
       }
 
+      // Se não há alunos válidos para importar
       if (alunosParaImportar.length === 0) {
         setImportResult({
           total: lines.length - 1,
           imported: 0,
           rejected: lines.length - 1,
           errors: erros
+        });
+        
+        toast({
+          title: "Nenhum aluno importado",
+          description: "Todos os registros foram rejeitados. Verifique os erros abaixo.",
+          variant: "destructive"
         });
         return;
       }
@@ -167,14 +186,17 @@ Pedro Santos,pedro@email.com,Turma C`;
         is_authenticated_student: true
       }));
 
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('profiles')
         .insert(alunosFormatados);
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Erro na inserção:', insertError);
+        throw new Error(`Erro ao inserir alunos: ${insertError.message}`);
+      }
 
       // Registrar histórico da importação
-      await supabase
+      const { error: historyError } = await supabase
         .from('importacao_csv')
         .insert({
           nome_arquivo: file.name,
@@ -183,6 +205,11 @@ Pedro Santos,pedro@email.com,Turma C`;
           registros_rejeitados: (lines.length - 1) - alunosParaImportar.length,
           detalhes_erros: erros
         });
+
+      if (historyError) {
+        console.error('Erro ao salvar histórico:', historyError);
+        // Não bloquear a importação por erro no histórico
+      }
 
       setImportResult({
         total: lines.length - 1,
@@ -207,6 +234,13 @@ Pedro Santos,pedro@email.com,Turma C`;
         title: "Erro na importação",
         description: error.message || "Ocorreu um erro inesperado.",
         variant: "destructive"
+      });
+      
+      setImportResult({
+        total: 0,
+        imported: 0,
+        rejected: 0,
+        errors: [error.message || "Erro inesperado durante a importação"]
       });
     } finally {
       setLoading(false);
