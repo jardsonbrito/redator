@@ -46,38 +46,10 @@ const Index = () => {
       showAlways: true
     },
     {
-      title: "Redações Exemplares",
-      path: "/redacoes",
-      icon: FileText,
-      tooltip: "Veja textos nota 1000 e aprenda estratégias eficazes.",
-      showAlways: true
-    },
-    {
-      title: "Videoteca",
-      path: "/videoteca",
-      icon: Video,
-      tooltip: "Acesse vídeos para enriquecer seu repertório sociocultural.",
-      showAlways: true
-    },
-    {
-      title: "Biblioteca",
-      path: "/biblioteca",
-      icon: File,
-      tooltip: "Acesse materiais em PDF organizados por competência.",
-      showAlways: true
-    },
-    {
       title: "Simulados",
       path: "/simulados",
       icon: ClipboardCheck,
       tooltip: "Participe de simulados com horário controlado e correção detalhada.",
-      showAlways: true
-    },
-    {
-      title: "Aulas",
-      path: "/aulas",
-      icon: GraduationCap,
-      tooltip: "Acesse aulas organizadas por competência.",
       showAlways: true
     },
     {
@@ -95,10 +67,38 @@ const Index = () => {
       showAlways: true
     },
     {
+      title: "Redações Exemplares",
+      path: "/redacoes",
+      icon: FileText,
+      tooltip: "Veja textos nota 1000 e aprenda estratégias eficazes.",
+      showAlways: true
+    },
+    {
+      title: "Videoteca",
+      path: "/videoteca",
+      icon: Video,
+      tooltip: "Acesse vídeos para enriquecer seu repertório sociocultural.",
+      showAlways: true
+    },
+    {
+      title: "Aulas",
+      path: "/aulas",
+      icon: GraduationCap,
+      tooltip: "Acesse aulas organizadas por competência.",
+      showAlways: true
+    },
+    {
       title: "Top 5",
       path: "/top5",
       icon: Trophy,
       tooltip: "Veja o ranking dos melhores desempenhos em redações.",
+      showAlways: true
+    },
+    {
+      title: "Biblioteca",
+      path: "/biblioteca",
+      icon: File,
+      tooltip: "Acesse materiais em PDF organizados por competência.",
       showAlways: true
     }
   ];
