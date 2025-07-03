@@ -55,27 +55,29 @@ export const AuthUserProvider = ({ children }: { children: React.ReactNode }) =>
 
     // Configurar listener de mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!mounted) return;
 
         console.log('Auth state changed:', event, 'User:', session?.user?.email);
         
-        if (session?.user) {
-          setSession(session);
-          setUser(session.user);
-          
-          // Buscar perfil do usuário
-          const userProfile = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(userProfile);
-          }
-        } else {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-        }
+        // Apenas definir estados síncronos aqui para evitar loop
+        setSession(session);
+        setUser(session?.user ?? null);
         
-        if (mounted) {
+        // Usar setTimeout para buscar perfil de forma assíncrona
+        if (session?.user) {
+          setTimeout(() => {
+            if (mounted) {
+              fetchProfile(session.user.id).then(profile => {
+                if (mounted) {
+                  setProfile(profile);
+                  setLoading(false);
+                }
+              });
+            }
+          }, 0);
+        } else {
+          setProfile(null);
           setLoading(false);
         }
       }
@@ -109,9 +111,12 @@ export const AuthUserProvider = ({ children }: { children: React.ReactNode }) =>
           setUser(null);
           setProfile(null);
         }
+        
+        if (mounted) {
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Erro ao inicializar auth:', error);
-      } finally {
         if (mounted) {
           setLoading(false);
         }
