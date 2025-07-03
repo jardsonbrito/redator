@@ -61,7 +61,7 @@ export const useAulaVirtual = (turmaCode: string) => {
         return null;
       }
     },
-    refetchInterval: 30000,
+    refetchInterval: 2000, // Verificar a cada 2 segundos para mudança automática de status
     retry: 2,
     staleTime: 0,
   });

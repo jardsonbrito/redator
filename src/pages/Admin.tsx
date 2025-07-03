@@ -57,6 +57,7 @@ import { RadarList } from "@/components/admin/RadarList";
 import { RadarRedacoes } from "@/components/admin/RadarRedacoes";
 import { AulaVirtualForm } from "@/components/admin/AulaVirtualForm";
 import { AulaVirtualList } from "@/components/admin/AulaVirtualList";
+import { AulaVirtualEditForm } from "@/components/admin/AulaVirtualEditForm";
 import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
 const Admin = () => {
@@ -64,6 +65,7 @@ const Admin = () => {
   const [activeView, setActiveView] = useState("dashboard");
   const [refreshAvisos, setRefreshAvisos] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState(null);
+  const [aulaEditando, setAulaEditando] = useState(null);
 
   console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
 
@@ -233,6 +235,28 @@ const Admin = () => {
         );
 
       case "salas-virtuais":
+        const handleAulaSuccess = () => {
+          setAulaEditando(null);
+        };
+
+        const handleEditAula = (aula: any) => {
+          setAulaEditando(aula);
+        };
+
+        const handleCancelAulaEdit = () => {
+          setAulaEditando(null);
+        };
+
+        if (aulaEditando) {
+          return (
+            <AulaVirtualEditForm 
+              aula={aulaEditando}
+              onSuccess={handleAulaSuccess}
+              onCancel={handleCancelAulaEdit}
+            />
+          );
+        }
+
         return (
           <Tabs defaultValue="list" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
@@ -240,10 +264,10 @@ const Admin = () => {
               <TabsTrigger value="create">Criar Sala</TabsTrigger>
             </TabsList>
             <TabsContent value="list">
-              <AulaVirtualList />
+              <AulaVirtualList onEdit={handleEditAula} />
             </TabsContent>
             <TabsContent value="create">
-              <AulaVirtualForm />
+              <AulaVirtualForm onSuccess={() => {}} />
             </TabsContent>
           </Tabs>
         );

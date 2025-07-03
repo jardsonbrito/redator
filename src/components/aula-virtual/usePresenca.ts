@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -12,6 +12,11 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
     nome: "",
     sobrenome: ""
   });
+
+  // Buscar registros ao inicializar o hook
+  useEffect(() => {
+    fetchRegistrosPresenca();
+  }, [studentData]);
 
   const fetchRegistrosPresenca = async () => {
     try {

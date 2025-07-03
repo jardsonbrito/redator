@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Video, Calendar, Clock, Users, ExternalLink, Trash2, Power, PowerOff } from "lucide-react";
+import { Video, Calendar, Clock, Users, ExternalLink, Trash2, Power, PowerOff, Edit } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface AulaVirtual {
@@ -23,7 +23,7 @@ interface AulaVirtual {
   criado_em: string;
 }
 
-export const AulaVirtualList = ({ refresh }: { refresh?: boolean }) => {
+export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit?: (aula: AulaVirtual) => void }) => {
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -179,6 +179,15 @@ export const AulaVirtualList = ({ refresh }: { refresh?: boolean }) => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        {onEdit && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEdit(aula)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
