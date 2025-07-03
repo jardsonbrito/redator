@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,10 +38,12 @@ type RedacaoTurma = {
 };
 
 export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
-  const [selectedRedacao, setSelectedRedacao] = useState<RedacaoTurma | null>(null);
+  const [selectedRedacaoId, setSelectedRedacaoId] = useState<string | null>(null);
+  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<RedacaoTurma | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [showCorrecaoDialog, setShowCorrecaoDialog] = useState(false);
   const { toast } = useToast();
 
   // Mapear nomes de turma para códigos corretos
@@ -111,13 +112,16 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
   });
 
   const handleViewCorrection = (redacao: RedacaoTurma) => {
-    setSelectedRedacao(redacao);
+    // Reset states
+    setAuthenticatedRedacao(null);
+    setShowCorrecaoDialog(false);
+    setSelectedRedacaoId(redacao.id);
     setEmailInput("");
     setIsAuthDialogOpen(true);
   };
 
   const handleEmailAuth = async () => {
-    if (!selectedRedacao || !emailInput.trim()) {
+    if (!selectedRedacaoId || !emailInput.trim()) {
       toast({
         title: "E-mail obrigatório",
         description: "Por favor, digite o e-mail cadastrado na redação.",
@@ -129,7 +133,20 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     setIsAuthenticating(true);
 
     try {
-      if (emailInput.trim().toLowerCase() !== selectedRedacao.email_aluno?.toLowerCase()) {
+      // Primeiro, buscar os dados básicos da redação para verificar o e-mail
+      const { data: redacaoBasica, error: errorBasico } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, email_aluno, frase_tematica, nome_aluno')
+        .eq('id', selectedRedacaoId)
+        .single();
+
+      if (errorBasico) {
+        console.error('Erro ao buscar redação:', errorBasico);
+        throw errorBasico;
+      }
+
+      // Verificar se o e-mail está correto
+      if (emailInput.trim().toLowerCase() !== redacaoBasica.email_aluno?.toLowerCase()) {
         toast({
           title: "E-mail incorreto. Acesso negado à correção.",
           description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
@@ -138,20 +155,31 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         return;
       }
 
-      // Buscar redação completa APENAS após validação do e-mail
-      const { data: redacaoCompleta, error } = await supabase
+      // SOMENTE após validação do e-mail, buscar os dados completos da correção
+      const { data: redacaoCompleta, error: errorCompleto } = await supabase
         .from('redacoes_enviadas')
         .select('*')
-        .eq('id', selectedRedacao.id)
+        .eq('id', selectedRedacaoId)
         .single();
 
-      if (error) {
-        console.error('Erro ao buscar redação completa:', error);
-        throw error;
+      if (errorCompleto) {
+        console.error('Erro ao buscar redação completa:', errorCompleto);
+        throw errorCompleto;
       }
 
-      const redacaoComTexto: RedacaoTurma & { redacao_texto: string } = {
-        ...selectedRedacao,
+      // Preparar dados completos APENAS após autenticação bem-sucedida
+      const redacaoAutenticada: RedacaoTurma & { redacao_texto: string } = {
+        id: redacaoCompleta.id,
+        frase_tematica: redacaoCompleta.frase_tematica,
+        nome_aluno: redacaoCompleta.nome_aluno,
+        email_aluno: redacaoCompleta.email_aluno,
+        tipo_envio: redacaoCompleta.tipo_envio,
+        data_envio: redacaoCompleta.data_envio,
+        status: redacaoCompleta.status,
+        corrigida: redacaoCompleta.corrigida,
+        nota_total: redacaoCompleta.nota_total,
+        comentario_admin: redacaoCompleta.comentario_admin,
+        data_correcao: redacaoCompleta.data_correcao,
         redacao_texto: redacaoCompleta.redacao_texto || "",
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
@@ -160,8 +188,10 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
+      // Fechar modal de autenticação e definir dados autenticados
       setIsAuthDialogOpen(false);
-      setSelectedRedacao(redacaoComTexto);
+      setAuthenticatedRedacao(redacaoAutenticada);
+      setShowCorrecaoDialog(true);
       
       toast({
         title: "Correção liberada!",
@@ -178,6 +208,14 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     } finally {
       setIsAuthenticating(false);
     }
+  };
+
+  const resetAuthenticationState = () => {
+    setSelectedRedacaoId(null);
+    setAuthenticatedRedacao(null);
+    setEmailInput("");
+    setIsAuthDialogOpen(false);
+    setShowCorrecaoDialog(false);
   };
 
   const getTipoEnvioLabel = (tipo: string) => {
@@ -314,8 +352,13 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         </Card>
       </div>
 
-      {/* Dialog de autenticação por email */}
-      <Dialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen}>
+      {/* Dialog de autenticação por email - SEM dados da correção */}
+      <Dialog open={isAuthDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          resetAuthenticationState();
+        }
+        setIsAuthDialogOpen(open);
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-primary flex items-center gap-2">
@@ -333,13 +376,6 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 </div>
               </div>
             </div>
-
-            {selectedRedacao && (
-              <div className="space-y-2 text-sm bg-primary/5 p-3 rounded-lg">
-                <p><span className="font-medium text-primary">Redação:</span> {selectedRedacao.frase_tematica}</p>
-                <p><span className="font-medium text-primary">Autor:</span> {selectedRedacao.nome_aluno}</p>
-              </div>
-            )}
 
             <div>
               <label htmlFor="email-auth" className="block text-sm font-medium text-primary mb-2">
@@ -366,7 +402,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
               
               <Button 
                 variant="outline"
-                onClick={() => setIsAuthDialogOpen(false)}
+                onClick={() => resetAuthenticationState()}
                 className="border-primary/30"
               >
                 Cancelar
@@ -376,36 +412,41 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de visualização da correção autenticada */}
-      {selectedRedacao && selectedRedacao.redacao_texto && (
-        <Dialog open={!!selectedRedacao.redacao_texto} onOpenChange={() => setSelectedRedacao(null)}>
+      {/* Modal de visualização da correção - APENAS após autenticação */}
+      {authenticatedRedacao && showCorrecaoDialog && (
+        <Dialog open={showCorrecaoDialog} onOpenChange={(open) => {
+          if (!open) {
+            resetAuthenticationState();
+          }
+          setShowCorrecaoDialog(open);
+        }}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-primary">
-                {selectedRedacao.frase_tematica}
+                {authenticatedRedacao.frase_tematica}
               </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-6">
               <RedacaoEnviadaCard 
                 redacao={{
-                  id: selectedRedacao.id,
-                  frase_tematica: selectedRedacao.frase_tematica,
-                  redacao_texto: selectedRedacao.redacao_texto,
-                  data_envio: selectedRedacao.data_envio,
-                  nota_c1: selectedRedacao.nota_c1,
-                  nota_c2: selectedRedacao.nota_c2,
-                  nota_c3: selectedRedacao.nota_c3,
-                  nota_c4: selectedRedacao.nota_c4,
-                  nota_c5: selectedRedacao.nota_c5,
-                  nota_total: selectedRedacao.nota_total,
-                  comentario_admin: selectedRedacao.comentario_admin,
-                  corrigida: selectedRedacao.corrigida,
-                  data_correcao: selectedRedacao.data_correcao,
-                  nome_aluno: selectedRedacao.nome_aluno,
-                  email_aluno: selectedRedacao.email_aluno,
-                  tipo_envio: selectedRedacao.tipo_envio,
-                  status: selectedRedacao.status,
+                  id: authenticatedRedacao.id,
+                  frase_tematica: authenticatedRedacao.frase_tematica,
+                  redacao_texto: authenticatedRedacao.redacao_texto || "",
+                  data_envio: authenticatedRedacao.data_envio,
+                  nota_c1: authenticatedRedacao.nota_c1,
+                  nota_c2: authenticatedRedacao.nota_c2,
+                  nota_c3: authenticatedRedacao.nota_c3,
+                  nota_c4: authenticatedRedacao.nota_c4,
+                  nota_c5: authenticatedRedacao.nota_c5,
+                  nota_total: authenticatedRedacao.nota_total,
+                  comentario_admin: authenticatedRedacao.comentario_admin,
+                  corrigida: authenticatedRedacao.corrigida,
+                  data_correcao: authenticatedRedacao.data_correcao,
+                  nome_aluno: authenticatedRedacao.nome_aluno,
+                  email_aluno: authenticatedRedacao.email_aluno,
+                  tipo_envio: authenticatedRedacao.tipo_envio,
+                  status: authenticatedRedacao.status,
                   turma: turmaCode === "visitante" ? "visitante" : turmaCode,
                 }} 
               />
