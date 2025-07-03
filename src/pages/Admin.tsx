@@ -82,15 +82,15 @@ const Admin = () => {
   const menuItems = [
     { id: "temas", label: "Temas", icon: BookOpen },
     { id: "redacoes", label: "Redações", icon: FileText },
+    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
+    { id: "simulados", label: "Simulados", icon: ClipboardCheck },
+    { id: "exercicios", label: "Exercícios", icon: NotebookPen },
+    { id: "salas-virtuais", label: "Salas Virtuais", icon: Video },
+    { id: "aulas", label: "Aulas", icon: GraduationCap },
+    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
     { id: "videos", label: "Vídeos", icon: Video },
     { id: "biblioteca", label: "Biblioteca", icon: File },
-    { id: "simulados", label: "Simulados", icon: ClipboardCheck },
-    { id: "aulas", label: "Aulas", icon: GraduationCap },
-    { id: "exercicios", label: "Exercícios", icon: NotebookPen },
-    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
-    { id: "salas-virtuais", label: "Salas Virtuais", icon: Video },
     { id: "radar", label: "Radar", icon: Radar },
-    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
   ];
 
   const renderContent = () => {
