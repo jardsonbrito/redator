@@ -5,9 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AuthUserProvider } from "@/hooks/useAuthUser";
 import { StudentAuthProvider } from "@/hooks/useStudentAuth";
 import Welcome from "./pages/Welcome";
 import AlunoLogin from "./pages/AlunoLogin";
+import AlunoAuth from "./pages/AlunoAuth";
 import VisitanteLogin from "./pages/VisitanteLogin";
 import Index from "./pages/Index";
 import Redacoes from "./pages/Redacoes";
@@ -32,15 +34,17 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <StudentAuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Welcome />} />
-              <Route path="/aluno-login" element={<AlunoLogin />} />
-              <Route path="/visitante-login" element={<VisitanteLogin />} />
+      <AuthUserProvider>
+        <StudentAuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Welcome />} />
+                <Route path="/aluno-login" element={<AlunoLogin />} />
+                <Route path="/aluno-auth" element={<AlunoAuth />} />
+                <Route path="/visitante-login" element={<VisitanteLogin />} />
               <Route path="/app" element={<Index />} />
               <Route path="/redacoes" element={<Redacoes />} />
               <Route path="/redacoes/:id" element={<RedacaoDetalhes />} />
@@ -63,8 +67,9 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </StudentAuthProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+    </AuthUserProvider>
+  </AuthProvider>
+</QueryClientProvider>
 );
 
 export default App;
