@@ -17,58 +17,68 @@ const AlunoAuth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Estados para login
-  const [loginData, setLoginData] = useState({
-    email: "",
-    password: ""
-  });
+  // Estados para login simplificado (apenas e-mail)
+  const [loginEmail, setLoginEmail] = useState("");
   
   // Estados para cadastro
   const [signupData, setSignupData] = useState({
     nome: "",
-    sobrenome: "",
     email: "",
-    password: "",
     turma: ""
   });
 
   const turmas = [
-    { value: "Turma A", label: "Turma A" },
-    { value: "Turma B", label: "Turma B" },
-    { value: "Turma C", label: "Turma C" },
-    { value: "Turma D", label: "Turma D" },
-    { value: "Turma E", label: "Turma E" },
-    { value: "Visitante", label: "Visitante" }
+    { value: "LRA 2025", label: "LRA 2025" },
+    { value: "LRB 2025", label: "LRB 2025" },
+    { value: "LRC 2025", label: "LRC 2025" },
+    { value: "LRD 2025", label: "LRD 2025" },
+    { value: "LRE 2025", label: "LRE 2025" },
+    { value: "VISITANTE", label: "VISITANTE" }
   ];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!loginEmail.trim()) {
+      toast({
+        title: "E-mail obrigatório",
+        description: "Por favor, digite seu e-mail para acessar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginData.email,
-        password: loginData.password,
-      });
+      // Verificar se o perfil existe no banco
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', loginEmail.trim())
+        .single();
 
-      if (error) {
+      if (error || !profile) {
         toast({
-          title: "Erro no login",
-          description: error.message === "Invalid login credentials" 
-            ? "Email ou senha incorretos" 
-            : error.message,
+          title: "E-mail não encontrado",
+          description: "Este e-mail não está cadastrado. Faça seu cadastro primeiro.",
           variant: "destructive",
         });
+        setActiveTab("signup");
+        setSignupData(prev => ({ ...prev, email: loginEmail.trim() }));
         return;
       }
 
-      if (data.user) {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Redirecionando para sua área...",
-        });
-        navigate("/app", { replace: true });
-      }
+      // Simular login direto com o perfil encontrado
+      toast({
+        title: "Acesso liberado!",
+        description: `Bem-vindo(a), ${profile.nome}!`,
+      });
+      
+      // Armazenar dados do usuário no localStorage para simular sessão
+      localStorage.setItem('user_profile', JSON.stringify(profile));
+      navigate("/app", { replace: true });
+      
     } catch (error: any) {
       toast({
         title: "Erro inesperado",
@@ -83,19 +93,20 @@ const AlunoAuth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!signupData.nome.trim() || !signupData.sobrenome.trim() || !signupData.email.trim() || !signupData.password.trim() || !signupData.turma) {
+    if (!signupData.nome.trim() || !signupData.email.trim() || !signupData.turma) {
       toast({
         title: "Preencha todos os campos",
-        description: "Todos os campos são obrigatórios.",
+        description: "Nome, e-mail e turma são obrigatórios.",
         variant: "destructive",
       });
       return;
     }
 
-    if (signupData.password.length < 6) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(signupData.email)) {
       toast({
-        title: "Senha muito curta",
-        description: "A senha deve ter pelo menos 6 caracteres.",
+        title: "E-mail inválido",
+        description: "Por favor, insira um e-mail válido.",
         variant: "destructive",
       });
       return;
@@ -104,37 +115,49 @@ const AlunoAuth = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: signupData.email,
-        password: signupData.password,
-        options: {
-          data: {
-            nome: signupData.nome,
-            sobrenome: signupData.sobrenome,
-            user_type: 'aluno',
-            turma: signupData.turma
-          }
-        }
+      // Verificar se o e-mail já existe
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', signupData.email.trim())
+        .single();
+
+      if (existingProfile) {
+        toast({
+          title: "E-mail já cadastrado",
+          description: "Este e-mail já possui cadastro. Use a aba 'Entrar' para acessar.",
+          variant: "destructive",
+        });
+        setActiveTab("login");
+        setLoginEmail(signupData.email.trim());
+        return;
+      }
+
+      // Criar perfil diretamente na tabela profiles usando RPC
+      const { data, error } = await supabase.rpc('create_simple_profile', {
+        p_nome: signupData.nome.trim(),
+        p_email: signupData.email.trim(),
+        p_turma: signupData.turma
       });
 
       if (error) {
         toast({
           title: "Erro no cadastro",
-          description: error.message === "User already registered" 
-            ? "Este email já está cadastrado" 
-            : error.message,
+          description: "Não foi possível concluir o cadastro. Tente novamente.",
           variant: "destructive",
         });
         return;
       }
 
-      if (data.user) {
+      if (data) {
         toast({
           title: "Cadastro realizado com sucesso!",
-          description: "Você já pode fazer login e acessar sua área.",
+          description: `Bem-vindo(a), ${data.nome}! Entrando na sua área...`,
         });
-        setActiveTab("login");
-        setLoginData({ email: signupData.email, password: "" });
+        
+        // Armazenar dados do usuário no localStorage
+        localStorage.setItem('user_profile', JSON.stringify(data));
+        navigate("/app", { replace: true });
       }
     } catch (error: any) {
       toast({
@@ -170,7 +193,7 @@ const AlunoAuth = () => {
             Área do Aluno
           </h1>
           <p className="text-redator-accent">
-            Faça login ou cadastre-se para acessar
+            Entre com seu e-mail ou cadastre-se pela primeira vez
           </p>
         </div>
 
@@ -201,22 +224,9 @@ const AlunoAuth = () => {
                     <Input
                       id="login-email"
                       type="email"
-                      value={loginData.email}
-                      onChange={(e) => setLoginData(prev => ({...prev, email: e.target.value}))}
-                      placeholder="Digite seu e-mail"
-                      className="border-redator-accent/30"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="login-password">Senha</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      value={loginData.password}
-                      onChange={(e) => setLoginData(prev => ({...prev, password: e.target.value}))}
-                      placeholder="Digite sua senha"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      placeholder="Digite seu e-mail cadastrado"
                       className="border-redator-accent/30"
                       required
                     />
@@ -227,36 +237,27 @@ const AlunoAuth = () => {
                     disabled={loading}
                     className="w-full bg-redator-primary hover:bg-redator-primary/90"
                   >
-                    {loading ? "Entrando..." : "Entrar"}
+                    {loading ? "Verificando..." : "Entrar"}
                   </Button>
+                  
+                  <p className="text-xs text-gray-500 text-center">
+                    Digite apenas seu e-mail para acessar sua área
+                  </p>
                 </form>
               </TabsContent>
 
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label htmlFor="signup-nome">Nome</Label>
-                      <Input
-                        id="signup-nome"
-                        value={signupData.nome}
-                        onChange={(e) => setSignupData(prev => ({...prev, nome: e.target.value}))}
-                        placeholder="Nome"
-                        className="border-redator-accent/30"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="signup-sobrenome">Sobrenome</Label>
-                      <Input
-                        id="signup-sobrenome"
-                        value={signupData.sobrenome}
-                        onChange={(e) => setSignupData(prev => ({...prev, sobrenome: e.target.value}))}
-                        placeholder="Sobrenome"
-                        className="border-redator-accent/30"
-                        required
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="signup-nome">Nome Completo</Label>
+                    <Input
+                      id="signup-nome"
+                      value={signupData.nome}
+                      onChange={(e) => setSignupData(prev => ({...prev, nome: e.target.value}))}
+                      placeholder="Digite seu nome completo"
+                      className="border-redator-accent/30"
+                      required
+                    />
                   </div>
                   
                   <div>
@@ -266,23 +267,9 @@ const AlunoAuth = () => {
                       type="email"
                       value={signupData.email}
                       onChange={(e) => setSignupData(prev => ({...prev, email: e.target.value}))}
-                      placeholder="Digite seu e-mail"
+                      placeholder="Digite seu e-mail (será sua chave de acesso)"
                       className="border-redator-accent/30"
                       required
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="signup-password">Criar Senha</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      value={signupData.password}
-                      onChange={(e) => setSignupData(prev => ({...prev, password: e.target.value}))}
-                      placeholder="Mínimo 6 caracteres"
-                      className="border-redator-accent/30"
-                      required
-                      minLength={6}
                     />
                   </div>
                   
@@ -307,8 +294,12 @@ const AlunoAuth = () => {
                     disabled={loading}
                     className="w-full bg-green-600 hover:bg-green-700"
                   >
-                    {loading ? "Cadastrando..." : "Cadastrar"}
+                    {loading ? "Cadastrando..." : "Criar Conta"}
                   </Button>
+                  
+                  <p className="text-xs text-gray-500 text-center">
+                    Não exigimos senha. Seu e-mail será sua chave de acesso.
+                  </p>
                 </form>
               </TabsContent>
             </Tabs>
