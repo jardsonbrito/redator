@@ -3,8 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
+import { MinhasRedacoesCard } from "@/components/MinhasRedacoesCard";
 import { SimuladoAtivo } from "@/components/SimuladoAtivo";
 import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
@@ -15,6 +17,7 @@ import { MuralAvisos } from "@/components/MuralAvisos";
 const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
+  const { isAuthenticated, studentProfile } = useSupabaseAuth();
   
   // Mapear nomes de turma para códigos corretos
   const getTurmaCode = (turmaNome: string) => {
@@ -30,8 +33,11 @@ const Index = () => {
 
   // Determina a turma/código do usuário
   let turmaCode = "Visitante";
-  if (studentData.userType === "aluno" && studentData.turma) {
-    turmaCode = studentData.turma; // Usar nome da turma para display, código será mapeado internamente
+  if (isAuthenticated && studentProfile) {
+    // Usuário autenticado individual
+    turmaCode = studentProfile.turma || "Aluno Autenticado";
+  } else if (studentData.userType === "aluno" && studentData.turma) {
+    turmaCode = studentData.turma;
   } else if (studentData.userType === "visitante") {
     turmaCode = "visitante";
   }
@@ -126,13 +132,15 @@ const Index = () => {
               </div>
               
               {/* Badge da turma */}
-              {studentData.userType && (
+              {(studentData.userType || isAuthenticated) && (
                 <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-lg border border-secondary">
                   <div className="w-2 h-2 bg-primary rounded-full"></div>
                   <p className="text-sm font-semibold text-primary">
-                    {studentData.userType === "aluno" && studentData.turma ? 
-                      `Aluno da ${studentData.turma}` : 
-                      "Visitante"
+                    {isAuthenticated && studentProfile ? 
+                      `${studentProfile.nome} - ${studentProfile.turma}` :
+                      studentData.userType === "aluno" && studentData.turma ? 
+                        `Aluno da ${studentData.turma}` : 
+                        "Visitante"
                     }
                   </p>
                 </div>
@@ -145,13 +153,16 @@ const Index = () => {
             {/* Mural de Avisos */}
             <MuralAvisos turmaCode={turmaCode} />
 
-            {/* Card "Minhas Redações" - SEMPRE FIXO E VISÍVEL */}
+            {/* Card "Minhas Redações" - Para alunos autenticados individualmente */}
+            {isAuthenticated && <MinhasRedacoesCard />}
+
+            {/* Card "Meus Simulados" - SEMPRE FIXO E VISÍVEL */}
             <MeusSimuladosFixo turmaCode={turmaCode} />
 
             {/* Menu Principal Horizontal */}
             <MenuGrid 
               menuItems={menuItems} 
-              showMinhasRedacoes={!!showMinhasRedacoes} 
+              showMinhasRedacoes={!!showMinhasRedacoes && !isAuthenticated} 
             />
           </main>
         </div>
