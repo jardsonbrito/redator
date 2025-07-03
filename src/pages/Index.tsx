@@ -37,6 +37,37 @@ const Index = () => {
     turmaCode = "Visitante"; // Corrigido para usar maiúscula consistente
   }
 
+  // Função para detectar gênero baseado no primeiro nome
+  const detectGender = (name: string): 'masculino' | 'feminino' | 'neutro' => {
+    const firstName = name.trim().split(' ')[0].toLowerCase();
+    
+    // Lista de nomes femininos comuns
+    const nomesFemininos = [
+      'maria', 'ana', 'lucia', 'fernanda', 'juliana', 'carla', 'patricia', 'sandra', 'marcia', 'adriana',
+      'claudia', 'simone', 'vanessa', 'cristina', 'beatriz', 'leticia', 'monica', 'debora', 'rosana', 'silvia',
+      'renata', 'viviane', 'eliane', 'fabiana', 'priscila', 'tatiana', 'luciana', 'michele', 'cintia', 'flavia',
+      'amanda', 'camila', 'natalia', 'sabrina', 'roberta', 'daniela', 'carolina', 'gabriela', 'rafaela', 'larissa',
+      'jessica', 'luana', 'bianca', 'mariana', 'isabela', 'lorena', 'helena', 'julia', 'vitoria', 'alice',
+      'sofia', 'clara', 'laura', 'nicole', 'melissa', 'lara', 'giovanna', 'valentina', 'aurora', 'luna'
+    ];
+    
+    return nomesFemininos.includes(firstName) ? 'feminino' : 'masculino';
+  };
+
+  // Função para criar saudação personalizada
+  const getPersonalizedGreeting = (nomeCompleto: string): string => {
+    const genero = detectGender(nomeCompleto);
+    
+    switch (genero) {
+      case 'feminino':
+        return `Bem-vinda, ${nomeCompleto}!`;
+      case 'masculino':
+        return `Bem-vindo, ${nomeCompleto}!`;
+      default:
+        return `Olá, ${nomeCompleto}!`;
+    }
+  };
+
   const menuItems = [
     {
       title: "Temas",
@@ -126,13 +157,13 @@ const Index = () => {
                 />
               </div>
               
-              {/* Badge da turma */}
+              {/* Saudação personalizada */}
               {studentData.userType && (
                 <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-lg border border-secondary">
                   <div className="w-2 h-2 bg-primary rounded-full"></div>
                   <p className="text-sm font-semibold text-primary">
-                    {studentData.userType === "aluno" && studentData.turma ? 
-                      `Aluno da ${studentData.turma}` : 
+                    {studentData.userType === "aluno" && studentData.nomeCompleto ? 
+                      getPersonalizedGreeting(studentData.nomeCompleto) : 
                       "Visitante"
                     }
                   </p>
