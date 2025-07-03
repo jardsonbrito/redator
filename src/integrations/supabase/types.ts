@@ -111,6 +111,54 @@ export type Database = {
         }
         Relationships: []
       }
+      aulas_virtuais: {
+        Row: {
+          abrir_aba_externa: boolean
+          ativo: boolean
+          atualizado_em: string
+          criado_em: string
+          data_aula: string
+          descricao: string | null
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          imagem_capa_url: string | null
+          link_meet: string
+          titulo: string
+          turmas_autorizadas: string[]
+        }
+        Insert: {
+          abrir_aba_externa?: boolean
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          data_aula: string
+          descricao?: string | null
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          imagem_capa_url?: string | null
+          link_meet: string
+          titulo: string
+          turmas_autorizadas?: string[]
+        }
+        Update: {
+          abrir_aba_externa?: boolean
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          data_aula?: string
+          descricao?: string | null
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          imagem_capa_url?: string | null
+          link_meet?: string
+          titulo?: string
+          turmas_autorizadas?: string[]
+        }
+        Relationships: []
+      }
       avisos: {
         Row: {
           ativo: boolean
@@ -285,6 +333,50 @@ export type Database = {
             columns: ["tema_id"]
             isOneToOne: false
             referencedRelation: "temas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presenca_aulas: {
+        Row: {
+          aula_id: string
+          criado_em: string
+          data_registro: string
+          email_aluno: string
+          id: string
+          nome_aluno: string
+          sobrenome_aluno: string
+          tipo_registro: string
+          turma: string
+        }
+        Insert: {
+          aula_id: string
+          criado_em?: string
+          data_registro?: string
+          email_aluno: string
+          id?: string
+          nome_aluno: string
+          sobrenome_aluno: string
+          tipo_registro: string
+          turma: string
+        }
+        Update: {
+          aula_id?: string
+          criado_em?: string
+          data_registro?: string
+          email_aluno?: string
+          id?: string
+          nome_aluno?: string
+          sobrenome_aluno?: string
+          tipo_registro?: string
+          turma?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presenca_aulas_aula_id_fkey"
+            columns: ["aula_id"]
+            isOneToOne: false
+            referencedRelation: "aulas_virtuais"
             referencedColumns: ["id"]
           },
         ]
@@ -818,6 +910,10 @@ export type Database = {
           admin_user_id?: string
         }
         Returns: boolean
+      }
+      calcular_tempo_presenca: {
+        Args: { p_aula_id: string; p_email_aluno: string }
+        Returns: number
       }
       can_access_redacao: {
         Args: { redacao_email: string; user_email: string }

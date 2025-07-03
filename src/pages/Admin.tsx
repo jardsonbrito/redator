@@ -55,6 +55,9 @@ import { AvisoList } from "@/components/admin/AvisoList";
 import { RadarUpload } from "@/components/admin/RadarUpload";
 import { RadarList } from "@/components/admin/RadarList";
 import { RadarRedacoes } from "@/components/admin/RadarRedacoes";
+import { AulaVirtualForm } from "@/components/admin/AulaVirtualForm";
+import { AulaVirtualList } from "@/components/admin/AulaVirtualList";
+import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -83,6 +86,7 @@ const Admin = () => {
     { id: "aulas", label: "Aulas", icon: GraduationCap },
     { id: "exercicios", label: "Exercícios", icon: NotebookPen },
     { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
+    { id: "salas-virtuais", label: "Salas Virtuais", icon: Video },
     { id: "radar", label: "Radar", icon: Radar },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
   ];
@@ -228,6 +232,22 @@ const Admin = () => {
           </div>
         );
 
+      case "salas-virtuais":
+        return (
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="list">Listar Salas</TabsTrigger>
+              <TabsTrigger value="create">Criar Sala</TabsTrigger>
+            </TabsList>
+            <TabsContent value="list">
+              <AulaVirtualList />
+            </TabsContent>
+            <TabsContent value="create">
+              <AulaVirtualForm />
+            </TabsContent>
+          </Tabs>
+        );
+
       case "radar":
         return (
           <div className="space-y-6">
@@ -238,9 +258,10 @@ const Admin = () => {
               </p>
             </div>
             <Tabs defaultValue="exercicios" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="exercicios">Dados de Exercícios</TabsTrigger>
                 <TabsTrigger value="redacoes">Redações Corrigidas</TabsTrigger>
+                <TabsTrigger value="frequencia">Frequência</TabsTrigger>
               </TabsList>
               <TabsContent value="exercicios" className="space-y-6">
                 <RadarUpload />
@@ -248,6 +269,9 @@ const Admin = () => {
               </TabsContent>
               <TabsContent value="redacoes">
                 <RadarRedacoes />
+              </TabsContent>
+              <TabsContent value="frequencia">
+                <FrequenciaAulas />
               </TabsContent>
             </Tabs>
           </div>

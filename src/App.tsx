@@ -20,6 +20,8 @@ import Simulados from "./pages/Simulados";
 import SimuladoDetalhes from "./pages/SimuladoDetalhes";
 import MeusSimulados from "./pages/MeusSimulados";
 import Top5 from "./pages/Top5";
+import SalaVirtual from "./pages/SalaVirtual";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import Aulas from "./pages/Aulas";
 import Exercicios from "./pages/Exercicios";
