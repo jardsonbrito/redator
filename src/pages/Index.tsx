@@ -6,6 +6,7 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { SimuladoAtivo } from "@/components/SimuladoAtivo";
+import { AulaVirtualAtiva } from "@/components/AulaVirtualAtiva";
 import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -141,6 +142,9 @@ const Index = () => {
 
             {/* Simulado Ativo - SEMPRE em destaque no topo */}
             <SimuladoAtivo turmaCode={turmaCode} />
+
+            {/* Aula Virtual Ativa */}
+            <AulaVirtualAtiva turmaCode={turmaCode} />
 
             {/* Mural de Avisos */}
             <MuralAvisos turmaCode={turmaCode} />
