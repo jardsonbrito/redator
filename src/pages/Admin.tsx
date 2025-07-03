@@ -239,20 +239,23 @@ const Admin = () => {
       
       default:
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {menuItems.map((item) => (
-              <Card key={item.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setActiveView(item.id)}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <item.icon className="w-5 h-5 text-redator-primary" />
-                    {item.label}
-                  </CardTitle>
+              <Card 
+                key={item.id} 
+                className="group cursor-pointer bg-white/80 backdrop-blur-sm hover:bg-white hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 border border-primary/10 hover:border-primary/20 rounded-2xl overflow-hidden" 
+                onClick={() => setActiveView(item.id)}
+              >
+                <CardHeader className="p-8 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="p-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl group-hover:from-primary/20 group-hover:to-accent/20 transition-all duration-300">
+                      <item.icon className="w-8 h-8 text-primary group-hover:text-accent transition-colors duration-300" />
+                    </div>
+                    <CardTitle className="text-xl font-semibold text-primary group-hover:text-accent transition-colors duration-300">
+                      {item.label}
+                    </CardTitle>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">
-                    Gerenciar {item.label.toLowerCase()}
-                  </p>
-                </CardContent>
               </Card>
             ))}
           </div>
@@ -261,23 +264,34 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
+            <div className="flex items-center gap-6">
+              <Link to="/app" className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 px-3 py-2 rounded-lg transition-all duration-300 text-primary hover:text-primary font-medium">
                 <Home className="w-5 h-5" />
                 <span>Voltar ao App</span>
               </Link>
-              <div className="w-px h-6 bg-gray-300"></div>
-              <h1 className="text-2xl font-bold text-redator-primary">Painel Administrativo</h1>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  Painel Administrativo
+                </h1>
+              </div>
             </div>
             
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">Olá, {user.email}</span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <div className="bg-secondary/20 px-3 py-1 rounded-full">
+                <span className="text-sm font-medium text-primary">Olá, {user.email}</span>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleLogout}
+                className="border-primary/20 hover:bg-primary hover:text-white transition-all duration-300"
+              >
                 <LogOut className="w-4 h-4 mr-2" />
                 Sair
               </Button>
@@ -288,14 +302,19 @@ const Admin = () => {
 
       {/* Navigation */}
       {activeView !== "dashboard" && (
-        <nav className="bg-white border-b">
+        <nav className="bg-white/80 backdrop-blur-sm border-b border-primary/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-1 py-2">
-              <Button variant="ghost" size="sm" onClick={() => setActiveView("dashboard")}>
+            <div className="flex items-center gap-3 py-3">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setActiveView("dashboard")}
+                className="hover:bg-primary/10 text-primary"
+              >
                 Dashboard
               </Button>
-              <span className="text-gray-400">/</span>
-              <span className="text-redator-primary font-medium">
+              <span className="text-primary/40">/</span>
+              <span className="text-primary font-semibold">
                 {menuItems.find(item => item.id === activeView)?.label}
               </span>
             </div>
