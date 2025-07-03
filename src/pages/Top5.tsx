@@ -204,7 +204,7 @@ const Top5 = () => {
                   onClick={() => setSelectedType("avulsa")}
                   className="bg-primary/10 border-primary/30"
                 >
-                  Avulsa
+                  Visitante
                 </Button>
               </div>
 
