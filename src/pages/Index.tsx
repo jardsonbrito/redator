@@ -5,20 +5,25 @@ import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
+import { MinhasRedacoesUnificado } from "@/components/MinhasRedacoesUnificado";
 import { SimuladoAtivo } from "@/components/SimuladoAtivo";
 import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
+  const { profile, isAuthenticated } = useAuthUser();
   
   // Determina a turma/código do usuário
   let turmaCode = "Visitante";
-  if (studentData.userType === "aluno" && studentData.turma) {
+  if (isAuthenticated && profile?.turma) {
+    turmaCode = profile.turma;
+  } else if (studentData.userType === "aluno" && studentData.turma) {
     turmaCode = studentData.turma;
   }
 
@@ -89,7 +94,8 @@ const Index = () => {
   ];
 
   // Determinar se deve mostrar seção "Minhas Redações" - tanto para alunos quanto visitantes
-  const showMinhasRedacoes = (studentData.userType === "aluno" && studentData.turma) || studentData.userType === "visitante";
+  const showMinhasRedacoes = isAuthenticated || (studentData.userType === "aluno" && studentData.turma) || studentData.userType === "visitante";
+  const useUnifiedRedacoes = isAuthenticated; // Usar componente unificado para usuários autenticados
 
   return (
     <ProtectedRoute>
@@ -112,13 +118,16 @@ const Index = () => {
               </div>
               
               {/* Badge da turma */}
-              {studentData.userType && (
+              {(isAuthenticated || studentData.userType) && (
                 <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-lg border border-secondary">
                   <div className="w-2 h-2 bg-primary rounded-full"></div>
                   <p className="text-sm font-semibold text-primary">
-                    {studentData.userType === "aluno" && studentData.turma ? 
-                      `Aluno da ${studentData.turma}` : 
-                      "Visitante"
+                    {isAuthenticated && profile ? 
+                      `${profile.nome} ${profile.sobrenome} - ${profile.turma}` :
+                      (studentData.userType === "aluno" && studentData.turma ? 
+                        `Aluno da ${studentData.turma}` : 
+                        "Visitante"
+                      )
                     }
                   </p>
                 </div>
@@ -131,10 +140,14 @@ const Index = () => {
             {/* Mural de Avisos */}
             <MuralAvisos turmaCode={turmaCode} />
 
-            {/* Seção "Minhas Redações" - apenas para alunos de turma */}
+            {/* Seção "Minhas Redações" - para usuários autenticados e visitantes */}
             {showMinhasRedacoes && (
               <div className="mb-8">
-                <MinhasRedacoes />
+                {useUnifiedRedacoes ? (
+                  <MinhasRedacoesUnificado />
+                ) : (
+                  <MinhasRedacoes />
+                )}
               </div>
             )}
 
