@@ -87,10 +87,10 @@ const Index = () => {
       showAlways: true
     },
     {
-      title: "Enviar Redação (Avulsa)",
+      title: studentData.userType === "aluno" ? "Enviar Redação – Tema Livre" : "Enviar Redação Avulsa – Tema Livre",
       path: "/envie-redacao",
       icon: Send,
-      tooltip: "Submeta seu texto para correção detalhada.",
+      tooltip: "Submeta seu texto sobre tema livre para correção detalhada.",
       showAlways: true
     },
     {

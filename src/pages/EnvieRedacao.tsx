@@ -28,12 +28,12 @@ const EnvieRedacao = () => {
   const alunoTurma = localStorage.getItem("alunoTurma");
   const visitanteData = localStorage.getItem("visitanteData");
 
-  // Determina o tipo de envio e turma
-  let tipoEnvio = "visitante";
+  // Determina o tipo de envio e turma - baseado no tipo de login do usuário
+  let tipoEnvio = "avulsa"; // Para visitantes sem turma
   let turmaCode = "visitante";
   
   if (userType === "aluno" && alunoTurma) {
-    tipoEnvio = "regular";
+    tipoEnvio = "regular"; // Para alunos logados com turma
     const turmasMap = {
       "Turma A": "LRA2025",
       "Turma B": "LRB2025", 
@@ -146,7 +146,8 @@ const EnvieRedacao = () => {
               <span>Início</span>
             </Link>
             <h1 className="text-2xl font-bold text-redator-primary">
-              {fonteFromUrl === 'tema' ? 'Redação sobre Tema' : 'Envie sua Redação'}
+              {fonteFromUrl === 'tema' ? 'Redação sobre Tema' : 
+               (userType === "aluno" ? 'Enviar Redação – Tema Livre' : 'Enviar Redação Avulsa – Tema Livre')}
             </h1>
           </div>
         </div>
@@ -159,12 +160,13 @@ const EnvieRedacao = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-redator-primary">
               <Send className="w-5 h-5" />
-              {fonteFromUrl === 'tema' ? 'Redação sobre o Tema Selecionado' : 'Envie sua Redação'}
+              {fonteFromUrl === 'tema' ? 'Redação sobre o Tema Selecionado' : 
+               (userType === "aluno" ? 'Enviar Redação – Tema Livre' : 'Enviar Redação Avulsa – Tema Livre')}
             </CardTitle>
             <p className="text-redator-accent">
               {fonteFromUrl === 'tema' 
                 ? 'Complete os dados abaixo para enviar sua redação sobre o tema escolhido. A frase temática já foi preenchida automaticamente.'
-                : 'Preencha todos os campos abaixo para enviar sua redação. Ela será corrigida e você poderá visualizar as notas e comentários no card "Minhas Redações" na página inicial.'
+                : 'Preencha todos os campos abaixo para enviar sua redação sobre tema livre. Ela será corrigida e você poderá visualizar as notas e comentários no card "Minhas Redações" na página inicial.'
               }
             </p>
           </CardHeader>
@@ -237,7 +239,7 @@ const EnvieRedacao = () => {
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <p className="text-sm text-blue-800">
                   <strong>Tipo de envio:</strong> {
-                    tipoEnvio === 'regular' ? `Aluno da ${alunoTurma}` : 'Visitante'
+                    tipoEnvio === 'regular' ? `Regular - Aluno da ${alunoTurma}` : 'Avulsa - Visitante'
                   }
                 </p>
                 <p className="text-xs text-blue-600 mt-1">

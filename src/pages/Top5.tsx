@@ -95,7 +95,7 @@ const Top5 = () => {
         if (selectedType === "regular") {
           query = query.eq('tipo_envio', 'regular');
         } else if (selectedType === "avulsa") {
-          query = query.in('tipo_envio', ['visitante', 'avulsa']);
+          query = query.eq('tipo_envio', 'avulsa');
         }
       }
       
