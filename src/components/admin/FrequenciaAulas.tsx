@@ -235,6 +235,13 @@ export const FrequenciaAulas = () => {
     setFilteredData(filtered);
   }, [frequencias, filters]);
 
+  // Carregar dados quando o componente é montado
+  useEffect(() => {
+    console.log('🔄 Carregando dados de frequência...');
+    fetchAulas();
+    fetchFrequencias();
+  }, []);
+
   // Aguarda carregamento da autenticação antes de decidir o que mostrar
   if (authLoading) {
     return (
@@ -246,30 +253,6 @@ export const FrequenciaAulas = () => {
       </Card>
     );
   }
-
-  // Verificar se é admin - sem causar logout
-  if (!user || !isAdmin) {
-    return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <Users className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Acesso restrito para administradores</p>
-          {!user && (
-            <p className="text-xs text-muted-foreground mt-1">Faça login para continuar</p>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Carregar dados quando o componente é montado
-  useEffect(() => {
-    if (user && isAdmin) {
-      console.log('👤 Usuário admin detectado, carregando dados...');
-      fetchAulas();
-      fetchFrequencias();
-    }
-  }, [user, isAdmin]);
 
   if (error) {
     return (
