@@ -30,7 +30,7 @@ const AlunoLogin = () => {
   };
 
   const handleLoginAluno = async () => {
-    if (!emailDigitado) {
+    if (!emailDigitado.trim()) {
       toast({
         title: "Digite seu e-mail",
         description: "O e-mail é obrigatório para o login.",
@@ -39,7 +39,7 @@ const AlunoLogin = () => {
       return;
     }
 
-    if (!senhaDigitada) {
+    if (!senhaDigitada.trim()) {
       toast({
         title: "Digite a senha",
         description: "A senha da turma é obrigatória.",
@@ -66,8 +66,8 @@ const AlunoLogin = () => {
 
       if (!aluno) {
         toast({
-          title: "E-mail ou senha inválidos",
-          description: "Verifique se sua turma está correta.",
+          title: "E-mail não encontrado",
+          description: "Verifique se você foi cadastrado pelo professor.",
           variant: "destructive",
         });
         return;
@@ -76,10 +76,10 @@ const AlunoLogin = () => {
       // Verificar se a senha digitada corresponde ao código da turma do aluno
       const codigoEsperado = codigosTurma[aluno.turma as keyof typeof codigosTurma];
       
-      if (!codigoEsperado || senhaDigitada !== codigoEsperado) {
+      if (!codigoEsperado || senhaDigitada.trim() !== codigoEsperado) {
         toast({
-          title: "E-mail ou senha inválidos",
-          description: "Verifique se sua turma está correta.",
+          title: "Senha incorreta para esta turma",
+          description: `Sua senha deve ser: ${codigoEsperado}`,
           variant: "destructive",
         });
         return;
@@ -147,7 +147,7 @@ const AlunoLogin = () => {
               {/* Campo de E-mail */}
               <div className="space-y-3">
                 <Label htmlFor="email" className="text-redator-primary font-medium">
-                  Seu E-mail
+                  Digite seu e-mail cadastrado
                 </Label>
                 <div className="relative">
                   <Input
@@ -168,7 +168,7 @@ const AlunoLogin = () => {
               {/* Campo de Senha */}
               <div className="space-y-3">
                 <Label htmlFor="senha" className="text-redator-primary font-medium">
-                  Senha da Turma
+                  Digite a senha da sua turma
                 </Label>
                 <div className="relative">
                   <Input
@@ -182,7 +182,7 @@ const AlunoLogin = () => {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 </div>
                 <p className="text-xs text-gray-500">
-                  A senha é o código da sua turma (fornecido pelo professor)
+                  Sua senha padrão é o código da sua turma (ex: LRA2025, LRB2025...)
                 </p>
               </div>
 
