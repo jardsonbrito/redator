@@ -69,31 +69,17 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
     setSelectedRedacao(redacao);
     setEmailInput("");
     setIsDialogOpen(true);
-    setRedacaoAutenticada(false); // Reset rigoroso
+    setRedacaoAutenticada(false);
   };
 
-  // Função de validação RIGOROSA
   const validarEmailRigoroso = async (emailCorreto: string, emailDigitado: string): Promise<boolean> => {
     console.log('🔒 CARD: INICIANDO VALIDAÇÃO RIGOROSA:', { emailCorreto, emailDigitado });
     
-    // Normalização dos e-mails
-    const emailCorretoNormalizado = emailCorreto.toLowerCase().trim();
-    const emailDigitadoNormalizado = emailDigitado.toLowerCase().trim();
-    
-    console.log('📧 CARD: E-MAILS NORMALIZADOS:', { 
-      emailCorretoNormalizado, 
-      emailDigitadoNormalizado,
-      saoIguais: emailCorretoNormalizado === emailDigitadoNormalizado
-    });
-
-    // VALIDAÇÃO 1: Comparação direta rigorosa
-    if (emailCorretoNormalizado !== emailDigitadoNormalizado) {
-      console.log('❌ CARD: FALHA NA VALIDAÇÃO DIRETA');
-      return false;
-    }
-
-    // VALIDAÇÃO 2: Verificação via Supabase
     try {
+      // Definir contexto do usuário atual
+      await supabase.rpc('set_current_user_email', { user_email: emailDigitado });
+      
+      // Validação via função RPC
       const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
         redacao_email: emailCorreto,
         user_email: emailDigitado
@@ -105,13 +91,13 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
         console.log('❌ CARD: FALHA NA VALIDAÇÃO SUPABASE');
         return false;
       }
+
+      console.log('✅ CARD: VALIDAÇÃO RIGOROSA APROVADA');
+      return true;
     } catch (error) {
       console.log('❌ CARD: ERRO NA VALIDAÇÃO SUPABASE:', error);
       return false;
     }
-
-    console.log('✅ CARD: VALIDAÇÃO RIGOROSA APROVADA');
-    return true;
   };
 
   const handleEmailAuth = async () => {
@@ -125,13 +111,21 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
     }
 
     setIsAuthenticating(true);
-    setRedacaoAutenticada(false); // Reset antes da validação
+    setRedacaoAutenticada(false);
 
     try {
       const isValid = await validarEmailRigoroso(selectedRedacao.email_aluno, emailInput.trim());
       
       if (!isValid) {
         console.error('🚫 CARD: ACESSO NEGADO - E-mail incorreto');
+        
+        // Log da tentativa negada
+        await supabase.rpc('log_denied_access', {
+          attempted_email: emailInput.trim(),
+          redacao_email: selectedRedacao.email_aluno,
+          redacao_id: selectedRedacao.id
+        });
+        
         toast({
           title: "🚫 E-mail incorreto",
           description: "Utilize o mesmo e-mail informado no envio da redação.",
@@ -141,7 +135,6 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
         return;
       }
 
-      // ✅ ACESSO APROVADO
       console.log('✅ CARD: ACESSO APROVADO - E-mail validado');
       setIsDialogOpen(false);
       setRedacaoAutenticada(true);

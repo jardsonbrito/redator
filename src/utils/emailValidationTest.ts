@@ -46,6 +46,11 @@ export const testEmailValidation = async () => {
 
   for (const testCase of testCases) {
     try {
+      // Definir contexto do usuário atual antes da validação
+      if (testCase.userEmail) {
+        await supabase.rpc('set_current_user_email', { user_email: testCase.userEmail });
+      }
+
       const { data: result, error } = await supabase.rpc('can_access_redacao', {
         redacao_email: testCase.redacaoEmail,
         user_email: testCase.userEmail

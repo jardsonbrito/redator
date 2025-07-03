@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      access_denied_log: {
+        Row: {
+          attempted_email: string
+          id: string
+          ip_address: unknown | null
+          redacao_email: string
+          redacao_id: string
+          timestamp: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          attempted_email: string
+          id?: string
+          ip_address?: unknown | null
+          redacao_email: string
+          redacao_id: string
+          timestamp?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          attempted_email?: string
+          id?: string
+          ip_address?: unknown | null
+          redacao_email?: string
+          redacao_id?: string
+          timestamp?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       access_logs: {
         Row: {
           action: string
@@ -814,6 +844,18 @@ export type Database = {
       is_main_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      log_denied_access: {
+        Args: {
+          attempted_email: string
+          redacao_email: string
+          redacao_id: string
+        }
+        Returns: undefined
+      }
+      set_current_user_email: {
+        Args: { user_email: string }
+        Returns: undefined
       }
     }
     Enums: {
