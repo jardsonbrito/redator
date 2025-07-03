@@ -5,7 +5,7 @@ import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   BookOpen, 
   FileText, 
   Video,
@@ -17,7 +17,8 @@ import {
   GraduationCap,
   NotebookPen,
   MessageSquare,
-  Radar
+  Radar,
+  Users
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,12 +61,18 @@ import { AulaVirtualList } from "@/components/admin/AulaVirtualList";
 import { AulaVirtualEditForm } from "@/components/admin/AulaVirtualEditForm";
 import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
+// Import aluno components
+import { AlunoForm } from "@/components/admin/AlunoForm";
+import { AlunoList } from "@/components/admin/AlunoList";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
   const [refreshAvisos, setRefreshAvisos] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState(null);
   const [aulaEditando, setAulaEditando] = useState(null);
+  const [refreshAlunos, setRefreshAlunos] = useState(false);
+  const [alunoEditando, setAlunoEditando] = useState(null);
 
   console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
 
@@ -91,6 +98,7 @@ const Admin = () => {
     { id: "videos", label: "Vídeos", icon: Video },
     { id: "biblioteca", label: "Biblioteca", icon: File },
     { id: "radar", label: "Radar", icon: Radar },
+    { id: "cadastro-alunos", label: "Cadastro de Alunos", icon: Users },
   ];
 
   const renderContent = () => {
@@ -315,6 +323,33 @@ const Admin = () => {
               <RedacaoSimuladoList />
             </TabsContent>
           </Tabs>
+        );
+
+      case "cadastro-alunos":
+        const handleAlunoSuccess = () => {
+          setRefreshAlunos(!refreshAlunos);
+        };
+
+        const handleEditAluno = (aluno: any) => {
+          setAlunoEditando(aluno);
+        };
+
+        const handleCancelAlunoEdit = () => {
+          setAlunoEditando(null);
+        };
+
+        return (
+          <div className="space-y-6">
+            <AlunoForm 
+              onSuccess={handleAlunoSuccess}
+              alunoEditando={alunoEditando}
+              onCancelEdit={handleCancelAlunoEdit}
+            />
+            <AlunoList 
+              refresh={refreshAlunos}
+              onEdit={handleEditAluno}
+            />
+          </div>
         );
       
       default:
