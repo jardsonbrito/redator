@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Eye, Calendar, User, Mail, FileText, CheckCircle, Home } from "lucide-react";
+import { Eye, Calendar, User, Mail, FileText, CheckCircle, Home, Shield, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,12 +17,12 @@ import { useToast } from "@/hooks/use-toast";
 const MeusSimulados = () => {
   const { toast } = useToast();
   const [emailVerificacao, setEmailVerificacao] = useState<{[key: string]: string}>({});
-  const [redacaoVisivel, setRedacaoVisivel] = useState<{[key: string]: boolean}>({});
+  const [redacaoAutenticada, setRedacaoAutenticada] = useState<{[key: string]: boolean}>({});
+  const [isValidating, setIsValidating] = useState<{[key: string]: boolean}>({});
 
   // Recupera a turma do usuário
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
-  const visitanteData = localStorage.getItem("visitanteData");
   
   let turmaUsuario = "visitante";
   if (userType === "aluno" && alunoTurma) {
@@ -62,104 +62,106 @@ const MeusSimulados = () => {
     }
   });
 
-  const verificarEmailEMostrarRedacao = async (redacaoId: string, emailCorreto: string) => {
-    const emailDigitado = emailVerificacao[redacaoId]?.trim();
+  // Função de validação RIGOROSA
+  const validarEmailRigoroso = async (redacaoId: string, emailCorreto: string, emailDigitado: string): Promise<boolean> => {
+    console.log('🔒 INICIANDO VALIDAÇÃO RIGOROSA:', { redacaoId, emailCorreto, emailDigitado });
     
-    if (!emailDigitado) {
-      toast({
-        title: "Digite o e-mail",
-        description: "Por favor, digite o e-mail para verificar o acesso.",
-        variant: "destructive",
-      });
-      return;
+    // Normalização dos e-mails
+    const emailCorretoNormalizado = emailCorreto.toLowerCase().trim();
+    const emailDigitadoNormalizado = emailDigitado.toLowerCase().trim();
+    
+    console.log('📧 E-MAILS NORMALIZADOS:', { 
+      emailCorretoNormalizado, 
+      emailDigitadoNormalizado,
+      saoIguais: emailCorretoNormalizado === emailDigitadoNormalizado
+    });
+
+    // VALIDAÇÃO 1: Comparação direta rigorosa
+    if (emailCorretoNormalizado !== emailDigitadoNormalizado) {
+      console.log('❌ FALHA NA VALIDAÇÃO DIRETA');
+      return false;
     }
 
+    // VALIDAÇÃO 2: Verificação via Supabase
     try {
-      console.log('🔍 VALIDAÇÃO INICIADA:', {
-        redacaoId,
-        emailCorreto,
-        emailDigitado,
-        timestamp: new Date().toISOString()
-      });
-
-      // 🔒 VALIDAÇÃO SEGURA via Supabase function
-      console.log('🔒 TESTANDO VALIDAÇÃO SIMULADOS:', {
-        emailCorreto,
-        emailDigitado,
-        saoIguais: emailCorreto.toLowerCase().trim() === emailDigitado.trim().toLowerCase(),
-        timestamp: new Date().toISOString()
-      });
-
       const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
         redacao_email: emailCorreto,
         user_email: emailDigitado
       });
 
-      console.log('🔍 RESULTADO COMPLETO SIMULADOS:', {
-        canAccess,
-        error,
-        type: typeof canAccess,
-        isExactlyTrue: canAccess === true,
-        emailCorreto,
-        emailDigitado,
-        comparison: {
-          raw: `"${emailCorreto}" vs "${emailDigitado}"`,
-          lower: `"${emailCorreto.toLowerCase()}" vs "${emailDigitado.toLowerCase()}"`,
-          trimmed: `"${emailCorreto.trim()}" vs "${emailDigitado.trim()}"`
-        }
-      });
+      console.log('🔍 RESULTADO SUPABASE:', { canAccess, error });
 
-      if (error) {
-        console.error('❌ Erro na validação de acesso:', error);
-        toast({
-          title: "Erro na validação",
-          description: "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
-          variant: "destructive",
-        });
-        return;
+      if (error || canAccess !== true) {
+        console.log('❌ FALHA NA VALIDAÇÃO SUPABASE');
+        return false;
       }
+    } catch (error) {
+      console.log('❌ ERRO NA VALIDAÇÃO SUPABASE:', error);
+      return false;
+    }
 
-      // 🚨 DUPLA VALIDAÇÃO DE SEGURANÇA
-      const emailsMatch = emailCorreto.toLowerCase().trim() === emailDigitado.trim().toLowerCase();
-      const supabaseValidation = canAccess === true;
-      
-      console.log('🔐 VALIDAÇÃO DUPLA SIMULADOS:', {
-        emailsMatch,
-        supabaseValidation,
-        finalDecision: emailsMatch && supabaseValidation
-      });
+    console.log('✅ VALIDAÇÃO RIGOROSA APROVADA');
+    return true;
+  };
 
-      if (canAccess !== true || !emailsMatch) {
-        console.error('🚫 ACESSO NEGADO SIMULADOS:', {
-          canAccess,
-          emailsMatch,
-          emailCorreto,
-          emailDigitado,
-          motivo: !emailsMatch ? 'Emails diferentes' : 'Validação Supabase falhou'
-        });
-        toast({
-          title: "E-mail incorreto. Acesso negado à correção.",
-          description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // ✅ ACESSO LIBERADO apenas após validação rigorosa
-      console.log('✅ ACESSO LIBERADO');
-      setRedacaoVisivel(prev => ({ ...prev, [redacaoId]: true }));
+  const verificarEmailEMostrarRedacao = async (redacaoId: string, emailCorreto: string) => {
+    const emailDigitado = emailVerificacao[redacaoId]?.trim();
+    
+    if (!emailDigitado) {
       toast({
-        title: "Redação liberada!",
-        description: "E-mail confirmado. Você pode ver sua correção.",
+        title: "❌ E-mail obrigatório",
+        description: "Digite o e-mail para acessar a correção.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Resetar estado de autenticação antes de validar
+    setRedacaoAutenticada(prev => ({ ...prev, [redacaoId]: false }));
+    setIsValidating(prev => ({ ...prev, [redacaoId]: true }));
+
+    try {
+      const isValid = await validarEmailRigoroso(redacaoId, emailCorreto, emailDigitado);
+      
+      if (!isValid) {
+        console.log('🚫 ACESSO NEGADO - E-mail incorreto');
+        toast({
+          title: "🚫 E-mail incorreto",
+          description: "Utilize o mesmo e-mail informado no envio da redação.",
+          variant: "destructive",
+        });
+        // Garantir que redação não seja mostrada
+        setRedacaoAutenticada(prev => ({ ...prev, [redacaoId]: false }));
+        return;
+      }
+
+      // ✅ ACESSO APROVADO
+      console.log('✅ ACESSO APROVADO - E-mail validado com sucesso');
+      setRedacaoAutenticada(prev => ({ ...prev, [redacaoId]: true }));
+      toast({
+        title: "✅ Correção liberada!",
+        description: "E-mail confirmado. Visualizando correção.",
       });
 
     } catch (error) {
-      console.error('💥 Erro na autenticação:', error);
+      console.error('💥 Erro na validação:', error);
       toast({
-        title: "Erro na autenticação", 
-        description: "Falha na verificação do e-mail. Tente novamente.",
+        title: "❌ Erro na validação", 
+        description: "Tente novamente.",
         variant: "destructive",
       });
+      setRedacaoAutenticada(prev => ({ ...prev, [redacaoId]: false }));
+    } finally {
+      setIsValidating(prev => ({ ...prev, [redacaoId]: false }));
+    }
+  };
+
+  // Função para resetar autenticação ao limpar campo
+  const handleEmailChange = (redacaoId: string, value: string) => {
+    setEmailVerificacao(prev => ({ ...prev, [redacaoId]: value }));
+    // Resetar autenticação sempre que o e-mail mudar
+    if (redacaoAutenticada[redacaoId]) {
+      setRedacaoAutenticada(prev => ({ ...prev, [redacaoId]: false }));
     }
   };
 
@@ -193,7 +195,7 @@ const MeusSimulados = () => {
               <Home className="w-5 h-5" />
               <span>Início</span>
             </Link>
-            <h1 className="text-2xl font-bold text-redator-primary">Meus Simulados</h1>
+            <h1 className="text-2xl font-bold text-redator-primary">🔐 Meus Simulados</h1>
           </div>
         </div>
       </header>
@@ -201,10 +203,10 @@ const MeusSimulados = () => {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-redator-primary mb-2">
-            Redações Corrigidas
+            📝 Redações Corrigidas
           </h2>
           <p className="text-redator-accent">
-            Digite seu e-mail para acessar sua correção. Apenas você pode ver sua própria correção.
+            🔒 Digite seu e-mail para acessar sua correção com segurança máxima.
           </p>
         </div>
 
@@ -251,40 +253,59 @@ const MeusSimulados = () => {
                         </div>
                       </div>
 
-                      {/* Campo de verificação de e-mail */}
-                      {!redacaoVisivel[redacao.id] && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Mail className="w-4 h-4 text-yellow-600" />
-                            <span className="text-sm font-medium text-yellow-800">
-                              Digite seu e-mail para ver a correção
+                      {/* CAMPO DE VERIFICAÇÃO DE E-MAIL - SEMPRE VISÍVEL */}
+                      {!redacaoAutenticada[redacao.id] && (
+                        <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 mb-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Shield className="w-5 h-5 text-amber-600" />
+                            <span className="text-sm font-bold text-amber-900">
+                              🔒 ACESSO SEGURO OBRIGATÓRIO
                             </span>
                           </div>
+                          <p className="text-sm text-amber-800 mb-3">
+                            Para visualizar sua correção, digite o e-mail <strong>exato</strong> usado no envio da redação.
+                          </p>
                           <div className="flex gap-2">
                             <Input
                               type="email"
-                              placeholder="Digite o e-mail usado no envio"
+                              placeholder="Digite o e-mail exato usado no envio"
                               value={emailVerificacao[redacao.id] || ""}
-                              onChange={(e) => setEmailVerificacao(prev => ({
-                                ...prev,
-                                [redacao.id]: e.target.value
-                              }))}
-                              className="flex-1"
+                              onChange={(e) => handleEmailChange(redacao.id, e.target.value)}
+                              className="flex-1 border-amber-300 focus:border-amber-500"
+                              disabled={isValidating[redacao.id]}
                             />
                             <Button
                               onClick={() => verificarEmailEMostrarRedacao(redacao.id, redacao.email_aluno)}
                               size="sm"
-                              className="bg-redator-primary"
+                              className="bg-redator-primary hover:bg-redator-primary/90"
+                              disabled={isValidating[redacao.id] || !emailVerificacao[redacao.id]?.trim()}
                             >
-                              Verificar
+                              {isValidating[redacao.id] ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Validando...
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="w-4 h-4 mr-1" />
+                                  Verificar E-mail
+                                </>
+                              )}
                             </Button>
                           </div>
                         </div>
                       )}
 
-                      {/* Mostrar correção se e-mail foi verificado */}
-                      {redacaoVisivel[redacao.id] && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      {/* MOSTRAR CORREÇÃO APENAS APÓS AUTENTICAÇÃO RIGOROSA */}
+                      {redacaoAutenticada[redacao.id] && (
+                        <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                            <span className="text-sm font-bold text-green-900">
+                              ✅ E-MAIL VALIDADO - ACESSO LIBERADO
+                            </span>
+                          </div>
+                          
                           <div className="grid grid-cols-5 gap-4 mb-4">
                             <div className="text-center">
                               <Label className="text-xs">C1</Label>

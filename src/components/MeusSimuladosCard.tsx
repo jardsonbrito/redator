@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Award, Calendar, Eye, Lock, AlertCircle, User } from "lucide-react";
+import { Award, Calendar, Eye, Lock, AlertCircle, User, Shield, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface MeusSimuladosCardProps {
@@ -42,7 +42,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
   const [emailInput, setEmailInput] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [showRedacao, setShowRedacao] = useState(false);
+  const [redacaoAutenticada, setRedacaoAutenticada] = useState(false);
   const { toast } = useToast();
 
   const { data: redacoesSimulado, isLoading } = useQuery({
@@ -69,110 +69,106 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
     setSelectedRedacao(redacao);
     setEmailInput("");
     setIsDialogOpen(true);
-    setShowRedacao(false);
+    setRedacaoAutenticada(false); // Reset rigoroso
+  };
+
+  // Função de validação RIGOROSA
+  const validarEmailRigoroso = async (emailCorreto: string, emailDigitado: string): Promise<boolean> => {
+    console.log('🔒 CARD: INICIANDO VALIDAÇÃO RIGOROSA:', { emailCorreto, emailDigitado });
+    
+    // Normalização dos e-mails
+    const emailCorretoNormalizado = emailCorreto.toLowerCase().trim();
+    const emailDigitadoNormalizado = emailDigitado.toLowerCase().trim();
+    
+    console.log('📧 CARD: E-MAILS NORMALIZADOS:', { 
+      emailCorretoNormalizado, 
+      emailDigitadoNormalizado,
+      saoIguais: emailCorretoNormalizado === emailDigitadoNormalizado
+    });
+
+    // VALIDAÇÃO 1: Comparação direta rigorosa
+    if (emailCorretoNormalizado !== emailDigitadoNormalizado) {
+      console.log('❌ CARD: FALHA NA VALIDAÇÃO DIRETA');
+      return false;
+    }
+
+    // VALIDAÇÃO 2: Verificação via Supabase
+    try {
+      const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
+        redacao_email: emailCorreto,
+        user_email: emailDigitado
+      });
+
+      console.log('🔍 CARD: RESULTADO SUPABASE:', { canAccess, error });
+
+      if (error || canAccess !== true) {
+        console.log('❌ CARD: FALHA NA VALIDAÇÃO SUPABASE');
+        return false;
+      }
+    } catch (error) {
+      console.log('❌ CARD: ERRO NA VALIDAÇÃO SUPABASE:', error);
+      return false;
+    }
+
+    console.log('✅ CARD: VALIDAÇÃO RIGOROSA APROVADA');
+    return true;
   };
 
   const handleEmailAuth = async () => {
     if (!selectedRedacao || !emailInput.trim()) {
       toast({
-        title: "E-mail obrigatório",
-        description: "Por favor, digite o e-mail cadastrado na redação.",
+        title: "❌ E-mail obrigatório",
+        description: "Digite o e-mail cadastrado na redação.",
         variant: "destructive",
       });
       return;
     }
 
     setIsAuthenticating(true);
+    setRedacaoAutenticada(false); // Reset antes da validação
 
     try {
-      console.log('🔍 VALIDAÇÃO CARD:', {
-        emailRedacao: selectedRedacao.email_aluno,
-        emailDigitado: emailInput.trim(),
-        timestamp: new Date().toISOString()
-      });
-
-      // 🔒 VALIDAÇÃO SEGURA via Supabase function (não apenas front-end)
-      console.log('🔒 TESTANDO VALIDAÇÃO CARD:', {
-        emailRedacao: selectedRedacao.email_aluno,
-        emailDigitado: emailInput.trim(),
-        saoIguais: selectedRedacao.email_aluno.toLowerCase().trim() === emailInput.trim().toLowerCase(),
-        timestamp: new Date().toISOString()
-      });
-
-      const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
-        redacao_email: selectedRedacao.email_aluno,
-        user_email: emailInput.trim()
-      });
-
-      console.log('🔍 RESULTADO COMPLETO CARD:', {
-        canAccess,
-        error,
-        type: typeof canAccess,
-        isExactlyTrue: canAccess === true,
-        emailRedacao: selectedRedacao.email_aluno,
-        emailDigitado: emailInput.trim(),
-        comparison: {
-          raw: `"${selectedRedacao.email_aluno}" vs "${emailInput.trim()}"`,
-          lower: `"${selectedRedacao.email_aluno.toLowerCase()}" vs "${emailInput.trim().toLowerCase()}"`
-        }
-      });
-
-      if (error) {
-        console.error('❌ Erro na validação de acesso:', error);
-        toast({
-          title: "Erro na validação",
-          description: "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // 🚨 DUPLA VALIDAÇÃO DE SEGURANÇA
-      const emailsMatch = selectedRedacao.email_aluno.toLowerCase().trim() === emailInput.trim().toLowerCase();
-      const supabaseValidation = canAccess === true;
+      const isValid = await validarEmailRigoroso(selectedRedacao.email_aluno, emailInput.trim());
       
-      console.log('🔐 VALIDAÇÃO DUPLA CARD:', {
-        emailsMatch,
-        supabaseValidation,
-        finalDecision: emailsMatch && supabaseValidation
-      });
-
-      if (canAccess !== true || !emailsMatch) {
-        console.error('🚫 ACESSO NEGADO CARD:', {
-          canAccess,
-          emailsMatch,
-          emailRedacao: selectedRedacao.email_aluno,
-          emailDigitado: emailInput.trim(),
-          motivo: !emailsMatch ? 'Emails diferentes' : 'Validação Supabase falhou'
-        });
+      if (!isValid) {
+        console.error('🚫 CARD: ACESSO NEGADO - E-mail incorreto');
         toast({
-          title: "E-mail incorreto. Acesso negado à correção.",
-          description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
+          title: "🚫 E-mail incorreto",
+          description: "Utilize o mesmo e-mail informado no envio da redação.",
           variant: "destructive",
         });
+        setRedacaoAutenticada(false);
         return;
       }
 
-      // ✅ ACESSO LIBERADO apenas após validação rigorosa
-      console.log('✅ ACESSO LIBERADO CARD');
+      // ✅ ACESSO APROVADO
+      console.log('✅ CARD: ACESSO APROVADO - E-mail validado');
       setIsDialogOpen(false);
-      setShowRedacao(true);
+      setRedacaoAutenticada(true);
       
       toast({
-        title: "Redação liberada!",
-        description: "Agora você pode visualizar sua redação completa.",
+        title: "✅ Redação liberada!",
+        description: "E-mail confirmado. Visualizando redação.",
       });
 
     } catch (error) {
-      console.error('Erro na autenticação:', error);
+      console.error('💥 CARD: Erro na validação:', error);
       toast({
-        title: "Erro na autenticação",
-        description: "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
+        title: "❌ Erro na validação",
+        description: "Tente novamente.",
         variant: "destructive",
       });
+      setRedacaoAutenticada(false);
     } finally {
       setIsAuthenticating(false);
     }
+  };
+
+  const resetAuth = () => {
+    setSelectedRedacao(null);
+    setEmailInput("");
+    setIsDialogOpen(false);
+    setRedacaoAutenticada(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -186,7 +182,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
   };
 
   if (turmaCode === "visitante") {
-    return null; // Visitantes não têm acesso a esta seção
+    return null;
   }
 
   return (
@@ -194,8 +190,8 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
       <Card className="border-redator-accent/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-redator-primary">
-            <Award className="w-5 h-5" />
-            Meus Simulados
+            <Shield className="w-5 h-5" />
+            🔐 Meus Simulados
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -235,7 +231,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
                       <div className="flex items-center gap-2">
                         {redacao.corrigida ? (
                           <>
-                            <Badge className="bg-green-100 text-green-800 text-xs">Corrigida</Badge>
+                            <Badge className="bg-green-100 text-green-800 text-xs">✅ Corrigida</Badge>
                             {redacao.nota_total !== null && (
                               <Badge variant="outline" className="text-xs">
                                 Nota: {redacao.nota_total}/1000
@@ -243,7 +239,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
                             )}
                           </>
                         ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800 text-xs">Aguardando</Badge>
+                          <Badge className="bg-yellow-100 text-yellow-800 text-xs">⏳ Aguardando</Badge>
                         )}
                       </div>
                     </div>
@@ -252,9 +248,10 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
                       variant="outline" 
                       size="sm"
                       onClick={() => handleViewRedacao(redacao)}
-                      className="shrink-0"
+                      className="shrink-0 border-amber-300 hover:bg-amber-50"
                     >
-                      <Eye className="w-3 h-3" />
+                      <Lock className="w-3 h-3 mr-1" />
+                      Ver Correção
                     </Button>
                   </div>
                 </div>
@@ -264,57 +261,75 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
         </CardContent>
       </Card>
 
-      {/* Dialog de autenticação por email */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Dialog de autenticação RIGOROSA */}
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        if (!open) resetAuth();
+        setIsDialogOpen(open);
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-redator-primary">Acesso à Redação</DialogTitle>
+            <DialogTitle className="text-redator-primary flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              🔒 ACESSO SEGURO OBRIGATÓRIO
+            </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <div className="bg-red-50 p-4 rounded-lg border-2 border-red-200">
               <div className="flex items-start gap-2">
-                <Lock className="w-4 h-4 text-amber-600 mt-0.5" />
-                <div className="text-sm text-amber-800">
-                  Para ver sua redação, digite o e-mail que você usou no envio.
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="text-sm text-red-800">
+                  <strong>ATENÇÃO:</strong> Digite o e-mail <strong>EXATO</strong> usado no envio da redação. Qualquer diferença bloqueará o acesso.
                 </div>
               </div>
             </div>
 
             {selectedRedacao && (
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
                 <p><span className="font-medium">Simulado:</span> {selectedRedacao.simulados.titulo}</p>
                 <p><span className="font-medium">Autor:</span> {selectedRedacao.nome_aluno}</p>
               </div>
             )}
 
             <div>
-              <label htmlFor="email-auth" className="block text-sm font-medium text-redator-primary mb-2">
-                E-mail de Acesso
+              <label htmlFor="email-auth" className="block text-sm font-bold text-redator-primary mb-2">
+                🔐 E-mail de Acesso *
               </label>
               <Input
                 id="email-auth"
                 type="email"
-                placeholder="Digite o e-mail cadastrado..."
+                placeholder="Digite o e-mail EXATO usado no envio..."
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                className="border-redator-accent/30 focus:border-redator-accent"
+                className="border-2 border-amber-300 focus:border-red-500"
+                disabled={isAuthenticating}
               />
             </div>
 
             <div className="flex gap-2">
               <Button 
                 onClick={handleEmailAuth}
-                disabled={isAuthenticating}
-                className="flex-1 bg-redator-primary hover:bg-redator-primary/90"
+                disabled={isAuthenticating || !emailInput.trim()}
+                className="flex-1 bg-red-600 hover:bg-red-700"
               >
-                {isAuthenticating ? "Verificando..." : "Acessar Redação"}
+                {isAuthenticating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Validando...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4 mr-1" />
+                    Verificar E-mail
+                  </>
+                )}
               </Button>
               
               <Button 
                 variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="border-redator-accent/50"
+                onClick={resetAuth}
+                className="border-red-300"
+                disabled={isAuthenticating}
               >
                 Cancelar
               </Button>
@@ -323,17 +338,26 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de visualização da redação */}
-      {selectedRedacao && showRedacao && (
-        <Dialog open={showRedacao} onOpenChange={() => setShowRedacao(false)}>
+      {/* Modal de visualização - APENAS após autenticação rigorosa */}
+      {selectedRedacao && redacaoAutenticada && (
+        <Dialog open={redacaoAutenticada} onOpenChange={(open) => {
+          if (!open) resetAuth();
+        }}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-redator-primary">
-                {selectedRedacao.simulados.titulo}
+              <DialogTitle className="text-redator-primary flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                ✅ {selectedRedacao.simulados.titulo}
               </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-6">
+              <div className="bg-green-50 border-2 border-green-200 p-3 rounded">
+                <p className="text-sm text-green-800 font-medium">
+                  ✅ E-mail validado com sucesso. Acesso liberado.
+                </p>
+              </div>
+
               <div className="bg-gradient-to-r from-redator-primary to-redator-secondary text-white p-4 rounded-lg">
                 <h3 className="font-bold text-lg mb-2">PROPOSTA DE REDAÇÃO</h3>
                 <p className="leading-relaxed">{selectedRedacao.simulados.frase_tematica}</p>

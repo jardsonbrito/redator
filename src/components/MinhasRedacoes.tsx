@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Calendar, Eye, Lock, AlertCircle, Shield } from "lucide-react";
+import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
 
@@ -156,11 +156,53 @@ export const MinhasRedacoes = () => {
     setIsAuthDialogOpen(true);
   };
 
+  // Função de validação RIGOROSA
+  const validarEmailRigoroso = async (emailCorreto: string, emailDigitado: string): Promise<boolean> => {
+    console.log('🔒 MINHAS REDAÇÕES: INICIANDO VALIDAÇÃO RIGOROSA:', { emailCorreto, emailDigitado });
+    
+    // Normalização dos e-mails
+    const emailCorretoNormalizado = emailCorreto.toLowerCase().trim();
+    const emailDigitadoNormalizado = emailDigitado.toLowerCase().trim();
+    
+    console.log('📧 MINHAS REDAÇÕES: E-MAILS NORMALIZADOS:', { 
+      emailCorretoNormalizado, 
+      emailDigitadoNormalizado,
+      saoIguais: emailCorretoNormalizado === emailDigitadoNormalizado
+    });
+
+    // VALIDAÇÃO 1: Comparação direta rigorosa
+    if (emailCorretoNormalizado !== emailDigitadoNormalizado) {
+      console.log('❌ MINHAS REDAÇÕES: FALHA NA VALIDAÇÃO DIRETA');
+      return false;
+    }
+
+    // VALIDAÇÃO 2: Verificação via Supabase
+    try {
+      const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
+        redacao_email: emailCorreto,
+        user_email: emailDigitado
+      });
+
+      console.log('🔍 MINHAS REDAÇÕES: RESULTADO SUPABASE:', { canAccess, error });
+
+      if (error || canAccess !== true) {
+        console.log('❌ MINHAS REDAÇÕES: FALHA NA VALIDAÇÃO SUPABASE');
+        return false;
+      }
+    } catch (error) {
+      console.log('❌ MINHAS REDAÇÕES: ERRO NA VALIDAÇÃO SUPABASE:', error);
+      return false;
+    }
+
+    console.log('✅ MINHAS REDAÇÕES: VALIDAÇÃO RIGOROSA APROVADA');
+    return true;
+  };
+
   const handleEmailAuth = async () => {
     if (!selectedRedacaoId || !emailInput.trim()) {
       toast({
-        title: "E-mail obrigatório",
-        description: "Por favor, digite o e-mail cadastrado na redação.",
+        title: "❌ E-mail obrigatório",
+        description: "Digite o e-mail cadastrado na redação.",
         variant: "destructive",
       });
       return;
@@ -176,58 +218,14 @@ export const MinhasRedacoes = () => {
         throw new Error('Redação não encontrada');
       }
 
-      // ETAPA 2: Verificação rigorosa de e-mail usando nova função segura
-      console.log('🔒 TESTANDO VALIDAÇÃO:', {
-        emailRedacao: redacaoBasica.email_aluno,
-        emailDigitado: emailInput.trim(),
-        saoIguais: redacaoBasica.email_aluno.toLowerCase().trim() === emailInput.trim().toLowerCase(),
-        timestamp: new Date().toISOString()
-      });
+      // ETAPA 2: Verificação rigorosa de e-mail
+      const isValid = await validarEmailRigoroso(redacaoBasica.email_aluno, emailInput.trim());
 
-      const emailMatches = await supabase.rpc('can_access_redacao', {
-        redacao_email: redacaoBasica.email_aluno,
-        user_email: emailInput.trim()
-      });
-
-      // 🚨 VALIDAÇÃO CRÍTICA COM LOG DETALHADO
-      console.log('🔍 RESULTADO COMPLETO DA VALIDAÇÃO:', {
-        emailMatches,
-        data: emailMatches.data,
-        error: emailMatches.error,
-        type: typeof emailMatches.data,
-        isExactlyTrue: emailMatches.data === true,
-        isStrictEqual: Object.is(emailMatches.data, true),
-        emailRedacao: redacaoBasica.email_aluno,
-        emailDigitado: emailInput.trim(),
-        comparison: {
-          raw: `"${redacaoBasica.email_aluno}" vs "${emailInput.trim()}"`,
-          lower: `"${redacaoBasica.email_aluno.toLowerCase()}" vs "${emailInput.trim().toLowerCase()}"`,
-          trimmed: `"${redacaoBasica.email_aluno.trim()}" vs "${emailInput.trim()}"`
-        }
-      });
-
-      // 🚨 DUPLA VALIDAÇÃO DE SEGURANÇA
-      const emailsMatch = redacaoBasica.email_aluno.toLowerCase().trim() === emailInput.trim().toLowerCase();
-      const supabaseValidation = emailMatches.data === true && !emailMatches.error;
-      
-      console.log('🔐 VALIDAÇÃO DUPLA:', {
-        emailsMatch,
-        supabaseValidation,
-        finalDecision: emailsMatch && supabaseValidation
-      });
-
-      if (emailMatches.error || emailMatches.data !== true || !emailsMatch) {
-        console.error('❌ ACESSO NEGADO - VALIDAÇÃO FALHOU:', {
-          error: emailMatches.error,
-          data: emailMatches.data,
-          emailsMatch,
-          emailRedacao: redacaoBasica.email_aluno,
-          emailDigitado: emailInput.trim(),
-          motivo: emailMatches.error ? 'Erro na função' : !emailsMatch ? 'Emails diferentes' : 'Resposta inesperada'
-        });
+      if (!isValid) {
+        console.error('🚫 MINHAS REDAÇÕES: ACESSO NEGADO - E-mail incorreto');
         toast({
-          title: "E-mail incorreto. Acesso negado à redação.",
-          description: "O e-mail digitado não corresponde ao cadastrado nesta redação.",
+          title: "🚫 E-mail incorreto",
+          description: "Utilize o mesmo e-mail informado no envio da redação.",
           variant: "destructive",
         });
         return;
@@ -275,18 +273,15 @@ export const MinhasRedacoes = () => {
       
       console.log('🎉 Redação liberada com segurança total');
       toast({
-        title: "Redação liberada!",
-        description: "Agora você pode visualizar sua redação completa.",
+        title: "✅ Redação liberada!",
+        description: "E-mail confirmado. Visualizando redação completa.",
       });
-
-      // Log de auditoria automático via trigger criado na migração
-      console.log('📝 Log de acesso registrado automaticamente');
 
     } catch (error) {
       console.error('💥 Erro na autenticação:', error);
       toast({
-        title: "Erro na autenticação",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao verificar o e-mail. Tente novamente.",
+        title: "❌ Erro na autenticação",
+        description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -436,11 +431,11 @@ export const MinhasRedacoes = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="w-full border-redator-accent/50 text-redator-primary hover:bg-redator-accent/10"
+                    className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500"
                     onClick={() => handleViewRedacao(redacao)}
                   >
-                    <Lock className="w-3 h-3 mr-1" />
-                    🔐 Ver Redação Segura
+                    <Shield className="w-3 h-3 mr-1" />
+                    🔒 Ver Correção
                   </Button>
                 </div>
               </CardContent>
@@ -458,33 +453,33 @@ export const MinhasRedacoes = () => {
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-redator-primary flex items-center gap-2">
-              <Lock className="w-5 h-5" />
-              🔐 Acesso Seguro à Redação
+            <DialogTitle className="text-red-700 flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              🔒 ACESSO SEGURO OBRIGATÓRIO
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+            <div className="bg-red-50 p-4 rounded-lg border-2 border-red-200">
               <div className="flex items-start gap-2">
-                <Lock className="w-4 h-4 text-amber-600 mt-0.5" />
-                <div className="text-sm text-amber-800">
-                  <strong>Segurança Máxima:</strong> Para visualizar sua redação, digite o e-mail exato usado no envio. Os dados só são carregados após validação.
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="text-sm text-red-800">
+                  <strong>SEGURANÇA MÁXIMA:</strong> Digite o e-mail <strong>EXATO</strong> usado no envio da redação. Os dados só são carregados após validação rigorosa.
                 </div>
               </div>
             </div>
 
             <div>
-              <label htmlFor="email-auth" className="block text-sm font-medium text-redator-primary mb-2">
-                E-mail de Acesso * (obrigatório)
+              <label htmlFor="email-auth" className="block text-sm font-bold text-red-700 mb-2">
+                🔐 E-mail de Acesso * (obrigatório)
               </label>
               <Input
                 id="email-auth"
                 type="email"
-                placeholder="Digite o e-mail cadastrado..."
+                placeholder="Digite o e-mail EXATO cadastrado..."
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                className="border-redator-accent/30 focus:border-redator-accent"
+                className="border-2 border-red-300 focus:border-red-500"
                 disabled={isAuthenticating}
               />
             </div>
@@ -493,22 +488,25 @@ export const MinhasRedacoes = () => {
               <Button 
                 onClick={handleEmailAuth}
                 disabled={isAuthenticating || !emailInput.trim()}
-                className="flex-1 bg-redator-primary hover:bg-redator-primary/90"
+                className="flex-1 bg-red-600 hover:bg-red-700"
               >
                 {isAuthenticating ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Verificando...
+                    Validando...
                   </>
                 ) : (
-                  "🔓 Acessar Redação"
+                  <>
+                    <Shield className="w-4 h-4 mr-1" />
+                    🔓 Verificar E-mail
+                  </>
                 )}
               </Button>
               
               <Button 
                 variant="outline"
                 onClick={() => resetAuthenticationState()}
-                className="border-redator-accent/50"
+                className="border-red-300"
                 disabled={isAuthenticating}
               >
                 Cancelar
@@ -528,12 +526,19 @@ export const MinhasRedacoes = () => {
         }}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-redator-primary">
+              <DialogTitle className="text-redator-primary flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
                 ✅ {authenticatedRedacao.frase_tematica}
               </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-6">
+              <div className="bg-green-50 border-2 border-green-200 p-3 rounded">
+                <p className="text-sm text-green-800 font-medium">
+                  ✅ E-mail validado com sucesso. Acesso liberado com segurança máxima.
+                </p>
+              </div>
+              
               <RedacaoEnviadaCard 
                 redacao={{
                   id: authenticatedRedacao.id,
