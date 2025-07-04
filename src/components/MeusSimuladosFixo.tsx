@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,8 +69,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
   };
 
   // Query otimizada com as novas políticas RLS
+  // Agora inclui AMBAS as tabelas: redacoes_enviadas E redacoes_simulado
   const { data: redacoesRecentes, isLoading } = useQuery({
-    queryKey: ['redacoes-recentes-seguras', turmaCode],
+    queryKey: ['redacoes-recentes-seguras-completas', turmaCode],
     queryFn: async () => {
       console.log('🔒 Buscando redações com segurança aprimorada para:', turmaCode);
       
@@ -112,7 +114,8 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         const codigoTurma = getTurmaCode(turmaCode);
         console.log('🔄 Código da turma convertido:', codigoTurma);
         
-        const { data, error } = await supabase
+        // Buscar da tabela redacoes_enviadas
+        const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
             id,
@@ -130,16 +133,64 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           .eq('turma', codigoTurma)
           .neq('tipo_envio', 'visitante')
           .eq('corrigida', true)
-          .order('data_envio', { ascending: false })
-          .limit(3);
-        
-        if (error) {
-          console.error('❌ Erro ao buscar redações da turma:', error);
-          return [];
+          .order('data_envio', { ascending: false });
+
+        if (errorRegulares) {
+          console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
         }
+
+        // Buscar da tabela redacoes_simulado
+        const { data: redacoesSimulado, error: errorSimulado } = await supabase
+          .from('redacoes_simulado')
+          .select(`
+            id,
+            nome_aluno,
+            email_aluno,
+            data_envio,
+            corrigida,
+            nota_total,
+            data_correcao,
+            simulados!inner(frase_tematica)
+          `)
+          .eq('turma', codigoTurma)
+          .eq('corrigida', true)
+          .order('data_envio', { ascending: false });
+
+        if (errorSimulado) {
+          console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
+        }
+
+        // Combinar e formatar os dados
+        const todasRedacoes: RedacaoTurma[] = [];
         
-        console.log('✅ Redações corrigidas encontradas para turma:', data);
-        return data || [];
+        // Adicionar redações regulares
+        if (redacoesRegulares) {
+          todasRedacoes.push(...redacoesRegulares);
+        }
+
+        // Adicionar redações de simulado (formatadas)
+        if (redacoesSimulado) {
+          const simuladosFormatados = redacoesSimulado.map(simulado => ({
+            id: simulado.id,
+            frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
+            nome_aluno: simulado.nome_aluno,
+            email_aluno: simulado.email_aluno,
+            tipo_envio: 'simulado',
+            data_envio: simulado.data_envio,
+            status: 'corrigido',
+            corrigida: simulado.corrigida,
+            nota_total: simulado.nota_total,
+            comentario_admin: null,
+            data_correcao: simulado.data_correcao
+          }));
+          todasRedacoes.push(...simuladosFormatados);
+        }
+
+        // Ordenar por data de envio (mais recente primeiro) e limitar a 3
+        todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
+        
+        console.log('✅ Redações corrigidas encontradas para turma:', todasRedacoes.length);
+        return todasRedacoes.slice(0, 3);
       }
     },
     enabled: !!turmaCode,
@@ -171,15 +222,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
 
     try {
       // ETAPA 1: Validação básica sem carregar dados sensíveis
-      const { data: redacaoBasica, error: errorBasico } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, email_aluno, frase_tematica, nome_aluno')
-        .eq('id', selectedRedacaoId)
-        .single();
-
-      if (errorBasico) {
-        console.error('❌ Erro ao validar redação:', errorBasico);
-        throw new Error('Redação não encontrada ou inacessível');
+      const redacaoBasica = redacoesRecentes?.find(r => r.id === selectedRedacaoId);
+      if (!redacaoBasica) {
+        throw new Error('Redação não encontrada');
       }
 
       // ETAPA 2: Verificação rigorosa de e-mail usando nova função segura
@@ -202,15 +247,40 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
       console.log('✅ E-mail validado com sucesso');
 
       // ETAPA 3: SOMENTE após validação, buscar dados completos sensíveis
-      const { data: redacaoCompleta, error: errorCompleto } = await supabase
-        .from('redacoes_enviadas')
-        .select('*')
-        .eq('id', selectedRedacaoId)
-        .single();
+      let redacaoCompleta;
+      
+      if (redacaoBasica.tipo_envio === 'simulado') {
+        // Buscar da tabela redacoes_simulado
+        const { data, error } = await supabase
+          .from('redacoes_simulado')
+          .select('*, simulados!inner(frase_tematica)')
+          .eq('id', selectedRedacaoId)
+          .single();
+          
+        if (error) {
+          console.error('❌ Erro ao carregar redação de simulado:', error);
+          throw new Error('Erro ao carregar redação de simulado');
+        }
+        
+        redacaoCompleta = {
+          ...data,
+          redacao_texto: data.texto,
+          frase_tematica: (data.simulados as any)?.frase_tematica || 'Simulado'
+        };
+      } else {
+        // Buscar da tabela redacoes_enviadas
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('id', selectedRedacaoId)
+          .single();
 
-      if (errorCompleto) {
-        console.error('❌ Erro ao carregar correção completa:', errorCompleto);
-        throw new Error('Erro ao carregar correção completa');
+        if (error) {
+          console.error('❌ Erro ao carregar redação regular:', error);
+          throw new Error('Erro ao carregar redação regular');
+        }
+        
+        redacaoCompleta = data;
       }
 
       // ETAPA 4: Preparar dados APENAS após autenticação bem-sucedida
@@ -219,14 +289,14 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         frase_tematica: redacaoCompleta.frase_tematica,
         nome_aluno: redacaoCompleta.nome_aluno,
         email_aluno: redacaoCompleta.email_aluno,
-        tipo_envio: redacaoCompleta.tipo_envio,
+        tipo_envio: redacaoBasica.tipo_envio,
         data_envio: redacaoCompleta.data_envio,
-        status: redacaoCompleta.status,
+        status: redacaoBasica.status,
         corrigida: redacaoCompleta.corrigida,
         nota_total: redacaoCompleta.nota_total,
-        comentario_admin: redacaoCompleta.comentario_admin,
+        comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
         data_correcao: redacaoCompleta.data_correcao,
-        redacao_texto: redacaoCompleta.redacao_texto || "",
+        redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "",
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
         nota_c3: redacaoCompleta.nota_c3,
@@ -339,55 +409,63 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {redacoesRecentes.slice(0, 3).map((redacao) => (
                   <Card key={redacao.id} className="border border-primary/20 hover:shadow-md transition-shadow">
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-base sm:text-lg text-primary mb-2 leading-tight break-words">
+                    <CardContent className="p-3">
+                      {/* Layout compacto para mobile */}
+                      <div className="flex flex-col gap-2">
+                        {/* Linha 1: Título e Status */}
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-bold text-sm text-primary leading-tight break-words flex-1">
                             {redacao.frase_tematica}
                           </h4>
-                          
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              🔐 Corrigido
+                          <Badge className="bg-green-100 text-green-800 text-xs shrink-0">
+                            🔐 Corrigido
+                          </Badge>
+                        </div>
+                        
+                        {/* Linha 2: Badges Tipo e Nota */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
+                            {getTipoEnvioLabel(redacao.tipo_envio)}
+                          </Badge>
+                          {redacao.nota_total && (
+                            <Badge variant="outline" className="text-xs">
+                              📊 {redacao.nota_total}/1000
                             </Badge>
-                            <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
-                              {getTipoEnvioLabel(redacao.tipo_envio)}
-                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Linha 3: Info do aluno e data */}
+                        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1 min-w-0 flex-1">
+                            <User className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{redacao.nome_aluno}</span>
                           </div>
-                          
-                          <div className="flex flex-col xs:flex-row xs:items-center gap-2 xs:gap-4 text-xs sm:text-sm text-muted-foreground mb-3">
-                            <div className="flex items-center gap-1 min-w-0">
-                              <User className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
-                              <span className="truncate">{redacao.nome_aluno}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
-                              <span className="whitespace-nowrap">{format(new Date(redacao.data_envio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
-                            </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Calendar className="w-3 h-3" />
+                            <span className="whitespace-nowrap">{format(new Date(redacao.data_envio), "dd/MM/yyyy", { locale: ptBR })}</span>
                           </div>
                         </div>
                         
-                        <div className="shrink-0 w-full sm:w-auto">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="border-primary/30 hover:bg-primary/10 w-full sm:w-auto"
-                            onClick={() => handleViewCorrection(redacao)}
-                          >
-                            <Lock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                            Ver Correção
-                          </Button>
-                        </div>
+                        {/* Linha 4: Botão */}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="border-primary/30 hover:bg-primary/10 w-full mt-1"
+                          onClick={() => handleViewCorrection(redacao)}
+                        >
+                          <Lock className="w-3 h-3 mr-1" />
+                          Ver Correção
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
 
                 {redacoesRecentes.length >= 3 && (
-                  <div className="text-center pt-4">
+                  <div className="text-center pt-2">
                     <Link to="/minhas-redacoes">
                       <Button 
                         variant="outline"

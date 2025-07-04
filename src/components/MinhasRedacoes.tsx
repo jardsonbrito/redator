@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle } from "lucide-react";
+import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
 
@@ -77,14 +77,17 @@ export const MinhasRedacoes = () => {
   }
 
   // Query SEGURA - NÃO carrega dados sensíveis automaticamente
+  // Agora inclui AMBAS as tabelas: redacoes_enviadas E redacoes_simulado
   const { data: redacoesTurma, isLoading, error } = useQuery({
-    queryKey: ['redacoes-usuario-basicas', turmaCode, visitanteEmail],
+    queryKey: ['redacoes-usuario-basicas-completas', turmaCode, visitanteEmail],
     queryFn: async () => {
-      console.log('🔒 Buscando redações SEM dados sensíveis');
+      console.log('🔒 Buscando redações SEM dados sensíveis (incluindo simulados)');
       
       if (userType === "aluno" && turmaCode) {
         console.log('👨‍🎓 Buscando redações básicas da turma:', turmaCode);
-        const { data, error } = await supabase
+        
+        // Buscar da tabela redacoes_enviadas
+        const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
             id,
@@ -101,15 +104,66 @@ export const MinhasRedacoes = () => {
           `)
           .eq('turma', turmaCode)
           .neq('tipo_envio', 'visitante')
+          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
-        
-        if (error) {
-          console.error('❌ Erro ao buscar redações da turma:', error);
-          throw error;
+
+        if (errorRegulares) {
+          console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
         }
+
+        // Buscar da tabela redacoes_simulado
+        const { data: redacoesSimulado, error: errorSimulado } = await supabase
+          .from('redacoes_simulado')
+          .select(`
+            id,
+            nome_aluno,
+            email_aluno,
+            data_envio,
+            corrigida,
+            nota_total,
+            data_correcao,
+            simulados!inner(frase_tematica)
+          `)
+          .eq('turma', turmaCode)
+          .eq('corrigida', true)
+          .order('data_envio', { ascending: false });
+
+        if (errorSimulado) {
+          console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
+        }
+
+        // Combinar e formatar os dados
+        const todasRedacoes: RedacaoTurma[] = [];
         
-        console.log('✅ Redações básicas da turma encontradas:', data?.length || 0);
-        return data as RedacaoTurma[] || [];
+        // Adicionar redações regulares
+        if (redacoesRegulares) {
+          todasRedacoes.push(...redacoesRegulares);
+        }
+
+        // Adicionar redações de simulado (formatadas)
+        if (redacoesSimulado) {
+          const simuladosFormatados = redacoesSimulado.map(simulado => ({
+            id: simulado.id,
+            frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
+            nome_aluno: simulado.nome_aluno,
+            email_aluno: simulado.email_aluno,
+            tipo_envio: 'simulado',
+            data_envio: simulado.data_envio,
+            status: 'corrigido',
+            corrigida: simulado.corrigida,
+            nota_total: simulado.nota_total,
+            comentario_admin: null,
+            data_correcao: simulado.data_correcao
+          }));
+          todasRedacoes.push(...simuladosFormatados);
+        }
+
+        // Ordenar por data de envio (mais recente primeiro)
+        todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
+        
+        console.log('✅ Total de redações encontradas:', todasRedacoes.length);
+        return todasRedacoes;
+        
       } else if (userType === "visitante" && visitanteEmail) {
         console.log('👤 Buscando redações básicas do visitante:', visitanteEmail);
         const { data, error } = await supabase
@@ -129,6 +183,7 @@ export const MinhasRedacoes = () => {
           `)
           .eq('email_aluno', visitanteEmail)
           .eq('tipo_envio', 'visitante')
+          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
         
         if (error) {
@@ -234,15 +289,40 @@ export const MinhasRedacoes = () => {
       console.log('✅ E-mail validado com sucesso');
 
       // ETAPA 3: SOMENTE após validação, buscar dados completos sensíveis
-      const { data: redacaoCompleta, error: errorCompleto } = await supabase
-        .from('redacoes_enviadas')
-        .select('*')
-        .eq('id', selectedRedacaoId)
-        .single();
+      let redacaoCompleta;
+      
+      if (redacaoBasica.tipo_envio === 'simulado') {
+        // Buscar da tabela redacoes_simulado
+        const { data, error } = await supabase
+          .from('redacoes_simulado')
+          .select('*, simulados!inner(frase_tematica)')
+          .eq('id', selectedRedacaoId)
+          .single();
+          
+        if (error) {
+          console.error('❌ Erro ao carregar redação de simulado:', error);
+          throw new Error('Erro ao carregar redação de simulado');
+        }
+        
+        redacaoCompleta = {
+          ...data,
+          redacao_texto: data.texto,
+          frase_tematica: (data.simulados as any)?.frase_tematica || 'Simulado'
+        };
+      } else {
+        // Buscar da tabela redacoes_enviadas
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('id', selectedRedacaoId)
+          .single();
 
-      if (errorCompleto) {
-        console.error('❌ Erro ao carregar redação completa:', errorCompleto);
-        throw new Error('Erro ao carregar redação completa');
+        if (error) {
+          console.error('❌ Erro ao carregar redação regular:', error);
+          throw new Error('Erro ao carregar redação regular');
+        }
+        
+        redacaoCompleta = data;
       }
 
       // ETAPA 4: Preparar dados APENAS após autenticação bem-sucedida
@@ -251,14 +331,14 @@ export const MinhasRedacoes = () => {
         frase_tematica: redacaoCompleta.frase_tematica,
         nome_aluno: redacaoCompleta.nome_aluno,
         email_aluno: redacaoCompleta.email_aluno,
-        tipo_envio: redacaoCompleta.tipo_envio,
+        tipo_envio: redacaoBasica.tipo_envio,
         data_envio: redacaoCompleta.data_envio,
-        status: redacaoCompleta.status,
+        status: redacaoBasica.status,
         corrigida: redacaoCompleta.corrigida,
         nota_total: redacaoCompleta.nota_total,
-        comentario_admin: redacaoCompleta.comentario_admin,
+        comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
         data_correcao: redacaoCompleta.data_correcao,
-        redacao_texto: redacaoCompleta.redacao_texto || "",
+        redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "",
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
         nota_c3: redacaoCompleta.nota_c3,
@@ -302,9 +382,7 @@ export const MinhasRedacoes = () => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     });
   };
 
@@ -316,6 +394,16 @@ export const MinhasRedacoes = () => {
       'visitante': 'Visitante'
     };
     return tipos[tipo as keyof typeof tipos] || tipo;
+  };
+
+  const getTipoEnvioColor = (tipo: string) => {
+    const cores = {
+      'regular': 'bg-blue-100 text-blue-800',
+      'exercicio': 'bg-purple-100 text-purple-800',
+      'simulado': 'bg-orange-100 text-orange-800',
+      'visitante': 'bg-gray-100 text-gray-800'
+    };
+    return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
   };
 
   if (!turmaCode && !visitanteEmail) {
@@ -363,12 +451,12 @@ export const MinhasRedacoes = () => {
         <CardContent className="text-center py-8">
           <p className="text-redator-accent mb-4">
             {userType === "aluno" ? 
-              `Ainda não há redações da sua turma (${alunoTurma}).` : 
-              "Você ainda não enviou nenhuma redação."
+              `Ainda não há redações corrigidas da sua turma (${alunoTurma}).` : 
+              "Você ainda não tem redações corrigidas."
             }
           </p>
           <p className="text-sm text-redator-accent/70">
-            Envie uma redação para começar a ver as correções aqui!
+            Suas redações corrigidas aparecerão aqui quando disponíveis!
           </p>
         </CardContent>
       </Card>
@@ -377,10 +465,10 @@ export const MinhasRedacoes = () => {
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Shield className="w-6 h-6 text-redator-primary" />
-          <h2 className="text-2xl font-bold text-redator-primary">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="w-5 h-5 text-redator-primary" />
+          <h2 className="text-xl font-bold text-redator-primary">
             {userType === "aluno" ? 
               `🔐 Minhas Redações - ${alunoTurma} (${redacoesTurma.length})` : 
               `🔐 Minhas Redações (${redacoesTurma.length})`
@@ -388,50 +476,53 @@ export const MinhasRedacoes = () => {
           </h2>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Layout compacto para móveis */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {redacoesTurma.map((redacao) => (
-            <Card key={redacao.id} className="border-redator-accent/20 hover:shadow-lg transition-shadow">
-              <CardContent className="p-4">
-                <div className="space-y-3">
+            <Card key={redacao.id} className="border-redator-accent/20 hover:shadow-md transition-shadow">
+              <CardContent className="p-3">
+                <div className="space-y-2">
+                  {/* Título e Status - Layout horizontal compacto */}
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium text-redator-primary text-sm line-clamp-2">
+                    <h3 className="font-medium text-redator-primary text-sm line-clamp-2 flex-1">
                       {redacao.frase_tematica}
                     </h3>
-                    {redacao.corrigida ? (
-                      <Badge className="bg-green-100 text-green-800 shrink-0 text-xs">✅ Corrigida</Badge>
-                    ) : (
-                      <Badge className="bg-yellow-100 text-yellow-800 shrink-0 text-xs">⏳ Aguardando</Badge>
-                    )}
+                    <Badge className="bg-green-100 text-green-800 shrink-0 text-xs">
+                      ✅ Corrigida
+                    </Badge>
                   </div>
                   
-                  <div className="space-y-2 text-xs text-redator-accent">
+                  {/* Informações em linha compacta */}
+                  <div className="space-y-1 text-xs text-redator-accent">
                     <div className="flex items-center gap-1">
-                      <span className="font-medium">Aluno:</span>
-                      <span>{redacao.nome_aluno}</span>
+                      <User className="w-3 h-3" />
+                      <span className="truncate">{redacao.nome_aluno}</span>
                     </div>
                     
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium">Tipo:</span>
-                      <span>{getTipoEnvioLabel(redacao.tipo_envio)}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatDate(redacao.data_envio)}</span>
+                      </div>
+                      
+                      <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
+                        {getTipoEnvioLabel(redacao.tipo_envio)}
+                      </Badge>
                     </div>
                     
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>{formatDate(redacao.data_envio)}</span>
-                    </div>
-                    
-                    {/* SEGURANÇA: Notas só aparecem se já foi autenticado */}
-                    {redacao.corrigida && redacao.nota_total !== null && (
+                    {/* Nota disponível após autenticação */}
+                    {redacao.nota_total !== null && (
                       <div className="flex items-center gap-1 text-redator-primary font-medium">
-                        <span>📊 Nota disponível após autenticação</span>
+                        <span>📊 Nota: {redacao.nota_total}/1000</span>
                       </div>
                     )}
                   </div>
 
+                  {/* Botão Ver Correção */}
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500"
+                    className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500 mt-2"
                     onClick={() => handleViewRedacao(redacao)}
                   >
                     <Shield className="w-3 h-3 mr-1" />
