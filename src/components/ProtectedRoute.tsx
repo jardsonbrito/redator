@@ -23,7 +23,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     
     if (!isStudentLoggedIn && !isLoginPage) {
       console.log('Redirecionando para login - usuário não logado');
-      navigate('/aluno-login', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [isStudentLoggedIn, navigate, location.pathname]);
 

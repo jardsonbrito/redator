@@ -11,6 +11,7 @@ import { ptBR } from "date-fns/locale";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Simulados = () => {
   const { studentData } = useStudentAuth();
@@ -59,21 +60,24 @@ const Simulados = () => {
   };
 
   if (isLoading) {
-    return (
-      <ProtectedRoute>
+  return (
+    <ProtectedRoute>
+      <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Simulados" />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div className="text-center">Carregando simulados...</div>
           </main>
         </div>
-      </ProtectedRoute>
+      </TooltipProvider>
+    </ProtectedRoute>
     );
   }
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader pageTitle="Simulados" />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -165,7 +169,8 @@ const Simulados = () => {
           </div>
         )}
       </main>
-    </div>
+        </div>
+      </TooltipProvider>
     </ProtectedRoute>
   );
 };

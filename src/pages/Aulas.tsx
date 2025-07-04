@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ExternalLink, FileText, Search, Home } from "lucide-react";
@@ -125,19 +126,22 @@ const Aulas = () => {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Aulas" />
           <div className="max-w-6xl mx-auto px-4 py-8">
             <div className="text-center py-8">Carregando aulas...</div>
           </div>
-        </div>
+          </div>
+        </TooltipProvider>
       </ProtectedRoute>
     );
   }
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader pageTitle="Aulas" />
 
         <main className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
@@ -255,7 +259,8 @@ const Aulas = () => {
             )}
           </div>
         </main>
-      </div>
+        </div>
+      </TooltipProvider>
     </ProtectedRoute>
   );
 };

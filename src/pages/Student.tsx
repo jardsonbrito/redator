@@ -1,6 +1,7 @@
 
 import { StudentHeader } from "@/components/StudentHeader";
 import { MenuGrid } from "@/components/MenuGrid";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy } from "lucide-react";
 
 const Student = () => {
@@ -71,12 +72,14 @@ const Student = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      <StudentHeader />
-      <main className="container mx-auto px-4 py-8">
-        <MenuGrid menuItems={menuItems} showMinhasRedacoes={true} />
-      </main>
-    </div>
+    <TooltipProvider>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+        <StudentHeader />
+        <main className="container mx-auto px-4 py-8">
+          <MenuGrid menuItems={menuItems} showMinhasRedacoes={true} />
+        </main>
+      </div>
+    </TooltipProvider>
   );
 };
 

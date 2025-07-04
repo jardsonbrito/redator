@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Videoteca = () => {
   const { data: videos, isLoading, error } = useQuery({
@@ -74,7 +75,8 @@ const Videoteca = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader pageTitle="Videoteca" />
 
       {/* Content */}
@@ -161,7 +163,8 @@ const Videoteca = () => {
           </div>
         )}
       </main>
-    </div>
+        </div>
+      </TooltipProvider>
     </ProtectedRoute>
   );
 };

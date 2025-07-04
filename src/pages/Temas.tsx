@@ -8,6 +8,7 @@ import { BookOpen, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function Temas() {
   const { data: temas, isLoading, error } = useQuery({
@@ -47,7 +48,8 @@ export default function Temas() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader pageTitle="Temas" />
 
       {/* Content */}
@@ -112,7 +114,8 @@ export default function Temas() {
           </div>
         )}
       </main>
-    </div>
+        </div>
+      </TooltipProvider>
     </ProtectedRoute>
   );
 }
