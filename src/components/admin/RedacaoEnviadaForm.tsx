@@ -75,7 +75,7 @@ export const RedacaoEnviadaForm = () => {
           <RedacaoListTable
             redacoes={redacoes}
             onCorrection={handleCorrection}
-            onDelete={handleDeleteRedacao}
+            onDelete={(redacao) => handleDeleteRedacao(redacao.id)}
             onCopy={handleCopyRedacao}
           />
         )}

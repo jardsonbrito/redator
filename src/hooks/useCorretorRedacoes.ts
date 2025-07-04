@@ -39,7 +39,8 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
       // Type cast the data to ensure compatibility
       const redacoesFormatadas = (data || []).map(item => ({
         ...item,
-        tipo_redacao: item.tipo_redacao as string
+        tipo_redacao: item.tipo_redacao as string,
+        status_minha_correcao: item.status_minha_correcao as 'pendente' | 'incompleta' | 'corrigida'
       }));
 
       setRedacoes(redacoesFormatadas);
