@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Video, Calendar, Clock, Users, ExternalLink, Trash2, Power, PowerOff, Edit, Radio } from "lucide-react";
+import { Video, Calendar, Clock, Users, ExternalLink, Trash2, Power, PowerOff, Edit, Radio, BarChart3 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { FrequenciaModal } from "./FrequenciaModal";
 
 interface AulaVirtual {
   id: string;
@@ -29,6 +30,15 @@ interface AulaVirtual {
 export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit?: (aula: AulaVirtual) => void }) => {
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [frequenciaModal, setFrequenciaModal] = useState<{
+    isOpen: boolean;
+    aulaId: string;
+    aulaTitle: string;
+  }>({
+    isOpen: false,
+    aulaId: '',
+    aulaTitle: ''
+  });
 
   const fetchAulas = async () => {
     try {
@@ -82,6 +92,22 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
     }
   };
 
+  const openFrequenciaModal = (aula: AulaVirtual) => {
+    setFrequenciaModal({
+      isOpen: true,
+      aulaId: aula.id,
+      aulaTitle: aula.titulo
+    });
+  };
+
+  const closeFrequenciaModal = () => {
+    setFrequenciaModal({
+      isOpen: false,
+      aulaId: '',
+      aulaTitle: ''
+    });
+  };
+
   useEffect(() => {
     fetchAulas();
   }, [refresh]);
@@ -98,156 +124,175 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Video className="w-5 h-5" />
-            Aulas Virtuais ({aulas.length})
-          </span>
-          <Button onClick={fetchAulas} variant="outline" size="sm">
-            Atualizar
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {aulas.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Video className="w-8 h-8 mx-auto mb-2" />
-            <p>Nenhuma aula virtual criada ainda</p>
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Data/Horário</TableHead>
-                  <TableHead>Turmas</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {aulas.map((aula) => (
-                  <TableRow key={aula.id}>
-                    <TableCell>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{aula.titulo}</p>
-                          {aula.eh_aula_ao_vivo && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Radio className="w-3 h-3 mr-1" />
-                              Ao Vivo
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Video className="w-5 h-5" />
+              Aulas Virtuais ({aulas.length})
+            </span>
+            <Button onClick={fetchAulas} variant="outline" size="sm">
+              Atualizar
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {aulas.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Video className="w-8 h-8 mx-auto mb-2" />
+              <p>Nenhuma aula virtual criada ainda</p>
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Título</TableHead>
+                    <TableHead>Data/Horário</TableHead>
+                    <TableHead>Turmas</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {aulas.map((aula) => (
+                    <TableRow key={aula.id}>
+                      <TableCell>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{aula.titulo}</p>
+                            {aula.eh_aula_ao_vivo && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Radio className="w-3 h-3 mr-1" />
+                                Ao Vivo
+                              </Badge>
+                            )}
+                          </div>
+                          {aula.descricao && (
+                            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                              {aula.descricao}
+                            </p>
+                          )}
+                          {aula.eh_aula_ao_vivo && aula.status_transmissao && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {aula.status_transmissao === 'agendada' && '📅 Agendada'}
+                              {aula.status_transmissao === 'em_transmissao' && '🔴 Em Transmissão'}
+                              {aula.status_transmissao === 'encerrada' && '⏹️ Encerrada'}
                             </Badge>
                           )}
                         </div>
-                        {aula.descricao && (
-                          <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                            {aula.descricao}
-                          </p>
-                        )}
-                        {aula.eh_aula_ao_vivo && aula.status_transmissao && (
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {aula.status_transmissao === 'agendada' && '📅 Agendada'}
-                            {aula.status_transmissao === 'em_transmissao' && '🔴 Em Transmissão'}
-                            {aula.status_transmissao === 'encerrada' && '⏹️ Encerrada'}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(aula.data_aula).toLocaleDateString('pt-BR')}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        {aula.horario_inicio} - {aula.horario_fim}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {aula.turmas_autorizadas.slice(0, 2).map((turma) => (
-                          <Badge key={turma} variant="outline" className="text-xs">
-                            {turma}
-                          </Badge>
-                        ))}
-                        {aula.turmas_autorizadas.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{aula.turmas_autorizadas.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={aula.abrir_aba_externa ? "default" : "secondary"}>
-                        {aula.abrir_aba_externa ? (
-                          <><ExternalLink className="w-3 h-3 mr-1" />Externa</>
-                        ) : (
-                          <>Embutida</>
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={aula.ativo ? "default" : "secondary"}>
-                        {aula.ativo ? "Ativa" : "Inativa"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {onEdit && (
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(aula.data_aula).toLocaleDateString('pt-BR')}
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          {aula.horario_inicio} - {aula.horario_fim}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {aula.turmas_autorizadas.slice(0, 2).map((turma) => (
+                            <Badge key={turma} variant="outline" className="text-xs">
+                              {turma}
+                            </Badge>
+                          ))}
+                          {aula.turmas_autorizadas.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{aula.turmas_autorizadas.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={aula.abrir_aba_externa ? "default" : "secondary"}>
+                          {aula.abrir_aba_externa ? (
+                            <><ExternalLink className="w-3 h-3 mr-1" />Externa</>
+                          ) : (
+                            <>Embutida</>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={aula.ativo ? "default" : "secondary"}>
+                          {aula.ativo ? "Ativa" : "Inativa"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {aula.eh_aula_ao_vivo && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openFrequenciaModal(aula)}
+                              title="Ver frequência"
+                            >
+                              <BarChart3 className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {onEdit && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onEdit(aula)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onEdit(aula)}
+                            onClick={() => toggleAulaStatus(aula.id, aula.ativo)}
                           >
-                            <Edit className="w-4 h-4" />
+                            {aula.ativo ? (
+                              <PowerOff className="w-4 h-4" />
+                            ) : (
+                              <Power className="w-4 h-4" />
+                            )}
                           </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleAulaStatus(aula.id, aula.ativo)}
-                        >
-                          {aula.ativo ? (
-                            <PowerOff className="w-4 h-4" />
-                          ) : (
-                            <Power className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza de que deseja excluir a aula "{aula.titulo}"? 
-                                Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteAula(aula.id)}>
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza de que deseja excluir a aula "{aula.titulo}"? 
+                                  Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteAula(aula.id)}>
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <FrequenciaModal
+        isOpen={frequenciaModal.isOpen}
+        onClose={closeFrequenciaModal}
+        aulaId={frequenciaModal.aulaId}
+        aulaTitle={frequenciaModal.aulaTitle}
+      />
+    </>
   );
 };
