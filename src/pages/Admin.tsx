@@ -328,13 +328,16 @@ const Admin = () => {
       case "cadastro-alunos":
         const handleAlunoSuccess = () => {
           setRefreshAlunos(!refreshAlunos);
+          setAlunoEditando(null); // Limpar aluno em edição após sucesso
         };
 
         const handleEditAluno = (aluno: any) => {
+          console.log("Admin - Editando aluno:", aluno);
           setAlunoEditando(aluno);
         };
 
         const handleCancelAlunoEdit = () => {
+          console.log("Admin - Cancelando edição de aluno");
           setAlunoEditando(null);
         };
 

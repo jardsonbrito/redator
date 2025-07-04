@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,11 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     
     setFilteredAlunos(filtered);
   }, [searchTerm, alunos]);
+
+  const handleEdit = (aluno: Aluno) => {
+    console.log("Editando aluno:", aluno);
+    onEdit(aluno);
+  };
 
   const handleDelete = async (aluno: Aluno) => {
     try {
@@ -174,7 +180,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onEdit(aluno)}
+                          onClick={() => handleEdit(aluno)}
                         >
                           <Edit className="w-4 h-4 mr-1" />
                           Editar

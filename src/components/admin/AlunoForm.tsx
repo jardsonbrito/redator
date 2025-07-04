@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,9 @@ interface AlunoFormProps {
 }
 
 export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormProps) => {
-  const [nome, setNome] = useState(alunoEditando?.nome || "");
-  const [email, setEmail] = useState(alunoEditando?.email || "");
-  const [turma, setTurma] = useState(alunoEditando?.turma || "");
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [turma, setTurma] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -32,6 +32,20 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
     "Turma E"
   ];
 
+  // Preencher formulário quando um aluno for selecionado para edição
+  useEffect(() => {
+    if (alunoEditando) {
+      setNome(alunoEditando.nome || "");
+      setEmail(alunoEditando.email || "");
+      setTurma(alunoEditando.turma || "");
+    } else {
+      // Limpar formulário quando não está editando
+      setNome("");
+      setEmail("");
+      setTurma("");
+    }
+  }, [alunoEditando]);
+
   const isFormValid = nome.trim() && email.trim() && turma;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,68 +54,70 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
 
     setLoading(true);
     try {
-        if (alunoEditando) {
-          const dadosAluno = {
-            nome: nome.trim(),
-            sobrenome: "", // Mantém campo vazio para compatibilidade
-            email: email.trim().toLowerCase(),
-            turma,
-            user_type: "aluno",
-            is_authenticated_student: true
-          };
+      if (alunoEditando) {
+        // Modo de edição - fazer UPDATE
+        const dadosAluno = {
+          nome: nome.trim(),
+          sobrenome: "", // Mantém campo vazio para compatibilidade
+          email: email.trim().toLowerCase(),
+          turma,
+          user_type: "aluno",
+          is_authenticated_student: true
+        };
 
-          const { error } = await supabase
-            .from("profiles")
-            .update(dadosAluno)
-            .eq("id", alunoEditando.id);
+        const { error } = await supabase
+          .from("profiles")
+          .update(dadosAluno)
+          .eq("id", alunoEditando.id);
 
-          if (error) throw error;
+        if (error) throw error;
 
+        toast({
+          title: "Aluno atualizado com sucesso!",
+          description: `${nome} foi atualizado na ${turma}.`
+        });
+      } else {
+        // Modo de cadastro - fazer INSERT
+        // Verificar se já existe aluno com este email
+        const { data: existingAluno } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("email", email.trim().toLowerCase())
+          .maybeSingle();
+
+        if (existingAluno) {
           toast({
-            title: "Aluno atualizado com sucesso!",
-            description: `${nome} foi atualizado na ${turma}.`
+            title: "Erro",
+            description: "Já existe um aluno cadastrado com este e-mail.",
+            variant: "destructive"
           });
-        } else {
-          // Verificar se já existe aluno com este email
-          const { data: existingAluno } = await supabase
-            .from("profiles")
-            .select("email")
-            .eq("email", email.trim().toLowerCase())
-            .maybeSingle();
-
-          if (existingAluno) {
-            toast({
-              title: "Erro",
-              description: "Já existe um aluno cadastrado com este e-mail.",
-              variant: "destructive"
-            });
-            setLoading(false);
-            return;
-          }
-
-          const dadosAluno = {
-            id: crypto.randomUUID(),
-            nome: nome.trim(),
-            sobrenome: "", // Mantém campo vazio para compatibilidade
-            email: email.trim().toLowerCase(),
-            turma,
-            user_type: "aluno",
-            is_authenticated_student: true
-          };
-
-          const { error } = await supabase
-            .from("profiles")
-            .insert(dadosAluno);
-
-          if (error) throw error;
-
-          toast({
-            title: "Aluno cadastrado com sucesso!",
-            description: `${nome} foi adicionado à ${turma}.`
-          });
+          setLoading(false);
+          return;
         }
 
-      // Limpar formulário
+        const dadosAluno = {
+          id: crypto.randomUUID(),
+          nome: nome.trim(),
+          sobrenome: "", // Mantém campo vazio para compatibilidade
+          email: email.trim().toLowerCase(),
+          turma,
+          user_type: "aluno",
+          is_authenticated_student: true
+        };
+
+        const { error } = await supabase
+          .from("profiles")
+          .insert(dadosAluno);
+
+        if (error) throw error;
+
+        toast({
+          title: "Aluno cadastrado com sucesso!",
+          description: `${nome} foi adicionado à ${turma}.`
+        });
+      }
+
+      // Limpar formulário e sair do modo de edição
       setNome("");
       setEmail("");
       setTurma("");
@@ -134,7 +150,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5" />
-            Editar Aluno
+            Editar Aluno: {alunoEditando.nome}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -184,7 +200,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
                 disabled={!isFormValid || loading}
                 className="flex-1"
               >
-                {loading ? "Salvando..." : "Atualizar"}
+                {loading ? "Salvando..." : "Atualizar Aluno"}
               </Button>
               
               <Button 
@@ -265,7 +281,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
                 disabled={!isFormValid || loading}
                 className="w-full"
               >
-                {loading ? "Salvando..." : "Cadastrar"}
+                {loading ? "Salvando..." : "Cadastrar Aluno"}
               </Button>
             </form>
           </CardContent>
