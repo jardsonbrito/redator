@@ -12,7 +12,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CreditInfoDialog } from "@/components/CreditInfoDialog";
-import { useCredits } from "@/hooks/use-credits";
+import { useCredits } from "@/hooks/useCredits";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
