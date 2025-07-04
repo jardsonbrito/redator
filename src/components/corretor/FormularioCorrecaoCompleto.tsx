@@ -100,7 +100,7 @@ export const FormularioCorrecaoCompleto = ({
       const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
       const notaTotal = calcularNotaTotal();
 
-      const updateData = {
+      const updateData: any = {
         [`c1_${prefixo}`]: notas.c1,
         [`c2_${prefixo}`]: notas.c2,
         [`c3_${prefixo}`]: notas.c3,
