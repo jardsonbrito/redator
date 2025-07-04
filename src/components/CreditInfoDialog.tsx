@@ -25,20 +25,16 @@ export const CreditInfoDialog = ({
   const { getCreditsbyEmail } = useCredits();
 
   useEffect(() => {
-    console.log('🎯 CreditInfoDialog aberto:', { isOpen, userEmail, selectedCorretores });
-    
     if (isOpen && userEmail) {
       loadCredits();
     }
   }, [isOpen, userEmail]);
 
   const loadCredits = async () => {
-    console.log('🔄 Carregando créditos para:', userEmail);
     setLoading(true);
     
     try {
       const userCredits = await getCreditsbyEmail(userEmail);
-      console.log('💰 Créditos carregados:', userCredits);
       setCredits(userCredits);
     } catch (error) {
       console.error('❌ Erro ao carregar créditos:', error);
@@ -50,13 +46,6 @@ export const CreditInfoDialog = ({
 
   const creditsNeeded = selectedCorretores.length;
   const hasEnoughCredits = credits >= creditsNeeded;
-
-  console.log('📊 Status dos créditos:', {
-    credits,
-    creditsNeeded,
-    hasEnoughCredits,
-    selectedCorretoresCount: selectedCorretores.length
-  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -106,12 +95,6 @@ export const CreditInfoDialog = ({
                   </p>
                 </div>
               )}
-
-              {/* Debug info - remover em produção */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs">
-                <p><strong>Debug:</strong> Email: {userEmail}</p>
-                <p>Corretores: {JSON.stringify(selectedCorretores)}</p>
-              </div>
             </>
           )}
         </div>
