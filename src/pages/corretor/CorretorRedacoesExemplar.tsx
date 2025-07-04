@@ -16,62 +16,33 @@ const CorretorRedacoesExemplar = () => {
     queryKey: ['redacoes-exemplares-corretor'],
     queryFn: async () => {
       try {
-        const [enviadasRes, simuladoRes, exercicioRes] = await Promise.all([
-          supabase
-            .from('redacoes_enviadas')
-            .select('*')
-            .gte('nota_total', 800)
-            .eq('corrigida', true)
-            .order('nota_total', { ascending: false }),
-          supabase
-            .from('redacoes_simulado')
-            .select(`
-              *,
-              simulados!inner(frase_tematica, titulo)
-            `)
-            .gte('nota_total', 800)
-            .eq('corrigida', true)
-            .order('nota_total', { ascending: false }),
-          supabase
-            .from('redacoes_exercicio')
-            .select(`
-              *,
-              exercicios!inner(titulo)
-            `)
-            .gte('nota_total', 800)
-            .eq('corrigida', true)
-            .order('nota_total', { ascending: false })
-        ]);
+        // Buscar redações exemplares da tabela 'redacoes' (cadastradas pelo administrador)
+        const { data, error } = await supabase
+          .from('redacoes')
+          .select(`
+            *,
+            temas(frase_tematica, eixo_tematico)
+          `)
+          .order('nota_total', { ascending: false });
 
-        const redacoesEnviadas = enviadasRes.data || [];
-        const redacoesSimulado = simuladoRes.data || [];
-        const redacoesExercicio = exercicioRes.data || [];
+        if (error) {
+          console.error('Erro ao buscar redações exemplares:', error);
+          throw error;
+        }
 
-        const redacoesCombinadas = [
-          ...redacoesEnviadas.map(r => ({
-            ...r,
-            tipo_fonte: r.tipo_envio || 'regular',
-            frase_tematica: r.frase_tematica,
-            texto: r.redacao_texto,
-            data_envio: r.data_envio
-          })),
-          ...redacoesSimulado.map(r => ({
-            ...r,
-            tipo_fonte: 'simulado',
-            frase_tematica: (r.simulados as any)?.frase_tematica || (r.simulados as any)?.titulo || 'Simulado',
-            texto: r.texto,
-            data_envio: r.data_envio
-          })),
-          ...redacoesExercicio.map(r => ({
-            ...r,
-            tipo_fonte: 'exercicio',
-            frase_tematica: (r.exercicios as any)?.titulo || 'Exercício',
-            texto: r.redacao_texto,
-            data_envio: r.data_envio
-          }))
-        ].sort((a, b) => b.nota_total - a.nota_total);
+        // Formatar as redações exemplares
+        const redacoesFormatadas = (data || []).map(r => ({
+          ...r,
+          tipo_fonte: 'exemplar',
+          frase_tematica: r.temas?.frase_tematica || r.frase_tematica || 'Redação Exemplar',
+          eixo_tematico: r.temas?.eixo_tematico || r.eixo_tematico,
+          texto: r.conteudo,
+          data_envio: r.data_envio,
+          nome_aluno: 'Redação Modelo' // Redações exemplares são modelos
+        }));
 
-        return redacoesCombinadas;
+        console.log('Redações exemplares carregadas:', redacoesFormatadas.length);
+        return redacoesFormatadas;
       } catch (error) {
         console.error('Erro ao buscar redações exemplares:', error);
         return [];
@@ -81,6 +52,7 @@ const CorretorRedacoesExemplar = () => {
 
   const getTipoLabel = (tipo: string) => {
     const tipos = {
+      'exemplar': 'Redação Modelo',
       'regular': 'Regular',
       'simulado': 'Simulado', 
       'exercicio': 'Exercício',
@@ -91,12 +63,13 @@ const CorretorRedacoesExemplar = () => {
 
   const getTipoColor = (tipo: string) => {
     const cores = {
+      'exemplar': 'bg-yellow-100 text-yellow-800',
       'regular': 'bg-blue-100 text-blue-800',
       'simulado': 'bg-orange-100 text-orange-800',
       'exercicio': 'bg-purple-100 text-purple-800',
       'visitante': 'bg-gray-100 text-gray-800'
     };
-    return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
+    return cores[tipo as keyof typeof cores] || 'bg-yellow-100 text-yellow-800';
   };
 
   if (isLoading) {
@@ -124,7 +97,7 @@ const CorretorRedacoesExemplar = () => {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Redações Exemplares</h1>
-          <p className="text-gray-600">Redações de alto desempenho (800+ pontos)</p>
+          <p className="text-gray-600">Redações modelo cadastradas pelo administrador</p>
         </div>
 
         {!redacoesExemplares || redacoesExemplares.length === 0 ? (
@@ -135,7 +108,7 @@ const CorretorRedacoesExemplar = () => {
                 Nenhuma redação exemplar disponível
               </h3>
               <p className="text-gray-500">
-                As redações de alto desempenho aparecerão aqui quando disponíveis.
+                As redações exemplares aparecerão aqui quando cadastradas pelo administrador.
               </p>
             </CardContent>
           </Card>
