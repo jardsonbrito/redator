@@ -141,7 +141,7 @@ const Index = () => {
             </div>
 
             {/* Simulado Ativo - SEMPRE em destaque no topo */}
-            <SimuladoAtivo turmaCode={turmaCode} />
+            <SimuladoAtivo />
 
             {/* Aula Virtual Ativa */}
             <AulaVirtualAtiva turmaCode={turmaCode} />
