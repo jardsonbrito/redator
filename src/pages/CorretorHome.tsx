@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { ListaRedacoesCorretor } from "@/components/corretor/ListaRedacoesCorretor";
-import { FormularioCorrecao } from "@/components/corretor/FormularioCorrecao";
+import { FormularioCorrecaoCompleto } from "@/components/corretor/FormularioCorrecaoCompleto";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 
 const CorretorHome = () => {
@@ -46,12 +46,12 @@ const CorretorHome = () => {
             Olá, {corretor.nome_completo}!
           </h1>
           <p className="text-gray-600 mt-2">
-            Bem-vindo ao painel do corretor. Aqui você pode corrigir as redações atribuídas a você.
+            Bem-vindo ao painel do corretor. Aqui você pode corrigir as redações atribuídas a você com a nova Vista Pedagógica.
           </p>
         </div>
 
         {redacaoSelecionada ? (
-          <FormularioCorrecao
+          <FormularioCorrecaoCompleto
             redacao={redacaoSelecionada}
             corretorEmail={corretor.email}
             onVoltar={handleVoltarLista}

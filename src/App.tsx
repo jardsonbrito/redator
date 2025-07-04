@@ -58,7 +58,9 @@ function App() {
                 <Route path="/temas" element={<Temas />} />
                 <Route path="/temas/:id" element={<TemaDetalhes />} />
                 <Route path="/simulados" element={<Simulados />} />
+                {/* Corrigindo as rotas do simulado - ambas devem funcionar */}
                 <Route path="/simulado/:id" element={<SimuladoParticipacao />} />
+                <Route path="/simulados/:id" element={<SimuladoParticipacao />} />
                 <Route path="/exercicios" element={<Exercicios />} />
                 <Route path="/envie-redacao" element={<EnvieRedacao />} />
                 <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
