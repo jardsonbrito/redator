@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,11 @@ interface RedacaoEnviada {
   redacao_texto: string;
   data_envio: string;
   corrigida: boolean;
+  nota_c1?: number;
+  nota_c2?: number;
+  nota_c3?: number;
+  nota_c4?: number;
+  nota_c5?: number;
   nota_total?: number;
   comentario_admin?: string;
   status: string;
