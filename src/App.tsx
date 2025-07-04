@@ -1,3 +1,4 @@
+
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Welcome from "./pages/Welcome";
@@ -27,38 +28,42 @@ import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 function App() {
   return (
     <CorretorAuthProvider>
-      <Router>
-        <div className="min-h-screen bg-background">
-          <Toaster />
-          <Routes>
-            {/* Rotas Públicas */}
-            <Route path="/" element={<Welcome />} />
-            <Route path="/login" element={<Login />} />
+      <StudentAuthProvider>
+        <AuthProvider>
+          <Router>
+            <div className="min-h-screen bg-background">
+              <Toaster />
+              <Routes>
+                {/* Rotas Públicas */}
+                <Route path="/" element={<Welcome />} />
+                <Route path="/login" element={<Login />} />
 
-            <Route path="/app" element={<StudentAuthProvider><Student /></StudentAuthProvider>} />
-            <Route path="/temas" element={<StudentAuthProvider><Temas /></StudentAuthProvider>} />
-            <Route path="/simulados" element={<StudentAuthProvider><Simulados /></StudentAuthProvider>} />
-            <Route path="/aulas" element={<StudentAuthProvider><Aulas /></StudentAuthProvider>} />
-            <Route path="/videoteca" element={<StudentAuthProvider><Videoteca /></StudentAuthProvider>} />
-            <Route path="/biblioteca" element={<StudentAuthProvider><Biblioteca /></StudentAuthProvider>} />
-            <Route path="/redacoes" element={<StudentAuthProvider><RedacoesExemplar /></StudentAuthProvider>} />
-            <Route path="/top5" element={<StudentAuthProvider><Top5 /></StudentAuthProvider>} />
+                <Route path="/app" element={<Student />} />
+                <Route path="/temas" element={<Temas />} />
+                <Route path="/simulados" element={<Simulados />} />
+                <Route path="/aulas" element={<Aulas />} />
+                <Route path="/videoteca" element={<Videoteca />} />
+                <Route path="/biblioteca" element={<Biblioteca />} />
+                <Route path="/redacoes" element={<RedacoesExemplar />} />
+                <Route path="/top5" element={<Top5 />} />
 
-            {/* Rotas do Admin */}
-            <Route path="/admin" element={<AuthProvider><Admin /></AuthProvider>} />
-            <Route path="/admin/dashboard" element={<AuthProvider><Dashboard /></AuthProvider>} />
-            <Route path="/admin/avisos" element={<AuthProvider><Avisos /></AuthProvider>} />
-            <Route path="/admin/redacoes" element={<AuthProvider><Redacoes /></AuthProvider>} />
-            <Route path="/admin/simulados" element={<AuthProvider><SimuladosAdmin /></AuthProvider>} />
-            <Route path="/admin/exercicios" element={<AuthProvider><ExerciciosAdmin /></AuthProvider>} />
-            <Route path="/admin/corretores" element={<AuthProvider><CorretoresAdmin /></AuthProvider>} />
-            
-            {/* Rotas do Corretor */}
-            <Route path="/corretor/login" element={<CorretorLogin />} />
-            <Route path="/corretor" element={<CorretorHome />} />
-          </Routes>
-        </div>
-      </Router>
+                {/* Rotas do Admin */}
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin/dashboard" element={<Dashboard />} />
+                <Route path="/admin/avisos" element={<Avisos />} />
+                <Route path="/admin/redacoes" element={<Redacoes />} />
+                <Route path="/admin/simulados" element={<SimuladosAdmin />} />
+                <Route path="/admin/exercicios" element={<ExerciciosAdmin />} />
+                <Route path="/admin/corretores" element={<CorretoresAdmin />} />
+                
+                {/* Rotas do Corretor */}
+                <Route path="/corretor/login" element={<CorretorLogin />} />
+                <Route path="/corretor" element={<CorretorHome />} />
+              </Routes>
+            </div>
+          </Router>
+        </AuthProvider>
+      </StudentAuthProvider>
     </CorretorAuthProvider>
   );
 }
