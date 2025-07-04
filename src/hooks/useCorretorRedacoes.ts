@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface RedacaoCorretor {
   id: string;
-  tipo_redacao: 'regular' | 'simulado' | 'exercicio';
+  tipo_redacao: string; // Changed from strict union to string
   nome_aluno: string;
   email_aluno: string;
   frase_tematica: string;
@@ -36,7 +36,13 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
 
       if (error) throw error;
 
-      setRedacoes(data || []);
+      // Type cast the data to ensure compatibility
+      const redacoesFormatadas = (data || []).map(item => ({
+        ...item,
+        tipo_redacao: item.tipo_redacao as string
+      }));
+
+      setRedacoes(redacoesFormatadas);
     } catch (error: any) {
       console.error("Erro ao buscar redações do corretor:", error);
       toast({

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export interface RedacaoEnviada {
   id: string;
@@ -12,48 +12,95 @@ export interface RedacaoEnviada {
   redacao_texto: string;
   data_envio: string;
   corrigida: boolean;
-  nota_c1?: number;
-  nota_c2?: number;
-  nota_c3?: number;
-  nota_c4?: number;
-  nota_c5?: number;
-  nota_total?: number;
-  comentario_admin?: string;
+  nota_total: number | null;
+  nota_c1: number | null;
+  nota_c2: number | null;
+  nota_c3: number | null;
+  nota_c4: number | null;
+  nota_c5: number | null;
+  comentario_admin: string | null;
+  data_correcao: string | null;
   status: string;
   tipo_envio: string;
-  corretor_id_1?: string;
-  corretor_id_2?: string;
+  // New corrector fields
+  c1_corretor_1: number | null;
+  c2_corretor_1: number | null;
+  c3_corretor_1: number | null;
+  c4_corretor_1: number | null;
+  c5_corretor_1: number | null;
+  nota_final_corretor_1: number | null;
+  status_corretor_1: string | null;
+  c1_corretor_2: number | null;
+  c2_corretor_2: number | null;
+  c3_corretor_2: number | null;
+  c4_corretor_2: number | null;
+  c5_corretor_2: number | null;
+  nota_final_corretor_2: number | null;
+  status_corretor_2: string | null;
+  corretor_id_1: string | null;
+  corretor_id_2: string | null;
 }
 
 export const useRedacoesEnviadas = () => {
   const [redacoes, setRedacoes] = useState<RedacaoEnviada[]>([]);
-  const [filteredRedacoes, setFilteredRedacoes] = useState<RedacaoEnviada[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
+  useEffect(() => {
+    fetchRedacoes();
+  }, []);
+
   const fetchRedacoes = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("redacoes_enviadas")
         .select(`
-          *,
-          corretor_1:corretor_id_1(nome_completo),
-          corretor_2:corretor_id_2(nome_completo)
+          id,
+          nome_aluno,
+          email_aluno,
+          turma,
+          frase_tematica,
+          redacao_texto,
+          data_envio,
+          corrigida,
+          nota_total,
+          nota_c1,
+          nota_c2,
+          nota_c3,
+          nota_c4,
+          nota_c5,
+          comentario_admin,
+          data_correcao,
+          status,
+          tipo_envio,
+          c1_corretor_1,
+          c2_corretor_1,
+          c3_corretor_1,
+          c4_corretor_1,
+          c5_corretor_1,
+          nota_final_corretor_1,
+          status_corretor_1,
+          c1_corretor_2,
+          c2_corretor_2,
+          c3_corretor_2,
+          c4_corretor_2,
+          c5_corretor_2,
+          nota_final_corretor_2,
+          status_corretor_2,
+          corretor_id_1,
+          corretor_id_2
         `)
-        .eq("tipo_envio", "regular")
         .order("data_envio", { ascending: false });
 
       if (error) throw error;
 
       setRedacoes(data || []);
-      setFilteredRedacoes(data || []);
     } catch (error: any) {
       console.error("Erro ao buscar redações:", error);
       toast({
         title: "Erro ao carregar redações",
-        description: error.message || "Ocorreu um erro inesperado.",
+        description: "Não foi possível carregar as redações.",
         variant: "destructive"
       });
     } finally {
@@ -61,73 +108,46 @@ export const useRedacoesEnviadas = () => {
     }
   };
 
-  useEffect(() => {
-    fetchRedacoes();
-  }, []);
-
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredRedacoes(redacoes);
-      return;
-    }
-
-    const filtered = redacoes.filter(redacao => 
-      redacao.nome_aluno.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      redacao.email_aluno.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      redacao.turma.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      redacao.frase_tematica.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    setFilteredRedacoes(filtered);
-  }, [searchTerm, redacoes]);
-
-  const handleDeleteRedacao = async (redacao: RedacaoEnviada) => {
+  const handleDeleteRedacao = async (id: string) => {
     try {
       const { error } = await supabase
         .from("redacoes_enviadas")
         .delete()
-        .eq("id", redacao.id);
+        .eq("id", id);
 
       if (error) throw error;
 
       toast({
-        title: "Redação excluída com sucesso!",
-        description: `A redação de ${redacao.nome_aluno} foi removida do sistema.`
+        title: "Redação excluída",
+        description: "A redação foi excluída com sucesso."
       });
 
       fetchRedacoes();
     } catch (error: any) {
       console.error("Erro ao excluir redação:", error);
       toast({
-        title: "Erro ao excluir redação",
-        description: error.message || "Ocorreu um erro inesperado.",
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a redação.",
         variant: "destructive"
       });
     }
   };
 
-  const handleCopyRedacao = async (redacao: RedacaoEnviada) => {
-    const textToCopy = `Autor: ${redacao.nome_aluno}
-Tema: ${redacao.frase_tematica}
-
-Texto:
-${redacao.redacao_texto}`;
-
-    try {
-      await navigator.clipboard.writeText(textToCopy);
-      toast({
-        title: "Redação copiada com sucesso!",
-        description: "O conteúdo foi copiado para a área de transferência."
-      });
-    } catch (error) {
-      console.error("Erro ao copiar redação:", error);
-      toast({
-        title: "Erro ao copiar redação",
-        description: "Não foi possível copiar o conteúdo. Tente novamente.",
-        variant: "destructive"
-      });
-    }
+  const handleCopyRedacao = (redacao: RedacaoEnviada) => {
+    const text = `Aluno: ${redacao.nome_aluno}\nE-mail: ${redacao.email_aluno}\nTurma: ${redacao.turma}\nTema: ${redacao.frase_tematica}\n\nTexto:\n${redacao.redacao_texto}`;
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Redação copiada!",
+      description: "O texto da redação foi copiado para a área de transferência."
+    });
   };
+
+  const filteredRedacoes = redacoes.filter(redacao =>
+    redacao.nome_aluno?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    redacao.email_aluno?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    redacao.turma?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    redacao.frase_tematica?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return {
     redacoes: filteredRedacoes,
