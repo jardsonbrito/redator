@@ -5,6 +5,8 @@ import Welcome from "./pages/Welcome";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
+import AlunoLogin from "./pages/AlunoLogin";
+import VisitanteLogin from "./pages/VisitanteLogin";
 import Simulados from "./pages/Simulados";
 import Temas from "./pages/Temas";
 import Aulas from "./pages/Aulas";
@@ -12,6 +14,9 @@ import Videoteca from "./pages/Videoteca";
 import Biblioteca from "./pages/Biblioteca";
 import RedacoesExemplar from "./pages/RedacoesExemplar";
 import Top5 from "./pages/Top5";
+import Exercicios from "./pages/Exercicios";
+import EnvieRedacao from "./pages/EnvieRedacao";
+import MinhasRedacoesList from "./pages/MinhasRedacoesList";
 import { AuthProvider } from "./hooks/useAuth";
 import { StudentAuthProvider } from "./hooks/useStudentAuth";
 import { Toaster } from "@/components/ui/toaster"
@@ -37,10 +42,15 @@ function App() {
                 {/* Rotas Públicas */}
                 <Route path="/" element={<Welcome />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/aluno-login" element={<AlunoLogin />} />
+                <Route path="/visitante-login" element={<VisitanteLogin />} />
 
                 <Route path="/app" element={<Index />} />
                 <Route path="/temas" element={<Temas />} />
                 <Route path="/simulados" element={<Simulados />} />
+                <Route path="/exercicios" element={<Exercicios />} />
+                <Route path="/envie-redacao" element={<EnvieRedacao />} />
+                <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
                 <Route path="/aulas" element={<Aulas />} />
                 <Route path="/videoteca" element={<Videoteca />} />
                 <Route path="/biblioteca" element={<Biblioteca />} />
