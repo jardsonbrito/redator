@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search } from "lucide-react";
+import { Edit, Trash2, Search, Copy } from "lucide-react";
 
 interface RedacaoEnviada {
   id: string;
@@ -181,6 +181,29 @@ export const RedacaoEnviadaForm = () => {
     }
   };
 
+  const handleCopyRedacao = async (redacao: RedacaoEnviada) => {
+    const textToCopy = `Autor: ${redacao.nome_aluno}
+Tema: ${redacao.frase_tematica}
+
+Texto:
+${redacao.redacao_texto}`;
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      toast({
+        title: "Redação copiada com sucesso!",
+        description: "O conteúdo foi copiado para a área de transferência."
+      });
+    } catch (error) {
+      console.error("Erro ao copiar redação:", error);
+      toast({
+        title: "Erro ao copiar redação",
+        description: "Não foi possível copiar o conteúdo. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getStatusColor = (status: string, corrigida: boolean) => {
     if (corrigida || status === "corrigido") return "bg-green-100 text-green-800";
     if (status === "aguardando") return "bg-yellow-100 text-yellow-800";
@@ -203,7 +226,19 @@ export const RedacaoEnviadaForm = () => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Corrigir Redação - {selectedRedacao.nome_aluno}</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            Corrigir Redação - {selectedRedacao.nome_aluno}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleCopyRedacao(selectedRedacao)}
+              className="flex items-center gap-2"
+              title="Copiar redação com dados do aluno"
+            >
+              <Copy className="w-4 h-4" />
+              Copiar Redação
+            </Button>
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -395,6 +430,16 @@ export const RedacaoEnviadaForm = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyRedacao(redacao)}
+                          title="Copiar redação com dados do aluno"
+                        >
+                          <Copy className="w-4 h-4 mr-1" />
+                          Copiar
+                        </Button>
+                        
                         <Button
                           variant="outline"
                           size="sm"
