@@ -326,6 +326,51 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_audit: {
+        Row: {
+          action: string
+          admin_id: string | null
+          created_at: string | null
+          id: string
+          new_credits: number
+          old_credits: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          admin_id?: string | null
+          created_at?: string | null
+          id?: string
+          new_credits: number
+          old_credits: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string | null
+          created_at?: string | null
+          id?: string
+          new_credits?: number
+          old_credits?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_audit_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_audit_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercicios: {
         Row: {
           abrir_aba_externa: boolean | null
@@ -464,6 +509,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          creditos: number | null
           email: string
           id: string
           is_authenticated_student: boolean | null
@@ -476,6 +522,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          creditos?: number | null
           email: string
           id: string
           is_authenticated_student?: boolean | null
@@ -488,6 +535,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          creditos?: number | null
           email?: string
           id?: string
           is_authenticated_student?: boolean | null
@@ -1327,6 +1375,10 @@ export type Database = {
           imagem_url: string
           link_externo: string
         }[]
+      }
+      get_credits_by_email: {
+        Args: { user_email: string }
+        Returns: number
       }
       get_redacoes_by_turma: {
         Args: { p_turma: string }

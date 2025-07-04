@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { CreditInfoDialog } from "@/components/CreditInfoDialog";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
@@ -22,6 +22,7 @@ const EnvieRedacao = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRedacaoValid, setIsRedacaoValid] = useState(false);
   const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
   const { toast } = useToast();
 
   // Parâmetros da URL para pré-preenchimento
@@ -63,7 +64,7 @@ const EnvieRedacao = () => {
     }
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePrimarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!nomeCompleto.trim() || !email.trim() || !fraseTematica.trim() || !redacaoTexto.trim()) {
@@ -125,6 +126,11 @@ const EnvieRedacao = () => {
       return;
     }
 
+    // Mostrar dialog de créditos antes de continuar
+    setShowCreditDialog(true);
+  };
+
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
 
     try {
@@ -164,6 +170,7 @@ const EnvieRedacao = () => {
       setFraseTematica("");
       setRedacaoTexto("");
       setSelectedCorretores([]);
+      setShowCreditDialog(false);
 
     } catch (error) {
       console.error('Erro ao enviar redação:', error);
@@ -202,7 +209,7 @@ const EnvieRedacao = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handlePrimarySubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="nome-completo" className="block text-sm font-medium text-redator-primary mb-2">
@@ -291,11 +298,19 @@ const EnvieRedacao = () => {
                 disabled={isSubmitting || !isRedacaoValid}
                 className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
               >
-                {isSubmitting ? "Salvando..." : "Enviar Redação"}
+                {isSubmitting ? "Salvando..." : "Verificar Créditos e Enviar"}
               </Button>
             </form>
           </CardContent>
         </Card>
+
+        <CreditInfoDialog
+          isOpen={showCreditDialog}
+          onClose={() => setShowCreditDialog(false)}
+          onProceed={handleFinalSubmit}
+          userEmail={email}
+          selectedCorretores={selectedCorretores}
+        />
         </main>
         </div>
       </TooltipProvider>

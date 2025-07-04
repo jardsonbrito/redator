@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CorretorSelector } from "./CorretorSelector";
+import { CreditInfoDialog } from "./CreditInfoDialog";
 
 interface EnvioRedacaoProps {
   isSimulado?: boolean;
@@ -33,6 +33,7 @@ export const EnvioRedacaoWithCorretor = ({
   });
   const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
   const { toast } = useToast();
 
   const validateForm = () => {
@@ -96,11 +97,16 @@ export const EnvioRedacaoWithCorretor = ({
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePrimarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) return;
 
+    // Mostrar dialog de créditos antes de continuar
+    setShowCreditDialog(true);
+  };
+
+  const handleFinalSubmit = async () => {
     setLoading(true);
 
     try {
@@ -159,6 +165,7 @@ export const EnvioRedacaoWithCorretor = ({
         redacao_texto: "",
       });
       setSelectedCorretores([]);
+      setShowCreditDialog(false);
 
       onSuccess?.();
     } catch (error: any) {
@@ -174,87 +181,97 @@ export const EnvioRedacaoWithCorretor = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          Enviar Redação {isSimulado ? "- Simulado" : exercicioId ? "- Exercício" : ""}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Enviar Redação {isSimulado ? "- Simulado" : exercicioId ? "- Exercício" : ""}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePrimarySubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="nome_aluno">Nome do Aluno *</Label>
+                <Input
+                  id="nome_aluno"
+                  value={formData.nome_aluno}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nome_aluno: e.target.value }))}
+                  placeholder="Digite seu nome completo"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="email_aluno">E-mail *</Label>
+                <Input
+                  id="email_aluno"
+                  type="email"
+                  value={formData.email_aluno}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email_aluno: e.target.value }))}
+                  placeholder="Digite seu e-mail"
+                  required
+                />
+              </div>
+            </div>
+
             <div>
-              <Label htmlFor="nome_aluno">Nome do Aluno *</Label>
+              <Label htmlFor="turma">Turma *</Label>
               <Input
-                id="nome_aluno"
-                value={formData.nome_aluno}
-                onChange={(e) => setFormData(prev => ({ ...prev, nome_aluno: e.target.value }))}
-                placeholder="Digite seu nome completo"
+                id="turma"
+                value={formData.turma}
+                onChange={(e) => setFormData(prev => ({ ...prev, turma: e.target.value }))}
+                placeholder="Digite sua turma"
                 required
               />
             </div>
 
-            <div>
-              <Label htmlFor="email_aluno">E-mail *</Label>
-              <Input
-                id="email_aluno"
-                type="email"
-                value={formData.email_aluno}
-                onChange={(e) => setFormData(prev => ({ ...prev, email_aluno: e.target.value }))}
-                placeholder="Digite seu e-mail"
-                required
-              />
-            </div>
-          </div>
+            {!fraseTematica && (
+              <div>
+                <Label htmlFor="frase_tematica">Frase Temática *</Label>
+                <Input
+                  id="frase_tematica"
+                  value={formData.frase_tematica}
+                  onChange={(e) => setFormData(prev => ({ ...prev, frase_tematica: e.target.value }))}
+                  placeholder="Digite a frase temática"
+                  required
+                />
+              </div>
+            )}
 
-          <div>
-            <Label htmlFor="turma">Turma *</Label>
-            <Input
-              id="turma"
-              value={formData.turma}
-              onChange={(e) => setFormData(prev => ({ ...prev, turma: e.target.value }))}
-              placeholder="Digite sua turma"
-              required
+            <CorretorSelector
+              selectedCorretores={selectedCorretores}
+              onCorretoresChange={setSelectedCorretores}
+              isSimulado={isSimulado}
+              required={true}
             />
-          </div>
 
-          {!fraseTematica && (
             <div>
-              <Label htmlFor="frase_tematica">Frase Temática *</Label>
-              <Input
-                id="frase_tematica"
-                value={formData.frase_tematica}
-                onChange={(e) => setFormData(prev => ({ ...prev, frase_tematica: e.target.value }))}
-                placeholder="Digite a frase temática"
+              <Label htmlFor="redacao_texto">Texto da Redação *</Label>
+              <Textarea
+                id="redacao_texto"
+                value={formData.redacao_texto}
+                onChange={(e) => setFormData(prev => ({ ...prev, redacao_texto: e.target.value }))}
+                placeholder="Digite o texto da sua redação aqui..."
+                className="min-h-[300px]"
                 required
               />
             </div>
-          )}
 
-          <CorretorSelector
-            selectedCorretores={selectedCorretores}
-            onCorretoresChange={setSelectedCorretores}
-            isSimulado={isSimulado}
-            required={true}
-          />
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? "Enviando..." : "Verificar Créditos e Enviar"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-          <div>
-            <Label htmlFor="redacao_texto">Texto da Redação *</Label>
-            <Textarea
-              id="redacao_texto"
-              value={formData.redacao_texto}
-              onChange={(e) => setFormData(prev => ({ ...prev, redacao_texto: e.target.value }))}
-              placeholder="Digite o texto da sua redação aqui..."
-              className="min-h-[300px]"
-              required
-            />
-          </div>
-
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Enviando..." : "Enviar Redação"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <CreditInfoDialog
+        isOpen={showCreditDialog}
+        onClose={() => setShowCreditDialog(false)}
+        onProceed={handleFinalSubmit}
+        userEmail={formData.email_aluno}
+        selectedCorretores={selectedCorretores}
+      />
+    </>
   );
 };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +17,7 @@ import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { CreditInfoDialog } from "@/components/CreditInfoDialog";
 
 const SimuladoParticipacao = () => {
   const { id } = useParams();
@@ -31,6 +31,7 @@ const SimuladoParticipacao = () => {
   const [isRedacaoValid, setIsRedacaoValid] = useState(false);
   const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
 
   // Pré-preencher dados do usuário logado
   useEffect(() => {
@@ -76,7 +77,7 @@ const SimuladoParticipacao = () => {
     enabled: !!id
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePrimarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!nomeCompleto.trim() || !email.trim() || !redacaoTexto.trim()) {
@@ -115,6 +116,11 @@ const SimuladoParticipacao = () => {
       return;
     }
 
+    // Mostrar dialog de créditos antes de continuar
+    setShowCreditDialog(true);
+  };
+
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
 
     try {
@@ -357,7 +363,7 @@ const SimuladoParticipacao = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handlePrimarySubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="nome-completo">Nome Completo *</Label>
@@ -411,11 +417,19 @@ const SimuladoParticipacao = () => {
                     disabled={isSubmitting || !isRedacaoValid}
                     className="w-full bg-primary"
                   >
-                    {isSubmitting ? "Enviando..." : "Enviar Redação do Simulado"}
+                    {isSubmitting ? "Enviando..." : "Verificar Créditos e Enviar"}
                   </Button>
                 </form>
               </CardContent>
             </Card>
+
+            <CreditInfoDialog
+              isOpen={showCreditDialog}
+              onClose={() => setShowCreditDialog(false)}
+              onProceed={handleFinalSubmit}
+              userEmail={email}
+              selectedCorretores={selectedCorretores}
+            />
           </main>
         </div>
       </TooltipProvider>
