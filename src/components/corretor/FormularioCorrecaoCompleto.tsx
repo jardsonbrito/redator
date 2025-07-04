@@ -50,19 +50,7 @@ export const FormularioCorrecaoCompleto = ({ redacao, corretorEmail, onVoltar, o
 
       const { data, error } = await supabase
         .from(tabela as any)
-        .select(`
-          c1_${prefixo},
-          c2_${prefixo},
-          c3_${prefixo},
-          c4_${prefixo},
-          c5_${prefixo},
-          comentario_c1_${prefixo},
-          comentario_c2_${prefixo},
-          comentario_c3_${prefixo},
-          comentario_c4_${prefixo},
-          comentario_c5_${prefixo},
-          elogios_pontos_atencao_${prefixo}
-        `)
+        .select('*')
         .eq('id', redacao.id)
         .single();
 
