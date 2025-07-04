@@ -34,11 +34,20 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
 
   // Preencher formulário quando um aluno for selecionado para edição
   useEffect(() => {
+    console.log("AlunoForm - useEffect chamado com alunoEditando:", alunoEditando);
+    
     if (alunoEditando) {
+      console.log("AlunoForm - Preenchendo formulário com dados:", {
+        nome: alunoEditando.nome,
+        email: alunoEditando.email,
+        turma: alunoEditando.turma
+      });
+      
       setNome(alunoEditando.nome || "");
       setEmail(alunoEditando.email || "");
       setTurma(alunoEditando.turma || "");
     } else {
+      console.log("AlunoForm - Limpando formulário");
       // Limpar formulário quando não está editando
       setNome("");
       setEmail("");
@@ -55,6 +64,8 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
     setLoading(true);
     try {
       if (alunoEditando) {
+        console.log("AlunoForm - Modo de edição - Atualizando aluno:", alunoEditando.id);
+        
         // Modo de edição - fazer UPDATE
         const dadosAluno = {
           nome: nome.trim(),
@@ -65,18 +76,27 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
           is_authenticated_student: true
         };
 
+        console.log("AlunoForm - Dados para update:", dadosAluno);
+
         const { error } = await supabase
           .from("profiles")
           .update(dadosAluno)
           .eq("id", alunoEditando.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("AlunoForm - Erro no update:", error);
+          throw error;
+        }
+
+        console.log("AlunoForm - Update realizado com sucesso");
 
         toast({
           title: "Aluno atualizado com sucesso!",
           description: `${nome} foi atualizado na ${turma}.`
         });
       } else {
+        console.log("AlunoForm - Modo de cadastro - Criando novo aluno");
+        
         // Modo de cadastro - fazer INSERT
         // Verificar se já existe aluno com este email
         const { data: existingAluno } = await supabase
@@ -122,7 +142,10 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
       setEmail("");
       setTurma("");
       onSuccess();
-      if (onCancelEdit) onCancelEdit();
+      if (onCancelEdit) {
+        console.log("AlunoForm - Chamando onCancelEdit");
+        onCancelEdit();
+      }
 
     } catch (error: any) {
       console.error("Erro ao salvar aluno:", error);
@@ -137,14 +160,20 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
   };
 
   const handleCancel = () => {
+    console.log("AlunoForm - handleCancel chamado");
     setNome("");
     setEmail("");
     setTurma("");
-    if (onCancelEdit) onCancelEdit();
+    if (onCancelEdit) {
+      console.log("AlunoForm - Chamando onCancelEdit no cancel");
+      onCancelEdit();
+    }
   };
 
   // Se está editando, mostrar apenas o formulário manual
   if (alunoEditando) {
+    console.log("AlunoForm - Renderizando modo de edição para:", alunoEditando.nome);
+    
     return (
       <Card>
         <CardHeader>
@@ -216,6 +245,8 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
       </Card>
     );
   }
+
+  console.log("AlunoForm - Renderizando modo normal (cadastro)");
 
   return (
     <Tabs defaultValue="manual" className="w-full">

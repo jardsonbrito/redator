@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,8 +75,26 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   }, [searchTerm, alunos]);
 
   const handleEdit = (aluno: Aluno) => {
-    console.log("Editando aluno:", aluno);
-    onEdit(aluno);
+    console.log("AlunoList - Clicou em editar aluno:", aluno);
+    console.log("AlunoList - Dados do aluno:", {
+      id: aluno.id,
+      nome: aluno.nome,
+      email: aluno.email,
+      turma: aluno.turma,
+      created_at: aluno.created_at
+    });
+    
+    // Garantir que todos os dados necessários estão presentes
+    const alunoParaEdicao = {
+      id: aluno.id,
+      nome: aluno.nome || '',
+      email: aluno.email || '',
+      turma: aluno.turma || '',
+      created_at: aluno.created_at
+    };
+    
+    console.log("AlunoList - Enviando para onEdit:", alunoParaEdicao);
+    onEdit(alunoParaEdicao);
   };
 
   const handleDelete = async (aluno: Aluno) => {
@@ -180,7 +197,12 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEdit(aluno)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log("Botão Editar clicado para aluno:", aluno.nome);
+                            handleEdit(aluno);
+                          }}
                         >
                           <Edit className="w-4 h-4 mr-1" />
                           Editar
