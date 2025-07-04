@@ -39,6 +39,7 @@ export default function Admin() {
   // Estados para modo de edição
   const [alunoEditando, setAlunoEditando] = useState(null);
   const [avisoEditando, setAvisoEditando] = useState(null);
+  const [temaEditando, setTemaEditando] = useState(null);
 
   const handleAulaSuccess = () => {
     setRefreshAulas(!refreshAulas);
@@ -50,6 +51,7 @@ export default function Admin() {
 
   const handleTemaSuccess = () => {
     setRefreshTemas(!refreshTemas);
+    setTemaEditando(null);
   };
 
   const handleSimuladoSuccess = () => {
@@ -89,12 +91,20 @@ export default function Admin() {
     setAvisoEditando(aviso);
   };
 
+  const handleEditTema = (tema: any) => {
+    setTemaEditando(tema);
+  };
+
+  const handleCancelEditTema = () => {
+    setTemaEditando(null);
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-8">
       <h1 className="text-3xl font-bold text-center mb-8">Painel Administrativo</h1>
       
       <Tabs defaultValue="salas" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 lg:grid-cols-11">
+        <TabsList className="grid w-full grid-cols-6 lg:grid-cols-10">
           <TabsTrigger value="salas">Salas</TabsTrigger>
           <TabsTrigger value="alunos">Alunos</TabsTrigger>
           <TabsTrigger value="aulas">Aulas</TabsTrigger>
@@ -145,8 +155,12 @@ export default function Admin() {
 
         <TabsContent value="temas" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TemaForm onSuccess={handleTemaSuccess} />
-            <TemaList />
+            <TemaForm 
+              onSuccess={handleTemaSuccess}
+              temaEditando={temaEditando}
+              onCancelEdit={handleCancelEditTema}
+            />
+            <TemaList onEdit={handleEditTema} />
           </div>
         </TabsContent>
 
