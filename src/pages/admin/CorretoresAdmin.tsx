@@ -15,7 +15,7 @@ export const CorretoresAdmin = () => {
       <h1 className="text-3xl font-bold">Gerenciar Corretores</h1>
       
       <CorretorForm onSuccess={handleSuccess} />
-      <CorretorList refresh={refresh} onSuccess={handleSuccess} />
+      <CorretorList refresh={refresh} />
     </div>
   );
 };

@@ -15,7 +15,7 @@ export const SimuladosAdmin = () => {
       <h1 className="text-3xl font-bold">Gerenciar Simulados</h1>
       
       <SimuladoForm onSuccess={handleSuccess} />
-      <SimuladoList onSuccess={handleSuccess} />
+      <SimuladoList />
     </div>
   );
 };

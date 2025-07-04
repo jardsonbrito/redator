@@ -32,7 +32,6 @@ export const Avisos = () => {
       <AvisoList 
         refresh={refresh} 
         onEdit={handleEdit}
-        onSuccess={handleSuccess}
       />
     </div>
   );
