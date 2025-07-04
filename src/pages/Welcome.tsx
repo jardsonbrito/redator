@@ -4,19 +4,21 @@ import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { ProfileSelector } from "@/components/ProfileSelector";
 import { LoginForm } from "@/components/LoginForm";
 import { LoginTestTool } from "@/components/LoginTestTool";
 
 const Welcome = () => {
-  const [selectedProfile, setSelectedProfile] = useState<"professor" | "aluno" | "visitante">("aluno");
+  const [selectedProfile, setSelectedProfile] = useState<"professor" | "aluno" | "visitante" | "corretor">("aluno");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { loginAsStudent, loginAsVisitante } = useStudentAuth();
   const { signIn } = useAuth();
+  const { loginAsCorretor } = useCorretorAuth();
 
-  const handleLogin = async (profileType: "professor" | "aluno" | "visitante", data: any) => {
+  const handleLogin = async (profileType: "professor" | "aluno" | "visitante" | "corretor", data: any) => {
     console.log('🔄 WELCOME - Login iniciado:', profileType, data);
     setLoading(true);
 
@@ -54,6 +56,24 @@ const Welcome = () => {
           description: `Olá, ${data.nome}! Acesso liberado.`
         });
         navigate("/app", { replace: true });
+      } else if (profileType === "corretor") {
+        console.log('✅ WELCOME - Login bem-sucedido para corretor:', data.email);
+        const { error } = await loginAsCorretor(data.email, "temp_password");
+        if (error) {
+          toast({
+            title: "Erro no login",
+            description: "E-mail não encontrado ou corretor inativo.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Acesso liberado!",
+            description: "Redirecionando para o painel do corretor..."
+          });
+          setTimeout(() => {
+            navigate('/corretor', { replace: true });
+          }, 1000);
+        }
       }
     } catch (error: any) {
       console.error('🚨 WELCOME - Erro no login:', error);
@@ -98,17 +118,6 @@ const Welcome = () => {
             onLogin={handleLogin}
             loading={loading}
           />
-
-          {/* Link para corretor */}
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-2">Você é um corretor?</p>
-            <Link 
-              to="/corretor/login" 
-              className="text-sm text-primary hover:underline"
-            >
-              Acesse o painel do corretor
-            </Link>
-          </div>
 
           {/* Ferramenta de teste - visível apenas em desenvolvimento */}
           {process.env.NODE_ENV === 'development' && (

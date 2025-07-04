@@ -13,7 +13,7 @@ interface Corretor {
 interface CorretorAuthContextType {
   corretor: Corretor | null;
   loading: boolean;
-  loginAsCorretor: (email: string, senha: string) => Promise<{ error?: string }>;
+  loginAsCorretor: (email: string, senha?: string) => Promise<{ error?: string }>;
   logout: () => void;
   isCorretor: boolean;
 }
@@ -53,7 +53,7 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
     setLoading(false);
   }, []);
 
-  const loginAsCorretor = async (email: string, senha: string) => {
+  const loginAsCorretor = async (email: string, senha?: string) => {
     try {
       // Verificar se o email é de um corretor ativo
       const { data: corretorData, error: corretorError } = await supabase
@@ -67,34 +67,6 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         return { error: "Corretor não encontrado ou inativo" };
       }
 
-      // Tentar fazer login com Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase().trim(),
-        password: senha,
-      });
-
-      if (authError) {
-        // Se não conseguir autenticar via Supabase, fazer login simples
-        // (para corretores que não têm conta no auth)
-        const corretorInfo: Corretor = {
-          id: corretorData.id,
-          nome_completo: corretorData.nome_completo,
-          email: corretorData.email,
-          ativo: corretorData.ativo,
-        };
-
-        setCorretor(corretorInfo);
-        localStorage.setItem('corretor_session', JSON.stringify(corretorInfo));
-        
-        toast({
-          title: "Login realizado com sucesso!",
-          description: `Bem-vindo(a), ${corretorData.nome_completo}!`,
-        });
-
-        return {};
-      }
-
-      // Se autenticou via Supabase, usar dados do corretor
       const corretorInfo: Corretor = {
         id: corretorData.id,
         nome_completo: corretorData.nome_completo,

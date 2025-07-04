@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { StudentLoginForm } from "./login/StudentLoginForm";
 import { ProfessorLoginForm } from "./login/ProfessorLoginForm";
 import { VisitorLoginForm } from "./login/VisitorLoginForm";
+import { CorretorLoginForm } from "./login/CorretorLoginForm";
 
 interface LoginFormProps {
-  selectedProfile: "professor" | "aluno" | "visitante";
-  onLogin: (profileType: "professor" | "aluno" | "visitante", data: any) => void;
+  selectedProfile: "professor" | "aluno" | "visitante" | "corretor";
+  onLogin: (profileType: "professor" | "aluno" | "visitante" | "corretor", data: any) => void;
   loading: boolean;
 }
 
@@ -34,6 +35,10 @@ export const LoginForm = ({ selectedProfile, onLogin, loading }: LoginFormProps)
 
         {selectedProfile === "visitante" && (
           <VisitorLoginForm onLogin={handleLogin} loading={loading} />
+        )}
+
+        {selectedProfile === "corretor" && (
+          <CorretorLoginForm onLogin={handleLogin} loading={loading} />
         )}
 
         {/* Checkbox Lembre-se de mim */}

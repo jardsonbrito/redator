@@ -2,13 +2,13 @@
 import { Button } from "@/components/ui/button";
 
 interface ProfileSelectorProps {
-  selectedProfile: "professor" | "aluno" | "visitante";
-  onProfileChange: (profile: "professor" | "aluno" | "visitante") => void;
+  selectedProfile: "professor" | "aluno" | "visitante" | "corretor";
+  onProfileChange: (profile: "professor" | "aluno" | "visitante" | "corretor") => void;
 }
 
 export const ProfileSelector = ({ selectedProfile, onProfileChange }: ProfileSelectorProps) => {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Button
         variant={selectedProfile === "professor" ? "default" : "outline"}
         onClick={() => onProfileChange("professor")}
@@ -41,6 +41,17 @@ export const ProfileSelector = ({ selectedProfile, onProfileChange }: ProfileSel
         }`}
       >
         Sou Visitante
+      </Button>
+      <Button
+        variant={selectedProfile === "corretor" ? "default" : "outline"}
+        onClick={() => onProfileChange("corretor")}
+        className={`h-16 text-xs ${
+          selectedProfile === "corretor"
+            ? "bg-redator-primary hover:bg-redator-primary/90 text-white"
+            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"
+        }`}
+      >
+        Sou Corretor
       </Button>
     </div>
   );
