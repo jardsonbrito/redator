@@ -94,9 +94,12 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
 
   const abrirDialog = (tipo: 'entrada' | 'saida') => {
     // Auto-preencher dados quando possível
-    if (studentData.userType === "aluno" && studentData.nome) {
-      setNomeAluno(studentData.nome);
-      setEmailAluno(studentData.email || "");
+    if (studentData.userType === "aluno" && studentData.nomeUsuario) {
+      setNomeAluno(studentData.nomeUsuario);
+      setEmailAluno(""); // Para alunos, email não está disponível diretamente
+    } else if (studentData.userType === "visitante" && studentData.visitanteInfo) {
+      setNomeAluno(studentData.visitanteInfo.nome);
+      setEmailAluno(studentData.visitanteInfo.email);
     }
     setDialogAberto(tipo);
     verificarRegistrosExistentes();
