@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { SimuladoForm } from "@/components/admin/SimuladoForm";
-import { SimuladoList } from "@/components/admin/SimuladoList";
+import SimuladoList from "@/components/admin/SimuladoList";
 
 export const SimuladosAdmin = () => {
   const [refresh, setRefresh] = useState(0);

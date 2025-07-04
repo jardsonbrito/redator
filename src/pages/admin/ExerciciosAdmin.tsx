@@ -15,7 +15,7 @@ export const ExerciciosAdmin = () => {
       <h1 className="text-3xl font-bold">Gerenciar Exercícios</h1>
       
       <ExercicioForm onSuccess={handleSuccess} />
-      <ExercicioList refresh={refresh} onSuccess={handleSuccess} />
+      <ExercicioList onSuccess={handleSuccess} />
     </div>
   );
 };
