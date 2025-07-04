@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ExternalLink, Search, FileText, Edit, Home } from "lucide-react";
@@ -138,19 +139,22 @@ const Exercicios = () => {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-          <StudentHeader pageTitle="Exercícios" />
-          <div className="max-w-6xl mx-auto px-4 py-8">
-            <div className="text-center py-8">Carregando exercícios...</div>
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+            <StudentHeader pageTitle="Exercícios" />
+            <div className="max-w-6xl mx-auto px-4 py-8">
+              <div className="text-center py-8">Carregando exercícios...</div>
+            </div>
           </div>
-        </div>
+        </TooltipProvider>
       </ProtectedRoute>
     );
   }
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader pageTitle="Exercícios" />
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -320,7 +324,8 @@ const Exercicios = () => {
           </div>
         </main>
       </div>
-    </ProtectedRoute>
+    </TooltipProvider>
+  </ProtectedRoute>
   );
 };
 

@@ -8,6 +8,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoTextarea } from "@/components/RedacaoTextarea";
+import { StudentHeader } from "@/components/StudentHeader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
@@ -136,22 +139,11 @@ const EnvieRedacao = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-redator-accent/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-              <Home className="w-5 h-5" />
-              <span>Início</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-redator-primary">
-              {fonteFromUrl === 'tema' ? 'Redação sobre Tema' : 
-               (userType === "aluno" ? 'Enviar Redação – Tema Livre' : 'Enviar Redação Avulsa – Tema Livre')}
-            </h1>
-          </div>
-        </div>
-      </header>
+    <ProtectedRoute>
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+          <StudentHeader pageTitle={fonteFromUrl === 'tema' ? 'Redação sobre Tema' : 
+               (userType === "aluno" ? 'Enviar Redação – Tema Livre' : 'Enviar Redação Avulsa – Tema Livre')} />
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -257,8 +249,10 @@ const EnvieRedacao = () => {
             </form>
           </CardContent>
         </Card>
-      </main>
-    </div>
+        </main>
+        </div>
+      </TooltipProvider>
+    </ProtectedRoute>
   );
 };
 

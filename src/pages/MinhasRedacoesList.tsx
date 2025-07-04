@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
 import { Link } from "react-router-dom";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { StudentHeader } from "@/components/StudentHeader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 type RedacaoTurma = {
   id: string;
@@ -310,25 +313,33 @@ export default function MinhasRedacoesList() {
 
   if (!studentData.userType) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <Card className="border-primary/20">
-            <CardContent className="text-center py-8">
-              <Lock className="w-12 h-12 text-primary mx-auto mb-4" />
-              <p className="text-primary">
-                Faça login como aluno ou visitante para visualizar suas redações.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <ProtectedRoute>
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
+            <StudentHeader pageTitle="Minhas Redações" />
+            <div className="max-w-6xl mx-auto px-4 py-8">
+              <Card className="border-primary/20">
+                <CardContent className="text-center py-8">
+                  <Lock className="w-12 h-12 text-primary mx-auto mb-4" />
+                  <p className="text-primary">
+                    Faça login como aluno ou visitante para visualizar suas redações.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TooltipProvider>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-        {/* Header elegante - melhorado para mobile */}
+    <ProtectedRoute>
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
+          <StudentHeader pageTitle="Minhas Redações" />
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+            {/* Header elegante - melhorado para mobile */}
         <div className="flex flex-col sm:flex-row items-center justify-between mb-6 sm:mb-8 gap-4">
           <Link to="/app" className="self-start sm:self-auto">
             <Button variant="outline" size="sm" className="gap-2 border-primary/30 hover:bg-primary/10">
@@ -683,5 +694,7 @@ export default function MinhasRedacoesList() {
         )}
       </div>
     </div>
+  </TooltipProvider>
+</ProtectedRoute>
   );
 }
