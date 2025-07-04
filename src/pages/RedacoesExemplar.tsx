@@ -22,71 +22,33 @@ const RedacoesExemplar = () => {
       console.log('🔍 Buscando redações exemplares...');
       
       try {
-        // Buscar redações com nota alta das três tabelas principais
-        const [enviadasRes, simuladoRes, exercicioRes] = await Promise.all([
-          supabase
-            .from('redacoes_enviadas')
-            .select('*')
-            .gte('nota_total', 800) // Notas acima de 800
-            .eq('corrigida', true)
-            .order('nota_total', { ascending: false }),
-          supabase
-            .from('redacoes_simulado')
-            .select(`
-              *,
-              simulados!inner(frase_tematica, titulo)
-            `)
-            .gte('nota_total', 800)
-            .eq('corrigida', true)
-            .order('nota_total', { ascending: false }),
-          supabase
-            .from('redacoes_exercicio')
-            .select(`
-              *,
-              exercicios!inner(titulo)
-            `)
-            .gte('nota_total', 800)
-            .eq('corrigida', true)
-            .order('nota_total', { ascending: false })
-        ]);
+        // Buscar redações exemplares da tabela 'redacoes' (cadastradas pelo administrador)
+        const { data, error } = await supabase
+          .from('redacoes')
+          .select('*')
+          .order('nota_total', { ascending: false });
 
-        const redacoesEnviadas = enviadasRes.data || [];
-        const redacoesSimulado = simuladoRes.data || [];
-        const redacoesExercicio = exercicioRes.data || [];
+        if (error) {
+          console.error('❌ Erro ao buscar redações exemplares:', error);
+          throw error;
+        }
 
-        // Formatar e combinar redações
-        const redacoesCombinadas = [
-          ...redacoesEnviadas.map(r => ({
-            ...r,
-            tipo_fonte: r.tipo_envio || 'regular',
-            frase_tematica: r.frase_tematica,
-            texto: r.redacao_texto,
-            data_envio: r.data_envio
-          })),
-          ...redacoesSimulado.map(r => ({
-            ...r,
-            id: r.id,
-            nome_aluno: r.nome_aluno,
-            nota_total: r.nota_total,
-            tipo_fonte: 'simulado',
-            frase_tematica: (r.simulados as any)?.frase_tematica || (r.simulados as any)?.titulo || 'Simulado',
-            texto: r.texto,
-            data_envio: r.data_envio
-          })),
-          ...redacoesExercicio.map(r => ({
-            ...r,
-            id: r.id,
-            nome_aluno: r.nome_aluno,
-            nota_total: r.nota_total,
-            tipo_fonte: 'exercicio',
-            frase_tematica: (r.exercicios as any)?.titulo || 'Exercício',
-            texto: r.redacao_texto,
-            data_envio: r.data_envio
-          }))
-        ].sort((a, b) => b.nota_total - a.nota_total);
+        console.log('✅ Redações exemplares encontradas:', data?.length || 0);
+        
+        // Formatar as redações exemplares
+        const redacoesFormatadas = (data || []).map(r => ({
+          ...r,
+          tipo_fonte: 'exemplar',
+          frase_tematica: r.frase_tematica || 'Redação Exemplar',
+          eixo_tematico: r.eixo_tematico,
+          texto: r.conteudo,
+          data_envio: r.data_envio,
+          nome_aluno: 'Redação Modelo', // Redações exemplares são modelos
+          imagem_url: r.pdf_url // Usar pdf_url como imagem
+        }));
 
-        console.log('✅ Redações exemplares encontradas:', redacoesCombinadas.length);
-        return redacoesCombinadas;
+        console.log('✅ Redações formatadas:', redacoesFormatadas.length);
+        return redacoesFormatadas;
       } catch (error) {
         console.error('❌ Erro ao buscar redações exemplares:', error);
         return [];
@@ -96,6 +58,7 @@ const RedacoesExemplar = () => {
 
   const getTipoLabel = (tipo: string) => {
     const tipos = {
+      'exemplar': 'Redação Modelo',
       'regular': 'Regular',
       'simulado': 'Simulado', 
       'exercicio': 'Exercício',
@@ -106,12 +69,13 @@ const RedacoesExemplar = () => {
 
   const getTipoColor = (tipo: string) => {
     const cores = {
+      'exemplar': 'bg-yellow-100 text-yellow-800',
       'regular': 'bg-blue-100 text-blue-800',
       'simulado': 'bg-orange-100 text-orange-800',
       'exercicio': 'bg-purple-100 text-purple-800',
       'visitante': 'bg-gray-100 text-gray-800'
     };
-    return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
+    return cores[tipo as keyof typeof cores] || 'bg-yellow-100 text-yellow-800';
   };
 
   if (isLoading) {
@@ -158,10 +122,10 @@ const RedacoesExemplar = () => {
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold text-primary mb-2">
-                🌟 Redações de Alto Desempenho
+                🌟 Redações Modelo
               </h2>
               <p className="text-muted-foreground">
-                Aprenda com redações que obtiveram excelentes notas (800+ pontos)
+                Redações exemplares cadastradas pelo administrador com nota 1000
               </p>
             </div>
 
@@ -173,7 +137,7 @@ const RedacoesExemplar = () => {
                     Nenhuma redação exemplar disponível
                   </h3>
                   <p className="text-gray-500">
-                    As redações de alto desempenho aparecerão aqui quando disponíveis.
+                    As redações exemplares aparecerão aqui quando cadastradas pelo administrador.
                   </p>
                 </CardContent>
               </Card>
@@ -260,13 +224,48 @@ const RedacoesExemplar = () => {
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="overflow-y-auto max-h-[60vh] p-6">
-                    <div className="prose max-w-none">
-                      <div className="whitespace-pre-wrap font-serif text-base leading-relaxed">
-                        {selectedRedacao.texto}
-                      </div>
-                    </div>
-                  </CardContent>
+                   <CardContent className="overflow-y-auto max-h-[60vh] p-6">
+                     <div className="space-y-6">
+                       {/* Imagem se disponível */}
+                       {selectedRedacao.imagem_url && (
+                         <div className="rounded-lg overflow-hidden">
+                           <img 
+                             src={selectedRedacao.imagem_url} 
+                             alt="Imagem da redação"
+                             className="w-full h-auto max-h-48 object-cover"
+                           />
+                         </div>
+                       )}
+                       
+                       {/* Eixo temático se disponível */}
+                       {selectedRedacao.eixo_tematico && (
+                         <div className="bg-primary/5 rounded-lg p-4">
+                           <h4 className="font-semibold text-primary mb-2">Eixo Temático</h4>
+                           <p className="text-sm text-muted-foreground">{selectedRedacao.eixo_tematico}</p>
+                         </div>
+                       )}
+                       
+                       {/* Texto da redação */}
+                       <div className="prose max-w-none">
+                         <h4 className="font-semibold text-primary mb-3">Redação</h4>
+                         <div className="whitespace-pre-wrap font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-4 bg-gray-50">
+                           {selectedRedacao.texto}
+                         </div>
+                       </div>
+                       
+                       {/* Dica de escrita se disponível */}
+                       {selectedRedacao.dica_de_escrita && (
+                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                           <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                             <span>💡</span> Dica de Escrita
+                           </h4>
+                           <p className="text-sm text-yellow-700 leading-relaxed">
+                             {selectedRedacao.dica_de_escrita}
+                           </p>
+                         </div>
+                       )}
+                     </div>
+                   </CardContent>
                 </Card>
               </div>
             )}

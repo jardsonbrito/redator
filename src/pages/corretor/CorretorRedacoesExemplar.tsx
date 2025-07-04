@@ -16,35 +16,37 @@ const CorretorRedacoesExemplar = () => {
     queryKey: ['redacoes-exemplares-corretor'],
     queryFn: async () => {
       try {
+        console.log('🔍 Buscando redações exemplares...');
+        
         // Buscar redações exemplares da tabela 'redacoes' (cadastradas pelo administrador)
         const { data, error } = await supabase
           .from('redacoes')
-          .select(`
-            *,
-            temas(frase_tematica, eixo_tematico)
-          `)
+          .select('*')
           .order('nota_total', { ascending: false });
 
         if (error) {
-          console.error('Erro ao buscar redações exemplares:', error);
+          console.error('❌ Erro ao buscar redações exemplares:', error);
           throw error;
         }
 
+        console.log('✅ Redações exemplares encontradas:', data?.length || 0);
+        
         // Formatar as redações exemplares
         const redacoesFormatadas = (data || []).map(r => ({
           ...r,
           tipo_fonte: 'exemplar',
-          frase_tematica: r.temas?.frase_tematica || r.frase_tematica || 'Redação Exemplar',
-          eixo_tematico: r.temas?.eixo_tematico || r.eixo_tematico,
+          frase_tematica: r.frase_tematica || 'Redação Exemplar',
+          eixo_tematico: r.eixo_tematico,
           texto: r.conteudo,
           data_envio: r.data_envio,
-          nome_aluno: 'Redação Modelo' // Redações exemplares são modelos
+          nome_aluno: 'Redação Modelo', // Redações exemplares são modelos
+          imagem_url: r.pdf_url // Usar pdf_url como imagem
         }));
 
-        console.log('Redações exemplares carregadas:', redacoesFormatadas.length);
+        console.log('✅ Redações formatadas:', redacoesFormatadas.length);
         return redacoesFormatadas;
       } catch (error) {
-        console.error('Erro ao buscar redações exemplares:', error);
+        console.error('❌ Erro ao buscar redações exemplares:', error);
         return [];
       }
     }
@@ -195,10 +197,45 @@ const CorretorRedacoesExemplar = () => {
               </CardHeader>
               
               <CardContent className="overflow-y-auto max-h-[60vh] p-6">
-                <div className="prose max-w-none">
-                  <div className="whitespace-pre-wrap font-serif text-base leading-relaxed">
-                    {selectedRedacao.texto}
+                <div className="space-y-6">
+                  {/* Imagem se disponível */}
+                  {selectedRedacao.imagem_url && (
+                    <div className="rounded-lg overflow-hidden">
+                      <img 
+                        src={selectedRedacao.imagem_url} 
+                        alt="Imagem da redação"
+                        className="w-full h-auto max-h-48 object-cover"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Eixo temático se disponível */}
+                  {selectedRedacao.eixo_tematico && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-800 mb-2">Eixo Temático</h4>
+                      <p className="text-sm text-gray-600">{selectedRedacao.eixo_tematico}</p>
+                    </div>
+                  )}
+                  
+                  {/* Texto da redação */}
+                  <div className="prose max-w-none">
+                    <h4 className="font-semibold text-gray-800 mb-3">Redação</h4>
+                    <div className="whitespace-pre-wrap font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-4 bg-gray-50">
+                      {selectedRedacao.texto}
+                    </div>
                   </div>
+                  
+                  {/* Dica de escrita se disponível */}
+                  {selectedRedacao.dica_de_escrita && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                        <span>💡</span> Dica de Escrita
+                      </h4>
+                      <p className="text-sm text-yellow-700 leading-relaxed">
+                        {selectedRedacao.dica_de_escrita}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
