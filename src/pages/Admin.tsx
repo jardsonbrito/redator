@@ -139,14 +139,14 @@ export default function Admin() {
         <TabsContent value="exercicios" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ExercicioForm onSuccess={handleExercicioSuccess} />
-            <ExercicioList refresh={refreshExercicios} />
+            <ExercicioList />
           </div>
         </TabsContent>
 
         <TabsContent value="temas" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <TemaForm onSuccess={handleTemaSuccess} />
-            <TemaList refresh={refreshTemas} />
+            <TemaList />
           </div>
         </TabsContent>
 
@@ -157,21 +157,21 @@ export default function Admin() {
         <TabsContent value="simulados" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SimuladoForm onSuccess={handleSimuladoSuccess} />
-            <SimuladoList refresh={refreshSimulados} />
+            <SimuladoList />
           </div>
         </TabsContent>
 
         <TabsContent value="videos" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <VideoForm onSuccess={handleVideoSuccess} />
-            <VideoList refresh={refreshVideos} />
+            <VideoForm />
+            <VideoList />
           </div>
         </TabsContent>
 
         <TabsContent value="biblioteca" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <BibliotecaForm onSuccess={handleBibliotecaSuccess} />
-            <BibliotecaList refresh={refreshBiblioteca} />
+            <BibliotecaForm />
+            <BibliotecaList />
           </div>
         </TabsContent>
 
