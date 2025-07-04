@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -145,6 +146,7 @@ const EnvieRedacao = () => {
           description: "Não foi possível consumir os créditos necessários. Verifique seu saldo.",
           variant: "destructive",
         });
+        setShowCreditDialog(false);
         return;
       }
 

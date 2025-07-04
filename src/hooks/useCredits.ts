@@ -135,7 +135,7 @@ export const useCredits = () => {
         return false;
       }
 
-      // Consumir créditos
+      // Consumir créditos diretamente no banco
       const newCredits = user.creditos - amount;
       const { error: updateError } = await supabase
         .from('profiles')
@@ -147,7 +147,7 @@ export const useCredits = () => {
         return false;
       }
 
-      console.log('✅ Créditos consumidos com sucesso. Saldo atual:', newCredits);
+      console.log('✅ Créditos consumidos com sucesso. Saldo anterior:', user.creditos, 'Saldo atual:', newCredits);
       return true;
     } catch (error: any) {
       console.error('❌ Erro ao consumir créditos por email:', error);

@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Info, Coins, AlertCircle } from "lucide-react";
+import { Coins, AlertCircle } from "lucide-react";
 import { useCredits } from "@/hooks/useCredits";
 
 interface CreditInfoDialogProps {
@@ -48,6 +48,7 @@ export const CreditInfoDialog = ({
 
   const creditsNeeded = selectedCorretores.length;
   const hasEnoughCredits = credits >= creditsNeeded;
+  const creditsAfterSend = Math.max(0, credits - creditsNeeded);
 
   console.log('📊 CreditInfoDialog - Status:', {
     credits,
@@ -64,9 +65,6 @@ export const CreditInfoDialog = ({
             <Coins className="w-5 h-5 text-yellow-500" />
             Créditos de Redação
           </DialogTitle>
-          <DialogDescription>
-            Informações sobre seus créditos disponíveis
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -77,49 +75,37 @@ export const CreditInfoDialog = ({
             </div>
           ) : (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Info className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium text-blue-800">Seus créditos disponíveis</span>
-                </div>
-                <p className="text-2xl font-bold text-blue-600">{credits} créditos</p>
-                <p className="text-xs text-blue-600 mt-1">E-mail: {userEmail}</p>
-              </div>
-
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="text-sm space-y-1">
-                  <p><strong>Corretores selecionados:</strong> {creditsNeeded}</p>
-                  <p><strong>Créditos necessários:</strong> {creditsNeeded}</p>
-                  <p><strong>Créditos restantes após envio:</strong> {Math.max(0, credits - creditsNeeded)}</p>
-                </div>
-              </div>
-
-              {!hasEnoughCredits ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="w-4 h-4 text-red-600" />
-                    <span className="font-medium text-red-800">Créditos insuficientes</span>
+              {hasEnoughCredits ? (
+                <div className="text-center space-y-3">
+                  <div className="text-2xl font-bold text-blue-600 mb-2">
+                    Você possui: {credits} créditos
                   </div>
-                  <p className="text-sm text-red-700">
-                    Você não possui créditos suficientes para esse envio. Entre em contato com seu professor para solicitar novos créditos.
-                  </p>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>Corretores selecionados: {creditsNeeded}</p>
+                    <p>Créditos após o envio: {creditsAfterSend}</p>
+                  </div>
                 </div>
               ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Coins className="w-4 h-4 text-green-600" />
-                    <span className="font-medium text-green-800">Créditos suficientes</span>
+                <div className="text-center space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-red-600 mb-3">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="font-semibold">Créditos insuficientes</span>
                   </div>
-                  <p className="text-sm text-green-700">
-                    Você pode prosseguir com o envio da redação.
-                  </p>
+                  <div className="text-sm text-gray-700">
+                    <p className="mb-2">Você possui: <strong>{credits} créditos</strong></p>
+                    <p className="mb-3">Necessários: <strong>{creditsNeeded} créditos</strong></p>
+                    <p className="text-red-600">
+                      Você não possui créditos suficientes para este envio. 
+                      Entre em contato com seu professor para solicitar novos créditos.
+                    </p>
+                  </div>
                 </div>
               )}
             </>
           )}
         </div>
 
-        <div className="flex gap-2 justify-end">
+        <div className="flex gap-2 justify-end mt-6">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
