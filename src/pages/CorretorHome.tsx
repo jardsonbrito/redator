@@ -6,10 +6,12 @@ import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { ListaRedacoesCorretor } from "@/components/corretor/ListaRedacoesCorretor";
 import { FormularioCorrecaoCompleto } from "@/components/corretor/FormularioCorrecaoCompleto";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const CorretorHome = () => {
   const { corretor, loading } = useCorretorAuth();
   const [redacaoSelecionada, setRedacaoSelecionada] = useState<RedacaoCorretor | null>(null);
+  const isMobile = useIsMobile();
 
   if (loading) {
     return (
@@ -40,13 +42,16 @@ const CorretorHome = () => {
 
   return (
     <CorretorLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Olá, {corretor.nome_completo}!
+      <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 break-words">
+            Olá, {isMobile ? corretor.nome_completo.split(' ')[0] : corretor.nome_completo}!
           </h1>
-          <p className="text-gray-600 mt-2">
-            Bem-vindo ao painel do corretor. Aqui você pode corrigir as redações atribuídas a você com a nova Vista Pedagógica.
+          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
+            {isMobile 
+              ? "Bem-vindo ao painel do corretor." 
+              : "Bem-vindo ao painel do corretor. Aqui você pode corrigir as redações atribuídas a você com a nova Vista Pedagógica."
+            }
           </p>
         </div>
 
