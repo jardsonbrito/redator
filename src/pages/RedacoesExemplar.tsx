@@ -21,46 +21,76 @@ const RedacoesExemplar = () => {
     queryFn: async () => {
       console.log('🔍 Buscando redações exemplares...');
       
-      // Buscar redações com nota alta das duas tabelas principais
-      const [enviadasRes, simuladoRes] = await Promise.all([
-        supabase
-          .from('redacoes_enviadas')
-          .select('*')
-          .gte('nota_total', 800) // Notas acima de 800
-          .eq('corrigida', true)
-          .order('nota_total', { ascending: false }),
-        supabase
-          .from('redacoes_simulado')
-          .select(`
-            *,
-            simulados!inner(frase_tematica, titulo)
-          `)
-          .gte('nota_total', 800)
-          .eq('corrigida', true)
-          .order('nota_total', { ascending: false })
-      ]);
+      try {
+        // Buscar redações com nota alta das três tabelas principais
+        const [enviadasRes, simuladoRes, exercicioRes] = await Promise.all([
+          supabase
+            .from('redacoes_enviadas')
+            .select('*')
+            .gte('nota_total', 800) // Notas acima de 800
+            .eq('corrigida', true)
+            .order('nota_total', { ascending: false }),
+          supabase
+            .from('redacoes_simulado')
+            .select(`
+              *,
+              simulados!inner(frase_tematica, titulo)
+            `)
+            .gte('nota_total', 800)
+            .eq('corrigida', true)
+            .order('nota_total', { ascending: false }),
+          supabase
+            .from('redacoes_exercicio')
+            .select(`
+              *,
+              exercicios!inner(titulo)
+            `)
+            .gte('nota_total', 800)
+            .eq('corrigida', true)
+            .order('nota_total', { ascending: false })
+        ]);
 
-      const redacoesEnviadas = enviadasRes.data || [];
-      const redacoesSimulado = simuladoRes.data || [];
+        const redacoesEnviadas = enviadasRes.data || [];
+        const redacoesSimulado = simuladoRes.data || [];
+        const redacoesExercicio = exercicioRes.data || [];
 
-      // Formatar e combinar redações
-      const redacoesCombinadas = [
-        ...redacoesEnviadas.map(r => ({
-          ...r,
-          tipo_fonte: 'regular',
-          frase_tematica: r.frase_tematica,
-          texto: r.redacao_texto
-        })),
-        ...redacoesSimulado.map(r => ({
-          ...r,
-          tipo_fonte: 'simulado',
-          frase_tematica: (r.simulados as any)?.frase_tematica || (r.simulados as any)?.titulo || 'Simulado',
-          texto: r.texto
-        }))
-      ].sort((a, b) => b.nota_total - a.nota_total);
+        // Formatar e combinar redações
+        const redacoesCombinadas = [
+          ...redacoesEnviadas.map(r => ({
+            ...r,
+            tipo_fonte: r.tipo_envio || 'regular',
+            frase_tematica: r.frase_tematica,
+            texto: r.redacao_texto,
+            data_envio: r.data_envio
+          })),
+          ...redacoesSimulado.map(r => ({
+            ...r,
+            id: r.id,
+            nome_aluno: r.nome_aluno,
+            nota_total: r.nota_total,
+            tipo_fonte: 'simulado',
+            frase_tematica: (r.simulados as any)?.frase_tematica || (r.simulados as any)?.titulo || 'Simulado',
+            texto: r.texto,
+            data_envio: r.data_envio
+          })),
+          ...redacoesExercicio.map(r => ({
+            ...r,
+            id: r.id,
+            nome_aluno: r.nome_aluno,
+            nota_total: r.nota_total,
+            tipo_fonte: 'exercicio',
+            frase_tematica: (r.exercicios as any)?.titulo || 'Exercício',
+            texto: r.redacao_texto,
+            data_envio: r.data_envio
+          }))
+        ].sort((a, b) => b.nota_total - a.nota_total);
 
-      console.log('✅ Redações exemplares encontradas:', redacoesCombinadas.length);
-      return redacoesCombinadas;
+        console.log('✅ Redações exemplares encontradas:', redacoesCombinadas.length);
+        return redacoesCombinadas;
+      } catch (error) {
+        console.error('❌ Erro ao buscar redações exemplares:', error);
+        return [];
+      }
     }
   });
 

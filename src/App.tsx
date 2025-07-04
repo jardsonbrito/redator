@@ -9,6 +9,7 @@ import AlunoLogin from "./pages/AlunoLogin";
 import VisitanteLogin from "./pages/VisitanteLogin";
 import Simulados from "./pages/Simulados";
 import Temas from "./pages/Temas";
+import TemaDetalhes from "./pages/TemaDetalhes";
 import Aulas from "./pages/Aulas";
 import Videoteca from "./pages/Videoteca";
 import Biblioteca from "./pages/Biblioteca";
@@ -47,6 +48,7 @@ function App() {
 
                 <Route path="/app" element={<Index />} />
                 <Route path="/temas" element={<Temas />} />
+                <Route path="/temas/:id" element={<TemaDetalhes />} />
                 <Route path="/simulados" element={<Simulados />} />
                 <Route path="/exercicios" element={<Exercicios />} />
                 <Route path="/envie-redacao" element={<EnvieRedacao />} />

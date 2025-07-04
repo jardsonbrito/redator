@@ -6,6 +6,7 @@ import { Trophy, Medal, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Top5 = () => {
   const [selectedType, setSelectedType] = useState<"simulado" | "regular" | "avulsa">("simulado");
@@ -144,10 +145,11 @@ const Top5 = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
-        <StudentHeader />
-        
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+          <StudentHeader pageTitle="Top 5" />
+          
+          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Destaque da Maior Nota */}
           {maiorNota && (
             <Card className="mb-8 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border-primary/20">
@@ -287,8 +289,9 @@ const Top5 = () => {
               )}
             </CardContent>
           </Card>
-        </main>
-      </div>
+          </main>
+        </div>
+      </TooltipProvider>
     </ProtectedRoute>
   );
 };

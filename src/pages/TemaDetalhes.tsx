@@ -6,6 +6,8 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Type extension para incluir o campo imagem_texto_4_url
 type TemaWithImage = {
@@ -78,9 +80,11 @@ const TemaDetalhes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-redator-accent/20">
+    <ProtectedRoute>
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+          {/* Header */}
+          <header className="bg-white shadow-sm border-b border-redator-accent/20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -185,9 +189,11 @@ const TemaDetalhes = () => {
               )}
             </div>
           </CardContent>
-        </Card>
-      </main>
-    </div>
+          </Card>
+        </main>
+        </div>
+      </TooltipProvider>
+    </ProtectedRoute>
   );
 };
 
