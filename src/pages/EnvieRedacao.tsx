@@ -12,6 +12,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CreditInfoDialog } from "@/components/CreditInfoDialog";
+import { useCredits } from "@/hooks/use-credits";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
@@ -24,6 +25,7 @@ const EnvieRedacao = () => {
   const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
   const { toast } = useToast();
+  const { consumeCreditsByEmail } = useCredits();
 
   // Parâmetros da URL para pré-preenchimento
   const temaFromUrl = searchParams.get('tema');
@@ -134,6 +136,20 @@ const EnvieRedacao = () => {
     setIsSubmitting(true);
 
     try {
+      // Primeiro, consumir os créditos
+      const creditsConsumed = await consumeCreditsByEmail(email.trim(), selectedCorretores.length);
+      
+      if (!creditsConsumed) {
+        toast({
+          title: "Erro ao consumir créditos",
+          description: "Não foi possível consumir os créditos necessários. Verifique seu saldo.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ Créditos consumidos com sucesso');
+
       const { error } = await supabase
         .from('redacoes_enviadas')
         .insert({
@@ -159,7 +175,7 @@ const EnvieRedacao = () => {
 
       toast({
         title: "Redação enviada com sucesso!",
-        description: `Sua redação foi salva e será corrigida pelos corretores selecionados. Você poderá visualizá-la no card "Minhas Redações" na página inicial.`,
+        description: `Sua redação foi salva e será corrigida pelos corretores selecionados. ${selectedCorretores.length} crédito(s) foram consumidos.`,
       });
 
       // Limpar formulário

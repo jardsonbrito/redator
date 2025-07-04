@@ -16,17 +16,37 @@ export const useCredits = () => {
         return 0;
       }
 
-      const { data, error } = await supabase.rpc('get_credits_by_email', {
-        user_email: email.trim().toLowerCase()
-      });
+      // Normalizar email
+      const normalizedEmail = email.trim().toLowerCase();
+      console.log('📧 Email normalizado:', normalizedEmail);
+
+      // Buscar na tabela profiles onde user_type = 'aluno'
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('creditos, nome, email, user_type')
+        .eq('email', normalizedEmail)
+        .eq('user_type', 'aluno')
+        .single();
 
       if (error) {
         console.error('❌ Erro ao buscar créditos:', error);
-        throw error;
+        
+        // Se não encontrou o aluno, verificar se existe com outro user_type
+        const { data: allProfiles } = await supabase
+          .from('profiles')
+          .select('email, user_type, creditos')
+          .eq('email', normalizedEmail);
+        
+        console.log('🔍 Perfis encontrados para este email:', allProfiles);
+        
+        return 0;
       }
 
-      console.log('✅ Créditos encontrados:', data);
-      return data || 0;
+      console.log('✅ Dados do aluno encontrados:', data);
+      const credits = data?.creditos || 0;
+      console.log('💰 Créditos retornados:', credits);
+      
+      return credits;
     } catch (error: any) {
       console.error('❌ Erro ao buscar créditos:', error);
       return 0;
@@ -88,10 +108,60 @@ export const useCredits = () => {
     }
   };
 
+  // Nova função para consumir créditos por email
+  const consumeCreditsByEmail = async (email: string, amount: number): Promise<boolean> => {
+    setLoading(true);
+    try {
+      console.log('🔥 Consumindo créditos por email:', { email, amount });
+      
+      // Buscar o usuário pelo email
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('id, creditos, nome')
+        .eq('email', email.trim().toLowerCase())
+        .eq('user_type', 'aluno')
+        .single();
+
+      if (userError || !user) {
+        console.error('❌ Usuário não encontrado:', userError);
+        return false;
+      }
+
+      console.log('👤 Usuário encontrado:', user);
+
+      // Verificar se tem créditos suficientes
+      if (user.creditos < amount) {
+        console.error('❌ Créditos insuficientes:', user.creditos, 'necessários:', amount);
+        return false;
+      }
+
+      // Consumir créditos
+      const newCredits = user.creditos - amount;
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ creditos: newCredits })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar créditos:', updateError);
+        return false;
+      }
+
+      console.log('✅ Créditos consumidos com sucesso. Saldo atual:', newCredits);
+      return true;
+    } catch (error: any) {
+      console.error('❌ Erro ao consumir créditos por email:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     getCreditsbyEmail,
     addCredits,
     consumeCredits,
+    consumeCreditsByEmail,
     loading
   };
 };

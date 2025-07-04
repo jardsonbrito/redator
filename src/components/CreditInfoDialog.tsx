@@ -32,9 +32,11 @@ export const CreditInfoDialog = ({
 
   const loadCredits = async () => {
     setLoading(true);
+    console.log('🔄 CreditInfoDialog - Carregando créditos para:', userEmail);
     
     try {
       const userCredits = await getCreditsbyEmail(userEmail);
+      console.log('💰 CreditInfoDialog - Créditos carregados:', userCredits);
       setCredits(userCredits);
     } catch (error) {
       console.error('❌ Erro ao carregar créditos:', error);
@@ -46,6 +48,13 @@ export const CreditInfoDialog = ({
 
   const creditsNeeded = selectedCorretores.length;
   const hasEnoughCredits = credits >= creditsNeeded;
+
+  console.log('📊 CreditInfoDialog - Status:', {
+    credits,
+    creditsNeeded,
+    hasEnoughCredits,
+    userEmail
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -74,6 +83,7 @@ export const CreditInfoDialog = ({
                   <span className="font-medium text-blue-800">Seus créditos disponíveis</span>
                 </div>
                 <p className="text-2xl font-bold text-blue-600">{credits} créditos</p>
+                <p className="text-xs text-blue-600 mt-1">E-mail: {userEmail}</p>
               </div>
 
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -84,7 +94,7 @@ export const CreditInfoDialog = ({
                 </div>
               </div>
 
-              {!hasEnoughCredits && (
+              {!hasEnoughCredits ? (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle className="w-4 h-4 text-red-600" />
@@ -92,6 +102,16 @@ export const CreditInfoDialog = ({
                   </div>
                   <p className="text-sm text-red-700">
                     Você não possui créditos suficientes para esse envio. Entre em contato com seu professor para solicitar novos créditos.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Coins className="w-4 h-4 text-green-600" />
+                    <span className="font-medium text-green-800">Créditos suficientes</span>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    Você pode prosseguir com o envio da redação.
                   </p>
                 </div>
               )}

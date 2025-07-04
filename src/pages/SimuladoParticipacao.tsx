@@ -18,12 +18,14 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CreditInfoDialog } from "@/components/CreditInfoDialog";
+import { useCredits } from "@/hooks/useCredits";
 
 const SimuladoParticipacao = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
+  const { consumeCreditsByEmail } = useCredits();
 
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
@@ -124,6 +126,20 @@ const SimuladoParticipacao = () => {
     setIsSubmitting(true);
 
     try {
+      // Primeiro, consumir os créditos
+      const creditsConsumed = await consumeCreditsByEmail(email.trim(), selectedCorretores.length);
+      
+      if (!creditsConsumed) {
+        toast({
+          title: "Erro ao consumir créditos",
+          description: "Não foi possível consumir os créditos necessários. Verifique seu saldo.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ Créditos consumidos com sucesso no simulado');
+
       const { error } = await supabase
         .from('redacoes_simulado')
         .insert({
@@ -144,7 +160,7 @@ const SimuladoParticipacao = () => {
 
       toast({
         title: "Redação enviada com sucesso!",
-        description: "Sua redação do simulado foi enviada e será corrigida pelos corretores selecionados.",
+        description: `Sua redação do simulado foi enviada e será corrigida pelos corretores selecionados. ${selectedCorretores.length} crédito(s) foram consumidos.`,
       });
 
       // Redirecionar para a home após sucesso
