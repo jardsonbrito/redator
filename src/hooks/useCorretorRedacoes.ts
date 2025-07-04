@@ -64,10 +64,16 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
     return { pendentes, incompletas, corrigidas };
   };
 
+  // Função para atualizar a lista após correção
+  const refreshRedacoes = () => {
+    fetchRedacoes();
+  };
+
   return {
     redacoes,
     loading,
     fetchRedacoes,
-    getRedacoesPorStatus
+    getRedacoesPorStatus,
+    refreshRedacoes
   };
 };

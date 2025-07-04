@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,9 +14,16 @@ interface FormularioCorrecaoCompletoProps {
   corretorEmail: string;
   onVoltar: () => void;
   onSucesso: () => void;
+  onRefreshList?: () => void;
 }
 
-export const FormularioCorrecaoCompleto = ({ redacao, corretorEmail, onVoltar, onSucesso }: FormularioCorrecaoCompletoProps) => {
+export const FormularioCorrecaoCompleto = ({ 
+  redacao, 
+  corretorEmail, 
+  onVoltar, 
+  onSucesso,
+  onRefreshList 
+}: FormularioCorrecaoCompletoProps) => {
   const [notas, setNotas] = useState({
     c1: 0,
     c2: 0,
@@ -123,6 +129,10 @@ export const FormularioCorrecaoCompleto = ({ redacao, corretorEmail, onVoltar, o
           ? `Redação de ${redacao.nome_aluno} foi corrigida com nota ${notaTotal}/1000.`
           : "Você pode continuar a correção mais tarde.",
       });
+
+      if (onRefreshList) {
+        onRefreshList();
+      }
 
       onSucesso();
     } catch (error: any) {

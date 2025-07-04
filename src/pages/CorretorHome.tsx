@@ -5,13 +5,16 @@ import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { ListaRedacoesCorretor } from "@/components/corretor/ListaRedacoesCorretor";
 import { FormularioCorrecaoCompleto } from "@/components/corretor/FormularioCorrecaoCompleto";
-import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
+import { RedacaoCorretor, useCorretorRedacoes } from "@/hooks/useCorretorRedacoes";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const CorretorHome = () => {
   const { corretor, loading } = useCorretorAuth();
   const [redacaoSelecionada, setRedacaoSelecionada] = useState<RedacaoCorretor | null>(null);
   const isMobile = useIsMobile();
+  
+  // Usar o hook para ter acesso à função de refresh
+  const { refreshRedacoes } = useCorretorRedacoes(corretor?.email || '');
 
   if (loading) {
     return (
@@ -38,6 +41,8 @@ const CorretorHome = () => {
 
   const handleSucessoCorrecao = () => {
     setRedacaoSelecionada(null);
+    // Atualizar a lista após correção
+    refreshRedacoes();
   };
 
   return (
@@ -61,6 +66,7 @@ const CorretorHome = () => {
             corretorEmail={corretor.email}
             onVoltar={handleVoltarLista}
             onSucesso={handleSucessoCorrecao}
+            onRefreshList={refreshRedacoes}
           />
         ) : (
           <ListaRedacoesCorretor
