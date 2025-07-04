@@ -172,6 +172,7 @@ export type Database = {
         Row: {
           ativo: boolean
           atualizado_em: string
+          corretores_destinatarios: string[] | null
           criado_em: string
           data_agendamento: string | null
           descricao: string
@@ -186,6 +187,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           atualizado_em?: string
+          corretores_destinatarios?: string[] | null
           criado_em?: string
           data_agendamento?: string | null
           descricao: string
@@ -200,6 +202,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           atualizado_em?: string
+          corretores_destinatarios?: string[] | null
           criado_em?: string
           data_agendamento?: string | null
           descricao?: string
@@ -655,6 +658,16 @@ export type Database = {
       }
       redacoes_enviadas: {
         Row: {
+          c1_corretor_1: number | null
+          c1_corretor_2: number | null
+          c2_corretor_1: number | null
+          c2_corretor_2: number | null
+          c3_corretor_1: number | null
+          c3_corretor_2: number | null
+          c4_corretor_1: number | null
+          c4_corretor_2: number | null
+          c5_corretor_1: number | null
+          c5_corretor_2: number | null
           comentario_admin: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
@@ -671,14 +684,28 @@ export type Database = {
           nota_c3: number | null
           nota_c4: number | null
           nota_c5: number | null
+          nota_final_corretor_1: number | null
+          nota_final_corretor_2: number | null
           nota_total: number | null
           redacao_texto: string
           status: string | null
+          status_corretor_1: string | null
+          status_corretor_2: string | null
           tipo_envio: string | null
           turma: string | null
           user_id: string | null
         }
         Insert: {
+          c1_corretor_1?: number | null
+          c1_corretor_2?: number | null
+          c2_corretor_1?: number | null
+          c2_corretor_2?: number | null
+          c3_corretor_1?: number | null
+          c3_corretor_2?: number | null
+          c4_corretor_1?: number | null
+          c4_corretor_2?: number | null
+          c5_corretor_1?: number | null
+          c5_corretor_2?: number | null
           comentario_admin?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
@@ -695,14 +722,28 @@ export type Database = {
           nota_c3?: number | null
           nota_c4?: number | null
           nota_c5?: number | null
+          nota_final_corretor_1?: number | null
+          nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_texto: string
           status?: string | null
+          status_corretor_1?: string | null
+          status_corretor_2?: string | null
           tipo_envio?: string | null
           turma?: string | null
           user_id?: string | null
         }
         Update: {
+          c1_corretor_1?: number | null
+          c1_corretor_2?: number | null
+          c2_corretor_1?: number | null
+          c2_corretor_2?: number | null
+          c3_corretor_1?: number | null
+          c3_corretor_2?: number | null
+          c4_corretor_1?: number | null
+          c4_corretor_2?: number | null
+          c5_corretor_1?: number | null
+          c5_corretor_2?: number | null
           comentario_admin?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
@@ -719,9 +760,13 @@ export type Database = {
           nota_c3?: number | null
           nota_c4?: number | null
           nota_c5?: number | null
+          nota_final_corretor_1?: number | null
+          nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_texto?: string
           status?: string | null
+          status_corretor_1?: string | null
+          status_corretor_2?: string | null
           tipo_envio?: string | null
           turma?: string | null
           user_id?: string | null
@@ -745,6 +790,16 @@ export type Database = {
       }
       redacoes_exercicio: {
         Row: {
+          c1_corretor_1: number | null
+          c1_corretor_2: number | null
+          c2_corretor_1: number | null
+          c2_corretor_2: number | null
+          c3_corretor_1: number | null
+          c3_corretor_2: number | null
+          c4_corretor_1: number | null
+          c4_corretor_2: number | null
+          c5_corretor_1: number | null
+          c5_corretor_2: number | null
           comentario_admin: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
@@ -760,12 +815,26 @@ export type Database = {
           nota_c3: number | null
           nota_c4: number | null
           nota_c5: number | null
+          nota_final_corretor_1: number | null
+          nota_final_corretor_2: number | null
           nota_total: number | null
           redacao_texto: string
+          status_corretor_1: string | null
+          status_corretor_2: string | null
           turma: string | null
           user_id: string | null
         }
         Insert: {
+          c1_corretor_1?: number | null
+          c1_corretor_2?: number | null
+          c2_corretor_1?: number | null
+          c2_corretor_2?: number | null
+          c3_corretor_1?: number | null
+          c3_corretor_2?: number | null
+          c4_corretor_1?: number | null
+          c4_corretor_2?: number | null
+          c5_corretor_1?: number | null
+          c5_corretor_2?: number | null
           comentario_admin?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
@@ -781,12 +850,26 @@ export type Database = {
           nota_c3?: number | null
           nota_c4?: number | null
           nota_c5?: number | null
+          nota_final_corretor_1?: number | null
+          nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_texto: string
+          status_corretor_1?: string | null
+          status_corretor_2?: string | null
           turma?: string | null
           user_id?: string | null
         }
         Update: {
+          c1_corretor_1?: number | null
+          c1_corretor_2?: number | null
+          c2_corretor_1?: number | null
+          c2_corretor_2?: number | null
+          c3_corretor_1?: number | null
+          c3_corretor_2?: number | null
+          c4_corretor_1?: number | null
+          c4_corretor_2?: number | null
+          c5_corretor_1?: number | null
+          c5_corretor_2?: number | null
           comentario_admin?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
@@ -802,8 +885,12 @@ export type Database = {
           nota_c3?: number | null
           nota_c4?: number | null
           nota_c5?: number | null
+          nota_final_corretor_1?: number | null
+          nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_texto?: string
+          status_corretor_1?: string | null
+          status_corretor_2?: string | null
           turma?: string | null
           user_id?: string | null
         }
@@ -826,6 +913,16 @@ export type Database = {
       }
       redacoes_simulado: {
         Row: {
+          c1_corretor_1: number | null
+          c1_corretor_2: number | null
+          c2_corretor_1: number | null
+          c2_corretor_2: number | null
+          c3_corretor_1: number | null
+          c3_corretor_2: number | null
+          c4_corretor_1: number | null
+          c4_corretor_2: number | null
+          c5_corretor_1: number | null
+          c5_corretor_2: number | null
           comentario_pedagogico: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
@@ -842,12 +939,26 @@ export type Database = {
           nota_c3: number | null
           nota_c4: number | null
           nota_c5: number | null
+          nota_final_corretor_1: number | null
+          nota_final_corretor_2: number | null
           nota_total: number | null
+          status_corretor_1: string | null
+          status_corretor_2: string | null
           texto: string
           turma: string
           user_id: string | null
         }
         Insert: {
+          c1_corretor_1?: number | null
+          c1_corretor_2?: number | null
+          c2_corretor_1?: number | null
+          c2_corretor_2?: number | null
+          c3_corretor_1?: number | null
+          c3_corretor_2?: number | null
+          c4_corretor_1?: number | null
+          c4_corretor_2?: number | null
+          c5_corretor_1?: number | null
+          c5_corretor_2?: number | null
           comentario_pedagogico?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
@@ -864,12 +975,26 @@ export type Database = {
           nota_c3?: number | null
           nota_c4?: number | null
           nota_c5?: number | null
+          nota_final_corretor_1?: number | null
+          nota_final_corretor_2?: number | null
           nota_total?: number | null
+          status_corretor_1?: string | null
+          status_corretor_2?: string | null
           texto: string
           turma: string
           user_id?: string | null
         }
         Update: {
+          c1_corretor_1?: number | null
+          c1_corretor_2?: number | null
+          c2_corretor_1?: number | null
+          c2_corretor_2?: number | null
+          c3_corretor_1?: number | null
+          c3_corretor_2?: number | null
+          c4_corretor_1?: number | null
+          c4_corretor_2?: number | null
+          c5_corretor_1?: number | null
+          c5_corretor_2?: number | null
           comentario_pedagogico?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
@@ -886,7 +1011,11 @@ export type Database = {
           nota_c3?: number | null
           nota_c4?: number | null
           nota_c5?: number | null
+          nota_final_corretor_1?: number | null
+          nota_final_corretor_2?: number | null
           nota_total?: number | null
+          status_corretor_1?: string | null
+          status_corretor_2?: string | null
           texto?: string
           turma?: string
           user_id?: string | null
@@ -1079,6 +1208,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_avisos_corretor: {
+        Args: { corretor_id_param: string }
+        Returns: {
+          id: string
+          titulo: string
+          descricao: string
+          prioridade: string
+          criado_em: string
+          imagem_url: string
+          link_externo: string
+        }[]
+      }
       get_redacoes_by_turma: {
         Args: { p_turma: string }
         Returns: {
@@ -1118,6 +1259,21 @@ export type Database = {
           data_envio: string
           corrigida: boolean
           texto: string
+        }[]
+      }
+      get_redacoes_corretor_detalhadas: {
+        Args: { corretor_email: string }
+        Returns: {
+          id: string
+          tipo_redacao: string
+          nome_aluno: string
+          email_aluno: string
+          frase_tematica: string
+          data_envio: string
+          texto: string
+          status_minha_correcao: string
+          eh_corretor_1: boolean
+          eh_corretor_2: boolean
         }[]
       }
       get_student_redacoes: {

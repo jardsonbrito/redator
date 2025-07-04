@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -98,6 +97,17 @@ const Welcome = () => {
             onLogin={handleLogin}
             loading={loading}
           />
+
+          {/* Link para corretor */}
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">Você é um corretor?</p>
+            <Link 
+              to="/corretor/login" 
+              className="text-sm text-primary hover:underline"
+            >
+              Acesse o painel do corretor
+            </Link>
+          </div>
 
           {/* Ferramenta de teste - visível apenas em desenvolvimento */}
           {process.env.NODE_ENV === 'development' && (

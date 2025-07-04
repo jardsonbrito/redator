@@ -1,72 +1,66 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import { StudentAuthProvider } from "@/hooks/useStudentAuth";
+import React from "react";
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Welcome from "./pages/Welcome";
-import AlunoLogin from "./pages/AlunoLogin";
-import VisitanteLogin from "./pages/VisitanteLogin";
-import Index from "./pages/Index";
-import Redacoes from "./pages/Redacoes";
-import RedacaoDetalhes from "./pages/RedacaoDetalhes";
+import Admin from "./pages/Admin";
+import Login from "./pages/Login";
+import Student from "./pages/Student";
+import Simulados from "./pages/Simulados";
 import Temas from "./pages/Temas";
-import TemaDetalhes from "./pages/TemaDetalhes";
+import Aulas from "./pages/Aulas";
 import Videoteca from "./pages/Videoteca";
 import Biblioteca from "./pages/Biblioteca";
-import Simulados from "./pages/Simulados";
-import SimuladoDetalhes from "./pages/SimuladoDetalhes";
-import MeusSimulados from "./pages/MeusSimulados";
+import RedacoesExemplar from "./pages/RedacoesExemplar";
 import Top5 from "./pages/Top5";
-import SalaVirtual from "./pages/SalaVirtual";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import EnvieRedacao from "./pages/EnvieRedacao";
-import Aulas from "./pages/Aulas";
-import Exercicios from "./pages/Exercicios";
-import MinhasRedacoesList from "./pages/MinhasRedacoesList";
-import Login from "./pages/Login";
-import Admin from "./pages/Admin";
-import NotFound from "./pages/NotFound";
+import { AuthProvider } from "./hooks/useAuth";
+import { StudentAuthProvider } from "./hooks/useStudentAuth";
+import { Toaster } from "@/components/ui/toaster"
+import { Dashboard } from "./pages/admin/Dashboard";
+import { Avisos } from "./pages/admin/Avisos";
+import { Redacoes } from "./pages/admin/Redacoes";
+import { SimuladosAdmin } from "./pages/admin/SimuladosAdmin";
+import { ExerciciosAdmin } from "./pages/admin/ExerciciosAdmin";
+import { CorretoresAdmin } from "./pages/admin/CorretoresAdmin";
+import CorretorLogin from "./pages/CorretorLogin";
+import CorretorHome from "./pages/CorretorHome";
+import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <StudentAuthProvider>
-        <TooltipProvider>
+function App() {
+  return (
+    <CorretorAuthProvider>
+      <Router>
+        <div className="min-h-screen bg-background">
           <Toaster />
-          <Sonner />
           <Routes>
-              <Route path="/" element={<Welcome />} />
-              <Route path="/aluno-login" element={<AlunoLogin />} />
-              <Route path="/visitante-login" element={<VisitanteLogin />} />
-              <Route path="/app" element={<Index />} />
-              <Route path="/redacoes" element={<Redacoes />} />
-              <Route path="/redacoes/:id" element={<RedacaoDetalhes />} />
-              <Route path="/temas" element={<Temas />} />
-              <Route path="/temas/:id" element={<TemaDetalhes />} />
-              <Route path="/videoteca" element={<Videoteca />} />
-              <Route path="/biblioteca" element={<Biblioteca />} />
-              <Route path="/simulados" element={<Simulados />} />
-              <Route path="/simulados/:id" element={<SimuladoDetalhes />} />
-              <Route path="/meus-simulados" element={<MeusSimulados />} />
-              <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
-              <Route path="/top5" element={<Top5 />} />
-              <Route path="/aulas" element={<Aulas />} />
-              <Route path="/exercicios" element={<Exercicios />} />
-              <Route path="/envie-redacao" element={<EnvieRedacao />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/admin" element={<Admin />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-        </TooltipProvider>
-      </StudentAuthProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+            {/* Rotas Públicas */}
+            <Route path="/" element={<Welcome />} />
+            <Route path="/login" element={<Login />} />
+
+            <Route path="/app" element={<StudentAuthProvider><Student /></StudentAuthProvider>} />
+            <Route path="/temas" element={<StudentAuthProvider><Temas /></StudentAuthProvider>} />
+            <Route path="/simulados" element={<StudentAuthProvider><Simulados /></StudentAuthProvider>} />
+            <Route path="/aulas" element={<StudentAuthProvider><Aulas /></StudentAuthProvider>} />
+            <Route path="/videoteca" element={<StudentAuthProvider><Videoteca /></StudentAuthProvider>} />
+            <Route path="/biblioteca" element={<StudentAuthProvider><Biblioteca /></StudentAuthProvider>} />
+            <Route path="/redacoes" element={<StudentAuthProvider><RedacoesExemplar /></StudentAuthProvider>} />
+            <Route path="/top5" element={<StudentAuthProvider><Top5 /></StudentAuthProvider>} />
+
+            {/* Rotas do Admin */}
+            <Route path="/admin" element={<AuthProvider><Admin /></AuthProvider>} />
+            <Route path="/admin/dashboard" element={<AuthProvider><Dashboard /></AuthProvider>} />
+            <Route path="/admin/avisos" element={<AuthProvider><Avisos /></AuthProvider>} />
+            <Route path="/admin/redacoes" element={<AuthProvider><Redacoes /></AuthProvider>} />
+            <Route path="/admin/simulados" element={<AuthProvider><SimuladosAdmin /></AuthProvider>} />
+            <Route path="/admin/exercicios" element={<AuthProvider><ExerciciosAdmin /></AuthProvider>} />
+            <Route path="/admin/corretores" element={<AuthProvider><CorretoresAdmin /></AuthProvider>} />
+            
+            {/* Rotas do Corretor */}
+            <Route path="/corretor/login" element={<CorretorLogin />} />
+            <Route path="/corretor" element={<CorretorHome />} />
+          </Routes>
+        </div>
+      </Router>
+    </CorretorAuthProvider>
+  );
+}
 
 export default App;
