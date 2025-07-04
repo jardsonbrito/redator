@@ -48,7 +48,7 @@ export const MinhasRedacoes = () => {
   const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
   const { toast } = useToast();
 
-  // Recupera dados do usuário logado
+  // Recupera dados do usuário logado com validação mais rigorosa
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
   const visitanteData = localStorage.getItem("visitanteData");
@@ -56,6 +56,9 @@ export const MinhasRedacoes = () => {
   // Determinar email do usuário logado para filtrar redações
   let currentUserEmail = "";
   let turmaCode = "";
+  let nomeCompleto = "";
+  
+  console.log('🔍 Debug - Dados do localStorage:', { userType, alunoTurma, visitanteData });
   
   if (userType === "aluno" && alunoTurma) {
     const turmasMap = {
@@ -67,17 +70,21 @@ export const MinhasRedacoes = () => {
     };
     turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "";
     currentUserEmail = `aluno.${turmaCode.toLowerCase()}@laboratoriodoredator.com`;
+    nomeCompleto = `Aluno da ${alunoTurma}`;
   } else if (userType === "visitante" && visitanteData) {
     try {
       const dados = JSON.parse(visitanteData);
       currentUserEmail = dados.email;
       turmaCode = "visitante";
+      nomeCompleto = dados.nome;
     } catch (error) {
       console.error('❌ Erro ao parsear dados do visitante:', error);
     }
   }
 
-  // Query para buscar APENAS as redações do usuário logado
+  console.log('📧 Email do usuário logado:', currentUserEmail);
+
+  // Query para buscar APENAS as redações do usuário logado com filtragem rigorosa
   const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
     queryKey: ['minhas-redacoes-filtradas', currentUserEmail],
     queryFn: async () => {
@@ -88,7 +95,7 @@ export const MinhasRedacoes = () => {
 
       console.log('🔍 Buscando redações do usuário:', currentUserEmail);
       
-      // Buscar redações regulares do usuário
+      // Buscar redações regulares do usuário com filtro específico por email
       const { data: redacoesRegulares, error: errorRegulares } = await supabase
         .from('redacoes_enviadas')
         .select(`
@@ -104,15 +111,15 @@ export const MinhasRedacoes = () => {
           comentario_admin,
           data_correcao
         `)
-        .eq('email_aluno', currentUserEmail)
-        .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
+        .eq('email_aluno', currentUserEmail.toLowerCase()) // Filtro específico por email
+        .eq('corrigida', true) // Apenas redações corrigidas
         .order('data_envio', { ascending: false });
 
       if (errorRegulares) {
         console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
       }
 
-      // Buscar redações de simulado do usuário
+      // Buscar redações de simulado do usuário com filtro específico por email
       const { data: redacoesSimulado, error: errorSimulado } = await supabase
         .from('redacoes_simulado')
         .select(`
@@ -125,29 +132,51 @@ export const MinhasRedacoes = () => {
           data_correcao,
           simulados!inner(frase_tematica)
         `)
-        .eq('email_aluno', currentUserEmail)
-        .or('corrigida.eq.true,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
+        .eq('email_aluno', currentUserEmail.toLowerCase()) // Filtro específico por email
+        .eq('corrigida', true) // Apenas redações corrigidas
         .order('data_envio', { ascending: false });
 
       if (errorSimulado) {
         console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
       }
 
+      // Buscar redações de exercício do usuário
+      const { data: redacoesExercicio, error: errorExercicio } = await supabase
+        .from('redacoes_exercicio')
+        .select(`
+          id,
+          nome_aluno,
+          email_aluno,
+          data_envio,
+          corrigida,
+          nota_total,
+          data_correcao,
+          exercicios!inner(titulo)
+        `)
+        .eq('email_aluno', currentUserEmail.toLowerCase()) // Filtro específico por email
+        .eq('corrigida', true) // Apenas redações corrigidas
+        .order('data_envio', { ascending: false });
+
+      if (errorExercicio) {
+        console.error('❌ Erro ao buscar redações de exercício:', errorExercicio);
+      }
+
       // Combinar e formatar os dados
       const todasRedacoes: RedacaoTurma[] = [];
       
       // Adicionar redações regulares
-      if (redacoesRegulares) {
+      if (redacoesRegulares && redacoesRegulares.length > 0) {
         const regularesFormatadas = redacoesRegulares.map(redacao => ({
           ...redacao,
           corrigida: true,
           status: 'corrigida'
         }));
         todasRedacoes.push(...regularesFormatadas);
+        console.log('✅ Redações regulares encontradas:', redacoesRegulares.length);
       }
 
       // Adicionar redações de simulado
-      if (redacoesSimulado) {
+      if (redacoesSimulado && redacoesSimulado.length > 0) {
         const simuladosFormatados = redacoesSimulado.map(simulado => ({
           id: simulado.id,
           frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
@@ -162,13 +191,37 @@ export const MinhasRedacoes = () => {
           data_correcao: simulado.data_correcao
         }));
         todasRedacoes.push(...simuladosFormatados);
+        console.log('✅ Redações de simulado encontradas:', redacoesSimulado.length);
+      }
+
+      // Adicionar redações de exercício
+      if (redacoesExercicio && redacoesExercicio.length > 0) {
+        const exerciciosFormatados = redacoesExercicio.map(exercicio => ({
+          id: exercicio.id,
+          frase_tematica: (exercicio.exercicios as any)?.titulo || 'Exercício',
+          nome_aluno: exercicio.nome_aluno,
+          email_aluno: exercicio.email_aluno,
+          tipo_envio: 'exercicio',
+          data_envio: exercicio.data_envio,
+          status: 'corrigida',
+          corrigida: true,
+          nota_total: exercicio.nota_total,
+          comentario_admin: null,
+          data_correcao: exercicio.data_correcao
+        }));
+        todasRedacoes.push(...exerciciosFormatados);
+        console.log('✅ Redações de exercício encontradas:', redacoesExercicio.length);
       }
 
       // Ordenar por data de envio (mais recente primeiro)
       todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
       
-      console.log('✅ Redações do usuário encontradas:', todasRedacoes.length);
-      return todasRedacoes;
+      console.log('📊 Total de redações do usuário encontradas:', todasRedacoes.length);
+      console.log('📧 Filtradas para o email:', currentUserEmail);
+      
+      return todasRedacoes.filter(redacao => 
+        redacao.email_aluno.toLowerCase() === currentUserEmail.toLowerCase()
+      );
     },
     enabled: !!currentUserEmail,
     staleTime: 30 * 1000,
@@ -177,12 +230,10 @@ export const MinhasRedacoes = () => {
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
     console.log('🔐 Iniciando visualização de redação do usuário logado:', redacao.id);
-    // Para redações do próprio usuário, não precisamos de autenticação adicional
-    // mas vamos manter a validação por segurança
     setAuthenticatedRedacao(null);
     setShowRedacaoDialog(false);
     setSelectedRedacaoId(redacao.id);
-    setEmailInput(currentUserEmail); // Pré-preencher com o email do usuário logado
+    setEmailInput(currentUserEmail);
     setIsAuthDialogOpen(true);
   };
 
@@ -263,6 +314,19 @@ export const MinhasRedacoes = () => {
           ...data,
           redacao_texto: data.texto,
           frase_tematica: (data.simulados as any)?.frase_tematica || 'Simulado'
+        };
+      } else if (redacaoBasica.tipo_envio === 'exercicio') {
+        const { data, error } = await supabase
+          .from('redacoes_exercicio')
+          .select('*, exercicios!inner(titulo)')
+          .eq('id', selectedRedacaoId)
+          .single();
+          
+        if (error) throw new Error('Erro ao carregar redação de exercício');
+        
+        redacaoCompleta = {
+          ...data,
+          frase_tematica: (data.exercicios as any)?.titulo || 'Exercício'
         };
       } else {
         const { data, error } = await supabase
@@ -402,8 +466,11 @@ export const MinhasRedacoes = () => {
           <p className="text-redator-accent mb-4">
             Você ainda não tem redações corrigidas.
           </p>
-          <p className="text-sm text-redator-accent/70">
+          <p className="text-sm text-redator-accent/70 mb-2">
             Suas redações corrigidas aparecerão aqui quando disponíveis!
+          </p>
+          <p className="text-xs text-gray-500">
+            👤 Logado como: {nomeCompleto} ({currentUserEmail})
           </p>
           <Button onClick={() => refetch()} className="mt-4">
             Verificar novamente
@@ -424,6 +491,10 @@ export const MinhasRedacoes = () => {
           <Button onClick={() => refetch()} variant="outline" size="sm">
             Atualizar
           </Button>
+        </div>
+
+        <div className="text-xs text-gray-500 mb-4 p-2 bg-gray-50 rounded">
+          👤 Exibindo redações de: {nomeCompleto} ({currentUserEmail})
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
