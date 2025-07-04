@@ -37,10 +37,10 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
 
   // Preencher formulário quando um aluno for selecionado para edição
   useEffect(() => {
-    console.log("AlunoForm - useEffect chamado com alunoEditando:", alunoEditando);
+    console.log("🎯 AlunoForm - useEffect chamado com alunoEditando:", alunoEditando);
     
     if (alunoEditando) {
-      console.log("AlunoForm - Preenchendo formulário com dados:", {
+      console.log("📝 AlunoForm - Preenchendo formulário com dados:", {
         nome: alunoEditando.nome,
         email: alunoEditando.email,
         turma: alunoEditando.turma,
@@ -52,7 +52,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
       setTurma(alunoEditando.turma || "");
       setCreditos(alunoEditando.creditos || 5);
     } else {
-      console.log("AlunoForm - Limpando formulário");
+      console.log("🔄 AlunoForm - Limpando formulário");
       // Limpar formulário quando não está editando
       setNome("");
       setEmail("");
@@ -70,7 +70,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
     setLoading(true);
     try {
       if (alunoEditando) {
-        console.log("AlunoForm - Modo de edição - Atualizando aluno:", alunoEditando.id);
+        console.log("✏️ AlunoForm - Modo de edição - Atualizando aluno:", alunoEditando.id);
         
         // Modo de edição - fazer UPDATE
         const dadosAluno = {
@@ -83,7 +83,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
           is_authenticated_student: true
         };
 
-        console.log("AlunoForm - Dados para update:", dadosAluno);
+        console.log("📊 AlunoForm - Dados para update:", dadosAluno);
 
         const { error } = await supabase
           .from("profiles")
@@ -91,18 +91,18 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
           .eq("id", alunoEditando.id);
 
         if (error) {
-          console.error("AlunoForm - Erro no update:", error);
+          console.error("❌ AlunoForm - Erro no update:", error);
           throw error;
         }
 
-        console.log("AlunoForm - Update realizado com sucesso");
+        console.log("✅ AlunoForm - Update realizado com sucesso");
 
         toast({
           title: "Aluno atualizado com sucesso!",
           description: `${nome} foi atualizado na ${turma} com ${creditos} créditos.`
         });
       } else {
-        console.log("AlunoForm - Modo de cadastro - Criando novo aluno");
+        console.log("➕ AlunoForm - Modo de cadastro - Criando novo aluno");
         
         // Modo de cadastro - fazer INSERT
         // Verificar se já existe aluno com este email
@@ -133,6 +133,8 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
           is_authenticated_student: true
         };
 
+        console.log("📊 AlunoForm - Dados para inserção:", dadosAluno);
+
         const { error } = await supabase
           .from("profiles")
           .insert(dadosAluno);
@@ -152,12 +154,12 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
       setCreditos(5);
       onSuccess();
       if (onCancelEdit) {
-        console.log("AlunoForm - Chamando onCancelEdit");
+        console.log("🔙 AlunoForm - Chamando onCancelEdit");
         onCancelEdit();
       }
 
     } catch (error: any) {
-      console.error("Erro ao salvar aluno:", error);
+      console.error("❌ Erro ao salvar aluno:", error);
       toast({
         title: "Erro ao salvar aluno",
         description: error.message || "Ocorreu um erro inesperado.",
@@ -169,20 +171,43 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
   };
 
   const handleCancel = () => {
-    console.log("AlunoForm - handleCancel chamado");
+    console.log("❌ AlunoForm - handleCancel chamado");
     setNome("");
     setEmail("");
     setTurma("");
     setCreditos(5);
     if (onCancelEdit) {
-      console.log("AlunoForm - Chamando onCancelEdit no cancel");
+      console.log("🔙 AlunoForm - Chamando onCancelEdit no cancel");
       onCancelEdit();
     }
   };
 
+  // Renderizar componente de créditos
+  const renderCreditField = () => (
+    <div className="space-y-2">
+      <Label htmlFor="creditos" className="flex items-center gap-2">
+        <Coins className="w-4 h-4 text-yellow-500" />
+        Créditos de Redação *
+      </Label>
+      <Input
+        id="creditos"
+        type="number"
+        min="0"
+        value={creditos}
+        onChange={(e) => setCreditos(parseInt(e.target.value) || 0)}
+        placeholder="Quantidade de créditos"
+        required
+        className="w-full"
+      />
+      <p className="text-xs text-gray-500">
+        Cada envio de redação consome 1 crédito por corretor selecionado
+      </p>
+    </div>
+  );
+
   // Se está editando, mostrar apenas o formulário manual
   if (alunoEditando) {
-    console.log("AlunoForm - Renderizando modo de edição para:", alunoEditando.nome);
+    console.log("✏️ AlunoForm - Renderizando modo de edição para:", alunoEditando.nome);
     
     return (
       <Card>
@@ -233,24 +258,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="creditos" className="flex items-center gap-2">
-                <Coins className="w-4 h-4 text-yellow-500" />
-                Créditos de Redação *
-              </Label>
-              <Input
-                id="creditos"
-                type="number"
-                min="0"
-                value={creditos}
-                onChange={(e) => setCreditos(parseInt(e.target.value) || 0)}
-                placeholder="Quantidade de créditos"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Cada envio de redação consome 1 crédito por corretor selecionado
-              </p>
-            </div>
+            {renderCreditField()}
 
             <div className="flex gap-2">
               <Button 
@@ -275,7 +283,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
     );
   }
 
-  console.log("AlunoForm - Renderizando modo normal (cadastro)");
+  console.log("➕ AlunoForm - Renderizando modo normal (cadastro)");
 
   return (
     <Tabs defaultValue="manual" className="w-full">
@@ -336,24 +344,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="creditos" className="flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-yellow-500" />
-                  Créditos de Redação *
-                </Label>
-                <Input
-                  id="creditos"
-                  type="number"
-                  min="0"
-                  value={creditos}
-                  onChange={(e) => setCreditos(parseInt(e.target.value) || 0)}
-                  placeholder="Quantidade de créditos (padrão: 5)"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Cada envio de redação consome 1 crédito por corretor selecionado
-                </p>
-              </div>
+              {renderCreditField()}
 
               <Button 
                 type="submit" 

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Info, Coins } from "lucide-react";
+import { Info, Coins, AlertCircle } from "lucide-react";
 import { useCredits } from "@/hooks/useCredits";
 
 interface CreditInfoDialogProps {
@@ -25,20 +25,38 @@ export const CreditInfoDialog = ({
   const { getCreditsbyEmail } = useCredits();
 
   useEffect(() => {
+    console.log('🎯 CreditInfoDialog aberto:', { isOpen, userEmail, selectedCorretores });
+    
     if (isOpen && userEmail) {
       loadCredits();
     }
   }, [isOpen, userEmail]);
 
   const loadCredits = async () => {
+    console.log('🔄 Carregando créditos para:', userEmail);
     setLoading(true);
-    const userCredits = await getCreditsbyEmail(userEmail);
-    setCredits(userCredits);
-    setLoading(false);
+    
+    try {
+      const userCredits = await getCreditsbyEmail(userEmail);
+      console.log('💰 Créditos carregados:', userCredits);
+      setCredits(userCredits);
+    } catch (error) {
+      console.error('❌ Erro ao carregar créditos:', error);
+      setCredits(0);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const creditsNeeded = selectedCorretores.length;
   const hasEnoughCredits = credits >= creditsNeeded;
+
+  console.log('📊 Status dos créditos:', {
+    credits,
+    creditsNeeded,
+    hasEnoughCredits,
+    selectedCorretoresCount: selectedCorretores.length
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -80,14 +98,20 @@ export const CreditInfoDialog = ({
               {!hasEnoughCredits && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Info className="w-4 h-4 text-red-600" />
+                    <AlertCircle className="w-4 h-4 text-red-600" />
                     <span className="font-medium text-red-800">Créditos insuficientes</span>
                   </div>
                   <p className="text-sm text-red-700">
-                    Você não possui créditos suficientes para esse envio. Fale com seu professor para adquirir mais créditos.
+                    Você não possui créditos suficientes para esse envio. Entre em contato com seu professor para solicitar novos créditos.
                   </p>
                 </div>
               )}
+
+              {/* Debug info - remover em produção */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs">
+                <p><strong>Debug:</strong> Email: {userEmail}</p>
+                <p>Corretores: {JSON.stringify(selectedCorretores)}</p>
+              </div>
             </>
           )}
         </div>
