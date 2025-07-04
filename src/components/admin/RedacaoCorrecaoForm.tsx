@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,57 @@ export const RedacaoCorrecaoForm = ({ redacao, onCancel, onSuccess, onCopyRedaca
   const [comentario, setComentario] = useState(redacao.comentario_admin || "");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+
+  const copiarPromptCorrecao = () => {
+    const promptCompleto = `🎯 PROMPT DE CORREÇÃO DE REDAÇÃO ENEM – LABORATÓRIO DO REDATOR
+
+Aluno: ${redacao.nome_aluno}
+Frase temática: ${redacao.frase_tematica}
+
+Texto da redação:
+${redacao.redacao_texto}
+
+---
+
+Você é um corretor especialista em redações do ENEM, treinado segundo a matriz oficial do INEP e os critérios do Laboratório do Redator. Corrija esta redação por competências (C1 a C5), com a seguinte estrutura:
+
+✅ Competência [X] – [Nome da competência]
+
+Erros identificados:
+1. [Trecho com erro]
+   - 🔧 Correção sugerida: [...]
+   - 💬 Comentário pedagógico: [...]
+
+Checklist técnico:
+- [ ] Critério 1
+- [ ] Critério 2
+- [ ] Critério 3
+
+Nota atribuída: [0, 40, 80, 120, 160, 200]
+Justificativa da nota: [...]
+
+(Repita para C2, C3, C4, C5)
+
+📌 Finalização:
+
+Resumo final para o aluno:
+- Pontuação total: ___
+- Sugestão de melhoria mais urgente: ___
+- Um ponto positivo para valorizar: ___`;
+
+    navigator.clipboard.writeText(promptCompleto).then(() => {
+      toast({
+        title: "Prompt copiado com sucesso!",
+        description: "O prompt de correção foi copiado para a área de transferência."
+      });
+    }).catch(() => {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o prompt. Tente novamente.",
+        variant: "destructive"
+      });
+    });
+  };
 
   const handleSubmitCorrection = async () => {
     const c1 = parseInt(nota_c1) || 0;
@@ -78,16 +128,28 @@ export const RedacaoCorrecaoForm = ({ redacao, onCancel, onSuccess, onCopyRedaca
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Corrigir Redação - {redacao.nome_aluno}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onCopyRedacao(redacao)}
-            className="flex items-center gap-2"
-            title="Copiar redação com dados do aluno"
-          >
-            <Copy className="w-4 h-4" />
-            Copiar Redação
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copiarPromptCorrecao}
+              className="flex items-center gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              title="Copiar prompt de correção com dados do aluno"
+            >
+              <Copy className="w-4 h-4" />
+              Copiar Prompt
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onCopyRedacao(redacao)}
+              className="flex items-center gap-2"
+              title="Copiar redação com dados do aluno"
+            >
+              <Copy className="w-4 h-4" />
+              Copiar Redação
+            </Button>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

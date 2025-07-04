@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Edit, CheckCircle, Calendar, User, Mail } from "lucide-react";
+import { Eye, Edit, CheckCircle, Calendar, User, Mail, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -122,7 +121,57 @@ const RedacaoSimuladoList = () => {
     setComentarioPedagogico(redacao.comentario_pedagogico || "");
   };
 
-  // Filtrar redações
+  const copiarPromptCorrecao = (redacao: any) => {
+    const promptCompleto = `🎯 PROMPT DE CORREÇÃO DE REDAÇÃO ENEM – LABORATÓRIO DO REDATOR
+
+Aluno: ${redacao.nome_aluno}
+Frase temática: ${redacao.simulados.frase_tematica}
+
+Texto da redação:
+${redacao.texto}
+
+---
+
+Você é um corretor especialista em redações do ENEM, treinado segundo a matriz oficial do INEP e os critérios do Laboratório do Redator. Corrija esta redação por competências (C1 a C5), com a seguinte estrutura:
+
+✅ Competência [X] – [Nome da competência]
+
+Erros identificados:
+1. [Trecho com erro]
+   - 🔧 Correção sugerida: [...]
+   - 💬 Comentário pedagógico: [...]
+
+Checklist técnico:
+- [ ] Critério 1
+- [ ] Critério 2
+- [ ] Critério 3
+
+Nota atribuída: [0, 40, 80, 120, 160, 200]
+Justificativa da nota: [...]
+
+(Repita para C2, C3, C4, C5)
+
+📌 Finalização:
+
+Resumo final para o aluno:
+- Pontuação total: ___
+- Sugestão de melhoria mais urgente: ___
+- Um ponto positivo para valorizar: ___`;
+
+    navigator.clipboard.writeText(promptCompleto).then(() => {
+      toast({
+        title: "Prompt copiado com sucesso!",
+        description: "O prompt de correção foi copiado para a área de transferência."
+      });
+    }).catch(() => {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o prompt. Tente novamente.",
+        variant: "destructive"
+      });
+    });
+  };
+
   const redacoesFiltradas = redacoes?.filter(redacao => {
     const matchTurma = filtroTurma === "todas" || redacao.turma === filtroTurma;
     const matchStatus = filtroStatus === "todas" || 
@@ -280,7 +329,18 @@ const RedacaoSimuladoList = () => {
                       </DialogTrigger>
                       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                          <DialogTitle>Correção - {redacao.nome_aluno}</DialogTitle>
+                          <DialogTitle className="flex items-center justify-between">
+                            Correção - {redacao.nome_aluno}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copiarPromptCorrecao(redacao)}
+                              className="flex items-center gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                            >
+                              <Copy className="w-4 h-4" />
+                              Copiar Prompt
+                            </Button>
+                          </DialogTitle>
                         </DialogHeader>
                         
                         {redacaoSelecionada && (
