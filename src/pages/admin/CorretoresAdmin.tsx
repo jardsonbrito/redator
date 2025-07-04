@@ -4,10 +4,10 @@ import { CorretorForm } from "@/components/admin/CorretorForm";
 import { CorretorList } from "@/components/admin/CorretorList";
 
 export const CorretoresAdmin = () => {
-  const [refresh, setRefresh] = useState(0);
+  const [refresh, setRefresh] = useState(false);
 
   const handleSuccess = () => {
-    setRefresh(prev => prev + 1);
+    setRefresh(prev => !prev);
   };
 
   return (

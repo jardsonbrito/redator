@@ -4,11 +4,11 @@ import { AvisoForm } from "@/components/admin/AvisoForm";
 import { AvisoList } from "@/components/admin/AvisoList";
 
 export const Avisos = () => {
-  const [refresh, setRefresh] = useState(0);
+  const [refresh, setRefresh] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState(null);
 
   const handleSuccess = () => {
-    setRefresh(prev => prev + 1);
+    setRefresh(prev => !prev);
   };
 
   const handleEdit = (aviso: any) => {
