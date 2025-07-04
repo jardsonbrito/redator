@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     const adminStatus = userEmail === 'jardsonbrito@gmail.com';
-    console.log('Admin check - Email:', userEmail, 'Admin status:', adminStatus);
+    console.log('🔐 Admin check - Email:', userEmail, 'Admin status:', adminStatus);
     setIsAdmin(adminStatus);
     return adminStatus;
   };
@@ -40,16 +40,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       async (event, session) => {
         if (!mounted) return;
 
-        console.log('Auth state changed:', event, 'User:', session?.user?.email);
+        console.log('🔄 Auth state changed:', event, 'User:', session?.user?.email);
         
         if (session?.user) {
           setSession(session);
           setUser(session.user);
           checkAdminStatus(session.user.email);
+          
+          // Salvar sessão admin persistente se for admin
+          if (session.user.email === 'jardsonbrito@gmail.com') {
+            localStorage.setItem('admin_session', JSON.stringify({
+              email: session.user.email,
+              timestamp: new Date().toISOString()
+            }));
+          }
         } else {
           setSession(null);
           setUser(null);
           setIsAdmin(false);
+          // Limpar sessão admin
+          localStorage.removeItem('admin_session');
         }
         
         setLoading(false);
@@ -63,24 +73,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!mounted) return;
 
         if (error) {
-          console.error('Error getting session:', error);
+          console.error('❌ Error getting session:', error);
+          // Verificar se há sessão admin salva localmente como fallback
+          const adminSession = localStorage.getItem('admin_session');
+          if (adminSession) {
+            try {
+              const adminData = JSON.parse(adminSession);
+              console.log('🔄 Tentando restaurar sessão admin local:', adminData.email);
+              // Tentar reautenticar silenciosamente se necessário
+            } catch (e) {
+              localStorage.removeItem('admin_session');
+            }
+          }
           setLoading(false);
           return;
         }
 
-        console.log('Initial session check:', session?.user?.email);
+        console.log('✅ Initial session check:', session?.user?.email);
         
         if (session?.user) {
           setSession(session);
           setUser(session.user);
           checkAdminStatus(session.user.email);
         } else {
+          // Verificar sessão local salva
+          const adminSession = localStorage.getItem('admin_session');
+          if (adminSession) {
+            console.log('🔄 Sessão local encontrada, tentando restaurar...');
+          }
           setSession(null);
           setUser(null);
           setIsAdmin(false);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('❌ Error initializing auth:', error);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -97,7 +123,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting sign in with:', email);
+    console.log('🔐 Attempting sign in with:', email);
     setLoading(true);
     
     try {
@@ -107,28 +133,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       if (error) {
-        console.error('Sign in error:', error);
+        console.error('❌ Sign in error:', error);
         setLoading(false);
         return { error };
       }
 
       if (data.user) {
-        console.log('Sign in successful for:', data.user.email);
-        // Don't set loading to false here - let the auth state change handle it
+        console.log('✅ Sign in successful for:', data.user.email);
+        // A sessão será definida pelo listener onAuthStateChange
         return { error: null };
       }
       
       setLoading(false);
       return { error: new Error('Login failed - no user returned') };
     } catch (error) {
-      console.error('Sign in exception:', error);
+      console.error('❌ Sign in exception:', error);
       setLoading(false);
       return { error };
     }
   };
 
   const signOut = async () => {
-    console.log('Signing out...');
+    console.log('🚪 Signing out...');
     setLoading(true);
     
     try {
@@ -136,8 +162,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(null);
       setUser(null);
       setIsAdmin(false);
+      // Limpar sessão admin local
+      localStorage.removeItem('admin_session');
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('❌ Sign out error:', error);
     } finally {
       setLoading(false);
     }

@@ -25,7 +25,7 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
         const agora = new Date();
         const dataAtual = agora.toISOString().split('T')[0];
 
-        console.log('Buscando simulado ativo para turma:', turmaCode);
+        console.log('🔍 Buscando simulado ativo para turma:', turmaCode);
 
         let query = supabase
           .from('simulados')
@@ -35,49 +35,50 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
           .order('data_inicio', { ascending: true });
 
         // Filtra por turma ou permite visitantes - NOMES CORRETOS DAS TURMAS
-        if (turmaCode === "Visitante") {
+        if (turmaCode === "Visitante" || turmaCode === "visitante") {
           query = query.eq('permite_visitante', true);
         } else {
+          // Usar tanto o formato exato da turma quanto permitir visitantes
           query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
         }
         
         const { data, error } = await query.limit(1);
         
         if (error) {
-          console.error('Erro ao buscar simulado:', error);
+          console.error('❌ Erro ao buscar simulado:', error);
           return null;
         }
         
         if (!data || data.length === 0) {
-          console.log('Nenhum simulado ativo encontrado');
+          console.log('ℹ️ Nenhum simulado ativo encontrado para turma:', turmaCode);
           return null;
         }
 
         const simulado = data[0];
-        console.log('Simulado encontrado:', simulado);
+        console.log('✅ Simulado encontrado:', simulado.titulo, 'ID:', simulado.id);
 
         // Verifica se o simulado ainda está no período de exibição
         const fimData = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
         
         if (agora > fimData) {
-          console.log('Simulado já encerrado, não será exibido');
+          console.log('⏰ Simulado já encerrado, não será exibido');
           return null;
         }
 
         // Publicar tema automaticamente se simulado iniciou e tema está em rascunho
         const inicioData = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
         if (agora >= inicioData && simulado.tema_id) {
-          console.log('Verificando se tema precisa ser publicado...');
+          console.log('📝 Verificando se tema precisa ser publicado...');
           try {
             await supabase.rpc('check_and_publish_expired_simulados');
           } catch (error) {
-            console.error('Erro ao publicar tema:', error);
+            console.error('❌ Erro ao publicar tema:', error);
           }
         }
 
         return simulado;
       } catch (error) {
-        console.error('Erro na busca de simulado:', error);
+        console.error('❌ Erro na busca de simulado:', error);
         return null;
       }
     },
@@ -86,8 +87,26 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
     staleTime: 0,
   });
 
-  // Se não há simulado ou está carregando, não renderiza nada
-  if (isLoading || !simuladoAtivo) {
+  // Log para debug
+  console.log('🎯 SimuladoAtivo - Loading:', isLoading, 'Data:', simuladoAtivo, 'Error:', error);
+
+  // Se está carregando, mostrar indicador
+  if (isLoading) {
+    return (
+      <div className="mb-8">
+        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
+          <CardContent className="py-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Verificando simulados disponíveis...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Se não há simulado, não renderiza nada
+  if (!simuladoAtivo) {
+    console.log('ℹ️ Nenhum simulado para exibir na Home');
     return null;
   }
 
@@ -137,7 +156,7 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
                     🎯 Simulado Disponível
                   </CardTitle>
                   <p className={`text-lg font-semibold ${simuladoDisponivel ? 'text-green-600' : 'text-blue-600'}`}>
-                    ⚡ Sua chance de brilhar está aqui!
+                    ⚡ {simuladoAtivo.titulo}
                   </p>
                 </div>
               </div>
@@ -174,14 +193,14 @@ export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
             {/* Informação da turma - NOMES CORRETOS */}
             <div className={`p-3 rounded-lg ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
               <span className="font-medium">
-                Turma: {turmaCode === "Visitante" ? "Visitantes" : turmaCode}
+                Turma: {turmaCode === "Visitante" || turmaCode === "visitante" ? "Visitantes" : turmaCode}
               </span>
             </div>
           </div>
 
           <div className="pt-2">
             {simuladoDisponivel ? (
-              <Link to={`/simulados/${simuladoAtivo.id}`}>
+              <Link to={`/simulado/${simuladoAtivo.id}`}>
                 <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-lg py-3 shadow-lg transform hover:scale-105 transition-all duration-200">
                   <ClipboardCheck className="w-6 h-6 mr-3" />
                   🚀 PARTICIPAR AGORA!

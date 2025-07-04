@@ -18,6 +18,7 @@ import Top5 from "./pages/Top5";
 import Exercicios from "./pages/Exercicios";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import MinhasRedacoesList from "./pages/MinhasRedacoesList";
+import SimuladoParticipacao from "./pages/SimuladoParticipacao";
 import { AuthProvider } from "./hooks/useAuth";
 import { StudentAuthProvider } from "./hooks/useStudentAuth";
 import { Toaster } from "@/components/ui/toaster"
@@ -57,6 +58,7 @@ function App() {
                 <Route path="/temas" element={<Temas />} />
                 <Route path="/temas/:id" element={<TemaDetalhes />} />
                 <Route path="/simulados" element={<Simulados />} />
+                <Route path="/simulado/:id" element={<SimuladoParticipacao />} />
                 <Route path="/exercicios" element={<Exercicios />} />
                 <Route path="/envie-redacao" element={<EnvieRedacao />} />
                 <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />

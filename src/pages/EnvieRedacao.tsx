@@ -8,6 +8,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoTextarea } from "@/components/RedacaoTextarea";
+import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +21,7 @@ const EnvieRedacao = () => {
   const [redacaoTexto, setRedacaoTexto] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRedacaoValid, setIsRedacaoValid] = useState(false);
+  const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
   const { toast } = useToast();
 
   // Parâmetros da URL para pré-preenchimento
@@ -93,6 +95,36 @@ const EnvieRedacao = () => {
       return;
     }
 
+    // Validação de corretores
+    if (selectedCorretores.length === 0) {
+      toast({
+        title: "Selecione pelo menos um corretor",
+        description: "É necessário selecionar pelo menos um corretor para sua redação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedCorretores.length > 2) {
+      toast({
+        title: "Limite de corretores excedido",
+        description: "Você pode selecionar no máximo 2 corretores.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verificar duplicados
+    const uniqueCorretores = new Set(selectedCorretores);
+    if (uniqueCorretores.size !== selectedCorretores.length) {
+      toast({
+        title: "Corretores duplicados",
+        description: "Não é possível selecionar o mesmo corretor duas vezes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -105,7 +137,13 @@ const EnvieRedacao = () => {
           redacao_texto: redacaoTexto.trim(),
           tipo_envio: tipoEnvio,
           turma: turmaCode,
-          status: 'aguardando'
+          status: 'aguardando',
+          corretor_id_1: selectedCorretores[0] || null,
+          corretor_id_2: selectedCorretores[1] || null,
+          status_corretor_1: 'pendente',
+          status_corretor_2: selectedCorretores[1] ? 'pendente' : null,
+          corrigida: false,
+          data_envio: new Date().toISOString()
         });
 
       if (error) {
@@ -115,7 +153,7 @@ const EnvieRedacao = () => {
 
       toast({
         title: "Redação enviada com sucesso!",
-        description: `Sua redação foi salva e estará disponível para correção. Você poderá visualizá-la no card "Minhas Redações" na página inicial.`,
+        description: `Sua redação foi salva e será corrigida pelos corretores selecionados. Você poderá visualizá-la no card "Minhas Redações" na página inicial.`,
       });
 
       // Limpar formulário
@@ -125,6 +163,7 @@ const EnvieRedacao = () => {
       }
       setFraseTematica("");
       setRedacaoTexto("");
+      setSelectedCorretores([]);
 
     } catch (error) {
       console.error('Erro ao enviar redação:', error);
@@ -158,7 +197,7 @@ const EnvieRedacao = () => {
             <p className="text-redator-accent">
               {fonteFromUrl === 'tema' 
                 ? 'Complete os dados abaixo para enviar sua redação sobre o tema escolhido. A frase temática já foi preenchida automaticamente.'
-                : 'Preencha todos os campos abaixo para enviar sua redação sobre tema livre. Ela será corrigida e você poderá visualizar as notas e comentários no card "Minhas Redações" na página inicial.'
+                : 'Preencha todos os campos abaixo para enviar sua redação sobre tema livre. Ela será corrigida pelos corretores selecionados e você poderá visualizar as notas e comentários no card "Minhas Redações" na página inicial.'
               }
             </p>
           </CardHeader>
@@ -221,6 +260,14 @@ const EnvieRedacao = () => {
                 </p>
               </div>
 
+              {/* Seleção de Corretores */}
+              <CorretorSelector
+                selectedCorretores={selectedCorretores}
+                onCorretoresChange={setSelectedCorretores}
+                isSimulado={false}
+                required={true}
+              />
+
               <RedacaoTextarea
                 value={redacaoTexto}
                 onChange={setRedacaoTexto}
@@ -235,7 +282,7 @@ const EnvieRedacao = () => {
                   }
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  Sua redação ficará disponível no card "Minhas Redações" na página inicial.
+                  Sua redação ficará disponível no card "Minhas Redações" na página inicial e será corrigida pelos corretores selecionados.
                 </p>
               </div>
 

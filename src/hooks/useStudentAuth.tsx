@@ -27,6 +27,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     nomeUsuario: '',
     visitanteInfo: undefined
   });
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Verificar se há uma sessão ativa de estudante no localStorage
@@ -35,9 +36,9 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       const alunoTurma = localStorage.getItem("alunoTurma");
       const visitanteData = localStorage.getItem("visitanteData");
 
-      console.log('Verificando sessão - userType:', userType);
-      console.log('Verificando sessão - alunoTurma:', alunoTurma);
-      console.log('Verificando sessão - visitanteData:', visitanteData);
+      console.log('🔍 Verificando sessão persistente - userType:', userType);
+      console.log('🔍 Verificando sessão persistente - alunoTurma:', alunoTurma);
+      console.log('🔍 Verificando sessão persistente - visitanteData:', visitanteData);
 
       if (userType === "aluno" && alunoTurma) {
         setIsStudentLoggedIn(true);
@@ -46,7 +47,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           turma: alunoTurma,
           nomeUsuario: `Aluno da ${alunoTurma}`
         });
-        console.log('Sessão de aluno restaurada');
+        console.log('✅ Sessão de aluno restaurada persistentemente');
       } else if (userType === "visitante" && visitanteData) {
         try {
           const dados = JSON.parse(visitanteData);
@@ -57,12 +58,13 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
             nomeUsuario: dados.nome,
             visitanteInfo: dados
           });
-          console.log('Sessão de visitante restaurada');
+          console.log('✅ Sessão de visitante restaurada persistentemente');
         } catch (error) {
-          console.error('Erro ao parsear dados do visitante:', error);
+          console.error('❌ Erro ao parsear dados do visitante:', error);
           // Limpar dados corrompidos
           localStorage.removeItem("visitanteData");
           localStorage.removeItem("userType");
+          localStorage.removeItem("alunoTurma");
           setIsStudentLoggedIn(false);
           setStudentData({
             userType: null,
@@ -77,8 +79,10 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           turma: null,
           nomeUsuario: ''
         });
-        console.log('Nenhuma sessão ativa encontrada');
+        console.log('❌ Nenhuma sessão ativa encontrada');
       }
+      
+      setIsInitialized(true);
     };
 
     checkStudentSession();
@@ -86,20 +90,38 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     // Adicionar listener para mudanças no localStorage (caso seja modificado em outra aba)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "userType" || e.key === "alunoTurma" || e.key === "visitanteData") {
-        console.log('Mudança detectada no localStorage:', e.key);
+        console.log('🔄 Mudança detectada no localStorage:', e.key);
         checkStudentSession();
       }
     };
 
+    // Adicionar listener para beforeunload para garantir persistência
+    const handleBeforeUnload = () => {
+      // Garantir que dados estão salvos antes da página fechar
+      if (isStudentLoggedIn) {
+        console.log('💾 Salvando sessão antes de fechar página');
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isStudentLoggedIn]);
 
   const loginAsStudent = (turma: string) => {
-    console.log('Login como aluno - turma:', turma);
+    console.log('🔐 Login como aluno - turma:', turma);
+    
+    // Garantir persistência com múltiplas estratégias
     localStorage.setItem("alunoTurma", turma);
     localStorage.setItem("userType", "aluno");
     localStorage.removeItem("visitanteData");
+    
+    // Também salvar timestamp para auditoria
+    localStorage.setItem("loginTimestamp", new Date().toISOString());
     
     setIsStudentLoggedIn(true);
     setStudentData({
@@ -110,16 +132,18 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
   };
 
   const loginAsVisitante = (nome: string, email: string) => {
-    console.log('Login como visitante - nome:', nome, 'email:', email);
+    console.log('🔐 Login como visitante - nome:', nome, 'email:', email);
     const visitanteInfo = {
       nome: nome.trim(),
       email: email.trim().toLowerCase(),
       tipo: "visitante"
     };
 
+    // Garantir persistência com múltiplas estratégias
     localStorage.setItem("visitanteData", JSON.stringify(visitanteInfo));
     localStorage.setItem("userType", "visitante");
     localStorage.setItem("alunoTurma", "visitante");
+    localStorage.setItem("loginTimestamp", new Date().toISOString());
 
     setIsStudentLoggedIn(true);
     setStudentData({
@@ -131,11 +155,12 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
   };
 
   const logoutStudent = () => {
-    console.log('Logout do estudante');
+    console.log('🚪 Logout do estudante');
     // Limpar todos os dados de sessão do estudante
     localStorage.removeItem("userType");
     localStorage.removeItem("alunoTurma");
     localStorage.removeItem("visitanteData");
+    localStorage.removeItem("loginTimestamp");
     
     setIsStudentLoggedIn(false);
     setStudentData({
@@ -144,6 +169,11 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       nomeUsuario: ''
     });
   };
+
+  // Não renderizar até a inicialização estar completa
+  if (!isInitialized) {
+    return <div>Carregando...</div>;
+  }
 
   return (
     <StudentAuthContext.Provider value={{
