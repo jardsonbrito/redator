@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeEmail, logLoginAttempt } from "@/utils/emailNormalizer";
 
 interface StudentLoginFormProps {
   onLogin: (data: { turma: string; nome: string }) => void;
@@ -16,7 +17,7 @@ export const StudentLoginForm = ({ onLogin, loading }: StudentLoginFormProps) =>
   const [email, setEmail] = useState("");
   const { toast } = useToast();
 
-  const validateAndLogin = async () => {
+  const handleLogin = async () => {
     if (!email.trim()) {
       toast({
         title: "Campo obrigatório",
@@ -26,87 +27,48 @@ export const StudentLoginForm = ({ onLogin, loading }: StudentLoginFormProps) =>
       return;
     }
 
-    // Normalização ULTRA robusta do email
-    const normalizedEmail = email
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[^\w@.-]/g, '');
-
-    console.log('🔍 DIAGNÓSTICO LOGIN - Iniciando validação');
-    console.log('📧 Email original:', email);
-    console.log('📧 Email normalizado:', normalizedEmail);
-    console.log('🕒 Timestamp:', new Date().toISOString());
-    console.log('📱 User Agent:', navigator.userAgent);
+    // Normalização do e-mail conforme especificação
+    const emailNormalizado = normalizeEmail(email);
 
     try {
-      // Primeira tentativa: busca exata
-      console.log('🔄 Tentativa 1: Busca exata');
-      const { data: student, error } = await supabase
+      // Consulta SQL conforme especificação: SELECT * FROM profiles WHERE LOWER(TRIM(email)) = email_normalizado
+      const { data: aluno, error } = await supabase
         .from("profiles")
         .select("id, nome, email, turma")
-        .eq("email", normalizedEmail)
         .eq("user_type", "aluno")
+        .ilike("email", emailNormalizado)
+        .limit(1)
         .maybeSingle();
-
-      console.log('📊 Resultado busca exata:', { student, error });
 
       if (error) {
+        logLoginAttempt(email, emailNormalizado, 'error');
         console.error('🚨 ERRO na consulta:', error);
-        throw error;
-      }
-
-      if (student) {
-        console.log('✅ SUCESSO - Aluno encontrado:', student.nome, 'Turma:', student.turma);
-        onLogin({ turma: student.turma, nome: student.nome });
+        toast({
+          title: "Erro no sistema",
+          description: "Ocorreu um erro ao verificar seus dados. Tente novamente.",
+          variant: "destructive"
+        });
         return;
       }
 
-      // Segunda tentativa: busca com ILIKE (case insensitive)
-      console.log('🔄 Tentativa 2: Busca com ILIKE');
-      const { data: studentIlike, error: errorIlike } = await supabase
-        .from("profiles")
-        .select("id, nome, email, turma")
-        .ilike("email", normalizedEmail)
-        .eq("user_type", "aluno")
-        .maybeSingle();
-
-      console.log('📊 Resultado ILIKE:', { studentIlike, errorIlike });
-
-      if (studentIlike) {
-        console.log('✅ SUCESSO ILIKE - Aluno encontrado:', studentIlike.nome);
-        onLogin({ turma: studentIlike.turma, nome: studentIlike.nome });
+      if (aluno) {
+        logLoginAttempt(email, emailNormalizado, 'success');
+        console.log('✅ LOGIN SUCESSO - Aluno:', aluno.nome, 'Turma:', aluno.turma);
+        onLogin({ turma: aluno.turma, nome: aluno.nome });
         return;
       }
 
-      // Terceira tentativa: busca por padrão similar
-      console.log('🔄 Tentativa 3: Busca por padrão similar');
-      const emailPrefix = normalizedEmail.split('@')[0];
-      const { data: similarEmails } = await supabase
-        .from("profiles")
-        .select("email, nome, turma")
-        .eq("user_type", "aluno")
-        .ilike("email", `%${emailPrefix}%`)
-        .limit(3);
-
-      console.log('📊 Emails similares encontrados:', similarEmails);
-
-      // Se não encontrou nada, mostrar erro com sugestões
-      let errorDescription = "Verifique se você foi cadastrado pelo professor ou se o e-mail está correto.";
-      
-      if (similarEmails && similarEmails.length > 0) {
-        const suggestion = similarEmails[0].email;
-        errorDescription = `E-mail não encontrado. Você quis dizer: ${suggestion}?`;
-      }
-
+      // Nenhum resultado encontrado
+      logLoginAttempt(email, emailNormalizado, 'not_found');
       toast({
         title: "E-mail não encontrado",
-        description: errorDescription,
+        description: "E-mail não encontrado. Verifique se você foi cadastrado corretamente pelo professor.",
         variant: "destructive"
       });
 
     } catch (error: any) {
-      console.error("🚨 ERRO CRÍTICO na validação:", error);
+      logLoginAttempt(email, emailNormalizado, 'error');
+      console.error("🚨 ERRO CRÍTICO:", error);
       toast({
         title: "Erro na validação",
         description: "Ocorreu um erro ao verificar seus dados. Tente novamente.",
@@ -132,7 +94,7 @@ export const StudentLoginForm = ({ onLogin, loading }: StudentLoginFormProps) =>
             autoComplete="email"
             autoCapitalize="none"
             autoCorrect="off"
-            onKeyPress={(e) => e.key === 'Enter' && validateAndLogin()}
+            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
           />
           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         </div>
@@ -142,7 +104,7 @@ export const StudentLoginForm = ({ onLogin, loading }: StudentLoginFormProps) =>
       </div>
 
       <Button 
-        onClick={validateAndLogin}
+        onClick={handleLogin}
         disabled={loading}
         className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white h-12"
       >
