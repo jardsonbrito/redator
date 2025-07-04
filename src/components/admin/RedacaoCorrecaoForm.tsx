@@ -110,6 +110,75 @@ export const RedacaoCorrecaoForm = ({ redacao, onCancel, onSuccess, onCopyRedaca
           </div>
         </div>
 
+        {/* Mostrar correções individuais se existirem */}
+        {(redacao.c1_corretor_1 !== null || redacao.c1_corretor_2 !== null) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {redacao.c1_corretor_1 !== null && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Correção - Corretor 1</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="grid grid-cols-5 gap-2 text-sm">
+                    <div>C1: {redacao.c1_corretor_1}</div>
+                    <div>C2: {redacao.c2_corretor_1}</div>
+                    <div>C3: {redacao.c3_corretor_1}</div>
+                    <div>C4: {redacao.c4_corretor_1}</div>
+                    <div>C5: {redacao.c5_corretor_1}</div>
+                  </div>
+                  <div className="font-semibold">
+                    Total: {redacao.nota_final_corretor_1}/1000
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Status: {redacao.status_corretor_1}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {redacao.c1_corretor_2 !== null && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Correção - Corretor 2</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="grid grid-cols-5 gap-2 text-sm">
+                    <div>C1: {redacao.c1_corretor_2}</div>
+                    <div>C2: {redacao.c2_corretor_2}</div>
+                    <div>C3: {redacao.c3_corretor_2}</div>
+                    <div>C4: {redacao.c4_corretor_2}</div>
+                    <div>C5: {redacao.c5_corretor_2}</div>
+                  </div>
+                  <div className="font-semibold">
+                    Total: {redacao.nota_final_corretor_2}/1000
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Status: {redacao.status_corretor_2}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {redacao.nota_total && (
+          <Card className="bg-blue-50">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-800">
+                  Nota Final: {redacao.nota_total}/1000
+                </div>
+                <div className="text-sm text-blue-600 mt-1">
+                  {redacao.c1_corretor_1 !== null && redacao.c1_corretor_2 !== null 
+                    ? 'Média entre as duas correções'
+                    : 'Correção única'
+                  }
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-5 gap-4">
           <div>
             <Label htmlFor="nota_c1">Competência 1 (0-200)</Label>

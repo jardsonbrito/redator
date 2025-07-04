@@ -1,62 +1,68 @@
 
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
-import { MuralAvisosCorretor } from "@/components/corretor/MuralAvisosCorretor";
 import { ListaRedacoesCorretor } from "@/components/corretor/ListaRedacoesCorretor";
 import { FormularioCorrecao } from "@/components/corretor/FormularioCorrecao";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 
 const CorretorHome = () => {
-  const { corretor } = useCorretorAuth();
+  const { corretor, loading } = useCorretorAuth();
   const [redacaoSelecionada, setRedacaoSelecionada] = useState<RedacaoCorretor | null>(null);
 
-  if (!corretor) {
-    return <div>Carregando...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
-  const handleCorrigir = (redacao: RedacaoCorretor) => {
+  if (!corretor) {
+    return <Navigate to="/corretor/login" replace />;
+  }
+
+  const handleCorrigirRedacao = (redacao: RedacaoCorretor) => {
     setRedacaoSelecionada(redacao);
   };
 
-  const handleVoltar = () => {
+  const handleVoltarLista = () => {
     setRedacaoSelecionada(null);
   };
 
-  const handleSucesso = () => {
+  const handleSucessoCorrecao = () => {
     setRedacaoSelecionada(null);
-    // Aqui poderia atualizar a lista de redações
   };
-
-  if (redacaoSelecionada) {
-    return (
-      <CorretorLayout>
-        <FormularioCorrecao
-          redacao={redacaoSelecionada}
-          corretorEmail={corretor.email}
-          onVoltar={handleVoltar}
-          onSucesso={handleSucesso}
-        />
-      </CorretorLayout>
-    );
-  }
 
   return (
     <CorretorLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Bem-vindo(a), {corretor.nome_completo}!</h1>
-          <p className="text-muted-foreground">
-            Gerencie suas correções e acompanhe os avisos importantes.
+          <h1 className="text-3xl font-bold text-gray-900">
+            Olá, {corretor.nome_completo}!
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Bem-vindo ao painel do corretor. Aqui você pode corrigir as redações atribuídas a você.
           </p>
         </div>
 
-        <MuralAvisosCorretor corretorId={corretor.id} />
-        
-        <ListaRedacoesCorretor 
-          corretorEmail={corretor.email} 
-          onCorrigir={handleCorrigir}
-        />
+        {redacaoSelecionada ? (
+          <FormularioCorrecao
+            redacao={redacaoSelecionada}
+            corretorEmail={corretor.email}
+            onVoltar={handleVoltarLista}
+            onSucesso={handleSucessoCorrecao}
+          />
+        ) : (
+          <ListaRedacoesCorretor
+            corretorEmail={corretor.email}
+            onCorrigir={handleCorrigirRedacao}
+          />
+        )}
       </div>
     </CorretorLayout>
   );

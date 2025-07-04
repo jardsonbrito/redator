@@ -5,13 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface RedacaoCorretor {
   id: string;
-  tipo_redacao: string;
+  tipo_redacao: 'regular' | 'simulado' | 'exercicio';
   nome_aluno: string;
   email_aluno: string;
   frase_tematica: string;
   data_envio: string;
   texto: string;
-  status_minha_correcao: string;
+  status_minha_correcao: 'pendente' | 'incompleta' | 'corrigida';
   eh_corretor_1: boolean;
   eh_corretor_2: boolean;
 }
@@ -21,9 +21,13 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchRedacoes = async () => {
-    if (!corretorEmail) return;
+  useEffect(() => {
+    if (corretorEmail) {
+      fetchRedacoes();
+    }
+  }, [corretorEmail]);
 
+  const fetchRedacoes = async () => {
     try {
       const { data, error } = await supabase
         .rpc('get_redacoes_corretor_detalhadas', {
@@ -34,20 +38,16 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
 
       setRedacoes(data || []);
     } catch (error: any) {
-      console.error("Erro ao buscar redações:", error);
+      console.error("Erro ao buscar redações do corretor:", error);
       toast({
         title: "Erro ao carregar redações",
-        description: error.message || "Ocorreu um erro inesperado.",
+        description: "Não foi possível carregar suas redações.",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchRedacoes();
-  }, [corretorEmail]);
 
   const getRedacoesPorStatus = () => {
     const pendentes = redacoes.filter(r => r.status_minha_correcao === 'pendente');
@@ -61,6 +61,6 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
     redacoes,
     loading,
     fetchRedacoes,
-    getRedacoesPorStatus,
+    getRedacoesPorStatus
   };
 };

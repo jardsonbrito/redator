@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from "react";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertCircle } from "lucide-react";
+import { Users, AlertCircle } from "lucide-react";
 
 interface Corretor {
   id: string;
@@ -37,19 +38,18 @@ export const CorretorSelector = ({
   const fetchCorretores = async () => {
     try {
       const { data, error } = await supabase
-        .from("corretores")
-        .select("id, nome_completo, email")
-        .eq("ativo", true)
-        .order("nome_completo");
+        .from('corretores')
+        .select('id, nome_completo, email')
+        .eq('ativo', true)
+        .order('nome_completo');
 
       if (error) throw error;
-
       setCorretores(data || []);
     } catch (error: any) {
-      console.error("Erro ao buscar corretores:", error);
+      console.error('Erro ao buscar corretores:', error);
       toast({
         title: "Erro ao carregar corretores",
-        description: error.message || "Ocorreu um erro inesperado.",
+        description: "Não foi possível carregar a lista de corretores.",
         variant: "destructive"
       });
     } finally {
@@ -61,26 +61,14 @@ export const CorretorSelector = ({
     let newSelected = [...selectedCorretores];
 
     if (checked) {
-      // Verificar limite máximo de 2 corretores
       if (newSelected.length >= 2) {
         toast({
-          title: "Limite atingido",
+          title: "Limite excedido",
           description: "Você pode selecionar no máximo 2 corretores.",
           variant: "destructive"
         });
         return;
       }
-      
-      // Verificar se não é duplicado
-      if (newSelected.includes(corretorId)) {
-        toast({
-          title: "Corretor já selecionado",
-          description: "Este corretor já foi selecionado.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
       newSelected.push(corretorId);
     } else {
       newSelected = newSelected.filter(id => id !== corretorId);
@@ -89,71 +77,85 @@ export const CorretorSelector = ({
     onCorretoresChange(newSelected);
   };
 
-  const getValidationMessage = () => {
-    if (isSimulado && selectedCorretores.length !== 2) {
-      return "Para simulados, é obrigatório selecionar exatamente 2 corretores.";
-    }
-    if (required && selectedCorretores.length === 0) {
-      return "Selecione pelo menos 1 corretor.";
-    }
-    return null;
-  };
-
-  const validationMessage = getValidationMessage();
-
   if (loading) {
-    return <div>Carregando corretores...</div>;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Seleção de Corretores
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Carregando corretores...</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Selecionar Corretor(es)
-          {required && <span className="text-red-500">*</span>}
+          <Users className="w-5 h-5" />
+          Seleção de Corretores {required && <span className="text-red-500">*</span>}
         </CardTitle>
-        {isSimulado && (
-          <p className="text-sm text-muted-foreground">
-            Para simulados, é obrigatório selecionar exatamente 2 corretores.
-          </p>
-        )}
       </CardHeader>
-      <CardContent>
-        {corretores.length === 0 ? (
-          <p className="text-muted-foreground">
-            Nenhum corretor disponível no momento.
-          </p>
-        ) : (
-          <div className="space-y-3">
+      <CardContent className="space-y-4">
+        {isSimulado && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Simulado:</strong> É obrigatório selecionar exatamente 2 corretores.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">
+            Selecione {isSimulado ? '2 corretores' : '1 ou 2 corretores'}:
+          </Label>
+          
+          <div className="grid grid-cols-1 gap-3">
             {corretores.map((corretor) => (
-              <div key={corretor.id} className="flex items-center space-x-2">
+              <div key={corretor.id} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50">
                 <Checkbox
                   id={`corretor-${corretor.id}`}
                   checked={selectedCorretores.includes(corretor.id)}
                   onCheckedChange={(checked) => 
-                    handleCorretorToggle(corretor.id, checked as boolean)
+                    handleCorretorToggle(corretor.id, checked === true)
                   }
                 />
-                <Label
+                <Label 
                   htmlFor={`corretor-${corretor.id}`}
-                  className="text-sm font-normal cursor-pointer"
+                  className="flex-1 cursor-pointer"
                 >
-                  {corretor.nome_completo}
+                  <div>
+                    <p className="font-medium">{corretor.nome_completo}</p>
+                    <p className="text-xs text-muted-foreground">{corretor.email}</p>
+                  </div>
                 </Label>
               </div>
             ))}
           </div>
-        )}
 
-        {validationMessage && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-red-600">
-            <AlertCircle className="w-4 h-4" />
-            {validationMessage}
-          </div>
-        )}
+          {corretores.length === 0 && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Nenhum corretor ativo encontrado. Entre em contato com o administrador.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
 
-        <div className="mt-4 text-xs text-muted-foreground">
-          Selecionados: {selectedCorretores.length} de 2 máximo
+        <div className="text-xs text-muted-foreground">
+          <p>Corretores selecionados: {selectedCorretores.length}/2</p>
+          {isSimulado && selectedCorretores.length !== 2 && (
+            <p className="text-red-500 mt-1">
+              ⚠️ Simulados requerem exatamente 2 corretores
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
