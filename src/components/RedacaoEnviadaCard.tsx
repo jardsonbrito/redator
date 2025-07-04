@@ -1,40 +1,34 @@
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Calendar, Award, MessageCircle, User, Mail } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-type RedacaoEnviada = {
-  id: string;
-  frase_tematica: string;
-  redacao_texto: string;
-  data_envio: string;
-  nota_c1: number | null;
-  nota_c2: number | null;
-  nota_c3: number | null;
-  nota_c4: number | null;
-  nota_c5: number | null;
-  nota_total: number | null;
-  comentario_admin: string | null;
-  corrigida: boolean;
-  data_correcao: string | null;
-  nome_aluno?: string | null;
-  email_aluno?: string | null;
-  tipo_envio?: string | null;
-  status?: string | null;
-  turma?: string | null;
-};
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock } from "lucide-react";
 
 interface RedacaoEnviadaCardProps {
-  redacao: RedacaoEnviada;
-  showAuthorInfo?: boolean;
+  redacao: {
+    id: string;
+    frase_tematica: string;
+    redacao_texto: string;
+    data_envio: string;
+    nota_c1?: number | null;
+    nota_c2?: number | null;
+    nota_c3?: number | null;
+    nota_c4?: number | null;
+    nota_c5?: number | null;
+    nota_total?: number | null;
+    comentario_admin?: string | null;
+    corrigida: boolean;
+    data_correcao?: string | null;
+    nome_aluno: string;
+    email_aluno: string;
+    tipo_envio: string;
+    status: string;
+    turma: string;
+  };
 }
 
-export const RedacaoEnviadaCard = ({ redacao, showAuthorInfo = false }: RedacaoEnviadaCardProps) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
+export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -45,250 +39,170 @@ export const RedacaoEnviadaCard = ({ redacao, showAuthorInfo = false }: RedacaoE
     });
   };
 
-  const getNotaColor = (nota: number | null) => {
-    if (nota === null) return "bg-gray-200 text-gray-600";
-    if (nota >= 160) return "bg-green-100 text-green-800";
-    if (nota >= 120) return "bg-yellow-100 text-yellow-800";
-    if (nota >= 80) return "bg-orange-100 text-orange-800";
-    return "bg-red-100 text-red-800";
-  };
-
-  const getTotalNotaColor = (nota: number | null) => {
-    if (nota === null) return "bg-gray-200 text-gray-600";
-    if (nota >= 800) return "bg-green-500 text-white";
-    if (nota >= 600) return "bg-yellow-500 text-white";
-    if (nota >= 400) return "bg-orange-500 text-white";
-    return "bg-red-500 text-white";
-  };
-
-  const getTipoEnvioLabel = (tipo: string | null | undefined) => {
-    if (!tipo) return "Regular";
+  const getTipoEnvioLabel = (tipo: string) => {
     const tipos = {
       'regular': 'Regular',
       'exercicio': 'Exercício',
       'simulado': 'Simulado',
-      'visitante': 'Visitante'
+      'visitante': 'Avulsa'
     };
     return tipos[tipo as keyof typeof tipos] || tipo;
   };
 
-  const getTipoEnvioColor = (tipo: string | null | undefined) => {
-    if (!tipo || tipo === 'regular') return "bg-blue-100 text-blue-800";
-    if (tipo === 'exercicio') return "bg-purple-100 text-purple-800";
-    if (tipo === 'simulado') return "bg-orange-100 text-orange-800";
-    if (tipo === 'visitante') return "bg-gray-100 text-gray-800";
-    return "bg-blue-100 text-blue-800";
+  const getTipoEnvioColor = (tipo: string) => {
+    const cores = {
+      'regular': 'bg-blue-100 text-blue-800',
+      'exercicio': 'bg-purple-100 text-purple-800',
+      'simulado': 'bg-orange-100 text-orange-800',
+      'visitante': 'bg-gray-100 text-gray-800'
+    };
+    return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
   };
 
   return (
-    <Card className="border-redator-accent/20 hover:shadow-lg transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-redator-primary text-lg line-clamp-2">
-            {redacao.frase_tematica}
-          </CardTitle>
-          {redacao.corrigida ? (
-            <Badge className="bg-green-100 text-green-800 shrink-0">Corrigida</Badge>
-          ) : (
-            <Badge className="bg-yellow-100 text-yellow-800 shrink-0">Aguardando</Badge>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-2 text-sm text-redator-accent">
-          <Calendar className="w-4 h-4" />
-          <span>Enviada em {formatDate(redacao.data_envio)}</span>
-        </div>
-
-        {/* Informações do autor - mostrar apenas se for para admin ou visitante */}
-        {showAuthorInfo && (redacao.nome_aluno || redacao.email_aluno) && (
-          <div className="space-y-1 text-sm text-redator-accent bg-redator-accent/5 p-2 rounded">
-            {redacao.nome_aluno && (
-              <div className="flex items-center gap-1">
-                <User className="w-3 h-3" />
-                <span>{redacao.nome_aluno}</span>
-              </div>
-            )}
-            {redacao.email_aluno && (
-              <div className="flex items-center gap-1">
-                <Mail className="w-3 h-3" />
-                <span>{redacao.email_aluno}</span>
-              </div>
-            )}
-            {redacao.tipo_envio && (
-              <Badge className={`text-xs ${getTipoEnvioColor(redacao.tipo_envio)}`}>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header da redação - otimizado para mobile */}
+      <Card className="border-primary/20">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <CardTitle className="text-lg sm:text-xl text-primary leading-tight">
+              {redacao.frase_tematica}
+            </CardTitle>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              {redacao.corrigida ? (
+                <Badge className="bg-green-100 text-green-800 text-xs">
+                  ✅ Corrigido
+                </Badge>
+              ) : (
+                <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                  ⏳ Aguardando
+                </Badge>
+              )}
+              <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
                 {getTipoEnvioLabel(redacao.tipo_envio)}
               </Badge>
-            )}
-          </div>
-        )}
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {/* Notas por competência - só exibir se corrigida */}
-        {redacao.corrigida && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-5 gap-2">
-              {[
-                { label: 'C1', value: redacao.nota_c1 },
-                { label: 'C2', value: redacao.nota_c2 },
-                { label: 'C3', value: redacao.nota_c3 },
-                { label: 'C4', value: redacao.nota_c4 },
-                { label: 'C5', value: redacao.nota_c5 },
-              ].map((competencia) => (
-                <div key={competencia.label} className="text-center">
-                  <div className="text-xs text-redator-accent mb-1">{competencia.label}</div>
-                  <Badge className={`w-full justify-center ${getNotaColor(competencia.value)}`}>
-                    {competencia.value ?? '0'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-
-            {/* Nota total */}
-            <div className="flex items-center justify-center gap-2">
-              <Award className="w-5 h-5 text-redator-accent" />
-              <span className="text-sm text-redator-accent">Nota Total:</span>
-              <Badge className={`px-3 py-1 ${getTotalNotaColor(redacao.nota_total)}`}>
-                {redacao.nota_total ?? 0}/1000
-              </Badge>
             </div>
           </div>
-        )}
-
-        {/* Botão para ver redação completa */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              variant="outline" 
-              className="w-full border-redator-accent/50 text-redator-primary hover:bg-redator-accent/10"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              Ver Redação Completa
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-redator-primary">
-                {redacao.frase_tematica}
-              </DialogTitle>
-            </DialogHeader>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          {/* Informações do aluno - layout mobile melhorado */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">Aluno:</span>
+              <span className="truncate">{redacao.nome_aluno}</span>
+            </div>
             
-            <div className="space-y-6">
-              {/* Informações do autor no modal */}
-              {showAuthorInfo && (redacao.nome_aluno || redacao.email_aluno) && (
-                <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
-                  <h4 className="font-medium text-redator-primary mb-2">Informações do Autor</h4>
-                  <div className="space-y-1 text-sm text-redator-accent">
-                    {redacao.nome_aluno && (
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <span><strong>Nome:</strong> {redacao.nome_aluno}</span>
-                      </div>
-                    )}
-                    {redacao.email_aluno && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        <span><strong>E-mail:</strong> {redacao.email_aluno}</span>
-                      </div>
-                    )}
-                    {redacao.tipo_envio && (
-                      <div>
-                        <strong>Tipo de envio:</strong> {getTipoEnvioLabel(redacao.tipo_envio)}
-                      </div>
-                    )}
-                    {redacao.turma && redacao.turma !== 'visitante' && (
-                      <div>
-                        <strong>Turma:</strong> {redacao.turma}
-                      </div>
-                    )}
-                  </div>
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">E-mail:</span>
+              <span className="truncate text-xs sm:text-sm">{redacao.email_aluno}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">Turma:</span>
+              <span>{redacao.turma}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">Enviado:</span>
+              <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Texto da redação - otimizado para mobile */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg text-primary">
+            <FileText className="w-5 h-5" />
+            Texto da Redação
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800">
+              {redacao.redacao_texto}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Correção (se disponível) - layout mobile otimizado */}
+      {redacao.corrigida && (
+        <Card className="border-green-200 bg-green-50/50">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-lg text-green-800">
+                <Star className="w-5 h-5" />
+                Correção Detalhada
+              </CardTitle>
+              {redacao.data_correcao && (
+                <div className="flex items-center gap-2 text-sm text-green-700">
+                  <Clock className="w-4 h-4" />
+                  Corrigido em: {formatDate(redacao.data_correcao)}
                 </div>
               )}
+            </div>
+          </CardHeader>
 
-              {/* Texto da redação */}
-              <div>
-                <h3 className="font-semibold text-redator-primary mb-3">Texto da Redação</h3>
-                <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {redacao.redacao_texto}
-                  </p>
-                </div>
+          <CardContent className="space-y-4 sm:space-y-6">
+            {/* Notas por competência - grid responsivo */}
+            <div>
+              <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                <GraduationCap className="w-4 h-4" />
+                Notas por Competência
+              </h3>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+                {[1, 2, 3, 4, 5].map((comp) => {
+                  const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
+                  return (
+                    <div key={comp} className="text-center">
+                      <div className="bg-white border border-green-200 rounded-lg p-3">
+                        <div className="text-xs text-green-600 font-medium mb-1">C{comp}</div>
+                        <div className="text-lg font-bold text-green-800">
+                          {nota !== null ? nota : '-'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Correção detalhada - só exibir se corrigida */}
-              {redacao.corrigida && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-redator-primary">Nota por competência</h3>
-                  
-                  {/* Notas por competência em formato detalhado */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {[
-                      { label: 'Competência 1', key: 'C1', value: redacao.nota_c1, description: 'Demonstrar domínio da modalidade escrita formal da língua portuguesa.' },
-                      { label: 'Competência 2', key: 'C2', value: redacao.nota_c2, description: 'Compreender a proposta de redação e aplicar conceitos das várias áreas de conhecimento.' },
-                      { label: 'Competência 3', key: 'C3', value: redacao.nota_c3, description: 'Selecionar, relacionar, organizar e interpretar informações, fatos, opiniões e argumentos.' },
-                      { label: 'Competência 4', key: 'C4', value: redacao.nota_c4, description: 'Demonstrar conhecimento dos mecanismos linguísticos necessários para a construção da argumentação.' },
-                      { label: 'Competência 5', key: 'C5', value: redacao.nota_c5, description: 'Elaborar proposta de intervenção para o problema abordado.' },
-                    ].map((comp) => (
-                      <div key={comp.key} className="bg-redator-accent/5 p-3 rounded-lg border border-redator-accent/20">
-                        <div className="text-center mb-2">
-                          <div className="text-xs text-redator-accent mb-1">{comp.key}</div>
-                          <div className="text-lg font-bold text-redator-primary">{comp.value ?? 0}</div>
-                          <div className="text-xs text-redator-accent">/200</div>
-                        </div>
-                        <div className="text-xs text-redator-accent text-center leading-relaxed">
-                          {comp.description}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Nota total destacada */}
-                  <div className="bg-redator-secondary/10 p-4 rounded-lg border border-redator-secondary/20 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Award className="w-6 h-6 text-redator-primary" />
-                      <span className="text-lg font-bold text-redator-primary">
-                        Nota Final: {redacao.nota_total ?? 0}/1000
-                      </span>
-                    </div>
-                    <div className="text-sm text-redator-accent">
-                      {redacao.data_correcao && `Corrigida em: ${formatDate(redacao.data_correcao)}`}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Comentário do admin */}
-              {redacao.comentario_admin && (
-                <div>
-                  <h3 className="font-semibold text-redator-primary mb-3 flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5" />
-                    Correção pedagógica detalhada – Plataforma App do Redator
-                  </h3>
-                  <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
-                    <div className="text-sm leading-relaxed text-redator-primary whitespace-pre-wrap break-words">
-                      {redacao.comentario_admin}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Mensagem para redações não corrigidas */}
-              {!redacao.corrigida && (
-                <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="w-5 h-5 text-redator-accent" />
-                    <span className="font-medium text-redator-primary">Aguardando Correção</span>
-                  </div>
-                  <p className="text-sm text-redator-accent">
-                    Esta redação foi enviada em {formatDate(redacao.data_envio)} e está aguardando correção. 
-                    Assim que for corrigida, você verá as notas e o feedback do corretor aqui.
-                  </p>
+              {/* Nota total - destaque */}
+              {redacao.nota_total !== null && (
+                <div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg p-4 text-center">
+                  <div className="text-sm font-medium mb-1">Nota Total</div>
+                  <div className="text-2xl sm:text-3xl font-bold">{redacao.nota_total}</div>
                 </div>
               )}
             </div>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+
+            {/* Comentários pedagógicos - otimizado para mobile */}
+            {redacao.comentario_admin && (
+              <>
+                <Separator className="bg-green-200" />
+                <div>
+                  <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Comentários Pedagógicos
+                  </h3>
+                  <div className="bg-white border border-green-200 rounded-lg p-4">
+                    <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                      {redacao.comentario_admin}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -328,28 +327,28 @@ export default function MinhasRedacoesList() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header elegante */}
-        <div className="flex items-center justify-between mb-8">
-          <Link to="/app">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        {/* Header elegante - melhorado para mobile */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 sm:mb-8 gap-4">
+          <Link to="/app" className="self-start sm:self-auto">
             <Button variant="outline" size="sm" className="gap-2 border-primary/30 hover:bg-primary/10">
               <ArrowLeft className="w-4 h-4" />
-              Voltar
+              <span className="hidden xs:inline">Voltar</span>
             </Button>
           </Link>
           
           <div className="flex items-center gap-3 flex-1 justify-center">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-2xl blur opacity-30"></div>
-              <div className="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-r from-primary to-secondary shadow-lg">
-                <FileText className="w-6 h-6 text-white" />
+              <div className="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-r from-primary to-secondary shadow-lg">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
             <div className="text-center">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 Minhas Redações
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 {studentData.userType === "aluno" ? 
                   `Todas as redações da ${studentData.turma}` : 
                   "Todas as suas redações enviadas"
@@ -358,32 +357,32 @@ export default function MinhasRedacoesList() {
             </div>
           </div>
           
-          <div className="w-20"></div> {/* Spacer para centralização */}
+          <div className="w-20 hidden sm:block"></div> {/* Spacer para centralização apenas em desktop */}
         </div>
 
-        {/* Botão de filtros */}
+        {/* Botão de filtros - melhorado para mobile */}
         <div className="mb-6 flex justify-center">
           <Button 
             variant="outline" 
             onClick={() => setShowFilters(!showFilters)}
-            className="gap-2 border-primary/30 hover:bg-primary/10"
+            className="gap-2 border-primary/30 hover:bg-primary/10 text-sm"
           >
             <Filter className="w-4 h-4" />
             {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
           </Button>
         </div>
 
-        {/* Filtros colapsáveis */}
+        {/* Filtros colapsáveis - melhorado para mobile */}
         {showFilters && (
-          <Card className="mb-8 border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-primary">
+          <Card className="mb-6 sm:mb-8 border-primary/20">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-primary text-lg">
                 <Search className="w-5 h-5" />
                 Filtros de Pesquisa
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Tipo de Envio</label>
                   <Select value={filtroTipo} onValueChange={setFiltroTipo}>
@@ -414,7 +413,7 @@ export default function MinhasRedacoesList() {
                   </Select>
                 </div>
                 
-                <div>
+                <div className="sm:col-span-2 lg:col-span-1">
                   <label className="block text-sm font-medium mb-2">Nome do Aluno</label>
                   <Input
                     placeholder="Buscar por nome..."
@@ -449,7 +448,7 @@ export default function MinhasRedacoesList() {
                 <Button 
                   variant="outline" 
                   onClick={clearFilters}
-                  className="border-primary/30 hover:bg-primary/10"
+                  className="border-primary/30 hover:bg-primary/10 text-sm"
                 >
                   Limpar Filtros
                 </Button>
@@ -485,7 +484,7 @@ export default function MinhasRedacoesList() {
                 <Button 
                   variant="outline" 
                   onClick={clearFilters}
-                  className="border-primary/30 hover:bg-primary/10"
+                  className="border-primary/30 hover:bg-primary/10 text-sm"
                 >
                   Limpar Filtros
                 </Button>
@@ -493,62 +492,77 @@ export default function MinhasRedacoesList() {
             </CardContent>
           </Card>
         ) : (
-          /* Lista de Redações */
-          <div className="space-y-6">
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-muted-foreground text-lg">
+          /* Lista de Redações - completamente otimizada para mobile */
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <p className="text-muted-foreground text-sm sm:text-lg">
                 {redacoesFiltradas.length} redação(ões) encontrada(s)
               </p>
             </div>
             
             {redacoesFiltradas.map((redacao) => (
               <Card key={redacao.id} className="border-primary/20 hover:shadow-xl transition-all duration-300 hover:border-primary/40">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-bold text-xl text-primary leading-tight">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="space-y-4">
+                    {/* Header do card - restruturado para mobile */}
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <h3 className="font-bold text-lg sm:text-xl text-primary leading-tight pr-2">
                           {redacao.frase_tematica}
                         </h3>
-                        <div className="flex gap-2 shrink-0">
+                        
+                        {/* Badges - melhor espaçamento no mobile */}
+                        <div className="flex flex-wrap gap-2 shrink-0">
                           {redacao.corrigida ? (
-                            <Badge className="bg-green-100 text-green-800">Corrigido</Badge>
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              🔓 Corrigido
+                            </Badge>
                           ) : (
-                            <Badge className="bg-yellow-100 text-yellow-800">Aguardando</Badge>
+                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                              ⏳ Aguardando
+                            </Badge>
                           )}
-                          <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
+                          <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
                             {getTipoEnvioLabel(redacao.tipo_envio)}
                           </Badge>
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
+                      {/* Informações do aluno - layout mobile otimizado */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-primary rounded-full"></div>
-                          <span className="font-medium">Aluno:</span> {redacao.nome_aluno}
+                          <div className="w-2 h-2 bg-primary rounded-full shrink-0"></div>
+                          <span className="font-medium">Aluno:</span> 
+                          <span className="truncate">{redacao.nome_aluno}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-primary" />
-                          <span className="font-medium">Enviado em:</span> {formatDate(redacao.data_envio)}
+                          <Calendar className="w-4 h-4 text-primary shrink-0" />
+                          <span className="font-medium">Enviado:</span> 
+                          <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
                         </div>
                       </div>
                     </div>
                     
-                    {redacao.corrigida ? (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="border-primary/30 hover:bg-primary/10 hover:border-primary shrink-0"
-                        onClick={() => handleViewRedacao(redacao)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver Correção
-                      </Button>
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-muted-foreground border border-muted rounded-md">
-                        Aguardando correção
-                      </div>
-                    )}
+                    {/* Ação - botão otimizado para mobile */}
+                    <div className="flex justify-end pt-2 border-t border-muted/20">
+                      {redacao.corrigida ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="border-primary/30 hover:bg-primary/10 hover:border-primary w-full sm:w-auto"
+                          onClick={() => handleViewRedacao(redacao)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Ver Correção
+                        </Button>
+                      ) : (
+                        <div className="w-full sm:w-auto">
+                          <div className="px-3 py-2 text-sm text-center sm:text-left text-muted-foreground border border-muted rounded-md bg-muted/10">
+                            Aguardando correção
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -556,16 +570,16 @@ export default function MinhasRedacoesList() {
           </div>
         )}
 
-        {/* Dialog de autenticação RIGOROSA por email */}
+        {/* Dialog de autenticação - melhorado para mobile */}
         <Dialog open={isAuthDialogOpen} onOpenChange={(open) => {
           if (!open) {
             resetAuthenticationState();
           }
           setIsAuthDialogOpen(open);
         }}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md mx-4 sm:mx-auto">
             <DialogHeader>
-              <DialogTitle className="text-primary flex items-center gap-2">
+              <DialogTitle className="text-primary flex items-center gap-2 text-lg">
                 <Lock className="w-5 h-5" />
                 🔐 Acesso Seguro à Redação
               </DialogTitle>
@@ -574,7 +588,7 @@ export default function MinhasRedacoesList() {
             <div className="space-y-4">
               <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
                 <div className="flex items-start gap-2">
-                  <Lock className="w-4 h-4 text-amber-600 mt-0.5" />
+                  <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                   <div className="text-sm text-amber-800">
                     <strong>Segurança Máxima:</strong> Para visualizar sua redação, digite o e-mail exato usado no envio. Os dados só são carregados após validação.
                   </div>
@@ -596,11 +610,11 @@ export default function MinhasRedacoesList() {
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   onClick={handleEmailAuth}
                   disabled={isAuthenticating || !emailInput.trim()}
-                  className="flex-1 bg-primary hover:bg-primary/90"
+                  className="flex-1 bg-primary hover:bg-primary/90 order-2 sm:order-1"
                 >
                   {isAuthenticating ? (
                     <>
@@ -615,7 +629,7 @@ export default function MinhasRedacoesList() {
                 <Button 
                   variant="outline"
                   onClick={() => resetAuthenticationState()}
-                  className="border-primary/30"
+                  className="border-primary/30 order-1 sm:order-2"
                   disabled={isAuthenticating}
                 >
                   Cancelar
@@ -625,7 +639,7 @@ export default function MinhasRedacoesList() {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de visualização da redação - APENAS após autenticação completa */}
+        {/* Modal de visualização da redação - otimizado para mobile */}
         {authenticatedRedacao && showRedacaoDialog && (
           <Dialog open={showRedacaoDialog} onOpenChange={(open) => {
             if (!open) {
@@ -633,9 +647,9 @@ export default function MinhasRedacoesList() {
             }
             setShowRedacaoDialog(open);
           }}>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 sm:mx-auto">
               <DialogHeader>
-                <DialogTitle className="text-primary">
+                <DialogTitle className="text-primary text-lg sm:text-xl">
                   ✅ {authenticatedRedacao.frase_tematica}
                 </DialogTitle>
               </DialogHeader>
