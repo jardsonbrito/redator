@@ -12,7 +12,7 @@ import { TemaForm } from "@/components/admin/TemaForm";
 import { TemaList } from "@/components/admin/TemaList";
 import { RedacaoList } from "@/components/admin/RedacaoList";
 import { SimuladoForm } from "@/components/admin/SimuladoForm";
-import { SimuladoList } from "@/components/admin/SimuladoList";
+import SimuladoList from "@/components/admin/SimuladoList";
 import { VideoForm } from "@/components/admin/VideoForm";
 import { VideoList } from "@/components/admin/VideoList";
 import { BibliotecaForm } from "@/components/admin/BibliotecaForm";
@@ -34,6 +34,11 @@ export default function Admin() {
   const [refreshBiblioteca, setRefreshBiblioteca] = useState(false);
   const [refreshAvisos, setRefreshAvisos] = useState(false);
   const [refreshAulasVirtuais, setRefreshAulasVirtuais] = useState(false);
+  const [refreshAlunos, setRefreshAlunos] = useState(false);
+
+  // Estados para modo de edição
+  const [alunoEditando, setAlunoEditando] = useState(null);
+  const [avisoEditando, setAvisoEditando] = useState(null);
 
   const handleAulaSuccess = () => {
     setRefreshAulas(!refreshAulas);
@@ -61,10 +66,27 @@ export default function Admin() {
 
   const handleAvisoSuccess = () => {
     setRefreshAvisos(!refreshAvisos);
+    setAvisoEditando(null);
   };
 
   const handleAulaVirtualSuccess = () => {
     setRefreshAulasVirtuais(!refreshAulasVirtuais);
+  };
+
+  const handleAlunoSuccess = () => {
+    setRefreshAlunos(!refreshAlunos);
+  };
+
+  const handleEditAluno = (aluno: any) => {
+    setAlunoEditando(aluno);
+  };
+
+  const handleCancelEditAluno = () => {
+    setAlunoEditando(null);
+  };
+
+  const handleEditAviso = (aviso: any) => {
+    setAvisoEditando(aviso);
   };
 
   return (
@@ -72,7 +94,7 @@ export default function Admin() {
       <h1 className="text-3xl font-bold text-center mb-8">Painel Administrativo</h1>
       
       <Tabs defaultValue="salas" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 lg:grid-cols-12">
+        <TabsList className="grid w-full grid-cols-6 lg:grid-cols-11">
           <TabsTrigger value="salas">Salas</TabsTrigger>
           <TabsTrigger value="alunos">Alunos</TabsTrigger>
           <TabsTrigger value="aulas">Aulas</TabsTrigger>
@@ -95,8 +117,15 @@ export default function Admin() {
 
         <TabsContent value="alunos" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <AlunoForm />
-            <AlunoList />
+            <AlunoForm 
+              onSuccess={handleAlunoSuccess}
+              alunoEditando={alunoEditando}
+              onCancelEdit={handleCancelEditAluno}
+            />
+            <AlunoList 
+              refresh={refreshAlunos} 
+              onEdit={handleEditAluno}
+            />
           </div>
         </TabsContent>
 
@@ -149,7 +178,7 @@ export default function Admin() {
         <TabsContent value="avisos" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <AvisoForm onSuccess={handleAvisoSuccess} />
-            <AvisoList refresh={refreshAvisos} />
+            <AvisoList refresh={refreshAvisos} onEdit={handleEditAviso} />
           </div>
         </TabsContent>
 
