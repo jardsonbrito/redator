@@ -155,12 +155,8 @@ export default function Admin() {
 
         <TabsContent value="temas" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TemaForm 
-              onSuccess={handleTemaSuccess}
-              temaEditando={temaEditando}
-              onCancelEdit={handleCancelEditTema}
-            />
-            <TemaList onEdit={handleEditTema} />
+            <TemaForm />
+            <TemaList />
           </div>
         </TabsContent>
 
