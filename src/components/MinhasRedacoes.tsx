@@ -48,14 +48,14 @@ export const MinhasRedacoes = () => {
   const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
   const { toast } = useToast();
 
-  // Recupera dados do usuário com validação aprimorada
+  // Recupera dados do usuário logado
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
   const visitanteData = localStorage.getItem("visitanteData");
 
-  // Determinar código da turma ou email do visitante
+  // Determinar email do usuário logado para filtrar redações
+  let currentUserEmail = "";
   let turmaCode = "";
-  let visitanteEmail = "";
   
   if (userType === "aluno" && alunoTurma) {
     const turmasMap = {
@@ -66,195 +66,153 @@ export const MinhasRedacoes = () => {
       "Turma E": "LRE2025"
     };
     turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "";
+    currentUserEmail = `aluno.${turmaCode.toLowerCase()}@laboratoriodoredator.com`;
   } else if (userType === "visitante" && visitanteData) {
     try {
       const dados = JSON.parse(visitanteData);
-      visitanteEmail = dados.email;
+      currentUserEmail = dados.email;
+      turmaCode = "visitante";
     } catch (error) {
       console.error('❌ Erro ao parsear dados do visitante:', error);
     }
   }
 
-  // Query SEGURA - NÃO carrega dados sensíveis automaticamente
-  // Agora inclui AMBAS as tabelas: redacoes_enviadas E redacoes_simulado
+  // Query para buscar APENAS as redações do usuário logado
   const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
-    queryKey: ['redacoes-usuario-basicas-completas', turmaCode, visitanteEmail],
+    queryKey: ['minhas-redacoes-filtradas', currentUserEmail],
     queryFn: async () => {
-      console.log('🔒 Buscando redações SEM dados sensíveis (incluindo simulados)');
-      
-      if (userType === "aluno" && turmaCode) {
-        console.log('👨‍🎓 Buscando redações básicas da turma:', turmaCode);
-        
-        // Buscar da tabela redacoes_enviadas - incluir TODAS as redações corrigidas
-        const { data: redacoesRegulares, error: errorRegulares } = await supabase
-          .from('redacoes_enviadas')
-          .select(`
-            id,
-            frase_tematica,
-            nome_aluno,
-            email_aluno,
-            tipo_envio,
-            data_envio,
-            status,
-            corrigida,
-            nota_total,
-            comentario_admin,
-            data_correcao
-          `)
-          .eq('turma', turmaCode)
-          .neq('tipo_envio', 'visitante')
-          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida') // Buscar por qualquer indicação de correção
-          .order('data_envio', { ascending: false });
-
-        if (errorRegulares) {
-          console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
-        }
-
-        // Buscar da tabela redacoes_simulado
-        const { data: redacoesSimulado, error: errorSimulado } = await supabase
-          .from('redacoes_simulado')
-          .select(`
-            id,
-            nome_aluno,
-            email_aluno,
-            data_envio,
-            corrigida,
-            nota_total,
-            data_correcao,
-            simulados!inner(frase_tematica)
-          `)
-          .eq('turma', turmaCode)
-          .or('corrigida.eq.true,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida') // Buscar por qualquer indicação de correção
-          .order('data_envio', { ascending: false });
-
-        if (errorSimulado) {
-          console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
-        }
-
-        // Combinar e formatar os dados
-        const todasRedacoes: RedacaoTurma[] = [];
-        
-        // Adicionar redações regulares
-        if (redacoesRegulares) {
-          const regularesFormatadas = redacoesRegulares.map(redacao => ({
-            ...redacao,
-            corrigida: true, // Forçar como corrigida já que foi filtrada
-            status: 'corrigida'
-          }));
-          todasRedacoes.push(...regularesFormatadas);
-        }
-
-        // Adicionar redações de simulado (formatadas)
-        if (redacoesSimulado) {
-          const simuladosFormatados = redacoesSimulado.map(simulado => ({
-            id: simulado.id,
-            frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
-            nome_aluno: simulado.nome_aluno,
-            email_aluno: simulado.email_aluno,
-            tipo_envio: 'simulado',
-            data_envio: simulado.data_envio,
-            status: 'corrigida',
-            corrigida: true,
-            nota_total: simulado.nota_total,
-            comentario_admin: null,
-            data_correcao: simulado.data_correcao
-          }));
-          todasRedacoes.push(...simuladosFormatados);
-        }
-
-        // Ordenar por data de envio (mais recente primeiro)
-        todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
-        
-        console.log('✅ Total de redações corrigidas encontradas:', todasRedacoes.length);
-        return todasRedacoes;
-        
-      } else if (userType === "visitante" && visitanteEmail) {
-        console.log('👤 Buscando redações básicas do visitante:', visitanteEmail);
-        const { data, error } = await supabase
-          .from('redacoes_enviadas')
-          .select(`
-            id,
-            frase_tematica,
-            nome_aluno,
-            email_aluno,
-            tipo_envio,
-            data_envio,
-            status,
-            corrigida,
-            nota_total,
-            comentario_admin,
-            data_correcao
-          `)
-          .eq('email_aluno', visitanteEmail)
-          .eq('tipo_envio', 'visitante')
-          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
-          .order('data_envio', { ascending: false });
-        
-        if (error) {
-          console.error('❌ Erro ao buscar redações do visitante:', error);
-          throw error;
-        }
-        
-        console.log('✅ Redações básicas do visitante encontradas:', data?.length || 0);
-        return data as RedacaoTurma[] || [];
+      if (!currentUserEmail) {
+        console.log('❌ Nenhum e-mail de usuário identificado');
+        return [];
       }
+
+      console.log('🔍 Buscando redações do usuário:', currentUserEmail);
       
-      return [];
+      // Buscar redações regulares do usuário
+      const { data: redacoesRegulares, error: errorRegulares } = await supabase
+        .from('redacoes_enviadas')
+        .select(`
+          id,
+          frase_tematica,
+          nome_aluno,
+          email_aluno,
+          tipo_envio,
+          data_envio,
+          status,
+          corrigida,
+          nota_total,
+          comentario_admin,
+          data_correcao
+        `)
+        .eq('email_aluno', currentUserEmail)
+        .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
+        .order('data_envio', { ascending: false });
+
+      if (errorRegulares) {
+        console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
+      }
+
+      // Buscar redações de simulado do usuário
+      const { data: redacoesSimulado, error: errorSimulado } = await supabase
+        .from('redacoes_simulado')
+        .select(`
+          id,
+          nome_aluno,
+          email_aluno,
+          data_envio,
+          corrigida,
+          nota_total,
+          data_correcao,
+          simulados!inner(frase_tematica)
+        `)
+        .eq('email_aluno', currentUserEmail)
+        .or('corrigida.eq.true,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
+        .order('data_envio', { ascending: false });
+
+      if (errorSimulado) {
+        console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
+      }
+
+      // Combinar e formatar os dados
+      const todasRedacoes: RedacaoTurma[] = [];
+      
+      // Adicionar redações regulares
+      if (redacoesRegulares) {
+        const regularesFormatadas = redacoesRegulares.map(redacao => ({
+          ...redacao,
+          corrigida: true,
+          status: 'corrigida'
+        }));
+        todasRedacoes.push(...regularesFormatadas);
+      }
+
+      // Adicionar redações de simulado
+      if (redacoesSimulado) {
+        const simuladosFormatados = redacoesSimulado.map(simulado => ({
+          id: simulado.id,
+          frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
+          nome_aluno: simulado.nome_aluno,
+          email_aluno: simulado.email_aluno,
+          tipo_envio: 'simulado',
+          data_envio: simulado.data_envio,
+          status: 'corrigida',
+          corrigida: true,
+          nota_total: simulado.nota_total,
+          comentario_admin: null,
+          data_correcao: simulado.data_correcao
+        }));
+        todasRedacoes.push(...simuladosFormatados);
+      }
+
+      // Ordenar por data de envio (mais recente primeiro)
+      todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
+      
+      console.log('✅ Redações do usuário encontradas:', todasRedacoes.length);
+      return todasRedacoes;
     },
-    enabled: !!(turmaCode || visitanteEmail),
-    staleTime: 30 * 1000, // Cache por apenas 30 segundos para garantir dados atualizados
-    refetchInterval: 60 * 1000, // Recarregar a cada 1 minuto
+    enabled: !!currentUserEmail,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
-    console.log('🔐 Iniciando fluxo SEGURO para visualização de redação');
-    // Reset completo de estados para garantir segurança
+    console.log('🔐 Iniciando visualização de redação do usuário logado:', redacao.id);
+    // Para redações do próprio usuário, não precisamos de autenticação adicional
+    // mas vamos manter a validação por segurança
     setAuthenticatedRedacao(null);
     setShowRedacaoDialog(false);
     setSelectedRedacaoId(redacao.id);
-    setEmailInput("");
+    setEmailInput(currentUserEmail); // Pré-preencher com o email do usuário logado
     setIsAuthDialogOpen(true);
   };
 
-  // Função de validação RIGOROSA
   const validarEmailRigoroso = async (emailCorreto: string, emailDigitado: string): Promise<boolean> => {
-    console.log('🔒 MINHAS REDAÇÕES: INICIANDO VALIDAÇÃO RIGOROSA:', { emailCorreto, emailDigitado });
+    console.log('🔒 VALIDAÇÃO: Comparando emails:', { emailCorreto, emailDigitado });
     
-    // Normalização dos e-mails
     const emailCorretoNormalizado = emailCorreto.toLowerCase().trim();
     const emailDigitadoNormalizado = emailDigitado.toLowerCase().trim();
     
-    console.log('📧 MINHAS REDAÇÕES: E-MAILS NORMALIZADOS:', { 
-      emailCorretoNormalizado, 
-      emailDigitadoNormalizado,
-      saoIguais: emailCorretoNormalizado === emailDigitadoNormalizado
-    });
-
-    // VALIDAÇÃO 1: Comparação direta rigorosa
     if (emailCorretoNormalizado !== emailDigitadoNormalizado) {
-      console.log('❌ MINHAS REDAÇÕES: FALHA NA VALIDAÇÃO DIRETA');
+      console.log('❌ E-mails diferentes');
       return false;
     }
 
-    // VALIDAÇÃO 2: Verificação via Supabase
     try {
       const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
         redacao_email: emailCorreto,
         user_email: emailDigitado
       });
 
-      console.log('🔍 MINHAS REDAÇÕES: RESULTADO SUPABASE:', { canAccess, error });
-
       if (error || canAccess !== true) {
-        console.log('❌ MINHAS REDAÇÕES: FALHA NA VALIDAÇÃO SUPABASE');
+        console.log('❌ Falha na validação Supabase');
         return false;
       }
     } catch (error) {
-      console.log('❌ MINHAS REDAÇÕES: ERRO NA VALIDAÇÃO SUPABASE:', error);
+      console.log('❌ Erro na validação:', error);
       return false;
     }
 
-    console.log('✅ MINHAS REDAÇÕES: VALIDAÇÃO RIGOROSA APROVADA');
+    console.log('✅ Validação aprovada');
     return true;
   };
 
@@ -269,20 +227,16 @@ export const MinhasRedacoes = () => {
     }
 
     setIsAuthenticating(true);
-    console.log('🔍 Iniciando validação segura de e-mail...');
 
     try {
-      // ETAPA 1: Validação básica sem carregar dados sensíveis
       const redacaoBasica = redacoesTurma?.find(r => r.id === selectedRedacaoId);
       if (!redacaoBasica) {
         throw new Error('Redação não encontrada');
       }
 
-      // ETAPA 2: Verificação rigorosa de e-mail
       const isValid = await validarEmailRigoroso(redacaoBasica.email_aluno, emailInput.trim());
 
       if (!isValid) {
-        console.error('🚫 MINHAS REDAÇÕES: ACESSO NEGADO - E-mail incorreto');
         toast({
           title: "🚫 E-mail incorreto",
           description: "Utilize o mesmo e-mail informado no envio da redação.",
@@ -291,23 +245,19 @@ export const MinhasRedacoes = () => {
         return;
       }
 
-      console.log('✅ E-mail validado com sucesso');
+      console.log('✅ E-mail validado');
 
-      // ETAPA 3: SOMENTE após validação, buscar dados completos sensíveis
+      // Buscar dados completos
       let redacaoCompleta;
       
       if (redacaoBasica.tipo_envio === 'simulado') {
-        // Buscar da tabela redacoes_simulado
         const { data, error } = await supabase
           .from('redacoes_simulado')
           .select('*, simulados!inner(frase_tematica)')
           .eq('id', selectedRedacaoId)
           .single();
           
-        if (error) {
-          console.error('❌ Erro ao carregar redação de simulado:', error);
-          throw new Error('Erro ao carregar redação de simulado');
-        }
+        if (error) throw new Error('Erro ao carregar redação de simulado');
         
         redacaoCompleta = {
           ...data,
@@ -315,22 +265,17 @@ export const MinhasRedacoes = () => {
           frase_tematica: (data.simulados as any)?.frase_tematica || 'Simulado'
         };
       } else {
-        // Buscar da tabela redacoes_enviadas
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select('*')
           .eq('id', selectedRedacaoId)
           .single();
 
-        if (error) {
-          console.error('❌ Erro ao carregar redação regular:', error);
-          throw new Error('Erro ao carregar redação regular');
-        }
+        if (error) throw new Error('Erro ao carregar redação regular');
         
         redacaoCompleta = data;
       }
 
-      // ETAPA 4: Preparar dados APENAS após autenticação bem-sucedida
       const redacaoAutenticada: AuthenticatedRedacao = {
         id: redacaoCompleta.id,
         frase_tematica: redacaoCompleta.frase_tematica,
@@ -351,12 +296,10 @@ export const MinhasRedacoes = () => {
         nota_c5: redacaoCompleta.nota_c5,
       };
 
-      // ETAPA 5: Fechar autenticação e exibir redação
       setIsAuthDialogOpen(false);
       setAuthenticatedRedacao(redacaoAutenticada);
       setShowRedacaoDialog(true);
       
-      console.log('🎉 Redação liberada com segurança total');
       toast({
         title: "✅ Redação liberada!",
         description: "E-mail confirmado. Visualizando redação completa.",
@@ -375,7 +318,6 @@ export const MinhasRedacoes = () => {
   };
 
   const resetAuthenticationState = () => {
-    console.log('🔄 Resetando estados de autenticação');
     setSelectedRedacaoId(null);
     setAuthenticatedRedacao(null);
     setEmailInput("");
@@ -411,13 +353,13 @@ export const MinhasRedacoes = () => {
     return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
   };
 
-  if (!turmaCode && !visitanteEmail) {
+  if (!currentUserEmail) {
     return (
       <Card className="border-redator-accent/20">
         <CardContent className="text-center py-8">
           <Shield className="w-12 h-12 text-redator-accent mx-auto mb-4" />
           <p className="text-redator-accent">
-            🔐 Faça login como aluno ou visitante para visualizar suas redações com segurança.
+            🔐 Faça login como aluno ou visitante para visualizar suas redações.
           </p>
         </CardContent>
       </Card>
@@ -428,7 +370,7 @@ export const MinhasRedacoes = () => {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-redator-accent mx-auto mb-4"></div>
-        <p className="text-redator-accent">🔒 Carregando suas redações com segurança...</p>
+        <p className="text-redator-accent">🔒 Carregando suas redações...</p>
       </div>
     );
   }
@@ -458,10 +400,7 @@ export const MinhasRedacoes = () => {
         </CardHeader>
         <CardContent className="text-center py-8">
           <p className="text-redator-accent mb-4">
-            {userType === "aluno" ? 
-              `Ainda não há redações corrigidas da sua turma (${alunoTurma}).` : 
-              "Você ainda não tem redações corrigidas."
-            }
+            Você ainda não tem redações corrigidas.
           </p>
           <p className="text-sm text-redator-accent/70">
             Suas redações corrigidas aparecerão aqui quando disponíveis!
@@ -480,23 +419,18 @@ export const MinhasRedacoes = () => {
         <div className="flex items-center gap-2 mb-4">
           <Shield className="w-5 h-5 text-redator-primary" />
           <h2 className="text-xl font-bold text-redator-primary">
-            {userType === "aluno" ? 
-              `🔐 Minhas Redações - ${alunoTurma} (${redacoesTurma.length})` : 
-              `🔐 Minhas Redações (${redacoesTurma.length})`
-            }
+            🔐 Minhas Redações ({redacoesTurma.length})
           </h2>
           <Button onClick={() => refetch()} variant="outline" size="sm">
             Atualizar
           </Button>
         </div>
         
-        {/* Layout compacto para móveis */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {redacoesTurma.map((redacao) => (
             <Card key={redacao.id} className="border-redator-accent/20 hover:shadow-md transition-shadow">
               <CardContent className="p-3">
                 <div className="space-y-2">
-                  {/* Título e Status - Layout horizontal compacto */}
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-medium text-redator-primary text-sm line-clamp-2 flex-1">
                       {redacao.frase_tematica}
@@ -506,7 +440,6 @@ export const MinhasRedacoes = () => {
                     </Badge>
                   </div>
                   
-                  {/* Informações em linha compacta */}
                   <div className="space-y-1 text-xs text-redator-accent">
                     <div className="flex items-center gap-1">
                       <User className="w-3 h-3" />
@@ -524,7 +457,6 @@ export const MinhasRedacoes = () => {
                       </Badge>
                     </div>
                     
-                    {/* Nota disponível após autenticação */}
                     {redacao.nota_total !== null && (
                       <div className="flex items-center gap-1 text-redator-primary font-medium">
                         <span>📊 Nota: {redacao.nota_total}/1000</span>
@@ -532,7 +464,6 @@ export const MinhasRedacoes = () => {
                     )}
                   </div>
 
-                  {/* Botão Ver Correção */}
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -549,7 +480,6 @@ export const MinhasRedacoes = () => {
         </div>
       </div>
 
-      {/* Dialog de autenticação RIGOROSA por email */}
       <Dialog open={isAuthDialogOpen} onOpenChange={(open) => {
         if (!open) {
           resetAuthenticationState();
@@ -560,31 +490,31 @@ export const MinhasRedacoes = () => {
           <DialogHeader>
             <DialogTitle className="text-red-700 flex items-center gap-2">
               <Shield className="w-5 h-5" />
-              🔒 ACESSO SEGURO OBRIGATÓRIO
+              🔒 CONFIRMAR IDENTIDADE
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="bg-red-50 p-4 rounded-lg border-2 border-red-200">
+            <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
               <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                <div className="text-sm text-red-800">
-                  <strong>SEGURANÇA MÁXIMA:</strong> Digite o e-mail <strong>EXATO</strong> usado no envio da redação. Os dados só são carregados após validação rigorosa.
+                <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  <strong>Sua redação foi encontrada!</strong> Confirme seu e-mail para visualizá-la.
                 </div>
               </div>
             </div>
 
             <div>
-              <label htmlFor="email-auth" className="block text-sm font-bold text-red-700 mb-2">
-                🔐 E-mail de Acesso * (obrigatório)
+              <label htmlFor="email-auth" className="block text-sm font-bold text-blue-700 mb-2">
+                🔐 Confirme seu e-mail *
               </label>
               <Input
                 id="email-auth"
                 type="email"
-                placeholder="Digite o e-mail EXATO cadastrado..."
+                placeholder="Digite seu e-mail..."
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                className="border-2 border-red-300 focus:border-red-500"
+                className="border-2 border-blue-300 focus:border-blue-500"
                 disabled={isAuthenticating}
               />
             </div>
@@ -593,17 +523,17 @@ export const MinhasRedacoes = () => {
               <Button 
                 onClick={handleEmailAuth}
                 disabled={isAuthenticating || !emailInput.trim()}
-                className="flex-1 bg-red-600 hover:bg-red-700"
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
                 {isAuthenticating ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Validando...
+                    Verificando...
                   </>
                 ) : (
                   <>
-                    <Shield className="w-4 h-4 mr-1" />
-                    🔓 Verificar E-mail
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    ✅ Confirmar
                   </>
                 )}
               </Button>
@@ -611,7 +541,7 @@ export const MinhasRedacoes = () => {
               <Button 
                 variant="outline"
                 onClick={() => resetAuthenticationState()}
-                className="border-red-300"
+                className="border-blue-300"
                 disabled={isAuthenticating}
               >
                 Cancelar
@@ -621,7 +551,6 @@ export const MinhasRedacoes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de visualização da redação - APENAS após autenticação completa */}
       {authenticatedRedacao && showRedacaoDialog && (
         <Dialog open={showRedacaoDialog} onOpenChange={(open) => {
           if (!open) {
@@ -640,7 +569,7 @@ export const MinhasRedacoes = () => {
             <div className="space-y-6">
               <div className="bg-green-50 border-2 border-green-200 p-3 rounded">
                 <p className="text-sm text-green-800 font-medium">
-                  ✅ E-mail validado com sucesso. Acesso liberado com segurança máxima.
+                  ✅ Identidade confirmada. Esta é sua redação.
                 </p>
               </div>
               
@@ -663,7 +592,7 @@ export const MinhasRedacoes = () => {
                   email_aluno: authenticatedRedacao.email_aluno,
                   tipo_envio: authenticatedRedacao.tipo_envio,
                   status: authenticatedRedacao.status,
-                  turma: userType === "aluno" ? turmaCode : "visitante",
+                  turma: turmaCode,
                 }} 
               />
             </div>

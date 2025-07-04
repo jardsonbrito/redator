@@ -17,8 +17,6 @@ import { useCredits } from "@/hooks/useCredits";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
-  const [nomeCompleto, setNomeCompleto] = useState("");
-  const [email, setEmail] = useState("");
   const [fraseTematica, setFraseTematica] = useState("");
   const [redacaoTexto, setRedacaoTexto] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,17 +30,19 @@ const EnvieRedacao = () => {
   const temaFromUrl = searchParams.get('tema');
   const fonteFromUrl = searchParams.get('fonte');
 
-  // Recupera dados do usuário
+  // Recupera dados do usuário logado
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
   const visitanteData = localStorage.getItem("visitanteData");
 
-  // Determina o tipo de envio e turma - baseado no tipo de login do usuário
-  let tipoEnvio = "avulsa"; // Para visitantes sem turma
+  // Obter dados do usuário logado automaticamente
+  let nomeCompleto = "";
+  let email = "";
+  let tipoEnvio = "avulsa";
   let turmaCode = "visitante";
   
   if (userType === "aluno" && alunoTurma) {
-    tipoEnvio = "regular"; // Para alunos logados com turma
+    tipoEnvio = "regular";
     const turmasMap = {
       "Turma A": "LRA2025",
       "Turma B": "LRB2025", 
@@ -51,17 +51,20 @@ const EnvieRedacao = () => {
       "Turma E": "LRE2025"
     };
     turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
+    
+    // Para alunos, usar dados padrão baseados na turma
+    nomeCompleto = `Aluno da ${alunoTurma}`;
+    email = `aluno.${turmaCode.toLowerCase()}@laboratoriodoredator.com`;
+  } else if (userType === "visitante" && visitanteData) {
+    const dados = JSON.parse(visitanteData);
+    nomeCompleto = dados.nome || "";
+    email = dados.email || "";
+    tipoEnvio = "visitante";
+    turmaCode = "visitante";
   }
 
-  // Pré-preencher dados se for visitante cadastrado ou se vier da URL
+  // Pré-preencher frase temática se vier da URL
   useState(() => {
-    if (userType === "visitante" && visitanteData) {
-      const dados = JSON.parse(visitanteData);
-      setNomeCompleto(dados.nome || "");
-      setEmail(dados.email || "");
-    }
-    
-    // Pré-preencher frase temática se vier da URL
     if (temaFromUrl) {
       setFraseTematica(decodeURIComponent(temaFromUrl));
     }
@@ -70,10 +73,10 @@ const EnvieRedacao = () => {
   const handlePrimarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!nomeCompleto.trim() || !email.trim() || !fraseTematica.trim() || !redacaoTexto.trim()) {
+    if (!fraseTematica.trim() || !redacaoTexto.trim()) {
       toast({
         title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos obrigatórios: nome completo, e-mail, frase temática e texto da redação.",
+        description: "Por favor, preencha a frase temática e o texto da redação.",
         variant: "destructive",
       });
       return;
@@ -88,12 +91,10 @@ const EnvieRedacao = () => {
       return;
     }
 
-    // Validação básica de e-mail
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!email || !nomeCompleto) {
       toast({
-        title: "E-mail inválido",
-        description: "Por favor, digite um e-mail válido.",
+        title: "Erro de autenticação",
+        description: "Não foi possível identificar o usuário logado. Faça login novamente.",
         variant: "destructive",
       });
       return;
@@ -138,12 +139,12 @@ const EnvieRedacao = () => {
 
     try {
       // Primeiro, consumir os créditos
-      const creditsConsumed = await consumeCreditsByEmail(email.trim(), selectedCorretores.length);
+      const creditsConsumed = await consumeCreditsByEmail(email, selectedCorretores.length);
       
       if (!creditsConsumed) {
         toast({
-          title: "Erro ao consumir créditos",
-          description: "Não foi possível consumir os créditos necessários. Verifique seu saldo.",
+          title: "Créditos insuficientes",
+          description: "Você não possui créditos suficientes para este envio.",
           variant: "destructive",
         });
         setShowCreditDialog(false);
@@ -155,8 +156,8 @@ const EnvieRedacao = () => {
       const { error } = await supabase
         .from('redacoes_enviadas')
         .insert({
-          nome_aluno: nomeCompleto.trim(),
-          email_aluno: email.trim(),
+          nome_aluno: nomeCompleto,
+          email_aluno: email,
           frase_tematica: fraseTematica.trim(),
           redacao_texto: redacaoTexto.trim(),
           tipo_envio: tipoEnvio,
@@ -181,10 +182,6 @@ const EnvieRedacao = () => {
       });
 
       // Limpar formulário
-      if (userType !== "visitante") {
-        setNomeCompleto("");
-        setEmail("");
-      }
       setFraseTematica("");
       setRedacaoTexto("");
       setSelectedCorretores([]);
@@ -222,41 +219,31 @@ const EnvieRedacao = () => {
             <p className="text-redator-accent">
               {fonteFromUrl === 'tema' 
                 ? 'Complete os dados abaixo para enviar sua redação sobre o tema escolhido. A frase temática já foi preenchida automaticamente.'
-                : 'Preencha todos os campos abaixo para enviar sua redação sobre tema livre. Ela será corrigida pelos corretores selecionados e você poderá visualizar as notas e comentários no card "Minhas Redações" na página inicial.'
+                : 'Preencha os campos abaixo para enviar sua redação sobre tema livre. Ela será corrigida pelos corretores selecionados e você poderá visualizar as notas e comentários no card "Minhas Redações" na página inicial.'
               }
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePrimarySubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="nome-completo" className="block text-sm font-medium text-redator-primary mb-2">
-                    Nome Completo *
-                  </label>
-                  <Input
-                    id="nome-completo"
-                    type="text"
-                    placeholder="Digite seu nome completo..."
-                    value={nomeCompleto}
-                    onChange={(e) => setNomeCompleto(e.target.value)}
-                    className="border-redator-accent/30 focus:border-redator-accent"
-                    maxLength={100}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-redator-primary mb-2">
-                    E-mail *
-                  </label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Digite seu e-mail..."
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="border-redator-accent/30 focus:border-redator-accent"
-                    maxLength={100}
-                  />
+              {/* Informações do usuário logado - apenas visualização */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h3 className="font-medium text-blue-800 mb-2">📋 Dados do envio (automático)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-blue-700">👤 Nome:</span> {nomeCompleto}
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-700">📧 E-mail:</span> {email}
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-700">🎯 Tipo:</span> {
+                      tipoEnvio === 'regular' ? `Regular - Aluno da ${alunoTurma}` : 
+                      tipoEnvio === 'visitante' ? 'Visitante' : 'Avulsa'
+                    }
+                  </div>
+                  <div>
+                    <span className="font-medium text-blue-700">🏫 Turma:</span> {turmaCode}
+                  </div>
                 </div>
               </div>
 
@@ -298,18 +285,6 @@ const EnvieRedacao = () => {
                 onChange={setRedacaoTexto}
                 onValidChange={setIsRedacaoValid}
               />
-
-              {/* Informações sobre tipo de envio */}
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-800">
-                  <strong>Tipo de envio:</strong> {
-                    tipoEnvio === 'regular' ? `Regular - Aluno da ${alunoTurma}` : 'Avulsa - Visitante'
-                  }
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Sua redação ficará disponível no card "Minhas Redações" na página inicial e será corrigida pelos corretores selecionados.
-                </p>
-              </div>
 
               <Button 
                 type="submit" 

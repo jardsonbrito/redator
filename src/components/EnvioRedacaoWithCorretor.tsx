@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CorretorSelector } from "./CorretorSelector";
 import { CreditInfoDialog } from "./CreditInfoDialog";
+import { useCredits } from "@/hooks/useCredits";
 
 interface EnvioRedacaoProps {
   isSimulado?: boolean;
@@ -25,9 +27,6 @@ export const EnvioRedacaoWithCorretor = ({
   onSuccess 
 }: EnvioRedacaoProps) => {
   const [formData, setFormData] = useState({
-    nome_aluno: "",
-    email_aluno: "",
-    turma: "",
     frase_tematica: fraseTematica || "",
     redacao_texto: "",
   });
@@ -35,13 +34,40 @@ export const EnvioRedacaoWithCorretor = ({
   const [loading, setLoading] = useState(false);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
   const { toast } = useToast();
+  const { consumeCreditsByEmail } = useCredits();
+
+  // Obter dados do usuário logado automaticamente
+  const userType = localStorage.getItem("userType");
+  const alunoTurma = localStorage.getItem("alunoTurma");
+  const visitanteData = localStorage.getItem("visitanteData");
+  
+  let nomeCompleto = "";
+  let email = "";
+  let turmaCode = "visitante";
+  
+  if (userType === "aluno" && alunoTurma) {
+    const turmasMap = {
+      "Turma A": "LRA2025",
+      "Turma B": "LRB2025", 
+      "Turma C": "LRC2025",
+      "Turma D": "LRD2025",
+      "Turma E": "LRE2025"
+    };
+    turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
+    nomeCompleto = `Aluno da ${alunoTurma}`;
+    email = `aluno.${turmaCode.toLowerCase()}@laboratoriodoredator.com`;
+  } else if (userType === "visitante" && visitanteData) {
+    const dados = JSON.parse(visitanteData);
+    nomeCompleto = dados.nome || "";
+    email = dados.email || "";
+    turmaCode = "visitante";
+  }
 
   const validateForm = () => {
-    if (!formData.nome_aluno.trim() || !formData.email_aluno.trim() || 
-        !formData.turma.trim() || !formData.redacao_texto.trim()) {
+    if (!formData.redacao_texto.trim()) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
+        title: "Campo obrigatório",
+        description: "Por favor, escreva sua redação.",
         variant: "destructive"
       });
       return false;
@@ -52,6 +78,15 @@ export const EnvioRedacaoWithCorretor = ({
         title: "Frase temática obrigatória",
         description: "Informe a frase temática da redação.",
         variant: "destructive"
+      });
+      return false;
+    }
+
+    if (!email || !nomeCompleto) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Não foi possível identificar o usuário logado. Faça login novamente.",
+        variant: "destructive",
       });
       return false;
     }
@@ -110,10 +145,23 @@ export const EnvioRedacaoWithCorretor = ({
     setLoading(true);
 
     try {
+      // Primeiro, consumir os créditos
+      const creditsConsumed = await consumeCreditsByEmail(email, selectedCorretores.length);
+      
+      if (!creditsConsumed) {
+        toast({
+          title: "Créditos insuficientes",
+          description: "Você não possui créditos suficientes para este envio.",
+          variant: "destructive",
+        });
+        setShowCreditDialog(false);
+        return;
+      }
+
       const redacaoData = {
-        nome_aluno: formData.nome_aluno.trim(),
-        email_aluno: formData.email_aluno.trim().toLowerCase(),
-        turma: formData.turma.trim(),
+        nome_aluno: nomeCompleto,
+        email_aluno: email.toLowerCase(),
+        turma: turmaCode,
         frase_tematica: fraseTematica || formData.frase_tematica.trim(),
         redacao_texto: formData.redacao_texto.trim(),
         corretor_id_1: selectedCorretores[0] || null,
@@ -121,6 +169,8 @@ export const EnvioRedacaoWithCorretor = ({
         tipo_envio: isSimulado ? 'simulado' : (exercicioId ? 'exercicio' : 'regular'),
         status: 'aguardando',
         corrigida: false,
+        status_corretor_1: 'pendente',
+        status_corretor_2: selectedCorretores[1] ? 'pendente' : null,
       };
 
       let result;
@@ -153,14 +203,11 @@ export const EnvioRedacaoWithCorretor = ({
 
       toast({
         title: "Redação enviada com sucesso!",
-        description: "Sua redação foi enviada e será corrigida pelos corretores selecionados.",
+        description: `Sua redação foi enviada e será corrigida pelos corretores selecionados. ${selectedCorretores.length} crédito(s) foram consumidos.`,
       });
 
       // Limpar formulário
       setFormData({
-        nome_aluno: "",
-        email_aluno: "",
-        turma: "",
         frase_tematica: fraseTematica || "",
         redacao_texto: "",
       });
@@ -190,40 +237,25 @@ export const EnvioRedacaoWithCorretor = ({
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePrimarySubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="nome_aluno">Nome do Aluno *</Label>
-                <Input
-                  id="nome_aluno"
-                  value={formData.nome_aluno}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nome_aluno: e.target.value }))}
-                  placeholder="Digite seu nome completo"
-                  required
-                />
+            {/* Informações do usuário logado - apenas visualização */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h3 className="font-medium text-blue-800 mb-2">📋 Dados do envio (automático)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-blue-700">👤 Nome:</span> {nomeCompleto}
+                </div>
+                <div>
+                  <span className="font-medium text-blue-700">📧 E-mail:</span> {email}
+                </div>
+                <div>
+                  <span className="font-medium text-blue-700">🏫 Turma:</span> {turmaCode}
+                </div>
+                <div>
+                  <span className="font-medium text-blue-700">🎯 Tipo:</span> {
+                    isSimulado ? 'Simulado' : (exercicioId ? 'Exercício' : 'Regular')
+                  }
+                </div>
               </div>
-
-              <div>
-                <Label htmlFor="email_aluno">E-mail *</Label>
-                <Input
-                  id="email_aluno"
-                  type="email"
-                  value={formData.email_aluno}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email_aluno: e.target.value }))}
-                  placeholder="Digite seu e-mail"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="turma">Turma *</Label>
-              <Input
-                id="turma"
-                value={formData.turma}
-                onChange={(e) => setFormData(prev => ({ ...prev, turma: e.target.value }))}
-                placeholder="Digite sua turma"
-                required
-              />
             </div>
 
             {!fraseTematica && (
@@ -269,7 +301,7 @@ export const EnvioRedacaoWithCorretor = ({
         isOpen={showCreditDialog}
         onClose={() => setShowCreditDialog(false)}
         onProceed={handleFinalSubmit}
-        userEmail={formData.email_aluno}
+        userEmail={email}
         selectedCorretores={selectedCorretores}
       />
     </>
