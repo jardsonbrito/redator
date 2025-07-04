@@ -25,6 +25,19 @@ interface RedacaoEnviadaCardProps {
     tipo_envio: string;
     status: string;
     turma: string;
+    // Novos campos de comentários pedagógicos
+    comentario_c1_corretor_1?: string | null;
+    comentario_c2_corretor_1?: string | null;
+    comentario_c3_corretor_1?: string | null;
+    comentario_c4_corretor_1?: string | null;
+    comentario_c5_corretor_1?: string | null;
+    elogios_pontos_atencao_corretor_1?: string | null;
+    comentario_c1_corretor_2?: string | null;
+    comentario_c2_corretor_2?: string | null;
+    comentario_c3_corretor_2?: string | null;
+    comentario_c4_corretor_2?: string | null;
+    comentario_c5_corretor_2?: string | null;
+    elogios_pontos_atencao_corretor_2?: string | null;
   };
 }
 
@@ -58,6 +71,38 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
     };
     return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
   };
+
+  // Função para obter comentários pedagógicos combinados
+  const getComentariosPedagogicos = () => {
+    const comentarios = [];
+    
+    // Comentários por competência
+    for (let i = 1; i <= 5; i++) {
+      const comentario1 = redacao[`comentario_c${i}_corretor_1` as keyof typeof redacao] as string | null;
+      const comentario2 = redacao[`comentario_c${i}_corretor_2` as keyof typeof redacao] as string | null;
+      
+      if (comentario1 || comentario2) {
+        comentarios.push({
+          competencia: i,
+          comentario1: comentario1?.trim(),
+          comentario2: comentario2?.trim()
+        });
+      }
+    }
+    
+    return comentarios;
+  };
+
+  // Função para obter elogios e pontos de atenção
+  const getElogiosEPontosAtencao = () => {
+    const elogios1 = redacao.elogios_pontos_atencao_corretor_1?.trim();
+    const elogios2 = redacao.elogios_pontos_atencao_corretor_2?.trim();
+    
+    return { elogios1, elogios2 };
+  };
+
+  const comentariosPedagogicos = getComentariosPedagogicos();
+  const { elogios1, elogios2 } = getElogiosEPontosAtencao();
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -183,14 +228,75 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
               )}
             </div>
 
-            {/* Comentários pedagógicos - otimizado para mobile */}
+            {/* Comentários pedagógicos por competência */}
+            {comentariosPedagogicos.length > 0 && (
+              <>
+                <Separator className="bg-green-200" />
+                <div>
+                  <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Comentários Pedagógicos por Competência
+                  </h3>
+                  <div className="space-y-4">
+                    {comentariosPedagogicos.map(({ competencia, comentario1, comentario2 }) => (
+                      <div key={competencia} className="bg-white border border-green-200 rounded-lg p-4">
+                        <h4 className="font-medium text-green-800 mb-2">
+                          Competência {competencia}
+                        </h4>
+                        {comentario1 && (
+                          <div className="mb-2">
+                            <span className="text-xs text-green-600 font-medium">Corretor 1:</span>
+                            <p className="text-sm text-gray-700 mt-1">{comentario1}</p>
+                          </div>
+                        )}
+                        {comentario2 && (
+                          <div>
+                            <span className="text-xs text-green-600 font-medium">Corretor 2:</span>
+                            <p className="text-sm text-gray-700 mt-1">{comentario2}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Elogios e pontos de atenção */}
+            {(elogios1 || elogios2) && (
+              <>
+                <Separator className="bg-green-200" />
+                <div>
+                  <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                    <Star className="w-4 h-4" />
+                    Elogios e Pontos de Atenção
+                  </h3>
+                  <div className="space-y-3">
+                    {elogios1 && (
+                      <div className="bg-white border border-green-200 rounded-lg p-4">
+                        <span className="text-xs text-green-600 font-medium">Corretor 1:</span>
+                        <p className="text-sm text-gray-700 mt-1">{elogios1}</p>
+                      </div>
+                    )}
+                    {elogios2 && (
+                      <div className="bg-white border border-green-200 rounded-lg p-4">
+                        <span className="text-xs text-green-600 font-medium">Corretor 2:</span>
+                        <p className="text-sm text-gray-700 mt-1">{elogios2}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Comentário do admin (legado) */}
             {redacao.comentario_admin && (
               <>
                 <Separator className="bg-green-200" />
                 <div>
                   <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
-                    Comentários Pedagógicos
+                    Comentário Geral
                   </h3>
                   <div className="bg-white border border-green-200 rounded-lg p-4">
                     <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">

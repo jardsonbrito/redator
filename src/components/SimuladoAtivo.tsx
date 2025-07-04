@@ -1,224 +1,233 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck, Clock, Calendar, AlertCircle, Brain } from "lucide-react";
+import { Calendar, Clock, Users, Target } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { format, isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Link } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
-interface SimuladoAtivoProps {
-  turmaCode: string;
-}
+export const SimuladoAtivo = () => {
+  const navigate = useNavigate();
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
-export const SimuladoAtivo = ({ turmaCode }: SimuladoAtivoProps) => {
-  const { toast } = useToast();
-
-  const { data: simuladoAtivo, isLoading, error } = useQuery({
-    queryKey: ['simulado-ativo', turmaCode],
+  const { data: simulados, isLoading } = useQuery({
+    queryKey: ['simulados-ativos'],
     queryFn: async () => {
-      try {
-        const agora = new Date();
-        const dataAtual = agora.toISOString().split('T')[0];
+      console.log('🎯 Carregando simulados ativos...');
+      
+      const { data, error } = await supabase
+        .from('simulados')
+        .select(`
+          *,
+          temas (
+            frase_tematica,
+            eixo_tematico
+          )
+        `)
+        .eq('ativo', true)
+        .order('data_inicio', { ascending: true });
 
-        console.log('🔍 Buscando simulado ativo para turma:', turmaCode);
-
-        let query = supabase
-          .from('simulados')
-          .select('*')
-          .eq('ativo', true)
-          .gte('data_fim', dataAtual)
-          .order('data_inicio', { ascending: true });
-
-        // Filtra por turma ou permite visitantes - NOMES CORRETOS DAS TURMAS
-        if (turmaCode === "Visitante" || turmaCode === "visitante") {
-          query = query.eq('permite_visitante', true);
-        } else {
-          // Usar tanto o formato exato da turma quanto permitir visitantes
-          query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
-        }
-        
-        const { data, error } = await query.limit(1);
-        
-        if (error) {
-          console.error('❌ Erro ao buscar simulado:', error);
-          return null;
-        }
-        
-        if (!data || data.length === 0) {
-          console.log('ℹ️ Nenhum simulado ativo encontrado para turma:', turmaCode);
-          return null;
-        }
-
-        const simulado = data[0];
-        console.log('✅ Simulado encontrado:', simulado.titulo, 'ID:', simulado.id);
-
-        // Verifica se o simulado ainda está no período de exibição
-        const fimData = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
-        
-        if (agora > fimData) {
-          console.log('⏰ Simulado já encerrado, não será exibido');
-          return null;
-        }
-
-        // Publicar tema automaticamente se simulado iniciou e tema está em rascunho
-        const inicioData = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-        if (agora >= inicioData && simulado.tema_id) {
-          console.log('📝 Verificando se tema precisa ser publicado...');
-          try {
-            await supabase.rpc('check_and_publish_expired_simulados');
-          } catch (error) {
-            console.error('❌ Erro ao publicar tema:', error);
-          }
-        }
-
-        return simulado;
-      } catch (error) {
-        console.error('❌ Erro na busca de simulado:', error);
-        return null;
+      if (error) {
+        console.error('❌ Erro ao carregar simulados:', error);
+        throw error;
       }
-    },
-    refetchInterval: 30000, // Atualiza a cada 30 segundos
-    retry: 2,
-    staleTime: 0,
+
+      console.log('✅ Simulados carregados:', data);
+      return data || [];
+    }
   });
 
-  // Log para debug
-  console.log('🎯 SimuladoAtivo - Loading:', isLoading, 'Data:', simuladoAtivo, 'Error:', error);
+  const getSimuladoStatus = (simulado: any) => {
+    const agora = new Date();
+    const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+    const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
 
-  // Se está carregando, mostrar indicador
+    if (isBefore(agora, inicioSimulado)) {
+      return 'agendado';
+    } else if (isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado })) {
+      return 'em_progresso';
+    } else {
+      return 'encerrado';
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'agendado':
+        return <Badge className="bg-blue-100 text-blue-800">📅 Agendado</Badge>;
+      case 'em_progresso':
+        return <Badge className="bg-green-100 text-green-800">🔴 Em Progresso</Badge>;
+      case 'encerrado':
+        return <Badge className="bg-gray-100 text-gray-800">⏰ Encerrado</Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-800">Indefinido</Badge>;
+    }
+  };
+
+  const getActionButton = (simulado: any, status: string) => {
+    switch (status) {
+      case 'agendado':
+        const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+        return (
+          <Button variant="outline" disabled>
+            <Clock className="w-4 h-4 mr-2" />
+            Inicia em {format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
+          </Button>
+        );
+      case 'em_progresso':
+        return (
+          <Button 
+            onClick={() => navigate(`/simulados/${simulado.id}`)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Target className="w-4 h-4 mr-2" />
+            Participar do Simulado
+          </Button>
+        );
+      case 'encerrado':
+        return (
+          <Button variant="outline" disabled>
+            <Clock className="w-4 h-4 mr-2" />
+            Simulado Encerrado
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="mb-8">
-        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="py-8 text-center">
+      <Card className="border-primary/20">
+        <CardContent className="p-6">
+          <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Verificando simulados disponíveis...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Se não há simulado, não renderiza nada
-  if (!simuladoAtivo) {
-    console.log('ℹ️ Nenhum simulado para exibir na Home');
-    return null;
-  }
-
-  const agora = new Date();
-  const inicioSimulado = parseISO(`${simuladoAtivo.data_inicio}T${simuladoAtivo.hora_inicio}`);
-  const fimSimulado = parseISO(`${simuladoAtivo.data_fim}T${simuladoAtivo.hora_fim}`);
-  
-  const simuladoDisponivel = isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado });
-  const simuladoFuturo = isBefore(agora, inicioSimulado);
-  const simuladoEncerrado = isAfter(agora, fimSimulado);
-
-  // Se já encerrou, não mostra
-  if (simuladoEncerrado) {
-    return null;
-  }
-
-  // Determina o status visual
-  let statusBadge;
-  let cardClass;
-  let statusText;
-
-  if (simuladoDisponivel) {
-    statusBadge = <Badge className="bg-green-500 text-white font-bold animate-pulse">EM PROGRESSO</Badge>;
-    cardClass = "border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-emerald-50 shadow-xl";
-    statusText = "em progresso";
-  } else if (simuladoFuturo) {
-    statusBadge = <Badge className="bg-blue-500 text-white">AGENDADO</Badge>;
-    cardClass = "border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-lg";
-    statusText = "agendado";
-  }
-
-  return (
-    <div className="mb-8">
-      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-2xl overflow-hidden">
-        <div className={`bg-gradient-to-r p-1 ${simuladoDisponivel ? 'from-green-400 to-emerald-500' : 'from-blue-400 to-cyan-500'}`}>
-          <CardHeader className="bg-white/95 rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className={`absolute inset-0 rounded-2xl blur ${simuladoDisponivel ? 'bg-green-400' : 'bg-blue-400'} opacity-30`}></div>
-                  <div className={`relative flex items-center justify-center w-16 h-16 rounded-2xl shadow-xl ${simuladoDisponivel ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-blue-500 to-cyan-600'}`}>
-                    <Brain className="w-8 h-8 text-white drop-shadow-lg" />
-                  </div>
-                </div>
-                <div>
-                  <CardTitle className={`text-3xl font-extrabold ${simuladoDisponivel ? 'text-green-700' : 'text-blue-700'}`}>
-                    🎯 Simulado Disponível
-                  </CardTitle>
-                  <p className={`text-lg font-semibold ${simuladoDisponivel ? 'text-green-600' : 'text-blue-600'}`}>
-                    ⚡ {simuladoAtivo.titulo}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                {statusBadge}
-                {simuladoDisponivel && (
-                  <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                    ⏰ ATIVO AGORA
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-        </div>
-        
-        <CardContent className="space-y-6">
-          <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-            {/* Informações do simulado - apenas turma e horários */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
-              <div className={`flex items-center gap-2 p-3 rounded-lg ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
-                <Calendar className="w-5 h-5" />
-                <span>
-                  <strong>Início:</strong> {format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
-                </span>
-              </div>
-              <div className={`flex items-center gap-2 p-3 rounded-lg ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
-                <Clock className="w-5 h-5" />
-                <span>
-                  <strong>Término:</strong> {format(fimSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
-                </span>
-              </div>
-            </div>
-
-            {/* Informação da turma - NOMES CORRETOS */}
-            <div className={`p-3 rounded-lg ${simuladoDisponivel ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'}`}>
-              <span className="font-medium">
-                Turma: {turmaCode === "Visitante" || turmaCode === "visitante" ? "Visitantes" : turmaCode}
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            {simuladoDisponivel ? (
-              <Link to={`/simulado/${simuladoAtivo.id}`}>
-                <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-lg py-3 shadow-lg transform hover:scale-105 transition-all duration-200">
-                  <ClipboardCheck className="w-6 h-6 mr-3" />
-                  🚀 PARTICIPAR AGORA!
-                </Button>
-              </Link>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-600 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                  <AlertCircle className="w-5 h-5 text-yellow-600" />
-                  <span className="font-medium">
-                    Disponível a partir de {format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
-                  </span>
-                </div>
-              </div>
-            )}
+            <p className="text-gray-600">Carregando simulados...</p>
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (!simulados || simulados.length === 0) {
+    return (
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Target className="w-5 h-5" />
+            Simulados
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600 text-center py-4">
+            Nenhum simulado disponível no momento.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Filtrar apenas simulados relevantes (agendados ou em progresso)
+  const simuladosRelevantes = simulados.filter(simulado => {
+    const status = getSimuladoStatus(simulado);
+    return status === 'agendado' || status === 'em_progresso';
+  });
+
+  if (simuladosRelevantes.length === 0) {
+    return (
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Target className="w-5 h-5" />
+            Simulados
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600 text-center py-4">
+            Nenhum simulado agendado ou em progresso.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-primary flex items-center gap-2">
+        <Target className="w-5 h-5" />
+        Simulados Disponíveis
+      </h2>
+      
+      {simuladosRelevantes.map((simulado) => {
+        const status = getSimuladoStatus(simulado);
+        const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+        const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+        const isExpanded = expandedCard === simulado.id;
+
+        return (
+          <Card 
+            key={simulado.id} 
+            className={`border-2 transition-all duration-200 ${
+              status === 'em_progresso' 
+                ? 'border-green-300 bg-green-50 shadow-lg' 
+                : 'border-blue-200 bg-blue-50'
+            }`}
+          >
+            <CardHeader 
+              className="cursor-pointer"
+              onClick={() => setExpandedCard(isExpanded ? null : simulado.id)}
+            >
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">
+                  🎯 {simulado.titulo}
+                </CardTitle>
+                {getStatusBadge(status)}
+              </div>
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{format(inicioSimulado, "dd/MM", { locale: ptBR })} - {format(fimSimulado, "dd/MM", { locale: ptBR })}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  <span>{format(inicioSimulado, "HH:mm", { locale: ptBR })} - {format(fimSimulado, "HH:mm", { locale: ptBR })}</span>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-0">
+              {isExpanded && (
+                <div className="mb-4 p-4 bg-white rounded-lg border">
+                  <h4 className="font-semibold text-primary mb-2">Tema da Redação:</h4>
+                  <p className="text-gray-700 font-medium">
+                    {simulado.temas?.frase_tematica || simulado.frase_tematica}
+                  </p>
+                  {simulado.temas?.eixo_tematico && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      <strong>Eixo temático:</strong> {simulado.temas.eixo_tematico}
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Users className="w-4 h-4" />
+                  <span>
+                    {simulado.permite_visitante ? 'Aberto a todos' : 'Turmas específicas'}
+                  </span>
+                </div>
+                
+                {getActionButton(simulado, status)}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

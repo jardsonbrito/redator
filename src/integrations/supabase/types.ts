@@ -669,12 +669,24 @@ export type Database = {
           c5_corretor_1: number | null
           c5_corretor_2: number | null
           comentario_admin: string | null
+          comentario_c1_corretor_1: string | null
+          comentario_c1_corretor_2: string | null
+          comentario_c2_corretor_1: string | null
+          comentario_c2_corretor_2: string | null
+          comentario_c3_corretor_1: string | null
+          comentario_c3_corretor_2: string | null
+          comentario_c4_corretor_1: string | null
+          comentario_c4_corretor_2: string | null
+          comentario_c5_corretor_1: string | null
+          comentario_c5_corretor_2: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
           corrigida: boolean | null
           created_by_ip: unknown | null
           data_correcao: string | null
           data_envio: string
+          elogios_pontos_atencao_corretor_1: string | null
+          elogios_pontos_atencao_corretor_2: string | null
           email_aluno: string | null
           frase_tematica: string
           id: string
@@ -707,12 +719,24 @@ export type Database = {
           c5_corretor_1?: number | null
           c5_corretor_2?: number | null
           comentario_admin?: string | null
+          comentario_c1_corretor_1?: string | null
+          comentario_c1_corretor_2?: string | null
+          comentario_c2_corretor_1?: string | null
+          comentario_c2_corretor_2?: string | null
+          comentario_c3_corretor_1?: string | null
+          comentario_c3_corretor_2?: string | null
+          comentario_c4_corretor_1?: string | null
+          comentario_c4_corretor_2?: string | null
+          comentario_c5_corretor_1?: string | null
+          comentario_c5_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
           created_by_ip?: unknown | null
           data_correcao?: string | null
           data_envio?: string
+          elogios_pontos_atencao_corretor_1?: string | null
+          elogios_pontos_atencao_corretor_2?: string | null
           email_aluno?: string | null
           frase_tematica: string
           id?: string
@@ -745,12 +769,24 @@ export type Database = {
           c5_corretor_1?: number | null
           c5_corretor_2?: number | null
           comentario_admin?: string | null
+          comentario_c1_corretor_1?: string | null
+          comentario_c1_corretor_2?: string | null
+          comentario_c2_corretor_1?: string | null
+          comentario_c2_corretor_2?: string | null
+          comentario_c3_corretor_1?: string | null
+          comentario_c3_corretor_2?: string | null
+          comentario_c4_corretor_1?: string | null
+          comentario_c4_corretor_2?: string | null
+          comentario_c5_corretor_1?: string | null
+          comentario_c5_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
           created_by_ip?: unknown | null
           data_correcao?: string | null
           data_envio?: string
+          elogios_pontos_atencao_corretor_1?: string | null
+          elogios_pontos_atencao_corretor_2?: string | null
           email_aluno?: string | null
           frase_tematica?: string
           id?: string
@@ -801,11 +837,23 @@ export type Database = {
           c5_corretor_1: number | null
           c5_corretor_2: number | null
           comentario_admin: string | null
+          comentario_c1_corretor_1: string | null
+          comentario_c1_corretor_2: string | null
+          comentario_c2_corretor_1: string | null
+          comentario_c2_corretor_2: string | null
+          comentario_c3_corretor_1: string | null
+          comentario_c3_corretor_2: string | null
+          comentario_c4_corretor_1: string | null
+          comentario_c4_corretor_2: string | null
+          comentario_c5_corretor_1: string | null
+          comentario_c5_corretor_2: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
           corrigida: boolean | null
           data_correcao: string | null
           data_envio: string | null
+          elogios_pontos_atencao_corretor_1: string | null
+          elogios_pontos_atencao_corretor_2: string | null
           email_aluno: string
           exercicio_id: string
           id: string
@@ -836,11 +884,23 @@ export type Database = {
           c5_corretor_1?: number | null
           c5_corretor_2?: number | null
           comentario_admin?: string | null
+          comentario_c1_corretor_1?: string | null
+          comentario_c1_corretor_2?: string | null
+          comentario_c2_corretor_1?: string | null
+          comentario_c2_corretor_2?: string | null
+          comentario_c3_corretor_1?: string | null
+          comentario_c3_corretor_2?: string | null
+          comentario_c4_corretor_1?: string | null
+          comentario_c4_corretor_2?: string | null
+          comentario_c5_corretor_1?: string | null
+          comentario_c5_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
           data_correcao?: string | null
           data_envio?: string | null
+          elogios_pontos_atencao_corretor_1?: string | null
+          elogios_pontos_atencao_corretor_2?: string | null
           email_aluno: string
           exercicio_id: string
           id?: string
@@ -871,11 +931,23 @@ export type Database = {
           c5_corretor_1?: number | null
           c5_corretor_2?: number | null
           comentario_admin?: string | null
+          comentario_c1_corretor_1?: string | null
+          comentario_c1_corretor_2?: string | null
+          comentario_c2_corretor_1?: string | null
+          comentario_c2_corretor_2?: string | null
+          comentario_c3_corretor_1?: string | null
+          comentario_c3_corretor_2?: string | null
+          comentario_c4_corretor_1?: string | null
+          comentario_c4_corretor_2?: string | null
+          comentario_c5_corretor_1?: string | null
+          comentario_c5_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
           data_correcao?: string | null
           data_envio?: string | null
+          elogios_pontos_atencao_corretor_1?: string | null
+          elogios_pontos_atencao_corretor_2?: string | null
           email_aluno?: string
           exercicio_id?: string
           id?: string
@@ -923,6 +995,16 @@ export type Database = {
           c4_corretor_2: number | null
           c5_corretor_1: number | null
           c5_corretor_2: number | null
+          comentario_c1_corretor_1: string | null
+          comentario_c1_corretor_2: string | null
+          comentario_c2_corretor_1: string | null
+          comentario_c2_corretor_2: string | null
+          comentario_c3_corretor_1: string | null
+          comentario_c3_corretor_2: string | null
+          comentario_c4_corretor_1: string | null
+          comentario_c4_corretor_2: string | null
+          comentario_c5_corretor_1: string | null
+          comentario_c5_corretor_2: string | null
           comentario_pedagogico: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
@@ -930,6 +1012,8 @@ export type Database = {
           dados_visitante: Json | null
           data_correcao: string | null
           data_envio: string
+          elogios_pontos_atencao_corretor_1: string | null
+          elogios_pontos_atencao_corretor_2: string | null
           email_aluno: string
           id: string
           id_simulado: string
@@ -959,6 +1043,16 @@ export type Database = {
           c4_corretor_2?: number | null
           c5_corretor_1?: number | null
           c5_corretor_2?: number | null
+          comentario_c1_corretor_1?: string | null
+          comentario_c1_corretor_2?: string | null
+          comentario_c2_corretor_1?: string | null
+          comentario_c2_corretor_2?: string | null
+          comentario_c3_corretor_1?: string | null
+          comentario_c3_corretor_2?: string | null
+          comentario_c4_corretor_1?: string | null
+          comentario_c4_corretor_2?: string | null
+          comentario_c5_corretor_1?: string | null
+          comentario_c5_corretor_2?: string | null
           comentario_pedagogico?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
@@ -966,6 +1060,8 @@ export type Database = {
           dados_visitante?: Json | null
           data_correcao?: string | null
           data_envio?: string
+          elogios_pontos_atencao_corretor_1?: string | null
+          elogios_pontos_atencao_corretor_2?: string | null
           email_aluno: string
           id?: string
           id_simulado: string
@@ -995,6 +1091,16 @@ export type Database = {
           c4_corretor_2?: number | null
           c5_corretor_1?: number | null
           c5_corretor_2?: number | null
+          comentario_c1_corretor_1?: string | null
+          comentario_c1_corretor_2?: string | null
+          comentario_c2_corretor_1?: string | null
+          comentario_c2_corretor_2?: string | null
+          comentario_c3_corretor_1?: string | null
+          comentario_c3_corretor_2?: string | null
+          comentario_c4_corretor_1?: string | null
+          comentario_c4_corretor_2?: string | null
+          comentario_c5_corretor_1?: string | null
+          comentario_c5_corretor_2?: string | null
           comentario_pedagogico?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
@@ -1002,6 +1108,8 @@ export type Database = {
           dados_visitante?: Json | null
           data_correcao?: string | null
           data_envio?: string
+          elogios_pontos_atencao_corretor_1?: string | null
+          elogios_pontos_atencao_corretor_2?: string | null
           email_aluno?: string
           id?: string
           id_simulado?: string
