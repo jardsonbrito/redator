@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
@@ -18,7 +17,8 @@ import {
   NotebookPen,
   MessageSquare,
   Radar,
-  Users
+  Users,
+  UserCheck
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +65,10 @@ import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 import { AlunoForm } from "@/components/admin/AlunoForm";
 import { AlunoList } from "@/components/admin/AlunoList";
 
+// Import corretor components
+import { CorretorForm } from "@/components/admin/CorretorForm";
+import { CorretorList } from "@/components/admin/CorretorList";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
@@ -73,6 +77,8 @@ const Admin = () => {
   const [aulaEditando, setAulaEditando] = useState(null);
   const [refreshAlunos, setRefreshAlunos] = useState(false);
   const [alunoEditando, setAlunoEditando] = useState(null);
+  const [refreshCorretores, setRefreshCorretores] = useState(false);
+  const [corretorEditando, setCorretorEditando] = useState(null);
 
   console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
 
@@ -99,10 +105,39 @@ const Admin = () => {
     { id: "biblioteca", label: "Biblioteca", icon: File },
     { id: "radar", label: "Radar", icon: Radar },
     { id: "cadastro-alunos", label: "Cadastro de Alunos", icon: Users },
+    { id: "corretores", label: "Corretores", icon: UserCheck },
   ];
 
   const renderContent = () => {
     switch (activeView) {
+      case "corretores":
+        const handleCorretorSuccess = () => {
+          setRefreshCorretores(!refreshCorretores);
+          setCorretorEditando(null);
+        };
+
+        const handleEditCorretor = (corretor: any) => {
+          setCorretorEditando(corretor);
+        };
+
+        const handleCancelCorretorEdit = () => {
+          setCorretorEditando(null);
+        };
+
+        return (
+          <div className="space-y-6">
+            <CorretorForm 
+              onSuccess={handleCorretorSuccess}
+              corretorEditando={corretorEditando}
+              onCancelEdit={handleCancelCorretorEdit}
+            />
+            <CorretorList 
+              refresh={refreshCorretores}
+              onEdit={handleEditCorretor}
+            />
+          </div>
+        );
+
       case "temas":
         return (
           <Tabs defaultValue="list" className="w-full">
@@ -329,7 +364,7 @@ const Admin = () => {
         const handleAlunoSuccess = () => {
           console.log("Admin - handleAlunoSuccess chamado");
           setRefreshAlunos(!refreshAlunos);
-          setAlunoEditando(null); // Limpar aluno em edição após sucesso
+          setAlunoEditando(null);
         };
 
         const handleEditAluno = (aluno: any) => {

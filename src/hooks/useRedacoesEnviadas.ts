@@ -21,6 +21,8 @@ export interface RedacaoEnviada {
   comentario_admin?: string;
   status: string;
   tipo_envio: string;
+  corretor_id_1?: string;
+  corretor_id_2?: string;
 }
 
 export const useRedacoesEnviadas = () => {
@@ -35,7 +37,11 @@ export const useRedacoesEnviadas = () => {
     try {
       const { data, error } = await supabase
         .from("redacoes_enviadas")
-        .select("*")
+        .select(`
+          *,
+          corretor_1:corretor_id_1(nome_completo),
+          corretor_2:corretor_id_2(nome_completo)
+        `)
         .eq("tipo_envio", "regular")
         .order("data_envio", { ascending: false });
 

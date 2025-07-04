@@ -296,6 +296,33 @@ export type Database = {
         }
         Relationships: []
       }
+      corretores: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          criado_em: string
+          email: string
+          id: string
+          nome_completo: string
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          email: string
+          id?: string
+          nome_completo: string
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          email?: string
+          id?: string
+          nome_completo?: string
+        }
+        Relationships: []
+      }
       exercicios: {
         Row: {
           abrir_aba_externa: boolean | null
@@ -629,6 +656,8 @@ export type Database = {
       redacoes_enviadas: {
         Row: {
           comentario_admin: string | null
+          corretor_id_1: string | null
+          corretor_id_2: string | null
           corrigida: boolean | null
           created_by_ip: unknown | null
           data_correcao: string | null
@@ -651,6 +680,8 @@ export type Database = {
         }
         Insert: {
           comentario_admin?: string | null
+          corretor_id_1?: string | null
+          corretor_id_2?: string | null
           corrigida?: boolean | null
           created_by_ip?: unknown | null
           data_correcao?: string | null
@@ -673,6 +704,8 @@ export type Database = {
         }
         Update: {
           comentario_admin?: string | null
+          corretor_id_1?: string | null
+          corretor_id_2?: string | null
           corrigida?: boolean | null
           created_by_ip?: unknown | null
           data_correcao?: string | null
@@ -693,11 +726,28 @@ export type Database = {
           turma?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "redacoes_enviadas_corretor_id_1_fkey"
+            columns: ["corretor_id_1"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redacoes_enviadas_corretor_id_2_fkey"
+            columns: ["corretor_id_2"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       redacoes_exercicio: {
         Row: {
           comentario_admin: string | null
+          corretor_id_1: string | null
+          corretor_id_2: string | null
           corrigida: boolean | null
           data_correcao: string | null
           data_envio: string | null
@@ -717,6 +767,8 @@ export type Database = {
         }
         Insert: {
           comentario_admin?: string | null
+          corretor_id_1?: string | null
+          corretor_id_2?: string | null
           corrigida?: boolean | null
           data_correcao?: string | null
           data_envio?: string | null
@@ -736,6 +788,8 @@ export type Database = {
         }
         Update: {
           comentario_admin?: string | null
+          corretor_id_1?: string | null
+          corretor_id_2?: string | null
           corrigida?: boolean | null
           data_correcao?: string | null
           data_envio?: string | null
@@ -753,11 +807,28 @@ export type Database = {
           turma?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "redacoes_exercicio_corretor_id_1_fkey"
+            columns: ["corretor_id_1"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redacoes_exercicio_corretor_id_2_fkey"
+            columns: ["corretor_id_2"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       redacoes_simulado: {
         Row: {
           comentario_pedagogico: string | null
+          corretor_id_1: string | null
+          corretor_id_2: string | null
           corrigida: boolean | null
           dados_visitante: Json | null
           data_correcao: string | null
@@ -778,6 +849,8 @@ export type Database = {
         }
         Insert: {
           comentario_pedagogico?: string | null
+          corretor_id_1?: string | null
+          corretor_id_2?: string | null
           corrigida?: boolean | null
           dados_visitante?: Json | null
           data_correcao?: string | null
@@ -798,6 +871,8 @@ export type Database = {
         }
         Update: {
           comentario_pedagogico?: string | null
+          corretor_id_1?: string | null
+          corretor_id_2?: string | null
           corrigida?: boolean | null
           dados_visitante?: Json | null
           data_correcao?: string | null
@@ -817,6 +892,20 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "redacoes_simulado_corretor_id_1_fkey"
+            columns: ["corretor_id_1"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redacoes_simulado_corretor_id_2_fkey"
+            columns: ["corretor_id_2"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "redacoes_simulado_id_simulado_fkey"
             columns: ["id_simulado"]
@@ -1018,6 +1107,19 @@ export type Database = {
           data_correcao: string
         }[]
       }
+      get_redacoes_corretor: {
+        Args: { corretor_email: string }
+        Returns: {
+          id: string
+          tipo_redacao: string
+          nome_aluno: string
+          email_aluno: string
+          frase_tematica: string
+          data_envio: string
+          corrigida: boolean
+          texto: string
+        }[]
+      }
       get_student_redacoes: {
         Args: { student_email: string }
         Returns: {
@@ -1052,6 +1154,10 @@ export type Database = {
       }
       is_authenticated_student: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_corretor: {
+        Args: { user_email: string }
         Returns: boolean
       }
       is_main_admin: {
