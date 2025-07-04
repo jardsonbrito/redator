@@ -15,13 +15,13 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
 
   const menuItems = [
     { icon: Home, label: "Home", path: "/corretor" },
-    { icon: BookOpen, label: "Temas", path: "/temas" },
-    { icon: FileText, label: "Simulados", path: "/simulados" },
-    { icon: Video, label: "Aulas", path: "/aulas" },
-    { icon: Video, label: "Videoteca", path: "/videoteca" },
-    { icon: Library, label: "Biblioteca", path: "/biblioteca" },
-    { icon: FileText, label: "Redações Exemplar", path: "/redacoes" },
-    { icon: Trophy, label: "Top 5", path: "/top5" },
+    { icon: BookOpen, label: "Temas", path: "/corretor/temas" },
+    { icon: FileText, label: "Simulados", path: "/corretor/simulados" },
+    { icon: Video, label: "Aulas", path: "/corretor/aulas" },
+    { icon: Video, label: "Videoteca", path: "/corretor/videoteca" },
+    { icon: Library, label: "Biblioteca", path: "/corretor/biblioteca" },
+    { icon: FileText, label: "Redações Exemplar", path: "/corretor/redacoes" },
+    { icon: Trophy, label: "Top 5", path: "/corretor/top5" },
   ];
 
   return (

@@ -29,6 +29,13 @@ import { ExerciciosAdmin } from "./pages/admin/ExerciciosAdmin";
 import { CorretoresAdmin } from "./pages/admin/CorretoresAdmin";
 import CorretorLogin from "./pages/CorretorLogin";
 import CorretorHome from "./pages/CorretorHome";
+import CorretorTemas from "./pages/corretor/CorretorTemas";
+import CorretorSimulados from "./pages/corretor/CorretorSimulados";
+import CorretorAulas from "./pages/corretor/CorretorAulas";
+import CorretorVideoteca from "./pages/corretor/CorretorVideoteca";
+import CorretorBiblioteca from "./pages/corretor/CorretorBiblioteca";
+import CorretorRedacoesExemplar from "./pages/corretor/CorretorRedacoesExemplar";
+import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 
 function App() {
@@ -71,6 +78,13 @@ function App() {
                 {/* Rotas do Corretor */}
                 <Route path="/corretor/login" element={<CorretorLogin />} />
                 <Route path="/corretor" element={<CorretorHome />} />
+                <Route path="/corretor/temas" element={<CorretorTemas />} />
+                <Route path="/corretor/simulados" element={<CorretorSimulados />} />
+                <Route path="/corretor/aulas" element={<CorretorAulas />} />
+                <Route path="/corretor/videoteca" element={<CorretorVideoteca />} />
+                <Route path="/corretor/biblioteca" element={<CorretorBiblioteca />} />
+                <Route path="/corretor/redacoes" element={<CorretorRedacoesExemplar />} />
+                <Route path="/corretor/top5" element={<CorretorTop5 />} />
               </Routes>
             </div>
           </Router>
