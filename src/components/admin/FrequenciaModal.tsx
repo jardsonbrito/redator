@@ -12,7 +12,7 @@ interface PresencaRecord {
   nome_aluno: string;
   email_aluno: string;
   turma: string;
-  tipo_registro: 'entrada' | 'saida';
+  tipo_registro: string; // Changed from 'entrada' | 'saida' to string
   data_registro: string;
 }
 
