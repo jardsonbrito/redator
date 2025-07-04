@@ -1,711 +1,442 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Save, Calendar, Award, Copy, Edit, User, Mail, Filter } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRedacaoCorrecaoHandler, type CorrecaoData } from "./RedacaoCorrecaoHandler";
+import { supabase } from "@/integrations/supabase/client";
+import { Edit, Trash2, Search } from "lucide-react";
 
-type RedacaoEnviada = {
+interface RedacaoEnviada {
   id: string;
+  nome_aluno: string;
+  email_aluno: string;
+  turma: string;
   frase_tematica: string;
   redacao_texto: string;
   data_envio: string;
-  nota_c1: number | null;
-  nota_c2: number | null;
-  nota_c3: number | null;
-  nota_c4: number | null;
-  nota_c5: number | null;
-  nota_total: number | null;
-  comentario_admin: string | null;
   corrigida: boolean;
-  data_correcao: string | null;
-  nome_aluno: string | null;
-  email_aluno: string | null;
-  tipo_envio: string | null;
-  status: string | null;
-  turma: string | null;
-};
+  nota_total?: number;
+  comentario_admin?: string;
+  status: string;
+  tipo_envio: string;
+}
 
 export const RedacaoEnviadaForm = () => {
+  const [redacoes, setRedacoes] = useState<RedacaoEnviada[]>([]);
+  const [filteredRedacoes, setFilteredRedacoes] = useState<RedacaoEnviada[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoEnviada | null>(null);
-  const [viewRedacao, setViewRedacao] = useState<RedacaoEnviada | null>(null);
-  const [editingRedacao, setEditingRedacao] = useState<RedacaoEnviada | null>(null);
-  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
-  const [filtroStatus, setFiltroStatus] = useState<string>("todos");
-  const [filtroTurma, setFiltroTurma] = useState<string>("todas");
-  const [formData, setFormData] = useState({
-    nota_c1: '',
-    nota_c2: '',
-    nota_c3: '',
-    nota_c4: '',
-    nota_c5: '',
-    nota_total: '',
-    comentario_admin: '',
-  });
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-
+  const [nota_c1, setNotaC1] = useState("");
+  const [nota_c2, setNotaC2] = useState("");
+  const [nota_c3, setNotaC3] = useState("");
+  const [nota_c4, setNotaC4] = useState("");
+  const [nota_c5, setNotaC5] = useState("");
+  const [comentario, setComentario] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { executarCorrecao } = useRedacaoCorrecaoHandler();
 
-  const { data: redacoes, isLoading } = useQuery({
-    queryKey: ['redacoes-enviadas-admin'],
-    queryFn: async () => {
-      console.log('🔍 Buscando redações para admin...');
+  const fetchRedacoes = async () => {
+    setLoading(true);
+    try {
       const { data, error } = await supabase
-        .from('redacoes_enviadas')
-        .select('*')
-        .order('data_envio', { ascending: false });
-      
-      if (error) {
-        console.error('❌ Erro ao buscar redações:', error);
-        throw error;
-      }
-      
-      console.log(`✅ ${data?.length || 0} redações encontradas`);
-      return data || [];
-    },
-  });
+        .from("redacoes_enviadas")
+        .select("*")
+        .eq("tipo_envio", "regular")
+        .order("data_envio", { ascending: false });
 
-  const corrigirMutation = useMutation({
-    mutationFn: async (dados: CorrecaoData) => {
-      const redacaoAtual = selectedRedacao || editingRedacao;
-      
-      if (!redacaoAtual?.id) {
-        throw new Error('ID da redação não encontrado');
-      }
+      if (error) throw error;
 
-      console.log('🚀 Iniciando correção para redação:', redacaoAtual.id);
-      
-      const resultado = await executarCorrecao(redacaoAtual.id, dados);
-      
-      if (!resultado.success) {
-        throw new Error(resultado.error || 'Erro desconhecido na correção');
-      }
+      setRedacoes(data || []);
+      setFilteredRedacoes(data || []);
+    } catch (error: any) {
+      console.error("Erro ao buscar redações:", error);
+      toast({
+        title: "Erro ao carregar redações",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      return resultado;
-    },
-    onSuccess: (result) => {
-      console.log('🎉 Correção concluída com sucesso:', result);
-      
+  useEffect(() => {
+    fetchRedacoes();
+  }, []);
+
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredRedacoes(redacoes);
+      return;
+    }
+
+    const filtered = redacoes.filter(redacao => 
+      redacao.nome_aluno.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      redacao.email_aluno.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      redacao.turma.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      redacao.frase_tematica.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    setFilteredRedacoes(filtered);
+  }, [searchTerm, redacoes]);
+
+  const handleCorrection = (redacao: RedacaoEnviada) => {
+    setSelectedRedacao(redacao);
+    setNotaC1(redacao.nota_c1?.toString() || "");
+    setNotaC2(redacao.nota_c2?.toString() || "");
+    setNotaC3(redacao.nota_c3?.toString() || "");
+    setNotaC4(redacao.nota_c4?.toString() || "");
+    setNotaC5(redacao.nota_c5?.toString() || "");
+    setComentario(redacao.comentario_admin || "");
+  };
+
+  const handleSubmitCorrection = async () => {
+    if (!selectedRedacao) return;
+
+    const c1 = parseInt(nota_c1) || 0;
+    const c2 = parseInt(nota_c2) || 0;
+    const c3 = parseInt(nota_c3) || 0;
+    const c4 = parseInt(nota_c4) || 0;
+    const c5 = parseInt(nota_c5) || 0;
+    const total = c1 + c2 + c3 + c4 + c5;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("redacoes_enviadas")
+        .update({
+          nota_c1: c1,
+          nota_c2: c2,
+          nota_c3: c3,
+          nota_c4: c4,
+          nota_c5: c5,
+          nota_total: total,
+          comentario_admin: comentario,
+          corrigida: true,
+          data_correcao: new Date().toISOString(),
+          status: "corrigido"
+        })
+        .eq("id", selectedRedacao.id);
+
+      if (error) throw error;
+
       toast({
         title: "Correção salva com sucesso!",
-        description: `Redação corrigida com nota total de ${result.notaTotal}/1000 pontos.`,
+        description: `Redação de ${selectedRedacao.nome_aluno} foi corrigida.`
       });
-      
-      // Invalidar queries para atualizar a interface
-      queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas-admin'] });
-      queryClient.invalidateQueries({ queryKey: ['redacoes-enviadas'] });
-      
-      resetForm();
-    },
-    onError: (error: Error) => {
-      console.error('💥 Erro na correção:', error);
+
+      setSelectedRedacao(null);
+      setNotaC1("");
+      setNotaC2("");
+      setNotaC3("");
+      setNotaC4("");
+      setNotaC5("");
+      setComentario("");
+      fetchRedacoes();
+    } catch (error: any) {
+      console.error("Erro ao salvar correção:", error);
       toast({
         title: "Erro ao salvar correção",
-        description: error.message,
-        variant: "destructive",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
       });
-    },
-  });
-
-  const resetForm = () => {
-    setSelectedRedacao(null);
-    setEditingRedacao(null);
-    setFormData({
-      nota_c1: '',
-      nota_c2: '',
-      nota_c3: '',
-      nota_c4: '',
-      nota_c5: '',
-      nota_total: '',
-      comentario_admin: '',
-    });
-  };
-
-  // Aplicar filtros
-  const redacoesFiltradas = redacoes?.filter(redacao => {
-    if (filtroTipo !== "todos" && redacao.tipo_envio !== filtroTipo) return false;
-    if (filtroStatus !== "todos") {
-      if (filtroStatus === "corrigida" && !redacao.corrigida) return false;
-      if (filtroStatus === "aguardando" && redacao.corrigida) return false;
+    } finally {
+      setSubmitting(false);
     }
-    if (filtroTurma !== "todas" && redacao.turma !== filtroTurma) return false;
-    return true;
-  }) || [];
-
-  // Extrair turmas únicas para o filtro
-  const turmasUnicas = [...new Set(redacoes?.map(r => r.turma).filter(Boolean))];
-
-  const handleEdit = (redacao: RedacaoEnviada) => {
-    console.log('✏️ Iniciando correção de redação:', redacao.id);
-    
-    if (!redacao?.id) {
-      toast({
-        title: "Erro",
-        description: "Redação inválida. Não é possível corrigir.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedRedacao(redacao);
-    setEditingRedacao(null);
-    setFormData({
-      nota_c1: '',
-      nota_c2: '',
-      nota_c3: '',
-      nota_c4: '',
-      nota_c5: '',
-      nota_total: '',
-      comentario_admin: '',
-    });
   };
 
-  const handleEditExisting = (redacao: RedacaoEnviada) => {
-    console.log('📝 Editando correção existente:', redacao.id);
-    
-    if (!redacao?.id) {
-      toast({
-        title: "Erro",
-        description: "Redação inválida. Não é possível editar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setEditingRedacao(redacao);
-    setSelectedRedacao(null);
-    setFormData({
-      nota_c1: redacao.nota_c1?.toString() || '',
-      nota_c2: redacao.nota_c2?.toString() || '',
-      nota_c3: redacao.nota_c3?.toString() || '',
-      nota_c4: redacao.nota_c4?.toString() || '',
-      nota_c5: redacao.nota_c5?.toString() || '',
-      nota_total: redacao.nota_total?.toString() || '',
-      comentario_admin: redacao.comentario_admin || '',
-    });
-  };
-
-  const handleView = (redacao: RedacaoEnviada) => {
-    console.log('👁️ Visualizando redação:', redacao);
-    setViewRedacao(redacao);
-    setIsViewDialogOpen(true);
-  };
-
-  const handleNotaChange = (competencia: string, valor: string) => {
-    console.log(`📊 Alterando ${competencia}:`, valor);
-    
-    // Permitir string vazia ou números válidos
-    let nota = '';
-    if (valor !== '') {
-      const valorNumerico = parseInt(valor);
-      if (!isNaN(valorNumerico)) {
-        nota = Math.min(200, Math.max(0, valorNumerico)).toString();
-      }
-    }
-    
-    const newFormData = { ...formData, [competencia]: nota };
-    
-    // Calcular total apenas com valores válidos
-    const total = [
-      newFormData.nota_c1,
-      newFormData.nota_c2,
-      newFormData.nota_c3,
-      newFormData.nota_c4,
-      newFormData.nota_c5,
-    ].reduce((sum, n) => {
-      const num = parseInt(n) || 0;
-      return sum + num;
-    }, 0);
-    
-    setFormData({
-      ...newFormData,
-      nota_total: total.toString()
-    });
-
-    console.log('📈 Novas notas:', newFormData, 'Total:', total);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getTipoEnvioLabel = (tipo: string | null) => {
-    if (!tipo) return "Regular";
-    const tipos = {
-      'regular': 'Regular',
-      'exercicio': 'Exercício',
-      'simulado': 'Simulado',
-      'visitante': 'Visitante'
-    };
-    return tipos[tipo as keyof typeof tipos] || tipo;
-  };
-
-  const getTipoEnvioColor = (tipo: string | null) => {
-    if (!tipo || tipo === 'regular') return "bg-blue-100 text-blue-800";
-    if (tipo === 'exercicio') return "bg-purple-100 text-purple-800";
-    if (tipo === 'simulado') return "bg-orange-100 text-orange-800";
-    if (tipo === 'visitante') return "bg-gray-100 text-gray-800";
-    return "bg-blue-100 text-blue-800";
-  };
-
-  const copiarPromptCorrecao = async (redacao: RedacaoEnviada) => {
-    const prompt = `Corrija a seguinte redação conforme os critérios do ENEM, atribuindo nota de 0 a 200 por competência (C1 a C5) e justificando cada uma. Utilize linguagem objetiva, mas pedagógica.
-
-Frase temática: "${redacao.frase_tematica}"
-
-Autor: ${redacao.nome_aluno || 'Não informado'}
-E-mail: ${redacao.email_aluno || 'Não informado'}
-Tipo de envio: ${getTipoEnvioLabel(redacao.tipo_envio)}
-${redacao.turma && redacao.turma !== 'visitante' ? `Turma: ${redacao.turma}` : ''}
-
-Redação do aluno:
-${redacao.redacao_texto}`;
-
+  const handleDeleteRedacao = async (redacao: RedacaoEnviada) => {
     try {
-      await navigator.clipboard.writeText(prompt);
+      const { error } = await supabase
+        .from("redacoes_enviadas")
+        .delete()
+        .eq("id", redacao.id);
+
+      if (error) throw error;
+
       toast({
-        title: "Texto copiado!",
-        description: "O prompt de correção foi copiado para a área de transferência.",
+        title: "Redação excluída com sucesso!",
+        description: `A redação de ${redacao.nome_aluno} foi removida do sistema.`
       });
-    } catch (err) {
-      const textArea = document.createElement('textarea');
-      textArea.value = prompt;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      
+
+      fetchRedacoes();
+    } catch (error: any) {
+      console.error("Erro ao excluir redação:", error);
       toast({
-        title: "Texto copiado!",
-        description: "O prompt de correção foi copiado para a área de transferência.",
+        title: "Erro ao excluir redação",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
       });
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const redacaoAtual = selectedRedacao || editingRedacao;
-    
-    console.log('🚀 Submetendo formulário:', {
-      redacaoId: redacaoAtual?.id,
-      formData: formData
-    });
-    
-    if (!redacaoAtual?.id) {
-      toast({
-        title: "Erro",
-        description: "Nenhuma redação selecionada ou ID inválido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Verificar se pelo menos uma nota foi preenchida
-    const temNota = formData.nota_c1 || formData.nota_c2 || formData.nota_c3 || formData.nota_c4 || formData.nota_c5;
-    if (!temNota) {
-      toast({
-        title: "Erro de validação",
-        description: "É necessário preencher pelo menos uma competência.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    console.log('✅ Validação OK, enviando correção...');
-    corrigirMutation.mutate(formData);
+  const getStatusColor = (status: string, corrigida: boolean) => {
+    if (corrigida || status === "corrigido") return "bg-green-100 text-green-800";
+    if (status === "aguardando") return "bg-yellow-100 text-yellow-800";
+    return "bg-gray-100 text-gray-800";
   };
 
-  if (isLoading) {
+  const getTurmaColor = (turma: string) => {
+    const colors = {
+      "Turma A": "bg-blue-100 text-blue-800",
+      "Turma B": "bg-green-100 text-green-800", 
+      "Turma C": "bg-purple-100 text-purple-800",
+      "Turma D": "bg-orange-100 text-orange-800",
+      "Turma E": "bg-pink-100 text-pink-800",
+      "Visitante": "bg-gray-100 text-gray-800"
+    };
+    return colors[turma as keyof typeof colors] || "bg-gray-100 text-gray-800";
+  };
+
+  if (selectedRedacao) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-redator-accent mx-auto mb-4"></div>
-        <p className="text-redator-accent">Carregando redações para correção...</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Corrigir Redação - {selectedRedacao.nome_aluno}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div><strong>Aluno:</strong> {selectedRedacao.nome_aluno}</div>
+            <div><strong>E-mail:</strong> {selectedRedacao.email_aluno}</div>
+            <div><strong>Turma:</strong> {selectedRedacao.turma}</div>
+            <div><strong>Data de Envio:</strong> {new Date(selectedRedacao.data_envio).toLocaleDateString('pt-BR')}</div>
+          </div>
+
+          <div>
+            <Label className="text-base font-semibold">Tema:</Label>
+            <p className="mt-1 p-3 bg-gray-50 rounded-md">{selectedRedacao.frase_tematica}</p>
+          </div>
+
+          <div>
+            <Label className="text-base font-semibold">Texto da Redação:</Label>
+            <div className="mt-1 p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
+              {selectedRedacao.redacao_texto}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-5 gap-4">
+            <div>
+              <Label htmlFor="nota_c1">Competência 1 (0-200)</Label>
+              <Input
+                id="nota_c1"
+                type="number"
+                min="0"
+                max="200"
+                value={nota_c1}
+                onChange={(e) => setNotaC1(e.target.value)}
+                placeholder="0-200"
+              />
+            </div>
+            <div>
+              <Label htmlFor="nota_c2">Competência 2 (0-200)</Label>
+              <Input
+                id="nota_c2"
+                type="number"
+                min="0"
+                max="200"
+                value={nota_c2}
+                onChange={(e) => setNotaC2(e.target.value)}
+                placeholder="0-200"
+              />
+            </div>
+            <div>
+              <Label htmlFor="nota_c3">Competência 3 (0-200)</Label>
+              <Input
+                id="nota_c3"
+                type="number"
+                min="0"
+                max="200"
+                value={nota_c3}
+                onChange={(e) => setNotaC3(e.target.value)}
+                placeholder="0-200"
+              />
+            </div>
+            <div>
+              <Label htmlFor="nota_c4">Competência 4 (0-200)</Label>
+              <Input
+                id="nota_c4"
+                type="number"
+                min="0"
+                max="200"
+                value={nota_c4}
+                onChange={(e) => setNotaC4(e.target.value)}
+                placeholder="0-200"
+              />
+            </div>
+            <div>
+              <Label htmlFor="nota_c5">Competência 5 (0-200)</Label>
+              <Input
+                id="nota_c5"
+                type="number"
+                min="0"
+                max="200"
+                value={nota_c5}
+                onChange={(e) => setNotaC5(e.target.value)}
+                placeholder="0-200"
+              />
+            </div>
+          </div>
+
+          <div className="p-3 bg-blue-50 rounded-md">
+            <strong>Nota Total: {(parseInt(nota_c1) || 0) + (parseInt(nota_c2) || 0) + (parseInt(nota_c3) || 0) + (parseInt(nota_c4) || 0) + (parseInt(nota_c5) || 0)}/1000</strong>
+          </div>
+
+          <div>
+            <Label htmlFor="comentario">Comentário Pedagógico (opcional)</Label>
+            <Textarea
+              id="comentario"
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value)}
+              placeholder="Digite aqui seus comentários sobre a redação..."
+              rows={4}
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <Button 
+              onClick={handleSubmitCorrection}
+              disabled={submitting}
+              className="flex-1"
+            >
+              {submitting ? "Salvando..." : "Salvar Correção"}
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setSelectedRedacao(null)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filtros */}
-      <Card className="border-redator-accent/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-redator-primary">
-            <Filter className="w-5 h-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-redator-primary mb-2">Tipo de Envio</label>
-              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os tipos</SelectItem>
-                  <SelectItem value="regular">Regular</SelectItem>
-                  <SelectItem value="exercicio">Exercício</SelectItem>
-                  <SelectItem value="simulado">Simulado</SelectItem>
-                  <SelectItem value="visitante">Visitante</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-redator-primary mb-2">Status</label>
-              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os status</SelectItem>
-                  <SelectItem value="aguardando">Aguardando correção</SelectItem>
-                  <SelectItem value="corrigida">Corrigidas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-redator-primary mb-2">Turma</label>
-              <Select value={filtroTurma} onValueChange={setFiltroTurma}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as turmas</SelectItem>
-                  {turmasUnicas.map(turma => (
-                    <SelectItem key={turma} value={turma!}>{turma}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Lista de redações */}
-      <div>
-        <h3 className="text-lg font-semibold text-redator-primary mb-4">
-          Redações Enviadas ({redacoesFiltradas.length})
-        </h3>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          Redações Enviadas - Tema Livre
+          <Badge variant="secondary">{filteredRedacoes.length} redação(ões)</Badge>
+        </CardTitle>
         
-        {redacoesFiltradas.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
-            {redacoesFiltradas.map((redacao) => (
-              <Card key={redacao.id} className="border-redator-accent/20">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-redator-primary mb-2 line-clamp-2">
-                        {redacao.frase_tematica}
-                      </h4>
-                      
-                      {/* Informações do autor */}
-                      <div className="space-y-1 text-sm text-redator-accent mb-3">
-                        {redacao.nome_aluno && (
-                          <div className="flex items-center gap-2">
-                            <User className="w-3 h-3" />
-                            <span>{redacao.nome_aluno}</span>
-                          </div>
-                        )}
-                        {redacao.email_aluno && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-3 h-3" />
-                            <span>{redacao.email_aluno}</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-redator-accent mb-2 flex-wrap">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(redacao.data_envio)}
-                        </div>
-                        
-                        <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
-                          {getTipoEnvioLabel(redacao.tipo_envio)}
-                        </Badge>
-                        
-                        {redacao.corrigida ? (
-                          <Badge className="bg-green-100 text-green-800">Corrigida</Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">Aguardando</Badge>
-                        )}
-
-                        {redacao.turma && redacao.turma !== 'visitante' && (
-                          <Badge variant="outline">{redacao.turma}</Badge>
-                        )}
-                      </div>
-
-                      {redacao.corrigida && redacao.nota_total !== null && (
-                        <div className="flex items-center gap-2">
-                          <Award className="w-4 h-4 text-redator-accent" />
-                          <span className="text-sm text-redator-accent">Nota Total: {redacao.nota_total}/1000</span>
-                        </div>
-                      )}
-                      
-                      <div className="text-xs text-gray-500 mt-1">
-                        ID: {redacao.id}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 flex-wrap">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleView(redacao)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => copiarPromptCorrecao(redacao)}
-                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-
-                      {redacao.corrigida && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleEditExisting(redacao)}
-                          className="border-orange-300 text-orange-600 hover:bg-orange-50"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      )}
-
-                      <Button 
-                        onClick={() => handleEdit(redacao)}
-                        variant={redacao.corrigida ? "outline" : "default"}
-                        size="sm"
-                        className={!redacao.corrigida ? "bg-redator-primary hover:bg-redator-primary/90" : ""}
-                      >
-                        {redacao.corrigida ? "Re-corrigir" : "Corrigir"}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Buscar por nome, e-mail, turma ou tema..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        {loading ? (
+          <div className="text-center py-8">Carregando redações...</div>
+        ) : filteredRedacoes.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            {searchTerm ? "Nenhuma redação encontrada com os critérios de busca." : "Nenhuma redação enviada ainda."}
           </div>
         ) : (
-          <div className="text-center py-8">
-            <p className="text-redator-accent">Nenhuma redação encontrada com os filtros selecionados.</p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aluno</TableHead>
+                  <TableHead>Turma</TableHead>
+                  <TableHead>Tema</TableHead>
+                  <TableHead>Data Envio</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Nota</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRedacoes.map((redacao) => (
+                  <TableRow key={redacao.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{redacao.nome_aluno}</div>
+                        <div className="text-sm text-gray-500">{redacao.email_aluno}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getTurmaColor(redacao.turma)}>
+                        {redacao.turma}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="truncate" title={redacao.frase_tematica}>
+                        {redacao.frase_tematica}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(redacao.status, redacao.corrigida)}>
+                        {redacao.corrigida ? "Corrigida" : "Aguardando"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {redacao.nota_total ? `${redacao.nota_total}/1000` : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCorrection(redacao)}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          {redacao.corrigida ? "Editar" : "Corrigir"}
+                        </Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Excluir
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza de que deseja excluir esta redação de <strong>{redacao.nome_aluno}</strong>?
+                                <br />
+                                <br />
+                                <strong>Esta ação não poderá ser desfeita.</strong>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteRedacao(redacao)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
-      </div>
-
-      {/* Dialog de visualização */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{viewRedacao?.frase_tematica}</DialogTitle>
-          </DialogHeader>
-          {viewRedacao && (
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20">
-                <h4 className="font-medium text-redator-primary mb-2">Texto da Redação:</h4>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {viewRedacao.redacao_texto}
-                </p>
-              </div>
-
-              {/* Exibir notas se corrigida */}
-              {viewRedacao.corrigida && (
-                <div className="space-y-4">
-                  <h4 className="font-medium text-redator-primary">Correção:</h4>
-                  
-                  <div className="grid grid-cols-5 gap-4">
-                    {[
-                      { label: 'C1', value: viewRedacao.nota_c1 },
-                      { label: 'C2', value: viewRedacao.nota_c2 },
-                      { label: 'C3', value: viewRedacao.nota_c3 },
-                      { label: 'C4', value: viewRedacao.nota_c4 },
-                      { label: 'C5', value: viewRedacao.nota_c5 },
-                    ].map((comp) => (
-                      <div key={comp.label} className="text-center">
-                        <div className="text-sm font-medium text-redator-primary mb-1">{comp.label}</div>
-                        <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-                          {comp.value ?? '0'}/200
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="w-5 h-5 text-green-600" />
-                      <span className="font-medium text-green-800">Nota Total: {viewRedacao.nota_total ?? 0}/1000</span>
-                    </div>
-                  </div>
-
-                  {viewRedacao.comentario_admin && (
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <h5 className="font-medium text-blue-800 mb-2">Dica de Escrita:</h5>
-                      <p className="text-sm text-blue-700">{viewRedacao.comentario_admin}</p>
-                    </div>
-                  )}
-
-                  {viewRedacao.data_correcao && (
-                    <div className="text-sm text-gray-600">
-                      Corrigida em: {formatDate(viewRedacao.data_correcao)}
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              <Button 
-                onClick={() => copiarPromptCorrecao(viewRedacao)}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                Copiar texto para correção
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Formulário de correção */}
-      {(selectedRedacao || editingRedacao) && (
-        <Card className="border-redator-primary/30">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <CardTitle className="text-redator-primary">
-                {editingRedacao ? 'Editando Correção: ' : 'Corrigindo: '}
-                {selectedRedacao?.frase_tematica || editingRedacao?.frase_tematica}
-              </CardTitle>
-              
-              <Button 
-                onClick={() => copiarPromptCorrecao(selectedRedacao || editingRedacao!)}
-                variant="outline"
-                className="border-blue-300 text-blue-600 hover:bg-blue-50"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                Copiar para correção
-              </Button>
-            </div>
-            
-            <div className="text-xs text-gray-500">
-              Corrigindo redação ID: {selectedRedacao?.id || editingRedacao?.id}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Exibir o texto da redação */}
-            <div className="mb-6">
-              <h4 className="font-medium text-redator-primary mb-2">Texto da Redação:</h4>
-              <div className="bg-gray-50 p-4 rounded-lg border border-redator-accent/20 max-h-60 overflow-y-auto">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {selectedRedacao?.redacao_texto || editingRedacao?.redacao_texto}
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Campos de notas por competência */}
-              <div>
-                <h4 className="font-medium text-redator-primary mb-3">Notas por Competência (0 a 200 pontos cada):</h4>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {[
-                    { key: 'nota_c1', label: 'Competência 1' },
-                    { key: 'nota_c2', label: 'Competência 2' },
-                    { key: 'nota_c3', label: 'Competência 3' },
-                    { key: 'nota_c4', label: 'Competência 4' },
-                    { key: 'nota_c5', label: 'Competência 5' },
-                  ].map((comp) => (
-                    <div key={comp.key}>
-                      <label className="block text-sm font-medium text-redator-primary mb-2">
-                        {comp.label}
-                      </label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="200"
-                        step="1"
-                        placeholder="0-200"
-                        value={formData[comp.key as keyof typeof formData]}
-                        onChange={(e) => handleNotaChange(comp.key, e.target.value)}
-                        className="w-full border-redator-accent/30 focus:border-redator-accent bg-white"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Nota total */}
-              <div className="bg-redator-accent/5 p-4 rounded-lg border border-redator-accent/20">
-                <label className="block text-sm font-medium text-redator-primary mb-2">
-                  Nota Total (Calculada Automaticamente)
-                </label>
-                <div className="flex items-center gap-3">
-                  <Input
-                    type="text"
-                    value={`${formData.nota_total || '0'}/1000`}
-                    readOnly
-                    className="bg-white border-redator-accent/30 font-semibold text-lg text-redator-primary"
-                  />
-                  <Award className="w-6 h-6 text-redator-accent" />
-                </div>
-              </div>
-
-              {/* Comentário pedagógico */}
-              <div>
-                <label className="block text-sm font-medium text-redator-primary mb-1">
-                  Dica de Escrita / Comentário Pedagógico
-                </label>
-                <Textarea
-                  placeholder="Escreva aqui suas observações, dicas e orientações para o aluno..."
-                  value={formData.comentario_admin}
-                  onChange={(e) => setFormData(prev => ({ ...prev, comentario_admin: e.target.value }))}
-                  className="min-h-[120px] border-redator-accent/30 focus:border-redator-accent"
-                />
-              </div>
-
-              {/* Botões */}
-              <div className="flex gap-3">
-                <Button 
-                  type="submit" 
-                  disabled={corrigirMutation.isPending}
-                  className="bg-redator-primary hover:bg-redator-primary/90 text-white"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {corrigirMutation.isPending ? "Salvando..." : (editingRedacao ? "Salvar Alterações" : "Salvar Correção")}
-                </Button>
-                
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={resetForm}
-                  className="border-redator-accent/50"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 };
