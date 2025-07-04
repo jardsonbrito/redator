@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,13 +50,22 @@ export const useAulaVirtual = (turmaCode: string) => {
         const aula = data[0];
         console.log('Aula virtual encontrada:', aula);
 
-        // Verifica se a aula ainda está no período de exibição (até 1h após o fim)
-        const fimAula = parseISO(`${aula.data_aula}T${aula.horario_fim}`);
-        const fimEstendido = addHours(fimAula, 1);
-        
-        if (agora > fimEstendido) {
-          console.log('Aula virtual já encerrada há mais de 1h, não será exibida');
-          return null;
+        // Se for aula ao vivo, verificar status de transmissão
+        if (aula.eh_aula_ao_vivo) {
+          // Para aulas ao vivo, mostrar apenas se estiver agendada ou em transmissão
+          if (aula.status_transmissao === 'encerrada') {
+            console.log('Aula ao vivo encerrada, não será exibida');
+            return null;
+          }
+        } else {
+          // Para aulas normais, aplicar a lógica de tempo original
+          const fimAula = parseISO(`${aula.data_aula}T${aula.horario_fim}`);
+          const fimEstendido = addHours(fimAula, 1);
+          
+          if (agora > fimEstendido) {
+            console.log('Aula virtual já encerrada há mais de 1h, não será exibida');
+            return null;
+          }
         }
 
         return aula as AulaVirtual;

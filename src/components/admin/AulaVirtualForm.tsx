@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Video, Clock, Users, Link as LinkIcon } from "lucide-react";
+import { Video, Clock, Users, Link as LinkIcon, Radio } from "lucide-react";
 
 const turmasDisponiveis = [
   "Turma A", "Turma B", "Turma C", "Turma D", "Turma E"
@@ -27,7 +29,9 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     link_meet: "",
     abrir_aba_externa: false,
     permite_visitante: false,
-    ativo: true
+    ativo: true,
+    eh_aula_ao_vivo: false,
+    status_transmissao: 'agendada' as 'agendada' | 'em_transmissao' | 'encerrada'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +63,9 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         link_meet: "",
         abrir_aba_externa: false,
         permite_visitante: false,
-        ativo: true
+        ativo: true,
+        eh_aula_ao_vivo: false,
+        status_transmissao: 'agendada'
       });
       
       onSuccess?.();
@@ -225,6 +231,41 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
               onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ativo: checked }))}
             />
             <Label htmlFor="ativo">Aula ativa</Label>
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Switch
+                id="eh_aula_ao_vivo"
+                checked={formData.eh_aula_ao_vivo}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, eh_aula_ao_vivo: checked }))}
+              />
+              <Label htmlFor="eh_aula_ao_vivo" className="flex items-center gap-2">
+                <Radio className="w-4 h-4" />
+                Aula ao vivo (com controle de frequência)
+              </Label>
+            </div>
+
+            {formData.eh_aula_ao_vivo && (
+              <div>
+                <Label htmlFor="status_transmissao">Status da Transmissão</Label>
+                <Select
+                  value={formData.status_transmissao}
+                  onValueChange={(value: 'agendada' | 'em_transmissao' | 'encerrada') => 
+                    setFormData(prev => ({ ...prev, status_transmissao: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="agendada">Agendada</SelectItem>
+                    <SelectItem value="em_transmissao">Em Transmissão</SelectItem>
+                    <SelectItem value="encerrada">Encerrada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full">

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Video, Calendar, Clock, Users, ExternalLink, Trash2, Power, PowerOff, Edit } from "lucide-react";
+import { Video, Calendar, Clock, Users, ExternalLink, Trash2, Power, PowerOff, Edit, Radio } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface AulaVirtual {
@@ -21,6 +22,8 @@ interface AulaVirtual {
   abrir_aba_externa: boolean;
   ativo: boolean;
   criado_em: string;
+  eh_aula_ao_vivo?: boolean;
+  status_transmissao?: string;
 }
 
 export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit?: (aula: AulaVirtual) => void }) => {
@@ -131,11 +134,26 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
                   <TableRow key={aula.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{aula.titulo}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{aula.titulo}</p>
+                          {aula.eh_aula_ao_vivo && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Radio className="w-3 h-3 mr-1" />
+                              Ao Vivo
+                            </Badge>
+                          )}
+                        </div>
                         {aula.descricao && (
                           <p className="text-sm text-muted-foreground truncate max-w-[200px]">
                             {aula.descricao}
                           </p>
+                        )}
+                        {aula.eh_aula_ao_vivo && aula.status_transmissao && (
+                          <Badge variant="outline" className="text-xs mt-1">
+                            {aula.status_transmissao === 'agendada' && '📅 Agendada'}
+                            {aula.status_transmissao === 'em_transmissao' && '🔴 Em Transmissão'}
+                            {aula.status_transmissao === 'encerrada' && '⏹️ Encerrada'}
+                          </Badge>
                         )}
                       </div>
                     </TableCell>

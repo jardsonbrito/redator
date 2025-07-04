@@ -119,12 +119,14 @@ export type Database = {
           criado_em: string
           data_aula: string
           descricao: string | null
+          eh_aula_ao_vivo: boolean | null
           horario_fim: string
           horario_inicio: string
           id: string
           imagem_capa_url: string | null
           link_meet: string
           permite_visitante: boolean
+          status_transmissao: string | null
           titulo: string
           turmas_autorizadas: string[]
         }
@@ -135,12 +137,14 @@ export type Database = {
           criado_em?: string
           data_aula: string
           descricao?: string | null
+          eh_aula_ao_vivo?: boolean | null
           horario_fim: string
           horario_inicio: string
           id?: string
           imagem_capa_url?: string | null
           link_meet: string
           permite_visitante?: boolean
+          status_transmissao?: string | null
           titulo: string
           turmas_autorizadas?: string[]
         }
@@ -151,12 +155,14 @@ export type Database = {
           criado_em?: string
           data_aula?: string
           descricao?: string | null
+          eh_aula_ao_vivo?: boolean | null
           horario_fim?: string
           horario_inicio?: string
           id?: string
           imagem_capa_url?: string | null
           link_meet?: string
           permite_visitante?: boolean
+          status_transmissao?: string | null
           titulo?: string
           turmas_autorizadas?: string[]
         }

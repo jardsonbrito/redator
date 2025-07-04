@@ -1,4 +1,3 @@
-
 import { Video, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { usePresenca } from "./aula-virtual/usePresenca";
 import { AulaStatusBadge } from "./aula-virtual/AulaStatusBadge";
 import { AulaInfoGrid } from "./aula-virtual/AulaInfoGrid";
 import { PresencaDialog } from "./aula-virtual/PresencaDialog";
+import { AulaAoVivoCard } from "./aula-virtual/AulaAoVivoCard";
 import { AulaVirtualAtivaProps, AulaVirtual } from "./aula-virtual/types";
 
 export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
@@ -33,6 +33,11 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
   // Se não há aula ou está carregando, não renderiza nada
   if (isLoading || !aulaAtiva) {
     return null;
+  }
+
+  // Se for aula ao vivo, renderizar o componente específico
+  if (aulaAtiva.eh_aula_ao_vivo) {
+    return <AulaAoVivoCard aula={aulaAtiva} turmaCode={turmaCode} />;
   }
 
   const agora = new Date();

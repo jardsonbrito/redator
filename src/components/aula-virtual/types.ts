@@ -12,6 +12,8 @@ export interface AulaVirtual {
   abrir_aba_externa: boolean;
   permite_visitante: boolean;
   ativo: boolean;
+  eh_aula_ao_vivo?: boolean;
+  status_transmissao?: 'agendada' | 'em_transmissao' | 'encerrada';
 }
 
 export interface RegistroPresenca {
