@@ -291,11 +291,12 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
 
   return (
     <>
-      <div className="mb-8">
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl overflow-hidden">
+      {/* Container principal com visibilidade garantida */}
+      <div className="w-full block visible opacity-100 mb-8" style={{ display: 'block', visibility: 'visible', opacity: 1 }}>
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl overflow-visible">
           <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 p-1">
             <CardHeader className="bg-white/90 rounded-t-lg">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-2xl blur opacity-30"></div>
@@ -304,17 +305,17 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                     </div>
                   </div>
                   <div>
-                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                    <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                       📝 Minhas Redações
                     </CardTitle>
-                    <p className="text-muted-foreground font-medium">Acompanhe todas as suas redações corrigidas com segurança</p>
+                    <p className="text-muted-foreground font-medium text-sm sm:text-base">Acompanhe todas as suas redações corrigidas com segurança</p>
                   </div>
                 </div>
-                <Link to="/minhas-redacoes">
+                <Link to="/minhas-redacoes" className="shrink-0">
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30 hover:from-primary/20 hover:to-secondary/20 font-medium"
+                    className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30 hover:from-primary/20 hover:to-secondary/20 font-medium w-full sm:w-auto"
                   >
                     Ver Todas
                   </Button>
@@ -323,10 +324,10 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             </CardHeader>
           </div>
           
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-4 sm:p-6">
             {isLoading ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="mt-4 text-muted-foreground">Carregando redações com segurança...</p>
               </div>
             ) : !redacoesRecentes || redacoesRecentes.length === 0 ? (
@@ -338,45 +339,45 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                 </p>
               </div>
             ) : (
-              <>
+              <div className="space-y-4">
                 {redacoesRecentes.slice(0, 3).map((redacao) => (
                   <Card key={redacao.id} className="border border-primary/20 hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h4 className="font-bold text-lg text-primary mb-2 leading-tight">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-base sm:text-lg text-primary mb-2 leading-tight break-words">
                             {redacao.frase_tematica}
                           </h4>
                           
                           <div className="flex flex-wrap gap-2 mb-3">
-                            <Badge className="bg-green-100 text-green-800">
+                            <Badge className="bg-green-100 text-green-800 text-xs">
                               🔐 Corrigido
                             </Badge>
-                            <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
+                            <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
                               {getTipoEnvioLabel(redacao.tipo_envio)}
                             </Badge>
                           </div>
                           
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                            <div className="flex items-center gap-1">
-                              <User className="w-4 h-4" />
-                              {redacao.nome_aluno}
+                          <div className="flex flex-col xs:flex-row xs:items-center gap-2 xs:gap-4 text-xs sm:text-sm text-muted-foreground mb-3">
+                            <div className="flex items-center gap-1 min-w-0">
+                              <User className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+                              <span className="truncate">{redacao.nome_aluno}</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {format(new Date(redacao.data_envio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
+                              <span className="whitespace-nowrap">{format(new Date(redacao.data_envio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="ml-4 shrink-0">
+                        <div className="shrink-0 w-full sm:w-auto">
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="border-primary/30 hover:bg-primary/10"
+                            className="border-primary/30 hover:bg-primary/10 w-full sm:w-auto"
                             onClick={() => handleViewCorrection(redacao)}
                           >
-                            <Lock className="w-4 h-4 mr-1" />
+                            <Lock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                             Ver Correção
                           </Button>
                         </div>
@@ -390,14 +391,14 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                     <Link to="/minhas-redacoes">
                       <Button 
                         variant="outline"
-                        className="border-primary/30 hover:bg-primary/10"
+                        className="border-primary/30 hover:bg-primary/10 w-full sm:w-auto"
                       >
                         Ver todas as redações
                       </Button>
                     </Link>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </CardContent>
         </Card>

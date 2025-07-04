@@ -149,8 +149,10 @@ const Index = () => {
             {/* Mural de Avisos */}
             <MuralAvisos turmaCode={turmaCode} />
 
-            {/* Card "Minhas Redações" - SEMPRE FIXO E VISÍVEL */}
-            <MeusSimuladosFixo turmaCode={turmaCode} />
+            {/* Card "Minhas Redações" - SEMPRE FIXO E VISÍVEL - Garantir visibilidade total */}
+            <div className="w-full block visible opacity-100 mb-8">
+              <MeusSimuladosFixo turmaCode={turmaCode} />
+            </div>
 
             {/* Menu Principal Horizontal */}
             <MenuGrid 
