@@ -43,6 +43,7 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
         status_minha_correcao: item.status_minha_correcao as 'pendente' | 'incompleta' | 'corrigida'
       }));
 
+      console.log('Redações carregadas:', redacoesFormatadas);
       setRedacoes(redacoesFormatadas);
     } catch (error: any) {
       console.error("Erro ao buscar redações do corretor:", error);
@@ -65,8 +66,9 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
   };
 
   // Função para atualizar a lista após correção
-  const refreshRedacoes = () => {
-    fetchRedacoes();
+  const refreshRedacoes = async () => {
+    console.log('Atualizando lista de redações...');
+    await fetchRedacoes();
   };
 
   return {

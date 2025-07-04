@@ -116,6 +116,14 @@ export const FormularioCorrecaoCompleto = ({
         [`elogios_pontos_atencao_${prefixo}`]: elogiosEPontosAtencao.trim(),
       };
 
+      // Se a correção está sendo finalizada, marcar também como corrigida
+      if (status === 'corrigida') {
+        updateData.corrigida = true;
+        updateData.data_correcao = new Date().toISOString();
+      }
+
+      console.log('Salvando correção:', { tabela, updateData, redacaoId: redacao.id });
+
       const { error } = await supabase
         .from(tabela as any)
         .update(updateData)
@@ -130,8 +138,11 @@ export const FormularioCorrecaoCompleto = ({
           : "Você pode continuar a correção mais tarde.",
       });
 
+      // Aguardar um momento para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       if (onRefreshList) {
-        onRefreshList();
+        await onRefreshList();
       }
 
       onSucesso();

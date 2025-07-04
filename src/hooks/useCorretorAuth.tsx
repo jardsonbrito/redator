@@ -2,7 +2,6 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
 interface Corretor {
   id: string;
@@ -90,31 +89,29 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
     }
   };
 
-  const logout = async () => {
+  const logout = () => {
     try {
       // Limpar estado local
       setCorretor(null);
       localStorage.removeItem('corretor_session');
       
       // Limpar sessão do Supabase também
-      await supabase.auth.signOut();
+      supabase.auth.signOut();
       
       toast({
         title: "Logout realizado",
         description: "Até logo!",
       });
 
-      // Redirecionar para login após um pequeno delay
-      setTimeout(() => {
-        window.location.href = '/corretor/login';
-      }, 1000);
+      // Forçar redirecionamento imediato
+      window.location.replace('/corretor/login');
       
     } catch (error) {
       console.error("Erro no logout:", error);
       // Mesmo se der erro, forçar limpeza e redirecionamento
       setCorretor(null);
       localStorage.removeItem('corretor_session');
-      window.location.href = '/corretor/login';
+      window.location.replace('/corretor/login');
     }
   };
 

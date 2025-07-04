@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,7 +77,7 @@ export const MinhasRedacoes = () => {
 
   // Query SEGURA - NÃO carrega dados sensíveis automaticamente
   // Agora inclui AMBAS as tabelas: redacoes_enviadas E redacoes_simulado
-  const { data: redacoesTurma, isLoading, error } = useQuery({
+  const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
     queryKey: ['redacoes-usuario-basicas-completas', turmaCode, visitanteEmail],
     queryFn: async () => {
       console.log('🔒 Buscando redações SEM dados sensíveis (incluindo simulados)');
@@ -86,7 +85,7 @@ export const MinhasRedacoes = () => {
       if (userType === "aluno" && turmaCode) {
         console.log('👨‍🎓 Buscando redações básicas da turma:', turmaCode);
         
-        // Buscar da tabela redacoes_enviadas
+        // Buscar da tabela redacoes_enviadas - incluir TODAS as redações corrigidas
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -104,7 +103,7 @@ export const MinhasRedacoes = () => {
           `)
           .eq('turma', turmaCode)
           .neq('tipo_envio', 'visitante')
-          .eq('corrigida', true)
+          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida') // Buscar por qualquer indicação de correção
           .order('data_envio', { ascending: false });
 
         if (errorRegulares) {
@@ -125,7 +124,7 @@ export const MinhasRedacoes = () => {
             simulados!inner(frase_tematica)
           `)
           .eq('turma', turmaCode)
-          .eq('corrigida', true)
+          .or('corrigida.eq.true,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida') // Buscar por qualquer indicação de correção
           .order('data_envio', { ascending: false });
 
         if (errorSimulado) {
@@ -137,7 +136,12 @@ export const MinhasRedacoes = () => {
         
         // Adicionar redações regulares
         if (redacoesRegulares) {
-          todasRedacoes.push(...redacoesRegulares);
+          const regularesFormatadas = redacoesRegulares.map(redacao => ({
+            ...redacao,
+            corrigida: true, // Forçar como corrigida já que foi filtrada
+            status: 'corrigida'
+          }));
+          todasRedacoes.push(...regularesFormatadas);
         }
 
         // Adicionar redações de simulado (formatadas)
@@ -149,8 +153,8 @@ export const MinhasRedacoes = () => {
             email_aluno: simulado.email_aluno,
             tipo_envio: 'simulado',
             data_envio: simulado.data_envio,
-            status: 'corrigido',
-            corrigida: simulado.corrigida,
+            status: 'corrigida',
+            corrigida: true,
             nota_total: simulado.nota_total,
             comentario_admin: null,
             data_correcao: simulado.data_correcao
@@ -161,7 +165,7 @@ export const MinhasRedacoes = () => {
         // Ordenar por data de envio (mais recente primeiro)
         todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
         
-        console.log('✅ Total de redações encontradas:', todasRedacoes.length);
+        console.log('✅ Total de redações corrigidas encontradas:', todasRedacoes.length);
         return todasRedacoes;
         
       } else if (userType === "visitante" && visitanteEmail) {
@@ -183,7 +187,7 @@ export const MinhasRedacoes = () => {
           `)
           .eq('email_aluno', visitanteEmail)
           .eq('tipo_envio', 'visitante')
-          .eq('corrigida', true)
+          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
           .order('data_envio', { ascending: false });
         
         if (error) {
@@ -198,7 +202,8 @@ export const MinhasRedacoes = () => {
       return [];
     },
     enabled: !!(turmaCode || visitanteEmail),
-    staleTime: 5 * 60 * 1000, // Cache por 5 minutos
+    staleTime: 30 * 1000, // Cache por apenas 30 segundos para garantir dados atualizados
+    refetchInterval: 60 * 1000, // Recarregar a cada 1 minuto
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
@@ -434,6 +439,9 @@ export const MinhasRedacoes = () => {
         <CardContent className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600">❌ Erro ao carregar suas redações. Tente novamente.</p>
+          <Button onClick={() => refetch()} className="mt-2">
+            Tentar novamente
+          </Button>
         </CardContent>
       </Card>
     );
@@ -458,6 +466,9 @@ export const MinhasRedacoes = () => {
           <p className="text-sm text-redator-accent/70">
             Suas redações corrigidas aparecerão aqui quando disponíveis!
           </p>
+          <Button onClick={() => refetch()} className="mt-4">
+            Verificar novamente
+          </Button>
         </CardContent>
       </Card>
     );
@@ -474,6 +485,9 @@ export const MinhasRedacoes = () => {
               `🔐 Minhas Redações (${redacoesTurma.length})`
             }
           </h2>
+          <Button onClick={() => refetch()} variant="outline" size="sm">
+            Atualizar
+          </Button>
         </div>
         
         {/* Layout compacto para móveis */}
