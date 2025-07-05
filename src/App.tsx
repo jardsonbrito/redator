@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { StudentAuthProvider } from "@/hooks/useStudentAuth";
 import Welcome from "./pages/Welcome";
 import Student from "./pages/Student";
 import { Redacoes } from "./pages/admin/Redacoes";
@@ -26,31 +27,33 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Welcome />} />
-            <Route path="/app" element={<Student />} />
-            <Route path="/envie-redacao" element={<EnvieRedacao />} />
-            <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
-            
-            {/* Admin Routes */}
-            <Route path="/admin" element={<Dashboard />} />
-            <Route path="/admin/alunos" element={<AdminAlunos />} />
-            <Route path="/admin/creditos" element={<AdminCreditos />} />
-            <Route path="/admin/redacoes" element={<Redacoes />} />
-            <Route path="/admin/temas" element={<AdminTemas />} />
-            <Route path="/admin/aulas" element={<AdminAulas />} />
-            <Route path="/admin/radar" element={<AdminRadar />} />
-            <Route path="/admin/biblioteca" element={<AdminBiblioteca />} />
-            <Route path="/admin/videos" element={<AdminVideos />} />
-            <Route path="/admin/corretores" element={<AdminCorretores />} />
-            <Route path="/admin/avisos" element={<AdminAvisos />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <StudentAuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Welcome />} />
+              <Route path="/app" element={<Student />} />
+              <Route path="/envie-redacao" element={<EnvieRedacao />} />
+              <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<Dashboard />} />
+              <Route path="/admin/alunos" element={<AdminAlunos />} />
+              <Route path="/admin/creditos" element={<AdminCreditos />} />
+              <Route path="/admin/redacoes" element={<Redacoes />} />
+              <Route path="/admin/temas" element={<AdminTemas />} />
+              <Route path="/admin/aulas" element={<AdminAulas />} />
+              <Route path="/admin/radar" element={<AdminRadar />} />
+              <Route path="/admin/biblioteca" element={<AdminBiblioteca />} />
+              <Route path="/admin/videos" element={<AdminVideos />} />
+              <Route path="/admin/corretores" element={<AdminCorretores />} />
+              <Route path="/admin/avisos" element={<AdminAvisos />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </StudentAuthProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
