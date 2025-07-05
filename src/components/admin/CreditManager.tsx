@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
-import { Coins, User, Plus, Minus, Search } from "lucide-react";
+import { Coins, User, Plus, Minus, Search, Loader2 } from "lucide-react";
 
 interface Student {
   id: string;
@@ -27,8 +27,9 @@ export const CreditManager = ({ turmaFilter }: CreditManagerProps) => {
   const [creditAmount, setCreditAmount] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
-  const { addCredits, loading } = useCredits();
+  const { addCredits, loading: creditsLoading } = useCredits();
   const queryClient = useQueryClient();
 
   const { data: students, isLoading } = useQuery({
@@ -77,14 +78,33 @@ export const CreditManager = ({ turmaFilter }: CreditManagerProps) => {
       return;
     }
 
+    setUpdating(true);
     const finalAmount = operation === 'subtract' ? -amount : amount;
+    
+    console.log('🎯 Tentando atualizar créditos:', {
+      student: student.nome,
+      email: student.email,
+      operacao: operation,
+      valor: finalAmount
+    });
+
     const success = await addCredits(student.email, finalAmount);
     
     if (success) {
       setCreditAmount("");
       setSelectedStudent(null);
-      queryClient.invalidateQueries({ queryKey: ['students-credits', turmaFilter] });
+      
+      // Aguardar um pouco e recarregar os dados
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['students-credits', turmaFilter] });
+      }, 500);
+      
+      console.log('✅ Créditos atualizados com sucesso!');
+    } else {
+      console.error('❌ Falha ao atualizar créditos');
     }
+    
+    setUpdating(false);
   };
 
   const handleSetCredits = async (student: Student) => {
@@ -101,13 +121,19 @@ export const CreditManager = ({ turmaFilter }: CreditManagerProps) => {
     const currentCredits = student.creditos || 0;
     const difference = newTotal - currentCredits;
     
+    setUpdating(true);
     const success = await addCredits(student.email, difference);
     
     if (success) {
       setCreditAmount("");
       setSelectedStudent(null);
-      queryClient.invalidateQueries({ queryKey: ['students-credits', turmaFilter] });
+      
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['students-credits', turmaFilter] });
+      }, 500);
     }
+    
+    setUpdating(false);
   };
 
   if (isLoading) {
@@ -168,6 +194,7 @@ export const CreditManager = ({ turmaFilter }: CreditManagerProps) => {
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedStudent(student)}
+                    disabled={updating}
                   >
                     Editar
                   </Button>
@@ -185,7 +212,12 @@ export const CreditManager = ({ turmaFilter }: CreditManagerProps) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm text-gray-600">Créditos atuais: <strong>{selectedStudent.creditos || 0}</strong></p>
+              <p className="text-sm text-gray-600">
+                Créditos atuais: <strong>{selectedStudent.creditos || 0}</strong>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Email: {selectedStudent.email}
+              </p>
             </div>
             
             <div>
@@ -197,35 +229,47 @@ export const CreditManager = ({ turmaFilter }: CreditManagerProps) => {
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(e.target.value)}
                 placeholder="Digite a quantidade"
+                disabled={updating}
               />
             </div>
             
             <div className="flex gap-2">
               <Button
                 onClick={() => handleUpdateCredits(selectedStudent, 'add')}
-                disabled={loading}
+                disabled={creditsLoading || updating}
                 className="flex-1"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                {updating ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4 mr-2" />
+                )}
                 Adicionar
               </Button>
               
               <Button
                 onClick={() => handleUpdateCredits(selectedStudent, 'subtract')}
                 variant="destructive"
-                disabled={loading}
+                disabled={creditsLoading || updating}
                 className="flex-1"
               >
-                <Minus className="w-4 h-4 mr-2" />
+                {updating ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Minus className="w-4 h-4 mr-2" />
+                )}
                 Subtrair
               </Button>
               
               <Button
                 onClick={() => handleSetCredits(selectedStudent)}
                 variant="secondary"
-                disabled={loading}
+                disabled={creditsLoading || updating}
                 className="flex-1"
               >
+                {updating ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
                 Definir Total
               </Button>
             </div>
@@ -237,6 +281,7 @@ export const CreditManager = ({ turmaFilter }: CreditManagerProps) => {
                 setCreditAmount("");
               }}
               className="w-full"
+              disabled={updating}
             >
               Cancelar
             </Button>

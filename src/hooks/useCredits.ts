@@ -56,7 +56,7 @@ export const useCredits = () => {
       
       const normalizedEmail = userEmail.trim().toLowerCase();
       
-      // Buscar o usuário pelo email
+      // Buscar o usuário pelo email primeiro
       const { data: user, error: userError } = await supabase
         .from('profiles')
         .select('id, creditos, nome, email')
@@ -66,39 +66,95 @@ export const useCredits = () => {
 
       if (userError) {
         console.error('❌ Erro ao buscar usuário:', userError);
+        toast({
+          title: "Erro ao buscar usuário",
+          description: userError.message,
+          variant: "destructive"
+        });
         return false;
       }
 
       if (!user) {
         console.error('❌ Usuário não encontrado para email:', normalizedEmail);
+        toast({
+          title: "Usuário não encontrado",
+          description: `Nenhum aluno encontrado com o email: ${normalizedEmail}`,
+          variant: "destructive"
+        });
         return false;
       }
 
-      const newCredits = Math.max(0, (user.creditos || 0) + amount);
+      const currentCredits = user.creditos || 0;
+      const newCredits = Math.max(0, currentCredits + amount);
       
-      // Atualizar créditos diretamente no banco
-      const { error: updateError } = await supabase
+      console.log('🔄 Atualizando créditos:', {
+        usuarioId: user.id,
+        creditosAtuais: currentCredits,
+        valorAdicionado: amount,
+        novoTotal: newCredits
+      });
+
+      // Usar transação para garantir consistência
+      const { data: updateResult, error: updateError } = await supabase
         .from('profiles')
-        .update({ creditos: newCredits })
-        .eq('id', user.id);
+        .update({ 
+          creditos: newCredits,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+        .select('creditos, nome');
 
       if (updateError) {
         console.error('❌ Erro ao atualizar créditos:', updateError);
-        throw updateError;
+        toast({
+          title: "Erro ao atualizar créditos",
+          description: updateError.message,
+          variant: "destructive"
+        });
+        return false;
       }
 
-      toast({
-        title: "Créditos atualizados",
-        description: `${amount > 0 ? 'Adicionados' : 'Removidos'} ${Math.abs(amount)} créditos para ${user.nome}. Total: ${newCredits} créditos.`
-      });
+      if (!updateResult || updateResult.length === 0) {
+        console.error('❌ Nenhum registro foi atualizado');
+        toast({
+          title: "Erro na atualização",
+          description: "Nenhum registro foi modificado. Verifique as permissões.",
+          variant: "destructive"
+        });
+        return false;
+      }
 
-      console.log('✅ Créditos atualizados com sucesso. Novo saldo:', newCredits);
-      return true;
+      console.log('✅ Créditos atualizados com sucesso:', updateResult[0]);
+
+      // Verificar se a atualização foi persistida
+      const { data: verification } = await supabase
+        .from('profiles')
+        .select('creditos')
+        .eq('id', user.id)
+        .single();
+
+      if (verification && verification.creditos === newCredits) {
+        toast({
+          title: "Créditos atualizados com sucesso!",
+          description: `${amount > 0 ? 'Adicionados' : 'Removidos'} ${Math.abs(amount)} créditos para ${user.nome}. Total atual: ${newCredits} créditos.`
+        });
+        console.log('✅ Verificação confirmada - créditos persistidos:', verification.creditos);
+        return true;
+      } else {
+        console.error('❌ Falha na verificação de persistência');
+        toast({
+          title: "Erro de consistência",
+          description: "Os créditos podem não ter sido salvos corretamente.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
     } catch (error: any) {
-      console.error('❌ Erro ao gerenciar créditos:', error);
+      console.error('❌ Erro geral ao gerenciar créditos:', error);
       toast({
-        title: "Erro ao atualizar créditos",
-        description: error.message || "Ocorreu um erro inesperado.",
+        title: "Erro inesperado",
+        description: error.message || "Ocorreu um erro ao atualizar os créditos.",
         variant: "destructive"
       });
       return false;
@@ -130,16 +186,14 @@ export const useCredits = () => {
     }
   };
 
-  // Função corrigida para consumir créditos por email
   const consumeCreditsByEmail = async (email: string, amount: number): Promise<boolean> => {
     setLoading(true);
     try {
       console.log('🔥 Consumindo créditos por email:', { email, amount });
       
-      // Normalizar o email
       const normalizedEmail = email.trim().toLowerCase();
       
-      // Buscar o usuário pelo email usando ilike para busca case-insensitive
+      // Buscar o usuário pelo email
       const { data: user, error: userError } = await supabase
         .from('profiles')
         .select('id, creditos, nome, email')
@@ -165,11 +219,15 @@ export const useCredits = () => {
         return false;
       }
 
-      // Consumir créditos diretamente no banco
-      const newCredits = (user.creditos || 0) - amount;
+      // Consumir créditos
+      const newCredits = Math.max(0, (user.creditos || 0) - amount);
+      
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ creditos: newCredits })
+        .update({ 
+          creditos: newCredits,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', user.id);
 
       if (updateError) {

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Users, FileText, BookOpen, Calendar, MessageSquare, Video, Library, Target, Radar, UserCheck, Menu, X } from "lucide-react";
+import { LogOut, User, Users, FileText, BookOpen, Calendar, MessageSquare, Video, Library, Target, Radar, UserCheck, Menu, X, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -17,17 +17,17 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const menuItems = [
+    { icon: Home, label: "Home", path: "/admin" },
     { icon: Users, label: "Alunos", path: "/admin/alunos" },
     { icon: Target, label: "Créditos", path: "/admin/creditos" },
     { icon: FileText, label: "Redações", path: "/admin/redacoes" },
     { icon: BookOpen, label: "Temas", path: "/admin/temas" },
     { icon: Calendar, label: "Aulas", path: "/admin/aulas" },
-    { icon: MessageSquare, label: "Avisos", path: "/admin/avisos" },
-    { icon: Video, label: "Vídeos", path: "/admin/videos" },
-    { icon: Library, label: "Biblioteca", path: "/admin/biblioteca" },
-    { icon: Target, label: "Exercícios", path: "/admin/exercicios" },
     { icon: Radar, label: "Radar", path: "/admin/radar" },
+    { icon: Library, label: "Biblioteca", path: "/admin/biblioteca" },
+    { icon: Video, label: "Videoteca", path: "/admin/videos" },
     { icon: UserCheck, label: "Corretores", path: "/admin/corretores" },
+    { icon: MessageSquare, label: "Avisos", path: "/admin/avisos" },
   ];
 
   const handleLogout = () => {
@@ -61,19 +61,13 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
               <h1 className="text-base sm:text-xl font-bold text-redator-primary truncate">
                 Painel do Administrador
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                Seja bem-vindo, {user?.email || 'Administrador'}
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Seja bem-vindo, Jardson Brito (jardsonbrito@gmail.com)
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {!isMobile && (
-              <div className="flex items-center gap-2 text-xs sm:text-sm">
-                <User className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="max-w-32 sm:max-w-none truncate">{user?.email}</span>
-              </div>
-            )}
             <Button variant="outline" onClick={handleLogout} size="sm" className="px-2 sm:px-4">
               <LogOut className="w-4 h-4 sm:mr-2" />
               {!isMobile && <span>Sair</span>}

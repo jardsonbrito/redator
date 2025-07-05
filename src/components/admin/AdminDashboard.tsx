@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Clock, CheckCircle, AlertTriangle, Trophy, Users, GraduationCap, TrendingUp } from "lucide-react";
+import { FileText, Clock, CheckCircle, Users, GraduationCap, TrendingUp, Trophy, AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardMetrics {
   totalRedacoes: number;
@@ -16,6 +17,7 @@ interface DashboardMetrics {
 }
 
 export const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalRedacoes: 0,
     redacoesPendentes: 0,
@@ -117,6 +119,26 @@ export const AdminDashboard = () => {
     fetchMetrics();
   }, []);
 
+  const handleCardClick = (type: string) => {
+    switch (type) {
+      case 'redacoes':
+        navigate('/admin/redacoes');
+        break;
+      case 'pendentes':
+        navigate('/admin/redacoes?filter=pendentes');
+        break;
+      case 'corrigidas':
+        navigate('/admin/redacoes?filter=corrigidas');
+        break;
+      case 'turmas':
+        navigate('/admin/alunos');
+        break;
+      case 'corretores':
+        navigate('/admin/corretores');
+        break;
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -128,114 +150,136 @@ export const AdminDashboard = () => {
     );
   }
 
-  const metricsCards = [
-    {
-      title: "Redações Enviadas",
-      value: metrics.totalRedacoes,
-      icon: FileText,
-      color: "bg-blue-50 text-blue-600"
-    },
-    {
-      title: "Pendentes de Correção",
-      value: metrics.redacoesPendentes,
-      icon: Clock,
-      color: "bg-yellow-50 text-yellow-600"
-    },
-    {
-      title: "Corrigidas",
-      value: metrics.redacoesCorrigidas,
-      icon: CheckCircle,
-      color: "bg-green-50 text-green-600"
-    },
-    {
-      title: "Corretores Ativos",
-      value: metrics.corretoresAtivos,
-      icon: Users,
-      color: "bg-purple-50 text-purple-600"
-    },
-    {
-      title: "Turmas Cadastradas",
-      value: metrics.turmasCadastradas,
-      icon: GraduationCap,
-      color: "bg-indigo-50 text-indigo-600"
-    },
-    {
-      title: "Média Geral",
-      value: `${metrics.mediaGeral} pts`,
-      icon: TrendingUp,
-      color: "bg-gray-50 text-gray-600"
-    }
-  ];
-
   return (
     <div className="space-y-6">
-      {/* Saudação */}
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold text-gray-900">
-          Olá, Administrador!
-        </h2>
-        <p className="text-gray-600">
-          Bem-vindo ao Painel do Administrador
-        </p>
-      </div>
-
-      {/* Métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {metricsCards.map((metric, index) => {
-          const Icon = metric.icon;
-          return (
-            <Card key={index} className="hover:shadow-lg transition-all duration-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-3 text-sm font-medium">
-                  <div className={`p-2 rounded-lg ${metric.color}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  {metric.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900">
-                  {metric.value}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Destaques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="hover:shadow-lg transition-all duration-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-green-700">
-              <Trophy className="w-5 h-5" />
-              Maior Nota
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {metrics.maiorNota.nota} pontos
+      {/* Mini cards superiores */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="hover:shadow-md transition-all duration-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="w-8 h-8 text-blue-600" />
+              <div>
+                <p className="text-2xl font-bold text-blue-600">{metrics.mediaGeral}</p>
+                <p className="text-sm text-gray-600">Média Geral</p>
+              </div>
             </div>
-            <p className="text-sm text-gray-600">
-              {metrics.maiorNota.aluno}
-            </p>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-all duration-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-orange-700">
-              <AlertTriangle className="w-5 h-5" />
-              Menor Nota
+        <Card className="hover:shadow-md transition-all duration-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Trophy className="w-8 h-8 text-green-600" />
+              <div>
+                <p className="text-lg font-bold text-green-600">{metrics.maiorNota.nota}</p>
+                <p className="text-xs text-gray-600">Maior Nota - {metrics.maiorNota.aluno}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-all duration-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-8 h-8 text-orange-600" />
+              <div>
+                <p className="text-lg font-bold text-orange-600">{metrics.menorNota.nota}</p>
+                <p className="text-xs text-gray-600">Menor Nota - {metrics.menorNota.aluno}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cards principais clicáveis */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105"
+          onClick={() => handleCardClick('redacoes')}
+        >
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-3 text-blue-700">
+              <FileText className="w-6 h-6" />
+              Redações Enviadas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {metrics.menorNota.nota} pontos
+            <div className="text-3xl font-bold text-blue-600 mb-2">
+              {metrics.totalRedacoes}
             </div>
-            <p className="text-sm text-gray-600">
-              {metrics.menorNota.aluno}
-            </p>
+            <p className="text-sm text-gray-600">Clique para ver lista filtrável</p>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105"
+          onClick={() => handleCardClick('pendentes')}
+        >
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-3 text-yellow-700">
+              <Clock className="w-6 h-6" />
+              Pendentes de Correção
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-yellow-600 mb-2">
+              {metrics.redacoesPendentes}
+            </div>
+            <p className="text-sm text-gray-600">Filtrar por turma e mês</p>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105"
+          onClick={() => handleCardClick('corrigidas')}
+        >
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-3 text-green-700">
+              <CheckCircle className="w-6 h-6" />
+              Redações Corrigidas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600 mb-2">
+              {metrics.redacoesCorrigidas}
+            </div>
+            <p className="text-sm text-gray-600">Ver por turma, mês e corretor</p>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105"
+          onClick={() => handleCardClick('turmas')}
+        >
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-3 text-purple-700">
+              <GraduationCap className="w-6 h-6" />
+              Turmas Cadastradas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-purple-600 mb-2">
+              {metrics.turmasCadastradas}
+            </div>
+            <p className="text-sm text-gray-600">Ver todas as turmas registradas</p>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105"
+          onClick={() => handleCardClick('corretores')}
+        >
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-3 text-indigo-700">
+              <Users className="w-6 h-6" />
+              Corretores Ativos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-indigo-600 mb-2">
+              {metrics.corretoresAtivos}
+            </div>
+            <p className="text-sm text-gray-600">Ver correções realizadas</p>
           </CardContent>
         </Card>
       </div>
