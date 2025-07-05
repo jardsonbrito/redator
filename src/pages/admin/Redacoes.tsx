@@ -1,6 +1,7 @@
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { RedacoesEnviadasList } from "@/components/admin/RedacoesEnviadasList";
+import { BackButton } from "@/components/admin/BackButton";
 import { useSearchParams } from "react-router-dom";
 
 export const Redacoes = () => {
@@ -16,6 +17,7 @@ export const Redacoes = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        <BackButton />
         <div>
           <h1 className="text-3xl font-bold">Gerenciar Redações</h1>
           <p className="text-gray-600">Visualize e gerencie todas as redações enviadas por alunos</p>

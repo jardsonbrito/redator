@@ -1,30 +1,42 @@
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bookmark } from "lucide-react";
+import { TemaList } from "@/components/admin/TemaList";
+import { TemaForm } from "@/components/admin/TemaForm";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 
 const AdminTemas = () => {
+  const [showForm, setShowForm] = useState(false);
+
+  const handleCreate = () => {
+    setShowForm(true);
+  };
+
+  const handleClose = () => {
+    setShowForm(false);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Temas</h2>
-          <p className="text-gray-600">Criar e gerenciar temas de redação</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Temas</h2>
+            <p className="text-gray-600">Crie e gerencie temas de redação</p>
+          </div>
+          
+          <Button onClick={handleCreate} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Novo Tema
+          </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bookmark className="w-5 h-5" />
-              Temas de Redação
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Sistema de gerenciamento de temas em desenvolvimento.
-            </p>
-          </CardContent>
-        </Card>
+        {showForm ? (
+          <TemaForm />
+        ) : (
+          <TemaList />
+        )}
       </div>
     </AdminLayout>
   );

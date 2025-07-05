@@ -34,19 +34,6 @@ export const RedacoesEnviadasList = ({ filtroStatus, titulo }: RedacoesEnviadasL
     return <Badge className="bg-yellow-600 text-white">Pendente</Badge>;
   };
 
-  const getTipoEnvioBadge = (tipoEnvio: string) => {
-    const tipoMap = {
-      'regular': { label: 'Regular', color: 'bg-blue-100 text-blue-800' },
-      'simulado': { label: 'Simulado', color: 'bg-orange-100 text-orange-800' },
-      'exercicio': { label: 'Exercício', color: 'bg-purple-100 text-purple-800' },
-      'visitante': { label: 'Avulsa', color: 'bg-gray-100 text-gray-800' }
-    };
-    
-    const tipo = tipoMap[tipoEnvio as keyof typeof tipoMap] || { label: tipoEnvio, color: 'bg-gray-100 text-gray-800' };
-    
-    return <Badge className={tipo.color}>{tipo.label}</Badge>;
-  };
-
   const getCorretorInfo = (redacao: any) => {
     const corretores = [];
     if (redacao.corretor_nome_1) corretores.push(redacao.corretor_nome_1);
@@ -98,10 +85,9 @@ export const RedacoesEnviadasList = ({ filtroStatus, titulo }: RedacoesEnviadasL
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
                           <Badge variant="outline">{redacao.turma}</Badge>
                           {getStatusBadge(redacao)}
-                          {getTipoEnvioBadge(redacao.tipo_envio)}
                           {redacao.nota_total && (
                             <Badge className="bg-blue-600 text-white">
                               Nota: {redacao.nota_total}/1000

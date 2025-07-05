@@ -1,30 +1,42 @@
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Video } from "lucide-react";
+import { VideoList } from "@/components/admin/VideoList";
+import { VideoForm } from "@/components/admin/VideoForm";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 
 const AdminVideos = () => {
+  const [showForm, setShowForm] = useState(false);
+
+  const handleCreate = () => {
+    setShowForm(true);
+  };
+
+  const handleClose = () => {
+    setShowForm(false);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Videoteca</h2>
-          <p className="text-gray-600">Vídeos educacionais e aulas gravadas</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Vídeos</h2>
+            <p className="text-gray-600">Crie e gerencie biblioteca de vídeos</p>
+          </div>
+          
+          <Button onClick={handleCreate} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Novo Vídeo
+          </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Video className="w-5 h-5" />
-              Videoteca
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Sistema de gerenciamento de vídeos em desenvolvimento.
-            </p>
-          </CardContent>
-        </Card>
+        {showForm ? (
+          <VideoForm />
+        ) : (
+          <VideoList />
+        )}
       </div>
     </AdminLayout>
   );

@@ -94,16 +94,16 @@ const Welcome = () => {
           <div className="flex justify-center mb-6">
             <img 
               src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" 
-              alt="Logo do App do Redator" 
-              className="w-24 h-24 object-contain" 
+              alt="Logo da plataforma" 
+              className="w-20 h-20 object-contain" 
             />
           </div>
           
-          <h1 className="text-3xl font-bold text-redator-primary mb-2">
-            App do Redator
+          <h1 className="text-2xl font-bold text-redator-primary mb-2">
+            Bem-vindo(a) à nossa plataforma
           </h1>
-          <p className="text-lg text-redator-accent font-medium mb-8">
-            Redação na Prática, Aprovação na Certa!
+          <p className="text-sm text-redator-accent mb-8">
+            Antes de entrar, selecione o tipo de perfil e em seguida preencha os dados solicitados.
           </p>
         </div>
 

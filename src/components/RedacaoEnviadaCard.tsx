@@ -1,8 +1,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { CalendarDays, FileText, Star, MessageSquare, Clock } from "lucide-react";
+import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock } from "lucide-react";
 
 interface RedacaoEnviadaCardProps {
   redacao: {
@@ -38,10 +39,9 @@ interface RedacaoEnviadaCardProps {
     comentario_c5_corretor_2?: string | null;
     elogios_pontos_atencao_corretor_2?: string | null;
   };
-  showStudentInfo?: boolean; // New prop to control student info display
 }
 
-export const RedacaoEnviadaCard = ({ redacao, showStudentInfo = true }: RedacaoEnviadaCardProps) => {
+export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -130,25 +130,34 @@ export const RedacaoEnviadaCard = ({ redacao, showStudentInfo = true }: RedacaoE
           </div>
         </CardHeader>
         
-        {showStudentInfo && (
-          <CardContent className="pt-0">
-            {/* Informações do aluno - layout mobile melhorado */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-primary shrink-0" />
-                <span className="font-medium">Enviado:</span>
-                <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
-              </div>
-              {redacao.data_correcao && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-primary shrink-0" />
-                  <span className="font-medium">Corrigido:</span>
-                  <span className="text-xs sm:text-sm">{formatDate(redacao.data_correcao)}</span>
-                </div>
-              )}
+        <CardContent className="pt-0">
+          {/* Informações do aluno - layout mobile melhorado */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">Aluno:</span>
+              <span className="truncate">{redacao.nome_aluno}</span>
             </div>
-          </CardContent>
-        )}
+            
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">E-mail:</span>
+              <span className="truncate text-xs sm:text-sm">{redacao.email_aluno}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">Turma:</span>
+              <span>{redacao.turma}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">Enviado:</span>
+              <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       {/* Texto da redação - otimizado para mobile */}
@@ -172,17 +181,25 @@ export const RedacaoEnviadaCard = ({ redacao, showStudentInfo = true }: RedacaoE
       {redacao.corrigida && (
         <Card className="border-green-200 bg-green-50/50">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-green-800">
-              <Star className="w-5 h-5" />
-              Correção Detalhada
-            </CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-lg text-green-800">
+                <Star className="w-5 h-5" />
+                Correção Detalhada
+              </CardTitle>
+              {redacao.data_correcao && (
+                <div className="flex items-center gap-2 text-sm text-green-700">
+                  <Clock className="w-4 h-4" />
+                  Corrigido em: {formatDate(redacao.data_correcao)}
+                </div>
+              )}
+            </div>
           </CardHeader>
 
           <CardContent className="space-y-4 sm:space-y-6">
             {/* Notas por competência - grid responsivo */}
             <div>
               <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-                <Star className="w-4 h-4" />
+                <GraduationCap className="w-4 h-4" />
                 Notas por Competência
               </h3>
               
@@ -218,7 +235,7 @@ export const RedacaoEnviadaCard = ({ redacao, showStudentInfo = true }: RedacaoE
                 <div>
                   <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
-                    💬 Comentários Pedagógicos por Competência
+                    Comentários Pedagógicos por Competência
                   </h3>
                   <div className="space-y-4">
                     {comentariosPedagogicos.map(({ competencia, comentario1, comentario2 }) => (
@@ -228,13 +245,13 @@ export const RedacaoEnviadaCard = ({ redacao, showStudentInfo = true }: RedacaoE
                         </h4>
                         {comentario1 && (
                           <div className="mb-2">
-                            <span className="text-xs text-green-600 font-medium">📝 Corretor 1:</span>
+                            <span className="text-xs text-green-600 font-medium">Corretor 1:</span>
                             <p className="text-sm text-gray-700 mt-1">{comentario1}</p>
                           </div>
                         )}
                         {comentario2 && (
                           <div>
-                            <span className="text-xs text-green-600 font-medium">📝 Corretor 2:</span>
+                            <span className="text-xs text-green-600 font-medium">Corretor 2:</span>
                             <p className="text-sm text-gray-700 mt-1">{comentario2}</p>
                           </div>
                         )}
@@ -252,18 +269,18 @@ export const RedacaoEnviadaCard = ({ redacao, showStudentInfo = true }: RedacaoE
                 <div>
                   <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
                     <Star className="w-4 h-4" />
-                    🌟 Elogios e Pontos de Atenção
+                    Elogios e Pontos de Atenção
                   </h3>
                   <div className="space-y-3">
                     {elogios1 && (
                       <div className="bg-white border border-green-200 rounded-lg p-4">
-                        <span className="text-xs text-green-600 font-medium">🎯 Corretor 1:</span>
+                        <span className="text-xs text-green-600 font-medium">Corretor 1:</span>
                         <p className="text-sm text-gray-700 mt-1">{elogios1}</p>
                       </div>
                     )}
                     {elogios2 && (
                       <div className="bg-white border border-green-200 rounded-lg p-4">
-                        <span className="text-xs text-green-600 font-medium">🎯 Corretor 2:</span>
+                        <span className="text-xs text-green-600 font-medium">Corretor 2:</span>
                         <p className="text-sm text-gray-700 mt-1">{elogios2}</p>
                       </div>
                     )}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Calendar, Eye, ArrowLeft, Search, Filter, FolderOpen, User, Star } from "lucide-react";
+import { FileText, Calendar, Eye, ArrowLeft, Search, Filter, FolderOpen, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
 import { Link } from "react-router-dom";
@@ -36,18 +37,6 @@ type RedacaoTurma = {
   nota_c4?: number | null;
   nota_c5?: number | null;
   corretor_nome?: string;
-  comentario_c1_corretor_1?: string | null;
-  comentario_c2_corretor_1?: string | null;
-  comentario_c3_corretor_1?: string | null;
-  comentario_c4_corretor_1?: string | null;
-  comentario_c5_corretor_1?: string | null;
-  elogios_pontos_atencao_corretor_1?: string | null;
-  comentario_c1_corretor_2?: string | null;
-  comentario_c2_corretor_2?: string | null;
-  comentario_c3_corretor_2?: string | null;
-  comentario_c4_corretor_2?: string | null;
-  comentario_c5_corretor_2?: string | null;
-  elogios_pontos_atencao_corretor_2?: string | null;
 };
 
 export default function MinhasRedacoesList() {
@@ -156,35 +145,7 @@ export default function MinhasRedacoesList() {
       if (redacoesRegulares) {
         const regularesFormatadas = redacoesRegulares.map(redacao => ({
           ...redacao,
-          // Determinar nome correto do aluno
-          nome_aluno: (() => {
-            if (userType === "visitante" && visitanteData) {
-              try {
-                const dados = JSON.parse(visitanteData);
-                return dados.nome || redacao.nome_aluno;
-              } catch {
-                return redacao.nome_aluno;
-              }
-            }
-            return redacao.nome_aluno;
-          })(),
-          // Determinar frase temática correta
-          frase_tematica: redacao.frase_tematica === "Tema livre" ? "Tema livre" : redacao.frase_tematica,
-          // Determinar status correto
-          status: redacao.corrigida ? 'corrigida' : 'aguardando',
-          corretor_nome: 'Corretor Principal',
-          comentario_c1_corretor_1: null,
-          comentario_c2_corretor_1: null,
-          comentario_c3_corretor_1: null,
-          comentario_c4_corretor_1: null,
-          comentario_c5_corretor_1: null,
-          elogios_pontos_atencao_corretor_1: null,
-          comentario_c1_corretor_2: null,
-          comentario_c2_corretor_2: null,
-          comentario_c3_corretor_2: null,
-          comentario_c4_corretor_2: null,
-          comentario_c5_corretor_2: null,
-          elogios_pontos_atencao_corretor_2: null,
+          corretor_nome: 'Corretor Principal'
         }));
         todasRedacoes.push(...regularesFormatadas);
       }
@@ -193,18 +154,7 @@ export default function MinhasRedacoesList() {
         const simuladosFormatados = redacoesSimulado.map(simulado => ({
           id: simulado.id,
           frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
-          // Determinar nome correto do aluno
-          nome_aluno: (() => {
-            if (userType === "visitante" && visitanteData) {
-              try {
-                const dados = JSON.parse(visitanteData);
-                return dados.nome || simulado.nome_aluno;
-              } catch {
-                return simulado.nome_aluno;
-              }
-            }
-            return simulado.nome_aluno;
-          })(),
+          nome_aluno: simulado.nome_aluno,
           email_aluno: simulado.email_aluno,
           tipo_envio: 'simulado',
           data_envio: simulado.data_envio,
@@ -213,19 +163,7 @@ export default function MinhasRedacoesList() {
           nota_total: simulado.nota_total,
           comentario_admin: null,
           data_correcao: simulado.data_correcao,
-          corretor_nome: 'Corretor Principal',
-          comentario_c1_corretor_1: null,
-          comentario_c2_corretor_1: null,
-          comentario_c3_corretor_1: null,
-          comentario_c4_corretor_1: null,
-          comentario_c5_corretor_1: null,
-          elogios_pontos_atencao_corretor_1: null,
-          comentario_c1_corretor_2: null,
-          comentario_c2_corretor_2: null,
-          comentario_c3_corretor_2: null,
-          comentario_c4_corretor_2: null,
-          comentario_c5_corretor_2: null,
-          elogios_pontos_atencao_corretor_2: null,
+          corretor_nome: 'Corretor Principal'
         }));
         todasRedacoes.push(...simuladosFormatados);
       }
@@ -286,19 +224,7 @@ export default function MinhasRedacoesList() {
         nota_c3: redacaoCompleta.nota_c3,
         nota_c4: redacaoCompleta.nota_c4,
         nota_c5: redacaoCompleta.nota_c5,
-        corretor_nome: redacao.corretor_nome,
-        comentario_c1_corretor_1: redacaoCompleta.comentario_c1_corretor_1,
-        comentario_c2_corretor_1: redacaoCompleta.comentario_c2_corretor_1,
-        comentario_c3_corretor_1: redacaoCompleta.comentario_c3_corretor_1,
-        comentario_c4_corretor_1: redacaoCompleta.comentario_c4_corretor_1,
-        comentario_c5_corretor_1: redacaoCompleta.comentario_c5_corretor_1,
-        elogios_pontos_atencao_corretor_1: redacaoCompleta.elogios_pontos_atencao_corretor_1,
-        comentario_c1_corretor_2: redacaoCompleta.comentario_c1_corretor_2,
-        comentario_c2_corretor_2: redacaoCompleta.comentario_c2_corretor_2,
-        comentario_c3_corretor_2: redacaoCompleta.comentario_c3_corretor_2,
-        comentario_c4_corretor_2: redacaoCompleta.comentario_c4_corretor_2,
-        comentario_c5_corretor_2: redacaoCompleta.comentario_c5_corretor_2,
-        elogios_pontos_atencao_corretor_2: redacaoCompleta.elogios_pontos_atencao_corretor_2,
+        corretor_nome: redacao.corretor_nome
       };
 
       setAuthenticatedRedacao(redacaoAutenticada);
@@ -573,31 +499,23 @@ export default function MinhasRedacoesList() {
                                 </Badge>
                               ) : (
                                 <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                                  ⏳ Pendente
+                                  ⏳ Aguardando
                                 </Badge>
                               )}
-                              {/* Exibir apenas tag do tipo de envio - removendo tag "livre" */}
-                              <Badge variant="outline" className="text-xs">
-                                {redacao.tipo_envio === 'regular' ? 'Regular' : 
-                                 redacao.tipo_envio === 'simulado' ? 'Simulado' :
-                                 redacao.tipo_envio === 'exercicio' ? 'Exercício' : 'Avulsa'}
-                              </Badge>
                             </div>
                           </div>
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-primary shrink-0" />
+                              <span className="font-medium">Corretor:</span> 
+                              <span>{redacao.corretor_nome}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-primary shrink-0" />
                               <span className="font-medium">Enviado:</span> 
                               <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
                             </div>
-                            {redacao.corrigida && redacao.nota_total && (
-                              <div className="flex items-center gap-2">
-                                <Star className="w-4 h-4 text-yellow-500 shrink-0" />
-                                <span className="font-medium">Nota:</span> 
-                                <span className="font-bold text-green-600">{redacao.nota_total}</span>
-                              </div>
-                            )}
                           </div>
                         </div>
                         
@@ -663,20 +581,7 @@ export default function MinhasRedacoesList() {
                         tipo_envio: authenticatedRedacao.tipo_envio,
                         status: authenticatedRedacao.status,
                         turma: userType === "aluno" ? (alunoTurma || "") : "visitante",
-                        comentario_c1_corretor_1: authenticatedRedacao.comentario_c1_corretor_1,
-                        comentario_c2_corretor_1: authenticatedRedacao.comentario_c2_corretor_1,
-                        comentario_c3_corretor_1: authenticatedRedacao.comentario_c3_corretor_1,
-                        comentario_c4_corretor_1: authenticatedRedacao.comentario_c4_corretor_1,
-                        comentario_c5_corretor_1: authenticatedRedacao.comentario_c5_corretor_1,
-                        elogios_pontos_atencao_corretor_1: authenticatedRedacao.elogios_pontos_atencao_corretor_1,
-                        comentario_c1_corretor_2: authenticatedRedacao.comentario_c1_corretor_2,
-                        comentario_c2_corretor_2: authenticatedRedacao.comentario_c2_corretor_2,
-                        comentario_c3_corretor_2: authenticatedRedacao.comentario_c3_corretor_2,
-                        comentario_c4_corretor_2: authenticatedRedacao.comentario_c4_corretor_2,
-                        comentario_c5_corretor_2: authenticatedRedacao.comentario_c5_corretor_2,
-                        elogios_pontos_atencao_corretor_2: authenticatedRedacao.elogios_pontos_atencao_corretor_2,
-                      }}
-                      showStudentInfo={false}
+                      }} 
                     />
                   </div>
                 </DialogContent>

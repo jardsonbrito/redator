@@ -1,97 +1,74 @@
 
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { Menu, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Home, LogOut, Settings } from "lucide-react";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface StudentHeaderProps {
   pageTitle?: string;
 }
 
 export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const { logoutStudent } = useStudentAuth();
+  const { studentData, logoutStudent } = useStudentAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLogout = () => {
     logoutStudent();
-    navigate("/", { replace: true });
+    toast({
+      title: "Sessão encerrada",
+      description: "Você foi desconectado com sucesso.",
+    });
+    navigate('/', { replace: true });
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 shadow-sm relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-          {/* Menu hambúrguer */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2"
+    <header className="bg-primary shadow-lg sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex items-center justify-between">
+          <Link 
+            to="/app" 
+            className="flex items-center gap-3 text-primary-foreground hover:text-secondary transition-colors duration-200"
           >
-            <Menu className="w-5 h-5" />
-          </Button>
-
-          {/* Logo e título */}
-          <div className="flex items-center gap-3 flex-1 justify-center">
-            <img 
-              src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" 
-              alt="Logo" 
-              className="w-8 h-8" 
-            />
-            <h1 className="text-xl font-bold text-gray-900">
-              {pageTitle || "App do Redator"}
-            </h1>
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <Home className="w-5 h-5" />
+            </div>
+            <span className="hidden sm:inline font-semibold text-lg">Início</span>
+          </Link>
+          
+          {/* Título da página no centro */}
+          {pageTitle && (
+            <h1 className="text-xl font-bold text-primary-foreground">{pageTitle}</h1>
+          )}
+          
+          <div className="flex items-center gap-3">
+            {/* Link para Professor apenas se for admin autenticado */}
+            {user && isAdmin && (
+              <Link 
+                to="/admin" 
+                className="flex items-center gap-2 bg-secondary/20 text-primary-foreground px-3 py-2 rounded-xl hover:bg-secondary/30 transition-colors duration-200 text-sm font-medium"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </Link>
+            )}
+            
+            {/* Botão Sair */}
+            <Button 
+              onClick={handleLogout}
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-2 border-secondary/30 text-primary-foreground hover:bg-secondary/20 hover:border-secondary/50 rounded-xl px-3 py-2 font-medium transition-colors duration-200 bg-transparent"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
           </div>
-
-          {/* Espaço para balanceamento */}
-          <div className="w-10"></div>
         </div>
       </div>
-
-      {/* Menu dropdown */}
-      {menuOpen && (
-        <>
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setMenuOpen(false)}
-          />
-          <div className="absolute top-full left-4 bg-white rounded-lg shadow-lg border z-50 min-w-48">
-            <div className="py-2">
-              <Link 
-                to="/app" 
-                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                onClick={() => setMenuOpen(false)}
-              >
-                Início
-              </Link>
-              <Link 
-                to="/minhas-redacoes" 
-                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                onClick={() => setMenuOpen(false)}
-              >
-                Minhas Redações
-              </Link>
-              <Link 
-                to="/envie-redacao" 
-                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                onClick={() => setMenuOpen(false)}
-              >
-                Enviar Redação
-              </Link>
-              <hr className="my-2" />
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Sair
-              </button>
-            </div>
-          </div>
-        </>
-      )}
     </header>
   );
 };

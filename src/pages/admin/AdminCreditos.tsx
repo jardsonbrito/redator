@@ -1,30 +1,42 @@
 
+import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard } from "lucide-react";
+import { TurmaSelector } from "@/components/admin/TurmaSelector";
+import { CreditManager } from "@/components/admin/CreditManager";
+import { BackButton } from "@/components/admin/BackButton";
 
 const AdminCreditos = () => {
+  const [selectedTurma, setSelectedTurma] = useState<string | null>(null);
+
+  const handleTurmaSelect = (turma: string) => {
+    setSelectedTurma(turma);
+  };
+
+  const handleBack = () => {
+    setSelectedTurma(null);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Créditos</h2>
-          <p className="text-gray-600">Sistema de créditos dos alunos</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              Créditos do Sistema
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Funcionalidade de gerenciamento de créditos em desenvolvimento.
-            </p>
-          </CardContent>
-        </Card>
+        {!selectedTurma ? (
+          <>
+            <BackButton />
+            <TurmaSelector onTurmaSelect={handleTurmaSelect} />
+          </>
+        ) : (
+          <div className="space-y-4">
+            <BackButton />
+            <div className="flex items-center gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Créditos - {selectedTurma}</h2>
+                <p className="text-gray-600">Gerencie os créditos dos alunos desta turma</p>
+              </div>
+            </div>
+            
+            <CreditManager turmaFilter={selectedTurma} />
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

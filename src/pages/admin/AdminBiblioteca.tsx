@@ -1,30 +1,47 @@
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen } from "lucide-react";
+import { BibliotecaList } from "@/components/admin/BibliotecaList";
+import { BibliotecaForm } from "@/components/admin/BibliotecaForm";
+import { BackButton } from "@/components/admin/BackButton";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 
 const AdminBiblioteca = () => {
+  const [showForm, setShowForm] = useState(false);
+  const [refreshBiblioteca, setRefreshBiblioteca] = useState(false);
+
+  const handleCreate = () => {
+    setShowForm(true);
+  };
+
+  const handleClose = () => {
+    setShowForm(false);
+    setRefreshBiblioteca(!refreshBiblioteca);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Biblioteca</h2>
-          <p className="text-gray-600">Materiais PDFs e recursos de estudo</p>
+        <BackButton />
+        
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Biblioteca</h2>
+            <p className="text-gray-600">Crie e gerencie materiais de estudo</p>
+          </div>
+          
+          <Button onClick={handleCreate} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Novo Material
+          </Button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
-              Biblioteca de Materiais
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Sistema de gerenciamento de biblioteca em desenvolvimento.
-            </p>
-          </CardContent>
-        </Card>
+        {showForm ? (
+          <BibliotecaForm onSuccess={handleClose} />
+        ) : (
+          <BibliotecaList />
+        )}
       </div>
     </AdminLayout>
   );
