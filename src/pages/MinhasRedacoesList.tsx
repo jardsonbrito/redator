@@ -174,9 +174,8 @@ export default function MinhasRedacoesList() {
     enabled: !!currentUserEmail,
   });
 
-  // Remover a lógica de senha - acesso direto às redações
   const handleViewRedacao = async (redacao: RedacaoTurma) => {
-    console.log('🔓 Acessando redação diretamente (sem senha):', redacao.id);
+    console.log('🔐 Acessando redação:', redacao.id);
     
     try {
       let redacaoCompleta;

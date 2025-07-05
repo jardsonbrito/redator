@@ -4,12 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StudentLoginForm } from "./login/StudentLoginForm";
+import { ProfessorLoginForm } from "./login/ProfessorLoginForm";
 import { VisitorLoginForm } from "./login/VisitorLoginForm";
 import { CorretorLoginForm } from "./login/CorretorLoginForm";
 
 interface LoginFormProps {
-  selectedProfile: "aluno" | "visitante" | "corretor";
-  onLogin: (profileType: "aluno" | "visitante" | "corretor", data: any) => void;
+  selectedProfile: "professor" | "aluno" | "visitante" | "corretor";
+  onLogin: (profileType: "professor" | "aluno" | "visitante" | "corretor", data: any) => void;
   loading: boolean;
 }
 
@@ -24,6 +25,10 @@ export const LoginForm = ({ selectedProfile, onLogin, loading }: LoginFormProps)
   return (
     <Card className="shadow-xl border-redator-accent/20">
       <CardContent className="p-6 space-y-6">
+        {selectedProfile === "professor" && (
+          <ProfessorLoginForm onLogin={handleLogin} loading={loading} />
+        )}
+
         {selectedProfile === "aluno" && (
           <StudentLoginForm onLogin={handleLogin} loading={loading} />
         )}

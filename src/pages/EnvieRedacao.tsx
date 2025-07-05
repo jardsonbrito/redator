@@ -140,7 +140,6 @@ const EnvieRedacao = () => {
 
     try {
       // Primeiro, consumir os créditos
-      console.log('💳 Tentando consumir créditos para email:', email, 'Quantidade:', selectedCorretores.length);
       const creditsConsumed = await consumeCreditsByEmail(email, selectedCorretores.length);
       
       if (!creditsConsumed) {
