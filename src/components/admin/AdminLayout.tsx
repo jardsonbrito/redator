@@ -11,7 +11,7 @@ interface AdminLayoutProps {
 }
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,7 +31,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   ];
 
   const handleLogout = () => {
-    logout();
+    signOut();
   };
 
   return (
