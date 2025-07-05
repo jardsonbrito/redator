@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -157,8 +156,23 @@ export default function MinhasRedacoesList() {
       if (redacoesRegulares) {
         const regularesFormatadas = redacoesRegulares.map(redacao => ({
           ...redacao,
+          // Determinar nome correto do aluno
+          nome_aluno: (() => {
+            if (userType === "visitante" && visitanteData) {
+              try {
+                const dados = JSON.parse(visitanteData);
+                return dados.nome || redacao.nome_aluno;
+              } catch {
+                return redacao.nome_aluno;
+              }
+            }
+            return redacao.nome_aluno;
+          })(),
+          // Determinar frase temática correta
+          frase_tematica: redacao.frase_tematica === "Tema livre" ? "Tema livre" : redacao.frase_tematica,
+          // Determinar status correto
+          status: redacao.corrigida ? 'corrigida' : 'aguardando',
           corretor_nome: 'Corretor Principal',
-          // Add missing properties with default values
           comentario_c1_corretor_1: null,
           comentario_c2_corretor_1: null,
           comentario_c3_corretor_1: null,
@@ -179,7 +193,18 @@ export default function MinhasRedacoesList() {
         const simuladosFormatados = redacoesSimulado.map(simulado => ({
           id: simulado.id,
           frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
-          nome_aluno: simulado.nome_aluno,
+          // Determinar nome correto do aluno
+          nome_aluno: (() => {
+            if (userType === "visitante" && visitanteData) {
+              try {
+                const dados = JSON.parse(visitanteData);
+                return dados.nome || simulado.nome_aluno;
+              } catch {
+                return simulado.nome_aluno;
+              }
+            }
+            return simulado.nome_aluno;
+          })(),
           email_aluno: simulado.email_aluno,
           tipo_envio: 'simulado',
           data_envio: simulado.data_envio,
@@ -189,7 +214,6 @@ export default function MinhasRedacoesList() {
           comentario_admin: null,
           data_correcao: simulado.data_correcao,
           corretor_nome: 'Corretor Principal',
-          // Add missing properties with default values
           comentario_c1_corretor_1: null,
           comentario_c2_corretor_1: null,
           comentario_c3_corretor_1: null,
@@ -552,6 +576,12 @@ export default function MinhasRedacoesList() {
                                   ⏳ Pendente
                                 </Badge>
                               )}
+                              {/* Exibir apenas tag do tipo de envio - removendo tag "livre" */}
+                              <Badge variant="outline" className="text-xs">
+                                {redacao.tipo_envio === 'regular' ? 'Regular' : 
+                                 redacao.tipo_envio === 'simulado' ? 'Simulado' :
+                                 redacao.tipo_envio === 'exercicio' ? 'Exercício' : 'Avulsa'}
+                              </Badge>
                             </div>
                           </div>
                           

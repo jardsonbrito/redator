@@ -47,6 +47,23 @@ export const EnvioRedacaoWithCorretor = ({
       "Turma E": "LRE2025"
     };
     turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
+    
+    // Buscar nome real do aluno no banco de dados
+    const fetchRealStudentName = async () => {
+      const studentEmail = `aluno.${turmaCode.toLowerCase()}@laboratoriodoredator.com`;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('nome, sobrenome')
+        .eq('email', studentEmail)
+        .single();
+      
+      if (profile) {
+        return `${profile.nome} ${profile.sobrenome}`.trim();
+      }
+      return `Aluno da ${alunoTurma}`;
+    };
+    
+    // Para agora, usar nome padrão e depois buscar o real
     nomeCompleto = `Aluno da ${alunoTurma}`;
     email = `aluno.${turmaCode.toLowerCase()}@laboratoriodoredator.com`;
   } else if (userType === "visitante" && visitanteData) {
@@ -113,8 +130,23 @@ export const EnvioRedacaoWithCorretor = ({
     setLoading(true);
 
     try {
+      // Buscar nome real do aluno se for aluno autenticado
+      let finalNomeAluno = nomeCompleto;
+      if (userType === "aluno" && alunoTurma) {
+        const studentEmail = `aluno.${turmaCode.toLowerCase()}@laboratoriodoredator.com`;
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nome, sobrenome')
+          .eq('email', studentEmail)
+          .single();
+        
+        if (profile) {
+          finalNomeAluno = `${profile.nome} ${profile.sobrenome}`.trim();
+        }
+      }
+
       const redacaoData = {
-        nome_aluno: nomeCompleto,
+        nome_aluno: finalNomeAluno,
         email_aluno: email.toLowerCase(),
         turma: turmaCode,
         frase_tematica: fraseTematica || "Tema livre",
