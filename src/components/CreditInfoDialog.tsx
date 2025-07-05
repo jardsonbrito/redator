@@ -78,7 +78,7 @@ export const CreditInfoDialog = ({
               {hasEnoughCredits ? (
                 <div className="text-center space-y-3">
                   <div className="text-lg font-semibold text-green-600 mb-3">
-                    ✅ Você possui {credits} créditos.
+                    ✅ Você tem {credits} créditos.
                   </div>
                   <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-lg">
                     <p>• Corretores selecionados: {creditsNeeded}</p>
@@ -95,7 +95,7 @@ export const CreditInfoDialog = ({
                     <p className="mb-2">Você possui: <strong>{credits} créditos</strong></p>
                     <p className="mb-3">Necessários: <strong>{creditsNeeded} créditos</strong></p>
                     <p className="text-red-600 font-medium">
-                      Fale com seu professor para solicitar mais créditos.
+                      Solicite novos créditos ao seu professor.
                     </p>
                   </div>
                 </div>

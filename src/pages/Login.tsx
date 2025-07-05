@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { User, Users, UserCheck, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [adminEmail, setAdminEmail] = useState("");
@@ -79,19 +78,6 @@ const Login = () => {
             </Button>
           </Link>
 
-          <Link to="/corretor-login">
-            <Button 
-              variant="outline" 
-              className="w-full h-16 text-left justify-start bg-white hover:bg-green-50 border-2 hover:border-green-200 transition-all"
-            >
-              <UserCheck className="w-6 h-6 mr-4 text-green-600" />
-              <div>
-                <div className="font-semibold text-green-800">Sou corretor</div>
-                <div className="text-sm text-green-600">Acessar painel de correção</div>
-              </div>
-            </Button>
-          </Link>
-
           <Link to="/visitante-login">
             <Button 
               variant="outline" 
@@ -101,6 +87,19 @@ const Login = () => {
               <div>
                 <div className="font-semibold text-purple-800">Sou visitante</div>
                 <div className="text-sm text-purple-600">Acesso para visitantes</div>
+              </div>
+            </Button>
+          </Link>
+
+          <Link to="/corretor-login">
+            <Button 
+              variant="outline" 
+              className="w-full h-16 text-left justify-start bg-white hover:bg-green-50 border-2 hover:border-green-200 transition-all"
+            >
+              <UserCheck className="w-6 h-6 mr-4 text-green-600" />
+              <div>
+                <div className="font-semibold text-green-800">Sou corretor</div>
+                <div className="text-sm text-green-600">Acessar painel de correção</div>
               </div>
             </Button>
           </Link>
@@ -116,7 +115,7 @@ const Login = () => {
                 className="w-full text-gray-500 hover:text-gray-700 text-xs"
               >
                 <Lock className="w-3 h-3 mr-2" />
-                🔐 Acesso ao painel administrativo
+                🔑 Acesso ao painel administrativo
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
@@ -134,7 +133,7 @@ const Login = () => {
                     type="email"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
-                    placeholder="admin@laboratoriodoredator.com"
+                    placeholder="jardsonbrito@gmail.com"
                     required
                   />
                 </div>

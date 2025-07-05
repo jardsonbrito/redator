@@ -10,7 +10,7 @@ export const linkOldEssaysToStudents = async () => {
     const { error: ruthError } = await supabase
       .from('redacoes_enviadas')
       .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Ruth%Constantatino%Esteves%');
+      .or('nome_aluno.ilike.%Ruth%Constantatino%Esteves%,nome_aluno.ilike.%Ruth%Constantino%');
 
     if (ruthError) {
       console.error('❌ Erro ao atualizar redações da Ruth:', ruthError);
@@ -42,22 +42,11 @@ export const linkOldEssaysToStudents = async () => {
       console.log('✅ Redações do Lucas vinculadas ao e-mail: lucasfreitas@laboratoriodoredator.com');
     }
 
-    // Também verificar outras variações do nome da Ruth
-    await supabase
-      .from('redacoes_enviadas')
-      .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Ruth%Constantino%');
-
     // Fazer o mesmo para redações de simulado se existirem
     await supabase
       .from('redacoes_simulado')
       .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Ruth%Constantatino%Esteves%');
-
-    await supabase
-      .from('redacoes_simulado')
-      .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Ruth%Constantino%');
+      .or('nome_aluno.ilike.%Ruth%Constantatino%Esteves%,nome_aluno.ilike.%Ruth%Constantino%');
 
     await supabase
       .from('redacoes_simulado')

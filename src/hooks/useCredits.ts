@@ -49,24 +49,50 @@ export const useCredits = () => {
     }
   };
 
-  const addCredits = async (userId: string, amount: number): Promise<boolean> => {
+  const addCredits = async (userEmail: string, amount: number): Promise<boolean> => {
     setLoading(true);
     try {
-      console.log('💳 Adicionando créditos:', { userId, amount });
+      console.log('💳 Adicionando créditos por email:', { userEmail, amount });
       
-      const { data, error } = await supabase.rpc('add_credits_safe', {
-        target_user_id: userId,
-        credit_amount: amount
-      });
+      const normalizedEmail = userEmail.trim().toLowerCase();
+      
+      // Buscar o usuário pelo email
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('id, creditos, nome, email')
+        .ilike('email', normalizedEmail)
+        .eq('user_type', 'aluno')
+        .maybeSingle();
 
-      if (error) throw error;
+      if (userError) {
+        console.error('❌ Erro ao buscar usuário:', userError);
+        return false;
+      }
+
+      if (!user) {
+        console.error('❌ Usuário não encontrado para email:', normalizedEmail);
+        return false;
+      }
+
+      const newCredits = Math.max(0, (user.creditos || 0) + amount);
+      
+      // Atualizar créditos diretamente no banco
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ creditos: newCredits })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar créditos:', updateError);
+        throw updateError;
+      }
 
       toast({
         title: "Créditos atualizados",
-        description: `${amount > 0 ? 'Adicionados' : 'Removidos'} ${Math.abs(amount)} créditos com sucesso.`
+        description: `${amount > 0 ? 'Adicionados' : 'Removidos'} ${Math.abs(amount)} créditos para ${user.nome}. Total: ${newCredits} créditos.`
       });
 
-      console.log('✅ Créditos atualizados com sucesso');
+      console.log('✅ Créditos atualizados com sucesso. Novo saldo:', newCredits);
       return true;
     } catch (error: any) {
       console.error('❌ Erro ao gerenciar créditos:', error);
@@ -134,13 +160,13 @@ export const useCredits = () => {
       console.log('👤 Usuário encontrado:', user);
 
       // Verificar se tem créditos suficientes
-      if (user.creditos < amount) {
+      if ((user.creditos || 0) < amount) {
         console.error('❌ Créditos insuficientes:', user.creditos, 'necessários:', amount);
         return false;
       }
 
       // Consumir créditos diretamente no banco
-      const newCredits = user.creditos - amount;
+      const newCredits = (user.creditos || 0) - amount;
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ creditos: newCredits })
