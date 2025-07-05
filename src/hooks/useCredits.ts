@@ -52,20 +52,21 @@ export const useCredits = () => {
   const addCredits = async (userEmail: string, amount: number): Promise<boolean> => {
     setLoading(true);
     try {
-      console.log('💳 Adicionando créditos por email:', { userEmail, amount });
+      console.log('💳 INÍCIO - Adicionando créditos por email:', { userEmail, amount });
       
       const normalizedEmail = userEmail.trim().toLowerCase();
       
-      // Buscar o usuário pelo email primeiro
+      // 1. Buscar o usuário pelo email primeiro
+      console.log('🔍 PASSO 1 - Buscando usuário por email:', normalizedEmail);
       const { data: user, error: userError } = await supabase
         .from('profiles')
-        .select('id, creditos, nome, email')
+        .select('id, creditos, nome, email, user_type')
         .ilike('email', normalizedEmail)
         .eq('user_type', 'aluno')
         .maybeSingle();
 
       if (userError) {
-        console.error('❌ Erro ao buscar usuário:', userError);
+        console.error('❌ ERRO PASSO 1 - Erro ao buscar usuário:', userError);
         toast({
           title: "Erro ao buscar usuário",
           description: userError.message,
@@ -75,7 +76,7 @@ export const useCredits = () => {
       }
 
       if (!user) {
-        console.error('❌ Usuário não encontrado para email:', normalizedEmail);
+        console.error('❌ ERRO PASSO 1 - Usuário não encontrado para email:', normalizedEmail);
         toast({
           title: "Usuário não encontrado",
           description: `Nenhum aluno encontrado com o email: ${normalizedEmail}`,
@@ -84,17 +85,20 @@ export const useCredits = () => {
         return false;
       }
 
+      console.log('✅ PASSO 1 SUCESSO - Usuário encontrado:', user);
+
       const currentCredits = user.creditos || 0;
       const newCredits = Math.max(0, currentCredits + amount);
       
-      console.log('🔄 Atualizando créditos:', {
+      console.log('🔄 PASSO 2 - Calculando novos créditos:', {
         usuarioId: user.id,
         creditosAtuais: currentCredits,
         valorAdicionado: amount,
         novoTotal: newCredits
       });
 
-      // Usar transação para garantir consistência
+      // 2. Usar transação para garantir consistência
+      console.log('🚀 PASSO 3 - Executando UPDATE...');
       const { data: updateResult, error: updateError } = await supabase
         .from('profiles')
         .update({ 
@@ -102,10 +106,10 @@ export const useCredits = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
-        .select('creditos, nome');
+        .select('creditos, nome, email, id');
 
       if (updateError) {
-        console.error('❌ Erro ao atualizar créditos:', updateError);
+        console.error('❌ ERRO PASSO 3 - Erro ao atualizar créditos:', updateError);
         toast({
           title: "Erro ao atualizar créditos",
           description: updateError.message,
@@ -115,7 +119,7 @@ export const useCredits = () => {
       }
 
       if (!updateResult || updateResult.length === 0) {
-        console.error('❌ Nenhum registro foi atualizado');
+        console.error('❌ ERRO PASSO 3 - Nenhum registro foi atualizado');
         toast({
           title: "Erro na atualização",
           description: "Nenhum registro foi modificado. Verifique as permissões.",
@@ -124,34 +128,52 @@ export const useCredits = () => {
         return false;
       }
 
-      console.log('✅ Créditos atualizados com sucesso:', updateResult[0]);
+      console.log('✅ PASSO 3 SUCESSO - Créditos atualizados:', updateResult[0]);
 
-      // Verificar se a atualização foi persistida
-      const { data: verification } = await supabase
+      // 3. NOVA VERIFICAÇÃO TRIPLA - Aguardar e verificar se foi persistido
+      console.log('🔍 PASSO 4 - Verificação de persistência...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Aguardar 1 segundo
+
+      const { data: verification, error: verificationError } = await supabase
         .from('profiles')
-        .select('creditos')
+        .select('creditos, email')
         .eq('id', user.id)
         .single();
 
+      if (verificationError) {
+        console.error('❌ ERRO PASSO 4 - Erro na verificação:', verificationError);
+        toast({
+          title: "Erro na verificação",
+          description: "Não foi possível verificar se os créditos foram salvos.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      console.log('🔍 PASSO 4 RESULTADO - Dados após verificação:', verification);
+
       if (verification && verification.creditos === newCredits) {
+        console.log('✅ PASSO 4 SUCESSO - Créditos persistidos corretamente!');
         toast({
           title: "Créditos atualizados com sucesso!",
           description: `${amount > 0 ? 'Adicionados' : 'Removidos'} ${Math.abs(amount)} créditos para ${user.nome}. Total atual: ${newCredits} créditos.`
         });
-        console.log('✅ Verificação confirmada - créditos persistidos:', verification.creditos);
         return true;
       } else {
-        console.error('❌ Falha na verificação de persistência');
+        console.error('❌ PASSO 4 FALHA - Créditos não foram persistidos!', {
+          esperado: newCredits,
+          encontrado: verification?.creditos
+        });
         toast({
-          title: "Erro de consistência",
-          description: "Os créditos podem não ter sido salvos corretamente.",
+          title: "⚠️ FALHA CRÍTICA NA PERSISTÊNCIA",
+          description: `Créditos não foram salvos no banco. Esperado: ${newCredits}, Encontrado: ${verification?.creditos}`,
           variant: "destructive"
         });
         return false;
       }
 
     } catch (error: any) {
-      console.error('❌ Erro geral ao gerenciar créditos:', error);
+      console.error('💥 ERRO GERAL - Erro ao gerenciar créditos:', error);
       toast({
         title: "Erro inesperado",
         description: error.message || "Ocorreu um erro ao atualizar os créditos.",
@@ -189,7 +211,7 @@ export const useCredits = () => {
   const consumeCreditsByEmail = async (email: string, amount: number): Promise<boolean> => {
     setLoading(true);
     try {
-      console.log('🔥 Consumindo créditos por email:', { email, amount });
+      console.log('🔥 INÍCIO - Consumindo créditos por email:', { email, amount });
       
       const normalizedEmail = email.trim().toLowerCase();
       
@@ -219,24 +241,16 @@ export const useCredits = () => {
         return false;
       }
 
-      // Consumir créditos
-      const newCredits = Math.max(0, (user.creditos || 0) - amount);
+      // Consumir créditos usando a mesma lógica robusta do addCredits
+      const success = await addCredits(email, -amount);
       
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          creditos: newCredits,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar créditos:', updateError);
+      if (success) {
+        console.log('✅ Créditos consumidos com sucesso via addCredits');
+        return true;
+      } else {
+        console.error('❌ Falha ao consumir créditos via addCredits');
         return false;
       }
-
-      console.log('✅ Créditos consumidos com sucesso. Saldo anterior:', user.creditos, 'Saldo atual:', newCredits);
-      return true;
     } catch (error: any) {
       console.error('❌ Erro ao consumir créditos por email:', error);
       return false;

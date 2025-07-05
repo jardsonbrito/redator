@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Clock, CheckCircle, Users, GraduationCap, TrendingUp, Trophy, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { CreditBypassNotice } from "./CreditBypassNotice";
 
 interface DashboardMetrics {
   totalRedacoes: number;
@@ -152,6 +153,9 @@ export const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Aviso do Sistema de Créditos */}
+      <CreditBypassNotice />
+
       {/* Mini cards superiores */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="hover:shadow-md transition-all duration-200">
