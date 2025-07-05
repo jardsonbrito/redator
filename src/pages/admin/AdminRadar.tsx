@@ -8,7 +8,6 @@ import { useState } from "react";
 
 const AdminRadar = () => {
   const [showUpload, setShowUpload] = useState(false);
-  const [refreshRadar, setRefreshRadar] = useState(false);
 
   const handleUpload = () => {
     setShowUpload(true);
@@ -16,7 +15,6 @@ const AdminRadar = () => {
 
   const handleClose = () => {
     setShowUpload(false);
-    setRefreshRadar(!refreshRadar);
   };
 
   return (
@@ -35,7 +33,7 @@ const AdminRadar = () => {
         </div>
 
         {showUpload ? (
-          <RadarUpload onClose={handleClose} />
+          <RadarUpload />
         ) : (
           <RadarList />
         )}

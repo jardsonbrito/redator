@@ -8,7 +8,6 @@ import { useState } from "react";
 
 const AdminTemas = () => {
   const [showForm, setShowForm] = useState(false);
-  const [refreshTemas, setRefreshTemas] = useState(false);
 
   const handleCreate = () => {
     setShowForm(true);
@@ -16,7 +15,6 @@ const AdminTemas = () => {
 
   const handleClose = () => {
     setShowForm(false);
-    setRefreshTemas(!refreshTemas);
   };
 
   return (
@@ -35,7 +33,7 @@ const AdminTemas = () => {
         </div>
 
         {showForm ? (
-          <TemaForm onClose={handleClose} />
+          <TemaForm />
         ) : (
           <TemaList />
         )}

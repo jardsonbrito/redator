@@ -8,7 +8,6 @@ import { useState } from "react";
 
 const AdminVideos = () => {
   const [showForm, setShowForm] = useState(false);
-  const [refreshVideos, setRefreshVideos] = useState(false);
 
   const handleCreate = () => {
     setShowForm(true);
@@ -16,7 +15,6 @@ const AdminVideos = () => {
 
   const handleClose = () => {
     setShowForm(false);
-    setRefreshVideos(!refreshVideos);
   };
 
   return (
@@ -35,7 +33,7 @@ const AdminVideos = () => {
         </div>
 
         {showForm ? (
-          <VideoForm onSuccess={handleClose} />
+          <VideoForm />
         ) : (
           <VideoList />
         )}
