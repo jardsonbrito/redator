@@ -1,27 +1,27 @@
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bookmark } from "lucide-react";
+import { UserCheck } from "lucide-react";
 
-const AdminTemas = () => {
+const AdminCorretores = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Temas</h2>
-          <p className="text-gray-600">Criar e gerenciar temas de redação</p>
+          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Corretores</h2>
+          <p className="text-gray-600">Cadastro e gerenciamento de corretores</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bookmark className="w-5 h-5" />
-              Temas de Redação
+              <UserCheck className="w-5 h-5" />
+              Corretores
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600">
-              Sistema de gerenciamento de temas em desenvolvimento.
+              Sistema de gerenciamento de corretores em desenvolvimento.
             </p>
           </CardContent>
         </Card>
@@ -30,4 +30,4 @@ const AdminTemas = () => {
   );
 };
 
-export default AdminTemas;
+export default AdminCorretores;

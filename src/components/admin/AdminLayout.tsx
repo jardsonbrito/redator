@@ -14,7 +14,11 @@ import {
   UserCheck,
   GraduationCap,
   Calendar,
-  Menu
+  Menu,
+  CreditCard,
+  Radar,
+  Bell,
+  Bookmark
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -24,19 +28,21 @@ interface AdminLayoutProps {
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { signOut } = useAuth(); // Changed from logout to signOut
+  const { signOut } = useAuth();
   const location = useLocation();
 
   const menuItems = [
     { name: "Dashboard", href: "/admin", icon: Home },
-    { name: "Redações", href: "/admin/redacoes", icon: FileText },
     { name: "Alunos", href: "/admin/alunos", icon: Users },
-    { name: "Corretores", href: "/admin/corretores", icon: UserCheck },
-    { name: "Gerenciar Aulas", href: "/admin/aulas", icon: GraduationCap },
-    { name: "Aulas Virtuais", href: "/admin/aulas-virtuais", icon: Calendar },
+    { name: "Créditos", href: "/admin/creditos", icon: CreditCard },
+    { name: "Redações", href: "/admin/redacoes", icon: FileText },
+    { name: "Temas", href: "/admin/temas", icon: Bookmark },
+    { name: "Aulas", href: "/admin/aulas", icon: GraduationCap },
+    { name: "Radar", href: "/admin/radar", icon: Radar },
     { name: "Biblioteca", href: "/admin/biblioteca", icon: BookOpen },
-    { name: "Vídeos", href: "/admin/videos", icon: Video },
-    { name: "Configurações", href: "/admin/configuracoes", icon: Settings },
+    { name: "Videoteca", href: "/admin/videos", icon: Video },
+    { name: "Corretores", href: "/admin/corretores", icon: UserCheck },
+    { name: "Avisos", href: "/admin/avisos", icon: Bell },
   ];
 
   const isActivePath = (path: string) => {
@@ -59,7 +65,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           <Menu className="w-5 h-5" />
         </Button>
         <h1 className="font-semibold text-gray-900">Painel Administrativo</h1>
-        <div className="w-9"></div> {/* Spacer for center alignment */}
+        <div className="w-9"></div>
       </div>
 
       <div className="flex">
@@ -106,7 +112,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             <div className="p-4 border-t">
               <Button
                 variant="outline"
-                onClick={signOut} // Changed from logout to signOut
+                onClick={signOut}
                 className="w-full justify-start gap-2"
               >
                 <LogOut className="w-4 h-4" />

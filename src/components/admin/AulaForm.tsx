@@ -1,75 +1,55 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload, FileText } from "lucide-react";
+import { Upload, X } from "lucide-react";
 
-interface AulaEditando {
+interface Aula {
   id: string;
   titulo: string;
-  descricao: string;
+  descricao: string | null;
   modulo: string;
   link_conteudo: string;
-  pdf_url?: string;
-  pdf_nome?: string;
-  turmas_autorizadas?: string[];
-  permite_visitante?: boolean;
-  ativo?: boolean;
+  pdf_url: string | null;
+  pdf_nome: string | null;
+  turmas_autorizadas: string[] | null;
+  permite_visitante: boolean | null;
+  ativo: boolean | null;
 }
 
 interface AulaFormProps {
-  aulaEditando?: AulaEditando | null;
-  onSuccess?: () => void;
-  onCancelEdit?: () => void;
+  aulaEditando?: Aula | null;
+  onSuccess: () => void;
+  onCancelEdit: () => void;
 }
 
 export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProps) => {
-  const [titulo, setTitulo] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [modulo, setModulo] = useState("");
-  const [linkConteudo, setLinkConteudo] = useState("");
-  const [pdfUrl, setPdfUrl] = useState("");
-  const [pdfNome, setPdfNome] = useState("");
-  const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>([]);
-  const [permiteVisitante, setPermiteVisitante] = useState(false);
-  const [ativo, setAtivo] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
+  const [titulo, setTitulo] = useState(aulaEditando?.titulo || "");
+  const [modulo, setModulo] = useState(aulaEditando?.modulo || "");
+  const [descricao, setDescricao] = useState(aulaEditando?.descricao || "");
+  const [linkConteudo, setLinkConteudo] = useState(aulaEditando?.link_conteudo || "");
+  const [pdfUrl, setPdfUrl] = useState(aulaEditando?.pdf_url || "");
+  const [pdfNome, setPdfNome] = useState(aulaEditando?.pdf_nome || "");
+  const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>(
+    aulaEditando?.turmas_autorizadas || []
+  );
+  const [permiteVisitante, setPermiteVisitante] = useState(
+    aulaEditando?.permite_visitante || false
+  );
+  const [ativo, setAtivo] = useState(aulaEditando?.ativo !== false);
+  const [loading, setLoading] = useState(false);
 
-  // Preencher formulário ao editar
-  useEffect(() => {
-    if (aulaEditando) {
-      setTitulo(aulaEditando.titulo || "");
-      setDescricao(aulaEditando.descricao || "");
-      setModulo(aulaEditando.modulo || "");
-      setLinkConteudo(aulaEditando.link_conteudo || "");
-      setPdfUrl(aulaEditando.pdf_url || "");
-      setPdfNome(aulaEditando.pdf_nome || "");
-      setTurmasAutorizadas(aulaEditando.turmas_autorizadas || []);
-      setPermiteVisitante(aulaEditando.permite_visitante || false);
-      setAtivo(aulaEditando.ativo !== false);
-    }
-  }, [aulaEditando]);
-
+  const turmasDisponiveis = ["Turma A", "Turma B", "Turma C", "Turma D", "Turma E"];
   const modulosDisponiveis = [
-    'Competência 1',
-    'Competência 2', 
-    'Competência 3',
-    'Competência 4',
-    'Competência 5',
-    'Aula ao vivo'
-  ];
-
-  const turmasDisponiveis = [
-    'TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E'
+    "Módulo 1", "Módulo 2", "Módulo 3", "Módulo 4", "Módulo 5",
+    "Módulo 6", "Módulo 7", "Módulo 8", "Módulo 9", "Módulo 10"
   ];
 
   const handleTurmaChange = (turma: string, checked: boolean) => {
@@ -80,139 +60,65 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast.error("Arquivo PDF muito grande. Máximo 10MB.");
-        return;
-      }
-      setPdfFile(file);
-      setPdfNome(file.name);
-    } else {
-      toast.error("Por favor, selecione um arquivo PDF válido.");
-    }
-  };
-
-  const uploadPdf = async (file: File): Promise<{ url: string; nome: string }> => {
-    const fileExt = 'pdf';
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('aula-pdfs')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('aula-pdfs')
-      .getPublicUrl(filePath);
-
-    return { url: publicUrl, nome: file.name };
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!titulo || !descricao || !modulo || !linkConteudo) {
-      toast.error("Por favor, preencha os campos obrigatórios.");
+    if (!titulo.trim() || !modulo || !linkConteudo.trim()) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    setIsLoading(true);
-
+    setLoading(true);
+    
     try {
-      let finalPdfUrl = pdfUrl;
-      let finalPdfNome = pdfNome;
-
-      // Se há arquivo para upload, fazer upload primeiro
-      if (uploadMethod === 'upload' && pdfFile) {
-        console.log('📤 Fazendo upload do PDF...');
-        const uploadResult = await uploadPdf(pdfFile);
-        finalPdfUrl = uploadResult.url;
-        finalPdfNome = uploadResult.nome;
-        console.log('✅ PDF enviado:', uploadResult);
-      }
-
       const aulaData = {
-        titulo,
-        descricao,
+        titulo: titulo.trim(),
         modulo,
-        link_conteudo: linkConteudo,
-        pdf_url: finalPdfUrl || null,
-        pdf_nome: finalPdfNome || null,
+        descricao: descricao.trim() || null,
+        link_conteudo: linkConteudo.trim(),
+        pdf_url: pdfUrl.trim() || null,
+        pdf_nome: pdfNome.trim() || null,
         turmas_autorizadas: turmasAutorizadas,
         permite_visitante: permiteVisitante,
         ativo
       };
 
-      let error;
-
+      let result;
+      
       if (aulaEditando) {
-        // Atualizar aula existente
-        const result = await supabase
+        result = await supabase
           .from("aulas")
           .update(aulaData)
           .eq("id", aulaEditando.id);
-        error = result.error;
       } else {
-        // Criar nova aula
-        const result = await supabase
+        result = await supabase
           .from("aulas")
-          .insert(aulaData);
-        error = result.error;
+          .insert([aulaData]);
       }
 
-      if (error) throw error;
+      if (result.error) throw result.error;
 
       toast.success(aulaEditando ? "Aula atualizada com sucesso!" : "Aula criada com sucesso!");
-      
-      if (onSuccess) {
-        onSuccess();
-      }
-
-      // Reset form se não estiver editando
-      if (!aulaEditando) {
-        setTitulo("");
-        setDescricao("");
-        setModulo("");
-        setLinkConteudo("");
-        setPdfUrl("");
-        setPdfNome("");
-        setPdfFile(null);
-        setTurmasAutorizadas([]);
-        setPermiteVisitante(false);
-        setAtivo(true);
-        setUploadMethod('url');
-      }
-
-    } catch (error) {
-      console.error("Erro ao criar aula:", error);
-      toast.error("Erro ao criar aula. Tente novamente.");
+      onSuccess();
+    } catch (error: any) {
+      console.error("Erro ao salvar aula:", error);
+      toast.error("Erro ao salvar aula: " + error.message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle>
           {aulaEditando ? "Editar Aula" : "Criar Nova Aula"}
-          {aulaEditando && onCancelEdit && (
-            <Button variant="outline" onClick={onCancelEdit} size="sm">
-              Cancelar
-            </Button>
-          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <Label htmlFor="titulo">Título *</Label>
+            <Label htmlFor="titulo">Título da Aula *</Label>
             <Input
               id="titulo"
               value={titulo}
@@ -239,14 +145,13 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
           </div>
 
           <div>
-            <Label htmlFor="descricao">Descrição *</Label>
+            <Label htmlFor="descricao">Descrição da Aula</Label>
             <Textarea
               id="descricao"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Digite a descrição da aula"
+              placeholder="Descreva o conteúdo da aula"
               rows={3}
-              required
             />
           </div>
 
@@ -254,90 +159,47 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
             <Label htmlFor="linkConteudo">Link do Conteúdo *</Label>
             <Input
               id="linkConteudo"
+              type="url"
               value={linkConteudo}
               onChange={(e) => setLinkConteudo(e.target.value)}
-              placeholder="https://..."
-              type="url"
+              placeholder="https://exemplo.com/aula"
               required
             />
           </div>
 
-          {/* Seção PDF */}
-          <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-            <Label className="text-base font-semibold">Material PDF (opcional)</Label>
-            
-            <div className="flex gap-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  checked={uploadMethod === 'url'}
-                  onChange={() => setUploadMethod('url')}
-                />
-                <span>URL do PDF</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  checked={uploadMethod === 'upload'}
-                  onChange={() => setUploadMethod('upload')}
-                />
-                <span>Upload de Arquivo</span>
-              </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="pdfUrl">URL do Material PDF</Label>
+              <Input
+                id="pdfUrl"
+                type="url"
+                value={pdfUrl}
+                onChange={(e) => setPdfUrl(e.target.value)}
+                placeholder="https://exemplo.com/material.pdf"
+              />
             </div>
-
-            {uploadMethod === 'url' ? (
-              <>
-                <div>
-                  <Label htmlFor="pdfUrl">URL do PDF</Label>
-                  <Input
-                    id="pdfUrl"
-                    value={pdfUrl}
-                    onChange={(e) => setPdfUrl(e.target.value)}
-                    placeholder="https://..."
-                    type="url"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="pdfNome">Nome do PDF</Label>
-                  <Input
-                    id="pdfNome"
-                    value={pdfNome}
-                    onChange={(e) => setPdfNome(e.target.value)}
-                    placeholder="Nome do arquivo PDF"
-                  />
-                </div>
-              </>
-            ) : (
-              <div>
-                <Label htmlFor="pdfFile">Arquivo PDF (máx. 10MB)</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="pdfFile"
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileChange}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
-                  />
-                  {pdfFile && (
-                    <div className="flex items-center text-sm text-green-600">
-                      <FileText className="w-4 h-4 mr-1" />
-                      {pdfFile.name}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            <div>
+              <Label htmlFor="pdfNome">Nome do PDF</Label>
+              <Input
+                id="pdfNome"
+                value={pdfNome}
+                onChange={(e) => setPdfNome(e.target.value)}
+                placeholder="Material de apoio"
+              />
+            </div>
           </div>
 
           <div>
             <Label>Turmas Autorizadas</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-2">
               {turmasDisponiveis.map((turma) => (
                 <div key={turma} className="flex items-center space-x-2">
                   <Checkbox
                     id={turma}
                     checked={turmasAutorizadas.includes(turma)}
-                    onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
+                    onCheckedChange={(checked) => 
+                      handleTurmaChange(turma, checked as boolean)
+                    }
                   />
                   <Label htmlFor={turma} className="text-sm">
                     {turma}
@@ -347,34 +209,34 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="permiteVisitante"
-              checked={permiteVisitante}
-              onCheckedChange={(checked) => setPermiteVisitante(checked as boolean)}
-            />
-            <Label htmlFor="permiteVisitante">
-              Permite visitante
-            </Label>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="permiteVisitante"
+                checked={permiteVisitante}
+                onCheckedChange={setPermiteVisitante}
+              />
+              <Label htmlFor="permiteVisitante">Permite visitante</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="ativo"
+                checked={ativo}
+                onCheckedChange={setAtivo}
+              />
+              <Label htmlFor="ativo">Ativo</Label>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="ativo"
-              checked={ativo}
-              onCheckedChange={(checked) => setAtivo(checked as boolean)}
-            />
-            <Label htmlFor="ativo">
-              Ativo
-            </Label>
+          <div className="flex gap-3">
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading ? "Salvando..." : (aulaEditando ? "Atualizar Aula" : "Criar Aula")}
+            </Button>
+            <Button type="button" variant="outline" onClick={onCancelEdit}>
+              Cancelar
+            </Button>
           </div>
-
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading 
-              ? (aulaEditando ? "Salvando..." : "Criando...")
-              : (aulaEditando ? "Salvar Alterações" : "Criar Aula")
-            }
-          </Button>
         </form>
       </CardContent>
     </Card>

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy } from "lucide-react";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
+import { useRedacaoStatus } from "@/hooks/useRedacaoStatus";
 
 interface RedacaoCorrecaoFormProps {
   redacao: RedacaoEnviada;
@@ -25,6 +26,7 @@ export const RedacaoCorrecaoForm = ({ redacao, onCancel, onSuccess, onCopyRedaca
   const [comentario, setComentario] = useState(redacao.comentario_admin || "");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+  const { updateRedacaoStatus } = useRedacaoStatus();
 
   const copiarPromptCorrecao = () => {
     const promptCompleto = `🎯 PROMPT DE CORREÇÃO DE REDAÇÃO ENEM – LABORATÓRIO DO REDATOR
@@ -99,11 +101,14 @@ Resumo final para o aluno:
           comentario_admin: comentario,
           corrigida: true,
           data_correcao: new Date().toISOString(),
-          status: "corrigido"
+          status: "corrigida"
         })
         .eq("id", redacao.id);
 
       if (error) throw error;
+
+      // Atualizar status usando o hook
+      await updateRedacaoStatus(redacao.id, 'regular', true);
 
       toast({
         title: "Correção salva com sucesso!",
