@@ -59,7 +59,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             
             <div className="min-w-0 flex-1">
               <h1 className="text-base sm:text-xl font-bold text-redator-primary truncate">
-                {isMobile ? "Admin" : "Painel do Administrador"}
+                Painel do Administrador
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground truncate">
                 Seja bem-vindo, {user?.email || 'Administrador'}

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, Users, UserCheck, GraduationCap, Lock } from "lucide-react";
+import { User, Users, UserCheck, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -65,18 +65,50 @@ const Login = () => {
 
         {/* Opções principais de login */}
         <div className="space-y-4">
-          <Link to="/admin">
-            <Button 
-              variant="outline" 
-              className="w-full h-16 text-left justify-start bg-white hover:bg-red-50 border-2 hover:border-red-200 transition-all"
-            >
-              <GraduationCap className="w-6 h-6 mr-4 text-red-600" />
-              <div>
-                <div className="font-semibold text-red-800">Sou Professor</div>
-                <div className="text-sm text-red-600">Acessar painel administrativo</div>
-              </div>
-            </Button>
-          </Link>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full h-16 text-left justify-start bg-white hover:bg-red-50 border-2 hover:border-red-200 transition-all"
+              >
+                <GraduationCap className="w-6 h-6 mr-4 text-red-600" />
+                <div>
+                  <div className="font-semibold text-red-800">Sou Professor</div>
+                  <div className="text-sm text-red-600">Acessar painel administrativo</div>
+                </div>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Login do Professor</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAdminLogin} className="space-y-4">
+                <div>
+                  <Label htmlFor="admin-email">E-mail</Label>
+                  <Input
+                    id="admin-email"
+                    type="email"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="admin-password">Senha</Label>
+                  <Input
+                    id="admin-password"
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isAdminLoading}>
+                  {isAdminLoading ? "Entrando..." : "Entrar"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           <Link to="/aluno-login">
             <Button 
