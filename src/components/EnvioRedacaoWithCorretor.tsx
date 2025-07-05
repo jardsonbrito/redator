@@ -217,13 +217,9 @@ export const EnvioRedacaoWithCorretor = ({
 
       if (result.error) throw result.error;
 
-      const successMessage = CREDIT_SYSTEM_BYPASS 
-        ? "Redação enviada com sucesso! (Sistema de créditos temporariamente desativado)"
-        : `Redação enviada com sucesso! ${selectedCorretores.length} crédito(s) foram consumidos.`;
-
       toast({
         title: "Redação enviada com sucesso!",
-        description: successMessage,
+        description: "Sua redação foi enviada e será corrigida em breve.",
       });
 
       // Limpar formulário
@@ -254,13 +250,6 @@ export const EnvioRedacaoWithCorretor = ({
           <CardTitle>
             Enviar Redação {isSimulado ? "- Simulado" : exercicioId ? "- Exercício" : ""}
           </CardTitle>
-          {CREDIT_SYSTEM_BYPASS && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-2">
-              <p className="text-orange-800 text-sm">
-                ⚠️ <strong>Sistema de créditos temporariamente desativado.</strong> Envio liberado.
-              </p>
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePrimarySubmit} className="space-y-6">
@@ -318,7 +307,7 @@ export const EnvioRedacaoWithCorretor = ({
             </div>
 
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Enviando..." : CREDIT_SYSTEM_BYPASS ? "Enviar Redação" : "Verificar Créditos e Enviar"}
+              {loading ? "Enviando..." : "Enviar Redação"}
             </Button>
           </form>
         </CardContent>

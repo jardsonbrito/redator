@@ -2,6 +2,7 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AulaList } from "@/components/admin/AulaList";
 import { AulaForm } from "@/components/admin/AulaForm";
+import { BackButton } from "@/components/admin/BackButton";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useState } from "react";
@@ -22,6 +23,8 @@ const AdminAulas = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        <BackButton />
+        
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Gerenciar Aulas</h2>

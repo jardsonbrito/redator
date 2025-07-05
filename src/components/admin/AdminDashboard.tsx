@@ -126,10 +126,10 @@ export const AdminDashboard = () => {
         navigate('/admin/redacoes');
         break;
       case 'pendentes':
-        navigate('/admin/redacoes?filter=pendentes');
+        navigate('/admin/redacoes?status=pendentes');
         break;
       case 'corrigidas':
-        navigate('/admin/redacoes?filter=corrigidas');
+        navigate('/admin/redacoes?status=corrigidas');
         break;
       case 'turmas':
         navigate('/admin/alunos');
@@ -153,7 +153,7 @@ export const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Aviso do Sistema de Créditos */}
+      {/* Aviso do Sistema de Créditos - APENAS PARA ADM */}
       <CreditBypassNotice />
 
       {/* Mini cards superiores */}
@@ -211,7 +211,7 @@ export const AdminDashboard = () => {
             <div className="text-3xl font-bold text-blue-600 mb-2">
               {metrics.totalRedacoes}
             </div>
-            <p className="text-sm text-gray-600">Clique para ver lista filtrável</p>
+            <p className="text-sm text-gray-600">Ver todas as redações enviadas</p>
           </CardContent>
         </Card>
 
@@ -229,7 +229,7 @@ export const AdminDashboard = () => {
             <div className="text-3xl font-bold text-yellow-600 mb-2">
               {metrics.redacoesPendentes}
             </div>
-            <p className="text-sm text-gray-600">Filtrar por turma e mês</p>
+            <p className="text-sm text-gray-600">Redações aguardando correção</p>
           </CardContent>
         </Card>
 
@@ -247,7 +247,7 @@ export const AdminDashboard = () => {
             <div className="text-3xl font-bold text-green-600 mb-2">
               {metrics.redacoesCorrigidas}
             </div>
-            <p className="text-sm text-gray-600">Ver por turma, mês e corretor</p>
+            <p className="text-sm text-gray-600">Redações já corrigidas</p>
           </CardContent>
         </Card>
 
@@ -265,7 +265,7 @@ export const AdminDashboard = () => {
             <div className="text-3xl font-bold text-purple-600 mb-2">
               {metrics.turmasCadastradas}
             </div>
-            <p className="text-sm text-gray-600">Ver todas as turmas registradas</p>
+            <p className="text-sm text-gray-600">Ver alunos por turma</p>
           </CardContent>
         </Card>
 
@@ -283,7 +283,7 @@ export const AdminDashboard = () => {
             <div className="text-3xl font-bold text-indigo-600 mb-2">
               {metrics.corretoresAtivos}
             </div>
-            <p className="text-sm text-gray-600">Ver correções realizadas</p>
+            <p className="text-sm text-gray-600">Gerenciar corretores</p>
           </CardContent>
         </Card>
       </div>
