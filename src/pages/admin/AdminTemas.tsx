@@ -37,7 +37,7 @@ const AdminTemas = () => {
         {showForm ? (
           <TemaForm onClose={handleClose} />
         ) : (
-          <TemaList refresh={refreshTemas} onEdit={() => {}} />
+          <TemaList />
         )}
       </div>
     </AdminLayout>

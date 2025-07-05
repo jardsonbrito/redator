@@ -35,9 +35,9 @@ const AdminAulas = () => {
         </div>
 
         {showForm ? (
-          <AulaForm onClose={handleClose} />
+          <AulaForm onSuccess={handleClose} />
         ) : (
-          <AulaList refresh={refreshAulas} onEdit={() => {}} />
+          <AulaList />
         )}
       </div>
     </AdminLayout>

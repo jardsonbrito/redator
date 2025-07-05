@@ -35,9 +35,9 @@ const AdminVideos = () => {
         </div>
 
         {showForm ? (
-          <VideoForm onClose={handleClose} />
+          <VideoForm onSuccess={handleClose} />
         ) : (
-          <VideoList refresh={refreshVideos} onEdit={() => {}} />
+          <VideoList />
         )}
       </div>
     </AdminLayout>

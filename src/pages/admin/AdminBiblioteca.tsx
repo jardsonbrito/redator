@@ -35,9 +35,9 @@ const AdminBiblioteca = () => {
         </div>
 
         {showForm ? (
-          <BibliotecaForm onClose={handleClose} />
+          <BibliotecaForm onSuccess={handleClose} />
         ) : (
-          <BibliotecaList refresh={refreshBiblioteca} onEdit={() => {}} />
+          <BibliotecaList />
         )}
       </div>
     </AdminLayout>

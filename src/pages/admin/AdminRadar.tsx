@@ -37,7 +37,7 @@ const AdminRadar = () => {
         {showUpload ? (
           <RadarUpload onClose={handleClose} />
         ) : (
-          <RadarList refresh={refreshRadar} />
+          <RadarList />
         )}
       </div>
     </AdminLayout>
