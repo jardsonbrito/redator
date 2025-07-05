@@ -16,15 +16,15 @@ export const useCredits = () => {
         return 0;
       }
 
-      // Normalizar email
+      // Normalizar email - remover espaços e converter para minúsculo
       const normalizedEmail = email.trim().toLowerCase();
       console.log('📧 Email normalizado:', normalizedEmail);
 
-      // Buscar na tabela profiles onde user_type = 'aluno'
+      // Buscar na tabela profiles onde user_type = 'aluno' usando busca exata
       const { data, error } = await supabase
         .from('profiles')
         .select('creditos, nome, email, user_type')
-        .ilike('email', normalizedEmail)
+        .eq('email', normalizedEmail)
         .eq('user_type', 'aluno')
         .maybeSingle();
 
@@ -35,7 +35,23 @@ export const useCredits = () => {
 
       if (!data) {
         console.log('❌ Nenhum perfil de aluno encontrado para:', normalizedEmail);
-        return 0;
+        // Tentar busca case-insensitive como fallback
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles') 
+          .select('creditos, nome, email, user_type')
+          .ilike('email', normalizedEmail)
+          .eq('user_type', 'aluno')
+          .maybeSingle();
+
+        if (fallbackError || !fallbackData) {
+          console.log('❌ Fallback também não encontrou dados');
+          return 0;
+        }
+
+        console.log('✅ Dados encontrados via fallback:', fallbackData);
+        const credits = fallbackData?.creditos || 0;
+        console.log('💰 Créditos retornados (fallback):', credits);
+        return credits;
       }
 
       console.log('✅ Dados do aluno encontrados:', data);
@@ -104,7 +120,7 @@ export const useCredits = () => {
     }
   };
 
-  // Função corrigida para consumir créditos por email
+  // Função corrigida para consumir créditos por email com lógica mais robusta
   const consumeCreditsByEmail = async (email: string, amount: number): Promise<boolean> => {
     setLoading(true);
     try {
@@ -113,17 +129,38 @@ export const useCredits = () => {
       // Normalizar o email
       const normalizedEmail = email.trim().toLowerCase();
       
-      // Buscar o usuário pelo email usando ilike para busca case-insensitive
-      const { data: user, error: userError } = await supabase
+      // Buscar o usuário pelo email usando busca exata primeiro
+      let user = null;
+      let userError = null;
+
+      const { data: exactUser, error: exactError } = await supabase
         .from('profiles')
         .select('id, creditos, nome, email')
-        .ilike('email', normalizedEmail)
+        .eq('email', normalizedEmail)
         .eq('user_type', 'aluno')
         .maybeSingle();
 
-      if (userError) {
-        console.error('❌ Erro ao buscar usuário:', userError);
-        return false;
+      if (exactError) {
+        console.log('⚠️ Erro na busca exata, tentando ilike:', exactError);
+      }
+
+      if (exactUser) {
+        user = exactUser;
+      } else {
+        // Fallback para busca case-insensitive
+        const { data: fallbackUser, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('id, creditos, nome, email')
+          .ilike('email', normalizedEmail)
+          .eq('user_type', 'aluno')
+          .maybeSingle();
+
+        if (fallbackError) {
+          console.error('❌ Erro ao buscar usuário (fallback):', fallbackError);
+          return false;
+        }
+
+        user = fallbackUser;
       }
 
       if (!user) {
@@ -143,7 +180,10 @@ export const useCredits = () => {
       const newCredits = user.creditos - amount;
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ creditos: newCredits })
+        .update({ 
+          creditos: newCredits,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', user.id);
 
       if (updateError) {

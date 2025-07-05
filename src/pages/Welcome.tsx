@@ -10,7 +10,7 @@ import { LoginForm } from "@/components/LoginForm";
 import { LoginTestTool } from "@/components/LoginTestTool";
 
 const Welcome = () => {
-  const [selectedProfile, setSelectedProfile] = useState<"professor" | "aluno" | "visitante" | "corretor">("aluno");
+  const [selectedProfile, setSelectedProfile] = useState<"aluno" | "visitante" | "corretor">("aluno");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -18,29 +18,12 @@ const Welcome = () => {
   const { signIn } = useAuth();
   const { loginAsCorretor } = useCorretorAuth();
 
-  const handleLogin = async (profileType: "professor" | "aluno" | "visitante" | "corretor", data: any) => {
+  const handleLogin = async (profileType: "aluno" | "visitante" | "corretor", data: any) => {
     console.log('🔄 WELCOME - Login iniciado:', profileType, data);
     setLoading(true);
 
     try {
-      if (profileType === "professor") {
-        const { error } = await signIn(data.email, data.senha);
-        if (error) {
-          toast({
-            title: "Erro no login",
-            description: error.message || "Credenciais inválidas. Verifique email e senha.",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Login realizado com sucesso!",
-            description: "Redirecionando para o painel administrativo..."
-          });
-          setTimeout(() => {
-            navigate('/admin', { replace: true });
-          }, 1000);
-        }
-      } else if (profileType === "aluno") {
+      if (profileType === "aluno") {
         console.log('✅ WELCOME - Login bem-sucedido para aluno:', data.nome, 'Turma:', data.turma);
         loginAsStudent(data.turma);
         toast({

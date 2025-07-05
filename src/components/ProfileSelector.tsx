@@ -2,24 +2,13 @@
 import { Button } from "@/components/ui/button";
 
 interface ProfileSelectorProps {
-  selectedProfile: "professor" | "aluno" | "visitante" | "corretor";
-  onProfileChange: (profile: "professor" | "aluno" | "visitante" | "corretor") => void;
+  selectedProfile: "aluno" | "visitante" | "corretor";
+  onProfileChange: (profile: "aluno" | "visitante" | "corretor") => void;
 }
 
 export const ProfileSelector = ({ selectedProfile, onProfileChange }: ProfileSelectorProps) => {
   return (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-      <Button
-        variant={selectedProfile === "professor" ? "default" : "outline"}
-        onClick={() => onProfileChange("professor")}
-        className={`h-16 text-xs ${
-          selectedProfile === "professor"
-            ? "bg-redator-primary hover:bg-redator-primary/90 text-white"
-            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"
-        }`}
-      >
-        Sou Professor
-      </Button>
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
       <Button
         variant={selectedProfile === "aluno" ? "default" : "outline"}
         onClick={() => onProfileChange("aluno")}

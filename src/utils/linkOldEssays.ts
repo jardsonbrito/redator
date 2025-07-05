@@ -6,68 +6,52 @@ export const linkOldEssaysToStudents = async () => {
   console.log("🔄 Iniciando vinculação de redações antigas...");
 
   try {
-    // Atualizar redações de Ruth Constantatino Esteves
-    const { error: ruthError } = await supabase
-      .from('redacoes_enviadas')
-      .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Ruth%Constantatino%Esteves%');
+    // Mapeamento correto dos nomes para e-mails
+    const estudantes = [
+      {
+        nomes: ['Ruth Constantatino Esteves', 'Ruth Constantino Esteves', 'Ruth Constantino', 'Ruth Constantatino'],
+        email: 'ruthesteves@laboratoriodoredator.com'
+      },
+      {
+        nomes: ['Joana Évelyn', 'Joana Evelyn'],
+        email: 'joana@laboratoriodoredator.com'
+      },
+      {
+        nomes: ['Lucas Julião', 'Lucas Juliao'],
+        email: 'lucasfreitas@laboratoriodoredator.com'
+      }
+    ];
 
-    if (ruthError) {
-      console.error('❌ Erro ao atualizar redações da Ruth:', ruthError);
-    } else {
-      console.log('✅ Redações da Ruth vinculadas ao e-mail: ruthesteves@laboratoriodoredator.com');
+    // Atualizar redações enviadas
+    for (const estudante of estudantes) {
+      for (const nome of estudante.nomes) {
+        console.log(`🔍 Procurando redações para: ${nome}`);
+        
+        // Atualizar em redacoes_enviadas
+        const { error: errorEnviadas } = await supabase
+          .from('redacoes_enviadas')
+          .update({ email_aluno: estudante.email })
+          .ilike('nome_aluno', `%${nome}%`);
+
+        if (errorEnviadas) {
+          console.error(`❌ Erro ao atualizar redações enviadas de ${nome}:`, errorEnviadas);
+        } else {
+          console.log(`✅ Redações enviadas de ${nome} vinculadas ao e-mail: ${estudante.email}`);
+        }
+
+        // Atualizar em redacoes_simulado
+        const { error: errorSimulado } = await supabase
+          .from('redacoes_simulado')
+          .update({ email_aluno: estudante.email })
+          .ilike('nome_aluno', `%${nome}%`);
+
+        if (errorSimulado) {
+          console.error(`❌ Erro ao atualizar redações de simulado de ${nome}:`, errorSimulado);
+        } else {
+          console.log(`✅ Redações de simulado de ${nome} vinculadas ao e-mail: ${estudante.email}`);
+        }
+      }
     }
-
-    // Atualizar redações de Joana Évelyn
-    const { error: joanaError } = await supabase
-      .from('redacoes_enviadas')
-      .update({ email_aluno: 'joana@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Joana%Évelyn%');
-
-    if (joanaError) {
-      console.error('❌ Erro ao atualizar redações da Joana:', joanaError);
-    } else {
-      console.log('✅ Redações da Joana vinculadas ao e-mail: joana@laboratoriodoredator.com');
-    }
-
-    // Atualizar redações de Lucas Julião
-    const { error: lucasError } = await supabase
-      .from('redacoes_enviadas')
-      .update({ email_aluno: 'lucasfreitas@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Lucas%Julião%');
-
-    if (lucasError) {
-      console.error('❌ Erro ao atualizar redações do Lucas:', lucasError);
-    } else {
-      console.log('✅ Redações do Lucas vinculadas ao e-mail: lucasfreitas@laboratoriodoredator.com');
-    }
-
-    // Também verificar outras variações do nome da Ruth
-    await supabase
-      .from('redacoes_enviadas')
-      .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Ruth%Constantino%');
-
-    // Fazer o mesmo para redações de simulado se existirem
-    await supabase
-      .from('redacoes_simulado')
-      .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Ruth%Constantatino%Esteves%');
-
-    await supabase
-      .from('redacoes_simulado')
-      .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Ruth%Constantino%');
-
-    await supabase
-      .from('redacoes_simulado')
-      .update({ email_aluno: 'joana@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Joana%Évelyn%');
-
-    await supabase
-      .from('redacoes_simulado')
-      .update({ email_aluno: 'lucasfreitas@laboratoriodoredator.com' })
-      .ilike('nome_aluno', '%Lucas%Julião%');
 
     console.log('🎉 Processo de vinculação de redações antigas concluído!');
     return true;
