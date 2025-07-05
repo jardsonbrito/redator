@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useCredits } from "@/hooks/useCredits";
-import { Coins, User, Plus, Minus } from "lucide-react";
+import { Coins, User, Plus, Minus, Search } from "lucide-react";
 
 interface Student {
   id: string;
@@ -18,26 +18,53 @@ interface Student {
   turma: string;
 }
 
-export const CreditManager = () => {
+interface CreditManagerProps {
+  turmaFilter?: string;
+}
+
+export const CreditManager = ({ turmaFilter }: CreditManagerProps) => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [creditAmount, setCreditAmount] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const { toast } = useToast();
   const { addCredits, loading } = useCredits();
   const queryClient = useQueryClient();
 
   const { data: students, isLoading } = useQuery({
-    queryKey: ['students-credits'],
+    queryKey: ['students-credits', turmaFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select('id, nome, email, creditos, turma')
         .eq('user_type', 'aluno')
         .order('nome');
 
+      if (turmaFilter) {
+        query = query.eq('turma', turmaFilter);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Student[];
     },
   });
+
+  useEffect(() => {
+    if (!students) return;
+    
+    if (!searchTerm.trim()) {
+      setFilteredStudents(students);
+      return;
+    }
+
+    const filtered = students.filter(student => 
+      student.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    setFilteredStudents(filtered);
+  }, [searchTerm, students]);
 
   const handleUpdateCredits = async (student: Student, operation: 'add' | 'subtract') => {
     const amount = parseInt(creditAmount);
@@ -56,7 +83,7 @@ export const CreditManager = () => {
     if (success) {
       setCreditAmount("");
       setSelectedStudent(null);
-      queryClient.invalidateQueries({ queryKey: ['students-credits'] });
+      queryClient.invalidateQueries({ queryKey: ['students-credits', turmaFilter] });
     }
   };
 
@@ -79,7 +106,7 @@ export const CreditManager = () => {
     if (success) {
       setCreditAmount("");
       setSelectedStudent(null);
-      queryClient.invalidateQueries({ queryKey: ['students-credits'] });
+      queryClient.invalidateQueries({ queryKey: ['students-credits', turmaFilter] });
     }
   };
 
@@ -102,12 +129,22 @@ export const CreditManager = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Coins className="w-5 h-5" />
-            Gerenciar Créditos dos Alunos
+            Gerenciar Créditos dos Alunos {turmaFilter && `- ${turmaFilter}`}
           </CardTitle>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar aluno por nome ou e-mail..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
-            {students?.map((student) => (
+            {filteredStudents?.map((student) => (
               <div
                 key={student.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
@@ -117,7 +154,7 @@ export const CreditManager = () => {
                   <div>
                     <p className="font-medium">{student.nome}</p>
                     <p className="text-sm text-gray-500">{student.email}</p>
-                    <p className="text-xs text-gray-400">Turma: {student.turma}</p>
+                    {!turmaFilter && <p className="text-xs text-gray-400">Turma: {student.turma}</p>}
                   </div>
                 </div>
                 
