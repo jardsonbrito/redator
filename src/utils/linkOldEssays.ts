@@ -32,7 +32,7 @@ export const linkOldEssaysToStudents = async () => {
 
     // Atualizar redações de Lucas Julião
     const { error: lucasError } = await supabase
-      .from('redacoes_enviados')
+      .from('redacoes_enviadas')
       .update({ email_aluno: 'lucasfreitas@laboratoriodoredator.com' })
       .ilike('nome_aluno', '%Lucas%Julião%');
 
