@@ -24,21 +24,17 @@ export const useCredits = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('creditos, nome, email, user_type')
-        .eq('email', normalizedEmail)
+        .ilike('email', normalizedEmail)
         .eq('user_type', 'aluno')
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('❌ Erro ao buscar créditos:', error);
-        
-        // Se não encontrou o aluno, verificar se existe com outro user_type
-        const { data: allProfiles } = await supabase
-          .from('profiles')
-          .select('email, user_type, creditos')
-          .eq('email', normalizedEmail);
-        
-        console.log('🔍 Perfis encontrados para este email:', allProfiles);
-        
+        return 0;
+      }
+
+      if (!data) {
+        console.log('❌ Nenhum perfil de aluno encontrado para:', normalizedEmail);
         return 0;
       }
 
@@ -108,22 +104,30 @@ export const useCredits = () => {
     }
   };
 
-  // Nova função para consumir créditos por email
+  // Função corrigida para consumir créditos por email
   const consumeCreditsByEmail = async (email: string, amount: number): Promise<boolean> => {
     setLoading(true);
     try {
       console.log('🔥 Consumindo créditos por email:', { email, amount });
       
-      // Buscar o usuário pelo email
+      // Normalizar o email
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      // Buscar o usuário pelo email usando ilike para busca case-insensitive
       const { data: user, error: userError } = await supabase
         .from('profiles')
-        .select('id, creditos, nome')
-        .eq('email', email.trim().toLowerCase())
+        .select('id, creditos, nome, email')
+        .ilike('email', normalizedEmail)
         .eq('user_type', 'aluno')
-        .single();
+        .maybeSingle();
 
-      if (userError || !user) {
-        console.error('❌ Usuário não encontrado:', userError);
+      if (userError) {
+        console.error('❌ Erro ao buscar usuário:', userError);
+        return false;
+      }
+
+      if (!user) {
+        console.error('❌ Usuário não encontrado para email:', normalizedEmail);
         return false;
       }
 

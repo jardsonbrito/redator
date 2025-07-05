@@ -136,6 +136,7 @@ const EnvieRedacao = () => {
 
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
+    setShowCreditDialog(false);
 
     try {
       // Primeiro, consumir os créditos
@@ -147,7 +148,6 @@ const EnvieRedacao = () => {
           description: "Você não possui créditos suficientes para este envio.",
           variant: "destructive",
         });
-        setShowCreditDialog(false);
         return;
       }
 
@@ -185,7 +185,6 @@ const EnvieRedacao = () => {
       setFraseTematica("");
       setRedacaoTexto("");
       setSelectedCorretores([]);
-      setShowCreditDialog(false);
 
     } catch (error) {
       console.error('Erro ao enviar redação:', error);
@@ -213,13 +212,12 @@ const EnvieRedacao = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-redator-primary">
                   <Send className="w-5 h-5" />
-                  {fonteFromUrl === 'tema' ? 'Redação sobre o Tema Selecionado' : 
-                   (userType === "aluno" ? 'Enviar Redação – Tema Livre' : 'Enviar Redação Avulsa – Tema Livre')}
+                  {fonteFromUrl === 'tema' ? 'Redação sobre o Tema Selecionado' : 'Enviar Nova Redação'}
                 </CardTitle>
                 <p className="text-redator-accent">
                   {fonteFromUrl === 'tema' 
                     ? 'Complete os dados abaixo para enviar sua redação sobre o tema escolhido.'
-                    : 'Preencha os campos abaixo para enviar sua redação sobre tema livre.'
+                    : 'Preencha os campos abaixo para enviar sua redação.'
                   }
                 </p>
               </CardHeader>
@@ -269,7 +267,7 @@ const EnvieRedacao = () => {
                     disabled={isSubmitting || !isRedacaoValid}
                     className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
                   >
-                    {isSubmitting ? "Enviando..." : "Enviar Redação"}
+                    {isSubmitting ? "Enviando..." : "Verificar Créditos e Enviar"}
                   </Button>
                 </form>
               </CardContent>

@@ -42,11 +42,22 @@ export const linkOldEssaysToStudents = async () => {
       console.log('✅ Redações do Lucas vinculadas ao e-mail: lucasfreitas@laboratoriodoredator.com');
     }
 
+    // Também verificar outras variações do nome da Ruth
+    await supabase
+      .from('redacoes_enviadas')
+      .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
+      .ilike('nome_aluno', '%Ruth%Constantino%');
+
     // Fazer o mesmo para redações de simulado se existirem
     await supabase
       .from('redacoes_simulado')
       .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
       .ilike('nome_aluno', '%Ruth%Constantatino%Esteves%');
+
+    await supabase
+      .from('redacoes_simulado')
+      .update({ email_aluno: 'ruthesteves@laboratoriodoredator.com' })
+      .ilike('nome_aluno', '%Ruth%Constantino%');
 
     await supabase
       .from('redacoes_simulado')

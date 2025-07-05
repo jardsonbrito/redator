@@ -63,7 +63,7 @@ export const CreditInfoDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Coins className="w-5 h-5 text-yellow-500" />
-            Créditos de Redação
+            Verificação de Créditos
           </DialogTitle>
         </DialogHeader>
 
@@ -77,12 +77,12 @@ export const CreditInfoDialog = ({
             <>
               {hasEnoughCredits ? (
                 <div className="text-center space-y-3">
-                  <div className="text-lg font-semibold text-blue-600 mb-3">
-                    Você possui {credits} créditos.
+                  <div className="text-lg font-semibold text-green-600 mb-3">
+                    ✅ Você possui {credits} créditos.
                   </div>
-                  <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                    <p>Corretores selecionados: {creditsNeeded}</p>
-                    <p className="font-medium">Após este envio, restarão {creditsAfterSend} créditos.</p>
+                  <div className="text-sm text-gray-600 bg-green-50 p-3 rounded-lg">
+                    <p>• Corretores selecionados: {creditsNeeded}</p>
+                    <p className="font-medium">• Após este envio, restarão {creditsAfterSend} créditos.</p>
                   </div>
                 </div>
               ) : (
@@ -110,7 +110,7 @@ export const CreditInfoDialog = ({
           </Button>
           {hasEnoughCredits && !loading && (
             <Button onClick={onProceed} className="bg-green-600 hover:bg-green-700">
-              Enviar Redação
+              Confirmar Envio
             </Button>
           )}
         </div>
