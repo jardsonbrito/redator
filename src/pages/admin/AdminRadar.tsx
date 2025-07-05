@@ -2,7 +2,6 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { RadarList } from "@/components/admin/RadarList";
 import { RadarUpload } from "@/components/admin/RadarUpload";
-import { BackButton } from "@/components/admin/BackButton";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { useState } from "react";
@@ -21,8 +20,6 @@ const AdminRadar = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <BackButton />
-        
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Radar - Relatórios e Análises</h2>

@@ -1,47 +1,17 @@
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { AulaList } from "@/components/admin/AulaList";
-import { AulaForm } from "@/components/admin/AulaForm";
-import { BackButton } from "@/components/admin/BackButton";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { SimpleAulaList } from "@/components/admin/SimpleAulaList";
 
 const AdminAulas = () => {
-  const [showForm, setShowForm] = useState(false);
-  const [refreshAulas, setRefreshAulas] = useState(false);
-
-  const handleCreate = () => {
-    setShowForm(true);
-  };
-
-  const handleClose = () => {
-    setShowForm(false);
-    setRefreshAulas(!refreshAulas);
-  };
-
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <BackButton />
-        
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Gerenciar Aulas</h2>
-            <p className="text-gray-600">Crie e gerencie aulas e conteúdos</p>
-          </div>
-          
-          <Button onClick={handleCreate} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Nova Aula
-          </Button>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Gerenciar Aulas</h2>
+          <p className="text-gray-600">Crie e gerencie aulas e conteúdos</p>
         </div>
 
-        {showForm ? (
-          <AulaForm onSuccess={handleClose} />
-        ) : (
-          <AulaList />
-        )}
+        <SimpleAulaList />
       </div>
     </AdminLayout>
   );
