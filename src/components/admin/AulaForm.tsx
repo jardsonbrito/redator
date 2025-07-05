@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Upload, X } from "lucide-react";
 
 interface Aula {
   id: string;
@@ -214,7 +213,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
               <Checkbox
                 id="permiteVisitante"
                 checked={permiteVisitante}
-                onCheckedChange={setPermiteVisitante}
+                onCheckedChange={(checked) => setPermiteVisitante(checked as boolean)}
               />
               <Label htmlFor="permiteVisitante">Permite visitante</Label>
             </div>
@@ -223,7 +222,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
               <Checkbox
                 id="ativo"
                 checked={ativo}
-                onCheckedChange={setAtivo}
+                onCheckedChange={(checked) => setAtivo(checked as boolean)}
               />
               <Label htmlFor="ativo">Ativo</Label>
             </div>

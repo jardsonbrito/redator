@@ -6,11 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Welcome from "./pages/Welcome";
-import StudentApp from "./pages/StudentApp";
+import Student from "./pages/Student";
 import { Redacoes } from "./pages/admin/Redacoes";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import MinhasRedacoesList from "./pages/MinhasRedacoesList";
-import AdminDashboard from "./pages/admin/AdminDashboard";
+import Dashboard from "./pages/admin/Dashboard";
 import AdminAlunos from "./pages/admin/AdminAlunos";
 import AdminCreditos from "./pages/admin/AdminCreditos";
 import AdminTemas from "./pages/admin/AdminTemas";
@@ -32,12 +32,12 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Welcome />} />
-            <Route path="/app" element={<StudentApp />} />
+            <Route path="/app" element={<Student />} />
             <Route path="/envie-redacao" element={<EnvieRedacao />} />
             <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
             
             {/* Admin Routes */}
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={<Dashboard />} />
             <Route path="/admin/alunos" element={<AdminAlunos />} />
             <Route path="/admin/creditos" element={<AdminCreditos />} />
             <Route path="/admin/redacoes" element={<Redacoes />} />

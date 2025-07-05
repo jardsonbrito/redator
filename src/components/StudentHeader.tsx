@@ -11,11 +11,11 @@ interface StudentHeaderProps {
 
 export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { logout } = useStudentAuth();
+  const { logoutStudent } = useStudentAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
+    logoutStudent();
     navigate("/", { replace: true });
   };
 
