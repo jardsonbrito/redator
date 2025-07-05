@@ -65,57 +65,24 @@ export const useCredits = () => {
     }
   };
 
-  const addCredits = async (userEmail: string, amount: number): Promise<boolean> => {
+  const addCredits = async (userId: string, amount: number): Promise<boolean> => {
     setLoading(true);
     try {
-      console.log('💳 Adicionando créditos para email:', userEmail, 'Quantidade:', amount);
+      console.log('💳 Adicionando créditos:', { userId, amount });
       
-      // Normalizar o email
-      const normalizedEmail = userEmail.trim().toLowerCase();
-      
-      // Primeiro, buscar o usuário atual
-      const { data: currentUser, error: fetchError } = await supabase
-        .from('profiles')
-        .select('id, creditos, nome, email')
-        .eq('email', normalizedEmail)
-        .eq('user_type', 'aluno')
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('add_credits_safe', {
+        target_user_id: userId,
+        credit_amount: amount
+      });
 
-      if (fetchError) {
-        console.error('❌ Erro ao buscar usuário:', fetchError);
-        throw fetchError;
-      }
+      if (error) throw error;
 
-      if (!currentUser) {
-        throw new Error('Usuário não encontrado');
-      }
-
-      // Calcular novos créditos
-      const newCredits = Math.max(0, (currentUser.creditos || 0) + amount);
-      console.log('🔄 Créditos atuais:', currentUser.creditos, 'Novos créditos:', newCredits);
-
-      // Atualizar créditos diretamente
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          creditos: newCredits,
-          updated_at: new Date().toISOString()
-        })
-        .eq('email', normalizedEmail)
-        .eq('user_type', 'aluno');
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar créditos:', updateError);
-        throw updateError;
-      }
-
-      console.log('✅ Créditos atualizados com sucesso');
-      
       toast({
         title: "Créditos atualizados",
         description: `${amount > 0 ? 'Adicionados' : 'Removidos'} ${Math.abs(amount)} créditos com sucesso.`
       });
 
+      console.log('✅ Créditos atualizados com sucesso');
       return true;
     } catch (error: any) {
       console.error('❌ Erro ao gerenciar créditos:', error);
@@ -164,6 +131,7 @@ export const useCredits = () => {
       
       // Buscar o usuário pelo email usando busca exata primeiro
       let user = null;
+      let userError = null;
 
       const { data: exactUser, error: exactError } = await supabase
         .from('profiles')

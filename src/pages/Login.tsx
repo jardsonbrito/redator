@@ -116,7 +116,7 @@ const Login = () => {
                 className="w-full text-gray-500 hover:text-gray-700 text-xs"
               >
                 <Lock className="w-3 h-3 mr-2" />
-                🔐 Acesso ao Painel Administrativo
+                🔐 Acesso ao painel administrativo
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">

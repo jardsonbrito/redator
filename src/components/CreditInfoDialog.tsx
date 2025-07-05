@@ -95,7 +95,7 @@ export const CreditInfoDialog = ({
                     <p className="mb-2">Você possui: <strong>{credits} créditos</strong></p>
                     <p className="mb-3">Necessários: <strong>{creditsNeeded} créditos</strong></p>
                     <p className="text-red-600 font-medium">
-                      Entre em contato com o seu professor para solicitar novos créditos.
+                      Fale com seu professor para solicitar mais créditos.
                     </p>
                   </div>
                 </div>

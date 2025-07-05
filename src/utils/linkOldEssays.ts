@@ -61,6 +61,3 @@ export const linkOldEssaysToStudents = async () => {
     return false;
   }
 };
-
-// Executar automaticamente a vinculação quando o módulo for importado
-linkOldEssaysToStudents();
