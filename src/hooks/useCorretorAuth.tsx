@@ -103,15 +103,15 @@ export const CorretorAuthProvider = ({ children }: { children: React.ReactNode }
         description: "Até logo!",
       });
 
-      // Forçar redirecionamento imediato
-      window.location.replace('/corretor/login');
+      // Forçar redirecionamento para tela principal de login
+      window.location.replace('/');
       
     } catch (error) {
       console.error("Erro no logout:", error);
       // Mesmo se der erro, forçar limpeza e redirecionamento
       setCorretor(null);
       localStorage.removeItem('corretor_session');
-      window.location.replace('/corretor/login');
+      window.location.replace('/');
     }
   };
 
