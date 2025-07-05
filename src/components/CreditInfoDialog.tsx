@@ -77,12 +77,12 @@ export const CreditInfoDialog = ({
             <>
               {hasEnoughCredits ? (
                 <div className="text-center space-y-3">
-                  <div className="text-2xl font-bold text-blue-600 mb-2">
-                    Você possui: {credits} créditos
+                  <div className="text-lg font-semibold text-blue-600 mb-3">
+                    Você possui {credits} créditos.
                   </div>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
                     <p>Corretores selecionados: {creditsNeeded}</p>
-                    <p>Créditos após o envio: {creditsAfterSend}</p>
+                    <p className="font-medium">Após este envio, restarão {creditsAfterSend} créditos.</p>
                   </div>
                 </div>
               ) : (
@@ -91,12 +91,11 @@ export const CreditInfoDialog = ({
                     <AlertCircle className="w-5 h-5" />
                     <span className="font-semibold">Créditos insuficientes</span>
                   </div>
-                  <div className="text-sm text-gray-700">
+                  <div className="text-sm text-gray-700 bg-red-50 p-3 rounded-lg">
                     <p className="mb-2">Você possui: <strong>{credits} créditos</strong></p>
                     <p className="mb-3">Necessários: <strong>{creditsNeeded} créditos</strong></p>
-                    <p className="text-red-600">
-                      Você não possui créditos suficientes para este envio. 
-                      Entre em contato com seu professor para solicitar novos créditos.
+                    <p className="text-red-600 font-medium">
+                      Fale com seu professor para solicitar mais créditos.
                     </p>
                   </div>
                 </div>
