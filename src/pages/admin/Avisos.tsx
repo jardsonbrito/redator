@@ -1,9 +1,7 @@
 
-import { AdminLayout } from "@/components/admin/AdminLayout";
+import { useState } from "react";
 import { AvisoForm } from "@/components/admin/AvisoForm";
 import { AvisoList } from "@/components/admin/AvisoList";
-import { BackButton } from "@/components/admin/BackButton";
-import { useState } from "react";
 
 export const Avisos = () => {
   const [refresh, setRefresh] = useState(false);
@@ -22,26 +20,19 @@ export const Avisos = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <BackButton />
-        
-        <div>
-          <h1 className="text-3xl font-bold">Gerenciar Avisos</h1>
-          <p className="text-gray-600">Crie e gerencie avisos para alunos e corretores</p>
-        </div>
-        
-        <AvisoForm 
-          onSuccess={handleSuccess} 
-          avisoEditando={avisoEditando}
-          onCancelEdit={handleCancelEdit}
-        />
-        
-        <AvisoList 
-          refresh={refresh} 
-          onEdit={handleEdit}
-        />
-      </div>
-    </AdminLayout>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">Gerenciar Avisos</h1>
+      
+      <AvisoForm 
+        onSuccess={handleSuccess} 
+        avisoEditando={avisoEditando}
+        onCancelEdit={handleCancelEdit}
+      />
+      
+      <AvisoList 
+        refresh={refresh} 
+        onEdit={handleEdit}
+      />
+    </div>
   );
 };

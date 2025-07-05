@@ -1,15 +1,14 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { FileText, Calendar, Eye, Clock, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
-import { Link } from "react-router-dom";
 
 type RedacaoTurma = {
   id: string;
@@ -29,19 +28,34 @@ type RedacaoTurma = {
   nota_c3?: number | null;
   nota_c4?: number | null;
   nota_c5?: number | null;
-  corretor_nome?: string;
+};
+
+type AuthenticatedRedacao = RedacaoTurma & {
+  redacao_texto: string;
+  nota_c1: number | null;
+  nota_c2: number | null;
+  nota_c3: number | null;
+  nota_c4: number | null;
+  nota_c5: number | null;
 };
 
 export const MinhasRedacoes = () => {
-  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<RedacaoTurma & { redacao_texto: string } | null>(null);
+  const [selectedRedacaoId, setSelectedRedacaoId] = useState<string | null>(null);
+  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<AuthenticatedRedacao | null>(null);
+  const [emailInput, setEmailInput] = useState("");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
   const { toast } = useToast();
 
-  // Determinar email do usuário logado
-  let currentUserEmail = "";
+  // Recupera dados do usuário com validação aprimorada
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
   const visitanteData = localStorage.getItem("visitanteData");
+
+  // Determinar código da turma ou email do visitante
+  let turmaCode = "";
+  let visitanteEmail = "";
   
   if (userType === "aluno" && alunoTurma) {
     const turmasMap = {
@@ -51,149 +65,283 @@ export const MinhasRedacoes = () => {
       "Turma D": "LRD2025",
       "Turma E": "LRE2025"
     };
-    const codigoTurma = turmasMap[alunoTurma as keyof typeof turmasMap] || "";
-    currentUserEmail = `aluno.${codigoTurma.toLowerCase()}@laboratoriodoredator.com`;
+    turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "";
   } else if (userType === "visitante" && visitanteData) {
     try {
       const dados = JSON.parse(visitanteData);
-      currentUserEmail = dados.email;
+      visitanteEmail = dados.email;
     } catch (error) {
       console.error('❌ Erro ao parsear dados do visitante:', error);
     }
   }
 
-  const { data: redacoesTurma, isLoading, error } = useQuery({
-    queryKey: ['redacoes-minhas', currentUserEmail],
+  // Query SEGURA - NÃO carrega dados sensíveis automaticamente
+  // Agora inclui AMBAS as tabelas: redacoes_enviadas E redacoes_simulado
+  const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
+    queryKey: ['redacoes-usuario-basicas-completas', turmaCode, visitanteEmail],
     queryFn: async () => {
-      if (!currentUserEmail) {
-        console.log('❌ Nenhum e-mail de usuário identificado');
-        return [];
-      }
-
-      console.log('🔍 Carregando redações do usuário:', currentUserEmail);
-
-      // Buscar redações regulares do usuário logado usando ilike para busca case-insensitive
-      const { data: redacoesRegulares, error: errorRegulares } = await supabase
-        .from('redacoes_enviadas')
-        .select(`
-          id,
-          frase_tematica,
-          nome_aluno,
-          email_aluno,
-          tipo_envio,
-          data_envio,
-          status,
-          corrigida,
-          nota_total,
-          comentario_admin,
-          data_correcao
-        `)
-        .ilike('email_aluno', currentUserEmail)
-        .order('data_envio', { ascending: false });
-
-      if (errorRegulares) {
-        console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
-        throw errorRegulares;
-      }
-
-      // Buscar redações de simulado do usuário logado
-      const { data: redacoesSimulado, error: errorSimulado } = await supabase
-        .from('redacoes_simulado')
-        .select(`
-          id,
-          nome_aluno,
-          email_aluno,
-          data_envio,
-          corrigida,
-          nota_total,
-          data_correcao,
-          simulados!inner(titulo)
-        `)
-        .ilike('email_aluno', currentUserEmail)
-        .order('data_envio', { ascending: false });
-
-      if (errorSimulado) {
-        console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
-      }
-
-      // Combinar e formatar dados
-      const todasRedacoes: RedacaoTurma[] = [];
+      console.log('🔒 Buscando redações SEM dados sensíveis (incluindo simulados)');
       
-      if (redacoesRegulares) {
-        const regularesFormatadas = redacoesRegulares.map(redacao => ({
-          ...redacao,
-          corretor_nome: 'Corretor Principal'
-        }));
-        todasRedacoes.push(...regularesFormatadas);
-      }
+      if (userType === "aluno" && turmaCode) {
+        console.log('👨‍🎓 Buscando redações básicas da turma:', turmaCode);
+        
+        // Buscar da tabela redacoes_enviadas - incluir TODAS as redações corrigidas
+        const { data: redacoesRegulares, error: errorRegulares } = await supabase
+          .from('redacoes_enviadas')
+          .select(`
+            id,
+            frase_tematica,
+            nome_aluno,
+            email_aluno,
+            tipo_envio,
+            data_envio,
+            status,
+            corrigida,
+            nota_total,
+            comentario_admin,
+            data_correcao
+          `)
+          .eq('turma', turmaCode)
+          .neq('tipo_envio', 'visitante')
+          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida') // Buscar por qualquer indicação de correção
+          .order('data_envio', { ascending: false });
 
-      if (redacoesSimulado) {
-        const simuladosFormatados = redacoesSimulado.map(simulado => ({
-          id: simulado.id,
-          frase_tematica: (simulado.simulados as any)?.titulo || 'Simulado',
-          nome_aluno: simulado.nome_aluno,
-          email_aluno: simulado.email_aluno,
-          tipo_envio: 'simulado',
-          data_envio: simulado.data_envio,
-          status: simulado.corrigida ? 'corrigida' : 'aguardando',
-          corrigida: simulado.corrigida,
-          nota_total: simulado.nota_total,
-          comentario_admin: null,
-          data_correcao: simulado.data_correcao,
-          corretor_nome: 'Corretor Principal'
-        }));
-        todasRedacoes.push(...simuladosFormatados);
-      }
+        if (errorRegulares) {
+          console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
+        }
 
-      console.log('✅ Total de redações encontradas:', todasRedacoes.length);
-      return todasRedacoes || [];
+        // Buscar da tabela redacoes_simulado
+        const { data: redacoesSimulado, error: errorSimulado } = await supabase
+          .from('redacoes_simulado')
+          .select(`
+            id,
+            nome_aluno,
+            email_aluno,
+            data_envio,
+            corrigida,
+            nota_total,
+            data_correcao,
+            simulados!inner(frase_tematica)
+          `)
+          .eq('turma', turmaCode)
+          .or('corrigida.eq.true,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida') // Buscar por qualquer indicação de correção
+          .order('data_envio', { ascending: false });
+
+        if (errorSimulado) {
+          console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
+        }
+
+        // Combinar e formatar os dados
+        const todasRedacoes: RedacaoTurma[] = [];
+        
+        // Adicionar redações regulares
+        if (redacoesRegulares) {
+          const regularesFormatadas = redacoesRegulares.map(redacao => ({
+            ...redacao,
+            corrigida: true, // Forçar como corrigida já que foi filtrada
+            status: 'corrigida'
+          }));
+          todasRedacoes.push(...regularesFormatadas);
+        }
+
+        // Adicionar redações de simulado (formatadas)
+        if (redacoesSimulado) {
+          const simuladosFormatados = redacoesSimulado.map(simulado => ({
+            id: simulado.id,
+            frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
+            nome_aluno: simulado.nome_aluno,
+            email_aluno: simulado.email_aluno,
+            tipo_envio: 'simulado',
+            data_envio: simulado.data_envio,
+            status: 'corrigida',
+            corrigida: true,
+            nota_total: simulado.nota_total,
+            comentario_admin: null,
+            data_correcao: simulado.data_correcao
+          }));
+          todasRedacoes.push(...simuladosFormatados);
+        }
+
+        // Ordenar por data de envio (mais recente primeiro)
+        todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
+        
+        console.log('✅ Total de redações corrigidas encontradas:', todasRedacoes.length);
+        return todasRedacoes;
+        
+      } else if (userType === "visitante" && visitanteEmail) {
+        console.log('👤 Buscando redações básicas do visitante:', visitanteEmail);
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select(`
+            id,
+            frase_tematica,
+            nome_aluno,
+            email_aluno,
+            tipo_envio,
+            data_envio,
+            status,
+            corrigida,
+            nota_total,
+            comentario_admin,
+            data_correcao
+          `)
+          .eq('email_aluno', visitanteEmail)
+          .eq('tipo_envio', 'visitante')
+          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
+          .order('data_envio', { ascending: false });
+        
+        if (error) {
+          console.error('❌ Erro ao buscar redações do visitante:', error);
+          throw error;
+        }
+        
+        console.log('✅ Redações básicas do visitante encontradas:', data?.length || 0);
+        return data as RedacaoTurma[] || [];
+      }
+      
+      return [];
     },
-    enabled: !!currentUserEmail,
+    enabled: !!(turmaCode || visitanteEmail),
+    staleTime: 30 * 1000, // Cache por apenas 30 segundos para garantir dados atualizados
+    refetchInterval: 60 * 1000, // Recarregar a cada 1 minuto
   });
 
-  const handleViewRedacao = async (redacao: RedacaoTurma) => {
-    console.log('👁️ Visualizando redação:', redacao.id);
+  const handleViewRedacao = (redacao: RedacaoTurma) => {
+    console.log('🔐 Iniciando fluxo SEGURO para visualização de redação');
+    // Reset completo de estados para garantir segurança
+    setAuthenticatedRedacao(null);
+    setShowRedacaoDialog(false);
+    setSelectedRedacaoId(redacao.id);
+    setEmailInput("");
+    setIsAuthDialogOpen(true);
+  };
+
+  // Função de validação RIGOROSA
+  const validarEmailRigoroso = async (emailCorreto: string, emailDigitado: string): Promise<boolean> => {
+    console.log('🔒 MINHAS REDAÇÕES: INICIANDO VALIDAÇÃO RIGOROSA:', { emailCorreto, emailDigitado });
     
+    // Normalização dos e-mails
+    const emailCorretoNormalizado = emailCorreto.toLowerCase().trim();
+    const emailDigitadoNormalizado = emailDigitado.toLowerCase().trim();
+    
+    console.log('📧 MINHAS REDAÇÕES: E-MAILS NORMALIZADOS:', { 
+      emailCorretoNormalizado, 
+      emailDigitadoNormalizado,
+      saoIguais: emailCorretoNormalizado === emailDigitadoNormalizado
+    });
+
+    // VALIDAÇÃO 1: Comparação direta rigorosa
+    if (emailCorretoNormalizado !== emailDigitadoNormalizado) {
+      console.log('❌ MINHAS REDAÇÕES: FALHA NA VALIDAÇÃO DIRETA');
+      return false;
+    }
+
+    // VALIDAÇÃO 2: Verificação via Supabase
     try {
+      const { data: canAccess, error } = await supabase.rpc('can_access_redacao', {
+        redacao_email: emailCorreto,
+        user_email: emailDigitado
+      });
+
+      console.log('🔍 MINHAS REDAÇÕES: RESULTADO SUPABASE:', { canAccess, error });
+
+      if (error || canAccess !== true) {
+        console.log('❌ MINHAS REDAÇÕES: FALHA NA VALIDAÇÃO SUPABASE');
+        return false;
+      }
+    } catch (error) {
+      console.log('❌ MINHAS REDAÇÕES: ERRO NA VALIDAÇÃO SUPABASE:', error);
+      return false;
+    }
+
+    console.log('✅ MINHAS REDAÇÕES: VALIDAÇÃO RIGOROSA APROVADA');
+    return true;
+  };
+
+  const handleEmailAuth = async () => {
+    if (!selectedRedacaoId || !emailInput.trim()) {
+      toast({
+        title: "❌ E-mail obrigatório",
+        description: "Digite o e-mail cadastrado na redação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAuthenticating(true);
+    console.log('🔍 Iniciando validação segura de e-mail...');
+
+    try {
+      // ETAPA 1: Validação básica sem carregar dados sensíveis
+      const redacaoBasica = redacoesTurma?.find(r => r.id === selectedRedacaoId);
+      if (!redacaoBasica) {
+        throw new Error('Redação não encontrada');
+      }
+
+      // ETAPA 2: Verificação rigorosa de e-mail
+      const isValid = await validarEmailRigoroso(redacaoBasica.email_aluno, emailInput.trim());
+
+      if (!isValid) {
+        console.error('🚫 MINHAS REDAÇÕES: ACESSO NEGADO - E-mail incorreto');
+        toast({
+          title: "🚫 E-mail incorreto",
+          description: "Utilize o mesmo e-mail informado no envio da redação.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ E-mail validado com sucesso');
+
+      // ETAPA 3: SOMENTE após validação, buscar dados completos sensíveis
       let redacaoCompleta;
       
-      if (redacao.tipo_envio === 'simulado') {
+      if (redacaoBasica.tipo_envio === 'simulado') {
+        // Buscar da tabela redacoes_simulado
         const { data, error } = await supabase
           .from('redacoes_simulado')
-          .select('*, simulados!inner(titulo)')
-          .eq('id', redacao.id)
+          .select('*, simulados!inner(frase_tematica)')
+          .eq('id', selectedRedacaoId)
           .single();
           
-        if (error) throw new Error('Erro ao carregar redação de simulado');
+        if (error) {
+          console.error('❌ Erro ao carregar redação de simulado:', error);
+          throw new Error('Erro ao carregar redação de simulado');
+        }
         
         redacaoCompleta = {
           ...data,
           redacao_texto: data.texto,
-          frase_tematica: (data.simulados as any)?.titulo || 'Simulado'
+          frase_tematica: (data.simulados as any)?.frase_tematica || 'Simulado'
         };
       } else {
+        // Buscar da tabela redacoes_enviadas
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select('*')
-          .eq('id', redacao.id)
+          .eq('id', selectedRedacaoId)
           .single();
 
-        if (error) throw new Error('Erro ao carregar redação regular');
+        if (error) {
+          console.error('❌ Erro ao carregar redação regular:', error);
+          throw new Error('Erro ao carregar redação regular');
+        }
         
         redacaoCompleta = data;
       }
 
-      const redacaoAutenticada: RedacaoTurma & { redacao_texto: string } = {
+      // ETAPA 4: Preparar dados APENAS após autenticação bem-sucedida
+      const redacaoAutenticada: AuthenticatedRedacao = {
         id: redacaoCompleta.id,
         frase_tematica: redacaoCompleta.frase_tematica,
         nome_aluno: redacaoCompleta.nome_aluno,
         email_aluno: redacaoCompleta.email_aluno,
-        tipo_envio: redacao.tipo_envio,
+        tipo_envio: redacaoBasica.tipo_envio,
         data_envio: redacaoCompleta.data_envio,
-        status: redacao.status,
+        status: redacaoBasica.status,
         corrigida: redacaoCompleta.corrigida,
         nota_total: redacaoCompleta.nota_total,
-        comentario_admin: redacaoCompleta.comentario_admin,
+        comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
         data_correcao: redacaoCompleta.data_correcao,
         redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "",
         nota_c1: redacaoCompleta.nota_c1,
@@ -201,29 +349,37 @@ export const MinhasRedacoes = () => {
         nota_c3: redacaoCompleta.nota_c3,
         nota_c4: redacaoCompleta.nota_c4,
         nota_c5: redacaoCompleta.nota_c5,
-        corretor_nome: redacao.corretor_nome
       };
 
+      // ETAPA 5: Fechar autenticação e exibir redação
+      setIsAuthDialogOpen(false);
       setAuthenticatedRedacao(redacaoAutenticada);
       setShowRedacaoDialog(true);
       
+      console.log('🎉 Redação liberada com segurança total');
       toast({
-        title: "Redação carregada!",
-        description: "Visualizando sua redação completa.",
+        title: "✅ Redação liberada!",
+        description: "E-mail confirmado. Visualizando redação completa.",
       });
 
     } catch (error) {
-      console.error('💥 Erro ao carregar redação:', error);
+      console.error('💥 Erro na autenticação:', error);
       toast({
-        title: "Erro ao carregar redação",
+        title: "❌ Erro na autenticação",
         description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive",
       });
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
-  const resetState = () => {
+  const resetAuthenticationState = () => {
+    console.log('🔄 Resetando estados de autenticação');
+    setSelectedRedacaoId(null);
     setAuthenticatedRedacao(null);
+    setEmailInput("");
+    setIsAuthDialogOpen(false);
     setShowRedacaoDialog(false);
   };
 
@@ -231,160 +387,289 @@ export const MinhasRedacoes = () => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     });
   };
 
-  if (!currentUserEmail) {
+  const getTipoEnvioLabel = (tipo: string) => {
+    const tipos = {
+      'regular': 'Regular',
+      'exercicio': 'Exercício',
+      'simulado': 'Simulado',
+      'visitante': 'Visitante'
+    };
+    return tipos[tipo as keyof typeof tipos] || tipo;
+  };
+
+  const getTipoEnvioColor = (tipo: string) => {
+    const cores = {
+      'regular': 'bg-blue-100 text-blue-800',
+      'exercicio': 'bg-purple-100 text-purple-800',
+      'simulado': 'bg-orange-100 text-orange-800',
+      'visitante': 'bg-gray-100 text-gray-800'
+    };
+    return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
+  };
+
+  if (!turmaCode && !visitanteEmail) {
     return (
-      <Card className="border-primary/20">
+      <Card className="border-redator-accent/20">
         <CardContent className="text-center py-8">
-          <FileText className="w-12 h-12 text-primary mx-auto mb-4" />
-          <p className="text-primary">
-            Faça login como aluno ou visitante para visualizar suas redações.
+          <Shield className="w-12 h-12 text-redator-accent mx-auto mb-4" />
+          <p className="text-redator-accent">
+            🔐 Faça login como aluno ou visitante para visualizar suas redações com segurança.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-primary flex items-center gap-2">
-          <FileText className="w-5 h-5" />
-          Minhas Redações
-        </h2>
-        <Link to="/minhas-redacoes">
-          <Button variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10">
-            Ver Todas
-          </Button>
-        </Link>
+  if (isLoading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-redator-accent mx-auto mb-4"></div>
+        <p className="text-redator-accent">🔒 Carregando suas redações com segurança...</p>
       </div>
+    );
+  }
 
-      {isLoading ? (
-        <Card className="border-primary/20">
-          <CardContent className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-primary">Carregando suas redações...</p>
-          </CardContent>
-        </Card>
-      ) : error ? (
-        <Card className="border-red-200">
-          <CardContent className="text-center py-8">
-            <p className="text-red-600">Erro ao carregar redações.</p>
-          </CardContent>
-        </Card>
-      ) : !redacoesTurma || redacoesTurma.length === 0 ? (
-        <Card className="border-primary/20">
-          <CardContent className="text-center py-8">
-            <FileText className="w-12 h-12 text-primary/50 mx-auto mb-4" />
-            <p className="text-primary/70 mb-4">
-              Você ainda não enviou nenhuma redação.
-            </p>
-            <Link to="/envie-redacao">
-              <Button className="bg-primary hover:bg-primary/90">
-                Enviar Primeira Redação
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {redacoesTurma.slice(0, 3).map((redacao) => (
-            <Card key={redacao.id} className="border-primary/20 hover:shadow-lg transition-shadow">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <h3 className="font-semibold text-primary leading-tight pr-2">
+  if (error) {
+    return (
+      <Card className="border-red-200">
+        <CardContent className="text-center py-8">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600">❌ Erro ao carregar suas redações. Tente novamente.</p>
+          <Button onClick={() => refetch()} className="mt-2">
+            Tentar novamente
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!redacoesTurma || redacoesTurma.length === 0) {
+    return (
+      <Card className="border-redator-accent/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-redator-primary">
+            <FileText className="w-5 h-5" />
+            📝 Minhas Redações
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <p className="text-redator-accent mb-4">
+            {userType === "aluno" ? 
+              `Ainda não há redações corrigidas da sua turma (${alunoTurma}).` : 
+              "Você ainda não tem redações corrigidas."
+            }
+          </p>
+          <p className="text-sm text-redator-accent/70">
+            Suas redações corrigidas aparecerão aqui quando disponíveis!
+          </p>
+          <Button onClick={() => refetch()} className="mt-4">
+            Verificar novamente
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="w-5 h-5 text-redator-primary" />
+          <h2 className="text-xl font-bold text-redator-primary">
+            {userType === "aluno" ? 
+              `🔐 Minhas Redações - ${alunoTurma} (${redacoesTurma.length})` : 
+              `🔐 Minhas Redações (${redacoesTurma.length})`
+            }
+          </h2>
+          <Button onClick={() => refetch()} variant="outline" size="sm">
+            Atualizar
+          </Button>
+        </div>
+        
+        {/* Layout compacto para móveis */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {redacoesTurma.map((redacao) => (
+            <Card key={redacao.id} className="border-redator-accent/20 hover:shadow-md transition-shadow">
+              <CardContent className="p-3">
+                <div className="space-y-2">
+                  {/* Título e Status - Layout horizontal compacto */}
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-medium text-redator-primary text-sm line-clamp-2 flex-1">
                       {redacao.frase_tematica}
                     </h3>
+                    <Badge className="bg-green-100 text-green-800 shrink-0 text-xs">
+                      ✅ Corrigida
+                    </Badge>
+                  </div>
+                  
+                  {/* Informações em linha compacta */}
+                  <div className="space-y-1 text-xs text-redator-accent">
+                    <div className="flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      <span className="truncate">{redacao.nome_aluno}</span>
+                    </div>
                     
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                      {redacao.corrigida ? (
-                        <Badge className="bg-green-100 text-green-800 text-xs">
-                          ✅ Corrigido
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                          ⏳ Aguardando
-                        </Badge>
-                      )}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatDate(redacao.data_envio)}</span>
+                      </div>
+                      
+                      <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
+                        {getTipoEnvioLabel(redacao.tipo_envio)}
+                      </Badge>
                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-primary" />
-                      <span>{redacao.corretor_nome}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-primary" />
-                      <span>{formatDate(redacao.data_envio)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end pt-2 border-t border-muted/20">
-                    {redacao.corrigida ? (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="border-primary/30 hover:bg-primary/10 hover:border-primary"
-                        onClick={() => handleViewRedacao(redacao)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver Correção
-                      </Button>
-                    ) : (
-                      <div className="px-3 py-2 text-sm text-muted-foreground border border-muted rounded-md bg-muted/10">
-                        <Clock className="w-4 h-4 inline mr-2" />
-                        Aguardando correção
+                    
+                    {/* Nota disponível após autenticação */}
+                    {redacao.nota_total !== null && (
+                      <div className="flex items-center gap-1 text-redator-primary font-medium">
+                        <span>📊 Nota: {redacao.nota_total}/1000</span>
                       </div>
                     )}
                   </div>
+
+                  {/* Botão Ver Correção */}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500 mt-2"
+                    onClick={() => handleViewRedacao(redacao)}
+                  >
+                    <Shield className="w-3 h-3 mr-1" />
+                    🔒 Ver Correção
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* Modal de visualização da redação */}
+      {/* Dialog de autenticação RIGOROSA por email */}
+      <Dialog open={isAuthDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          resetAuthenticationState();
+        }
+        setIsAuthDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-700 flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              🔒 ACESSO SEGURO OBRIGATÓRIO
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-red-50 p-4 rounded-lg border-2 border-red-200">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="text-sm text-red-800">
+                  <strong>SEGURANÇA MÁXIMA:</strong> Digite o e-mail <strong>EXATO</strong> usado no envio da redação. Os dados só são carregados após validação rigorosa.
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="email-auth" className="block text-sm font-bold text-red-700 mb-2">
+                🔐 E-mail de Acesso * (obrigatório)
+              </label>
+              <Input
+                id="email-auth"
+                type="email"
+                placeholder="Digite o e-mail EXATO cadastrado..."
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="border-2 border-red-300 focus:border-red-500"
+                disabled={isAuthenticating}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleEmailAuth}
+                disabled={isAuthenticating || !emailInput.trim()}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                {isAuthenticating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Validando...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4 mr-1" />
+                    🔓 Verificar E-mail
+                  </>
+                )}
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={() => resetAuthenticationState()}
+                className="border-red-300"
+                disabled={isAuthenticating}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de visualização da redação - APENAS após autenticação completa */}
       {authenticatedRedacao && showRedacaoDialog && (
         <Dialog open={showRedacaoDialog} onOpenChange={(open) => {
           if (!open) {
-            resetState();
+            resetAuthenticationState();
           }
           setShowRedacaoDialog(open);
         }}>
-          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-            <RedacaoEnviadaCard 
-              redacao={{
-                id: authenticatedRedacao.id,
-                frase_tematica: authenticatedRedacao.frase_tematica,
-                redacao_texto: authenticatedRedacao.redacao_texto,
-                data_envio: authenticatedRedacao.data_envio,
-                nota_c1: authenticatedRedacao.nota_c1,
-                nota_c2: authenticatedRedacao.nota_c2,
-                nota_c3: authenticatedRedacao.nota_c3,
-                nota_c4: authenticatedRedacao.nota_c4,
-                nota_c5: authenticatedRedacao.nota_c5,
-                nota_total: authenticatedRedacao.nota_total,
-                comentario_admin: authenticatedRedacao.comentario_admin,
-                corrigida: authenticatedRedacao.corrigida,
-                data_correcao: authenticatedRedacao.data_correcao,
-                nome_aluno: authenticatedRedacao.nome_aluno,
-                email_aluno: authenticatedRedacao.email_aluno,
-                tipo_envio: authenticatedRedacao.tipo_envio,
-                status: authenticatedRedacao.status,
-                turma: userType === "aluno" ? (alunoTurma || "") : "visitante",
-              }} 
-            />
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-redator-primary flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                ✅ {authenticatedRedacao.frase_tematica}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              <div className="bg-green-50 border-2 border-green-200 p-3 rounded">
+                <p className="text-sm text-green-800 font-medium">
+                  ✅ E-mail validado com sucesso. Acesso liberado com segurança máxima.
+                </p>
+              </div>
+              
+              <RedacaoEnviadaCard 
+                redacao={{
+                  id: authenticatedRedacao.id,
+                  frase_tematica: authenticatedRedacao.frase_tematica,
+                  redacao_texto: authenticatedRedacao.redacao_texto,
+                  data_envio: authenticatedRedacao.data_envio,
+                  nota_c1: authenticatedRedacao.nota_c1,
+                  nota_c2: authenticatedRedacao.nota_c2,
+                  nota_c3: authenticatedRedacao.nota_c3,
+                  nota_c4: authenticatedRedacao.nota_c4,
+                  nota_c5: authenticatedRedacao.nota_c5,
+                  nota_total: authenticatedRedacao.nota_total,
+                  comentario_admin: authenticatedRedacao.comentario_admin,
+                  corrigida: authenticatedRedacao.corrigida,
+                  data_correcao: authenticatedRedacao.data_correcao,
+                  nome_aluno: authenticatedRedacao.nome_aluno,
+                  email_aluno: authenticatedRedacao.email_aluno,
+                  tipo_envio: authenticatedRedacao.tipo_envio,
+                  status: authenticatedRedacao.status,
+                  turma: userType === "aluno" ? turmaCode : "visitante",
+                }} 
+              />
+            </div>
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 };

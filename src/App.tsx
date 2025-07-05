@@ -1,14 +1,8 @@
+
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Welcome from "./pages/Welcome";
 import Admin from "./pages/Admin";
-import AdminAlunos from "./pages/admin/AdminAlunos";
-import AdminCreditos from "./pages/admin/AdminCreditos";
-import AdminTemas from "./pages/admin/AdminTemas";
-import AdminAulas from "./pages/admin/AdminAulas";
-import AdminVideos from "./pages/admin/AdminVideos";
-import AdminBiblioteca from "./pages/admin/AdminBiblioteca";
-import AdminRadar from "./pages/admin/AdminRadar";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import AlunoLogin from "./pages/AlunoLogin";
@@ -78,16 +72,11 @@ function App() {
 
                 {/* Rotas do Admin */}
                 <Route path="/admin" element={<Admin />} />
-                <Route path="/admin/alunos" element={<AdminAlunos />} />
-                <Route path="/admin/creditos" element={<AdminCreditos />} />
-                <Route path="/admin/redacoes" element={<Redacoes />} />
-                <Route path="/admin/temas" element={<AdminTemas />} />
-                <Route path="/admin/aulas" element={<AdminAulas />} />
+                <Route path="/admin/dashboard" element={<Dashboard />} />
                 <Route path="/admin/avisos" element={<Avisos />} />
-                <Route path="/admin/videos" element={<AdminVideos />} />
-                <Route path="/admin/biblioteca" element={<AdminBiblioteca />} />
+                <Route path="/admin/redacoes" element={<Redacoes />} />
+                <Route path="/admin/simulados" element={<SimuladosAdmin />} />
                 <Route path="/admin/exercicios" element={<ExerciciosAdmin />} />
-                <Route path="/admin/radar" element={<AdminRadar />} />
                 <Route path="/admin/corretores" element={<CorretoresAdmin />} />
                 
                 {/* Rotas do Corretor */}

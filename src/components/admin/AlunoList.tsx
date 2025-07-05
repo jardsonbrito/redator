@@ -20,10 +20,9 @@ interface Aluno {
 interface AlunoListProps {
   refresh: boolean;
   onEdit: (aluno: Aluno) => void;
-  turmaFilter?: string;
 }
 
-export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
+export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [filteredAlunos, setFilteredAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,18 +32,12 @@ export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
   const fetchAlunos = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("id, nome, email, turma, created_at")
         .eq("user_type", "aluno")
         .eq("is_authenticated_student", true)
         .order("created_at", { ascending: false });
-
-      if (turmaFilter) {
-        query = query.eq("turma", turmaFilter);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -64,7 +57,7 @@ export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
 
   useEffect(() => {
     fetchAlunos();
-  }, [refresh, turmaFilter]);
+  }, [refresh]);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -83,6 +76,15 @@ export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
 
   const handleEdit = (aluno: Aluno) => {
     console.log("AlunoList - Clicou em editar aluno:", aluno);
+    console.log("AlunoList - Dados do aluno:", {
+      id: aluno.id,
+      nome: aluno.nome,
+      email: aluno.email,
+      turma: aluno.turma,
+      created_at: aluno.created_at
+    });
+    
+    // Garantir que todos os dados necessários estão presentes
     const alunoParaEdicao = {
       id: aluno.id,
       nome: aluno.nome || '',
@@ -90,6 +92,8 @@ export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
       turma: aluno.turma || '',
       created_at: aluno.created_at
     };
+    
+    console.log("AlunoList - Enviando para onEdit:", alunoParaEdicao);
     onEdit(alunoParaEdicao);
   };
 
@@ -143,7 +147,7 @@ export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Lista de Alunos {turmaFilter && `- ${turmaFilter}`}
+          Lista de Alunos Cadastrados
           <Badge variant="secondary">{filteredAlunos.length} aluno(s)</Badge>
         </CardTitle>
         
@@ -170,7 +174,7 @@ export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
                 <TableRow>
                   <TableHead>Nome Completo</TableHead>
                   <TableHead>E-mail</TableHead>
-                  {!turmaFilter && <TableHead>Turma</TableHead>}
+                  <TableHead>Turma</TableHead>
                   <TableHead>Data de Cadastro</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -180,13 +184,11 @@ export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
                   <TableRow key={aluno.id}>
                     <TableCell className="font-medium">{aluno.nome}</TableCell>
                     <TableCell>{aluno.email}</TableCell>
-                    {!turmaFilter && (
-                      <TableCell>
-                        <Badge className={getTurmaColor(aluno.turma)}>
-                          {aluno.turma}
-                        </Badge>
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      <Badge className={getTurmaColor(aluno.turma)}>
+                        {aluno.turma}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       {new Date(aluno.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
@@ -198,6 +200,7 @@ export const AlunoList = ({ refresh, onEdit, turmaFilter }: AlunoListProps) => {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            console.log("Botão Editar clicado para aluno:", aluno.nome);
                             handleEdit(aluno);
                           }}
                         >

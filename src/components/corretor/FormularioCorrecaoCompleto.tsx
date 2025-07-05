@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
-import { ArrowLeft, Save, CheckCircle, Copy } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle } from "lucide-react";
 
 interface FormularioCorrecaoCompletoProps {
   redacao: RedacaoCorretor;
@@ -100,7 +100,7 @@ export const FormularioCorrecaoCompleto = ({
       const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
       const notaTotal = calcularNotaTotal();
 
-      const updateData: any = {
+      const updateData = {
         [`c1_${prefixo}`]: notas.c1,
         [`c2_${prefixo}`]: notas.c2,
         [`c3_${prefixo}`]: notas.c3,
@@ -158,57 +158,6 @@ export const FormularioCorrecaoCompleto = ({
     }
   };
 
-  const copiarPromptCorrecao = () => {
-    const promptCompleto = `🎯 PROMPT DE CORREÇÃO DE REDAÇÃO ENEM – LABORATÓRIO DO REDATOR
-
-Aluno: ${redacao.nome_aluno}
-Frase temática: ${redacao.frase_tematica}
-
-Texto da redação:
-${redacao.texto}
-
----
-
-Você é um corretor especialista em redações do ENEM, treinado segundo a matriz oficial do INEP e os critérios do Laboratório do Redator. Corrija esta redação por competências (C1 a C5), com a seguinte estrutura:
-
-✅ Competência [X] – [Nome da competência]
-
-Erros identificados:
-1. [Trecho com erro]
-   - 🔧 Correção sugerida: [...]
-   - 💬 Comentário pedagógico: [...]
-
-Checklist técnico:
-- [ ] Critério 1
-- [ ] Critério 2
-- [ ] Critério 3
-
-Nota atribuída: [0, 40, 80, 120, 160, 200]
-Justificativa da nota: [...]
-
-(Repita para C2, C3, C4, C5)
-
-📌 Finalização:
-
-Resumo final para o aluno:
-- Pontuação total: ___
-- Sugestão de melhoria mais urgente: ___
-- Um ponto positivo para valorizar: ___`;
-
-    navigator.clipboard.writeText(promptCompleto).then(() => {
-      toast({
-        title: "Prompt copiado com sucesso!",
-        description: "O prompt de correção foi copiado para a área de transferência."
-      });
-    }).catch(() => {
-      toast({
-        title: "Erro ao copiar",
-        description: "Não foi possível copiar o prompt. Tente novamente.",
-        variant: "destructive"
-      });
-    });
-  };
-
   const opcoesNota = [0, 40, 80, 120, 160, 200];
   const competenciasLabels = [
     "Domínio da escrita formal da língua portuguesa",
@@ -230,14 +179,6 @@ Resumo final para o aluno:
           Voltar
         </Button>
         <h1 className="text-2xl font-bold">Vista Pedagógica - Correção Completa</h1>
-        <Button 
-          variant="outline" 
-          onClick={copiarPromptCorrecao}
-          className="ml-auto flex items-center gap-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-        >
-          <Copy className="w-4 h-4" />
-          Copiar Prompt de Correção
-        </Button>
       </div>
 
       <Card>

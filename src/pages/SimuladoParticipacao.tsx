@@ -1,9 +1,12 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Send, ArrowLeft, FileText } from "lucide-react";
 import { format, isWithinInterval, parseISO } from "date-fns";
@@ -15,48 +18,27 @@ import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { CreditInfoDialog } from "@/components/CreditInfoDialog";
-import { useCredits } from "@/hooks/useCredits";
 
 const SimuladoParticipacao = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
-  const { consumeCreditsByEmail } = useCredits();
 
+  const [nomeCompleto, setNomeCompleto] = useState("");
+  const [email, setEmail] = useState("");
   const [redacaoTexto, setRedacaoTexto] = useState("");
   const [isRedacaoValid, setIsRedacaoValid] = useState(false);
   const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCreditDialog, setShowCreditDialog] = useState(false);
 
-  // Obter dados do usuário logado automaticamente
-  const userType = localStorage.getItem("userType");
-  const alunoTurma = localStorage.getItem("alunoTurma");
-  const visitanteData = localStorage.getItem("visitanteData");
-  
-  let nomeCompleto = "";
-  let email = "";
-  let turmaCode = "visitante";
-  
-  if (userType === "aluno" && alunoTurma) {
-    const turmasMap = {
-      "Turma A": "LRA2025",
-      "Turma B": "LRB2025", 
-      "Turma C": "LRC2025",
-      "Turma D": "LRD2025",
-      "Turma E": "LRE2025"
-    };
-    turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
-    nomeCompleto = `Aluno da ${alunoTurma}`;
-    email = `aluno.${turmaCode.toLowerCase()}@laboratoriodoredator.com`;
-  } else if (userType === "visitante" && visitanteData) {
-    const dados = JSON.parse(visitanteData);
-    nomeCompleto = dados.nome || "";
-    email = dados.email || "";
-    turmaCode = "visitante";
-  }
+  // Pré-preencher dados do usuário logado
+  useEffect(() => {
+    if (studentData.userType === "visitante" && studentData.visitanteInfo) {
+      setNomeCompleto(studentData.visitanteInfo.nome);
+      setEmail(studentData.visitanteInfo.email);
+    }
+  }, [studentData]);
 
   const { data: simulado, isLoading, error } = useQuery({
     queryKey: ['simulado-participacao', id],
@@ -94,13 +76,13 @@ const SimuladoParticipacao = () => {
     enabled: !!id
   });
 
-  const handlePrimarySubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!redacaoTexto.trim()) {
+    if (!nomeCompleto.trim() || !email.trim() || !redacaoTexto.trim()) {
       toast({
-        title: "Campo obrigatório",
-        description: "Por favor, escreva sua redação.",
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios.",
         variant: "destructive"
       });
       return;
@@ -111,15 +93,6 @@ const SimuladoParticipacao = () => {
         title: "Redação inválida",
         description: "Por favor, escreva sua redação completa.",
         variant: "destructive"
-      });
-      return;
-    }
-
-    if (!email || !nomeCompleto) {
-      toast({
-        title: "Erro de autenticação",
-        description: "Não foi possível identificar o usuário logado. Faça login novamente.",
-        variant: "destructive",
       });
       return;
     }
@@ -142,35 +115,16 @@ const SimuladoParticipacao = () => {
       return;
     }
 
-    // Mostrar dialog de créditos antes de continuar
-    setShowCreditDialog(true);
-  };
-
-  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
 
     try {
-      // Primeiro, consumir os créditos
-      const creditsConsumed = await consumeCreditsByEmail(email, selectedCorretores.length);
-      
-      if (!creditsConsumed) {
-        toast({
-          title: "Créditos insuficientes",
-          description: "Você não possui créditos suficientes para este envio.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('✅ Créditos consumidos com sucesso no simulado');
-
       const { error } = await supabase
         .from('redacoes_simulado')
         .insert({
           id_simulado: id,
-          nome_aluno: nomeCompleto,
-          email_aluno: email.toLowerCase(),
-          turma: turmaCode,
+          nome_aluno: nomeCompleto.trim(),
+          email_aluno: email.trim().toLowerCase(),
+          turma: studentData.turma || 'visitante',
           texto: redacaoTexto.trim(),
           corretor_id_1: selectedCorretores[0] || null,
           corretor_id_2: selectedCorretores[1] || null,
@@ -184,7 +138,7 @@ const SimuladoParticipacao = () => {
 
       toast({
         title: "Redação enviada com sucesso!",
-        description: `Sua redação do simulado foi enviada e será corrigida pelos corretores selecionados. ${selectedCorretores.length} crédito(s) foram consumidos.`,
+        description: "Sua redação do simulado foi enviada e será corrigida pelos corretores selecionados.",
       });
 
       // Redirecionar para a home após sucesso
@@ -403,23 +357,30 @@ const SimuladoParticipacao = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handlePrimarySubmit} className="space-y-6">
-                  {/* Informações do usuário logado - apenas visualização */}
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <h3 className="font-medium text-blue-800 mb-2">📋 Dados do envio (automático)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-blue-700">👤 Nome:</span> {nomeCompleto}
-                      </div>
-                      <div>
-                        <span className="font-medium text-blue-700">📧 E-mail:</span> {email}
-                      </div>
-                      <div>
-                        <span className="font-medium text-blue-700">🏫 Turma:</span> {turmaCode}
-                      </div>
-                      <div>
-                        <span className="font-medium text-blue-700">🎯 Tipo:</span> Simulado
-                      </div>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="nome-completo">Nome Completo *</Label>
+                      <Input
+                        id="nome-completo"
+                        type="text"
+                        placeholder="Digite seu nome completo..."
+                        value={nomeCompleto}
+                        onChange={(e) => setNomeCompleto(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="email">E-mail *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Digite seu e-mail..."
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
                     </div>
                   </div>
 
@@ -436,24 +397,25 @@ const SimuladoParticipacao = () => {
                     onValidChange={setIsRedacaoValid}
                   />
 
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <p className="text-sm text-green-800">
+                      <strong>Simulado:</strong> {simulado.titulo}
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      Sua redação será enviada para correção pelos corretores selecionados.
+                    </p>
+                  </div>
+
                   <Button 
                     type="submit" 
                     disabled={isSubmitting || !isRedacaoValid}
                     className="w-full bg-primary"
                   >
-                    {isSubmitting ? "Enviando..." : "Verificar Créditos e Enviar"}
+                    {isSubmitting ? "Enviando..." : "Enviar Redação do Simulado"}
                   </Button>
                 </form>
               </CardContent>
             </Card>
-
-            <CreditInfoDialog
-              isOpen={showCreditDialog}
-              onClose={() => setShowCreditDialog(false)}
-              onProceed={handleFinalSubmit}
-              userEmail={email}
-              selectedCorretores={selectedCorretores}
-            />
           </main>
         </div>
       </TooltipProvider>
