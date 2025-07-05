@@ -1,3 +1,4 @@
+
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Welcome from "./pages/Welcome";
@@ -54,8 +55,9 @@ function App() {
             <div className="min-h-screen bg-background">
               <Toaster />
               <Routes>
-                {/* Rotas Públicas */}
-                <Route path="/" element={<Welcome />} />
+                {/* Rota principal - deve renderizar a nova tela de login */}
+                <Route path="/" element={<Login />} />
+                <Route path="/welcome" element={<Welcome />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/aluno-login" element={<AlunoLogin />} />
                 <Route path="/visitante-login" element={<VisitanteLogin />} />
