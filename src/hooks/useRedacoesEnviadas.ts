@@ -22,26 +22,13 @@ export interface RedacaoEnviada {
   data_correcao: string | null;
   status: string;
   tipo_envio: string;
-  // New corrector fields
-  c1_corretor_1: number | null;
-  c2_corretor_1: number | null;
-  c3_corretor_1: number | null;
-  c4_corretor_1: number | null;
-  c5_corretor_1: number | null;
-  nota_final_corretor_1: number | null;
-  status_corretor_1: string | null;
-  c1_corretor_2: number | null;
-  c2_corretor_2: number | null;
-  c3_corretor_2: number | null;
-  c4_corretor_2: number | null;
-  c5_corretor_2: number | null;
-  nota_final_corretor_2: number | null;
-  status_corretor_2: string | null;
   corretor_id_1: string | null;
   corretor_id_2: string | null;
+  corretor_nome_1?: string;
+  corretor_nome_2?: string;
 }
 
-export const useRedacoesEnviadas = () => {
+export const useRedacoesEnviadas = (filtroStatus?: string) => {
   const [redacoes, setRedacoes] = useState<RedacaoEnviada[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,11 +36,14 @@ export const useRedacoesEnviadas = () => {
 
   useEffect(() => {
     fetchRedacoes();
-  }, []);
+  }, [filtroStatus]);
 
   const fetchRedacoes = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('Buscando redações enviadas por alunos...');
+      
+      // Buscar redações enviadas (incluindo simulados e exercícios)
+      let query = supabase
         .from("redacoes_enviadas")
         .select(`
           id,
@@ -74,33 +64,68 @@ export const useRedacoesEnviadas = () => {
           data_correcao,
           status,
           tipo_envio,
-          c1_corretor_1,
-          c2_corretor_1,
-          c3_corretor_1,
-          c4_corretor_1,
-          c5_corretor_1,
-          nota_final_corretor_1,
-          status_corretor_1,
-          c1_corretor_2,
-          c2_corretor_2,
-          c3_corretor_2,
-          c4_corretor_2,
-          c5_corretor_2,
-          nota_final_corretor_2,
-          status_corretor_2,
           corretor_id_1,
           corretor_id_2
         `)
         .order("data_envio", { ascending: false });
 
-      if (error) throw error;
+      // Aplicar filtros baseados no status solicitado
+      if (filtroStatus === 'pendentes') {
+        query = query.eq('corrigida', false);
+      } else if (filtroStatus === 'corrigidas') {
+        query = query.eq('corrigida', true);
+      }
 
-      setRedacoes(data || []);
+      const { data: redacoesData, error } = await query;
+
+      if (error) {
+        console.error('Erro ao buscar redações enviadas:', error);
+        throw error;
+      }
+
+      console.log(`Encontradas ${redacoesData?.length || 0} redações enviadas`);
+
+      // Buscar informações dos corretores
+      let redacoesComCorretores: RedacaoEnviada[] = [];
+      
+      if (redacoesData && redacoesData.length > 0) {
+        // Coletar IDs únicos dos corretores
+        const corretorIds = new Set<string>();
+        redacoesData.forEach(redacao => {
+          if (redacao.corretor_id_1) corretorIds.add(redacao.corretor_id_1);
+          if (redacao.corretor_id_2) corretorIds.add(redacao.corretor_id_2);
+        });
+
+        let corretoresMap = new Map();
+        
+        if (corretorIds.size > 0) {
+          const { data: corretoresData } = await supabase
+            .from('corretores')
+            .select('id, nome_completo')
+            .in('id', Array.from(corretorIds));
+
+          if (corretoresData) {
+            corretoresData.forEach(corretor => {
+              corretoresMap.set(corretor.id, corretor.nome_completo);
+            });
+          }
+        }
+
+        // Combinar dados
+        redacoesComCorretores = redacoesData.map(redacao => ({
+          ...redacao,
+          corretor_nome_1: redacao.corretor_id_1 ? corretoresMap.get(redacao.corretor_id_1) : null,
+          corretor_nome_2: redacao.corretor_id_2 ? corretoresMap.get(redacao.corretor_id_2) : null,
+        }));
+      }
+
+      console.log('Redações processadas com dados dos corretores:', redacoesComCorretores.length);
+      setRedacoes(redacoesComCorretores);
     } catch (error: any) {
-      console.error("Erro ao buscar redações:", error);
+      console.error("Erro ao buscar redações enviadas:", error);
       toast({
         title: "Erro ao carregar redações",
-        description: "Não foi possível carregar as redações.",
+        description: "Não foi possível carregar as redações enviadas.",
         variant: "destructive"
       });
     } finally {
@@ -134,7 +159,8 @@ export const useRedacoesEnviadas = () => {
   };
 
   const handleCopyRedacao = (redacao: RedacaoEnviada) => {
-    const text = `Aluno: ${redacao.nome_aluno}\nE-mail: ${redacao.email_aluno}\nTurma: ${redacao.turma}\nTema: ${redacao.frase_tematica}\n\nTexto:\n${redacao.redacao_texto}`;
+    const corretorInfo = redacao.corretor_nome_1 ? `\nCorretor: ${redacao.corretor_nome_1}` : '';
+    const text = `Aluno: ${redacao.nome_aluno}\nE-mail: ${redacao.email_aluno}\nTurma: ${redacao.turma}\nTema: ${redacao.frase_tematica}${corretorInfo}\n\nTexto:\n${redacao.redacao_texto}`;
     navigator.clipboard.writeText(text);
     toast({
       title: "Redação copiada!",
