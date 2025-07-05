@@ -24,7 +24,7 @@ interface AdminLayoutProps {
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { logout } = useAuth();
+  const { signOut } = useAuth(); // Changed from logout to signOut
   const location = useLocation();
 
   const menuItems = [
@@ -106,7 +106,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             <div className="p-4 border-t">
               <Button
                 variant="outline"
-                onClick={logout}
+                onClick={signOut} // Changed from logout to signOut
                 className="w-full justify-start gap-2"
               >
                 <LogOut className="w-4 h-4" />

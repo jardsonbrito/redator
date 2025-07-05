@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,18 +37,18 @@ type RedacaoTurma = {
   nota_c4?: number | null;
   nota_c5?: number | null;
   corretor_nome?: string;
-  comentario_c1_corretor_1: string;
-  comentario_c2_corretor_1: string;
-  comentario_c3_corretor_1: string;
-  comentario_c4_corretor_1: string;
-  comentario_c5_corretor_1: string;
-  elogios_pontos_atencao_corretor_1: string;
-  comentario_c1_corretor_2: string;
-  comentario_c2_corretor_2: string;
-  comentario_c3_corretor_2: string;
-  comentario_c4_corretor_2: string;
-  comentario_c5_corretor_2: string;
-  elogios_pontos_atencao_corretor_2: string;
+  comentario_c1_corretor_1?: string | null;
+  comentario_c2_corretor_1?: string | null;
+  comentario_c3_corretor_1?: string | null;
+  comentario_c4_corretor_1?: string | null;
+  comentario_c5_corretor_1?: string | null;
+  elogios_pontos_atencao_corretor_1?: string | null;
+  comentario_c1_corretor_2?: string | null;
+  comentario_c2_corretor_2?: string | null;
+  comentario_c3_corretor_2?: string | null;
+  comentario_c4_corretor_2?: string | null;
+  comentario_c5_corretor_2?: string | null;
+  elogios_pontos_atencao_corretor_2?: string | null;
 };
 
 export default function MinhasRedacoesList() {
@@ -156,7 +157,20 @@ export default function MinhasRedacoesList() {
       if (redacoesRegulares) {
         const regularesFormatadas = redacoesRegulares.map(redacao => ({
           ...redacao,
-          corretor_nome: 'Corretor Principal'
+          corretor_nome: 'Corretor Principal',
+          // Add missing properties with default values
+          comentario_c1_corretor_1: null,
+          comentario_c2_corretor_1: null,
+          comentario_c3_corretor_1: null,
+          comentario_c4_corretor_1: null,
+          comentario_c5_corretor_1: null,
+          elogios_pontos_atencao_corretor_1: null,
+          comentario_c1_corretor_2: null,
+          comentario_c2_corretor_2: null,
+          comentario_c3_corretor_2: null,
+          comentario_c4_corretor_2: null,
+          comentario_c5_corretor_2: null,
+          elogios_pontos_atencao_corretor_2: null,
         }));
         todasRedacoes.push(...regularesFormatadas);
       }
@@ -174,7 +188,20 @@ export default function MinhasRedacoesList() {
           nota_total: simulado.nota_total,
           comentario_admin: null,
           data_correcao: simulado.data_correcao,
-          corretor_nome: 'Corretor Principal'
+          corretor_nome: 'Corretor Principal',
+          // Add missing properties with default values
+          comentario_c1_corretor_1: null,
+          comentario_c2_corretor_1: null,
+          comentario_c3_corretor_1: null,
+          comentario_c4_corretor_1: null,
+          comentario_c5_corretor_1: null,
+          elogios_pontos_atencao_corretor_1: null,
+          comentario_c1_corretor_2: null,
+          comentario_c2_corretor_2: null,
+          comentario_c3_corretor_2: null,
+          comentario_c4_corretor_2: null,
+          comentario_c5_corretor_2: null,
+          elogios_pontos_atencao_corretor_2: null,
         }));
         todasRedacoes.push(...simuladosFormatados);
       }
