@@ -26,6 +26,10 @@ const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLinking, setIsLinking] = useState(false);
+  const [refreshAlunos, setRefreshAlunos] = useState(false);
+  const [refreshAvisos, setRefreshAvisos] = useState(false);
+  const [editingAluno, setEditingAluno] = useState(null);
+  const [editingAviso, setEditingAviso] = useState(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -62,6 +66,14 @@ const Admin = () => {
     } finally {
       setIsLinking(false);
     }
+  };
+
+  const handleEditAluno = (aluno: any) => {
+    setEditingAluno(aluno);
+  };
+
+  const handleEditAviso = (aviso: any) => {
+    setEditingAviso(aviso);
   };
 
   return (
@@ -140,7 +152,7 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="alunos">
-            <AlunoList />
+            <AlunoList refresh={refreshAlunos} onEdit={handleEditAluno} />
           </TabsContent>
 
           <TabsContent value="creditos">
@@ -160,7 +172,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="avisos">
-            <AvisoList />
+            <AvisoList refresh={refreshAvisos} onEdit={handleEditAviso} />
           </TabsContent>
 
           <TabsContent value="videos">
