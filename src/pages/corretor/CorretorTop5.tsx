@@ -96,7 +96,9 @@ const CorretorTop5 = () => {
         }
       }
       
-      const { data, error } = await query.order('nota_total', { ascending: false });
+      const { data, error } = await query
+        .order('nota_total', { ascending: false })
+        .order('data_envio', { ascending: true }); // Em caso de empate, priorizar envio mais antigo
       
       if (error) throw error;
       

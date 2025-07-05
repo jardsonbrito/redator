@@ -293,15 +293,21 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo oficial */}
+        {/* Logo oficial e título */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-4">
             <img 
               src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" 
               alt="Logo da plataforma" 
-              className="w-20 h-20 object-contain" 
+              className="w-32 h-32 object-contain" 
             />
           </div>
+          <h1 className="text-3xl font-bold text-redator-primary mb-2">
+            App do Redator
+          </h1>
+          <p className="text-lg text-redator-accent">
+            Redação na Prática, Aprovação na Certa!
+          </p>
         </div>
 
         <Card className="shadow-xl border-redator-accent/20">
