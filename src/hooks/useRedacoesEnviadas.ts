@@ -26,6 +26,34 @@ export interface RedacaoEnviada {
   corretor_id_2: string | null;
   corretor_nome_1?: string;
   corretor_nome_2?: string;
+  // Propriedades específicas do corretor 1
+  c1_corretor_1: number | null;
+  c2_corretor_1: number | null;
+  c3_corretor_1: number | null;
+  c4_corretor_1: number | null;
+  c5_corretor_1: number | null;
+  nota_final_corretor_1: number | null;
+  status_corretor_1: string | null;
+  comentario_c1_corretor_1: string | null;
+  comentario_c2_corretor_1: string | null;
+  comentario_c3_corretor_1: string | null;
+  comentario_c4_corretor_1: string | null;
+  comentario_c5_corretor_1: string | null;
+  elogios_pontos_atencao_corretor_1: string | null;
+  // Propriedades específicas do corretor 2
+  c1_corretor_2: number | null;
+  c2_corretor_2: number | null;
+  c3_corretor_2: number | null;
+  c4_corretor_2: number | null;
+  c5_corretor_2: number | null;
+  nota_final_corretor_2: number | null;
+  status_corretor_2: string | null;
+  comentario_c1_corretor_2: string | null;
+  comentario_c2_corretor_2: string | null;
+  comentario_c3_corretor_2: string | null;
+  comentario_c4_corretor_2: string | null;
+  comentario_c5_corretor_2: string | null;
+  elogios_pontos_atencao_corretor_2: string | null;
 }
 
 export const useRedacoesEnviadas = (filtroStatus?: string) => {
@@ -42,7 +70,7 @@ export const useRedacoesEnviadas = (filtroStatus?: string) => {
     try {
       console.log('Buscando redações enviadas por alunos...');
       
-      // Buscar redações enviadas (incluindo simulados e exercícios)
+      // Buscar redações enviadas com todos os campos necessários
       let query = supabase
         .from("redacoes_enviadas")
         .select(`
@@ -65,7 +93,33 @@ export const useRedacoesEnviadas = (filtroStatus?: string) => {
           status,
           tipo_envio,
           corretor_id_1,
-          corretor_id_2
+          corretor_id_2,
+          c1_corretor_1,
+          c2_corretor_1,
+          c3_corretor_1,
+          c4_corretor_1,
+          c5_corretor_1,
+          nota_final_corretor_1,
+          status_corretor_1,
+          comentario_c1_corretor_1,
+          comentario_c2_corretor_1,
+          comentario_c3_corretor_1,
+          comentario_c4_corretor_1,
+          comentario_c5_corretor_1,
+          elogios_pontos_atencao_corretor_1,
+          c1_corretor_2,
+          c2_corretor_2,
+          c3_corretor_2,
+          c4_corretor_2,
+          c5_corretor_2,
+          nota_final_corretor_2,
+          status_corretor_2,
+          comentario_c1_corretor_2,
+          comentario_c2_corretor_2,
+          comentario_c3_corretor_2,
+          comentario_c4_corretor_2,
+          comentario_c5_corretor_2,
+          elogios_pontos_atencao_corretor_2
         `)
         .order("data_envio", { ascending: false });
 
