@@ -1,129 +1,135 @@
 
+import { Sidebar } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { LogOut, User, Users, FileText, BookOpen, Calendar, MessageSquare, Video, Library, Target, Radar, UserCheck, Menu, X, Home } from "lucide-react";
+import { 
+  Users, 
+  FileText, 
+  BookOpen, 
+  Video, 
+  Settings, 
+  LogOut, 
+  Home,
+  UserCheck,
+  GraduationCap,
+  Calendar,
+  Menu
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
-  const { user, signOut } = useAuth();
-  const location = useLocation();
-  const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout } = useAuth();
+  const location = useLocation();
 
   const menuItems = [
-    { icon: Home, label: "Home", path: "/admin" },
-    { icon: Users, label: "Alunos", path: "/admin/alunos" },
-    { icon: Target, label: "Créditos", path: "/admin/creditos" },
-    { icon: FileText, label: "Redações", path: "/admin/redacoes" },
-    { icon: BookOpen, label: "Temas", path: "/admin/temas" },
-    { icon: Calendar, label: "Aulas", path: "/admin/aulas" },
-    { icon: Radar, label: "Radar", path: "/admin/radar" },
-    { icon: Library, label: "Biblioteca", path: "/admin/biblioteca" },
-    { icon: Video, label: "Videoteca", path: "/admin/videos" },
-    { icon: UserCheck, label: "Corretores", path: "/admin/corretores" },
-    { icon: MessageSquare, label: "Avisos", path: "/admin/avisos" },
+    { name: "Dashboard", href: "/admin", icon: Home },
+    { name: "Redações", href: "/admin/redacoes", icon: FileText },
+    { name: "Alunos", href: "/admin/alunos", icon: Users },
+    { name: "Corretores", href: "/admin/corretores", icon: UserCheck },
+    { name: "Gerenciar Aulas", href: "/admin/aulas", icon: GraduationCap },
+    { name: "Aulas Virtuais", href: "/admin/aulas-virtuais", icon: Calendar },
+    { name: "Biblioteca", href: "/admin/biblioteca", icon: BookOpen },
+    { name: "Vídeos", href: "/admin/videos", icon: Video },
+    { name: "Configurações", href: "/admin/configuracoes", icon: Settings },
   ];
 
-  const handleLogout = () => {
-    signOut();
+  const isActivePath = (path: string) => {
+    if (path === "/admin") {
+      return location.pathname === "/admin";
+    }
+    return location.pathname.startsWith(path);
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header - Responsivo */}
-      <header className="border-b bg-white shadow-sm">
-        <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-            {isMobile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1 sm:p-2"
-              >
-                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </Button>
-            )}
-            
-            <img 
-              src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" 
-              alt="Logo" 
-              className="w-8 h-8 sm:w-10 sm:h-10 object-contain shrink-0" 
-            />
-            
-            <div className="min-w-0 flex-1">
-              <h1 className="text-base sm:text-xl font-bold text-redator-primary truncate">
-                Painel do Administrador
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Seja bem-vindo, Jardson Brito (jardsonbrito@gmail.com)
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <Button variant="outline" onClick={handleLogout} size="sm" className="px-2 sm:px-4">
-              <LogOut className="w-4 h-4 sm:mr-2" />
-              {!isMobile && <span>Sair</span>}
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile menu button */}
+      <div className="lg:hidden bg-white border-b px-4 py-3 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2"
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
+        <h1 className="font-semibold text-gray-900">Painel Administrativo</h1>
+        <div className="w-9"></div> {/* Spacer for center alignment */}
+      </div>
 
-      <div className="flex relative">
-        {/* Sidebar - Responsiva */}
-        <aside className={`
-          ${isMobile 
-            ? `fixed inset-y-0 left-0 z-50 w-64 bg-white border-r shadow-lg transform transition-transform duration-300 ease-in-out ${
-                sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-              } top-[73px]`
-            : 'w-52 lg:w-64 bg-white border-r shadow-sm'
-          } min-h-[calc(100vh-73px)]
-        `}>
-          {isMobile && sidebarOpen && (
-            <div 
-              className="fixed inset-0 bg-black/20 z-40 top-[73px]"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-          
-          <nav className="p-3 sm:p-4 relative z-50 bg-white">
-            <ul className="space-y-1 sm:space-y-2">
+      <div className="flex">
+        {/* Sidebar */}
+        <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className="flex items-center gap-3 px-6 py-4 border-b">
+              <img 
+                src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" 
+                alt="Logo" 
+                className="w-8 h-8" 
+              />
+              <span className="font-bold text-lg text-gray-900">Admin</span>
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex-1 px-4 py-4 space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path;
+                const isActive = isActivePath(item.href);
                 
                 return (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      onClick={() => isMobile && setSidebarOpen(false)}
-                      className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg transition-colors text-sm ${
-                        isActive 
-                          ? 'bg-redator-primary text-white' 
-                          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  </li>
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.name}
+                  </Link>
                 );
               })}
-            </ul>
-          </nav>
-        </aside>
+            </nav>
 
-        {/* Main Content - Responsivo */}
-        <main className="flex-1 p-3 sm:p-6 min-w-0">
-          {children}
-        </main>
+            {/* Logout button */}
+            <div className="p-4 border-t">
+              <Button
+                variant="outline"
+                onClick={logout}
+                className="w-full justify-start gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Overlay for mobile */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Main content */}
+        <div className="flex-1 flex flex-col min-h-screen lg:ml-0">
+          <main className="flex-1 p-6">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );

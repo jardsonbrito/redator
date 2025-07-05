@@ -59,7 +59,6 @@ const Login = () => {
 
     try {
       if (selectedProfile === "aluno") {
-        // Login de aluno - usar a lógica existente do StudentLoginForm
         const { supabase } = await import("@/integrations/supabase/client");
         const { normalizeEmail } = await import("@/utils/emailNormalizer");
         
@@ -89,7 +88,6 @@ const Login = () => {
         navigate("/app", { replace: true });
 
       } else if (selectedProfile === "visitante") {
-        // Validação básica de e-mail
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
           toast({
@@ -299,7 +297,7 @@ const Login = () => {
             <img 
               src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" 
               alt="Logo da plataforma" 
-              className="w-32 h-32 object-contain" 
+              className="w-40 h-40 object-contain" 
             />
           </div>
           <h1 className="text-3xl font-bold text-redator-primary mb-2">
