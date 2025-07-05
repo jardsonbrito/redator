@@ -10,7 +10,7 @@ import Student from "./pages/Student";
 import { Redacoes } from "./pages/admin/Redacoes";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import MinhasRedacoesList from "./pages/MinhasRedacoesList";
-import Dashboard from "./pages/admin/Dashboard";
+import { Dashboard } from "./pages/admin/Dashboard";
 import AdminAlunos from "./pages/admin/AdminAlunos";
 import AdminCreditos from "./pages/admin/AdminCreditos";
 import AdminTemas from "./pages/admin/AdminTemas";
