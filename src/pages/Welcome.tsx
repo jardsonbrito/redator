@@ -42,7 +42,7 @@ const Welcome = () => {
         }
       } else if (profileType === "aluno") {
         console.log('✅ WELCOME - Login bem-sucedido para aluno:', data.nome, 'Turma:', data.turma);
-        loginAsStudent(data.turma);
+        loginAsStudent(data.turma, data.nome, data.email);
         toast({
           title: "Acesso liberado!",
           description: `Bem-vindo, ${data.nome}!`

@@ -74,7 +74,7 @@ const AlunoLogin = () => {
 
       // Login bem-sucedido
       console.log('Login bem-sucedido para:', aluno.nome, 'Turma:', aluno.turma);
-      loginAsStudent(aluno.turma);
+      loginAsStudent(aluno.turma, aluno.nome, aluno.email);
       
       toast({
         title: "Acesso liberado!",

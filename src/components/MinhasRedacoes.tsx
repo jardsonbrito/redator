@@ -51,21 +51,29 @@ export const MinhasRedacoes = () => {
   // Recupera dados do usuário com validação aprimorada
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
+  const alunoData = localStorage.getItem("alunoData");
   const visitanteData = localStorage.getItem("visitanteData");
 
-  // Determinar código da turma ou email do visitante
+  // Determinar código da turma e email do usuário
   let turmaCode = "";
   let visitanteEmail = "";
+  let alunoEmail = "";
   
-  if (userType === "aluno" && alunoTurma) {
-    const turmasMap = {
-      "Turma A": "LRA2025",
-      "Turma B": "LRB2025", 
-      "Turma C": "LRC2025",
-      "Turma D": "LRD2025",
-      "Turma E": "LRE2025"
-    };
-    turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "";
+  if (userType === "aluno" && alunoTurma && alunoData) {
+    try {
+      const dados = JSON.parse(alunoData);
+      alunoEmail = dados.email;
+      const turmasMap = {
+        "Turma A": "LRA2025",
+        "Turma B": "LRB2025", 
+        "Turma C": "LRC2025",
+        "Turma D": "LRD2025",
+        "Turma E": "LRE2025"
+      };
+      turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "";
+    } catch (error) {
+      console.error('❌ Erro ao parsear dados do aluno:', error);
+    }
   } else if (userType === "visitante" && visitanteData) {
     try {
       const dados = JSON.parse(visitanteData);
@@ -78,14 +86,14 @@ export const MinhasRedacoes = () => {
   // Query SEGURA - NÃO carrega dados sensíveis automaticamente
   // Agora inclui AMBAS as tabelas: redacoes_enviadas E redacoes_simulado
   const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
-    queryKey: ['redacoes-usuario-basicas-completas', turmaCode, visitanteEmail],
+    queryKey: ['redacoes-usuario-basicas-completas', turmaCode, visitanteEmail, alunoEmail],
     queryFn: async () => {
       console.log('🔒 Buscando redações SEM dados sensíveis (incluindo simulados)');
       
-      if (userType === "aluno" && turmaCode) {
-        console.log('👨‍🎓 Buscando redações básicas da turma:', turmaCode);
+      if (userType === "aluno" && turmaCode && alunoEmail) {
+        console.log('👨‍🎓 Buscando redações básicas do aluno:', alunoEmail, 'da turma:', turmaCode);
         
-        // Buscar da tabela redacoes_enviadas - incluir TODAS as redações corrigidas
+        // Buscar da tabela redacoes_enviadas - FILTRAR POR EMAIL DO ALUNO
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -101,16 +109,16 @@ export const MinhasRedacoes = () => {
             comentario_admin,
             data_correcao
           `)
-          .eq('turma', turmaCode)
+          .eq('email_aluno', alunoEmail)
           .neq('tipo_envio', 'visitante')
-          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida') // Buscar por qualquer indicação de correção
+          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
           .order('data_envio', { ascending: false });
 
         if (errorRegulares) {
           console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
         }
 
-        // Buscar da tabela redacoes_simulado
+        // Buscar da tabela redacoes_simulado - FILTRAR POR EMAIL DO ALUNO
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
           .select(`
@@ -123,8 +131,8 @@ export const MinhasRedacoes = () => {
             data_correcao,
             simulados!inner(frase_tematica)
           `)
-          .eq('turma', turmaCode)
-          .or('corrigida.eq.true,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida') // Buscar por qualquer indicação de correção
+          .eq('email_aluno', alunoEmail)
+          .or('corrigida.eq.true,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
           .order('data_envio', { ascending: false });
 
         if (errorSimulado) {
@@ -201,7 +209,7 @@ export const MinhasRedacoes = () => {
       
       return [];
     },
-    enabled: !!(turmaCode || visitanteEmail),
+    enabled: !!(turmaCode && alunoEmail) || !!visitanteEmail,
     staleTime: 30 * 1000, // Cache por apenas 30 segundos para garantir dados atualizados
     refetchInterval: 60 * 1000, // Recarregar a cada 1 minuto
   });
@@ -411,7 +419,7 @@ export const MinhasRedacoes = () => {
     return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
   };
 
-  if (!turmaCode && !visitanteEmail) {
+  if (!turmaCode && !visitanteEmail && !alunoEmail) {
     return (
       <Card className="border-redator-accent/20">
         <CardContent className="text-center py-8">

@@ -56,6 +56,30 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
   const [showCorrecaoDialog, setShowCorrecaoDialog] = useState(false);
   const { toast } = useToast();
 
+  // Obter dados do usuário logado para filtrar por email
+  const userType = localStorage.getItem("userType");
+  const alunoData = localStorage.getItem("alunoData");
+  const visitanteData = localStorage.getItem("visitanteData");
+  
+  let alunoEmail = "";
+  let visitanteEmail = "";
+  
+  if (userType === "aluno" && alunoData) {
+    try {
+      const dados = JSON.parse(alunoData);
+      alunoEmail = dados.email;
+    } catch (error) {
+      console.error('❌ Erro ao parsear dados do aluno:', error);
+    }
+  } else if (userType === "visitante" && visitanteData) {
+    try {
+      const dados = JSON.parse(visitanteData);
+      visitanteEmail = dados.email;
+    } catch (error) {
+      console.error('❌ Erro ao parsear dados do visitante:', error);
+    }
+  }
+
   // Mapear nomes de turma para códigos corretos
   const getTurmaCode = (turmaNome: string) => {
     const turmasMap = {
@@ -71,16 +95,14 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
   // Query otimizada com as novas políticas RLS
   // Agora inclui AMBAS as tabelas: redacoes_enviadas E redacoes_simulado
   const { data: redacoesRecentes, isLoading } = useQuery({
-    queryKey: ['redacoes-recentes-seguras-completas', turmaCode],
+    queryKey: ['redacoes-recentes-seguras-completas', turmaCode, alunoEmail, visitanteEmail],
     queryFn: async () => {
       console.log('🔒 Buscando redações com segurança aprimorada para:', turmaCode);
       
       if (turmaCode === "visitante" || turmaCode === "Visitante") {
-        // Para visitantes, usar nova política segura
-        const visitanteData = localStorage.getItem("visitanteData");
-        if (!visitanteData) return [];
+        // Para visitantes, usar email do visitante
+        if (!visitanteEmail) return [];
         
-        const dados = JSON.parse(visitanteData);
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -96,7 +118,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             comentario_admin,
             data_correcao
           `)
-          .eq('email_aluno', dados.email)
+          .eq('email_aluno', visitanteEmail)
           .eq('tipo_envio', 'visitante')
           .eq('corrigida', true)
           .order('data_envio', { ascending: false })
@@ -110,11 +132,13 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         console.log('✅ Redações corrigidas encontradas para visitante:', data);
         return data || [];
       } else {
-        // Para alunos, usar nova política segura com função otimizada
-        const codigoTurma = getTurmaCode(turmaCode);
-        console.log('🔄 Código da turma convertido:', codigoTurma);
+        // Para alunos, usar email do aluno (não apenas turma)
+        if (!alunoEmail) return [];
         
-        // Buscar da tabela redacoes_enviadas
+        const codigoTurma = getTurmaCode(turmaCode);
+        console.log('🔄 Código da turma convertido:', codigoTurma, 'Email do aluno:', alunoEmail);
+        
+        // Buscar da tabela redacoes_enviadas - FILTRAR POR EMAIL DO ALUNO
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -130,7 +154,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             comentario_admin,
             data_correcao
           `)
-          .eq('turma', codigoTurma)
+          .eq('email_aluno', alunoEmail)
           .neq('tipo_envio', 'visitante')
           .eq('corrigida', true)
           .order('data_envio', { ascending: false });
@@ -139,7 +163,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
         }
 
-        // Buscar da tabela redacoes_simulado
+        // Buscar da tabela redacoes_simulado - FILTRAR POR EMAIL DO ALUNO
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
           .select(`
@@ -152,7 +176,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             data_correcao,
             simulados!inner(frase_tematica)
           `)
-          .eq('turma', codigoTurma)
+          .eq('email_aluno', alunoEmail)
           .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
@@ -193,7 +217,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         return todasRedacoes.slice(0, 3);
       }
     },
-    enabled: !!turmaCode,
+    enabled: !!(alunoEmail || visitanteEmail),
     staleTime: 5 * 60 * 1000, // Cache por 5 minutos para melhor performance
   });
 
