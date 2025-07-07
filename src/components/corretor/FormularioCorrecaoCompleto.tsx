@@ -132,22 +132,9 @@ export const FormularioCorrecaoCompleto = ({
         [`elogios_pontos_atencao_${prefixo}`]: elogiosEPontosAtencao.trim(),
       };
 
-      // Se salvando como corrigida, definir data de correção e atualizar status geral
+      // Se salvando como corrigida, definir data de correção
       if (status === 'corrigida') {
         updateData.data_correcao = new Date().toISOString();
-        updateData.corrigida = true;
-        updateData.status = 'corrigido';
-        
-        // Se há apenas um corretor ou se é a segunda correção, calcular médias
-        if (!redacao.eh_corretor_1 && !redacao.eh_corretor_2) {
-          // Correção única
-          updateData.nota_total = notaTotal;
-          updateData.nota_c1 = notas.c1;
-          updateData.nota_c2 = notas.c2;
-          updateData.nota_c3 = notas.c3;
-          updateData.nota_c4 = notas.c4;
-          updateData.nota_c5 = notas.c5;
-        }
       }
 
       console.log('Salvando correção:', { tabela, updateData, redacaoId: redacao.id });
