@@ -1,15 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 
 interface RedacaoViewFormProps {
   redacao: RedacaoEnviada;
   onCancel: () => void;
-  onCopyRedacao: (redacao: RedacaoEnviada) => void;
 }
 
-export const RedacaoViewForm = ({ redacao, onCancel, onCopyRedacao }: RedacaoViewFormProps) => {
+export const RedacaoViewForm = ({ redacao, onCancel }: RedacaoViewFormProps) => {
   const handleDownloadManuscrita = () => {
     if (redacao.redacao_manuscrita_url) {
       window.open(redacao.redacao_manuscrita_url, '_blank');
@@ -19,18 +18,8 @@ export const RedacaoViewForm = ({ redacao, onCancel, onCopyRedacao }: RedacaoVie
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle>
           Visualizar Redação - {redacao.nome_aluno}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onCopyRedacao(redacao)}
-            className="flex items-center gap-2"
-            title="Copiar redação com dados do aluno"
-          >
-            <Copy className="w-4 h-4" />
-            Copiar Redação
-          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

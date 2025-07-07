@@ -15,8 +15,7 @@ export const RedacaoEnviadaForm = () => {
     searchTerm,
     setSearchTerm,
     fetchRedacoes,
-    handleDeleteRedacao,
-    handleCopyRedacao
+    handleDeleteRedacao
   } = useRedacoesEnviadas();
 
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoEnviada | null>(null);
@@ -34,7 +33,6 @@ export const RedacaoEnviadaForm = () => {
       <RedacaoViewForm
         redacao={selectedRedacao}
         onCancel={handleCancelView}
-        onCopyRedacao={handleCopyRedacao}
       />
     );
   }
@@ -70,7 +68,6 @@ export const RedacaoEnviadaForm = () => {
             redacoes={redacoes}
             onView={handleView}
             onDelete={(redacao) => handleDeleteRedacao(redacao.id)}
-            onCopy={handleCopyRedacao}
           />
         )}
       </CardContent>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Copy, Eye } from "lucide-react";
+import { Trash2, Eye } from "lucide-react";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { getStatusColor, getTurmaColor } from "@/utils/redacaoUtils";
 
@@ -11,10 +11,9 @@ interface RedacaoListTableProps {
   redacoes: RedacaoEnviada[];
   onView: (redacao: RedacaoEnviada) => void;
   onDelete: (redacao: RedacaoEnviada) => void;
-  onCopy: (redacao: RedacaoEnviada) => void;
 }
 
-export const RedacaoListTable = ({ redacoes, onView, onDelete, onCopy }: RedacaoListTableProps) => {
+export const RedacaoListTable = ({ redacoes, onView, onDelete }: RedacaoListTableProps) => {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -26,7 +25,6 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onCopy }: Redacao
             <TableHead>Data Envio</TableHead>
             <TableHead>Corretor Designado</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Nota</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -70,21 +68,8 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onCopy }: Redacao
                   {redacao.corrigida ? "Corrigida" : "Aguardando"}
                 </Badge>
               </TableCell>
-              <TableCell>
-                {redacao.nota_total ? `${redacao.nota_total}/1000` : "-"}
-              </TableCell>
               <TableCell className="text-right">
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onCopy(redacao)}
-                    title="Copiar redação com dados do aluno"
-                  >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Copiar
-                  </Button>
-                  
                   <Button
                     variant="outline"
                     size="sm"
