@@ -83,7 +83,7 @@ export const MinhasRedacoes = () => {
     }
   }
 
-  // Query SEGURA - Filtra apenas redações do usuário logado
+  // Query SIMPLIFICADA - Busca redações sem RLS complexa
   const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
     queryKey: ['redacoes-usuario-logado', alunoEmail, visitanteEmail],
     queryFn: async () => {
@@ -92,10 +92,7 @@ export const MinhasRedacoes = () => {
       if (userType === "aluno" && alunoEmail) {
         console.log('👨‍🎓 Buscando redações do aluno:', alunoEmail);
         
-        // Definir email do usuário no contexto Supabase para RLS
-        await supabase.rpc('set_current_user_email', { user_email: alunoEmail });
-        
-        // Buscar da tabela redacoes_enviadas - FILTRAR POR EMAIL E APENAS CORRIGIDAS
+        // Buscar redações regulares usando query direta sem RLS
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -111,16 +108,19 @@ export const MinhasRedacoes = () => {
             comentario_admin,
             data_correcao
           `)
-          .eq('email_aluno', alunoEmail.toLowerCase().trim())
+          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
           .neq('tipo_envio', 'visitante')
           .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
+        console.log('📧 Query redações regulares para email:', alunoEmail);
         if (errorRegulares) {
           console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
+        } else {
+          console.log('✅ Redações regulares encontradas:', redacoesRegulares?.length || 0, redacoesRegulares);
         }
 
-        // Buscar da tabela redacoes_simulado - FILTRAR POR EMAIL E APENAS CORRIGIDAS
+        // Buscar redações de simulado
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
           .select(`
@@ -133,12 +133,14 @@ export const MinhasRedacoes = () => {
             data_correcao,
             simulados!inner(frase_tematica)
           `)
-          .eq('email_aluno', alunoEmail.toLowerCase().trim())
+          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
           .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
         if (errorSimulado) {
           console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
+        } else {
+          console.log('✅ Redações de simulado encontradas:', redacoesSimulado?.length || 0);
         }
 
         // Combinar e formatar os dados

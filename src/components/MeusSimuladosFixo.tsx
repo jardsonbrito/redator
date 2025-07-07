@@ -154,7 +154,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             comentario_admin,
             data_correcao
           `)
-          .eq('email_aluno', alunoEmail)
+          .ilike('email_aluno', alunoEmail)
           .neq('tipo_envio', 'visitante')
           .eq('corrigida', true)
           .order('data_envio', { ascending: false });
@@ -176,7 +176,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             data_correcao,
             simulados!inner(frase_tematica)
           `)
-          .eq('email_aluno', alunoEmail)
+          .ilike('email_aluno', alunoEmail)
           .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
