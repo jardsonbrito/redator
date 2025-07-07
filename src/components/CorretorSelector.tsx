@@ -132,7 +132,6 @@ export const CorretorSelector = ({
                 >
                   <div>
                     <p className="font-medium">{corretor.nome_completo}</p>
-                    <p className="text-xs text-muted-foreground">{corretor.email}</p>
                   </div>
                 </Label>
               </div>
