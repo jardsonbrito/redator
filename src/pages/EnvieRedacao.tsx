@@ -194,7 +194,7 @@ const EnvieRedacao = () => {
           nome_aluno: nomeCompleto.trim(),
           email_aluno: email.trim(),
           frase_tematica: fraseTematica.trim(),
-          redacao_texto: redacaoTexto.trim(),
+          redacao_texto: redacaoTexto.trim() || "",
           redacao_manuscrita_url: manuscritaUrl,
           tipo_envio: tipoEnvio,
           turma: turmaCode,
@@ -217,6 +217,7 @@ const EnvieRedacao = () => {
         description: `Sua redação foi salva e será corrigida pelos corretores selecionados. Você poderá visualizá-la no card "Minhas Redações" na página inicial.`,
       });
 
+      // Limpar formulário após sucesso
       if (userType !== "visitante") {
         setNomeCompleto("");
         setEmail("");

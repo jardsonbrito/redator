@@ -40,6 +40,8 @@ export interface RedacaoEnviada {
   status_corretor_2: string | null;
   corretor_id_1: string | null;
   corretor_id_2: string | null;
+  corretor_1: { nome_completo: string } | null;
+  corretor_2: { nome_completo: string } | null;
 }
 
 export const useRedacoesEnviadas = () => {
@@ -91,7 +93,9 @@ export const useRedacoesEnviadas = () => {
           nota_final_corretor_2,
           status_corretor_2,
           corretor_id_1,
-          corretor_id_2
+          corretor_id_2,
+          corretor_1:corretores!corretor_id_1(nome_completo),
+          corretor_2:corretores!corretor_id_2(nome_completo)
         `)
         .order("data_envio", { ascending: false });
 

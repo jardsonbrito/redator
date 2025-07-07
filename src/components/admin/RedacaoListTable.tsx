@@ -50,13 +50,13 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete }: RedacaoListTabl
               <TableCell>
                 {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}
               </TableCell>
-              <TableCell>
+               <TableCell>
                 <div className="text-sm">
-                  {redacao.corretor_id_1 && (
-                    <div>Corretor 1: Designado</div>
+                  {redacao.corretor_1 && (
+                    <div>{redacao.corretor_1.nome_completo}</div>
                   )}
-                  {redacao.corretor_id_2 && (
-                    <div>Corretor 2: Designado</div>
+                  {redacao.corretor_2 && (
+                    <div>{redacao.corretor_2.nome_completo}</div>
                   )}
                   {!redacao.corretor_id_1 && !redacao.corretor_id_2 && (
                     <span className="text-gray-400">Não designado</span>
