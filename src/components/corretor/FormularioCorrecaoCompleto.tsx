@@ -130,32 +130,8 @@ export const FormularioCorrecaoCompleto = ({
         [`elogios_pontos_atencao_${prefixo}`]: elogiosEPontosAtencao.trim(),
       };
 
-      if (status === 'corrigida') {
-        let redacaoAtualQuery;
-        
-        if (tabela === 'redacoes_enviadas') {
-          redacaoAtualQuery = supabase.from('redacoes_enviadas').select('*').eq('id', redacao.id).single();
-        } else if (tabela === 'redacoes_simulado') {
-          redacaoAtualQuery = supabase.from('redacoes_simulado').select('*').eq('id', redacao.id).single();
-        } else {
-          redacaoAtualQuery = supabase.from('redacoes_exercicio').select('*').eq('id', redacao.id).single();
-        }
-
-        const { data: redacaoAtual } = await redacaoAtualQuery;
-
-        if (redacaoAtual) {
-          const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
-          const outroCorretorFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
-          const temOutroCorretor = redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`];
-          
-          // Se não há outro corretor OU se o outro corretor já finalizou, marcar como corrigida
-          if (!temOutroCorretor || outroCorretorFinalizou) {
-            updateData.corrigida = true;
-            updateData.data_correcao = new Date().toISOString();
-            updateData.status = 'corrigido'; // Adicionar status geral
-          }
-        }
-      }
+      // Não alterar status geral da redação - cada corretor é independente
+      // O status_corretor_1 ou status_corretor_2 já está sendo definido no updateData
 
       console.log('Salvando correção:', { tabela, updateData, redacaoId: redacao.id });
 
