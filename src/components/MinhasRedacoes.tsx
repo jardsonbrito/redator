@@ -92,7 +92,10 @@ export const MinhasRedacoes = () => {
       if (userType === "aluno" && alunoEmail) {
         console.log('👨‍🎓 Buscando redações do aluno:', alunoEmail);
         
-        // Buscar da tabela redacoes_enviadas - FILTRAR POR EMAIL OU APENAS CORRIGIDAS
+        // Definir email do usuário no contexto Supabase para RLS
+        await supabase.rpc('set_current_user_email', { user_email: alunoEmail });
+        
+        // Buscar da tabela redacoes_enviadas - FILTRAR POR EMAIL E APENAS CORRIGIDAS
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -177,6 +180,10 @@ export const MinhasRedacoes = () => {
         
       } else if (userType === "visitante" && visitanteEmail) {
         console.log('👤 Buscando redações do visitante:', visitanteEmail);
+        
+        // Definir email do usuário no contexto Supabase para RLS
+        await supabase.rpc('set_current_user_email', { user_email: visitanteEmail });
+        
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
