@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, Send, Upload, X } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Home, Send, Upload, X, Camera, Edit3 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +25,7 @@ const EnvieRedacao = () => {
   const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
   const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
+  const [tipoRedacao, setTipoRedacao] = useState<"manuscrita" | "digitada">("digitada");
   const { toast } = useToast();
 
   const temaFromUrl = searchParams.get('tema');
@@ -47,17 +50,26 @@ const EnvieRedacao = () => {
     turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
   }
 
-  useState(() => {
+  useEffect(() => {
+    // Preenchimento automático baseado no tipo de usuário
     if (userType === "visitante" && visitanteData) {
       const dados = JSON.parse(visitanteData);
       setNomeCompleto(dados.nome || "");
       setEmail(dados.email || "");
+    } else if (userType === "aluno" && alunoTurma) {
+      // Para alunos, preencher automaticamente o nome baseado nos dados armazenados
+      const alunoData = localStorage.getItem("alunoData");
+      if (alunoData) {
+        const dados = JSON.parse(alunoData);
+        setNomeCompleto(dados.nome || "");
+        setEmail(dados.email || "");
+      }
     }
     
     if (temaFromUrl) {
       setFraseTematica(decodeURIComponent(temaFromUrl));
     }
-  });
+  }, [userType, visitanteData, alunoTurma, temaFromUrl]);
 
   const handleRedacaoManuscritaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -130,10 +142,20 @@ const EnvieRedacao = () => {
       return;
     }
 
-    if (!redacaoTexto.trim() && !redacaoManuscrita) {
+    // Validação condicional baseada no tipo de redação
+    if (tipoRedacao === "digitada" && !redacaoTexto.trim()) {
       toast({
         title: "Redação obrigatória",
-        description: "Digite sua redação ou envie uma redação manuscrita para continuar.",
+        description: "Digite o texto da sua redação para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (tipoRedacao === "manuscrita" && !redacaoManuscrita) {
+      toast({
+        title: "Redação manuscrita obrigatória",
+        description: "Selecione uma foto da sua redação manuscrita para continuar.",
         variant: "destructive",
       });
       return;
@@ -327,56 +349,109 @@ const EnvieRedacao = () => {
                     required={true}
                   />
 
-                  <div>
-                    <label className="block text-sm font-medium text-redator-primary mb-2">
-                      Redação Manuscrita (opcional)
+                  {/* Radio buttons para tipo de redação */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+                    <label className="block text-lg font-semibold text-redator-primary mb-4">
+                      Como deseja enviar sua redação? *
                     </label>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <label htmlFor="redacao-manuscrita" className="cursor-pointer">
-                          <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-redator-accent/30 rounded-lg hover:border-redator-accent transition-colors">
-                            <Upload className="w-4 h-4" />
-                            <span className="text-sm">Selecionar imagem</span>
+                    <RadioGroup
+                      value={tipoRedacao}
+                      onValueChange={(value: "manuscrita" | "digitada") => {
+                        setTipoRedacao(value);
+                        // Limpar dados do tipo anterior quando mudar
+                        if (value === "manuscrita") {
+                          setRedacaoTexto("");
+                        } else {
+                          handleRemoveRedacaoManuscrita();
+                        }
+                      }}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                    >
+                      <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-redator-accent transition-colors cursor-pointer bg-white">
+                        <RadioGroupItem value="manuscrita" id="manuscrita" />
+                        <Label htmlFor="manuscrita" className="flex items-center gap-2 cursor-pointer flex-1">
+                          <Camera className="w-5 h-5 text-redator-primary" />
+                          <div>
+                            <div className="font-medium text-redator-primary">Redação manuscrita (foto)</div>
+                            <div className="text-sm text-redator-accent">Envie uma foto da sua redação escrita à mão</div>
                           </div>
-                        </label>
-                        <input
-                          id="redacao-manuscrita"
-                          type="file"
-                          accept="image/jpeg,image/jpg,image/png"
-                          onChange={handleRedacaoManuscritaChange}
-                          className="hidden"
-                        />
+                        </Label>
                       </div>
-
-                      {redacaoManuscritaUrl && (
-                        <div className="relative inline-block">
-                          <img 
-                            src={redacaoManuscritaUrl} 
-                            alt="Preview da redação manuscrita" 
-                            className="max-w-xs max-h-60 rounded-lg border border-redator-accent/30"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0"
-                            onClick={handleRemoveRedacaoManuscrita}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-redator-accent mt-1">
-                      Formatos aceitos: JPG, JPEG, PNG
-                    </p>
+                      
+                      <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-redator-accent transition-colors cursor-pointer bg-white">
+                        <RadioGroupItem value="digitada" id="digitada" />
+                        <Label htmlFor="digitada" className="flex items-center gap-2 cursor-pointer flex-1">
+                          <Edit3 className="w-5 h-5 text-redator-primary" />
+                          <div>
+                            <div className="font-medium text-redator-primary">Redação digitada (formulário)</div>
+                            <div className="text-sm text-redator-accent">Digite o texto da sua redação no campo abaixo</div>
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
 
-                  <RedacaoTextarea
-                    value={redacaoTexto}
-                    onChange={setRedacaoTexto}
-                    onValidChange={setIsRedacaoValid}
-                  />
+                  {/* Campo para redação manuscrita - aparece apenas se selecionado */}
+                  {tipoRedacao === "manuscrita" && (
+                    <div className="bg-amber-50 p-6 rounded-lg border border-amber-200">
+                      <label className="block text-lg font-medium text-redator-primary mb-4">
+                        📷 Envie a foto da sua redação manuscrita *
+                      </label>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-4">
+                          <label htmlFor="redacao-manuscrita" className="cursor-pointer">
+                            <div className="flex items-center gap-3 px-6 py-4 border-2 border-dashed border-amber-300 rounded-lg hover:border-amber-400 transition-colors bg-white">
+                              <Camera className="w-6 h-6 text-amber-600" />
+                              <div>
+                                <span className="text-base font-medium text-amber-700">Selecionar foto da redação</span>
+                                <div className="text-sm text-amber-600">JPG, JPEG ou PNG (máx. 5MB)</div>
+                              </div>
+                            </div>
+                          </label>
+                          <input
+                            id="redacao-manuscrita"
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png"
+                            onChange={handleRedacaoManuscritaChange}
+                            className="hidden"
+                          />
+                        </div>
+
+                        {redacaoManuscritaUrl && (
+                          <div className="relative inline-block">
+                            <img 
+                              src={redacaoManuscritaUrl} 
+                              alt="Preview da redação manuscrita" 
+                              className="max-w-sm max-h-80 rounded-lg border-2 border-amber-300 shadow-md"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute -top-2 -right-2 rounded-full w-8 h-8 p-0"
+                              onClick={handleRemoveRedacaoManuscrita}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Campo para redação digitada - aparece apenas se selecionado */}
+                  {tipoRedacao === "digitada" && (
+                    <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+                      <label className="block text-lg font-medium text-redator-primary mb-4">
+                        ✏️ Digite o texto da sua redação *
+                      </label>
+                      <RedacaoTextarea
+                        value={redacaoTexto}
+                        onChange={setRedacaoTexto}
+                        onValidChange={setIsRedacaoValid}
+                      />
+                    </div>
+                  )}
 
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-800">
@@ -391,7 +466,11 @@ const EnvieRedacao = () => {
 
                   <Button 
                     type="submit" 
-                    disabled={isSubmitting || (!isRedacaoValid && !redacaoManuscrita)}
+                    disabled={
+                      isSubmitting || 
+                      (tipoRedacao === "digitada" && !isRedacaoValid) ||
+                      (tipoRedacao === "manuscrita" && !redacaoManuscrita)
+                    }
                     className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
                   >
                     {isSubmitting ? "Salvando..." : "Enviar Redação"}
