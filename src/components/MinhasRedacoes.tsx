@@ -92,7 +92,7 @@ export const MinhasRedacoes = () => {
       if (userType === "aluno" && alunoEmail) {
         console.log('👨‍🎓 Buscando redações do aluno:', alunoEmail);
         
-        // Buscar da tabela redacoes_enviadas - FILTRAR RIGOROSAMENTE POR EMAIL
+        // Buscar da tabela redacoes_enviadas - FILTRAR POR EMAIL OU APENAS CORRIGIDAS
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -110,14 +110,14 @@ export const MinhasRedacoes = () => {
           `)
           .eq('email_aluno', alunoEmail.toLowerCase().trim())
           .neq('tipo_envio', 'visitante')
-          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
+          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
         if (errorRegulares) {
           console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
         }
 
-        // Buscar da tabela redacoes_simulado - FILTRAR RIGOROSAMENTE POR EMAIL
+        // Buscar da tabela redacoes_simulado - FILTRAR POR EMAIL E APENAS CORRIGIDAS
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
           .select(`
@@ -131,7 +131,7 @@ export const MinhasRedacoes = () => {
             simulados!inner(frase_tematica)
           `)
           .eq('email_aluno', alunoEmail.toLowerCase().trim())
-          .or('corrigida.eq.true,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
+          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
         if (errorSimulado) {
@@ -194,7 +194,7 @@ export const MinhasRedacoes = () => {
           `)
           .eq('email_aluno', visitanteEmail.toLowerCase().trim())
           .eq('tipo_envio', 'visitante')
-          .or('corrigida.eq.true,status.eq.corrigida,status_corretor_1.eq.corrigida,status_corretor_2.eq.corrigida')
+          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
         
         if (error) {
