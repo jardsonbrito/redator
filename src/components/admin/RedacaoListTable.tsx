@@ -3,18 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Edit, Trash2, Copy } from "lucide-react";
+import { Trash2, Copy, Eye } from "lucide-react";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { getStatusColor, getTurmaColor } from "@/utils/redacaoUtils";
 
 interface RedacaoListTableProps {
   redacoes: RedacaoEnviada[];
-  onCorrection: (redacao: RedacaoEnviada) => void;
+  onView: (redacao: RedacaoEnviada) => void;
   onDelete: (redacao: RedacaoEnviada) => void;
   onCopy: (redacao: RedacaoEnviada) => void;
 }
 
-export const RedacaoListTable = ({ redacoes, onCorrection, onDelete, onCopy }: RedacaoListTableProps) => {
+export const RedacaoListTable = ({ redacoes, onView, onDelete, onCopy }: RedacaoListTableProps) => {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -24,6 +24,7 @@ export const RedacaoListTable = ({ redacoes, onCorrection, onDelete, onCopy }: R
             <TableHead>Turma</TableHead>
             <TableHead>Tema</TableHead>
             <TableHead>Data Envio</TableHead>
+            <TableHead>Corretor Designado</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Nota</TableHead>
             <TableHead className="text-right">Ações</TableHead>
@@ -52,6 +53,19 @@ export const RedacaoListTable = ({ redacoes, onCorrection, onDelete, onCopy }: R
                 {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}
               </TableCell>
               <TableCell>
+                <div className="text-sm">
+                  {redacao.corretor_id_1 && (
+                    <div>Corretor 1: Designado</div>
+                  )}
+                  {redacao.corretor_id_2 && (
+                    <div>Corretor 2: Designado</div>
+                  )}
+                  {!redacao.corretor_id_1 && !redacao.corretor_id_2 && (
+                    <span className="text-gray-400">Não designado</span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
                 <Badge className={getStatusColor(redacao.status, redacao.corrigida)}>
                   {redacao.corrigida ? "Corrigida" : "Aguardando"}
                 </Badge>
@@ -74,10 +88,11 @@ export const RedacaoListTable = ({ redacoes, onCorrection, onDelete, onCopy }: R
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onCorrection(redacao)}
+                    onClick={() => onView(redacao)}
+                    title="Visualizar redação"
                   >
-                    <Edit className="w-4 h-4 mr-1" />
-                    {redacao.corrigida ? "Editar" : "Corrigir"}
+                    <Eye className="w-4 h-4 mr-1" />
+                    Visualizar
                   </Button>
                   
                   <AlertDialog>

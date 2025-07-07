@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,10 +117,25 @@ export const FormularioCorrecaoCompleto = ({
         [`elogios_pontos_atencao_${prefixo}`]: elogiosEPontosAtencao.trim(),
       };
 
-      // Se a correção está sendo finalizada, marcar também como corrigida
+      // Se a correção está sendo finalizada, marcar também como corrigida na redação
       if (status === 'corrigida') {
-        updateData.corrigida = true;
-        updateData.data_correcao = new Date().toISOString();
+        // Verificar se o outro corretor já finalizou para marcar como corrigida geral
+        const { data: redacaoAtual } = await supabase
+          .from(tabela as any)
+          .select('*')
+          .eq('id', redacao.id)
+          .single();
+
+        if (redacaoAtual) {
+          const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
+          const outroCorretorFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
+          
+          // Se só há um corretor ou se o outro também finalizou, marcar a redação como corrigida
+          if (!redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`] || outroCorretorFinalizou) {
+            updateData.corrigida = true;
+            updateData.data_correcao = new Date().toISOString();
+          }
+        }
       }
 
       console.log('Salvando correção:', { tabela, updateData, redacaoId: redacao.id });

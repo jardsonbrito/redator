@@ -79,7 +79,7 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
       const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
       const notaTotal = calcularNotaTotal();
 
-      const updateData = {
+      const updateData: any = {
         [`c1_${prefixo}`]: notas.c1,
         [`c2_${prefixo}`]: notas.c2,
         [`c3_${prefixo}`]: notas.c3,
@@ -88,6 +88,26 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         [`nota_final_${prefixo}`]: notaTotal,
         [`status_${prefixo}`]: status,
       };
+
+      // Se a correção está sendo finalizada, verificar se deve marcar como corrigida geral
+      if (status === 'corrigida') {
+        const { data: redacaoAtual } = await supabase
+          .from(tabela as any)
+          .select('*')
+          .eq('id', redacao.id)
+          .single();
+
+        if (redacaoAtual) {
+          const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
+          const outroCorretorFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
+          
+          // Se só há um corretor ou se o outro também finalizou
+          if (!redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`] || outroCorretorFinalizou) {
+            updateData.corrigida = true;
+            updateData.data_correcao = new Date().toISOString();
+          }
+        }
+      }
 
       const { error } = await supabase
         .from(tabela as any)

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useRedacoesEnviadas, RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
-import { RedacaoCorrecaoForm } from "./RedacaoCorrecaoForm";
+import { RedacaoViewForm } from "./RedacaoViewForm";
 import { RedacaoListTable } from "./RedacaoListTable";
 
 export const RedacaoEnviadaForm = () => {
@@ -21,25 +21,19 @@ export const RedacaoEnviadaForm = () => {
 
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoEnviada | null>(null);
 
-  const handleCorrection = (redacao: RedacaoEnviada) => {
+  const handleView = (redacao: RedacaoEnviada) => {
     setSelectedRedacao(redacao);
   };
 
-  const handleCancelCorrection = () => {
+  const handleCancelView = () => {
     setSelectedRedacao(null);
-  };
-
-  const handleSuccessCorrection = () => {
-    setSelectedRedacao(null);
-    fetchRedacoes();
   };
 
   if (selectedRedacao) {
     return (
-      <RedacaoCorrecaoForm
+      <RedacaoViewForm
         redacao={selectedRedacao}
-        onCancel={handleCancelCorrection}
-        onSuccess={handleSuccessCorrection}
+        onCancel={handleCancelView}
         onCopyRedacao={handleCopyRedacao}
       />
     );
@@ -49,7 +43,7 @@ export const RedacaoEnviadaForm = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Redações Enviadas - Tema Livre
+          Redações Enviadas - Visualização Gerencial
           <Badge variant="secondary">{redacoes.length} redação(ões)</Badge>
         </CardTitle>
         
@@ -74,7 +68,7 @@ export const RedacaoEnviadaForm = () => {
         ) : (
           <RedacaoListTable
             redacoes={redacoes}
-            onCorrection={handleCorrection}
+            onView={handleView}
             onDelete={(redacao) => handleDeleteRedacao(redacao.id)}
             onCopy={handleCopyRedacao}
           />
