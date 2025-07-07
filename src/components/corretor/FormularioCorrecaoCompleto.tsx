@@ -132,8 +132,10 @@ export const FormularioCorrecaoCompleto = ({
         [`elogios_pontos_atencao_${prefixo}`]: elogiosEPontosAtencao.trim(),
       };
 
-      // Não alterar status geral da redação - cada corretor é independente
-      // O status_corretor_1 ou status_corretor_2 já está sendo definido no updateData
+      // Se salvando como corrigida, definir data de correção
+      if (status === 'corrigida') {
+        updateData.data_correcao = new Date().toISOString();
+      }
 
       console.log('Salvando correção:', { tabela, updateData, redacaoId: redacao.id });
 
