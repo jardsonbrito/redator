@@ -119,13 +119,13 @@ const SimuladoParticipacao = () => {
       const filePath = `redacoes-manuscritas/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('biblioteca-pdfs')
+        .from('redacoes-manuscritas')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage
-        .from('biblioteca-pdfs')
+        .from('redacoes-manuscritas')
         .getPublicUrl(filePath);
 
       return data.publicUrl;
