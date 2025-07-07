@@ -747,6 +747,7 @@ export type Database = {
           nota_final_corretor_1: number | null
           nota_final_corretor_2: number | null
           nota_total: number | null
+          redacao_manuscrita_url: string | null
           redacao_texto: string
           status: string | null
           status_corretor_1: string | null
@@ -797,6 +798,7 @@ export type Database = {
           nota_final_corretor_1?: number | null
           nota_final_corretor_2?: number | null
           nota_total?: number | null
+          redacao_manuscrita_url?: string | null
           redacao_texto: string
           status?: string | null
           status_corretor_1?: string | null
@@ -847,6 +849,7 @@ export type Database = {
           nota_final_corretor_1?: number | null
           nota_final_corretor_2?: number | null
           nota_total?: number | null
+          redacao_manuscrita_url?: string | null
           redacao_texto?: string
           status?: string | null
           status_corretor_1?: string | null
@@ -914,6 +917,7 @@ export type Database = {
           nota_final_corretor_1: number | null
           nota_final_corretor_2: number | null
           nota_total: number | null
+          redacao_manuscrita_url: string | null
           redacao_texto: string
           status_corretor_1: string | null
           status_corretor_2: string | null
@@ -961,6 +965,7 @@ export type Database = {
           nota_final_corretor_1?: number | null
           nota_final_corretor_2?: number | null
           nota_total?: number | null
+          redacao_manuscrita_url?: string | null
           redacao_texto: string
           status_corretor_1?: string | null
           status_corretor_2?: string | null
@@ -1008,6 +1013,7 @@ export type Database = {
           nota_final_corretor_1?: number | null
           nota_final_corretor_2?: number | null
           nota_total?: number | null
+          redacao_manuscrita_url?: string | null
           redacao_texto?: string
           status_corretor_1?: string | null
           status_corretor_2?: string | null
@@ -1074,6 +1080,7 @@ export type Database = {
           nota_final_corretor_1: number | null
           nota_final_corretor_2: number | null
           nota_total: number | null
+          redacao_manuscrita_url: string | null
           status_corretor_1: string | null
           status_corretor_2: string | null
           texto: string
@@ -1122,6 +1129,7 @@ export type Database = {
           nota_final_corretor_1?: number | null
           nota_final_corretor_2?: number | null
           nota_total?: number | null
+          redacao_manuscrita_url?: string | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           texto: string
@@ -1170,6 +1178,7 @@ export type Database = {
           nota_final_corretor_1?: number | null
           nota_final_corretor_2?: number | null
           nota_total?: number | null
+          redacao_manuscrita_url?: string | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           texto?: string

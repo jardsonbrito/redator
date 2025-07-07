@@ -10,6 +10,7 @@ export interface RedacaoEnviada {
   turma: string;
   frase_tematica: string;
   redacao_texto: string;
+  redacao_manuscrita_url: string | null;
   data_envio: string;
   corrigida: boolean;
   nota_total: number | null;
@@ -62,6 +63,7 @@ export const useRedacoesEnviadas = () => {
           turma,
           frase_tematica,
           redacao_texto,
+          redacao_manuscrita_url,
           data_envio,
           corrigida,
           nota_total,
@@ -134,7 +136,7 @@ export const useRedacoesEnviadas = () => {
   };
 
   const handleCopyRedacao = (redacao: RedacaoEnviada) => {
-    const text = `Aluno: ${redacao.nome_aluno}\nE-mail: ${redacao.email_aluno}\nTurma: ${redacao.turma}\nTema: ${redacao.frase_tematica}\n\nTexto:\n${redacao.redacao_texto}`;
+    const text = `Aluno: ${redacao.nome_aluno}\nE-mail: ${redacao.email_aluno}\nTurma: ${redacao.turma}\nTema: ${redacao.frase_tematica}\n\nTexto:\n${redacao.redacao_texto}${redacao.redacao_manuscrita_url ? `\n\nRedação Manuscrita: ${redacao.redacao_manuscrita_url}` : ''}`;
     navigator.clipboard.writeText(text);
     toast({
       title: "Redação copiada!",

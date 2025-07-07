@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
-import { ArrowLeft, Save, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle, Download } from "lucide-react";
 
 interface FormularioCorrecaoCompletoProps {
   redacao: RedacaoCorretor;
@@ -44,6 +43,7 @@ export const FormularioCorrecaoCompleto = ({
   const [elogiosEPontosAtencao, setElogiosEPontosAtencao] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingCorrecao, setLoadingCorrecao] = useState(true);
+  const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,11 +81,18 @@ export const FormularioCorrecaoCompleto = ({
         });
         
         setElogiosEPontosAtencao(data[`elogios_pontos_atencao_${prefixo}`] || "");
+        setManuscritaUrl(data.redacao_manuscrita_url || null);
       }
     } catch (error: any) {
       console.error("Erro ao carregar correção:", error);
     } finally {
       setLoadingCorrecao(false);
+    }
+  };
+
+  const handleDownloadManuscrita = () => {
+    if (manuscritaUrl) {
+      window.open(manuscritaUrl, '_blank');
     }
   };
 
@@ -117,9 +124,7 @@ export const FormularioCorrecaoCompleto = ({
         [`elogios_pontos_atencao_${prefixo}`]: elogiosEPontosAtencao.trim(),
       };
 
-      // Se a correção está sendo finalizada, marcar também como corrigida na redação
       if (status === 'corrigida') {
-        // Verificar se o outro corretor já finalizou para marcar como corrigida geral
         const { data: redacaoAtual } = await supabase
           .from(tabela as any)
           .select('*')
@@ -130,7 +135,6 @@ export const FormularioCorrecaoCompleto = ({
           const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
           const outroCorretorFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
           
-          // Se só há um corretor ou se o outro também finalizou, marcar a redação como corrigida
           if (!redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`] || outroCorretorFinalizou) {
             updateData.corrigida = true;
             updateData.data_correcao = new Date().toISOString();
@@ -154,7 +158,6 @@ export const FormularioCorrecaoCompleto = ({
           : "Você pode continuar a correção mais tarde.",
       });
 
-      // Aguardar um momento para garantir que o banco foi atualizado
       await new Promise(resolve => setTimeout(resolve, 500));
 
       if (onRefreshList) {
@@ -210,16 +213,44 @@ export const FormularioCorrecaoCompleto = ({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Texto da Redação</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
-            {redacao.texto}
-          </div>
-        </CardContent>
-      </Card>
+      {manuscritaUrl ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              Redação Manuscrita
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadManuscrita}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Baixar Redação Manuscrita
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 rounded-md p-4 max-h-96 overflow-y-auto">
+              <img 
+                src={manuscritaUrl} 
+                alt="Redação manuscrita" 
+                className="w-full h-auto rounded-md"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Texto da Redação</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
+              {redacao.texto}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

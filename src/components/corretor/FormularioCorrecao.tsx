@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
-import { ArrowLeft, Save, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle, Download } from "lucide-react";
 
 interface FormularioCorrecaoProps {
   redacao: RedacaoCorretor;
@@ -26,6 +25,7 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
   });
   const [loading, setLoading] = useState(false);
   const [loadingCorrecao, setLoadingCorrecao] = useState(true);
+  const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,13 +39,7 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
 
       const { data, error } = await supabase
         .from(tabela as any)
-        .select(`
-          c1_${prefixo},
-          c2_${prefixo},
-          c3_${prefixo},
-          c4_${prefixo},
-          c5_${prefixo}
-        `)
+        .select('*')
         .eq('id', redacao.id)
         .single();
 
@@ -59,11 +53,18 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
           c4: data[`c4_${prefixo}`] || 0,
           c5: data[`c5_${prefixo}`] || 0,
         });
+        setManuscritaUrl(data.redacao_manuscrita_url || null);
       }
     } catch (error: any) {
       console.error("Erro ao carregar correção:", error);
     } finally {
       setLoadingCorrecao(false);
+    }
+  };
+
+  const handleDownloadManuscrita = () => {
+    if (manuscritaUrl) {
+      window.open(manuscritaUrl, '_blank');
     }
   };
 
@@ -89,7 +90,6 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         [`status_${prefixo}`]: status,
       };
 
-      // Se a correção está sendo finalizada, verificar se deve marcar como corrigida geral
       if (status === 'corrigida') {
         const { data: redacaoAtual } = await supabase
           .from(tabela as any)
@@ -101,7 +101,6 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
           const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
           const outroCorretorFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
           
-          // Se só há um corretor ou se o outro também finalizou
           if (!redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`] || outroCorretorFinalizou) {
             updateData.corrigida = true;
             updateData.data_correcao = new Date().toISOString();
@@ -165,16 +164,44 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Texto da Redação</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
-            {redacao.texto}
-          </div>
-        </CardContent>
-      </Card>
+      {manuscritaUrl ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              Redação Manuscrita
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadManuscrita}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Baixar Redação Manuscrita
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 rounded-md p-4 max-h-96 overflow-y-auto">
+              <img 
+                src={manuscritaUrl} 
+                alt="Redação manuscrita" 
+                className="w-full h-auto rounded-md"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Texto da Redação</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
+              {redacao.texto}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

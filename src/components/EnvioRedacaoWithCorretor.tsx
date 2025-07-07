@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CorretorSelector } from "./CorretorSelector";
+import { Upload, X } from "lucide-react";
 
 interface EnvioRedacaoProps {
   isSimulado?: boolean;
@@ -32,12 +33,73 @@ export const EnvioRedacaoWithCorretor = ({
     redacao_texto: "",
   });
   const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
+  const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
+  const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const handleRedacaoManuscritaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Formato inválido",
+        description: "Por favor, selecione apenas arquivos de imagem (JPG, JPEG ou PNG).",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "A imagem deve ter no máximo 5MB.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setRedacaoManuscrita(file);
+    const tempUrl = URL.createObjectURL(file);
+    setRedacaoManuscritaUrl(tempUrl);
+  };
+
+  const handleRemoveRedacaoManuscrita = () => {
+    if (redacaoManuscritaUrl && redacaoManuscritaUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(redacaoManuscritaUrl);
+    }
+    setRedacaoManuscrita(null);
+    setRedacaoManuscritaUrl(null);
+  };
+
+  const uploadRedacaoManuscrita = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `redacoes-manuscritas/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('biblioteca-pdfs')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('biblioteca-pdfs')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Erro ao fazer upload da redação manuscrita:', error);
+      return null;
+    }
+  };
+
   const validateForm = () => {
     if (!formData.nome_aluno.trim() || !formData.email_aluno.trim() || 
-        !formData.turma.trim() || !formData.redacao_texto.trim()) {
+        !formData.turma.trim()) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos obrigatórios.",
@@ -50,6 +112,15 @@ export const EnvioRedacaoWithCorretor = ({
       toast({
         title: "Frase temática obrigatória",
         description: "Informe a frase temática da redação.",
+        variant: "destructiva"
+      });
+      return false;
+    }
+
+    if (!formData.redacao_texto.trim() && !redacaoManuscrita) {
+      toast({
+        title: "Redação obrigatória",
+        description: "Digite sua redação ou envie uma redação manuscrita para continuar.",
         variant: "destructive"
       });
       return false;
@@ -82,7 +153,6 @@ export const EnvioRedacaoWithCorretor = ({
       return false;
     }
 
-    // Verificar duplicados
     const uniqueCorretores = new Set(selectedCorretores);
     if (uniqueCorretores.size !== selectedCorretores.length) {
       toast({
@@ -104,12 +174,21 @@ export const EnvioRedacaoWithCorretor = ({
     setLoading(true);
 
     try {
+      let manuscritaUrl = null;
+      if (redacaoManuscrita) {
+        manuscritaUrl = await uploadRedacaoManuscrita(redacaoManuscrita);
+        if (!manuscritaUrl) {
+          throw new Error("Erro ao fazer upload da redação manuscrita");
+        }
+      }
+
       const redacaoData = {
         nome_aluno: formData.nome_aluno.trim(),
         email_aluno: formData.email_aluno.trim().toLowerCase(),
         turma: formData.turma.trim(),
         frase_tematica: fraseTematica || formData.frase_tematica.trim(),
         redacao_texto: formData.redacao_texto.trim(),
+        redacao_manuscrita_url: manuscritaUrl,
         corretor_id_1: selectedCorretores[0] || null,
         corretor_id_2: selectedCorretores[1] || null,
         tipo_envio: isSimulado ? 'simulado' : (exercicioId ? 'exercicio' : 'regular'),
@@ -120,7 +199,6 @@ export const EnvioRedacaoWithCorretor = ({
       let result;
 
       if (isSimulado && simuladoId) {
-        // Envio de simulado
         result = await supabase
           .from("redacoes_simulado")
           .insert({
@@ -129,7 +207,6 @@ export const EnvioRedacaoWithCorretor = ({
             texto: redacaoData.redacao_texto,
           });
       } else if (exercicioId) {
-        // Envio de exercício
         result = await supabase
           .from("redacoes_exercicio")
           .insert({
@@ -137,7 +214,6 @@ export const EnvioRedacaoWithCorretor = ({
             exercicio_id: exercicioId,
           });
       } else {
-        // Envio regular
         result = await supabase
           .from("redacoes_enviadas")
           .insert(redacaoData);
@@ -150,7 +226,6 @@ export const EnvioRedacaoWithCorretor = ({
         description: "Sua redação foi enviada e será corrigida pelos corretores selecionados.",
       });
 
-      // Limpar formulário
       setFormData({
         nome_aluno: "",
         email_aluno: "",
@@ -159,6 +234,7 @@ export const EnvioRedacaoWithCorretor = ({
         redacao_texto: "",
       });
       setSelectedCorretores([]);
+      handleRemoveRedacaoManuscrita();
 
       onSuccess?.();
     } catch (error: any) {
@@ -239,14 +315,56 @@ export const EnvioRedacaoWithCorretor = ({
           />
 
           <div>
-            <Label htmlFor="redacao_texto">Texto da Redação *</Label>
+            <Label className="text-base font-medium">Redação Manuscrita (opcional)</Label>
+            <div className="space-y-4 mt-2">
+              <div className="flex items-center gap-4">
+                <label htmlFor="redacao-manuscrita" className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
+                    <Upload className="w-4 h-4" />
+                    <span className="text-sm">Selecionar imagem</span>
+                  </div>
+                </label>
+                <input
+                  id="redacao-manuscrita"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  onChange={handleRedacaoManuscritaChange}
+                  className="hidden"
+                />
+              </div>
+
+              {redacaoManuscritaUrl && (
+                <div className="relative inline-block">
+                  <img 
+                    src={redacaoManuscritaUrl} 
+                    alt="Preview da redação manuscrita" 
+                    className="max-w-xs max-h-60 rounded-lg border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0"
+                    onClick={handleRemoveRedacaoManuscrita}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Formatos aceitos: JPG, JPEG, PNG
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="redacao_texto">Texto da Redação</Label>
             <Textarea
               id="redacao_texto"
               value={formData.redacao_texto}
               onChange={(e) => setFormData(prev => ({ ...prev, redacao_texto: e.target.value }))}
               placeholder="Digite o texto da sua redação aqui..."
               className="min-h-[300px]"
-              required
             />
           </div>
 

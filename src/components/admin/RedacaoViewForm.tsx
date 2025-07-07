@@ -1,7 +1,6 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy } from "lucide-react";
+import { Copy, Download } from "lucide-react";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 
 interface RedacaoViewFormProps {
@@ -11,6 +10,12 @@ interface RedacaoViewFormProps {
 }
 
 export const RedacaoViewForm = ({ redacao, onCancel, onCopyRedacao }: RedacaoViewFormProps) => {
+  const handleDownloadManuscrita = () => {
+    if (redacao.redacao_manuscrita_url) {
+      window.open(redacao.redacao_manuscrita_url, '_blank');
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -41,12 +46,36 @@ export const RedacaoViewForm = ({ redacao, onCancel, onCopyRedacao }: RedacaoVie
           <p className="mt-1 p-3 bg-gray-50 rounded-md">{redacao.frase_tematica}</p>
         </div>
 
-        <div>
-          <label className="text-base font-semibold">Texto da Redação:</label>
-          <div className="mt-1 p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
-            {redacao.redacao_texto}
+        {redacao.redacao_manuscrita_url ? (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-base font-semibold">Redação Manuscrita:</label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadManuscrita}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Baixar Redação Manuscrita
+              </Button>
+            </div>
+            <div className="mt-1 p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto">
+              <img 
+                src={redacao.redacao_manuscrita_url} 
+                alt="Redação manuscrita" 
+                className="w-full h-auto rounded-md"
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div>
+            <label className="text-base font-semibold">Texto da Redação:</label>
+            <div className="mt-1 p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
+              {redacao.redacao_texto}
+            </div>
+          </div>
+        )}
 
         {/* Mostrar correções individuais se existirem */}
         {(redacao.c1_corretor_1 !== null || redacao.c1_corretor_2 !== null) && (
