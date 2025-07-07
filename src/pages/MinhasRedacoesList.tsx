@@ -409,12 +409,6 @@ export default function MinhasRedacoesList() {
                   <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                     Minhas Redações
                   </h1>
-                  <p className="text-sm sm:text-base text-muted-foreground">
-                    {userType === "aluno" ? 
-                      `Suas redações pessoais` : 
-                      "Todas as suas redações enviadas"
-                    }
-                  </p>
                 </div>
               </div>
               
