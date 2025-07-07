@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { normalizeEmail, logLoginAttempt } from "@/utils/emailNormalizer";
 
 interface StudentLoginFormProps {
-  onLogin: (data: { turma: string; nome: string }) => void;
+  onLogin: (data: { turma: string; nome: string; email: string }) => void;
   loading: boolean;
 }
 
@@ -54,7 +54,7 @@ export const StudentLoginForm = ({ onLogin, loading }: StudentLoginFormProps) =>
       if (aluno) {
         logLoginAttempt(email, emailNormalizado, 'success');
         console.log('✅ LOGIN SUCESSO - Aluno:', aluno.nome, 'Turma:', aluno.turma);
-        onLogin({ turma: aluno.turma, nome: aluno.nome });
+        onLogin({ turma: aluno.turma, nome: aluno.nome, email: aluno.email });
         return;
       }
 
