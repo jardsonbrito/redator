@@ -47,8 +47,10 @@ export const FormularioCorrecaoCompleto = ({
   const { toast } = useToast();
 
   useEffect(() => {
+    // Inicializar manuscrita URL da redação original
+    setManuscritaUrl(redacao.redacao_manuscrita_url || null);
     carregarCorrecaoExistente();
-  }, [redacao.id, corretorEmail]);
+  }, [redacao.id, corretorEmail, redacao.redacao_manuscrita_url]);
 
   const carregarCorrecaoExistente = async () => {
     try {

@@ -1448,6 +1448,7 @@ export type Database = {
           status_minha_correcao: string
           eh_corretor_1: boolean
           eh_corretor_2: boolean
+          redacao_manuscrita_url: string
         }[]
       }
       get_student_redacoes: {

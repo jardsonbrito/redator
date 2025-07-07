@@ -14,6 +14,7 @@ export interface RedacaoCorretor {
   status_minha_correcao: 'pendente' | 'incompleta' | 'corrigida';
   eh_corretor_1: boolean;
   eh_corretor_2: boolean;
+  redacao_manuscrita_url?: string | null;
 }
 
 export const useCorretorRedacoes = (corretorEmail: string) => {
