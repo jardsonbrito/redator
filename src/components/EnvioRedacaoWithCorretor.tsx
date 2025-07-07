@@ -112,7 +112,7 @@ export const EnvioRedacaoWithCorretor = ({
       toast({
         title: "Frase temática obrigatória",
         description: "Informe a frase temática da redação.",
-        variant: "destructiva"
+        variant: "destructive"
       });
       return false;
     }
