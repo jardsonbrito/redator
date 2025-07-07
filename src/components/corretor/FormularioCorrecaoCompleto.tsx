@@ -146,10 +146,13 @@ export const FormularioCorrecaoCompleto = ({
         if (redacaoAtual) {
           const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
           const outroCorretorFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
+          const temOutroCorretor = redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`];
           
-          if (!redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`] || outroCorretorFinalizou) {
+          // Se não há outro corretor OU se o outro corretor já finalizou, marcar como corrigida
+          if (!temOutroCorretor || outroCorretorFinalizou) {
             updateData.corrigida = true;
             updateData.data_correcao = new Date().toISOString();
+            updateData.status = 'corrigido'; // Adicionar status geral
           }
         }
       }
