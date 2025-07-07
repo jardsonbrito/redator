@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,11 +37,17 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
       const tabela = `redacoes_${redacao.tipo_redacao === 'regular' ? 'enviadas' : redacao.tipo_redacao}`;
       const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
 
-      const { data, error } = await supabase
-        .from(tabela as any)
-        .select('*')
-        .eq('id', redacao.id)
-        .single();
+      let query;
+      
+      if (tabela === 'redacoes_enviadas') {
+        query = supabase.from('redacoes_enviadas').select('*').eq('id', redacao.id).single();
+      } else if (tabela === 'redacoes_simulado') {
+        query = supabase.from('redacoes_simulado').select('*').eq('id', redacao.id).single();
+      } else {
+        query = supabase.from('redacoes_exercicio').select('*').eq('id', redacao.id).single();
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -92,11 +97,17 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
       };
 
       if (status === 'corrigida') {
-        const { data: redacaoAtual } = await supabase
-          .from(tabela as any)
-          .select('*')
-          .eq('id', redacao.id)
-          .single();
+        let redacaoAtualQuery;
+        
+        if (tabela === 'redacoes_enviadas') {
+          redacaoAtualQuery = supabase.from('redacoes_enviadas').select('*').eq('id', redacao.id).single();
+        } else if (tabela === 'redacoes_simulado') {
+          redacaoAtualQuery = supabase.from('redacoes_simulado').select('*').eq('id', redacao.id).single();
+        } else {
+          redacaoAtualQuery = supabase.from('redacoes_exercicio').select('*').eq('id', redacao.id).single();
+        }
+
+        const { data: redacaoAtual } = await redacaoAtualQuery;
 
         if (redacaoAtual) {
           const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
@@ -109,10 +120,17 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         }
       }
 
-      const { error } = await supabase
-        .from(tabela as any)
-        .update(updateData)
-        .eq('id', redacao.id);
+      let updateQuery;
+      
+      if (tabela === 'redacoes_enviadas') {
+        updateQuery = supabase.from('redacoes_enviadas').update(updateData).eq('id', redacao.id);
+      } else if (tabela === 'redacoes_simulado') {
+        updateQuery = supabase.from('redacoes_simulado').update(updateData).eq('id', redacao.id);
+      } else {
+        updateQuery = supabase.from('redacoes_exercicio').update(updateData).eq('id', redacao.id);
+      }
+
+      const { error } = await updateQuery;
 
       if (error) throw error;
 
