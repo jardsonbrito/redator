@@ -51,7 +51,6 @@ export default function MinhasRedacoesList() {
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
-  const [filtroNome, setFiltroNome] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
   // Mapear nomes de turma para códigos corretos
@@ -67,13 +66,12 @@ export default function MinhasRedacoesList() {
   };
 
   const { data: redacoesTurma, isLoading, error } = useQuery({
-    queryKey: ['redacoes-todas', studentData.userType, studentData.turma, studentData.visitanteInfo?.email],
+    queryKey: ['redacoes-aluno-logado', studentData.userType, studentData.email, studentData.visitanteInfo?.email],
     queryFn: async () => {
-      console.log('Carregando redações - Tipo:', studentData.userType, 'Turma:', studentData.turma);
+      console.log('🔒 Carregando APENAS redações do aluno logado - Email:', studentData.email || studentData.visitanteInfo?.email);
       
-      if (studentData.userType === "aluno" && studentData.turma) {
-        const codigoTurma = getTurmaCode(studentData.turma);
-        console.log('Código da turma convertido:', codigoTurma);
+      if (studentData.userType === "aluno" && studentData.email) {
+        console.log('👨‍🎓 Buscando redações do aluno:', studentData.email);
         
         const { data, error } = await supabase
           .from('redacoes_enviadas')
@@ -90,16 +88,16 @@ export default function MinhasRedacoesList() {
             comentario_admin,
             data_correcao
           `)
-          .eq('turma', codigoTurma)
+          .eq('email_aluno', studentData.email.toLowerCase().trim())
           .neq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
         
         if (error) {
-          console.error('Erro ao buscar redações da turma:', error);
+          console.error('❌ Erro ao buscar redações do aluno:', error);
           throw error;
         }
         
-        console.log('Redações encontradas:', data);
+        console.log('✅ Redações do aluno encontradas:', data?.length || 0);
         return data as RedacaoTurma[] || [];
       } else if (studentData.userType === "visitante" && studentData.visitanteInfo?.email) {
         console.log('Buscando redações do visitante:', studentData.visitanteInfo.email);
@@ -289,14 +287,12 @@ export default function MinhasRedacoesList() {
     setFiltroStatus("all");
     setFiltroDataInicio("");
     setFiltroDataFim("");
-    setFiltroNome("");
   };
 
   // Aplicar filtros
   const redacoesFiltradas = redacoesTurma?.filter(redacao => {
     const tipoMatch = !filtroTipo || filtroTipo === 'all' || redacao.tipo_envio === filtroTipo;
     const statusMatch = !filtroStatus || filtroStatus === 'all' || (filtroStatus === 'corrigida' ? redacao.corrigida : !redacao.corrigida);
-    const nomeMatch = !filtroNome || redacao.nome_aluno.toLowerCase().includes(filtroNome.toLowerCase());
     
     let dataMatch = true;
     if (filtroDataInicio || filtroDataFim) {
@@ -308,7 +304,7 @@ export default function MinhasRedacoesList() {
       if (dataFim && dataRedacao > dataFim) dataMatch = false;
     }
     
-    return tipoMatch && statusMatch && nomeMatch && dataMatch;
+    return tipoMatch && statusMatch && dataMatch;
   }) || [];
 
   if (!studentData.userType) {
@@ -361,7 +357,7 @@ export default function MinhasRedacoesList() {
               </h1>
               <p className="text-sm sm:text-base text-muted-foreground">
                 {studentData.userType === "aluno" ? 
-                  `Todas as redações da ${studentData.turma}` : 
+                  `Suas redações pessoais` : 
                   "Todas as suas redações enviadas"
                 }
               </p>
@@ -424,15 +420,6 @@ export default function MinhasRedacoesList() {
                   </Select>
                 </div>
                 
-                <div className="sm:col-span-2 lg:col-span-1">
-                  <label className="block text-sm font-medium mb-2">Nome do Aluno</label>
-                  <Input
-                    placeholder="Buscar por nome..."
-                    value={filtroNome}
-                    onChange={(e) => setFiltroNome(e.target.value)}
-                    className="border-primary/30 focus:border-primary"
-                  />
-                </div>
                 
                 <div>
                   <label className="block text-sm font-medium mb-2">Data Início</label>
@@ -491,7 +478,7 @@ export default function MinhasRedacoesList() {
               <p className="text-primary/70 mb-4 text-lg">
                 Nenhuma redação encontrada.
               </p>
-              {(filtroTipo || filtroStatus || filtroNome || filtroDataInicio || filtroDataFim) && (
+              {(filtroTipo || filtroStatus || filtroDataInicio || filtroDataFim) && (
                 <Button 
                   variant="outline" 
                   onClick={clearFilters}
