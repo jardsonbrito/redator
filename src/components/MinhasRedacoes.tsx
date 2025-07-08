@@ -518,11 +518,6 @@ export const MinhasRedacoes = () => {
                       </Badge>
                     </div>
                     
-                    {redacao.nota_total !== null && (
-                      <div className="flex items-center gap-1 text-redator-primary font-medium">
-                        <span>📊 Nota: {redacao.nota_total}/1000</span>
-                      </div>
-                    )}
                   </div>
 
                   <Button 

@@ -449,11 +449,6 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                           <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
                             {getTipoEnvioLabel(redacao.tipo_envio)}
                           </Badge>
-                          {redacao.nota_total && (
-                            <Badge variant="outline" className="text-xs">
-                              📊 {redacao.nota_total}/1000
-                            </Badge>
-                          )}
                         </div>
                         
                         {/* Linha 3: Info do aluno e data */}
