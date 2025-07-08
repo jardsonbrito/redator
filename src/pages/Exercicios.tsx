@@ -13,7 +13,6 @@ import { ExternalLink, Search, FileText, Edit, Home, Clock, Calendar } from "luc
 import { useNavigate, Link } from "react-router-dom";
 import { format, isWithinInterval, parseISO, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
 interface Exercicio {
   id: string;
   titulo: string;
@@ -35,47 +34,41 @@ interface Exercicio {
     eixo_tematico: string;
   };
 }
-
 const Exercicios = () => {
-  const { studentData } = useStudentAuth();
+  const {
+    studentData
+  } = useStudentAuth();
   const navigate = useNavigate();
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [filteredExercicios, setFilteredExercicios] = useState<Exercicio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
-
-  const tiposDisponiveis = [
-    'Google Forms',
-    'Redação com Frase Temática'
-  ];
-
+  const tiposDisponiveis = ['Google Forms', 'Redação com Frase Temática'];
   useEffect(() => {
     fetchExercicios();
   }, []);
-
   useEffect(() => {
     filterExercicios();
   }, [exercicios, searchTerm, tipoFilter]);
-
   const getExercicioStatus = (exercicio: Exercicio) => {
     if (!exercicio.data_inicio || !exercicio.hora_inicio || !exercicio.data_fim || !exercicio.hora_fim) {
       return 'disponivel'; // Exercícios sem data são sempre disponíveis se ativos
     }
-
     const agora = new Date();
     const inicioExercicio = parseISO(`${exercicio.data_inicio}T${exercicio.hora_inicio}`);
     const fimExercicio = parseISO(`${exercicio.data_fim}T${exercicio.hora_fim}`);
-
     if (isBefore(agora, inicioExercicio)) {
       return 'agendado';
-    } else if (isWithinInterval(agora, { start: inicioExercicio, end: fimExercicio })) {
+    } else if (isWithinInterval(agora, {
+      start: inicioExercicio,
+      end: fimExercicio
+    })) {
       return 'disponivel';
     } else {
       return 'encerrado';
     }
   };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'agendado':
@@ -88,21 +81,20 @@ const Exercicios = () => {
         return <Badge className="bg-gray-100 text-gray-800">Indefinido</Badge>;
     }
   };
-
   const fetchExercicios = async () => {
     try {
-      const { data, error } = await supabase
-        .from("exercicios")
-        .select(`
+      const {
+        data,
+        error
+      } = await supabase.from("exercicios").select(`
           *,
           temas (
             frase_tematica,
             eixo_tematico
           )
-        `)
-        .eq("ativo", true)
-        .order("criado_em", { ascending: false });
-
+        `).eq("ativo", true).order("criado_em", {
+        ascending: false
+      });
       if (error) throw error;
       setExercicios(data || []);
     } catch (error) {
@@ -111,18 +103,16 @@ const Exercicios = () => {
       setIsLoading(false);
     }
   };
-
   const filterExercicios = () => {
-    console.log('🔍 Filtrando exercícios:', { 
-      totalExercicios: exercicios.length, 
-      userType: studentData.userType, 
-      userTurma: studentData.turma 
+    console.log('🔍 Filtrando exercícios:', {
+      totalExercicios: exercicios.length,
+      userType: studentData.userType,
+      userTurma: studentData.turma
     });
-
     let filtered = exercicios.filter(exercicio => {
-      console.log('📝 Verificando exercício:', { 
-        titulo: exercicio.titulo, 
-        turmasAutorizadas: exercicio.turmas_autorizadas, 
+      console.log('📝 Verificando exercício:', {
+        titulo: exercicio.titulo,
+        turmasAutorizadas: exercicio.turmas_autorizadas,
         permiteVisitante: exercicio.permite_visitante,
         ativo: exercicio.ativo
       });
@@ -136,58 +126,52 @@ const Exercicios = () => {
         console.log('✅ Acesso de visitante permitido');
         return true;
       }
-      
+
       // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
       if (!isVisitante && userTurma && userTurma !== "visitante") {
         const turmasAutorizadas = exercicio.turmas_autorizadas || [];
         // Comparação case-insensitive para as turmas
-        const hasAccess = turmasAutorizadas.length === 0 || 
-          turmasAutorizadas.some(turma => turma.toUpperCase() === userTurma.toUpperCase());
-        console.log('👤 Verificando acesso do aluno:', { userTurma, turmasAutorizadas, hasAccess });
+        const hasAccess = turmasAutorizadas.length === 0 || turmasAutorizadas.some(turma => turma.toUpperCase() === userTurma.toUpperCase());
+        console.log('👤 Verificando acesso do aluno:', {
+          userTurma,
+          turmasAutorizadas,
+          hasAccess
+        });
         return hasAccess;
       }
-
       console.log('❌ Acesso negado');
       return false;
     });
 
     // Aplicar filtros de busca
     if (searchTerm) {
-      filtered = filtered.filter(exercicio =>
-        exercicio.titulo.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      filtered = filtered.filter(exercicio => exercicio.titulo.toLowerCase().includes(searchTerm.toLowerCase()));
     }
-
     if (tipoFilter && tipoFilter !== "todos") {
       filtered = filtered.filter(exercicio => exercicio.tipo === tipoFilter);
     }
-
-    console.log('📊 Resultado da filtragem:', { totalFiltrados: filtered.length });
+    console.log('📊 Resultado da filtragem:', {
+      totalFiltrados: filtered.length
+    });
     setFilteredExercicios(filtered);
   };
-
   const handleRedacaoExercicio = (exercicio: Exercicio) => {
     const status = getExercicioStatus(exercicio);
-    
     if (status === 'agendado') {
       alert('Este exercício ainda não está disponível. Aguarde a data de início.');
       return;
     }
-    
     if (status === 'encerrado') {
       alert('Este exercício está encerrado. Você pode visualizar a proposta, mas não pode mais respondê-lo.');
       return;
     }
-    
     if (exercicio.tema_id) {
       // Navegar para a página de redação com o tema do exercício
       navigate(`/temas/${exercicio.tema_id}?exercicio=${exercicio.id}`);
     }
   };
-
   if (isLoading) {
-    return (
-      <ProtectedRoute>
+    return <ProtectedRoute>
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
             <StudentHeader pageTitle="Exercícios" />
@@ -196,21 +180,16 @@ const Exercicios = () => {
             </div>
           </div>
         </TooltipProvider>
-      </ProtectedRoute>
-    );
+      </ProtectedRoute>;
   }
-
-  return (
-    <ProtectedRoute>
+  return <ProtectedRoute>
       <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader pageTitle="Exercícios" />
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center mb-8">
-            <p className="text-lg text-redator-accent">
-              Pratique com exercícios direcionados e desenvolva suas habilidades
-            </p>
+            <p className="text-lg text-redator-accent"></p>
           </div>
 
           {/* Filtros */}
@@ -224,11 +203,7 @@ const Exercicios = () => {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Input
-                    placeholder="Buscar por título..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                  <Input placeholder="Buscar por título..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                 </div>
                 <div>
                   <Select value={tipoFilter} onValueChange={setTipoFilter}>
@@ -237,11 +212,9 @@ const Exercicios = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todos">Todos os tipos</SelectItem>
-                      {tiposDisponiveis.map((tipo) => (
-                        <SelectItem key={tipo} value={tipo}>
+                      {tiposDisponiveis.map(tipo => <SelectItem key={tipo} value={tipo}>
                           {tipo}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -251,8 +224,7 @@ const Exercicios = () => {
 
           {/* Lista de Exercícios */}
           <div className="grid gap-6">
-            {filteredExercicios.length === 0 ? (
-              <Card>
+            {filteredExercicios.length === 0 ? <Card>
                 <CardContent className="text-center py-12">
                   <h3 className="text-xl font-semibold text-redator-primary mb-2">
                     Nenhum exercício disponível no momento.
@@ -261,62 +233,43 @@ const Exercicios = () => {
                     Verifique novamente em breve ou entre em contato com sua coordenação.
                   </p>
                 </CardContent>
-              </Card>
-            ) : (
-              filteredExercicios.map((exercicio) => {
-                const status = getExercicioStatus(exercicio);
-                const isDisabled = status === 'encerrado' || status === 'agendado';
-                
-                return (
-                  <Card key={exercicio.id} className={`hover:shadow-lg transition-shadow ${isDisabled ? 'opacity-60' : ''}`}>
+              </Card> : filteredExercicios.map(exercicio => {
+              const status = getExercicioStatus(exercicio);
+              const isDisabled = status === 'encerrado' || status === 'agendado';
+              return <Card key={exercicio.id} className={`hover:shadow-lg transition-shadow ${isDisabled ? 'opacity-60' : ''}`}>
                     <CardHeader>
                         <div className="flex justify-between items-start">
                           <div>
                             <CardTitle className="text-xl mb-3">{exercicio.titulo}</CardTitle>
                             <div className="flex gap-2 mb-3">
                               {getStatusBadge(status)}
-                              {exercicio.temas && (
-                                <Badge variant="secondary">
+                              {exercicio.temas && <Badge variant="secondary">
                                   {exercicio.temas.eixo_tematico}
-                                </Badge>
-                              )}
+                                </Badge>}
                             </div>
                             {/* Mostrar período da atividade se exercício tem período definido */}
-                            {exercicio.data_inicio && exercicio.hora_inicio && exercicio.data_fim && exercicio.hora_fim && (
-                              <div className="text-sm text-gray-600 mt-2">
-                                <span className="font-medium">Período da atividade:</span> {format(parseISO(exercicio.data_inicio), "dd/MM", { locale: ptBR })} às {exercicio.hora_inicio.slice(0, 5)} até {format(parseISO(exercicio.data_fim), "dd/MM", { locale: ptBR })} às {exercicio.hora_fim.slice(0, 5)}
-                              </div>
-                            )}
+                            {exercicio.data_inicio && exercicio.hora_inicio && exercicio.data_fim && exercicio.hora_fim && <div className="text-sm text-gray-600 mt-2">
+                                <span className="font-medium">Período da atividade:</span> {format(parseISO(exercicio.data_inicio), "dd/MM", {
+                          locale: ptBR
+                        })} às {exercicio.hora_inicio.slice(0, 5)} até {format(parseISO(exercicio.data_fim), "dd/MM", {
+                          locale: ptBR
+                        })} às {exercicio.hora_fim.slice(0, 5)}
+                              </div>}
                         </div>
                         <div className="flex gap-2">
-                          {exercicio.tipo === 'Google Forms' && exercicio.link_forms && (
-                            status === 'agendado' ? (
-                              <Button variant="outline" size="sm" disabled>
+                          {exercicio.tipo === 'Google Forms' && exercicio.link_forms && (status === 'agendado' ? <Button variant="outline" size="sm" disabled>
                                 <Clock className="w-4 h-4 mr-2" />
                                 Agendado
-                              </Button>
-                            ) : status === 'encerrado' ? (
-                              <Button variant="outline" size="sm" disabled>
+                              </Button> : status === 'encerrado' ? <Button variant="outline" size="sm" disabled>
                                 <Clock className="w-4 h-4 mr-2" />
                                 Encerrado
-                              </Button>
-                            ) : exercicio.abrir_aba_externa ? (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => window.open(exercicio.link_forms, '_blank')}
-                              >
+                              </Button> : exercicio.abrir_aba_externa ? <Button variant="default" size="sm" onClick={() => window.open(exercicio.link_forms, '_blank')}>
                                 <ExternalLink className="w-4 h-4 mr-2" />
                                 Abrir Formulário
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => {
-                                  // Criar modal ou iframe para exibir o formulário embutido
-                                  const modal = document.createElement('div');
-                                  modal.style.cssText = `
+                              </Button> : <Button variant="default" size="sm" onClick={() => {
+                        // Criar modal ou iframe para exibir o formulário embutido
+                        const modal = document.createElement('div');
+                        modal.style.cssText = `
                                     position: fixed;
                                     top: 0;
                                     left: 0;
@@ -328,7 +281,7 @@ const Exercicios = () => {
                                     align-items: center;
                                     justify-content: center;
                                   `;
-                                  modal.innerHTML = `
+                        modal.innerHTML = `
                                     <div style="
                                       width: 95%;
                                       height: 95%;
@@ -357,62 +310,39 @@ const Exercicios = () => {
                                       ></iframe>
                                     </div>
                                   `;
-                                  document.body.appendChild(modal);
-                                }}
-                              >
+                        document.body.appendChild(modal);
+                      }}>
                                 <FileText className="w-4 h-4 mr-2" />
                                 Abrir Formulário
-                              </Button>
-                            )
-                          )}
-                          {exercicio.tipo === 'Redação com Frase Temática' && exercicio.tema_id && (
-                            status === 'agendado' ? (
-                              <Button variant="outline" size="sm" disabled>
+                              </Button>)}
+                          {exercicio.tipo === 'Redação com Frase Temática' && exercicio.tema_id && (status === 'agendado' ? <Button variant="outline" size="sm" disabled>
                                 <Clock className="w-4 h-4 mr-2" />
                                 Ainda não disponível
-                              </Button>
-                            ) : status === 'encerrado' ? (
-                              <Button variant="outline" size="sm" disabled>
+                              </Button> : status === 'encerrado' ? <Button variant="outline" size="sm" disabled>
                                 <Clock className="w-4 h-4 mr-2" />
                                 Exercício Encerrado
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => handleRedacaoExercicio(exercicio)}
-                              >
+                              </Button> : <Button variant="default" size="sm" onClick={() => handleRedacaoExercicio(exercicio)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Escrever Redação
-                              </Button>
-                            )
-                           )}
+                              </Button>)}
                         </div>
                       </div>
                     </CardHeader>
                      <CardContent>
                        {/* Mensagem adicional para exercícios agendados ou encerrados */}
-                       {status === 'agendado' && (
-                         <div className="text-sm text-blue-600 italic">
+                       {status === 'agendado' && <div className="text-sm text-blue-600 italic">
                            Este exercício ainda não está disponível. Aguarde a data de início.
-                         </div>
-                       )}
-                       {status === 'encerrado' && (
-                         <div className="text-sm text-gray-600 italic">
+                         </div>}
+                       {status === 'encerrado' && <div className="text-sm text-gray-600 italic">
                            Este exercício está encerrado. Você pode visualizar a proposta, mas não pode mais respondê-lo.
-                         </div>
-                       )}
+                         </div>}
                      </CardContent>
-                  </Card>
-                );
-              })
-            )}
+                  </Card>;
+            })}
           </div>
         </main>
       </div>
     </TooltipProvider>
-  </ProtectedRoute>
-  );
+  </ProtectedRoute>;
 };
-
 export default Exercicios;
