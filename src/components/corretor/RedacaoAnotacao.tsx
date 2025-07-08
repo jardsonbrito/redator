@@ -1,0 +1,478 @@
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Canvas as FabricCanvas, Rect, FabricText } from "fabric";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Palette, Save, Edit3, Trash2 } from "lucide-react";
+
+interface MarcacaoVisual {
+  id?: string;
+  x_start: number;
+  y_start: number;
+  x_end: number;
+  y_end: number;
+  competencia: number;
+  cor_marcacao: string;
+  comentario: string;
+  imagem_largura: number;
+  imagem_altura: number;
+}
+
+interface RedacaoAnotacaoProps {
+  imagemUrl: string;
+  redacaoId: string;
+  tabelaOrigem: string;
+  corretorId: string;
+  readonly?: boolean;
+}
+
+const CORES_COMPETENCIAS = {
+  1: { cor: '#ef4444', nome: 'Vermelho', label: 'C1 - Norma Culta' },
+  2: { cor: '#22c55e', nome: 'Verde', label: 'C2 - Compreensão' },
+  3: { cor: '#3b82f6', nome: 'Azul', label: 'C3 - Argumentação' },
+  4: { cor: '#a855f7', nome: 'Roxo', label: 'C4 - Coesão' },
+  5: { cor: '#f97316', nome: 'Laranja', label: 'C5 - Proposta' },
+};
+
+export const RedacaoAnotacao = ({ 
+  imagemUrl, 
+  redacaoId, 
+  tabelaOrigem, 
+  corretorId,
+  readonly = false 
+}: RedacaoAnotacaoProps) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const [competenciaSelecionada, setCompetenciaSelecionada] = useState<number>(1);
+  const [modoSelecao, setModoSelecao] = useState<boolean>(false);
+  const [dialogAberto, setDialogAberto] = useState<boolean>(false);
+  const [comentarioTemp, setComentarioTemp] = useState<string>("");
+  const [marcacaoTemp, setMarcacaoTemp] = useState<MarcacaoVisual | null>(null);
+  const [marcacoes, setMarcacoes] = useState<MarcacaoVisual[]>([]);
+  const [imagemCarregada, setImagemCarregada] = useState<boolean>(false);
+  const [dimensoesImagem, setDimensoesImagem] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [marcacoesObjects, setMarcacoesObjects] = useState<Set<any>>(new Set());
+  const { toast } = useToast();
+
+  // Carregar marcações existentes
+  const carregarMarcacoes = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('marcacoes_visuais')
+        .select('*')
+        .eq('redacao_id', redacaoId)
+        .eq('tabela_origem', tabelaOrigem);
+
+      if (error) throw error;
+      setMarcacoes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar marcações:', error);
+    }
+  }, [redacaoId, tabelaOrigem]);
+
+  // Inicializar canvas
+  useEffect(() => {
+    if (!canvasRef.current || fabricCanvas) return;
+
+    const canvas = new FabricCanvas(canvasRef.current, {
+      selection: !readonly,
+      isDrawingMode: false,
+      width: 800,
+      height: 600,
+    });
+
+    // Carregar imagem de fundo
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const aspectRatio = img.width / img.height;
+      const canvasWidth = Math.min(800, window.innerWidth - 100);
+      const canvasHeight = canvasWidth / aspectRatio;
+
+      canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
+      
+      // Usar CSS para definir imagem de fundo
+      if (containerRef.current) {
+        containerRef.current.style.backgroundImage = `url(${imagemUrl})`;
+        containerRef.current.style.backgroundSize = `${canvasWidth}px ${canvasHeight}px`;
+        containerRef.current.style.backgroundRepeat = 'no-repeat';
+        containerRef.current.style.backgroundPosition = 'center';
+      }
+
+      setDimensoesImagem({ width: img.width, height: img.height });
+      setImagemCarregada(true);
+    };
+    img.src = imagemUrl;
+
+    if (!readonly) {
+      // Event listeners para seleção de área
+      let isSelecting = false;
+      let selectionRect: Rect | null = null;
+      let startX = 0;
+      let startY = 0;
+
+      canvas.on('mouse:down', (e) => {
+        if (!modoSelecao || !e.pointer) return;
+        
+        isSelecting = true;
+        const pointer = canvas.getPointer(e.e);
+        startX = pointer.x;
+        startY = pointer.y;
+
+        selectionRect = new Rect({
+          left: startX,
+          top: startY,
+          width: 0,
+          height: 0,
+          fill: 'transparent',
+          stroke: CORES_COMPETENCIAS[competenciaSelecionada].cor,
+          strokeWidth: 2,
+          strokeDashArray: [5, 5],
+          selectable: false,
+          evented: false,
+        });
+
+        canvas.add(selectionRect);
+      });
+
+      canvas.on('mouse:move', (e) => {
+        if (!isSelecting || !selectionRect || !e.pointer) return;
+
+        const pointer = canvas.getPointer(e.e);
+        const width = pointer.x - startX;
+        const height = pointer.y - startY;
+
+        selectionRect.set({
+          width: Math.abs(width),
+          height: Math.abs(height),
+          left: width > 0 ? startX : pointer.x,
+          top: height > 0 ? startY : pointer.y,
+        });
+
+        canvas.renderAll();
+      });
+
+      canvas.on('mouse:up', (e) => {
+        if (!isSelecting || !selectionRect) return;
+        
+        isSelecting = false;
+        
+        const rect = selectionRect;
+        const left = rect.left || 0;
+        const top = rect.top || 0;
+        const width = rect.width || 0;
+        const height = rect.height || 0;
+
+        // Verificar se a seleção tem tamanho mínimo
+        if (width < 10 || height < 10) {
+          canvas.remove(rect);
+          return;
+        }
+
+        // Calcular coordenadas relativas à imagem original
+        const scaleX = dimensoesImagem.width / canvas.width!;
+        const scaleY = dimensoesImagem.height / canvas.height!;
+
+        const marcacao: MarcacaoVisual = {
+          x_start: left * scaleX,
+          y_start: top * scaleY,
+          x_end: (left + width) * scaleX,
+          y_end: (top + height) * scaleY,
+          competencia: competenciaSelecionada,
+          cor_marcacao: CORES_COMPETENCIAS[competenciaSelecionada].cor,
+          comentario: "",
+          imagem_largura: dimensoesImagem.width,
+          imagem_altura: dimensoesImagem.height,
+        };
+
+        setMarcacaoTemp(marcacao);
+        setComentarioTemp("");
+        setDialogAberto(true);
+        setModoSelecao(false);
+
+        // Remove o retângulo temporário
+        canvas.remove(rect);
+      });
+    }
+
+    setFabricCanvas(canvas);
+
+    return () => {
+      canvas.dispose();
+    };
+  }, [imagemUrl, readonly, modoSelecao, competenciaSelecionada, dimensoesImagem]);
+
+  // Renderizar marcações no canvas
+  useEffect(() => {
+    if (!fabricCanvas || !imagemCarregada || marcacoes.length === 0) return;
+
+    // Limpar marcações anteriores
+    marcacoesObjects.forEach(obj => fabricCanvas.remove(obj));
+    setMarcacoesObjects(new Set());
+
+    const newObjects = new Set();
+
+    // Adicionar marcações
+    marcacoes.forEach((marcacao, index) => {
+      const scaleX = fabricCanvas.width! / marcacao.imagem_largura;
+      const scaleY = fabricCanvas.height! / marcacao.imagem_altura;
+
+      const rect = new Rect({
+        left: marcacao.x_start * scaleX,
+        top: marcacao.y_start * scaleY,
+        width: (marcacao.x_end - marcacao.x_start) * scaleX,
+        height: (marcacao.y_end - marcacao.y_start) * scaleY,
+        fill: marcacao.cor_marcacao + '20', // 20% opacity
+        stroke: marcacao.cor_marcacao,
+        strokeWidth: 2,
+        selectable: false,
+        evented: true,
+      });
+
+      // Adicionar propriedade customizada para identificar
+      (rect as any).marcacaoData = { marcacao, index };
+
+      // Adicionar texto da competência
+      const text = new FabricText(`C${marcacao.competencia}`, {
+        left: marcacao.x_start * scaleX + 5,
+        top: marcacao.y_start * scaleY + 5,
+        fontSize: 12,
+        fill: 'white',
+        backgroundColor: marcacao.cor_marcacao,
+        selectable: false,
+        evented: false,
+      });
+
+      fabricCanvas.add(rect, text);
+      newObjects.add(rect);
+      newObjects.add(text);
+
+      // Adicionar click handler para mostrar comentário
+      rect.on('mousedown', () => {
+        if (readonly) {
+          toast({
+            title: `Competência ${marcacao.competencia}`,
+            description: marcacao.comentario,
+          });
+        }
+      });
+    });
+
+    setMarcacoesObjects(newObjects);
+    fabricCanvas.renderAll();
+  }, [fabricCanvas, marcacoes, imagemCarregada, readonly, toast, marcacoesObjects]);
+
+  // Salvar marcação
+  const salvarMarcacao = async () => {
+    if (!marcacaoTemp || !comentarioTemp.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('marcacoes_visuais')
+        .insert({
+          redacao_id: redacaoId,
+          tabela_origem: tabelaOrigem,
+          corretor_id: corretorId,
+          x_start: marcacaoTemp.x_start,
+          y_start: marcacaoTemp.y_start,
+          x_end: marcacaoTemp.x_end,
+          y_end: marcacaoTemp.y_end,
+          competencia: marcacaoTemp.competencia,
+          cor_marcacao: marcacaoTemp.cor_marcacao,
+          comentario: comentarioTemp.trim(),
+          imagem_largura: marcacaoTemp.imagem_largura,
+          imagem_altura: marcacaoTemp.imagem_altura,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Marcação salva!",
+        description: "Comentário adicionado com sucesso.",
+      });
+
+      setDialogAberto(false);
+      setMarcacaoTemp(null);
+      setComentarioTemp("");
+      await carregarMarcacoes();
+
+    } catch (error) {
+      console.error('Erro ao salvar marcação:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar a marcação.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Carregar marcações no início
+  useEffect(() => {
+    carregarMarcacoes();
+  }, [carregarMarcacoes]);
+
+  if (readonly) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Palette className="w-4 h-4" />
+          <span className="font-medium">Correção com Marcações</span>
+        </div>
+        <div className="border rounded-lg p-4 bg-gray-50" ref={containerRef}>
+          <canvas ref={canvasRef} className="max-w-full" />
+        </div>
+        {marcacoes.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="font-medium">Comentários:</h4>
+            {marcacoes.map((marcacao, index) => (
+              <div key={index} className="p-3 bg-white border rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge style={{ backgroundColor: marcacao.cor_marcacao, color: 'white' }}>
+                    {CORES_COMPETENCIAS[marcacao.competencia].label}
+                  </Badge>
+                </div>
+                <p className="text-sm">{marcacao.comentario}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Ferramentas */}
+      <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Competência:</span>
+          {Object.entries(CORES_COMPETENCIAS).map(([num, { cor, nome, label }]) => (
+            <Button
+              key={num}
+              size="sm"
+              variant={competenciaSelecionada === parseInt(num) ? "default" : "outline"}
+              onClick={() => setCompetenciaSelecionada(parseInt(num))}
+              className="flex items-center gap-1"
+              style={competenciaSelecionada === parseInt(num) ? { backgroundColor: cor, borderColor: cor } : {}}
+            >
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: cor }}
+              />
+              C{num}
+            </Button>
+          ))}
+        </div>
+        
+        <Button
+          variant={modoSelecao ? "default" : "outline"}
+          size="sm"
+          onClick={() => setModoSelecao(!modoSelecao)}
+          className="flex items-center gap-2"
+        >
+          <Edit3 className="w-4 h-4" />
+          {modoSelecao ? "Cancelar Seleção" : "Marcar Área"}
+        </Button>
+      </div>
+
+      {/* Canvas */}
+      <div className="border rounded-lg p-4 bg-white" ref={containerRef}>
+        <canvas ref={canvasRef} className="max-w-full border" />
+        {modoSelecao && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Clique e arraste para selecionar uma área da redação
+          </p>
+        )}
+      </div>
+
+      {/* Lista de marcações */}
+      {marcacoes.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="font-medium">Marcações Salvas:</h4>
+          {marcacoes.map((marcacao, index) => (
+            <div key={index} className="p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <Badge style={{ backgroundColor: marcacao.cor_marcacao, color: 'white' }}>
+                  {CORES_COMPETENCIAS[marcacao.competencia].label}
+                </Badge>
+                {marcacao.id && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={async () => {
+                      try {
+                        await supabase
+                          .from('marcacoes_visuais')
+                          .delete()
+                          .eq('id', marcacao.id);
+                        
+                        await carregarMarcacoes();
+                        toast({
+                          title: "Marcação removida",
+                          description: "A marcação foi excluída com sucesso.",
+                        });
+                      } catch (error) {
+                        console.error('Erro ao remover marcação:', error);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              <p className="text-sm">{marcacao.comentario}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Dialog para comentário */}
+      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Adicionar Comentário - {CORES_COMPETENCIAS[competenciaSelecionada].label}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-4 h-4 rounded-full" 
+                style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada].cor }}
+              />
+              <span className="font-medium">
+                {CORES_COMPETENCIAS[competenciaSelecionada].label}
+              </span>
+            </div>
+            
+            <Textarea
+              placeholder="Digite seu comentário pedagógico sobre esta área..."
+              value={comentarioTemp}
+              onChange={(e) => setComentarioTemp(e.target.value)}
+              rows={4}
+            />
+            
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDialogAberto(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={salvarMarcacao}
+                disabled={!comentarioTemp.trim()}
+                className="flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Salvar Comentário
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};

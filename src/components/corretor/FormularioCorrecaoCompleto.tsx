@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
+import { RedacaoAnotacao } from "./RedacaoAnotacao";
 import { ArrowLeft, Save, CheckCircle, Download, Upload, Edit } from "lucide-react";
 
 interface FormularioCorrecaoCompletoProps {
@@ -299,15 +300,15 @@ export const FormularioCorrecaoCompleto = ({
         <strong>Tema:</strong> {redacao.frase_tematica}
       </div>
 
-      {/* Redação - Exibição expandida sem scroll interno */}
+      {/* Redação com Anotações Interativas */}
       {manuscritaUrl ? (
-        <div className="w-full">
-          <img 
-            src={manuscritaUrl} 
-            alt="Redação manuscrita" 
-            className="w-full h-auto rounded-md shadow-lg"
-          />
-        </div>
+        <RedacaoAnotacao
+          imagemUrl={manuscritaUrl}
+          redacaoId={redacao.id}
+          tabelaOrigem={tabela}
+          corretorId={redacao.eh_corretor_1 ? redacao.corretor_id_1 || '' : redacao.corretor_id_2 || ''}
+          readonly={false}
+        />
       ) : (
         <div className="p-6 bg-gray-50 rounded-md whitespace-pre-wrap text-sm leading-relaxed">
           {redacao.texto}

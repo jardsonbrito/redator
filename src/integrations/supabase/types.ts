@@ -479,6 +479,68 @@ export type Database = {
           },
         ]
       }
+      marcacoes_visuais: {
+        Row: {
+          atualizado_em: string
+          comentario: string
+          competencia: number
+          cor_marcacao: string
+          corretor_id: string
+          criado_em: string
+          id: string
+          imagem_altura: number
+          imagem_largura: number
+          redacao_id: string
+          tabela_origem: string
+          x_end: number
+          x_start: number
+          y_end: number
+          y_start: number
+        }
+        Insert: {
+          atualizado_em?: string
+          comentario: string
+          competencia: number
+          cor_marcacao: string
+          corretor_id: string
+          criado_em?: string
+          id?: string
+          imagem_altura: number
+          imagem_largura: number
+          redacao_id: string
+          tabela_origem: string
+          x_end: number
+          x_start: number
+          y_end: number
+          y_start: number
+        }
+        Update: {
+          atualizado_em?: string
+          comentario?: string
+          competencia?: number
+          cor_marcacao?: string
+          corretor_id?: string
+          criado_em?: string
+          id?: string
+          imagem_altura?: number
+          imagem_largura?: number
+          redacao_id?: string
+          tabela_origem?: string
+          x_end?: number
+          x_start?: number
+          y_end?: number
+          y_start?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_marcacoes_corretor"
+            columns: ["corretor_id"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       presenca_aulas: {
         Row: {
           aula_id: string
