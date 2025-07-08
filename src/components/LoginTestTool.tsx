@@ -29,7 +29,7 @@ export const LoginTestTool = () => {
       try {
         const { data: aluno, error } = await supabase
           .from("profiles")
-          .select("id, nome, email, turma")
+          .select("id, nome, email, turma, ativo")
           .eq("user_type", "aluno")
           .ilike("email", emailNormalizado)
           .limit(1)
@@ -38,16 +38,19 @@ export const LoginTestTool = () => {
         const endTime = Date.now();
         const duration = endTime - startTime;
 
+        const isAlunoValido = aluno && aluno.ativo;
+        
         results.push({
           tentativa: i,
-          sucesso: !!aluno && !error,
+          sucesso: !!isAlunoValido && !error,
           encontrado: !!aluno,
+          ativo: aluno?.ativo || false,
           erro: error?.message || null,
           duracao: duration,
           timestamp: new Date().toISOString()
         });
 
-        console.log(`✅ Tentativa ${i}: ${aluno ? 'ENCONTRADO' : 'NÃO ENCONTRADO'} (${duration}ms)`);
+        console.log(`✅ Tentativa ${i}: ${aluno ? 'ENCONTRADO' : 'NÃO ENCONTRADO'} ${aluno ? (aluno.ativo ? '(ATIVO)' : '(INATIVO)') : ''} (${duration}ms)`);
 
       } catch (error: any) {
         const endTime = Date.now();
@@ -57,6 +60,7 @@ export const LoginTestTool = () => {
           tentativa: i,
           sucesso: false,
           encontrado: false,
+          ativo: false,
           erro: error.message,
           duracao: duration,
           timestamp: new Date().toISOString()
@@ -114,6 +118,7 @@ export const LoginTestTool = () => {
                 <div key={idx} className={result.sucesso ? 'text-green-600' : 'text-red-600'}>
                   Tentativa {result.tentativa}: {result.sucesso ? '✅' : '❌'} 
                   {result.encontrado ? ' ENCONTRADO' : ' NÃO ENCONTRADO'} 
+                  {result.encontrado && (result.ativo ? ' (ATIVO)' : ' (INATIVO)')}
                   ({result.duracao}ms)
                   {result.erro && ` - ${result.erro}`}
                 </div>

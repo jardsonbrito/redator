@@ -34,7 +34,7 @@ export const StudentLoginForm = ({ onLogin, loading }: StudentLoginFormProps) =>
       // Consulta SQL conforme especificação: SELECT * FROM profiles WHERE LOWER(TRIM(email)) = email_normalizado
       const { data: aluno, error } = await supabase
         .from("profiles")
-        .select("id, nome, email, turma")
+        .select("id, nome, email, turma, ativo")
         .eq("user_type", "aluno")
         .ilike("email", emailNormalizado)
         .limit(1)
@@ -52,6 +52,17 @@ export const StudentLoginForm = ({ onLogin, loading }: StudentLoginFormProps) =>
       }
 
       if (aluno) {
+        // Verificar se o aluno está ativo
+        if (!aluno.ativo) {
+          logLoginAttempt(email, emailNormalizado, 'error');
+          toast({
+            title: "Acesso não liberado",
+            description: "Seu acesso ainda não foi liberado. Aguarde o administrador.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         logLoginAttempt(email, emailNormalizado, 'success');
         console.log('✅ LOGIN SUCESSO - Aluno:', aluno.nome, 'Turma:', aluno.turma);
         onLogin({ turma: aluno.turma, nome: aluno.nome, email: aluno.email });
