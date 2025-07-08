@@ -278,25 +278,20 @@ export const AtividadeAtiva = () => {
     });
 
     if (exerciciosDisponiveis.length > 0) {
-      // Renderizar aviso de exercício disponível
+      // Renderizar card simples de exercício disponível
       return (
         <Card className="border-2 border-orange-300 bg-orange-50 shadow-lg animate-pulse">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-orange-800">
-              <BookOpen className="w-5 h-5" />
               📢 Exercício Disponível
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-orange-700 mb-4">
-              Há um exercício disponível para você. Por favor, clique no card EXERCÍCIOS para iniciá-lo.
-            </p>
             <Button 
               onClick={() => navigate('/exercicios')}
               className="bg-orange-600 hover:bg-orange-700 text-white"
             >
-              <Edit className="w-4 h-4 mr-2" />
-              Ir para Exercícios
+              Iniciar
             </Button>
           </CardContent>
         </Card>
