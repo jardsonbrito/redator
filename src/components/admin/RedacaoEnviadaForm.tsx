@@ -68,6 +68,7 @@ export const RedacaoEnviadaForm = () => {
             redacoes={redacoes}
             onView={handleView}
             onDelete={(redacao) => handleDeleteRedacao(redacao.id)}
+            onRefresh={fetchRedacoes}
           />
         )}
       </CardContent>
