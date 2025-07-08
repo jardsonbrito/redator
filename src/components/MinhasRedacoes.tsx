@@ -92,7 +92,7 @@ export const MinhasRedacoes = () => {
       if (userType === "aluno" && alunoEmail) {
         console.log('👨‍🎓 Buscando redações do aluno:', alunoEmail);
         
-        // Buscar redações regulares usando query direta sem RLS
+        // Buscar TODAS as redações regulares do aluno (corrigidas e pendentes)
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -110,7 +110,6 @@ export const MinhasRedacoes = () => {
           `)
           .ilike('email_aluno', alunoEmail.toLowerCase().trim())
           .neq('tipo_envio', 'visitante')
-          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
         console.log('📧 Query redações regulares para email:', alunoEmail);
@@ -120,7 +119,7 @@ export const MinhasRedacoes = () => {
           console.log('✅ Redações regulares encontradas:', redacoesRegulares?.length || 0, redacoesRegulares);
         }
 
-        // Buscar redações de simulado
+        // Buscar TODAS as redações de simulado do aluno (corrigidas e pendentes)
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
           .select(`
@@ -134,7 +133,6 @@ export const MinhasRedacoes = () => {
             simulados!inner(frase_tematica)
           `)
           .ilike('email_aluno', alunoEmail.toLowerCase().trim())
-          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
         if (errorSimulado) {
@@ -146,12 +144,11 @@ export const MinhasRedacoes = () => {
         // Combinar e formatar os dados
         const todasRedacoes: RedacaoTurma[] = [];
         
-        // Adicionar redações regulares
+        // Adicionar redações regulares preservando status real
         if (redacoesRegulares) {
           const regularesFormatadas = redacoesRegulares.map(redacao => ({
             ...redacao,
-            corrigida: true,
-            status: 'corrigida'
+            status: redacao.corrigida ? 'corrigida' : 'aguardando'
           }));
           todasRedacoes.push(...regularesFormatadas);
         }
@@ -165,8 +162,8 @@ export const MinhasRedacoes = () => {
             email_aluno: simulado.email_aluno,
             tipo_envio: 'simulado',
             data_envio: simulado.data_envio,
-            status: 'corrigida',
-            corrigida: true,
+            status: simulado.corrigida ? 'corrigida' : 'aguardando',
+            corrigida: simulado.corrigida,
             nota_total: simulado.nota_total,
             comentario_admin: null,
             data_correcao: simulado.data_correcao
@@ -203,7 +200,6 @@ export const MinhasRedacoes = () => {
           `)
           .eq('email_aluno', visitanteEmail.toLowerCase().trim())
           .eq('tipo_envio', 'visitante')
-          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
         
         if (error) {

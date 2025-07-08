@@ -120,7 +120,6 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           `)
           .eq('email_aluno', visitanteEmail)
           .eq('tipo_envio', 'visitante')
-          .eq('corrigida', true)
           .order('data_envio', { ascending: false })
           .limit(3);
         
@@ -156,7 +155,6 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           `)
           .ilike('email_aluno', alunoEmail)
           .neq('tipo_envio', 'visitante')
-          .eq('corrigida', true)
           .order('data_envio', { ascending: false });
 
         if (errorRegulares) {
@@ -177,7 +175,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             simulados!inner(frase_tematica)
           `)
           .ilike('email_aluno', alunoEmail)
-          .eq('corrigida', true)
+          
           .order('data_envio', { ascending: false });
 
         if (errorSimulado) {
@@ -201,7 +199,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             email_aluno: simulado.email_aluno,
             tipo_envio: 'simulado',
             data_envio: simulado.data_envio,
-            status: 'corrigido',
+            status: simulado.corrigida ? 'corrigido' : 'aguardando',
             corrigida: simulado.corrigida,
             nota_total: simulado.nota_total,
             comentario_admin: null,
