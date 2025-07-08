@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
-import { ArrowLeft, Save, CheckCircle, Download } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle, Download, Upload, Edit } from "lucide-react";
 
 interface FormularioCorrecaoCompletoProps {
   redacao: RedacaoCorretor;
@@ -44,6 +45,10 @@ export const FormularioCorrecaoCompleto = ({
   const [loading, setLoading] = useState(false);
   const [loadingCorrecao, setLoadingCorrecao] = useState(true);
   const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
+  const [correcaoArquivo, setCorrecaoArquivo] = useState<File | null>(null);
+  const [correcaoUrl, setCorrecaoUrl] = useState<string | null>(null);
+  const [uploadingCorrecao, setUploadingCorrecao] = useState(false);
+  const [modoEdicao, setModoEdicao] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -90,6 +95,12 @@ export const FormularioCorrecaoCompleto = ({
         
         setElogiosEPontosAtencao(data[`elogios_pontos_atencao_${prefixo}`] || "");
         setManuscritaUrl(data.redacao_manuscrita_url || null);
+        setCorrecaoUrl(data[`correcao_arquivo_url_${prefixo}`] || null);
+        
+        // Verificar se há correção salva para habilitar modo de edição
+        if (data[`status_${prefixo}`] === 'incompleta' || data[`status_${prefixo}`] === 'corrigida') {
+          setModoEdicao(true);
+        }
       }
     } catch (error: any) {
       console.error("Erro ao carregar correção:", error);
@@ -101,6 +112,62 @@ export const FormularioCorrecaoCompleto = ({
   const handleDownloadManuscrita = () => {
     if (manuscritaUrl) {
       window.open(manuscritaUrl, '_blank');
+    }
+  };
+
+  const handleUploadCorrecao = async () => {
+    if (!correcaoArquivo) return;
+
+    setUploadingCorrecao(true);
+    try {
+      const fileExt = correcaoArquivo.name.split('.').pop();
+      const fileName = `correcao_${redacao.id}_${Date.now()}.${fileExt}`;
+      const filePath = `redacoes-correcoes/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('redacoes-manuscritas')
+        .upload(filePath, correcaoArquivo);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('redacoes-manuscritas')
+        .getPublicUrl(filePath);
+
+      setCorrecaoUrl(urlData.publicUrl);
+
+      // Salvar URL na base de dados
+      const tabela = redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                    redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio';
+      const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
+      
+      const updateData = {
+        [`correcao_arquivo_url_${prefixo}`]: urlData.publicUrl
+      };
+
+      if (tabela === 'redacoes_enviadas') {
+        await supabase.from('redacoes_enviadas').update(updateData).eq('id', redacao.id);
+      } else if (tabela === 'redacoes_simulado') {
+        await supabase.from('redacoes_simulado').update(updateData).eq('id', redacao.id);
+      } else {
+        await supabase.from('redacoes_exercicio').update(updateData).eq('id', redacao.id);
+      }
+
+      toast({
+        title: "Correção enviada!",
+        description: "Arquivo de correção foi enviado com sucesso.",
+      });
+
+      setCorrecaoArquivo(null);
+    } catch (error: any) {
+      console.error("Erro ao enviar correção:", error);
+      toast({
+        title: "Erro ao enviar correção",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingCorrecao(false);
     }
   };
 
@@ -182,13 +249,6 @@ export const FormularioCorrecaoCompleto = ({
   };
 
   const opcoesNota = [0, 40, 80, 120, 160, 200];
-  const competenciasLabels = [
-    "Domínio da escrita formal da língua portuguesa",
-    "Compreensão da proposta de redação",
-    "Seleção, organização e interpretação de informações",
-    "Conhecimento dos mecanismos linguísticos",
-    "Proposta de intervenção"
-  ];
 
   if (loadingCorrecao) {
     return <div>Carregando correção...</div>;
@@ -196,75 +256,104 @@ export const FormularioCorrecaoCompleto = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onVoltar}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
-        </Button>
-        <h1 className="text-2xl font-bold">Vista Pedagógica - Correção Completa</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={onVoltar}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
+          <h1 className="text-xl font-bold">Correção de Redação</h1>
+        </div>
+        
+        {modoEdicao && (
+          <Button variant="outline" onClick={() => setModoEdicao(!modoEdicao)}>
+            <Edit className="w-4 h-4 mr-2" />
+            Editar Correção
+          </Button>
+        )}
       </div>
 
+      {/* Informações compactas no topo */}
+      <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg text-sm">
+        <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
+        <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
+        <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
+        <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
+        <div className="flex gap-2">
+          {manuscritaUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadManuscrita}
+              className="flex items-center gap-1 text-xs"
+            >
+              <Download className="w-3 h-3" />
+              Baixar Redação
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Tema em linha separada */}
+      <div className="p-3 bg-blue-50 rounded-lg">
+        <strong>Tema:</strong> {redacao.frase_tematica}
+      </div>
+
+      {/* Redação - Exibição expandida sem scroll interno */}
+      {manuscritaUrl ? (
+        <div className="w-full">
+          <img 
+            src={manuscritaUrl} 
+            alt="Redação manuscrita" 
+            className="w-full h-auto rounded-md shadow-lg"
+          />
+        </div>
+      ) : (
+        <div className="p-6 bg-gray-50 rounded-md whitespace-pre-wrap text-sm leading-relaxed">
+          {redacao.texto}
+        </div>
+      )}
+
+      {/* Upload de Correção */}
       <Card>
         <CardHeader>
-          <CardTitle>Informações da Redação</CardTitle>
+          <CardTitle>Enviar Correção Externa</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-          <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
-          <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
-          <div className="col-span-2"><strong>Tema:</strong> {redacao.frase_tematica}</div>
-          <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleString('pt-BR')}</div>
-          <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Input
+              type="file"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleUploadCorrecao}
+              disabled={!correcaoArquivo || uploadingCorrecao}
+              className="flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              {uploadingCorrecao ? "Enviando..." : "Subir Correção"}
+            </Button>
+          </div>
+          {correcaoUrl && (
+            <div className="text-sm text-green-600">
+              ✓ Correção enviada com sucesso! O aluno poderá baixá-la em seu painel.
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {manuscritaUrl ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Redação Manuscrita
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadManuscrita}
-                className="flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Baixar Redação Manuscrita
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-gray-50 rounded-md p-4 max-h-96 overflow-y-auto">
-              <img 
-                src={manuscritaUrl} 
-                alt="Redação manuscrita" 
-                className="w-full h-auto rounded-md"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Texto da Redação</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
-              {redacao.texto}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
+      {/* Avaliação Simplificada */}
       <Card>
         <CardHeader>
-          <CardTitle>Avaliação por Competências - Vista Pedagógica</CardTitle>
+          <CardTitle>Avaliação por Competências</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => (
             <div key={competencia} className="border rounded-lg p-4 bg-gray-50">
               <div className="flex items-center gap-4 mb-3">
-                <Label className="w-32 font-semibold">Competência {index + 1}:</Label>
+                <Label className="w-24 font-semibold text-base">C{index + 1}:</Label>
                 <Select
                   value={notas[competencia as keyof typeof notas].toString()}
                   onValueChange={(value) => 
@@ -274,7 +363,7 @@ export const FormularioCorrecaoCompleto = ({
                     }))
                   }
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -288,12 +377,7 @@ export const FormularioCorrecaoCompleto = ({
                 <span className="text-sm text-muted-foreground">/ 200</span>
               </div>
               
-              <div className="text-xs text-gray-600 mb-2">
-                {competenciasLabels[index]}
-              </div>
-              
               <div>
-                <Label className="text-sm font-medium">Comentário pedagógico – C{index + 1}</Label>
                 <Textarea
                   value={comentarios[competencia as keyof typeof comentarios]}
                   onChange={(e) => 
@@ -302,16 +386,15 @@ export const FormularioCorrecaoCompleto = ({
                       [competencia]: e.target.value
                     }))
                   }
-                  placeholder={`Escreva aqui o comentário pedagógico para a competência ${index + 1}...`}
-                  className="mt-1"
-                  rows={3}
+                  placeholder={`Comentário para competência ${index + 1}...`}
+                  rows={2}
                 />
               </div>
             </div>
           ))}
           
-          <div className="pt-4 border-t">
-            <div className="flex items-center gap-4 text-lg font-semibold mb-4">
+          <div className="pt-4 border-t space-y-4">
+            <div className="flex items-center gap-4 text-lg font-semibold">
               <Label>Nota Total:</Label>
               <span className="text-2xl text-primary">{calcularNotaTotal()}/1000</span>
             </div>
