@@ -112,57 +112,45 @@ export const FormularioCorrecaoCompleto = ({
     setLoading(true);
     
     try {
-      const tabela = `redacoes_${redacao.tipo_redacao === 'regular' ? 'enviadas' : redacao.tipo_redacao}`;
-      const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
+      const tabela = redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                    redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio';
       const notaTotal = calcularNotaTotal();
 
-      const updateData: any = {
-        [`c1_${prefixo}`]: notas.c1,
-        [`c2_${prefixo}`]: notas.c2,
-        [`c3_${prefixo}`]: notas.c3,
-        [`c4_${prefixo}`]: notas.c4,
-        [`c5_${prefixo}`]: notas.c5,
-        [`nota_final_${prefixo}`]: notaTotal,
-        [`status_${prefixo}`]: status,
-        [`comentario_c1_${prefixo}`]: comentarios.c1.trim(),
-        [`comentario_c2_${prefixo}`]: comentarios.c2.trim(),
-        [`comentario_c3_${prefixo}`]: comentarios.c3.trim(),
-        [`comentario_c4_${prefixo}`]: comentarios.c4.trim(),
-        [`comentario_c5_${prefixo}`]: comentarios.c5.trim(),
-        [`elogios_pontos_atencao_${prefixo}`]: elogiosEPontosAtencao.trim(),
-      };
-
-      // Se salvando como corrigida, definir data de correção
-      if (status === 'corrigida') {
-        updateData.data_correcao = new Date().toISOString();
-      }
-
-      console.log('Salvando correção:', { 
-        tabela, 
-        updateData, 
+      console.log('Salvando correção via função RPC:', { 
         redacaoId: redacao.id,
+        tabela,
         corretorEmail,
         ehCorretor1: redacao.eh_corretor_1,
         ehCorretor2: redacao.eh_corretor_2,
-        statusAntes: status
+        statusAntes: status,
+        notas,
+        notaTotal
       });
 
-      let updateQuery;
+      // Usar a função RPC para salvar correção de forma segura
+      const { data, error } = await supabase.rpc('salvar_correcao_corretor', {
+        redacao_id: redacao.id,
+        tabela_nome: tabela,
+        eh_corretor_1: redacao.eh_corretor_1,
+        c1_nota: notas.c1,
+        c2_nota: notas.c2,
+        c3_nota: notas.c3,
+        c4_nota: notas.c4,
+        c5_nota: notas.c5,
+        nota_final: notaTotal,
+        status_correcao: status,
+        comentario_c1: comentarios.c1.trim(),
+        comentario_c2: comentarios.c2.trim(),
+        comentario_c3: comentarios.c3.trim(),
+        comentario_c4: comentarios.c4.trim(),
+        comentario_c5: comentarios.c5.trim(),
+        elogios_pontos: elogiosEPontosAtencao.trim()
+      });
       
-      if (tabela === 'redacoes_enviadas') {
-        updateQuery = supabase.from('redacoes_enviadas').update(updateData).eq('id', redacao.id);
-      } else if (tabela === 'redacoes_simulado') {
-        updateQuery = supabase.from('redacoes_simulado').update(updateData).eq('id', redacao.id);
-      } else {
-        updateQuery = supabase.from('redacoes_exercicio').update(updateData).eq('id', redacao.id);
-      }
-
-      const { error, data } = await updateQuery;
-      
-      console.log('Resultado do update:', { error, data, redacaoId: redacao.id });
+      console.log('Resultado da função RPC:', { data, error, redacaoId: redacao.id });
 
       if (error) {
-        console.error('Erro no update:', error);
+        console.error('Erro na função RPC:', error);
         throw error;
       }
 
@@ -173,7 +161,8 @@ export const FormularioCorrecaoCompleto = ({
           : "Você pode continuar a correção mais tarde.",
       });
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Aguardar um pouco para garantir que o trigger executou
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (onRefreshList) {
         await onRefreshList();

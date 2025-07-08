@@ -1503,6 +1503,27 @@ export type Database = {
         }
         Returns: undefined
       }
+      salvar_correcao_corretor: {
+        Args: {
+          redacao_id: string
+          tabela_nome: string
+          eh_corretor_1: boolean
+          c1_nota: number
+          c2_nota: number
+          c3_nota: number
+          c4_nota: number
+          c5_nota: number
+          nota_final: number
+          status_correcao: string
+          comentario_c1?: string
+          comentario_c2?: string
+          comentario_c3?: string
+          comentario_c4?: string
+          comentario_c5?: string
+          elogios_pontos?: string
+        }
+        Returns: boolean
+      }
       set_current_user_email: {
         Args: { user_email: string }
         Returns: undefined
