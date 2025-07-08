@@ -83,19 +83,16 @@ export const MinhasRedacoes = () => {
     }
   }
 
-  // Query SIMPLIFICADA - Busca redações sem RLS complexa
+  // Query REVERTIDA - Busca redações por turma como era antes
   const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
-    queryKey: ['redacoes-usuario-logado', alunoEmail, visitanteEmail],
+    queryKey: ['redacoes-turma-revertida', turmaCode],
     queryFn: async () => {
-      console.log('🔒 Buscando redações do usuário logado');
+      console.log('🔒 REVERTIDO: Buscando redações por turma');
       
-      if (userType === "aluno" && alunoEmail) {
-        console.log('👨‍🎓 Buscando redações do aluno:', alunoEmail);
+      if (userType === "aluno" && turmaCode) {
+        console.log('👨‍🎓 Buscando redações da turma:', turmaCode);
         
-        // Definir email do usuário no contexto Supabase para RLS
-        await supabase.rpc('set_current_user_email', { user_email: alunoEmail });
-        
-        // Buscar TODAS as redações regulares do aluno (corrigidas e pendentes)
+        // Buscar TODAS as redações da turma (corrigidas e pendentes)
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -111,18 +108,18 @@ export const MinhasRedacoes = () => {
             comentario_admin,
             data_correcao
           `)
-          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
+          .eq('turma', turmaCode)
           .neq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
 
-        console.log('📧 Query redações regulares para email:', alunoEmail);
+        console.log('📧 Query redações regulares para turma:', turmaCode);
         if (errorRegulares) {
           console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
         } else {
           console.log('✅ Redações regulares encontradas:', redacoesRegulares?.length || 0, redacoesRegulares);
         }
 
-        // Buscar TODAS as redações de simulado do aluno (corrigidas e pendentes)
+        // Buscar TODAS as redações de simulado da turma (corrigidas e pendentes)
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
           .select(`
@@ -135,7 +132,7 @@ export const MinhasRedacoes = () => {
             data_correcao,
             simulados!inner(frase_tematica)
           `)
-          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
+          .eq('turma', turmaCode)
           .order('data_envio', { ascending: false });
 
         if (errorSimulado) {
@@ -177,14 +174,11 @@ export const MinhasRedacoes = () => {
         // Ordenar por data de envio (mais recente primeiro)
         todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
         
-        console.log('✅ Redações do aluno encontradas:', todasRedacoes.length);
+        console.log('✅ Redações da turma encontradas:', todasRedacoes.length);
         return todasRedacoes;
         
       } else if (userType === "visitante" && visitanteEmail) {
         console.log('👤 Buscando redações do visitante:', visitanteEmail);
-        
-        // Definir email do usuário no contexto Supabase para RLS
-        await supabase.rpc('set_current_user_email', { user_email: visitanteEmail });
         
         const { data, error } = await supabase
           .from('redacoes_enviadas')
@@ -216,7 +210,7 @@ export const MinhasRedacoes = () => {
       
       return [];
     },
-    enabled: !!(alunoEmail || visitanteEmail),
+    enabled: !!(turmaCode || visitanteEmail),
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
   });
