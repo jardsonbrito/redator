@@ -3,147 +3,107 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Copy, Check, ExternalLink } from "lucide-react";
 
 interface AlunoSelfServiceProps {
   onSuccess: () => void;
 }
 
 export const AlunoSelfService = ({ onSuccess }: AlunoSelfServiceProps) => {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [turma, setTurma] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [copiado, setCopiado] = useState(false);
   const { toast } = useToast();
 
-  const turmas = [
-    "Turma A",
-    "Turma B", 
-    "Turma C",
-    "Turma D",
-    "Turma E"
-  ];
+  // Gerar o link de autoatendimento
+  const linkAutoatendimento = `${window.location.origin}/cadastro-aluno`;
 
-  const isFormValid = nome.trim() && email.trim() && turma;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid) return;
-
-    setLoading(true);
+  const handleCopiarLink = async () => {
     try {
-      // Verificar se já existe aluno com este email
-      const { data: existingAluno } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("email", email.trim().toLowerCase())
-        .maybeSingle();
-
-      if (existingAluno) {
-        toast({
-          title: "Erro",
-          description: "Já existe um aluno cadastrado com este e-mail.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      const dadosAluno = {
-        id: crypto.randomUUID(),
-        nome: nome.trim(),
-        sobrenome: "", // Mantém campo vazio para compatibilidade
-        email: email.trim().toLowerCase(),
-        turma,
-        user_type: "aluno",
-        is_authenticated_student: true
-      };
-
-      const { error } = await supabase
-        .from("profiles")
-        .insert(dadosAluno);
-
-      if (error) throw error;
-
+      await navigator.clipboard.writeText(linkAutoatendimento);
+      setCopiado(true);
       toast({
-        title: "Aluno cadastrado com sucesso!",
-        description: `${nome} foi adicionado à ${turma}.`
+        title: "Link copiado!",
+        description: "O link de autoatendimento foi copiado para a área de transferência."
       });
-
-      // Limpar formulário
-      setNome("");
-      setEmail("");
-      setTurma("");
-      onSuccess();
-
-    } catch (error: any) {
-      console.error("Erro ao salvar aluno:", error);
+      
+      // Resetar o ícone após 2 segundos
+      setTimeout(() => {
+        setCopiado(false);
+      }, 2000);
+    } catch (error) {
       toast({
-        title: "Erro ao salvar aluno",
-        description: error.message || "Ocorreu um erro inesperado.",
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o link. Tente novamente.",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleAbrirLink = () => {
+    window.open(linkAutoatendimento, '_blank');
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Formulário de Autoatendimento</CardTitle>
+        <CardTitle>Link de Autoatendimento</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Compartilhe este link com os alunos para que eles possam se cadastrar automaticamente no sistema.
+        </p>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="nome">Nome Completo *</Label>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="link">Link de Cadastro</Label>
+          <div className="flex gap-2 mt-2">
             <Input
-              id="nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Digite o nome completo do aluno"
-              required
+              id="link"
+              value={linkAutoatendimento}
+              readOnly
+              className="flex-1"
             />
+            <Button
+              onClick={handleCopiarLink}
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+            >
+              {copiado ? (
+                <Check className="w-4 h-4 text-green-600" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+            </Button>
           </div>
+        </div>
 
-          <div>
-            <Label htmlFor="email">E-mail *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Digite o e-mail do aluno"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="turma">Turma *</Label>
-            <Select value={turma} onValueChange={setTurma} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a turma" />
-              </SelectTrigger>
-              <SelectContent>
-                {turmas.map((turmaOption) => (
-                  <SelectItem key={turmaOption} value={turmaOption}>
-                    {turmaOption}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button 
-            type="submit" 
-            disabled={!isFormValid || loading}
-            className="w-full"
+        <div className="flex gap-2">
+          <Button
+            onClick={handleCopiarLink}
+            className="flex-1"
+            variant="default"
           >
-            {loading ? "Salvando..." : "Cadastrar Aluno"}
+            <Copy className="w-4 h-4 mr-2" />
+            Copiar Link
           </Button>
-        </form>
+          <Button
+            onClick={handleAbrirLink}
+            variant="outline"
+            className="flex-1"
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Abrir Link
+          </Button>
+        </div>
+
+        <div className="bg-muted/50 p-4 rounded-lg">
+          <h4 className="font-semibold mb-2">Como usar:</h4>
+          <ul className="text-sm space-y-1 text-muted-foreground">
+            <li>1. Copie o link acima</li>
+            <li>2. Envie para os alunos via WhatsApp, e-mail ou outro meio</li>
+            <li>3. Os alunos preencherão o formulário de cadastro</li>
+            <li>4. Você poderá editar os dados dos alunos posteriormente se necessário</li>
+          </ul>
+        </div>
       </CardContent>
     </Card>
   );

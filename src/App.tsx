@@ -38,6 +38,7 @@ import CorretorBiblioteca from "./pages/corretor/CorretorBiblioteca";
 import CorretorRedacoesExemplar from "./pages/corretor/CorretorRedacoesExemplar";
 import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
+import CadastroAluno from "./pages/CadastroAluno";
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/aluno-login" element={<AlunoLogin />} />
                 <Route path="/visitante-login" element={<VisitanteLogin />} />
+                <Route path="/cadastro-aluno" element={<CadastroAluno />} />
 
                 <Route path="/app" element={<Index />} />
                 <Route path="/temas" element={<Temas />} />
