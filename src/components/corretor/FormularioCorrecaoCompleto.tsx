@@ -277,20 +277,34 @@ export const FormularioCorrecaoCompleto = ({
         )}
       </div>
 
-      {/* Informações compactas */}
-      <div className="grid grid-cols-5 gap-4 p-3 bg-muted/50 rounded-lg text-sm">
+      {/* Informações compactas + Botões de Ação */}
+      <div className="grid grid-cols-4 gap-4 p-3 bg-muted/50 rounded-lg text-sm">
         <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
         <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
         <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
         <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
-        <div className="flex gap-2">
-          {manuscritaUrl && (
-            <Button variant="outline" size="sm" onClick={handleDownloadManuscrita} className="text-xs">
-              <Download className="w-3 h-3 mr-1" />
-              Baixar
-            </Button>
-          )}
-        </div>
+      </div>
+
+      {/* Botões de Ação */}
+      <div className="flex gap-2 justify-end">
+        {manuscritaUrl && (
+          <Button variant="outline" size="sm" onClick={handleDownloadManuscrita}>
+            <Download className="w-4 h-4 mr-1" />
+            Baixar
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={handleUploadCorrecao} disabled={!correcaoArquivo || uploadingCorrecao}>
+          <Upload className="w-4 h-4 mr-1" />
+          Subir
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => salvarCorrecao('incompleta')} disabled={loading}>
+          <Save className="w-4 h-4 mr-1" />
+          Incompleta
+        </Button>
+        <Button size="sm" onClick={() => salvarCorrecao('corrigida')} disabled={loading}>
+          <CheckCircle className="w-4 h-4 mr-1" />
+          Completa
+        </Button>
       </div>
 
       {/* Tema */}
@@ -299,9 +313,9 @@ export const FormularioCorrecaoCompleto = ({
       </div>
 
       {/* Layout principal: Redação + Vista Pedagógica */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 items-start">
         {/* Redação - 80-85% da tela */}
-        <div className="flex-1 max-w-[85%] space-y-4">
+        <div className="flex-1 max-w-[85%]">
           {manuscritaUrl ? (
             <div className="bg-white rounded-lg overflow-hidden">
               <img 
@@ -322,7 +336,7 @@ export const FormularioCorrecaoCompleto = ({
           )}
 
           {/* Upload de Correção */}
-          <Card className="bg-white">
+          <Card className="bg-white mt-4">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
                 <Input
@@ -331,15 +345,6 @@ export const FormularioCorrecaoCompleto = ({
                   onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
                   className="flex-1 text-sm"
                 />
-                <Button
-                  onClick={handleUploadCorrecao}
-                  disabled={!correcaoArquivo || uploadingCorrecao}
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="w-3 h-3" />
-                  {uploadingCorrecao ? "Enviando..." : "Subir Correção"}
-                </Button>
               </div>
               {correcaoUrl && (
                 <div className="text-xs text-green-600 mt-2">
@@ -465,27 +470,6 @@ export const FormularioCorrecaoCompleto = ({
             </CardContent>
           </Card>
         </div>
-      </div>
-
-      <div className="flex gap-4">
-        <Button
-          onClick={() => salvarCorrecao('incompleta')}
-          disabled={loading}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Save className="w-4 h-4" />
-          {loading ? "Salvando..." : "Salvar como Incompleta"}
-        </Button>
-        
-        <Button
-          onClick={() => salvarCorrecao('corrigida')}
-          disabled={loading}
-          className="flex items-center gap-2"
-        >
-          <CheckCircle className="w-4 h-4" />
-          {loading ? "Finalizando..." : "Salvar Correção Completa"}
-        </Button>
       </div>
     </div>
   );
