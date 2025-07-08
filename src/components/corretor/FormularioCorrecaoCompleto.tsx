@@ -50,6 +50,8 @@ export const FormularioCorrecaoCompleto = ({
   const [correcaoUrl, setCorrecaoUrl] = useState<string | null>(null);
   const [uploadingCorrecao, setUploadingCorrecao] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
+  const [comentariosAbertos, setComentariosAbertos] = useState<{[key: string]: boolean}>({});
+  const [elogiosAberto, setElogiosAberto] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -296,23 +298,23 @@ export const FormularioCorrecaoCompleto = ({
         <strong>Tema:</strong> {redacao.frase_tematica}
       </div>
 
-      {/* Layout principal: Redação + Avaliação */}
-      <div className="flex gap-6">
-        {/* Redação - 70% da tela */}
-        <div className="flex-1" style={{ minWidth: '70%' }}>
+      {/* Layout principal: Redação + Vista Pedagógica */}
+      <div className="flex gap-4">
+        {/* Redação - 80-85% da tela */}
+        <div className="flex-1 max-w-[85%] space-y-4">
           {manuscritaUrl ? (
-            <div className="border rounded-lg overflow-hidden bg-white">
+            <div className="bg-white rounded-lg overflow-hidden">
               <img 
                 src={manuscritaUrl} 
                 alt="Redação manuscrita" 
                 className="w-full h-auto object-contain"
-                style={{ maxHeight: '80vh' }}
+                style={{ maxHeight: '85vh' }}
               />
             </div>
           ) : (
-            <div className="border rounded-lg bg-white p-6">
-              <div className="prose prose-sm max-w-none">
-                <p className="text-base leading-relaxed whitespace-pre-wrap text-foreground">
+            <div className="bg-white rounded-lg p-6 border">
+              <div className="prose prose-base max-w-none">
+                <p className="text-base leading-relaxed whitespace-pre-wrap text-gray-800">
                   {redacao.texto}
                 </p>
               </div>
@@ -320,26 +322,27 @@ export const FormularioCorrecaoCompleto = ({
           )}
 
           {/* Upload de Correção */}
-          <Card className="mt-4">
+          <Card className="bg-white">
             <CardContent className="pt-4">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <Input
                   type="file"
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
-                  className="flex-1"
+                  className="flex-1 text-sm"
                 />
                 <Button
                   onClick={handleUploadCorrecao}
                   disabled={!correcaoArquivo || uploadingCorrecao}
+                  size="sm"
                   className="flex items-center gap-2"
                 >
-                  <Upload className="w-4 h-4" />
+                  <Upload className="w-3 h-3" />
                   {uploadingCorrecao ? "Enviando..." : "Subir Correção"}
                 </Button>
               </div>
               {correcaoUrl && (
-                <div className="text-sm text-green-600 mt-2">
+                <div className="text-xs text-green-600 mt-2">
                   ✓ Correção enviada com sucesso!
                 </div>
               )}
@@ -347,25 +350,27 @@ export const FormularioCorrecaoCompleto = ({
           </Card>
         </div>
 
-        {/* Avaliação - 30% da tela */}
-        <div className="w-80 space-y-4">
-          <Card>
+        {/* Vista Pedagógica - 15-20% da tela */}
+        <div className="w-64 min-w-64">
+          <Card className="bg-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Avaliação por Competências</CardTitle>
+              <CardTitle className="text-base">Vista Pedagógica</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
                 const cores = ['#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#f97316'];
                 const corCompetencia = cores[index];
                 
                 return (
                   <div key={competencia} className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0" 
-                        style={{ backgroundColor: corCompetencia }}
-                      />
-                      <Label className="font-medium">C{index + 1}</Label>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: corCompetencia }}
+                        />
+                        <Label className="text-sm font-medium">C{index + 1}</Label>
+                      </div>
                       <Select
                         value={notas[competencia as keyof typeof notas].toString()}
                         onValueChange={(value) => 
@@ -375,7 +380,7 @@ export const FormularioCorrecaoCompleto = ({
                           }))
                         }
                       >
-                        <SelectTrigger className="w-20 h-8">
+                        <SelectTrigger className="w-16 h-7 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -386,43 +391,75 @@ export const FormularioCorrecaoCompleto = ({
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-xs text-muted-foreground">/200</span>
+                      <span className="text-xs text-gray-500">/200</span>
                     </div>
                     
-                    <Textarea
-                      value={comentarios[competencia as keyof typeof comentarios]}
-                      onChange={(e) => 
-                        setComentarios(prev => ({
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs h-7"
+                      onClick={() => setComentariosAbertos(prev => ({
+                        ...prev,
+                        [competencia]: !prev[competencia]
+                      }))}
+                    >
+                      {comentarios[competencia as keyof typeof comentarios] ? '✏️ Editar' : '💬 Comentário'}
+                    </Button>
+                    
+                    {comentariosAbertos[competencia] && (
+                      <Textarea
+                        value={comentarios[competencia as keyof typeof comentarios]}
+                        onChange={(e) => 
+                          setComentarios(prev => ({
+                            ...prev,
+                            [competencia]: e.target.value
+                          }))
+                        }
+                        onBlur={() => setComentariosAbertos(prev => ({
                           ...prev,
-                          [competencia]: e.target.value
-                        }))
-                      }
-                      placeholder={`Comentário para C${index + 1}...`}
-                      rows={2}
-                      className="text-xs"
-                    />
+                          [competencia]: false
+                        }))}
+                        placeholder={`Comentário para C${index + 1}...`}
+                        rows={3}
+                        className="text-xs"
+                        autoFocus
+                      />
+                    )}
                   </div>
                 );
               })}
               
-              <div className="pt-4 border-t space-y-3">
-                <div className="flex items-center gap-2 text-lg font-semibold">
-                  <Label>Nota Total:</Label>
-                  <span className="text-xl text-primary">{calcularNotaTotal()}/1000</span>
+              <div className="pt-3 border-t space-y-3">
+                <div className="text-center">
+                  <Label className="text-sm font-medium">Nota Total</Label>
+                  <div className="text-lg font-bold text-primary">{calcularNotaTotal()}/1000</div>
                 </div>
                 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-500" />
-                    <Label className="text-sm font-medium">Elogios e pontos de atenção</Label>
+                    <div className="w-2 h-2 rounded-full bg-gray-500" />
+                    <Label className="text-sm font-medium">Elogios</Label>
                   </div>
-                  <Textarea
-                    value={elogiosEPontosAtencao}
-                    onChange={(e) => setElogiosEPontosAtencao(e.target.value)}
-                    placeholder="Elogios gerais e pontos de atenção..."
-                    rows={3}
-                    className="text-xs"
-                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs h-7"
+                    onClick={() => setElogiosAberto(!elogiosAberto)}
+                  >
+                    {elogiosEPontosAtencao ? '✏️ Editar' : '💬 Comentário'}
+                  </Button>
+                  
+                  {elogiosAberto && (
+                    <Textarea
+                      value={elogiosEPontosAtencao}
+                      onChange={(e) => setElogiosEPontosAtencao(e.target.value)}
+                      onBlur={() => setElogiosAberto(false)}
+                      placeholder="Elogios gerais e pontos de atenção..."
+                      rows={3}
+                      className="text-xs"
+                      autoFocus
+                    />
+                  )}
                 </div>
               </div>
             </CardContent>
