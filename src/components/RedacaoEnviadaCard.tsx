@@ -10,6 +10,7 @@ interface RedacaoEnviadaCardProps {
     id: string;
     frase_tematica: string;
     redacao_texto: string;
+    redacao_manuscrita_url?: string | null;
     data_envio: string;
     nota_c1?: number | null;
     nota_c2?: number | null;
@@ -181,7 +182,15 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
         </CardHeader>
         <CardContent>
           <div className="bg-gray-50 p-4 rounded-lg border min-h-[200px]">
-            {redacao.redacao_texto ? (
+            {redacao.redacao_manuscrita_url ? (
+              <div className="flex flex-col items-center">
+                <img 
+                  src={redacao.redacao_manuscrita_url} 
+                  alt="Redação manuscrita" 
+                  className="w-full h-auto rounded-md max-h-[80vh] object-contain"
+                />
+              </div>
+            ) : redacao.redacao_texto ? (
               <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800">
                 {redacao.redacao_texto}
               </p>
