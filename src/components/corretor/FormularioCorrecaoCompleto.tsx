@@ -137,7 +137,15 @@ export const FormularioCorrecaoCompleto = ({
         updateData.data_correcao = new Date().toISOString();
       }
 
-      console.log('Salvando correção:', { tabela, updateData, redacaoId: redacao.id });
+      console.log('Salvando correção:', { 
+        tabela, 
+        updateData, 
+        redacaoId: redacao.id,
+        corretorEmail,
+        ehCorretor1: redacao.eh_corretor_1,
+        ehCorretor2: redacao.eh_corretor_2,
+        statusAntes: status
+      });
 
       let updateQuery;
       
@@ -149,9 +157,14 @@ export const FormularioCorrecaoCompleto = ({
         updateQuery = supabase.from('redacoes_exercicio').update(updateData).eq('id', redacao.id);
       }
 
-      const { error } = await updateQuery;
+      const { error, data } = await updateQuery;
+      
+      console.log('Resultado do update:', { error, data, redacaoId: redacao.id });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro no update:', error);
+        throw error;
+      }
 
       toast({
         title: status === 'corrigida' ? "Correção finalizada!" : "Correção salva!",
