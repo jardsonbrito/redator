@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
-import { RedacaoAnotacao } from "./RedacaoAnotacao";
-import { ArrowLeft, Save, CheckCircle, Download, Upload, Edit } from "lucide-react";
+
+import { ArrowLeft, Save, CheckCircle, Download, Upload, Edit, FileText } from "lucide-react";
 
 interface FormularioCorrecaoCompletoProps {
   redacao: RedacaoCorretor;
@@ -300,25 +300,38 @@ export const FormularioCorrecaoCompleto = ({
         <strong>Tema:</strong> {redacao.frase_tematica}
       </div>
 
-      {/* Redação com Anotações Interativas */}
+      {/* Visualização da Redação */}
       {manuscritaUrl ? (
-        <RedacaoAnotacao
-          imagemUrl={manuscritaUrl}
-          redacaoId={redacao.id}
-          tabelaOrigem={`redacoes_${redacao.tipo_redacao === 'regular' ? 'enviadas' : redacao.tipo_redacao}`}
-          corretorId={redacao.eh_corretor_1 ? redacao.corretor_id_1 || '' : redacao.corretor_id_2 || ''}
-          readonly={false}
-        />
-      ) : (
-        <div className="p-6 bg-gray-50 rounded-md whitespace-pre-wrap text-sm leading-relaxed">
-          {redacao.texto}
+        <div className="border rounded-lg overflow-hidden bg-white">
+          <img 
+            src={manuscritaUrl} 
+            alt="Redação manuscrita" 
+            className="w-full h-auto max-h-screen object-contain"
+            style={{ maxHeight: '80vh' }}
+          />
         </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="w-5 h-5" />
+              Texto da Redação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 p-6 rounded-lg border min-h-[200px]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
+                {redacao.texto}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Upload de Correção */}
       <Card>
         <CardHeader>
-          <CardTitle>Enviar Correção Externa</CardTitle>
+          <CardTitle>Upload de Correção</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
@@ -351,10 +364,24 @@ export const FormularioCorrecaoCompleto = ({
           <CardTitle>Avaliação por Competências</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => (
-            <div key={competencia} className="border rounded-lg p-4 bg-gray-50">
+          {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
+            const cores = {
+              0: '#ef4444', // C1 - Vermelho
+              1: '#22c55e', // C2 - Verde  
+              2: '#3b82f6', // C3 - Azul
+              3: '#a855f7', // C4 - Roxo
+              4: '#f97316', // C5 - Laranja
+            };
+            return (
+            <div key={competencia} className="border rounded-lg p-4" style={{ backgroundColor: `${cores[index as keyof typeof cores]}10` }}>
               <div className="flex items-center gap-4 mb-3">
-                <Label className="w-24 font-semibold text-base">C{index + 1}:</Label>
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-4 h-4 rounded-full" 
+                    style={{ backgroundColor: cores[index as keyof typeof cores] }}
+                  />
+                  <Label className="w-16 font-semibold text-base">C{index + 1}:</Label>
+                </div>
                 <Select
                   value={notas[competencia as keyof typeof notas].toString()}
                   onValueChange={(value) => 
@@ -392,7 +419,8 @@ export const FormularioCorrecaoCompleto = ({
                 />
               </div>
             </div>
-          ))}
+            );
+          })}
           
           <div className="pt-4 border-t space-y-4">
             <div className="flex items-center gap-4 text-lg font-semibold">
@@ -400,13 +428,15 @@ export const FormularioCorrecaoCompleto = ({
               <span className="text-2xl text-primary">{calcularNotaTotal()}/1000</span>
             </div>
             
-            <div>
-              <Label className="text-base font-medium">Elogios e pontos de atenção</Label>
+            <div className="border rounded-lg p-4" style={{ backgroundColor: '#6b728010' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-4 h-4 rounded-full bg-gray-500" />
+                <Label className="text-base font-medium">Elogios e pontos de atenção</Label>
+              </div>
               <Textarea
                 value={elogiosEPontosAtencao}
                 onChange={(e) => setElogiosEPontosAtencao(e.target.value)}
                 placeholder="Escreva aqui elogios gerais e pontos que merecem atenção especial..."
-                className="mt-2"
                 rows={4}
               />
             </div>
