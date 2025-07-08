@@ -256,7 +256,8 @@ export const FormularioCorrecaoCompleto = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={onVoltar}>
@@ -274,175 +275,160 @@ export const FormularioCorrecaoCompleto = ({
         )}
       </div>
 
-      {/* Informações compactas no topo */}
-      <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg text-sm">
+      {/* Informações compactas */}
+      <div className="grid grid-cols-5 gap-4 p-3 bg-muted/50 rounded-lg text-sm">
         <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
         <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
         <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
         <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
         <div className="flex gap-2">
           {manuscritaUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownloadManuscrita}
-              className="flex items-center gap-1 text-xs"
-            >
-              <Download className="w-3 h-3" />
-              Baixar Redação
+            <Button variant="outline" size="sm" onClick={handleDownloadManuscrita} className="text-xs">
+              <Download className="w-3 h-3 mr-1" />
+              Baixar
             </Button>
           )}
         </div>
       </div>
 
-      {/* Tema em linha separada */}
-      <div className="p-3 bg-blue-50 rounded-lg">
+      {/* Tema */}
+      <div className="p-3 bg-primary/5 rounded-lg">
         <strong>Tema:</strong> {redacao.frase_tematica}
       </div>
 
-      {/* Visualização da Redação */}
-      {manuscritaUrl ? (
-        <div className="border rounded-lg overflow-hidden bg-white">
-          <img 
-            src={manuscritaUrl} 
-            alt="Redação manuscrita" 
-            className="w-full h-auto max-h-screen object-contain"
-            style={{ maxHeight: '80vh' }}
-          />
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="w-5 h-5" />
-              Texto da Redação
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-gray-50 p-6 rounded-lg border min-h-[200px]">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
-                {redacao.texto}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Upload de Correção */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload de Correção</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Input
-              type="file"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleUploadCorrecao}
-              disabled={!correcaoArquivo || uploadingCorrecao}
-              className="flex items-center gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              {uploadingCorrecao ? "Enviando..." : "Subir Correção"}
-            </Button>
-          </div>
-          {correcaoUrl && (
-            <div className="text-sm text-green-600">
-              ✓ Correção enviada com sucesso! O aluno poderá baixá-la em seu painel.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Avaliação Simplificada */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Avaliação por Competências</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
-            const cores = {
-              0: '#ef4444', // C1 - Vermelho
-              1: '#22c55e', // C2 - Verde  
-              2: '#3b82f6', // C3 - Azul
-              3: '#a855f7', // C4 - Roxo
-              4: '#f97316', // C5 - Laranja
-            };
-            return (
-            <div key={competencia} className="border rounded-lg p-4" style={{ backgroundColor: `${cores[index as keyof typeof cores]}10` }}>
-              <div className="flex items-center gap-4 mb-3">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-4 h-4 rounded-full" 
-                    style={{ backgroundColor: cores[index as keyof typeof cores] }}
-                  />
-                  <Label className="w-16 font-semibold text-base">C{index + 1}:</Label>
-                </div>
-                <Select
-                  value={notas[competencia as keyof typeof notas].toString()}
-                  onValueChange={(value) => 
-                    setNotas(prev => ({
-                      ...prev,
-                      [competencia]: parseInt(value)
-                    }))
-                  }
-                >
-                  <SelectTrigger className="w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {opcoesNota.map(nota => (
-                      <SelectItem key={nota} value={nota.toString()}>
-                        {nota}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">/ 200</span>
-              </div>
-              
-              <div>
-                <Textarea
-                  value={comentarios[competencia as keyof typeof comentarios]}
-                  onChange={(e) => 
-                    setComentarios(prev => ({
-                      ...prev,
-                      [competencia]: e.target.value
-                    }))
-                  }
-                  placeholder={`Comentário para competência ${index + 1}...`}
-                  rows={2}
-                />
-              </div>
-            </div>
-            );
-          })}
-          
-          <div className="pt-4 border-t space-y-4">
-            <div className="flex items-center gap-4 text-lg font-semibold">
-              <Label>Nota Total:</Label>
-              <span className="text-2xl text-primary">{calcularNotaTotal()}/1000</span>
-            </div>
-            
-            <div className="border rounded-lg p-4" style={{ backgroundColor: '#6b728010' }}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-4 h-4 rounded-full bg-gray-500" />
-                <Label className="text-base font-medium">Elogios e pontos de atenção</Label>
-              </div>
-              <Textarea
-                value={elogiosEPontosAtencao}
-                onChange={(e) => setElogiosEPontosAtencao(e.target.value)}
-                placeholder="Escreva aqui elogios gerais e pontos que merecem atenção especial..."
-                rows={4}
+      {/* Layout principal: Redação + Avaliação */}
+      <div className="flex gap-6">
+        {/* Redação - 70% da tela */}
+        <div className="flex-1" style={{ minWidth: '70%' }}>
+          {manuscritaUrl ? (
+            <div className="border rounded-lg overflow-hidden bg-white">
+              <img 
+                src={manuscritaUrl} 
+                alt="Redação manuscrita" 
+                className="w-full h-auto object-contain"
+                style={{ maxHeight: '80vh' }}
               />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          ) : (
+            <div className="border rounded-lg bg-white p-6">
+              <div className="prose prose-sm max-w-none">
+                <p className="text-base leading-relaxed whitespace-pre-wrap text-foreground">
+                  {redacao.texto}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Upload de Correção */}
+          <Card className="mt-4">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-4">
+                <Input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleUploadCorrecao}
+                  disabled={!correcaoArquivo || uploadingCorrecao}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  {uploadingCorrecao ? "Enviando..." : "Subir Correção"}
+                </Button>
+              </div>
+              {correcaoUrl && (
+                <div className="text-sm text-green-600 mt-2">
+                  ✓ Correção enviada com sucesso!
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Avaliação - 30% da tela */}
+        <div className="w-80 space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Avaliação por Competências</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
+                const cores = ['#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#f97316'];
+                const corCompetencia = cores[index];
+                
+                return (
+                  <div key={competencia} className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: corCompetencia }}
+                      />
+                      <Label className="font-medium">C{index + 1}</Label>
+                      <Select
+                        value={notas[competencia as keyof typeof notas].toString()}
+                        onValueChange={(value) => 
+                          setNotas(prev => ({
+                            ...prev,
+                            [competencia]: parseInt(value)
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-20 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {opcoesNota.map(nota => (
+                            <SelectItem key={nota} value={nota.toString()}>
+                              {nota}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-xs text-muted-foreground">/200</span>
+                    </div>
+                    
+                    <Textarea
+                      value={comentarios[competencia as keyof typeof comentarios]}
+                      onChange={(e) => 
+                        setComentarios(prev => ({
+                          ...prev,
+                          [competencia]: e.target.value
+                        }))
+                      }
+                      placeholder={`Comentário para C${index + 1}...`}
+                      rows={2}
+                      className="text-xs"
+                    />
+                  </div>
+                );
+              })}
+              
+              <div className="pt-4 border-t space-y-3">
+                <div className="flex items-center gap-2 text-lg font-semibold">
+                  <Label>Nota Total:</Label>
+                  <span className="text-xl text-primary">{calcularNotaTotal()}/1000</span>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-gray-500" />
+                    <Label className="text-sm font-medium">Elogios e pontos de atenção</Label>
+                  </div>
+                  <Textarea
+                    value={elogiosEPontosAtencao}
+                    onChange={(e) => setElogiosEPontosAtencao(e.target.value)}
+                    placeholder="Elogios gerais e pontos de atenção..."
+                    rows={3}
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <div className="flex gap-4">
         <Button
