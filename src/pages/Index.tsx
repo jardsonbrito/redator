@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
-import { SimuladoAtivo } from "@/components/SimuladoAtivo";
+import { AtividadeAtiva } from "@/components/AtividadeAtiva";
 import { AulaVirtualAtiva } from "@/components/AulaVirtualAtiva";
 import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
@@ -140,8 +140,8 @@ const Index = () => {
               )}
             </div>
 
-            {/* Simulado Ativo - SEMPRE em destaque no topo */}
-            <SimuladoAtivo />
+            {/* Atividade Ativa - Simulados ou Exercícios - SEMPRE em destaque no topo */}
+            <AtividadeAtiva />
 
             {/* Aula Virtual Ativa */}
             <AulaVirtualAtiva turmaCode={turmaCode} />
