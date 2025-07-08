@@ -60,11 +60,11 @@ export const FormularioCorrecaoCompleto = ({
       let query;
       
       if (tabela === 'redacoes_enviadas') {
-        query = supabase.from('redacoes_enviadas').select('*').eq('id', redacao.id).single();
+        query = supabase.from('redacoes_enviadas').select('*').eq('id', redacao.id).maybeSingle();
       } else if (tabela === 'redacoes_simulado') {
-        query = supabase.from('redacoes_simulado').select('*').eq('id', redacao.id).single();
+        query = supabase.from('redacoes_simulado').select('*').eq('id', redacao.id).maybeSingle();
       } else {
-        query = supabase.from('redacoes_exercicio').select('*').eq('id', redacao.id).single();
+        query = supabase.from('redacoes_exercicio').select('*').eq('id', redacao.id).maybeSingle();
       }
 
       const { data, error } = await query;
