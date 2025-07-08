@@ -747,6 +747,8 @@ export type Database = {
           comentario_c4_corretor_2: string | null
           comentario_c5_corretor_1: string | null
           comentario_c5_corretor_2: string | null
+          correcao_arquivo_url_corretor_1: string | null
+          correcao_arquivo_url_corretor_2: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
           corrigida: boolean | null
@@ -798,6 +800,8 @@ export type Database = {
           comentario_c4_corretor_2?: string | null
           comentario_c5_corretor_1?: string | null
           comentario_c5_corretor_2?: string | null
+          correcao_arquivo_url_corretor_1?: string | null
+          correcao_arquivo_url_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
@@ -849,6 +853,8 @@ export type Database = {
           comentario_c4_corretor_2?: string | null
           comentario_c5_corretor_1?: string | null
           comentario_c5_corretor_2?: string | null
+          correcao_arquivo_url_corretor_1?: string | null
+          correcao_arquivo_url_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
@@ -918,6 +924,8 @@ export type Database = {
           comentario_c4_corretor_2: string | null
           comentario_c5_corretor_1: string | null
           comentario_c5_corretor_2: string | null
+          correcao_arquivo_url_corretor_1: string | null
+          correcao_arquivo_url_corretor_2: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
           corrigida: boolean | null
@@ -966,6 +974,8 @@ export type Database = {
           comentario_c4_corretor_2?: string | null
           comentario_c5_corretor_1?: string | null
           comentario_c5_corretor_2?: string | null
+          correcao_arquivo_url_corretor_1?: string | null
+          correcao_arquivo_url_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
@@ -1014,6 +1024,8 @@ export type Database = {
           comentario_c4_corretor_2?: string | null
           comentario_c5_corretor_1?: string | null
           comentario_c5_corretor_2?: string | null
+          correcao_arquivo_url_corretor_1?: string | null
+          correcao_arquivo_url_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
@@ -1080,6 +1092,8 @@ export type Database = {
           comentario_c5_corretor_1: string | null
           comentario_c5_corretor_2: string | null
           comentario_pedagogico: string | null
+          correcao_arquivo_url_corretor_1: string | null
+          correcao_arquivo_url_corretor_2: string | null
           corretor_id_1: string | null
           corretor_id_2: string | null
           corrigida: boolean | null
@@ -1129,6 +1143,8 @@ export type Database = {
           comentario_c5_corretor_1?: string | null
           comentario_c5_corretor_2?: string | null
           comentario_pedagogico?: string | null
+          correcao_arquivo_url_corretor_1?: string | null
+          correcao_arquivo_url_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null
@@ -1178,6 +1194,8 @@ export type Database = {
           comentario_c5_corretor_1?: string | null
           comentario_c5_corretor_2?: string | null
           comentario_pedagogico?: string | null
+          correcao_arquivo_url_corretor_1?: string | null
+          correcao_arquivo_url_corretor_2?: string | null
           corretor_id_1?: string | null
           corretor_id_2?: string | null
           corrigida?: boolean | null

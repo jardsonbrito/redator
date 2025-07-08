@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock } from "lucide-react";
+import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download } from "lucide-react";
 
 interface RedacaoEnviadaCardProps {
   redacao: {
@@ -38,6 +38,8 @@ interface RedacaoEnviadaCardProps {
     comentario_c4_corretor_2?: string | null;
     comentario_c5_corretor_2?: string | null;
     elogios_pontos_atencao_corretor_2?: string | null;
+    correcao_arquivo_url_corretor_1?: string | null;
+    correcao_arquivo_url_corretor_2?: string | null;
   };
 }
 
@@ -101,8 +103,17 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
     return { elogios1, elogios2 };
   };
 
+  // Função para verificar se há correção externa disponível
+  const getCorrecaoExterna = () => {
+    const correcao1 = redacao.correcao_arquivo_url_corretor_1?.trim();
+    const correcao2 = redacao.correcao_arquivo_url_corretor_2?.trim();
+    
+    return { correcao1, correcao2 };
+  };
+
   const comentariosPedagogicos = getComentariosPedagogicos();
   const { elogios1, elogios2 } = getElogiosEPontosAtencao();
+  const { correcao1, correcao2 } = getCorrecaoExterna();
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -186,12 +197,41 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                 <Star className="w-5 h-5" />
                 Correção Detalhada
               </CardTitle>
-              {redacao.data_correcao && (
-                <div className="flex items-center gap-2 text-sm text-green-700">
-                  <Clock className="w-4 h-4" />
-                  Corrigido em: {formatDate(redacao.data_correcao)}
-                </div>
-              )}
+              <div className="flex flex-col sm:flex-row gap-2">
+                {redacao.data_correcao && (
+                  <div className="flex items-center gap-2 text-sm text-green-700">
+                    <Clock className="w-4 h-4" />
+                    Corrigido em: {formatDate(redacao.data_correcao)}
+                  </div>
+                )}
+                {/* Botões de download da correção externa */}
+                {(correcao1 || correcao2) && (
+                  <div className="flex gap-2">
+                    {correcao1 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(correcao1, '_blank')}
+                        className="flex items-center gap-1 border-green-300 text-green-700 hover:bg-green-50"
+                      >
+                        <Download className="w-3 h-3" />
+                        Baixar Correção
+                      </Button>
+                    )}
+                    {correcao2 && !correcao1 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(correcao2, '_blank')}
+                        className="flex items-center gap-1 border-green-300 text-green-700 hover:bg-green-50"
+                      >
+                        <Download className="w-3 h-3" />
+                        Baixar Correção
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
 
