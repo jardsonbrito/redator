@@ -41,7 +41,7 @@ export const RedacaoEnviadaForm = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Redações Enviadas - Visualização Gerencial
+          Visualização Gerencial
           <Badge variant="secondary">{redacoes.length} redação(ões)</Badge>
         </CardTitle>
         
