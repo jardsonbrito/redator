@@ -270,33 +270,23 @@ const Exercicios = () => {
                 return (
                   <Card key={exercicio.id} className={`hover:shadow-lg transition-shadow ${isDisabled ? 'opacity-60' : ''}`}>
                     <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-xl mb-2">{exercicio.titulo}</CardTitle>
-                          <div className="flex gap-2 mb-2">
-                            <Badge variant="outline">
-                              {exercicio.tipo}
-                            </Badge>
-                            {getStatusBadge(status)}
-                            {exercicio.temas && (
-                              <Badge variant="secondary">
-                                {exercicio.temas.eixo_tematico}
-                              </Badge>
-                            )}
-                          </div>
-                          {/* Mostrar data/hora se exercício tem período definido */}
-                          {exercicio.data_inicio && exercicio.hora_inicio && exercicio.data_fim && exercicio.hora_fim && (
-                            <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-4 h-4" />
-                                <span>{format(parseISO(exercicio.data_inicio), "dd/MM", { locale: ptBR })} - {format(parseISO(exercicio.data_fim), "dd/MM", { locale: ptBR })}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-4 h-4" />
-                                <span>{exercicio.hora_inicio} - {exercicio.hora_fim}</span>
-                              </div>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-xl mb-3">{exercicio.titulo}</CardTitle>
+                            <div className="flex gap-2 mb-3">
+                              {getStatusBadge(status)}
+                              {exercicio.temas && (
+                                <Badge variant="secondary">
+                                  {exercicio.temas.eixo_tematico}
+                                </Badge>
+                              )}
                             </div>
-                          )}
+                            {/* Mostrar período da atividade se exercício tem período definido */}
+                            {exercicio.data_inicio && exercicio.hora_inicio && exercicio.data_fim && exercicio.hora_fim && (
+                              <div className="text-sm text-gray-600 mt-2">
+                                <span className="font-medium">Período da atividade:</span> {format(parseISO(exercicio.data_inicio), "dd/MM", { locale: ptBR })} às {exercicio.hora_inicio.slice(0, 5)} até {format(parseISO(exercicio.data_fim), "dd/MM", { locale: ptBR })} às {exercicio.hora_fim.slice(0, 5)}
+                              </div>
+                            )}
                         </div>
                         <div className="flex gap-2">
                           {exercicio.tipo === 'Google Forms' && exercicio.link_forms && (
@@ -400,24 +390,19 @@ const Exercicios = () => {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      {exercicio.temas && (
-                        <div className="mb-3">
-                          <strong>Tema:</strong> {exercicio.temas.frase_tematica}
-                        </div>
-                      )}
-                      {/* Mensagem adicional para exercícios agendados ou encerrados */}
-                      {status === 'agendado' && (
-                        <div className="text-sm text-blue-600 italic">
-                          Este exercício ainda não está disponível. Aguarde a data de início.
-                        </div>
-                      )}
-                      {status === 'encerrado' && (
-                        <div className="text-sm text-gray-600 italic">
-                          Este exercício está encerrado. Você pode visualizar a proposta, mas não pode mais respondê-lo.
-                        </div>
-                      )}
-                    </CardContent>
+                     <CardContent>
+                       {/* Mensagem adicional para exercícios agendados ou encerrados */}
+                       {status === 'agendado' && (
+                         <div className="text-sm text-blue-600 italic">
+                           Este exercício ainda não está disponível. Aguarde a data de início.
+                         </div>
+                       )}
+                       {status === 'encerrado' && (
+                         <div className="text-sm text-gray-600 italic">
+                           Este exercício está encerrado. Você pode visualizar a proposta, mas não pode mais respondê-lo.
+                         </div>
+                       )}
+                     </CardContent>
                   </Card>
                 );
               })
