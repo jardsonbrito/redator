@@ -258,8 +258,9 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                 Notas por Competência
               </h3>
               
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-                {[1, 2, 3, 4, 5].map((comp) => {
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {/* Primeira linha: C1, C2, C3 */}
+                {[1, 2, 3].map((comp) => {
                   const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
                   return (
                     <div key={comp} className="text-center">
@@ -274,13 +275,32 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                 })}
               </div>
 
-               {/* Nota total - destaque */}
-              {redacao.nota_total !== null && (
-                <div className="bg-gradient-to-r from-primary to-primary/80 text-white rounded-lg p-4 text-center">
-                  <div className="text-sm font-medium mb-1">Nota Total</div>
-                  <div className="text-2xl sm:text-3xl font-bold">{redacao.nota_total}</div>
-                </div>
-              )}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Segunda linha: C4, C5, Nota Total */}
+                {[4, 5].map((comp) => {
+                  const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
+                  return (
+                    <div key={comp} className="text-center">
+                         <div className="bg-white border border-primary/20 rounded-lg p-3">
+                           <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
+                           <div className="text-lg font-bold text-primary">
+                          {nota !== null ? nota : '-'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Nota total com mesmo estilo das competências */}
+                {redacao.nota_total !== null && (
+                  <div className="text-center">
+                    <div className="bg-primary text-white rounded-lg p-3">
+                      <div className="text-xs font-medium mb-1">Total</div>
+                      <div className="text-lg font-bold">{redacao.nota_total}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Comentários pedagógicos por competência */}
