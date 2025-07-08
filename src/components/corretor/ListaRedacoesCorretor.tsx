@@ -33,9 +33,10 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="font-semibold text-sm sm:text-lg">#{index + 1}</span>
             <Badge variant="outline" className="text-xs">
-              {redacao.tipo_redacao === 'regular' ? 'Livre' : 
+              {redacao.tipo_redacao === 'regular' ? 'Regular' : 
                redacao.tipo_redacao === 'simulado' ? 'Simulado' : 
-               redacao.tipo_redacao === 'exercicio' ? 'Exercício' : redacao.tipo_redacao}
+               redacao.tipo_redacao === 'exercicio' ? 'Exercício' : 
+               redacao.tipo_redacao === 'avulsa' ? 'Livre' : redacao.tipo_redacao}
             </Badge>
           </div>
           
