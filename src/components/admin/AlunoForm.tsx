@@ -74,7 +74,8 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
           email: email.trim().toLowerCase(),
           turma,
           user_type: "aluno",
-          is_authenticated_student: true
+          is_authenticated_student: true,
+          ativo: true // Cadastros manuais são sempre ativos
         };
 
         console.log("AlunoForm - Dados para update:", dadosAluno);
@@ -123,7 +124,8 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
           email: email.trim().toLowerCase(),
           turma,
           user_type: "aluno",
-          is_authenticated_student: true
+          is_authenticated_student: true,
+          ativo: true // Cadastros manuais são sempre ativos
         };
 
         const { error } = await supabase

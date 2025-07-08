@@ -183,7 +183,8 @@ Pedro Santos,pedro@email.com,Turma C`;
         email: aluno.email,
         turma: aluno.turma,
         user_type: 'aluno',
-        is_authenticated_student: true
+        is_authenticated_student: true,
+        ativo: true // Cadastros via CSV são sempre ativos
       }));
 
       const { error: insertError } = await supabase

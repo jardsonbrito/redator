@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search } from "lucide-react";
+import { Edit, Trash2, Search, UserX, UserCheck } from "lucide-react";
 
 interface Aluno {
   id: string;
@@ -15,6 +15,7 @@ interface Aluno {
   email: string;
   turma: string;
   created_at: string;
+  ativo: boolean;
 }
 
 interface AlunoListProps {
@@ -34,7 +35,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, nome, email, turma, created_at")
+        .select("id, nome, email, turma, created_at, ativo")
         .eq("user_type", "aluno")
         .eq("is_authenticated_student", true)
         .order("created_at", { ascending: false });
@@ -90,7 +91,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
       nome: aluno.nome || '',
       email: aluno.email || '',
       turma: aluno.turma || '',
-      created_at: aluno.created_at
+      created_at: aluno.created_at,
+      ativo: aluno.ativo
     };
     
     console.log("AlunoList - Enviando para onEdit:", alunoParaEdicao);
@@ -116,6 +118,31 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
       console.error("Erro ao excluir aluno:", error);
       toast({
         title: "Erro ao excluir aluno",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleToggleStatus = async (aluno: Aluno) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ ativo: !aluno.ativo })
+        .eq("id", aluno.id);
+
+      if (error) throw error;
+
+      toast({
+        title: aluno.ativo ? "Aluno desativado" : "Aluno ativado",
+        description: `${aluno.nome} foi ${aluno.ativo ? 'desativado' : 'ativado'} com sucesso.`
+      });
+
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao alterar status do aluno:", error);
+      toast({
+        title: "Erro ao alterar status",
         description: error.message || "Ocorreu um erro inesperado.",
         variant: "destructive"
       });
@@ -175,6 +202,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                   <TableHead>Nome Completo</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Turma</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Data de Cadastro</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -190,10 +218,32 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                       </Badge>
                     </TableCell>
                     <TableCell>
+                      <Badge 
+                        variant={aluno.ativo ? "default" : "secondary"}
+                        className={aluno.ativo ? "bg-purple-600 text-white" : "bg-purple-200 text-purple-800"}
+                      >
+                        {aluno.ativo ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       {new Date(aluno.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleStatus(aluno)}
+                          className={aluno.ativo ? "text-red-600 hover:text-red-700" : "text-green-600 hover:text-green-700"}
+                        >
+                          {aluno.ativo ? (
+                            <UserX className="w-4 h-4 mr-1" />
+                          ) : (
+                            <UserCheck className="w-4 h-4 mr-1" />
+                          )}
+                          {aluno.ativo ? "Desativar" : "Ativar"}
+                        </Button>
+                        
                         <Button
                           variant="outline"
                           size="sm"

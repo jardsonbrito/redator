@@ -57,7 +57,8 @@ export default function CadastroAluno() {
         email: email.trim().toLowerCase(),
         turma,
         user_type: "aluno",
-        is_authenticated_student: true
+        is_authenticated_student: true,
+        ativo: false // Alunos cadastrados via link ficam inativos
       };
 
       const { error } = await supabase
@@ -68,8 +69,8 @@ export default function CadastroAluno() {
 
       setCadastrado(true);
       toast({
-        title: "Cadastro realizado com sucesso!",
-        description: `Bem-vindo, ${nome}! Você foi cadastrado na ${turma}.`
+        title: "Cadastro enviado com sucesso!",
+        description: "Aguarde a liberação do seu acesso por um administrador."
       });
 
     } catch (error: any) {
@@ -96,12 +97,12 @@ export default function CadastroAluno() {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              Seu cadastro foi realizado com sucesso. Agora você pode acessar o sistema.
+              Cadastro enviado com sucesso. Aguarde a liberação do seu acesso por um administrador.
             </p>
-            <Link to="/app">
+            <Link to="/">
               <Button className="w-full">
                 <Home className="w-4 h-4 mr-2" />
-                Acessar Sistema
+                Voltar ao Início
               </Button>
             </Link>
           </CardContent>

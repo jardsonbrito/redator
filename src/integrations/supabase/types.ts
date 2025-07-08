@@ -513,6 +513,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ativo: boolean | null
           created_at: string | null
           creditos: number | null
           email: string
@@ -526,6 +527,7 @@ export type Database = {
           user_type: string | null
         }
         Insert: {
+          ativo?: boolean | null
           created_at?: string | null
           creditos?: number | null
           email: string
@@ -539,6 +541,7 @@ export type Database = {
           user_type?: string | null
         }
         Update: {
+          ativo?: boolean | null
           created_at?: string | null
           creditos?: number | null
           email?: string

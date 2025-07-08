@@ -35,7 +35,7 @@ const AlunoLogin = () => {
       // Buscar aluno na tabela profiles
       const { data: aluno, error } = await supabase
         .from("profiles")
-        .select("id, nome, email, turma")
+        .select("id, nome, email, turma, ativo")
         .eq("email", emailDigitado.trim().toLowerCase())
         .eq("user_type", "aluno")
         .maybeSingle();
@@ -67,6 +67,16 @@ const AlunoLogin = () => {
         toast({
           title: "E-mail não encontrado",
           description: descricaoErro,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Verificar se o aluno está ativo
+      if (!aluno.ativo) {
+        toast({
+          title: "Acesso não liberado",
+          description: "Seu acesso ainda não foi liberado. Aguarde o administrador.",
           variant: "destructive",
         });
         return;
