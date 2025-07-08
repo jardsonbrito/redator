@@ -255,8 +255,9 @@ export const RedacaoAnotacao = ({
       rect.on('mousedown', () => {
         if (readonly) {
           toast({
-            title: `Competência ${marcacao.competencia}`,
+            title: `${CORES_COMPETENCIAS[marcacao.competencia].label}`,
             description: marcacao.comentario,
+            duration: 4000,
           });
         }
       });
@@ -320,22 +321,47 @@ export const RedacaoAnotacao = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Palette className="w-4 h-4" />
-          <span className="font-medium">Correção com Marcações</span>
+          <span className="font-medium">Correção com Marcações Pedagógicas</span>
         </div>
-        <div className="border rounded-lg p-4 bg-gray-50" ref={containerRef}>
+        
+        {/* Legenda de Cores */}
+        {marcacoes.length > 0 && (
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <h4 className="font-medium text-sm mb-2">Legenda das Competências:</h4>
+            <div className="flex flex-wrap gap-2">
+              {[...new Set(marcacoes.map(m => m.competencia))].sort().map(competencia => (
+                <div key={competencia} className="flex items-center gap-1">
+                  <div 
+                    className="w-3 h-3 rounded-sm" 
+                    style={{ backgroundColor: CORES_COMPETENCIAS[competencia].cor }}
+                  />
+                  <span className="text-xs font-medium">
+                    {CORES_COMPETENCIAS[competencia].label}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Clique nas marcações coloridas para ver os comentários
+            </p>
+          </div>
+        )}
+        
+        <div className="border rounded-lg p-4 bg-white" ref={containerRef}>
           <canvas ref={canvasRef} className="max-w-full" />
         </div>
+        
         {marcacoes.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-medium">Comentários:</h4>
+            <h4 className="font-medium">Feedback por Competência:</h4>
             {marcacoes.map((marcacao, index) => (
-              <div key={index} className="p-3 bg-white border rounded-lg">
+              <div key={index} className="p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge style={{ backgroundColor: marcacao.cor_marcacao, color: 'white' }}>
                     {CORES_COMPETENCIAS[marcacao.competencia].label}
                   </Badge>
                 </div>
-                <p className="text-sm">{marcacao.comentario}</p>
+                <p className="text-sm leading-relaxed">{marcacao.comentario}</p>
               </div>
             ))}
           </div>
@@ -349,7 +375,7 @@ export const RedacaoAnotacao = ({
       {/* Ferramentas */}
       <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Competência:</span>
+          <span className="text-sm font-medium">Competências:</span>
           {Object.entries(CORES_COMPETENCIAS).map(([num, { cor, nome, label }]) => (
             <Button
               key={num}
@@ -369,13 +395,13 @@ export const RedacaoAnotacao = ({
         </div>
         
         <Button
-          variant={modoSelecao ? "default" : "outline"}
+          variant={modoSelecao ? "destructive" : "outline"}
           size="sm"
           onClick={() => setModoSelecao(!modoSelecao)}
           className="flex items-center gap-2"
         >
           <Edit3 className="w-4 h-4" />
-          {modoSelecao ? "Cancelar Seleção" : "Marcar Área"}
+          {modoSelecao ? "Cancelar Marcação" : "Marcar Área"}
         </Button>
       </div>
 
@@ -383,9 +409,14 @@ export const RedacaoAnotacao = ({
       <div className="border rounded-lg p-4 bg-white" ref={containerRef}>
         <canvas ref={canvasRef} className="max-w-full border" />
         {modoSelecao && (
-          <p className="text-sm text-muted-foreground mt-2">
-            Clique e arraste para selecionar uma área da redação
-          </p>
+          <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+            <p className="text-blue-700 font-medium">
+              ✏️ Modo de marcação ativo - Competência {CORES_COMPETENCIAS[competenciaSelecionada].label.split(' - ')[0]}
+            </p>
+            <p className="text-blue-600 text-xs mt-1">
+              Clique e arraste sobre a imagem para marcar uma área da redação
+            </p>
+          </div>
         )}
       </div>
 
