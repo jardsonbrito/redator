@@ -15,6 +15,8 @@ export interface RedacaoCorretor {
   eh_corretor_1: boolean;
   eh_corretor_2: boolean;
   redacao_manuscrita_url?: string | null;
+  corretor_id_1?: string | null;
+  corretor_id_2?: string | null;
 }
 
 export const useCorretorRedacoes = (corretorEmail: string) => {

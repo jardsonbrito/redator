@@ -305,7 +305,7 @@ export const FormularioCorrecaoCompleto = ({
         <RedacaoAnotacao
           imagemUrl={manuscritaUrl}
           redacaoId={redacao.id}
-          tabelaOrigem={tabela}
+          tabelaOrigem={`redacoes_${redacao.tipo_redacao === 'regular' ? 'enviadas' : redacao.tipo_redacao}`}
           corretorId={redacao.eh_corretor_1 ? redacao.corretor_id_1 || '' : redacao.corretor_id_2 || ''}
           readonly={false}
         />
