@@ -26,6 +26,10 @@ interface ExercicioEditando {
   permite_visitante?: boolean;
   ativo?: boolean;
   abrir_aba_externa?: boolean;
+  data_inicio?: string;
+  hora_inicio?: string;
+  data_fim?: string;
+  hora_fim?: string;
 }
 
 interface ExercicioFormProps {
@@ -77,8 +81,20 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
       setPermiteVisitante(exercicioEditando.permite_visitante || false);
       setAtivo(exercicioEditando.ativo !== false);
       setAbrirAbaExterna(exercicioEditando.abrir_aba_externa || false);
+      setDataInicio(exercicioEditando.data_inicio || "");
+      setHoraInicio(exercicioEditando.hora_inicio || "");
+      setDataFim(exercicioEditando.data_fim || "");
+      setHoraFim(exercicioEditando.hora_fim || "");
+      
+      // Se tem tema_id, buscar o tema para mostrar na busca
+      if (exercicioEditando.tema_id && temas.length > 0) {
+        const tema = temas.find(t => t.id === exercicioEditando.tema_id);
+        if (tema) {
+          setTemaSearch(tema.frase_tematica);
+        }
+      }
     }
-  }, [exercicioEditando]);
+  }, [exercicioEditando, temas]);
 
   const fetchTemas = async () => {
     try {
@@ -140,11 +156,15 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
         tipo,
         link_forms: tipo === 'Google Forms' ? linkForms : null,
         tema_id: tipo === 'Redação com Frase Temática' ? temaId : null,
-        imagem_capa_url: imagemCapaUrl || null,
+        imagem_capa_url: tipo === 'Google Forms' ? (imagemCapaUrl || null) : null,
         turmas_autorizadas: turmasAutorizadas,
         permite_visitante: permiteVisitante,
         ativo,
-        abrir_aba_externa: abrirAbaExterna
+        abrir_aba_externa: abrirAbaExterna,
+        data_inicio: tipo === 'Redação com Frase Temática' ? dataInicio : null,
+        hora_inicio: tipo === 'Redação com Frase Temática' ? horaInicio : null,
+        data_fim: tipo === 'Redação com Frase Temática' ? dataFim : null,
+        hora_fim: tipo === 'Redação com Frase Temática' ? horaFim : null
       };
 
       let error;
@@ -183,6 +203,11 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
         setPermiteVisitante(false);
         setAtivo(true);
         setAbrirAbaExterna(false);
+        setDataInicio("");
+        setHoraInicio("");
+        setDataFim("");
+        setHoraFim("");
+        setTemaSearch("");
       }
 
     } catch (error) {

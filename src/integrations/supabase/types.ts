@@ -381,6 +381,10 @@ export type Database = {
           abrir_aba_externa: boolean | null
           ativo: boolean | null
           criado_em: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          hora_fim: string | null
+          hora_inicio: string | null
           id: string
           imagem_capa_url: string | null
           link_forms: string | null
@@ -394,6 +398,10 @@ export type Database = {
           abrir_aba_externa?: boolean | null
           ativo?: boolean | null
           criado_em?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
           id?: string
           imagem_capa_url?: string | null
           link_forms?: string | null
@@ -407,6 +415,10 @@ export type Database = {
           abrir_aba_externa?: boolean | null
           ativo?: boolean | null
           criado_em?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          hora_fim?: string | null
+          hora_inicio?: string | null
           id?: string
           imagem_capa_url?: string | null
           link_forms?: string | null
