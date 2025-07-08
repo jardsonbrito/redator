@@ -483,18 +483,6 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                   </Card>
                 ))}
 
-                {redacoesRecentes.length >= 3 && (
-                  <div className="text-center pt-2">
-                    <Link to="/minhas-redacoes">
-                      <Button 
-                        variant="outline"
-                        className="border-primary/30 hover:bg-primary/10 w-full sm:w-auto"
-                      >
-                        Ver todas as redações
-                      </Button>
-                    </Link>
-                  </div>
-                )}
               </div>
             )}
           </CardContent>
