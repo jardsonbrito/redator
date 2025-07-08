@@ -92,16 +92,14 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     return turmasMap[turmaNome as keyof typeof turmasMap] || turmaNome;
   };
 
-  // Query simplificada que funciona garantidamente
+  // Query otimizada para buscar apenas redações do usuário logado
   const { data: redacoesRecentes, isLoading } = useQuery({
-    queryKey: ['redacoes-por-turma-simplificada', turmaCode, visitanteEmail],
+    queryKey: ['redacoes-home-usuario', alunoEmail, visitanteEmail],
     queryFn: async () => {
-      console.log('🔍 Buscando redações para:', turmaCode);
+      console.log('🔍 Buscando redações do usuário logado para home');
       
-      if (turmaCode === "visitante" || turmaCode === "Visitante") {
+      if (userType === "visitante" && visitanteEmail) {
         // Para visitantes, usar email do visitante
-        if (!visitanteEmail) return [];
-        
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -117,7 +115,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             comentario_admin,
             data_correcao
           `)
-          .eq('email_aluno', visitanteEmail)
+          .ilike('email_aluno', visitanteEmail.toLowerCase().trim())
           .eq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false })
           .limit(3);
@@ -129,10 +127,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         
         console.log('✅ Redações encontradas para visitante:', data?.length || 0);
         return data || [];
-      } else {
-        // Para alunos, buscar por turma (método que funcionava antes)
-        const codigoTurma = getTurmaCode(turmaCode);
-        console.log('🔄 Buscando redações por turma:', codigoTurma);
+      } else if (userType === "aluno" && alunoEmail) {
+        // Para alunos, buscar por email do aluno
+        console.log('👨‍🎓 Buscando redações do aluno:', alunoEmail);
         
         // Buscar da tabela redacoes_enviadas
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
@@ -150,7 +147,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             comentario_admin,
             data_correcao
           `)
-          .eq('turma', codigoTurma)
+          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
           .neq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
 
@@ -172,7 +169,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             data_correcao,
             simulados!inner(frase_tematica)
           `)
-          .eq('turma', codigoTurma)
+          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
           .order('data_envio', { ascending: false });
 
         if (errorSimulado) {
@@ -208,11 +205,13 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         // Ordenar por data de envio (mais recente primeiro) e limitar a 3
         todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
         
-        console.log('✅ Redações encontradas para turma:', todasRedacoes.length);
+        console.log('✅ Redações encontradas para aluno:', todasRedacoes.length);
         return todasRedacoes.slice(0, 3);
       }
+      
+      return [];
     },
-    enabled: !!(turmaCode || visitanteEmail),
+    enabled: !!(alunoEmail || visitanteEmail),
     staleTime: 30 * 1000, // Cache menor para atualização mais rápida
   });
 

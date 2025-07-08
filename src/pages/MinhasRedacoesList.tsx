@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Calendar, Eye, Lock, AlertCircle, ArrowLeft, FolderOpen } from "lucide-react";
+import { FileText, Calendar, Eye, Lock, AlertCircle, ArrowLeft, FolderOpen, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
 import { Link } from "react-router-dom";
@@ -41,6 +41,9 @@ export default function MinhasRedacoesList() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const { toast } = useToast();
 
   // Obter dados do usuário logado
@@ -360,6 +363,52 @@ export default function MinhasRedacoesList() {
     return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
   };
 
+  // Filtrar redações com base no termo de busca
+  const filteredRedacoes = useMemo(() => {
+    if (!redacoesTurma) return [];
+    
+    if (!searchTerm.trim()) return redacoesTurma;
+    
+    const termo = searchTerm.toLowerCase().trim();
+    return redacoesTurma.filter(redacao => 
+      redacao.nome_aluno.toLowerCase().includes(termo) ||
+      redacao.email_aluno.toLowerCase().includes(termo) ||
+      redacao.frase_tematica.toLowerCase().includes(termo)
+    );
+  }, [redacoesTurma, searchTerm]);
+
+  // Paginação
+  const totalPages = Math.ceil(filteredRedacoes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentRedacoes = filteredRedacoes.slice(startIndex, endIndex);
+
+  // Reset page quando busca muda
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  // Gerar números de página para exibir
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisible = 5;
+    const half = Math.floor(maxVisible / 2);
+    
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pageNumbers.push(i);
+    }
+    
+    return pageNumbers;
+  };
+
   // Validação se há usuário logado
   if (!alunoEmail && !visitanteEmail) {
     return (
@@ -449,87 +498,152 @@ export default function MinhasRedacoesList() {
             ) : (
               /* Lista de Redações */
               <div className="space-y-4 sm:space-y-6">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <p className="text-muted-foreground text-sm sm:text-lg">
-                    {redacoesTurma.length} redação(ões) encontrada(s)
-                  </p>
-                  <Button onClick={() => refetch()} variant="outline" size="sm">
+                {/* Filtro de busca */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome, e-mail ou tema..."
+                      value={searchTerm}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      className="pl-10 border-primary/30 focus:border-primary"
+                    />
+                  </div>
+                  <Button onClick={() => refetch()} variant="outline" size="sm" className="shrink-0">
                     Atualizar
                   </Button>
                 </div>
-                
-                {redacoesTurma.map((redacao) => (
-                  <Card key={redacao.id} className="border-primary/20 hover:shadow-xl transition-all duration-300 hover:border-primary/40">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="space-y-4">
-                        {/* Header do card */}
-                        <div className="space-y-3">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                            <h3 className="font-bold text-lg sm:text-xl text-primary leading-tight pr-2">
-                              {redacao.frase_tematica}
-                            </h3>
-                            
-                            {/* Badges */}
-                            <div className="flex flex-wrap gap-2 shrink-0">
-                              {redacao.corrigida ? (
-                                <Badge className="bg-green-100 text-green-800 text-xs">
-                                  ✅ Corrigido
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                                  ⏳ Aguardando
-                                </Badge>
-                              )}
-                              <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
-                                {getTipoEnvioLabel(redacao.tipo_envio)}
-                              </Badge>
-                              {redacao.nota_total && (
-                                <Badge variant="outline" className="text-xs">
-                                  📊 {redacao.nota_total}/1000
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Informações do aluno */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-primary rounded-full shrink-0"></div>
-                              <span className="font-medium">Aluno:</span> 
-                              <span className="truncate">{redacao.nome_aluno}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-primary shrink-0" />
-                              <span className="font-medium">Enviado:</span> 
-                              <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Botão de ação */}
-                        <div className="flex justify-end pt-2 border-t border-muted/20">
-                          {redacao.corrigida ? (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="border-primary/30 hover:bg-primary/10 hover:border-primary w-full sm:w-auto"
-                              onClick={() => handleViewRedacao(redacao)}
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Ver Correção
-                            </Button>
-                          ) : (
-                            <div className="w-full sm:w-auto">
-                              <div className="px-3 py-2 text-sm text-center sm:text-left text-muted-foreground border border-muted rounded-md bg-muted/10">
-                                Aguardando correção
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+
+                {/* Contador de resultados */}
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <p className="text-muted-foreground text-sm sm:text-base">
+                    {filteredRedacoes.length} redação(ões) encontrada(s)
+                    {searchTerm && ` para "${searchTerm}"`}
+                  </p>
+                </div>
+
+                {/* Lista de redações */}
+                {currentRedacoes.length === 0 ? (
+                  <Card className="border-primary/20">
+                    <CardContent className="text-center py-12">
+                      <Search className="w-16 h-16 text-primary/50 mx-auto mb-4" />
+                      <p className="text-primary/70 mb-2 text-lg">
+                        Nenhuma redação encontrada
+                      </p>
+                      <p className="text-sm text-primary/50">
+                        Tente ajustar os termos de busca
+                      </p>
+                      <Button 
+                        onClick={() => handleSearchChange("")} 
+                        variant="outline" 
+                        className="mt-4"
+                      >
+                        Limpar busca
+                      </Button>
                     </CardContent>
                   </Card>
-                ))}
+                ) : (
+                  <>
+                    {currentRedacoes.map((redacao) => (
+                      <Card key={redacao.id} className="border-primary/20 hover:shadow-xl transition-all duration-300 hover:border-primary/40">
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                            {/* Informações da redação */}
+                            <div className="flex-1">
+                              <h3 className="font-bold text-lg sm:text-xl text-primary mb-2 line-clamp-2">
+                                {redacao.frase_tematica}
+                              </h3>
+                              
+                              <div className="flex flex-wrap gap-2 mb-3">
+                                <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
+                                  {getTipoEnvioLabel(redacao.tipo_envio)}
+                                </Badge>
+                                <Badge variant="outline" className="text-green-600 border-green-200">
+                                  ✅ Corrigida
+                                </Badge>
+                              </div>
+
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">Aluno:</span>
+                                  <span>{redacao.nome_aluno}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Enviado em {formatDate(redacao.data_envio)}</span>
+                                </div>
+                                {redacao.data_correcao && (
+                                  <div className="flex items-center gap-2">
+                                    <Eye className="w-4 h-4" />
+                                    <span>Corrigido em {formatDate(redacao.data_correcao)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Ações */}
+                            <div className="flex items-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-primary/30 hover:bg-primary/10 hover:border-primary w-full sm:w-auto"
+                                onClick={() => handleViewRedacao(redacao)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver Correção
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+
+                    {/* Paginação */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mt-8">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="gap-1"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Anterior
+                        </Button>
+
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm text-muted-foreground mr-2">
+                            Página {currentPage} de {totalPages}
+                          </span>
+                          
+                          {getPageNumbers().map(pageNum => (
+                            <Button
+                              key={pageNum}
+                              variant={currentPage === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(pageNum)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {pageNum}
+                            </Button>
+                          ))}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="gap-1"
+                        >
+                          Próxima
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
