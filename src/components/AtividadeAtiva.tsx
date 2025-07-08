@@ -278,23 +278,25 @@ export const AtividadeAtiva = () => {
     });
 
     if (exerciciosDisponiveis.length > 0) {
-      // Renderizar card simples de exercício disponível
+      // Renderizar card compacto de exercício disponível
       return (
-        <Card className="border-2 border-orange-300 bg-orange-50 shadow-lg animate-pulse">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-800">
-              📢 Exercício Disponível
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => navigate('/exercicios')}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-            >
-              Iniciar
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="flex justify-center mb-8">
+          <Card className="w-full max-w-sm border-2 border-orange-200 bg-orange-50 shadow-md rounded-lg hover:shadow-lg transition-shadow animate-pulse">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-lg">📢</span>
+                <h3 className="font-semibold text-orange-800 text-lg">Exercício Disponível</h3>
+              </div>
+              <Button 
+                onClick={() => navigate('/exercicios')}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium"
+                size="sm"
+              >
+                Iniciar
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       );
     }
   }
