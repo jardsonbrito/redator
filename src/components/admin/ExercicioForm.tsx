@@ -44,8 +44,13 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
   const [permiteVisitante, setPermiteVisitante] = useState(false);
   const [ativo, setAtivo] = useState(true);
   const [abrirAbaExterna, setAbrirAbaExterna] = useState(false);
+  const [dataInicio, setDataInicio] = useState("");
+  const [horaInicio, setHoraInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [horaFim, setHoraFim] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [temas, setTemas] = useState<Tema[]>([]);
+  const [temaSearch, setTemaSearch] = useState("");
 
   const tiposDisponiveis = [
     'Google Forms',
@@ -112,9 +117,19 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
       return;
     }
 
-    if (tipo === 'Redação com Frase Temática' && !temaId) {
-      toast.error("Tema é obrigatório para exercícios de redação.");
-      return;
+    if (tipo === 'Redação com Frase Temática') {
+      if (!temaId) {
+        toast.error("Tema é obrigatório para exercícios de redação.");
+        return;
+      }
+      if (!dataInicio || !horaInicio) {
+        toast.error("Data e hora de início são obrigatórias.");
+        return;
+      }
+      if (!dataFim || !horaFim) {
+        toast.error("Data e hora de término são obrigatórias.");
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -243,16 +258,108 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
             </div>
           )}
 
-          <div>
-            <Label htmlFor="imagemCapaUrl">URL da Imagem de Capa (opcional)</Label>
-            <Input
-              id="imagemCapaUrl"
-              value={imagemCapaUrl}
-              onChange={(e) => setImagemCapaUrl(e.target.value)}
-              placeholder="https://..."
-              type="url"
-            />
-          </div>
+          {tipo === 'Redação com Frase Temática' && (
+            <>
+              <div>
+                <Label htmlFor="temaSearch">Buscar Tema *</Label>
+                <div className="relative">
+                  <Input
+                    id="temaSearch"
+                    value={temaSearch}
+                    onChange={(e) => setTemaSearch(e.target.value)}
+                    placeholder="Buscar tema pela frase temática..."
+                    className="mb-2"
+                  />
+                  {temaSearch && (
+                    <div className="absolute z-10 w-full bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {temas
+                        .filter(tema => 
+                          tema.frase_tematica.toLowerCase().includes(temaSearch.toLowerCase())
+                        )
+                        .slice(0, 5)
+                        .map((tema) => (
+                          <div
+                            key={tema.id}
+                            className="p-2 hover:bg-accent cursor-pointer border-b last:border-b-0"
+                            onClick={() => {
+                              setTemaId(tema.id);
+                              setTemaSearch(tema.frase_tematica);
+                            }}
+                          >
+                            <div className="font-medium text-sm">{tema.frase_tematica}</div>
+                            <div className="text-xs text-muted-foreground">{tema.eixo_tematico}</div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                {temaId && (
+                  <div className="text-sm text-green-600 mb-2">
+                    Tema selecionado: {temas.find(t => t.id === temaId)?.frase_tematica}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="dataInicio">Data de Início *</Label>
+                  <Input
+                    id="dataInicio"
+                    type="date"
+                    value={dataInicio}
+                    onChange={(e) => setDataInicio(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="horaInicio">Hora de Início *</Label>
+                  <Input
+                    id="horaInicio"
+                    type="time"
+                    value={horaInicio}
+                    onChange={(e) => setHoraInicio(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="dataFim">Data de Término *</Label>
+                  <Input
+                    id="dataFim"
+                    type="date"
+                    value={dataFim}
+                    onChange={(e) => setDataFim(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="horaFim">Hora de Término *</Label>
+                  <Input
+                    id="horaFim"
+                    type="time"
+                    value={horaFim}
+                    onChange={(e) => setHoraFim(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {tipo === 'Google Forms' && (
+            <div>
+              <Label htmlFor="imagemCapaUrl">URL da Imagem de Capa (opcional)</Label>
+              <Input
+                id="imagemCapaUrl"
+                value={imagemCapaUrl}
+                onChange={(e) => setImagemCapaUrl(e.target.value)}
+                placeholder="https://..."
+                type="url"
+              />
+            </div>
+          )}
 
           <div>
             <Label>Turmas Autorizadas</Label>
