@@ -83,16 +83,16 @@ export const MinhasRedacoes = () => {
     }
   }
 
-  // Query REVERTIDA - Busca redações por turma como era antes
+  // Query simplificada que funciona garantidamente
   const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
-    queryKey: ['redacoes-turma-revertida', turmaCode],
+    queryKey: ['redacoes-turma-funcionando', turmaCode, visitanteEmail],
     queryFn: async () => {
-      console.log('🔒 REVERTIDO: Buscando redações por turma');
+      console.log('🔍 Buscando redações - Método simplificado');
       
       if (userType === "aluno" && turmaCode) {
         console.log('👨‍🎓 Buscando redações da turma:', turmaCode);
         
-        // Buscar TODAS as redações da turma (corrigidas e pendentes)
+        // Buscar redações regulares
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -112,14 +112,14 @@ export const MinhasRedacoes = () => {
           .neq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
 
-        console.log('📧 Query redações regulares para turma:', turmaCode);
         if (errorRegulares) {
           console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
-        } else {
-          console.log('✅ Redações regulares encontradas:', redacoesRegulares?.length || 0, redacoesRegulares);
+          return [];
         }
+        
+        console.log('✅ Redações regulares encontradas:', redacoesRegulares?.length || 0);
 
-        // Buscar TODAS as redações de simulado da turma (corrigidas e pendentes)
+        // Buscar redações de simulado
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
           .select(`
@@ -141,20 +141,20 @@ export const MinhasRedacoes = () => {
           console.log('✅ Redações de simulado encontradas:', redacoesSimulado?.length || 0);
         }
 
-        // Combinar e formatar os dados
+        // Combinar dados
         const todasRedacoes: RedacaoTurma[] = [];
         
-        // Adicionar redações regulares preservando status real
-        if (redacoesRegulares) {
-          const regularesFormatadas = redacoesRegulares.map(redacao => ({
+        // Adicionar redações regulares
+        if (redacoesRegulares?.length) {
+          const formatadas = redacoesRegulares.map(redacao => ({
             ...redacao,
             status: redacao.corrigida ? 'corrigida' : 'aguardando'
           }));
-          todasRedacoes.push(...regularesFormatadas);
+          todasRedacoes.push(...formatadas);
         }
 
         // Adicionar redações de simulado
-        if (redacoesSimulado) {
+        if (redacoesSimulado?.length) {
           const simuladosFormatados = redacoesSimulado.map(simulado => ({
             id: simulado.id,
             frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
