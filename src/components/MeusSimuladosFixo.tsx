@@ -103,6 +103,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         // Para visitantes, usar email do visitante
         if (!visitanteEmail) return [];
         
+        // Definir email do usuário no contexto Supabase para RLS
+        await supabase.rpc('set_current_user_email', { user_email: visitanteEmail });
+        
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -133,6 +136,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
       } else {
         // Para alunos, usar email do aluno (não apenas turma)
         if (!alunoEmail) return [];
+        
+        // Definir email do usuário no contexto Supabase para RLS
+        await supabase.rpc('set_current_user_email', { user_email: alunoEmail });
         
         const codigoTurma = getTurmaCode(turmaCode);
         console.log('🔄 Código da turma convertido:', codigoTurma, 'Email do aluno:', alunoEmail);
