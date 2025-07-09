@@ -116,18 +116,25 @@ export const FormularioCorrecaoCompleto = ({
           // Dimensões da página A4 em mm
           const pageWidth = 210;
           const pageHeight = 297;
+          const margin = 10; // margem uniforme
           
-          // Calcular dimensões mantendo proporção
+          // Área útil da página
+          const maxWidth = pageWidth - (margin * 2);
+          const maxHeight = pageHeight - (margin * 2);
+          
+          // Calcular dimensões mantendo proporção e garantindo que caiba na página
           const imgAspectRatio = img.width / img.height;
+          const pageAspectRatio = maxWidth / maxHeight;
+          
           let width, height;
           
-          if (imgAspectRatio > 1) {
-            // Imagem mais larga que alta
-            width = pageWidth - 20; // margem de 10mm de cada lado
+          if (imgAspectRatio > pageAspectRatio) {
+            // Imagem é mais larga em relação à página - limitar pela largura
+            width = maxWidth;
             height = width / imgAspectRatio;
           } else {
-            // Imagem mais alta que larga
-            height = pageHeight - 40; // margem de 20mm em cima e embaixo
+            // Imagem é mais alta em relação à página - limitar pela altura
+            height = maxHeight;
             width = height * imgAspectRatio;
           }
           
