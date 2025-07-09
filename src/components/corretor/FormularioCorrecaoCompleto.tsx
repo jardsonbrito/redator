@@ -126,40 +126,40 @@ export const FormularioCorrecaoCompleto = ({
         logoImg.crossOrigin = 'anonymous';
         
         logoImg.onload = () => {
-          // Fundo branco/cinza claro
-          pdf.setFillColor(248, 250, 252);
+          // Fundo cinza claro exatamente como no mockup
+          pdf.setFillColor(240, 240, 240);
           pdf.rect(0, 0, 210, 297, 'F');
           
-          // Logo redondo no topo esquerdo
-          pdf.addImage(logoImg, 'PNG', 20, 15, 25, 25);
+          // Logo circular no topo esquerdo - proporção exata do mockup
+          pdf.addImage(logoImg, 'PNG', 15, 15, 30, 30);
           
-          // Título ao lado do logo
+          // Título "Laboratório do Redator" ao lado do logo - posição e fonte do mockup
           pdf.setTextColor(102, 51, 153);
-          pdf.setFontSize(20);
+          pdf.setFontSize(22);
           pdf.setFont('helvetica', 'bold');
-          pdf.text('Laboratório do Redator', 55, 32);
+          pdf.text('Laboratório do Redator', 55, 35);
           
-          // Caixa de informações da redação (mesma cor do mockup)
-          pdf.setFillColor(200, 180, 245);
-          pdf.rect(20, 55, 170, 40, 'F');
+          // Caixa de informações - dimensões exatas do mockup
+          pdf.setFillColor(218, 193, 255); // Cor lilás exata do mockup
+          pdf.rect(15, 60, 180, 50, 'F');
           
-          // Borda da caixa
+          // Borda roxa da caixa - espessura do mockup
           pdf.setDrawColor(102, 51, 153);
-          pdf.setLineWidth(1.5);
-          pdf.rect(20, 55, 170, 40, 'S');
+          pdf.setLineWidth(2);
+          pdf.rect(15, 60, 180, 50, 'S');
           
-          // Título da seção
+          // Título "Informações da Redação" - posição do mockup
           pdf.setTextColor(102, 51, 153);
           pdf.setFontSize(16);
           pdf.setFont('helvetica', 'bold');
-          pdf.text('Informações da Redação', 25, 68);
+          pdf.text('Informações da Redação', 22, 78);
           
-          // Informações do aluno
+          // Informações do aluno - espaçamentos do mockup
           pdf.setFontSize(12);
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`Aluno: ${redacao.nome_aluno}`, 25, 78);
-          pdf.text(`Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}`, 25, 85);
-          pdf.text(`Tema: ${redacao.frase_tematica}`, 25, 92);
+          pdf.text(`Aluno: ${redacao.nome_aluno}`, 22, 90);
+          pdf.text(`Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}`, 22, 98);
+          pdf.text(`Tema: ${redacao.frase_tematica}`, 22, 106);
           
           // Carregar e processar a imagem da redação
           const img = new Image();
@@ -227,10 +227,10 @@ export const FormularioCorrecaoCompleto = ({
               
               pdf.addImage(img, 'JPEG', x, y, width, height);
             } else {
-              // Layout retrato - área da redação
-              const margin = 20;
+              // Layout retrato - área da redação exatamente como no mockup
+              const margin = 15;
               const availableWidth = 210 - (margin * 2);
-              const availableHeight = 297 - 105 - 20; // 105 = cabeçalho + info, 20 = rodapé
+              const availableHeight = 297 - 120 - 25; // 120 = cabeçalho + info, 25 = rodapé
               
               let width, height;
               if (imgAspectRatio > availableWidth / availableHeight) {
@@ -241,14 +241,15 @@ export const FormularioCorrecaoCompleto = ({
                 width = height * imgAspectRatio;
               }
               
+              // Centralizar a imagem exatamente como no mockup
               const x = (210 - width) / 2;
-              const y = 105;
+              const y = 120;
               
               pdf.addImage(img, 'JPEG', x, y, width, height);
               
-              // Rodapé colorido (sem texto)
+              // Rodapé colorido na posição exata do mockup (sem texto)
               pdf.setFillColor(102, 51, 153);
-              pdf.rect(0, 277, 210, 20, 'F');
+              pdf.rect(0, 272, 210, 25, 'F');
             }
             
             // Download do PDF
