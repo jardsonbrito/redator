@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search, UserX, UserCheck } from "lucide-react";
+import { Edit, Trash2, Search, UserX, UserCheck, Users } from "lucide-react";
 
 interface Aluno {
   id: string;
@@ -25,9 +26,9 @@ interface AlunoListProps {
 
 export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [filteredAlunos, setFilteredAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTurma, setActiveTurma] = useState("todos");
   const { toast } = useToast();
 
   const fetchAlunos = async () => {
@@ -38,12 +39,11 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         .select("id, nome, email, turma, created_at, ativo")
         .eq("user_type", "aluno")
         .eq("is_authenticated_student", true)
-        .order("created_at", { ascending: false });
+        .order("nome", { ascending: true }); // Ordenar por nome alfabeticamente
 
       if (error) throw error;
 
       setAlunos(data || []);
-      setFilteredAlunos(data || []);
     } catch (error: any) {
       console.error("Erro ao buscar alunos:", error);
       toast({
@@ -60,20 +60,50 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     fetchAlunos();
   }, [refresh]);
 
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredAlunos(alunos);
-      return;
+  // Obter todas as turmas únicas e ordenadas
+  const turmasDisponiveis = useMemo(() => {
+    const turmas = Array.from(new Set(alunos.map(aluno => aluno.turma))).sort();
+    return turmas;
+  }, [alunos]);
+
+  // Filtrar alunos baseado na turma ativa e termo de busca
+  const filteredAlunos = useMemo(() => {
+    let filtered = alunos;
+
+    // Filtrar por turma
+    if (activeTurma !== "todos") {
+      filtered = filtered.filter(aluno => aluno.turma === activeTurma);
     }
 
-    const filtered = alunos.filter(aluno => 
-      aluno.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      aluno.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      aluno.turma.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    setFilteredAlunos(filtered);
-  }, [searchTerm, alunos]);
+    // Filtrar por termo de busca (apenas nome e email)
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(aluno => 
+        aluno.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        aluno.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [alunos, activeTurma, searchTerm]);
+
+  // Contar alunos por turma
+  const contadorPorTurma = useMemo(() => {
+    const contador: { [key: string]: number } = {};
+    alunos.forEach(aluno => {
+      contador[aluno.turma] = (contador[aluno.turma] || 0) + 1;
+    });
+    return contador;
+  }, [alunos]);
+
+  // Determinar a classe de grid baseada no número de turmas
+  const getGridClass = () => {
+    const totalTabs = turmasDisponiveis.length + 1; // +1 para a aba "Todos"
+    if (totalTabs <= 2) return "grid-cols-2";
+    if (totalTabs <= 3) return "grid-cols-3";
+    if (totalTabs <= 4) return "grid-cols-4";
+    if (totalTabs <= 5) return "grid-cols-5";
+    return "grid-cols-6";
+  };
 
   const handleEdit = (aluno: Aluno) => {
     console.log("AlunoList - Clicou em editar aluno:", aluno);
@@ -173,128 +203,206 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <Users className="w-5 h-5" />
           Lista de Alunos Cadastrados
-          <Badge variant="secondary">{filteredAlunos.length} aluno(s)</Badge>
         </CardTitle>
-        
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Buscar por nome, e-mail ou turma..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
       </CardHeader>
       
       <CardContent>
-        {filteredAlunos.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            {searchTerm ? "Nenhum aluno encontrado com os critérios de busca." : "Nenhum aluno cadastrado ainda."}
+        <Tabs value={activeTurma} onValueChange={setActiveTurma} className="w-full">
+          <TabsList className={`grid w-full ${getGridClass()}`}>
+            <TabsTrigger value="todos" className="flex items-center gap-2">
+              Todos ({alunos.length})
+            </TabsTrigger>
+            {turmasDisponiveis.map((turma) => (
+              <TabsTrigger 
+                key={turma} 
+                value={turma}
+                className="flex items-center gap-2"
+              >
+                {turma} ({contadorPorTurma[turma] || 0})
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <div className="mt-4 mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar por nome ou e-mail..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome Completo</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Turma</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data de Cadastro</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAlunos.map((aluno) => (
-                  <TableRow key={aluno.id}>
-                    <TableCell className="font-medium">{aluno.nome}</TableCell>
-                    <TableCell>{aluno.email}</TableCell>
-                    <TableCell>
-                      <Badge className={getTurmaColor(aluno.turma)}>
-                        {aluno.turma}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={aluno.ativo ? "default" : "secondary"}
-                        className={aluno.ativo ? "bg-purple-600 text-white" : "bg-purple-200 text-purple-800"}
-                      >
-                        {aluno.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(aluno.created_at).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleStatus(aluno)}
-                          className={aluno.ativo ? "text-red-600 hover:text-red-700" : "text-green-600 hover:text-green-700"}
-                        >
-                          {aluno.ativo ? (
-                            <UserX className="w-4 h-4 mr-1" />
-                          ) : (
-                            <UserCheck className="w-4 h-4 mr-1" />
-                          )}
-                          {aluno.ativo ? "Desativar" : "Ativar"}
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log("Botão Editar clicado para aluno:", aluno.nome);
-                            handleEdit(aluno);
-                          }}
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          Editar
-                        </Button>
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 className="w-4 h-4 mr-1" />
-                              Excluir
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Você tem certeza que deseja excluir o aluno <strong>{aluno.nome}</strong>?
-                                <br />
-                                <br />
-                                <em>Nota: O histórico de redações e notas do aluno será mantido para referência futura.</em>
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDelete(aluno)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+
+          <TabsContent value="todos" className="mt-0">
+            <AlunoTable 
+              alunos={filteredAlunos} 
+              loading={loading}
+              searchTerm={searchTerm}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onToggleStatus={handleToggleStatus}
+              getTurmaColor={getTurmaColor}
+            />
+          </TabsContent>
+
+          {turmasDisponiveis.map((turma) => (
+            <TabsContent key={turma} value={turma} className="mt-0">
+              <AlunoTable 
+                alunos={filteredAlunos} 
+                loading={loading}
+                searchTerm={searchTerm}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onToggleStatus={handleToggleStatus}
+                getTurmaColor={getTurmaColor}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
       </CardContent>
     </Card>
+  );
+};
+
+// Componente separado para a tabela
+interface AlunoTableProps {
+  alunos: Aluno[];
+  loading: boolean;
+  searchTerm: string;
+  onEdit: (aluno: Aluno) => void;
+  onDelete: (aluno: Aluno) => void;
+  onToggleStatus: (aluno: Aluno) => void;
+  getTurmaColor: (turma: string) => string;
+}
+
+const AlunoTable = ({ 
+  alunos, 
+  loading, 
+  searchTerm, 
+  onEdit, 
+  onDelete, 
+  onToggleStatus, 
+  getTurmaColor 
+}: AlunoTableProps) => {
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-muted-foreground">Carregando alunos...</div>
+      </div>
+    );
+  }
+
+  if (alunos.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        {searchTerm ? "Nenhum aluno encontrado com os critérios de busca." : "Nenhum aluno cadastrado nesta turma."}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nome Completo</TableHead>
+            <TableHead>E-mail</TableHead>
+            <TableHead>Turma</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Data de Cadastro</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {alunos.map((aluno) => (
+            <TableRow key={aluno.id}>
+              <TableCell className="font-medium">{aluno.nome}</TableCell>
+              <TableCell>{aluno.email}</TableCell>
+              <TableCell>
+                <Badge className={getTurmaColor(aluno.turma)}>
+                  {aluno.turma}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  variant={aluno.ativo ? "default" : "secondary"}
+                  className={aluno.ativo ? "bg-purple-600 text-white" : "bg-purple-200 text-purple-800"}
+                >
+                  {aluno.ativo ? "Ativo" : "Inativo"}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {new Date(aluno.created_at).toLocaleDateString('pt-BR')}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onToggleStatus(aluno)}
+                    className={aluno.ativo ? "text-red-600 hover:text-red-700" : "text-green-600 hover:text-green-700"}
+                  >
+                    {aluno.ativo ? (
+                      <UserX className="w-4 h-4 mr-1" />
+                    ) : (
+                      <UserCheck className="w-4 h-4 mr-1" />
+                    )}
+                    {aluno.ativo ? "Desativar" : "Ativar"}
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("Botão Editar clicado para aluno:", aluno.nome);
+                      onEdit(aluno);
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Editar
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Excluir
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Você tem certeza que deseja excluir o aluno <strong>{aluno.nome}</strong>?
+                          <br />
+                          <br />
+                          <em>Nota: O histórico de redações e notas do aluno será mantido para referência futura.</em>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDelete(aluno)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
