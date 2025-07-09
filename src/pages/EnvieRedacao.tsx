@@ -276,12 +276,6 @@ const EnvieRedacao = () => {
                   {fonteFromUrl === 'tema' ? 'Redação sobre o Tema Selecionado' : 
                    (userType === "aluno" ? 'Enviar Redação – Tema Livre' : 'Enviar Redação Avulsa – Tema Livre')}
                 </CardTitle>
-                <p className="text-redator-accent">
-                  {fonteFromUrl === 'tema' 
-                    ? 'Complete os dados abaixo para enviar sua redação sobre o tema escolhido. A frase temática já foi preenchida automaticamente.'
-                    : 'Preencha todos os campos abaixo para enviar sua redação sobre tema livre. Ela será corrigida pelos corretores selecionados e você poderá visualizar as notas e comentários no card "Minhas Redações" na página inicial.'
-                  }
-                </p>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
