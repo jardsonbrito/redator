@@ -172,12 +172,12 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
         </CardContent>
       </Card>
 
-      {/* Texto da redação - otimizado para mobile */}
+      {/* Redação - otimizado para mobile */}
       <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-primary">
             <FileText className="w-5 h-5" />
-            Texto da Redação
+            {redacao.redacao_manuscrita_url ? "Redação Manuscrita" : "Texto da Redação"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -190,13 +190,13 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                   className="w-full h-auto rounded-md max-h-[80vh] object-contain"
                 />
               </div>
-            ) : redacao.redacao_texto ? (
+            ) : redacao.redacao_texto?.trim() ? (
               <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800">
                 {redacao.redacao_texto}
               </p>
             ) : (
               <p className="text-sm text-gray-500 italic">
-                Texto da redação não disponível
+                Conteúdo da redação não disponível
               </p>
             )}
           </div>

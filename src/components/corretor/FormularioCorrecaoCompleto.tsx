@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
@@ -305,6 +305,9 @@ export const FormularioCorrecaoCompleto = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Upload de Correção Externa</DialogTitle>
+              <DialogDescription>
+                Envie um arquivo com sua correção externa (PDF, DOC, imagens, etc.)
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
