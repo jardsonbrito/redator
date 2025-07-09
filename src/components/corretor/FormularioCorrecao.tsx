@@ -77,80 +77,257 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
       const isImage = manuscritaUrl.toLowerCase().match(/\.(jpeg|jpg|png)$/);
       
       if (isImage) {
-        // Gerar PDF da imagem
+        // Gerar PDF da imagem com template personalizado
         let pdf = new jsPDF();
         
-        // Criar uma nova imagem para obter as dimensões
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
+        // Cores da paleta do projeto
+        const primaryColor = [102, 51, 153]; // hsl(258, 84%, 29%) convertido para RGB
+        const secondaryColor = [200, 180, 245]; // hsl(258, 60%, 78%) convertido para RGB
+        const accentColor = [153, 102, 204]; // hsl(258, 70%, 55%) convertido para RGB
         
-        img.onload = () => {
-          // Dimensões da página A4 em mm
-          const pageWidth = 210;
-          const pageHeight = 297;
+        // Configurar fundo elegante
+        pdf.setFillColor(248, 250, 252); // Fundo claro
+        pdf.rect(0, 0, 210, 297, 'F');
+        
+        // Adicionar faixa superior com gradiente simulado
+        pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        pdf.rect(0, 0, 210, 25, 'F');
+        
+        // Carregar e adicionar logomarca
+        const logoImg = new Image();
+        logoImg.crossOrigin = 'anonymous';
+        
+        logoImg.onload = () => {
+          // Adicionar logo (pequena, no canto superior esquerdo da faixa)
+          pdf.addImage(logoImg, 'PNG', 10, 3, 40, 19);
           
-          // Calcular se deve usar orientação paisagem
-          const imgAspectRatio = img.width / img.height;
-          const uselandscape = imgAspectRatio > 1.2; // Se imagem for bem mais larga que alta
+          // Título principal na faixa
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(16);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Laboratório do Redator', 60, 15);
           
-          let finalPageWidth, finalPageHeight;
-          if (uselandscape) {
-            finalPageWidth = pageHeight; // 297mm
-            finalPageHeight = pageWidth; // 210mm
-            pdf = new jsPDF('landscape', 'mm', 'a4');
-          } else {
-            finalPageWidth = pageWidth;
-            finalPageHeight = pageHeight;
-          }
+          // Seção de informações do aluno
+          pdf.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+          pdf.rect(15, 35, 180, 35, 'F');
           
-          // Margens mínimas para maximizar espaço
-          const margin = 5;
-          const maxWidth = finalPageWidth - (margin * 2);
-          const maxHeight = finalPageHeight - (margin * 2);
+          // Borda decorativa
+          pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          pdf.setLineWidth(1);
+          pdf.rect(15, 35, 180, 35, 'S');
           
-          // Calcular dimensões para ocupar máximo espaço possível
-          let width, height;
-          const pageAspectRatio = maxWidth / maxHeight;
+          // Informações do cabeçalho
+          pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Informações da Redação', 20, 45);
           
-          if (imgAspectRatio > pageAspectRatio) {
-            // Limitar pela largura
-            width = maxWidth;
-            height = width / imgAspectRatio;
-          } else {
-            // Limitar pela altura
-            height = maxHeight;
-            width = height * imgAspectRatio;
-          }
+          pdf.setFontSize(11);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Aluno: ${redacao.nome_aluno}`, 20, 55);
+          pdf.text(`Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}`, 20, 62);
+          pdf.text(`Tema: ${redacao.frase_tematica}`, 20, 69);
           
-          // Centralizar na página
-          const x = (finalPageWidth - width) / 2;
-          const y = (finalPageHeight - height) / 2;
+          // Carregar e processar a imagem da redação
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
           
-          // Adicionar imagem ao PDF
-          pdf.addImage(img, 'JPEG', x, y, width, height);
+          img.onload = () => {
+            // Calcular se deve usar orientação paisagem
+            const imgAspectRatio = img.width / img.height;
+            const useLandscape = imgAspectRatio > 1.2;
+            
+            if (useLandscape) {
+              // Recriar PDF em paisagem
+              pdf = new jsPDF('landscape', 'mm', 'a4');
+              
+              // Refazer o layout para paisagem
+              const pageWidth = 297;
+              const pageHeight = 210;
+              
+              // Fundo
+              pdf.setFillColor(248, 250, 252);
+              pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+              
+              // Faixa superior
+              pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+              pdf.rect(0, 0, pageWidth, 25, 'F');
+              
+              // Logo e título
+              pdf.addImage(logoImg, 'PNG', 10, 3, 40, 19);
+              pdf.setTextColor(255, 255, 255);
+              pdf.setFontSize(16);
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('Laboratório do Redator', 60, 15);
+              
+              // Informações em paisagem
+              pdf.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+              pdf.rect(15, 35, 267, 25, 'F');
+              pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+              pdf.setLineWidth(1);
+              pdf.rect(15, 35, 267, 25, 'S');
+              
+              pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+              pdf.setFontSize(12);
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('Informações da Redação', 20, 45);
+              pdf.setFontSize(10);
+              pdf.setFont('helvetica', 'normal');
+              pdf.text(`Aluno: ${redacao.nome_aluno}  |  Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}  |  Tema: ${redacao.frase_tematica}`, 20, 54);
+              
+              // Área para imagem em paisagem
+              const margin = 15;
+              const availableWidth = pageWidth - (margin * 2);
+              const availableHeight = pageHeight - 75; // 75 = espaço do cabeçalho
+              
+              let width, height;
+              if (imgAspectRatio > availableWidth / availableHeight) {
+                width = availableWidth;
+                height = width / imgAspectRatio;
+              } else {
+                height = availableHeight;
+                width = height * imgAspectRatio;
+              }
+              
+              const x = (pageWidth - width) / 2;
+              const y = 75;
+              
+              pdf.addImage(img, 'JPEG', x, y, width, height);
+            } else {
+              // Layout retrato
+              const margin = 15;
+              const availableWidth = 210 - (margin * 2);
+              const availableHeight = 297 - 85; // 85 = espaço do cabeçalho
+              
+              let width, height;
+              if (imgAspectRatio > availableWidth / availableHeight) {
+                width = availableWidth;
+                height = width / imgAspectRatio;
+              } else {
+                height = availableHeight;
+                width = height * imgAspectRatio;
+              }
+              
+              const x = (210 - width) / 2;
+              const y = 85;
+              
+              pdf.addImage(img, 'JPEG', x, y, width, height);
+            }
+            
+            // Download do PDF
+            const fileName = `redacao_${redacao.nome_aluno.replace(/\s+/g, '_')}_${redacao.id.substring(0, 8)}.pdf`;
+            pdf.save(fileName);
+            
+            toast({
+              title: "PDF gerado com sucesso!",
+              description: "A redação foi convertida para PDF e baixada com template personalizado.",
+            });
+          };
           
-          // Download do PDF
-          const fileName = `redacao_${redacao.nome_aluno.replace(/\s+/g, '_')}_${redacao.id.substring(0, 8)}.pdf`;
-          pdf.save(fileName);
+          img.onerror = () => {
+            console.error('Erro ao carregar imagem da redação');
+            toast({
+              title: "Erro ao gerar PDF",
+              description: "Não foi possível carregar a imagem. Baixando arquivo original.",
+              variant: "destructive"
+            });
+            window.open(manuscritaUrl, '_blank');
+          };
           
-          toast({
-            title: "PDF gerado com sucesso!",
-            description: "A redação foi convertida para PDF e baixada.",
-          });
+          img.src = manuscritaUrl;
         };
         
-        img.onerror = () => {
-          console.error('Erro ao carregar imagem para gerar PDF');
-          toast({
-            title: "Erro ao gerar PDF",
-            description: "Não foi possível carregar a imagem. Baixando arquivo original.",
-            variant: "destructive"
-          });
-          // Fallback: baixar arquivo original
-          window.open(manuscritaUrl, '_blank');
+        logoImg.onerror = () => {
+          console.error('Erro ao carregar logo, continuando sem ela');
+          // Continuar sem logo se não carregar
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            // Mesmo processamento da imagem sem logo
+            const imgAspectRatio = img.width / img.height;
+            const useLandscape = imgAspectRatio > 1.2;
+            
+            if (useLandscape) {
+              pdf = new jsPDF('landscape', 'mm', 'a4');
+              const pageWidth = 297;
+              const pageHeight = 210;
+              
+              pdf.setFillColor(248, 250, 252);
+              pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+              
+              pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+              pdf.rect(0, 0, pageWidth, 25, 'F');
+              
+              pdf.setTextColor(255, 255, 255);
+              pdf.setFontSize(16);
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('Laboratório do Redator', 20, 15);
+              
+              pdf.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+              pdf.rect(15, 35, 267, 25, 'F');
+              pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+              pdf.setLineWidth(1);
+              pdf.rect(15, 35, 267, 25, 'S');
+              
+              pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+              pdf.setFontSize(12);
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('Informações da Redação', 20, 45);
+              pdf.setFontSize(10);
+              pdf.setFont('helvetica', 'normal');
+              pdf.text(`Aluno: ${redacao.nome_aluno}  |  Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}  |  Tema: ${redacao.frase_tematica}`, 20, 54);
+              
+              const margin = 15;
+              const availableWidth = pageWidth - (margin * 2);
+              const availableHeight = pageHeight - 75;
+              
+              let width, height;
+              if (imgAspectRatio > availableWidth / availableHeight) {
+                width = availableWidth;
+                height = width / imgAspectRatio;
+              } else {
+                height = availableHeight;
+                width = height * imgAspectRatio;
+              }
+              
+              const x = (pageWidth - width) / 2;
+              const y = 75;
+              
+              pdf.addImage(img, 'JPEG', x, y, width, height);
+            } else {
+              const margin = 15;
+              const availableWidth = 210 - (margin * 2);
+              const availableHeight = 297 - 85;
+              
+              let width, height;
+              if (imgAspectRatio > availableWidth / availableHeight) {
+                width = availableWidth;
+                height = width / imgAspectRatio;
+              } else {
+                height = availableHeight;
+                width = height * imgAspectRatio;
+              }
+              
+              const x = (210 - width) / 2;
+              const y = 85;
+              
+              pdf.addImage(img, 'JPEG', x, y, width, height);
+            }
+            
+            const fileName = `redacao_${redacao.nome_aluno.replace(/\s+/g, '_')}_${redacao.id.substring(0, 8)}.pdf`;
+            pdf.save(fileName);
+            
+            toast({
+              title: "PDF gerado com sucesso!",
+              description: "A redação foi convertida para PDF e baixada com template personalizado.",
+            });
+          };
+          img.src = manuscritaUrl;
         };
         
-        img.src = manuscritaUrl;
+        // Carregar logo do projeto
+        logoImg.src = '/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png';
+        
       } else {
         // Se não for imagem, baixar arquivo original
         window.open(manuscritaUrl, '_blank');
@@ -162,7 +339,6 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         description: "Ocorreu um erro. Baixando arquivo original.",
         variant: "destructive"
       });
-      // Fallback: baixar arquivo original
       window.open(manuscritaUrl, '_blank');
     }
   };
