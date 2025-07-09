@@ -60,11 +60,11 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     fetchAlunos();
   }, [refresh]);
 
-  // Obter todas as turmas únicas e ordenadas
+  // Lista fixa de turmas do sistema
   const turmasDisponiveis = useMemo(() => {
-    const turmas = Array.from(new Set(alunos.map(aluno => aluno.turma))).sort();
-    return turmas;
-  }, [alunos]);
+    const turmasFixas = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'];
+    return turmasFixas;
+  }, []);
 
   // Filtrar alunos baseado na turma ativa e termo de busca
   const filteredAlunos = useMemo(() => {
