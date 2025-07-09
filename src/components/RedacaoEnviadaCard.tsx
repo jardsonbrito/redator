@@ -128,11 +128,11 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
             <div className="flex flex-wrap gap-2 shrink-0">
               {redacao.corrigida ? (
                 <Badge className="bg-green-100 text-green-800 text-xs">
-                  ✅ Corrigido
+                  Corrigido
                 </Badge>
               ) : (
                 <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                  ⏳ Aguardando
+                  Aguardando
                 </Badge>
               )}
               <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
@@ -172,66 +172,165 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
         </CardContent>
       </Card>
 
-      {/* Redação - otimizado para mobile */}
+      {/* Área de exibição da redação corrigida - com lógica condicional */}
       <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-primary">
             <FileText className="w-5 h-5" />
-            {redacao.redacao_manuscrita_url ? "Redação Manuscrita" : "Texto da Redação"}
+            Redação
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="bg-gray-50 p-4 rounded-lg border min-h-[200px]">
-            {redacao.redacao_manuscrita_url ? (
-              <div className="flex flex-col items-center">
-                {redacao.redacao_manuscrita_url.toLowerCase().includes('.pdf') ? (
-                  <div className="w-full">
-                    <embed 
-                      src={redacao.redacao_manuscrita_url} 
-                      type="application/pdf"
-                      className="w-full h-[600px] rounded-md"
-                    />
-                    <div className="mt-2 text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(redacao.redacao_manuscrita_url, '_blank')}
-                        className="text-primary border-primary hover:bg-primary/10"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Visualizar PDF em nova aba
-                      </Button>
-                    </div>
+            {/* Lógica condicional baseada no tipo de envio e correção externa */}
+            {(() => {
+              const temCorrecaoExterna = correcao1 || correcao2;
+              const redacaoFoiManuscrita = redacao.redacao_manuscrita_url;
+              
+              // Se há correção externa e redação foi manuscrita, mostrar apenas a correção
+              if (temCorrecaoExterna && redacaoFoiManuscrita) {
+                const urlCorrecao = correcao1 || correcao2;
+                return (
+                  <div className="flex flex-col items-center">
+                    {urlCorrecao?.toLowerCase().includes('.pdf') ? (
+                      <div className="w-full">
+                        <embed 
+                          src={urlCorrecao} 
+                          type="application/pdf"
+                          className="w-full h-[600px] rounded-md"
+                        />
+                        <div className="mt-2 text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(urlCorrecao, '_blank')}
+                            className="text-primary border-primary hover:bg-primary/10"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Visualizar PDF em nova aba
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <img 
+                        src={urlCorrecao} 
+                        alt="Correção do professor" 
+                        className="w-full h-auto rounded-md max-h-[80vh] object-contain"
+                      />
+                    )}
                   </div>
-                ) : (
-                  <img 
-                    src={redacao.redacao_manuscrita_url} 
-                    alt="Redação manuscrita" 
-                    className="w-full h-auto rounded-md max-h-[80vh] object-contain"
-                  />
-                )}
-              </div>
-            ) : redacao.redacao_texto?.trim() ? (
-              <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800">
-                {redacao.redacao_texto}
-              </p>
-            ) : (
-              <p className="text-sm text-gray-500 italic">
-                Conteúdo da redação não disponível
-              </p>
-            )}
+                );
+              }
+              
+              // Se redação foi digitada, mostrar sempre o texto + correção externa (se houver)
+              if (!redacaoFoiManuscrita) {
+                return (
+                  <div className="space-y-4">
+                    {redacao.redacao_texto?.trim() ? (
+                      <div>
+                        <h4 className="font-medium text-primary mb-2">Texto Original:</h4>
+                        <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800 p-3 bg-white rounded border">
+                          {redacao.redacao_texto}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 italic">
+                        Conteúdo da redação não disponível
+                      </p>
+                    )}
+                    
+                    {/* Mostrar correção externa se existir */}
+                    {temCorrecaoExterna && (
+                      <div>
+                        <h4 className="font-medium text-primary mb-2">Correção do Professor:</h4>
+                        <div className="flex flex-col items-center">
+                          {(() => {
+                            const urlCorrecao = correcao1 || correcao2;
+                            return urlCorrecao?.toLowerCase().includes('.pdf') ? (
+                              <div className="w-full">
+                                <embed 
+                                  src={urlCorrecao} 
+                                  type="application/pdf"
+                                  className="w-full h-[600px] rounded-md"
+                                />
+                                <div className="mt-2 text-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(urlCorrecao, '_blank')}
+                                    className="text-primary border-primary hover:bg-primary/10"
+                                  >
+                                    <Download className="w-4 h-4 mr-2" />
+                                    Visualizar PDF em nova aba
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <img 
+                                src={urlCorrecao} 
+                                alt="Correção do professor" 
+                                className="w-full h-auto rounded-md max-h-[80vh] object-contain"
+                              />
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              
+              // Se redação foi manuscrita mas não há correção externa, mostrar original
+              if (redacaoFoiManuscrita && !temCorrecaoExterna) {
+                return (
+                  <div className="flex flex-col items-center">
+                    {redacao.redacao_manuscrita_url?.toLowerCase().includes('.pdf') ? (
+                      <div className="w-full">
+                        <embed 
+                          src={redacao.redacao_manuscrita_url} 
+                          type="application/pdf"
+                          className="w-full h-[600px] rounded-md"
+                        />
+                        <div className="mt-2 text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(redacao.redacao_manuscrita_url, '_blank')}
+                            className="text-primary border-primary hover:bg-primary/10"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Visualizar PDF em nova aba
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <img 
+                        src={redacao.redacao_manuscrita_url} 
+                        alt="Redação manuscrita" 
+                        className="w-full h-auto rounded-md max-h-[80vh] object-contain"
+                      />
+                    )}
+                  </div>
+                );
+              }
+              
+              return (
+                <p className="text-sm text-gray-500 italic">
+                  Conteúdo da redação não disponível
+                </p>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>
 
-      {/* Correção (se disponível) - layout mobile otimizado */}
+      {/* Vista Pedagógica (se disponível) - layout mobile otimizado */}
       {redacao.corrigida && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <CardTitle className="flex items-center gap-2 text-lg text-primary">
-                <Star className="w-5 h-5" />
-                Correção Detalhada
+              <CardTitle className="text-lg text-primary">
+                Vista Pedagógica
               </CardTitle>
               <div className="flex flex-col sm:flex-row gap-2">
                 {redacao.data_correcao && (
@@ -240,129 +339,65 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                     Corrigido em: {formatDate(redacao.data_correcao)}
                   </div>
                 )}
-                {/* Botões de download da correção externa */}
-                {(correcao1 || correcao2) && (
-                  <div className="flex gap-2">
-                    {correcao1 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(correcao1, '_blank')}
-                         className="flex items-center gap-1 border-primary/30 text-primary hover:bg-primary/10"
-                      >
-                        <Download className="w-3 h-3" />
-                        Baixar Correção
-                      </Button>
-                    )}
-                    {correcao2 && !correcao1 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(correcao2, '_blank')}
-                        className="flex items-center gap-1 border-primary/30 text-primary hover:bg-primary/10"
-                      >
-                        <Download className="w-3 h-3" />
-                        Baixar Correção
-                      </Button>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4 sm:space-y-6">
-            {/* Notas por competência - grid responsivo */}
+          <CardContent className="space-y-6">
+            {/* Notas por competência - nova estrutura */}
             <div>
-               <h3 className="font-semibold text-primary mb-3 flex items-center gap-2">
-                <GraduationCap className="w-4 h-4" />
-                Notas por Competência
-              </h3>
+              <h3 className="font-semibold text-primary mb-4">Notas por Competência</h3>
               
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {/* Primeira linha: C1, C2, C3 */}
-                {[1, 2, 3].map((comp) => {
+              {/* Grid 5 competências + nota final */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[1, 2, 3, 4, 5].map((comp) => {
                   const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
                   return (
                     <div key={comp} className="text-center">
-                         <div className="bg-white border border-primary/20 rounded-lg p-3">
-                           <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
-                           <div className="text-lg font-bold text-primary">
-                          {nota !== null ? nota : '-'}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {/* Segunda linha: C4, C5, Nota Total */}
-                {[4, 5].map((comp) => {
-                  const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
-                  return (
-                    <div key={comp} className="text-center">
-                         <div className="bg-white border border-primary/20 rounded-lg p-3">
-                           <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
-                           <div className="text-lg font-bold text-primary">
-                          {nota !== null ? nota : '-'}
+                      <div className="bg-white border border-primary/20 rounded-lg p-3">
+                        <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
+                        <div className="text-lg font-bold text-primary">
+                          {nota !== null ? `${nota}/200` : '-/200'}
                         </div>
                       </div>
                     </div>
                   );
                 })}
                 
-                {/* Nota total com mesmo estilo das competências */}
-                {redacao.nota_total !== null && (
-                  <div className="text-center">
-                    <div className="bg-primary text-white rounded-lg p-3">
-                      <div className="text-xs font-medium mb-1">Total</div>
-                      <div className="text-lg font-bold">{redacao.nota_total}</div>
+                {/* Nota Final */}
+                <div className="text-center col-span-2 sm:col-span-1">
+                  <div className="bg-primary text-white rounded-lg p-3">
+                    <div className="text-xs font-medium mb-1">Nota Final</div>
+                    <div className="text-lg font-bold">
+                      {redacao.nota_total !== null ? `${redacao.nota_total}/1000` : '-/1000'}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
-            {/* Comentários pedagógicos por competência */}
+            {/* Comentários - apenas competências com comentários */}
             {comentariosPedagogicos.length > 0 && (
               <>
-                 <Separator className="bg-primary/20" />
+                <Separator className="bg-primary/20" />
                 <div>
-                   <h3 className="font-semibold text-primary mb-3 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Comentários Pedagógicos por Competência
-                  </h3>
-                   <div className="space-y-4">
-                     {comentariosPedagogicos.map(({ competencia, comentario1, comentario2 }) => {
-                       const cores = ['#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#f97316'];
-                       const corCompetencia = cores[competencia - 1];
-                       return (
-                       <div key={competencia} className="bg-white border rounded-lg p-4" style={{ borderColor: corCompetencia + '40' }}>
-                         <div className="flex items-center gap-2 mb-2">
-                           <div 
-                             className="w-4 h-4 rounded-full" 
-                             style={{ backgroundColor: corCompetencia }}
-                           />
-                           <h4 className="font-medium text-gray-800">
-                             Competência {competencia}
-                           </h4>
-                         </div>
+                  <h3 className="font-semibold text-primary mb-4">Comentários</h3>
+                  <div className="space-y-3">
+                    {comentariosPedagogicos.map(({ competencia, comentario1, comentario2 }) => (
+                      <div key={competencia} className="bg-white border border-primary/20 rounded-lg p-4">
+                        <h4 className="font-medium text-primary mb-3">C{competencia}</h4>
                         {comentario1 && (
-                          <div className="mb-2">
-                             <span className="text-xs text-primary/80 font-medium">Corretor 1:</span>
-                            <p className="text-sm text-gray-700 mt-1">{comentario1}</p>
+                          <div className="mb-3">
+                            <p className="text-sm text-gray-700">{comentario1}</p>
                           </div>
                         )}
                         {comentario2 && (
                           <div>
-                             <span className="text-xs text-primary/80 font-medium">Corretor 2:</span>
-                            <p className="text-sm text-gray-700 mt-1">{comentario2}</p>
+                            <p className="text-sm text-gray-700">{comentario2}</p>
                           </div>
                         )}
-                       </div>
-                       );
-                     })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </>
@@ -371,23 +406,18 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
             {/* Elogios e pontos de atenção */}
             {(elogios1 || elogios2) && (
               <>
-                 <Separator className="bg-primary/20" />
+                <Separator className="bg-primary/20" />
                 <div>
-                   <h3 className="font-semibold text-primary mb-3 flex items-center gap-2">
-                    <Star className="w-4 h-4" />
-                    Elogios e Pontos de Atenção
-                  </h3>
+                  <h3 className="font-semibold text-primary mb-4">Elogios e Pontos de Atenção</h3>
                   <div className="space-y-3">
                     {elogios1 && (
-                       <div className="bg-white border border-primary/20 rounded-lg p-4">
-                         <span className="text-xs text-primary/80 font-medium">Corretor 1:</span>
-                        <p className="text-sm text-gray-700 mt-1">{elogios1}</p>
+                      <div className="bg-white border border-primary/20 rounded-lg p-4">
+                        <p className="text-sm text-gray-700">{elogios1}</p>
                       </div>
                     )}
                     {elogios2 && (
-                       <div className="bg-white border border-primary/20 rounded-lg p-4">
-                         <span className="text-xs text-primary/80 font-medium">Corretor 2:</span>
-                        <p className="text-sm text-gray-700 mt-1">{elogios2}</p>
+                      <div className="bg-white border border-primary/20 rounded-lg p-4">
+                        <p className="text-sm text-gray-700">{elogios2}</p>
                       </div>
                     )}
                   </div>
@@ -400,10 +430,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
               <>
                 <Separator className="bg-primary/20" />
                 <div>
-                  <h3 className="font-semibold text-primary mb-3 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Comentário Geral
-                  </h3>
+                  <h3 className="font-semibold text-primary mb-4">Comentário Geral</h3>
                   <div className="bg-white border border-primary/20 rounded-lg p-4">
                     <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
                       {redacao.comentario_admin}
