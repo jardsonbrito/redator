@@ -448,27 +448,37 @@ const EnvieRedacao = () => {
                           <div className="relative inline-block">
                             {redacaoManuscrita?.type === 'application/pdf' ? (
                               <div className="bg-white rounded-lg border-2 border-amber-300 shadow-md overflow-hidden">
-                                <iframe 
-                                  src={`${redacaoManuscritaUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                                <object 
+                                  data={redacaoManuscritaUrl}
+                                  type="application/pdf"
                                   width="400"
                                   height="500"
-                                  className="w-full border-0"
-                                  title="Preview do PDF da redação"
-                                  style={{ minHeight: '500px' }}
-                                  onError={(e) => {
-                                    console.error('Erro ao carregar PDF no iframe:', e);
-                                  }}
-                                  onLoad={() => {
-                                    console.log('✅ PDF carregado com sucesso no iframe');
-                                  }}
-                                />
-                                <div className="p-2 bg-gray-50 text-sm text-gray-600 text-center border-t">
-                                  📄 PDF: {redacaoManuscrita?.name || 'redacao.pdf'}
-                                  <br />
-                                  <span className="text-xs text-gray-500">
-                                    {(redacaoManuscrita.size / 1024 / 1024).toFixed(2)} MB
-                                  </span>
-                                </div>
+                                  className="w-full"
+                                >
+                                  {/* Fallback para quando o PDF não carrega */}
+                                  <div className="flex flex-col items-center justify-center h-full p-8 bg-gray-50">
+                                    <div className="text-6xl mb-4">📄</div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                                      PDF Selecionado
+                                    </h3>
+                                    <p className="text-sm text-gray-600 mb-4 text-center">
+                                      {redacaoManuscrita?.name || 'redacao.pdf'}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mb-4">
+                                      Tamanho: {(redacaoManuscrita.size / 1024 / 1024).toFixed(2)} MB
+                                    </p>
+                                    <a 
+                                      href={redacaoManuscritaUrl} 
+                                      download={redacaoManuscrita?.name || 'redacao.pdf'}
+                                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                                    >
+                                      📥 Baixar PDF
+                                    </a>
+                                    <p className="text-xs text-gray-400 mt-3 text-center">
+                                      O PDF será enviado normalmente, mesmo que não apareça aqui
+                                    </p>
+                                  </div>
+                                </object>
                               </div>
                             ) : (
                               <img 
