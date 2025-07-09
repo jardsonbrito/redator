@@ -78,7 +78,7 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
       
       if (isImage) {
         // Gerar PDF da imagem
-        const pdf = new jsPDF();
+        let pdf = new jsPDF();
         
         // Criar uma nova imagem para obter as dimensões
         const img = new Image();
@@ -88,31 +88,43 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
           // Dimensões da página A4 em mm
           const pageWidth = 210;
           const pageHeight = 297;
-          const margin = 10; // margem uniforme
           
-          // Área útil da página
-          const maxWidth = pageWidth - (margin * 2);
-          const maxHeight = pageHeight - (margin * 2);
-          
-          // Calcular dimensões mantendo proporção e garantindo que caiba na página
+          // Calcular se deve usar orientação paisagem
           const imgAspectRatio = img.width / img.height;
+          const uselandscape = imgAspectRatio > 1.2; // Se imagem for bem mais larga que alta
+          
+          let finalPageWidth, finalPageHeight;
+          if (uselandscape) {
+            finalPageWidth = pageHeight; // 297mm
+            finalPageHeight = pageWidth; // 210mm
+            pdf = new jsPDF('landscape', 'mm', 'a4');
+          } else {
+            finalPageWidth = pageWidth;
+            finalPageHeight = pageHeight;
+          }
+          
+          // Margens mínimas para maximizar espaço
+          const margin = 5;
+          const maxWidth = finalPageWidth - (margin * 2);
+          const maxHeight = finalPageHeight - (margin * 2);
+          
+          // Calcular dimensões para ocupar máximo espaço possível
+          let width, height;
           const pageAspectRatio = maxWidth / maxHeight;
           
-          let width, height;
-          
           if (imgAspectRatio > pageAspectRatio) {
-            // Imagem é mais larga em relação à página - limitar pela largura
+            // Limitar pela largura
             width = maxWidth;
             height = width / imgAspectRatio;
           } else {
-            // Imagem é mais alta em relação à página - limitar pela altura
+            // Limitar pela altura
             height = maxHeight;
             width = height * imgAspectRatio;
           }
           
           // Centralizar na página
-          const x = (pageWidth - width) / 2;
-          const y = (pageHeight - height) / 2;
+          const x = (finalPageWidth - width) / 2;
+          const y = (finalPageHeight - height) / 2;
           
           // Adicionar imagem ao PDF
           pdf.addImage(img, 'JPEG', x, y, width, height);
