@@ -184,11 +184,32 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
           <div className="bg-gray-50 p-4 rounded-lg border min-h-[200px]">
             {redacao.redacao_manuscrita_url ? (
               <div className="flex flex-col items-center">
-                <img 
-                  src={redacao.redacao_manuscrita_url} 
-                  alt="Redação manuscrita" 
-                  className="w-full h-auto rounded-md max-h-[80vh] object-contain"
-                />
+                {redacao.redacao_manuscrita_url.toLowerCase().includes('.pdf') ? (
+                  <div className="w-full">
+                    <embed 
+                      src={redacao.redacao_manuscrita_url} 
+                      type="application/pdf"
+                      className="w-full h-[600px] rounded-md"
+                    />
+                    <div className="mt-2 text-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(redacao.redacao_manuscrita_url, '_blank')}
+                        className="text-primary border-primary hover:bg-primary/10"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Visualizar PDF em nova aba
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <img 
+                    src={redacao.redacao_manuscrita_url} 
+                    alt="Redação manuscrita" 
+                    className="w-full h-auto rounded-md max-h-[80vh] object-contain"
+                  />
+                )}
               </div>
             ) : redacao.redacao_texto?.trim() ? (
               <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800">

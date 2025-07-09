@@ -279,80 +279,82 @@ export const FormularioCorrecaoCompleto = ({
         )}
       </div>
 
-      {/* Informações compactas + Botões de Ação */}
-      <div className="grid grid-cols-4 gap-4 p-3 bg-muted/50 rounded-lg text-sm">
-        <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
-        <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
-        <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
-        <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
-      </div>
-
-      {/* Botões de Ação */}
-      <div className="flex gap-2 justify-end">
-        {manuscritaUrl && (
-          <Button variant="outline" size="sm" onClick={handleDownloadManuscrita}>
-            <Download className="w-4 h-4 mr-1" />
-            Baixar
-          </Button>
-        )}
-        <Dialog open={modalUploadAberto} onOpenChange={setModalUploadAberto}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Upload className="w-4 h-4 mr-1" />
-              Subir
+      {/* Informações compactas com Botões de Ação integrados */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg text-sm">
+        <div className="grid grid-cols-2 gap-4">
+          <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
+          <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
+          <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
+          <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
+        </div>
+        
+        {/* Botões de Ação integrados */}
+        <div className="flex gap-2 justify-end items-center">
+          {manuscritaUrl && (
+            <Button variant="outline" size="sm" onClick={handleDownloadManuscrita}>
+              <Download className="w-4 h-4 mr-1" />
+              Baixar
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Upload de Correção Externa</DialogTitle>
-              <DialogDescription>
-                Envie um arquivo com sua correção externa (PDF, DOC, imagens, etc.)
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="correcao-upload">Selecionar arquivo de correção</Label>
-                <Input
-                  id="correcao-upload"
-                  type="file"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
-                  className="mt-2"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Formatos aceitos: PDF, DOC, DOCX, JPG, JPEG, PNG
-                </p>
-              </div>
-              {correcaoUrl && (
-                <div className="text-xs text-green-600">
-                  ✓ Correção enviada com sucesso!
+          )}
+          <Dialog open={modalUploadAberto} onOpenChange={setModalUploadAberto}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-1" />
+                Subir
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Upload de Correção Externa</DialogTitle>
+                <DialogDescription>
+                  Envie um arquivo com sua correção externa (PDF, DOC, imagens, etc.)
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="correcao-upload">Selecionar arquivo de correção</Label>
+                  <Input
+                    id="correcao-upload"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Formatos aceitos: PDF, DOC, DOCX, JPG, JPEG, PNG
+                  </p>
                 </div>
-              )}
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setModalUploadAberto(false)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={async () => {
-                    await handleUploadCorrecao();
-                    setModalUploadAberto(false);
-                  }} 
-                  disabled={!correcaoArquivo || uploadingCorrecao}
-                >
-                  {uploadingCorrecao ? "Enviando..." : "Enviar"}
-                </Button>
+                {correcaoUrl && (
+                  <div className="text-xs text-green-600">
+                    ✓ Correção enviada com sucesso!
+                  </div>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setModalUploadAberto(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      await handleUploadCorrecao();
+                      setModalUploadAberto(false);
+                    }} 
+                    disabled={!correcaoArquivo || uploadingCorrecao}
+                  >
+                    {uploadingCorrecao ? "Enviando..." : "Enviar"}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-        <Button variant="outline" size="sm" onClick={() => salvarCorrecao('incompleta')} disabled={loading}>
-          <Save className="w-4 h-4 mr-1" />
-          Incompleta
-        </Button>
-        <Button size="sm" onClick={() => salvarCorrecao('corrigida')} disabled={loading}>
-          <CheckCircle className="w-4 h-4 mr-1" />
-          Completa
-        </Button>
+            </DialogContent>
+          </Dialog>
+          <Button variant="outline" size="sm" onClick={() => salvarCorrecao('incompleta')} disabled={loading}>
+            <Save className="w-4 h-4 mr-1" />
+            Incompleta
+          </Button>
+          <Button size="sm" onClick={() => salvarCorrecao('corrigida')} disabled={loading}>
+            <CheckCircle className="w-4 h-4 mr-1" />
+            Completa
+          </Button>
+        </div>
       </div>
 
       {/* Tema */}

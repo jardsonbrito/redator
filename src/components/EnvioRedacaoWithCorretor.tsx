@@ -252,14 +252,14 @@ export const EnvioRedacaoWithCorretor = ({
   };
 
   return (
-    <Card className="max-w-4xl mx-auto">
+    <Card className="max-w-5xl mx-auto">
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg">
-          Enviar Redação {isSimulado ? "- Simulado" : exercicioId ? "- Exercício" : ""}
+        <CardTitle className="text-lg text-primary">
+          Enviar Redação {isSimulado ? "- Simulado" : exercicioId ? "- Exercício" : "- Tema Livre"}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="nome_aluno">Nome do Aluno *</Label>
@@ -309,8 +309,8 @@ export const EnvioRedacaoWithCorretor = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
               <CorretorSelector
                 selectedCorretores={selectedCorretores}
                 onCorretoresChange={setSelectedCorretores}
@@ -319,14 +319,14 @@ export const EnvioRedacaoWithCorretor = ({
               />
             </div>
 
-            <div>
-              <Label className="text-base font-medium">Como deseja enviar sua redação? *</Label>
-              <div className="space-y-3 mt-2">
+            <div className="space-y-4">
+              <Label className="text-base font-medium text-primary">Como deseja enviar sua redação? *</Label>
+              <div className="space-y-3">
                 <div className="flex items-center gap-4">
                   <label htmlFor="redacao-manuscrita" className="cursor-pointer">
-                    <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-primary/30 rounded-lg hover:border-primary/50 transition-colors">
-                      <Upload className="w-4 h-4" />
-                      <span className="text-sm">Selecionar arquivo</span>
+                    <div className="flex items-center gap-2 px-4 py-3 border border-dashed border-primary/30 rounded-lg hover:border-primary/50 transition-colors bg-background">
+                      <Upload className="w-4 h-4 text-primary" />
+                      <span className="text-sm text-foreground">Selecionar arquivo</span>
                     </div>
                   </label>
                   <input
@@ -341,17 +341,17 @@ export const EnvioRedacaoWithCorretor = ({
                 {redacaoManuscritaUrl && (
                   <div className="relative inline-block">
                     {redacaoManuscrita?.type === 'application/pdf' ? (
-                      <div className="flex items-center gap-2 p-4 border rounded-lg bg-gray-50">
-                        <div className="w-8 h-8 bg-red-500 text-white rounded flex items-center justify-center text-xs font-bold">
+                      <div className="flex items-center gap-2 p-4 border border-primary/20 rounded-lg bg-muted/30">
+                        <div className="w-8 h-8 bg-primary text-primary-foreground rounded flex items-center justify-center text-xs font-bold">
                           PDF
                         </div>
-                        <span className="text-sm">{redacaoManuscrita.name}</span>
+                        <span className="text-sm text-foreground">{redacaoManuscrita.name}</span>
                       </div>
                     ) : (
                       <img 
                         src={redacaoManuscritaUrl} 
                         alt="Preview da redação manuscrita" 
-                        className="max-w-xs max-h-40 rounded-lg border"
+                        className="max-w-xs max-h-40 rounded-lg border border-primary/20"
                       />
                     )}
                     <Button
@@ -373,17 +373,17 @@ export const EnvioRedacaoWithCorretor = ({
           </div>
 
           <div>
-            <Label htmlFor="redacao_texto">Texto da Redação</Label>
+            <Label htmlFor="redacao_texto" className="text-primary">Texto da Redação (opcional se enviou arquivo)</Label>
             <Textarea
               id="redacao_texto"
               value={formData.redacao_texto}
               onChange={(e) => setFormData(prev => ({ ...prev, redacao_texto: e.target.value }))}
               placeholder="Digite o texto da sua redação aqui..."
-              className="min-h-[200px]"
+              className="min-h-[180px] border-primary/20 focus:border-primary"
             />
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary/90">
             {loading ? "Enviando..." : "Enviar Redação"}
           </Button>
         </form>
