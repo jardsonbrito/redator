@@ -95,7 +95,7 @@ const Welcome = () => {
             <img 
               src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" 
               alt="Logo da plataforma" 
-              className="w-20 h-20 object-contain" 
+              className="w-28 h-28 md:w-32 md:h-32 object-contain" 
             />
           </div>
           
