@@ -67,8 +67,8 @@ export const RedacaoEnemForm = ({
             width: '100%',
             aspectRatio: '18/20', // 18cm x 20cm
             maxWidth: '720px', // 18cm * 40px/cm
-            maxHeight: '800px', // 20cm * 40px/cm
-            minHeight: '600px'
+            height: '848px', // Altura fixa para garantir que todas as 30 linhas caibam (24px + 30*26.64px + 24px)
+            minHeight: '848px'
           }}
         >
           {/* Numeração das linhas */}
@@ -139,7 +139,7 @@ export const RedacaoEnemForm = ({
         </div>
         
         {/* Contador de linhas */}
-        <div className="mt-2 text-center">
+        <div className="mt-4 text-center">
           <span className="text-sm text-gray-500">
             Linhas utilizadas: {getLineCount(value)}/30
           </span>
