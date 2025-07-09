@@ -32,11 +32,29 @@ type RedacaoTurma = {
 
 type AuthenticatedRedacao = RedacaoTurma & {
   redacao_texto: string;
+  redacao_manuscrita_url?: string | null;
   nota_c1: number | null;
   nota_c2: number | null;
   nota_c3: number | null;
   nota_c4: number | null;
   nota_c5: number | null;
+  // Campos dos comentários pedagógicos dos corretores
+  comentario_c1_corretor_1?: string | null;
+  comentario_c2_corretor_1?: string | null;
+  comentario_c3_corretor_1?: string | null;
+  comentario_c4_corretor_1?: string | null;
+  comentario_c5_corretor_1?: string | null;
+  elogios_pontos_atencao_corretor_1?: string | null;
+  comentario_c1_corretor_2?: string | null;
+  comentario_c2_corretor_2?: string | null;
+  comentario_c3_corretor_2?: string | null;
+  comentario_c4_corretor_2?: string | null;
+  comentario_c5_corretor_2?: string | null;
+  elogios_pontos_atencao_corretor_2?: string | null;
+  // URLs de correções externas
+  correcao_arquivo_url_corretor_1?: string | null;
+  correcao_arquivo_url_corretor_2?: string | null;
+  turma: string;
 };
 
 export const MinhasRedacoes = () => {
@@ -336,17 +354,35 @@ export const MinhasRedacoes = () => {
         email_aluno: redacaoCompleta.email_aluno,
         tipo_envio: redacaoBasica.tipo_envio,
         data_envio: redacaoCompleta.data_envio,
-        status: redacaoBasica.status,
+        status: redacaoCompleta.corrigida ? 'corrigida' : 'aguardando', // Corrigindo status
         corrigida: redacaoCompleta.corrigida,
         nota_total: redacaoCompleta.nota_total,
         comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
         data_correcao: redacaoCompleta.data_correcao,
         redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "",
+        redacao_manuscrita_url: redacaoCompleta.redacao_manuscrita_url,
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
         nota_c3: redacaoCompleta.nota_c3,
         nota_c4: redacaoCompleta.nota_c4,
         nota_c5: redacaoCompleta.nota_c5,
+        // Incluindo comentários pedagógicos dos corretores
+        comentario_c1_corretor_1: redacaoCompleta.comentario_c1_corretor_1,
+        comentario_c2_corretor_1: redacaoCompleta.comentario_c2_corretor_1,
+        comentario_c3_corretor_1: redacaoCompleta.comentario_c3_corretor_1,
+        comentario_c4_corretor_1: redacaoCompleta.comentario_c4_corretor_1,
+        comentario_c5_corretor_1: redacaoCompleta.comentario_c5_corretor_1,
+        elogios_pontos_atencao_corretor_1: redacaoCompleta.elogios_pontos_atencao_corretor_1,
+        comentario_c1_corretor_2: redacaoCompleta.comentario_c1_corretor_2,
+        comentario_c2_corretor_2: redacaoCompleta.comentario_c2_corretor_2,
+        comentario_c3_corretor_2: redacaoCompleta.comentario_c3_corretor_2,
+        comentario_c4_corretor_2: redacaoCompleta.comentario_c4_corretor_2,
+        comentario_c5_corretor_2: redacaoCompleta.comentario_c5_corretor_2,
+        elogios_pontos_atencao_corretor_2: redacaoCompleta.elogios_pontos_atencao_corretor_2,
+        // URLs de correções externas
+        correcao_arquivo_url_corretor_1: redacaoCompleta.correcao_arquivo_url_corretor_1,
+        correcao_arquivo_url_corretor_2: redacaoCompleta.correcao_arquivo_url_corretor_2,
+        turma: redacaoCompleta.turma || (userType === "aluno" ? turmaCode : "visitante"),
       };
 
       setIsAuthDialogOpen(false);
@@ -634,6 +670,7 @@ export const MinhasRedacoes = () => {
                   id: authenticatedRedacao.id,
                   frase_tematica: authenticatedRedacao.frase_tematica,
                   redacao_texto: authenticatedRedacao.redacao_texto,
+                  redacao_manuscrita_url: authenticatedRedacao.redacao_manuscrita_url,
                   data_envio: authenticatedRedacao.data_envio,
                   nota_c1: authenticatedRedacao.nota_c1,
                   nota_c2: authenticatedRedacao.nota_c2,
@@ -648,8 +685,24 @@ export const MinhasRedacoes = () => {
                   email_aluno: authenticatedRedacao.email_aluno,
                   tipo_envio: authenticatedRedacao.tipo_envio,
                   status: authenticatedRedacao.status,
-                  turma: userType === "aluno" ? turmaCode : "visitante",
-                }} 
+                  turma: authenticatedRedacao.turma,
+                  // Incluindo todos os comentários pedagógicos dos corretores
+                  comentario_c1_corretor_1: authenticatedRedacao.comentario_c1_corretor_1,
+                  comentario_c2_corretor_1: authenticatedRedacao.comentario_c2_corretor_1,
+                  comentario_c3_corretor_1: authenticatedRedacao.comentario_c3_corretor_1,
+                  comentario_c4_corretor_1: authenticatedRedacao.comentario_c4_corretor_1,
+                  comentario_c5_corretor_1: authenticatedRedacao.comentario_c5_corretor_1,
+                  elogios_pontos_atencao_corretor_1: authenticatedRedacao.elogios_pontos_atencao_corretor_1,
+                  comentario_c1_corretor_2: authenticatedRedacao.comentario_c1_corretor_2,
+                  comentario_c2_corretor_2: authenticatedRedacao.comentario_c2_corretor_2,
+                  comentario_c3_corretor_2: authenticatedRedacao.comentario_c3_corretor_2,
+                  comentario_c4_corretor_2: authenticatedRedacao.comentario_c4_corretor_2,
+                  comentario_c5_corretor_2: authenticatedRedacao.comentario_c5_corretor_2,
+                  elogios_pontos_atencao_corretor_2: authenticatedRedacao.elogios_pontos_atencao_corretor_2,
+                  // URLs de correções externas
+                  correcao_arquivo_url_corretor_1: authenticatedRedacao.correcao_arquivo_url_corretor_1,
+                  correcao_arquivo_url_corretor_2: authenticatedRedacao.correcao_arquivo_url_corretor_2,
+                }}
               />
             </div>
           </DialogContent>
