@@ -8,6 +8,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Mail, Home, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
+interface EmailUpdateResult {
+  success: boolean;
+  error?: string;
+  message: string;
+}
+
 export default function AtualizarEmail() {
   const [emailAtual, setEmailAtual] = useState("");
   const [novoEmail, setNovoEmail] = useState("");
@@ -23,50 +29,42 @@ export default function AtualizarEmail() {
 
     setLoading(true);
     try {
-      // Verificar se o e-mail atual existe no banco de dados
-      const { data: existingUser } = await supabase
-        .from("profiles")
-        .select("id, email, nome")
-        .eq("email", emailAtual.trim().toLowerCase())
-        .maybeSingle();
+      // Chamar a função segura do banco de dados
+      const { data, error } = await supabase
+        .rpc('update_student_email', {
+          current_email: emailAtual.trim(),
+          new_email: novoEmail.trim()
+        });
 
-      if (!existingUser) {
+      if (error) {
+        console.error("Erro na função RPC:", error);
+        throw error;
+      }
+
+      console.log("Resultado da troca de e-mail:", data);
+
+      const result = data as unknown as EmailUpdateResult;
+
+      if (!result.success) {
+        let title = "Erro na atualização";
+        let description = result.message || "Ocorreu um erro inesperado.";
+        
+        if (result.error === 'email_not_found') {
+          title = "E-mail não encontrado";
+          description = "E-mail não encontrado no sistema. Verifique se digitou corretamente.";
+        } else if (result.error === 'email_in_use') {
+          title = "E-mail já em uso";
+          description = "O novo e-mail já está sendo usado por outro aluno.";
+        }
+
         toast({
-          title: "E-mail não encontrado",
-          description: "E-mail não encontrado no sistema. Verifique se digitou corretamente.",
+          title,
+          description,
           variant: "destructive"
         });
         setLoading(false);
         return;
       }
-
-      // Verificar se o novo e-mail já está em uso
-      const { data: emailInUse } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("email", novoEmail.trim().toLowerCase())
-        .maybeSingle();
-
-      if (emailInUse) {
-        toast({
-          title: "E-mail já em uso",
-          description: "O novo e-mail já está sendo usado por outro aluno.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Atualizar o e-mail do aluno
-      const { error } = await supabase
-        .from("profiles")
-        .update({ 
-          email: novoEmail.trim().toLowerCase(),
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", existingUser.id);
-
-      if (error) throw error;
 
       setAtualizado(true);
       toast({

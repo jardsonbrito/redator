@@ -1623,6 +1623,10 @@ export type Database = {
         Args: { user_email: string }
         Returns: undefined
       }
+      update_student_email: {
+        Args: { current_email: string; new_email: string }
+        Returns: Json
+      }
     }
     Enums: {
       competencia_type: "C1" | "C2" | "C3" | "C4" | "C5"
