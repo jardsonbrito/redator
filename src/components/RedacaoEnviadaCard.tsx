@@ -337,7 +337,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Notas por competência - nova estrutura */}
+            {/* Notas por competência - formato simplificado */}
             <div>
               <h3 className="font-semibold text-primary mb-4">Notas por Competência</h3>
               
@@ -350,7 +350,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                       <div className="bg-white border border-primary/20 rounded-lg p-3">
                         <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
                         <div className="text-lg font-bold text-primary">
-                          {nota !== null ? `${nota}/200` : '-/200'}
+                          {nota !== null ? nota : '-'}
                         </div>
                       </div>
                     </div>
@@ -362,7 +362,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
                   <div className="bg-primary text-white rounded-lg p-3">
                     <div className="text-xs font-medium mb-1">Nota Final</div>
                     <div className="text-lg font-bold">
-                      {redacao.nota_total !== null ? `${redacao.nota_total}/1000` : '-/1000'}
+                      {redacao.nota_total !== null ? redacao.nota_total : '-'}
                     </div>
                   </div>
                 </div>
