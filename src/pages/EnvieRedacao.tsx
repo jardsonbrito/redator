@@ -30,6 +30,7 @@ const EnvieRedacao = () => {
 
   const temaFromUrl = searchParams.get('tema');
   const fonteFromUrl = searchParams.get('fonte');
+  const exercicioFromUrl = searchParams.get('exercicio');
 
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
@@ -38,7 +39,10 @@ const EnvieRedacao = () => {
   let tipoEnvio = "avulsa";
   let turmaCode = "visitante";
   
-  if (userType === "aluno" && alunoTurma) {
+  // Se há exercício na URL, é um envio de exercício
+  if (exercicioFromUrl) {
+    tipoEnvio = "exercicio";
+  } else if (userType === "aluno" && alunoTurma) {
     tipoEnvio = "regular";
     const turmasMap = {
       "Turma A": "LRA2025",
@@ -211,33 +215,59 @@ const EnvieRedacao = () => {
         }
       }
 
-      const { error } = await supabase
-        .from('redacoes_enviadas')
-        .insert({
-          nome_aluno: nomeCompleto.trim(),
-          email_aluno: email.trim(),
-          frase_tematica: fraseTematica.trim(),
-          redacao_texto: redacaoTexto.trim() || "",
-          redacao_manuscrita_url: manuscritaUrl,
-          tipo_envio: tipoEnvio,
-          turma: turmaCode,
-          status: 'aguardando',
-          corretor_id_1: selectedCorretores[0] || null,
-          corretor_id_2: selectedCorretores[1] || null,
-          status_corretor_1: 'pendente',
-          status_corretor_2: selectedCorretores[1] ? 'pendente' : null,
-          corrigida: false,
-          data_envio: new Date().toISOString()
-        });
+      // Se é um exercício, salvar na tabela redacoes_exercicio
+      if (exercicioFromUrl) {
+        const { error } = await supabase
+          .from('redacoes_exercicio')
+          .insert({
+            exercicio_id: exercicioFromUrl,
+            nome_aluno: nomeCompleto.trim(),
+            email_aluno: email.trim(),
+            redacao_texto: redacaoTexto.trim() || "",
+            redacao_manuscrita_url: manuscritaUrl,
+            turma: userType === "aluno" && alunoTurma ? alunoTurma : "visitante",
+            corretor_id_1: selectedCorretores[0] || null,
+            corretor_id_2: selectedCorretores[1] || null,
+            status_corretor_1: 'pendente',
+            status_corretor_2: selectedCorretores[1] ? 'pendente' : null,
+            corrigida: false,
+            data_envio: new Date().toISOString()
+          });
 
-      if (error) {
-        console.error('Erro ao salvar redação:', error);
-        throw error;
+        if (error) {
+          console.error('Erro ao salvar redação de exercício:', error);
+          throw error;
+        }
+      } else {
+        // Salvar na tabela normal para redações avulsas/regulares
+        const { error } = await supabase
+          .from('redacoes_enviadas')
+          .insert({
+            nome_aluno: nomeCompleto.trim(),
+            email_aluno: email.trim(),
+            frase_tematica: fraseTematica.trim(),
+            redacao_texto: redacaoTexto.trim() || "",
+            redacao_manuscrita_url: manuscritaUrl,
+            tipo_envio: tipoEnvio,
+            turma: turmaCode,
+            status: 'aguardando',
+            corretor_id_1: selectedCorretores[0] || null,
+            corretor_id_2: selectedCorretores[1] || null,
+            status_corretor_1: 'pendente',
+            status_corretor_2: selectedCorretores[1] ? 'pendente' : null,
+            corrigida: false,
+            data_envio: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('Erro ao salvar redação:', error);
+          throw error;
+        }
       }
 
       toast({
         title: "Redação enviada com sucesso!",
-        description: `Sua redação foi salva e será corrigida pelos corretores selecionados. Você poderá visualizá-la no card "Minhas Redações" na página inicial.`,
+        description: `Sua redação foi salva e será corrigida pelos corretores selecionados. ${exercicioFromUrl ? 'O exercício foi marcado como concluído.' : 'Você poderá visualizá-la no card "Minhas Redações" na página inicial.'}`,
       });
 
       // Limpar formulário após sucesso
@@ -449,6 +479,7 @@ const EnvieRedacao = () => {
                    <div className="bg-purple-50 p-4 rounded-lg border border-redator-accent/30">
                      <p className="text-sm text-redator-primary">
                        <strong>Tipo de envio:</strong> {
+                         tipoEnvio === 'exercicio' ? `Exercício ${exercicioFromUrl ? '(ID: ' + exercicioFromUrl + ')' : ''}` :
                          tipoEnvio === 'regular' ? `Regular - Aluno da ${alunoTurma}` : 'Avulsa - Visitante'
                        }
                      </p>
