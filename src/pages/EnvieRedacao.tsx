@@ -515,7 +515,7 @@ const EnvieRedacao = () => {
                         value={redacaoTexto}
                         onChange={setRedacaoTexto}
                         onValidChange={setIsRedacaoValid}
-                        placeholder="Escreva sua redação aqui seguindo o formato oficial do ENEM..."
+                        placeholder="Escreva sua redação aqui..."
                       />
                     </div>
                   )}

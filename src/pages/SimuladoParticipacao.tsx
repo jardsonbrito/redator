@@ -497,7 +497,7 @@ const SimuladoParticipacao = () => {
                     value={redacaoTexto}
                     onChange={setRedacaoTexto}
                     onValidChange={setIsRedacaoValid}
-                    placeholder="Escreva sua redação para o simulado seguindo o formato oficial do ENEM..."
+                    placeholder="Escreva sua redação aqui..."
                   />
 
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">

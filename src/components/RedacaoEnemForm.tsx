@@ -62,7 +62,7 @@ export const RedacaoEnemForm = ({
       <div className="relative mx-auto max-w-4xl">
         {/* Container principal com proporções da folha ENEM */}
         <div 
-          className="relative bg-gradient-to-b from-purple-50/30 to-purple-50/10 rounded-xl shadow-lg border border-purple-100/50"
+          className="relative bg-white rounded-xl shadow-lg border border-gray-200"
           style={{
             width: '100%',
             aspectRatio: '18/20', // 18cm x 20cm
@@ -73,7 +73,7 @@ export const RedacaoEnemForm = ({
         >
           {/* Numeração das linhas */}
           <div 
-            className="absolute left-0 top-0 flex flex-col justify-between text-gray-400 text-sm font-mono py-4"
+            className="absolute left-0 top-0 flex flex-col justify-start text-gray-500 text-sm font-mono py-6"
             style={{
               width: '8.33%', // 0.5cm de 18cm = 2.77%, mas ajustado para melhor visualização
               height: '100%'
@@ -82,8 +82,11 @@ export const RedacaoEnemForm = ({
             {lineNumbers.map((num) => (
               <div 
                 key={num} 
-                className="flex items-center justify-center text-xs"
-                style={{ height: '3.33%' }} // 100% / 30 linhas
+                className="flex items-start justify-center text-xs"
+                style={{ 
+                  height: '3.33%', // 100% / 30 linhas
+                  paddingTop: '2px'
+                }}
               >
                 {num}
               </div>
@@ -100,14 +103,16 @@ export const RedacaoEnemForm = ({
             }}
           >
             {/* Linhas de fundo */}
-            <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 pointer-events-none py-6">
               {lineNumbers.map((num) => (
                 <div 
                   key={num}
-                  className="absolute w-full border-b border-purple-200/40"
+                  className="absolute w-full"
                   style={{
-                    top: `${(num - 1) * 3.33}%`,
-                    height: '3.33%'
+                    top: `${(num - 1) * 3.33 + 2.8}%`, // Posiciona a linha na base do texto
+                    height: '1px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.25)', // Linha preta com 25% de opacidade
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.25)'
                   }}
                 />
               ))}
@@ -119,10 +124,10 @@ export const RedacaoEnemForm = ({
               value={value}
               onChange={handleChange}
               placeholder={placeholder}
-              className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-800 font-sans leading-relaxed p-0 pt-4"
+              className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-900 font-sans p-0 pt-6"
               style={{
                 fontSize: '16px',
-                lineHeight: '26.4px', // Aproximadamente 0.66cm em pixels
+                lineHeight: '26.64px', // Altura de cada linha (3.33% de 800px)
                 fontFamily: 'system-ui, -apple-system, sans-serif'
               }}
               spellCheck={false}
