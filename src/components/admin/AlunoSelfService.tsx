@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Check, ExternalLink } from "lucide-react";
 
@@ -10,25 +9,87 @@ interface AlunoSelfServiceProps {
   onSuccess: () => void;
 }
 
+const LinkBlock = ({ 
+  title, 
+  link, 
+  onCopy, 
+  onOpen, 
+  copied 
+}: { 
+  title: string; 
+  link: string; 
+  onCopy: () => void; 
+  onOpen: () => void; 
+  copied: boolean; 
+}) => (
+  <Card className="flex-1">
+    <CardHeader className="pb-3">
+      <CardTitle className="text-lg">{title}</CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-3">
+      <div className="flex gap-2">
+        <Input
+          value={link}
+          readOnly
+          className="flex-1"
+        />
+        <Button
+          onClick={onCopy}
+          variant="outline"
+          size="icon"
+          className="shrink-0"
+        >
+          {copied ? (
+            <Check className="w-4 h-4 text-green-600" />
+          ) : (
+            <Copy className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
+      
+      <div className="flex gap-2">
+        <Button
+          onClick={onCopy}
+          className="flex-1"
+          variant="default"
+        >
+          <Copy className="w-4 h-4 mr-2" />
+          Copiar Link
+        </Button>
+        <Button
+          onClick={onOpen}
+          variant="outline"
+          className="flex-1"
+        >
+          <ExternalLink className="w-4 h-4 mr-2" />
+          Abrir Link
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+);
+
 export const AlunoSelfService = ({ onSuccess }: AlunoSelfServiceProps) => {
-  const [copiado, setCopiado] = useState(false);
+  const [copiado1, setCopiado1] = useState(false);
+  const [copiado2, setCopiado2] = useState(false);
   const { toast } = useToast();
 
-  // Gerar o link de autoatendimento
-  const linkAutoatendimento = `${window.location.origin}/cadastro-aluno`;
+  // Links de autoatendimento
+  const linkCadastro = `${window.location.origin}/cadastro-aluno`;
+  const linkTrocaEmail = `${window.location.origin}/atualizar-email`;
 
-  const handleCopiarLink = async () => {
+  const handleCopiarLink = async (link: string, setCopied: (value: boolean) => void) => {
     try {
-      await navigator.clipboard.writeText(linkAutoatendimento);
-      setCopiado(true);
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
       toast({
         title: "Link copiado!",
-        description: "O link de autoatendimento foi copiado para a área de transferência."
+        description: "O link foi copiado para a área de transferência."
       });
       
       // Resetar o ícone após 2 segundos
       setTimeout(() => {
-        setCopiado(false);
+        setCopied(false);
       }, 2000);
     } catch (error) {
       toast({
@@ -39,72 +100,29 @@ export const AlunoSelfService = ({ onSuccess }: AlunoSelfServiceProps) => {
     }
   };
 
-  const handleAbrirLink = () => {
-    window.open(linkAutoatendimento, '_blank');
+  const handleAbrirLink = (link: string) => {
+    window.open(link, '_blank');
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Link de Autoatendimento</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Compartilhe este link com os alunos para que eles possam se cadastrar automaticamente no sistema.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <Label htmlFor="link">Link de Cadastro</Label>
-          <div className="flex gap-2 mt-2">
-            <Input
-              id="link"
-              value={linkAutoatendimento}
-              readOnly
-              className="flex-1"
-            />
-            <Button
-              onClick={handleCopiarLink}
-              variant="outline"
-              size="icon"
-              className="shrink-0"
-            >
-              {copiado ? (
-                <Check className="w-4 h-4 text-green-600" />
-              ) : (
-                <Copy className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            onClick={handleCopiarLink}
-            className="flex-1"
-            variant="default"
-          >
-            <Copy className="w-4 h-4 mr-2" />
-            Copiar Link
-          </Button>
-          <Button
-            onClick={handleAbrirLink}
-            variant="outline"
-            className="flex-1"
-          >
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Abrir Link
-          </Button>
-        </div>
-
-        <div className="bg-muted/50 p-4 rounded-lg">
-          <h4 className="font-semibold mb-2">Como usar:</h4>
-          <ul className="text-sm space-y-1 text-muted-foreground">
-            <li>1. Copie o link acima</li>
-            <li>2. Envie para os alunos via WhatsApp, e-mail ou outro meio</li>
-            <li>3. Os alunos preencherão o formulário de cadastro</li>
-            <li>4. Você poderá editar os dados dos alunos posteriormente se necessário</li>
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <LinkBlock
+          title="Link de Cadastro"
+          link={linkCadastro}
+          onCopy={() => handleCopiarLink(linkCadastro, setCopiado1)}
+          onOpen={() => handleAbrirLink(linkCadastro)}
+          copied={copiado1}
+        />
+        
+        <LinkBlock
+          title="Link de Troca de E-mail"
+          link={linkTrocaEmail}
+          onCopy={() => handleCopiarLink(linkTrocaEmail, setCopiado2)}
+          onOpen={() => handleAbrirLink(linkTrocaEmail)}
+          copied={copiado2}
+        />
+      </div>
+    </div>
   );
 };

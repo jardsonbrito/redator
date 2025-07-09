@@ -264,7 +264,7 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
         </TabsTrigger>
         <TabsTrigger value="link" className="flex items-center gap-2">
           <Link className="w-4 h-4" />
-          Link
+          Autoatendimento
         </TabsTrigger>
       </TabsList>
       
