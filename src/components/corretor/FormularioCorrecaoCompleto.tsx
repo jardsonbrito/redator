@@ -126,35 +126,40 @@ export const FormularioCorrecaoCompleto = ({
         logoImg.crossOrigin = 'anonymous';
         
         logoImg.onload = () => {
-          // Adicionar logo (pequena, no canto superior esquerdo da faixa)
-          pdf.addImage(logoImg, 'PNG', 10, 3, 40, 19);
+          // Fundo branco/cinza claro
+          pdf.setFillColor(248, 250, 252);
+          pdf.rect(0, 0, 210, 297, 'F');
           
-          // Título principal na faixa
-          pdf.setTextColor(255, 255, 255);
+          // Logo redondo no topo esquerdo
+          pdf.addImage(logoImg, 'PNG', 20, 15, 25, 25);
+          
+          // Título ao lado do logo
+          pdf.setTextColor(102, 51, 153);
+          pdf.setFontSize(20);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Laboratório do Redator', 55, 32);
+          
+          // Caixa de informações da redação (mesma cor do mockup)
+          pdf.setFillColor(200, 180, 245);
+          pdf.rect(20, 55, 170, 40, 'F');
+          
+          // Borda da caixa
+          pdf.setDrawColor(102, 51, 153);
+          pdf.setLineWidth(1.5);
+          pdf.rect(20, 55, 170, 40, 'S');
+          
+          // Título da seção
+          pdf.setTextColor(102, 51, 153);
           pdf.setFontSize(16);
           pdf.setFont('helvetica', 'bold');
-          pdf.text('Laboratório do Redator', 60, 15);
+          pdf.text('Informações da Redação', 25, 68);
           
-          // Seção de informações do aluno
-          pdf.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-          pdf.rect(15, 35, 180, 35, 'F');
-          
-          // Borda decorativa
-          pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-          pdf.setLineWidth(1);
-          pdf.rect(15, 35, 180, 35, 'S');
-          
-          // Informações do cabeçalho
-          pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-          pdf.setFontSize(14);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Informações da Redação', 20, 45);
-          
-          pdf.setFontSize(11);
+          // Informações do aluno
+          pdf.setFontSize(12);
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`Aluno: ${redacao.nome_aluno}`, 20, 55);
-          pdf.text(`Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}`, 20, 62);
-          pdf.text(`Tema: ${redacao.frase_tematica}`, 20, 69);
+          pdf.text(`Aluno: ${redacao.nome_aluno}`, 25, 78);
+          pdf.text(`Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}`, 25, 85);
+          pdf.text(`Tema: ${redacao.frase_tematica}`, 25, 92);
           
           // Carregar e processar a imagem da redação
           const img = new Image();
@@ -222,10 +227,10 @@ export const FormularioCorrecaoCompleto = ({
               
               pdf.addImage(img, 'JPEG', x, y, width, height);
             } else {
-              // Layout retrato
-              const margin = 15;
+              // Layout retrato - área da redação
+              const margin = 20;
               const availableWidth = 210 - (margin * 2);
-              const availableHeight = 297 - 85; // 85 = espaço do cabeçalho
+              const availableHeight = 297 - 105 - 20; // 105 = cabeçalho + info, 20 = rodapé
               
               let width, height;
               if (imgAspectRatio > availableWidth / availableHeight) {
@@ -237,9 +242,13 @@ export const FormularioCorrecaoCompleto = ({
               }
               
               const x = (210 - width) / 2;
-              const y = 85;
+              const y = 105;
               
               pdf.addImage(img, 'JPEG', x, y, width, height);
+              
+              // Rodapé colorido (sem texto)
+              pdf.setFillColor(102, 51, 153);
+              pdf.rect(0, 277, 210, 20, 'F');
             }
             
             // Download do PDF
