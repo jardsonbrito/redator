@@ -322,9 +322,6 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <CardTitle className="text-lg text-primary">
-                Vista Pedagógica
-              </CardTitle>
               <div className="flex flex-col sm:flex-row gap-2">
                 {redacao.data_correcao && (
                   <div className="flex items-center gap-2 text-sm text-primary/80">
