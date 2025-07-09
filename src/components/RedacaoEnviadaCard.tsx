@@ -116,6 +116,20 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
   const { elogios1, elogios2 } = getElogiosEPontosAtencao();
   const { correcao1, correcao2 } = getCorrecaoExterna();
 
+  console.log('🔍 DEBUG RedacaoEnviadaCard:', {
+    comentariosPedagogicos,
+    elogios1,
+    elogios2,
+    correcao1,
+    correcao2,
+    redacao: {
+      comentario_c1_corretor_1: redacao.comentario_c1_corretor_1,
+      comentario_c2_corretor_1: redacao.comentario_c2_corretor_1,
+      elogios_pontos_atencao_corretor_1: redacao.elogios_pontos_atencao_corretor_1,
+      elogios_pontos_atencao_corretor_2: redacao.elogios_pontos_atencao_corretor_2
+    }
+  });
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header da redação - otimizado para mobile */}
