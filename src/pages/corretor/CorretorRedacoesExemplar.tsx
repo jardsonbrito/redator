@@ -139,7 +139,7 @@ const CorretorRedacoesExemplar = () => {
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                         <div className="flex items-center gap-1">
                           <User className="w-4 h-4" />
-                          <span>{redacao.nome_aluno}</span>
+                          <span>Professor</span>
                         </div>
                         
                         <div className="flex items-center gap-1">
@@ -191,7 +191,7 @@ const CorretorRedacoesExemplar = () => {
                     {selectedRedacao.nota_total}/1000
                   </Badge>
                   <span className="text-sm text-gray-500">
-                    por {selectedRedacao.nome_aluno}
+                    por Professor
                   </span>
                 </div>
               </CardHeader>
