@@ -20,11 +20,11 @@ export const FileInput = ({ onImageUpload, initialImageUrl }: FileInputProps) =>
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    // Validate file type - only JPEG and PNG
+    if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione apenas arquivos de imagem.",
+        description: "Por favor, selecione apenas arquivos JPEG ou PNG.",
         variant: "destructive"
       });
       return;
@@ -87,7 +87,7 @@ export const FileInput = ({ onImageUpload, initialImageUrl }: FileInputProps) =>
         <Input
           id="image-upload"
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/jpg,image/png"
           onChange={handleFileChange}
           disabled={uploading}
           className="hidden"

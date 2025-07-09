@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { ArrowLeft, Save, CheckCircle, Download } from "lucide-react";
+import jsPDF from 'jspdf';
 
 interface FormularioCorrecaoProps {
   redacao: RedacaoCorretor;
@@ -68,8 +69,81 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
     }
   };
 
-  const handleDownloadManuscrita = () => {
-    if (manuscritaUrl) {
+  const handleDownloadManuscrita = async () => {
+    if (!manuscritaUrl) return;
+
+    try {
+      // Verificar se é uma imagem (JPEG/PNG)
+      const isImage = manuscritaUrl.toLowerCase().match(/\.(jpeg|jpg|png)$/);
+      
+      if (isImage) {
+        // Gerar PDF da imagem
+        const pdf = new jsPDF();
+        
+        // Criar uma nova imagem para obter as dimensões
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => {
+          // Dimensões da página A4 em mm
+          const pageWidth = 210;
+          const pageHeight = 297;
+          
+          // Calcular dimensões mantendo proporção
+          const imgAspectRatio = img.width / img.height;
+          let width, height;
+          
+          if (imgAspectRatio > 1) {
+            // Imagem mais larga que alta
+            width = pageWidth - 20; // margem de 10mm de cada lado
+            height = width / imgAspectRatio;
+          } else {
+            // Imagem mais alta que larga
+            height = pageHeight - 40; // margem de 20mm em cima e embaixo
+            width = height * imgAspectRatio;
+          }
+          
+          // Centralizar na página
+          const x = (pageWidth - width) / 2;
+          const y = (pageHeight - height) / 2;
+          
+          // Adicionar imagem ao PDF
+          pdf.addImage(img, 'JPEG', x, y, width, height);
+          
+          // Download do PDF
+          const fileName = `redacao_${redacao.nome_aluno.replace(/\s+/g, '_')}_${redacao.id.substring(0, 8)}.pdf`;
+          pdf.save(fileName);
+          
+          toast({
+            title: "PDF gerado com sucesso!",
+            description: "A redação foi convertida para PDF e baixada.",
+          });
+        };
+        
+        img.onerror = () => {
+          console.error('Erro ao carregar imagem para gerar PDF');
+          toast({
+            title: "Erro ao gerar PDF",
+            description: "Não foi possível carregar a imagem. Baixando arquivo original.",
+            variant: "destructive"
+          });
+          // Fallback: baixar arquivo original
+          window.open(manuscritaUrl, '_blank');
+        };
+        
+        img.src = manuscritaUrl;
+      } else {
+        // Se não for imagem, baixar arquivo original
+        window.open(manuscritaUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Ocorreu um erro. Baixando arquivo original.",
+        variant: "destructive"
+      });
+      // Fallback: baixar arquivo original
       window.open(manuscritaUrl, '_blank');
     }
   };
