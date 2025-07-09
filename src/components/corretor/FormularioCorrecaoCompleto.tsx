@@ -28,22 +28,14 @@ export const FormularioCorrecaoCompleto = ({
   onRefreshList 
 }: FormularioCorrecaoCompletoProps) => {
   const [notas, setNotas] = useState({
-    c1: 0,
-    c2: 0,
-    c3: 0,
-    c4: 0,
-    c5: 0,
+    c1: 200,
+    c2: 200,
+    c3: 200,
+    c4: 200,
+    c5: 200,
   });
   
-  const [comentarios, setComentarios] = useState({
-    c1: "",
-    c2: "",
-    c3: "",
-    c4: "",
-    c5: "",
-  });
-  
-  const [elogiosEPontosAtencao, setElogiosEPontosAtencao] = useState("");
+  const [relatorioPedagogico, setRelatorioPedagogico] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingCorrecao, setLoadingCorrecao] = useState(true);
   const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
@@ -51,8 +43,6 @@ export const FormularioCorrecaoCompleto = ({
   const [correcaoUrl, setCorrecaoUrl] = useState<string | null>(null);
   const [uploadingCorrecao, setUploadingCorrecao] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
-  const [comentariosAbertos, setComentariosAbertos] = useState<{[key: string]: boolean}>({});
-  const [elogiosAberto, setElogiosAberto] = useState(false);
   const [modalUploadAberto, setModalUploadAberto] = useState(false);
   const { toast } = useToast();
 
@@ -83,22 +73,14 @@ export const FormularioCorrecaoCompleto = ({
 
       if (data) {
         setNotas({
-          c1: data[`c1_${prefixo}`] || 0,
-          c2: data[`c2_${prefixo}`] || 0,
-          c3: data[`c3_${prefixo}`] || 0,
-          c4: data[`c4_${prefixo}`] || 0,
-          c5: data[`c5_${prefixo}`] || 0,
+          c1: data[`c1_${prefixo}`] || 200,
+          c2: data[`c2_${prefixo}`] || 200,
+          c3: data[`c3_${prefixo}`] || 200,
+          c4: data[`c4_${prefixo}`] || 200,
+          c5: data[`c5_${prefixo}`] || 200,
         });
         
-        setComentarios({
-          c1: data[`comentario_c1_${prefixo}`] || "",
-          c2: data[`comentario_c2_${prefixo}`] || "",
-          c3: data[`comentario_c3_${prefixo}`] || "",
-          c4: data[`comentario_c4_${prefixo}`] || "",
-          c5: data[`comentario_c5_${prefixo}`] || "",
-        });
-        
-        setElogiosEPontosAtencao(data[`elogios_pontos_atencao_${prefixo}`] || "");
+        setRelatorioPedagogico(data[`elogios_pontos_atencao_${prefixo}`] || "");
         setManuscritaUrl(data.redacao_manuscrita_url || null);
         setCorrecaoUrl(data[`correcao_arquivo_url_${prefixo}`] || null);
         
@@ -211,12 +193,12 @@ export const FormularioCorrecaoCompleto = ({
         c5_nota: notas.c5,
         nota_final: notaTotal,
         status_correcao: status,
-        comentario_c1: comentarios.c1.trim(),
-        comentario_c2: comentarios.c2.trim(),
-        comentario_c3: comentarios.c3.trim(),
-        comentario_c4: comentarios.c4.trim(),
-        comentario_c5: comentarios.c5.trim(),
-        elogios_pontos: elogiosEPontosAtencao.trim()
+        comentario_c1: "",
+        comentario_c2: "",
+        comentario_c3: "",
+        comentario_c4: "",
+        comentario_c5: "",
+        elogios_pontos: relatorioPedagogico.trim()
       });
       
       console.log('Resultado da função RPC:', { data, error, redacaoId: redacao.id });
@@ -430,38 +412,6 @@ export const FormularioCorrecaoCompleto = ({
                       </Select>
                       <span className="text-xs text-gray-500">/200</span>
                     </div>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs h-7"
-                      onClick={() => setComentariosAbertos(prev => ({
-                        ...prev,
-                        [competencia]: !prev[competencia]
-                      }))}
-                    >
-                      {comentarios[competencia as keyof typeof comentarios] ? '✏️ Editar' : '💬 Comentário'}
-                    </Button>
-                    
-                    {comentariosAbertos[competencia] && (
-                      <Textarea
-                        value={comentarios[competencia as keyof typeof comentarios]}
-                        onChange={(e) => 
-                          setComentarios(prev => ({
-                            ...prev,
-                            [competencia]: e.target.value
-                          }))
-                        }
-                        onBlur={() => setComentariosAbertos(prev => ({
-                          ...prev,
-                          [competencia]: false
-                        }))}
-                        placeholder={`Comentário para C${index + 1}...`}
-                        rows={3}
-                        className="text-xs"
-                        autoFocus
-                      />
-                    )}
                   </div>
                 );
               })}
@@ -471,38 +421,27 @@ export const FormularioCorrecaoCompleto = ({
                   <Label className="text-sm font-medium">Nota Total</Label>
                   <div className="text-lg font-bold text-primary">{calcularNotaTotal()}/1000</div>
                 </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-gray-500" />
-                    <Label className="text-sm font-medium">Elogios</Label>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs h-7"
-                    onClick={() => setElogiosAberto(!elogiosAberto)}
-                  >
-                    {elogiosEPontosAtencao ? '✏️ Editar' : '💬 Comentário'}
-                  </Button>
-                  
-                  {elogiosAberto && (
-                    <Textarea
-                      value={elogiosEPontosAtencao}
-                      onChange={(e) => setElogiosEPontosAtencao(e.target.value)}
-                      onBlur={() => setElogiosAberto(false)}
-                      placeholder="Elogios gerais e pontos de atenção..."
-                      rows={3}
-                      className="text-xs"
-                      autoFocus
-                    />
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Relatório pedagógico de correção */}
+      <Card className="bg-white">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Relatório pedagógico de correção</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={relatorioPedagogico}
+            onChange={(e) => setRelatorioPedagogico(e.target.value)}
+            placeholder="Digite aqui seu relatório pedagógico completo para o aluno..."
+            rows={6}
+            className="w-full resize-none"
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 };
