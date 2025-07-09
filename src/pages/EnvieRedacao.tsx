@@ -389,7 +389,7 @@ const EnvieRedacao = () => {
                   {tipoRedacao === "manuscrita" && (
                     <div className="bg-purple-50 p-6 rounded-lg border" style={{ borderColor: '#662f96' }}>
                       <label className="block text-lg font-medium text-redator-primary mb-4">
-                        📷 Envie a foto da sua redação manuscrita *
+                        Envie a foto da sua redação manuscrita *
                       </label>
                       <div className="space-y-4">
                         <div className="flex items-center gap-4">
