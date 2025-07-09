@@ -284,7 +284,29 @@ export const RedacaoEnviadaCard = ({
                             Visualizar PDF em nova aba
                           </Button>
                         </div>
-                      </div> : <img src={redacao.redacao_manuscrita_url} alt="Redação manuscrita" className="w-full h-auto rounded-md max-h-[80vh] object-contain" />}
+                      </div> : <img 
+                        src={redacao.redacao_manuscrita_url} 
+                        alt="Redação manuscrita" 
+                        className="w-full h-auto rounded-md cursor-zoom-in"
+                        style={{ maxHeight: '85vh', minHeight: '400px' }}
+                        onClick={() => window.open(redacao.redacao_manuscrita_url, '_blank')}
+                        onError={(e) => {
+                          console.error('Erro ao carregar redação manuscrita:', e);
+                          e.currentTarget.style.display = 'none';
+                          const errorDiv = document.createElement('div');
+                          errorDiv.innerHTML = `
+                            <div class="flex flex-col items-center justify-center h-96 p-8 bg-gray-50 rounded-md">
+                              <div class="text-6xl mb-4">❌</div>
+                              <h3 class="text-lg font-semibold text-gray-700 mb-2">Erro ao carregar redação</h3>
+                              <p class="text-sm text-gray-600 text-center">Não foi possível exibir a redação manuscrita</p>
+                              <button onclick="window.open('${redacao.redacao_manuscrita_url}', '_blank')" class="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm">
+                                Tentar abrir em nova aba
+                              </button>
+                            </div>
+                          `;
+                          e.currentTarget.parentNode?.appendChild(errorDiv);
+                        }}
+                      />}
                   </div>;
             }
             return <p className="text-sm text-gray-500 italic">
