@@ -82,261 +82,141 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         
         // Cores da paleta do projeto
         const primaryColor = [102, 51, 153]; // hsl(258, 84%, 29%) convertido para RGB
-        const secondaryColor = [200, 180, 245]; // hsl(258, 60%, 78%) convertido para RGB
-        const accentColor = [153, 102, 204]; // hsl(258, 70%, 55%) convertido para RGB
         
-        // Configurar fundo elegante
-        pdf.setFillColor(248, 250, 252); // Fundo claro
-        pdf.rect(0, 0, 210, 297, 'F');
+        // Carregar e processar a imagem da redação
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
         
-        // Adicionar faixa superior com gradiente simulado
-        pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        pdf.rect(0, 0, 210, 25, 'F');
-        
-        // Carregar e adicionar logomarca
-        const logoImg = new Image();
-        logoImg.crossOrigin = 'anonymous';
-        
-        logoImg.onload = () => {
-          // Fundo cinza claro exatamente como no mockup
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(0, 0, 210, 297, 'F');
+        img.onload = () => {
+          // Calcular se deve usar orientação paisagem
+          const imgAspectRatio = img.width / img.height;
+          const useLandscape = imgAspectRatio > 1.2;
           
-          // Logo circular no topo esquerdo - proporção exata do mockup
-          pdf.addImage(logoImg, 'PNG', 15, 15, 30, 30);
-          
-          // Título "Laboratório do Redator" ao lado do logo - posição e fonte do mockup
-          pdf.setTextColor(102, 51, 153);
-          pdf.setFontSize(22);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Laboratório do Redator', 55, 35);
-          
-          // Caixa de informações - dimensões exatas do mockup
-          pdf.setFillColor(218, 193, 255); // Cor lilás exata do mockup
-          pdf.rect(15, 60, 180, 50, 'F');
-          
-          // Borda roxa da caixa - espessura do mockup
-          pdf.setDrawColor(102, 51, 153);
-          pdf.setLineWidth(2);
-          pdf.rect(15, 60, 180, 50, 'S');
-          
-          // Título "Informações da Redação" - posição do mockup
-          pdf.setTextColor(102, 51, 153);
-          pdf.setFontSize(16);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Informações da Redação', 22, 78);
-          
-          // Informações do aluno - espaçamentos do mockup
-          pdf.setFontSize(12);
-          pdf.setFont('helvetica', 'normal');
-          pdf.text(`Aluno: ${redacao.nome_aluno}`, 22, 90);
-          pdf.text(`Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}`, 22, 98);
-          pdf.text(`Tema: ${redacao.frase_tematica}`, 22, 106);
-          
-          // Carregar e processar a imagem da redação
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          
-          img.onload = () => {
-            // Calcular se deve usar orientação paisagem
-            const imgAspectRatio = img.width / img.height;
-            const useLandscape = imgAspectRatio > 1.2;
+          if (useLandscape) {
+            // Recriar PDF em paisagem
+            pdf = new jsPDF('landscape', 'mm', 'a4');
             
-            if (useLandscape) {
-              // Recriar PDF em paisagem
-              pdf = new jsPDF('landscape', 'mm', 'a4');
-              
-              // Refazer o layout para paisagem
-              const pageWidth = 297;
-              const pageHeight = 210;
-              
-              // Fundo
-              pdf.setFillColor(248, 250, 252);
-              pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-              
-              // Faixa superior
-              pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-              pdf.rect(0, 0, pageWidth, 25, 'F');
-              
-              // Logo e título
-              pdf.addImage(logoImg, 'PNG', 10, 3, 40, 19);
-              pdf.setTextColor(255, 255, 255);
-              pdf.setFontSize(16);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('Laboratório do Redator', 60, 15);
-              
-              // Informações em paisagem
-              pdf.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-              pdf.rect(15, 35, 267, 25, 'F');
-              pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-              pdf.setLineWidth(1);
-              pdf.rect(15, 35, 267, 25, 'S');
-              
-              pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-              pdf.setFontSize(12);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('Informações da Redação', 20, 45);
-              pdf.setFontSize(10);
-              pdf.setFont('helvetica', 'normal');
-              pdf.text(`Aluno: ${redacao.nome_aluno}  |  Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}  |  Tema: ${redacao.frase_tematica}`, 20, 54);
-              
-              // Área para imagem em paisagem
-              const margin = 15;
-              const availableWidth = pageWidth - (margin * 2);
-              const availableHeight = pageHeight - 75; // 75 = espaço do cabeçalho
-              
-              let width, height;
-              if (imgAspectRatio > availableWidth / availableHeight) {
-                width = availableWidth;
-                height = width / imgAspectRatio;
-              } else {
-                height = availableHeight;
-                width = height * imgAspectRatio;
-              }
-              
-              const x = (pageWidth - width) / 2;
-              const y = 75;
-              
-              pdf.addImage(img, 'JPEG', x, y, width, height);
+            // Refazer o layout para paisagem
+            const pageWidth = 297;
+            const pageHeight = 210;
+            
+            // Fundo branco limpo
+            pdf.setFillColor(255, 255, 255);
+            pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+            
+            // Título "Laboratório do Redator" centralizado
+            pdf.setTextColor(102, 51, 153);
+            pdf.setFontSize(22);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Laboratório do Redator', pageWidth / 2, 25, { align: 'center' });
+            
+            // Título "Informações da Redação"
+            pdf.setTextColor(102, 51, 153);
+            pdf.setFontSize(16);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Informações da Redação', 15, 45);
+            
+            // Informações do aluno diretamente na página
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`Aluno: ${redacao.nome_aluno}`, 15, 57);
+            pdf.text(`Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}`, 15, 65);
+            pdf.text(`Tema: ${redacao.frase_tematica}`, 15, 73);
+            
+            // Área para imagem em paisagem
+            const margin = 15;
+            const availableWidth = pageWidth - (margin * 2);
+            const availableHeight = pageHeight - 85; // 85 = espaço do cabeçalho
+            
+            let width, height;
+            if (imgAspectRatio > availableWidth / availableHeight) {
+              width = availableWidth;
+              height = width / imgAspectRatio;
             } else {
-              // Layout retrato - área da redação exatamente como no mockup
-              const margin = 15;
-              const availableWidth = 210 - (margin * 2);
-              const availableHeight = 297 - 120 - 25; // 120 = cabeçalho + info, 25 = rodapé
-              
-              let width, height;
-              if (imgAspectRatio > availableWidth / availableHeight) {
-                width = availableWidth;
-                height = width / imgAspectRatio;
-              } else {
-                height = availableHeight;
-                width = height * imgAspectRatio;
-              }
-              
-              // Centralizar a imagem exatamente como no mockup
-              const x = (210 - width) / 2;
-              const y = 120;
-              
-              pdf.addImage(img, 'JPEG', x, y, width, height);
-              
-              // Rodapé colorido na posição exata do mockup (sem texto)
-              pdf.setFillColor(102, 51, 153);
-              pdf.rect(0, 272, 210, 25, 'F');
+              height = availableHeight;
+              width = height * imgAspectRatio;
             }
             
-            // Download do PDF
-            const fileName = `redacao_${redacao.nome_aluno.replace(/\s+/g, '_')}_${redacao.id.substring(0, 8)}.pdf`;
-            pdf.save(fileName);
+            const x = (pageWidth - width) / 2;
+            const y = 85;
             
-            toast({
-              title: "PDF gerado com sucesso!",
-              description: "A redação foi convertida para PDF e baixada com template personalizado.",
-            });
-          };
-          
-          img.onerror = () => {
-            console.error('Erro ao carregar imagem da redação');
-            toast({
-              title: "Erro ao gerar PDF",
-              description: "Não foi possível carregar a imagem. Baixando arquivo original.",
-              variant: "destructive"
-            });
-            window.open(manuscritaUrl, '_blank');
-          };
-          
-          img.src = manuscritaUrl;
-        };
-        
-        logoImg.onerror = () => {
-          console.error('Erro ao carregar logo, continuando sem ela');
-          // Continuar sem logo se não carregar
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => {
-            // Mesmo processamento da imagem sem logo
-            const imgAspectRatio = img.width / img.height;
-            const useLandscape = imgAspectRatio > 1.2;
+            pdf.addImage(img, 'JPEG', x, y, width, height);
             
-            if (useLandscape) {
-              pdf = new jsPDF('landscape', 'mm', 'a4');
-              const pageWidth = 297;
-              const pageHeight = 210;
-              
-              pdf.setFillColor(248, 250, 252);
-              pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-              
-              pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-              pdf.rect(0, 0, pageWidth, 25, 'F');
-              
-              pdf.setTextColor(255, 255, 255);
-              pdf.setFontSize(16);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('Laboratório do Redator', 20, 15);
-              
-              pdf.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-              pdf.rect(15, 35, 267, 25, 'F');
-              pdf.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-              pdf.setLineWidth(1);
-              pdf.rect(15, 35, 267, 25, 'S');
-              
-              pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-              pdf.setFontSize(12);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('Informações da Redação', 20, 45);
-              pdf.setFontSize(10);
-              pdf.setFont('helvetica', 'normal');
-              pdf.text(`Aluno: ${redacao.nome_aluno}  |  Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}  |  Tema: ${redacao.frase_tematica}`, 20, 54);
-              
-              const margin = 15;
-              const availableWidth = pageWidth - (margin * 2);
-              const availableHeight = pageHeight - 75;
-              
-              let width, height;
-              if (imgAspectRatio > availableWidth / availableHeight) {
-                width = availableWidth;
-                height = width / imgAspectRatio;
-              } else {
-                height = availableHeight;
-                width = height * imgAspectRatio;
-              }
-              
-              const x = (pageWidth - width) / 2;
-              const y = 75;
-              
-              pdf.addImage(img, 'JPEG', x, y, width, height);
+            // Rodapé colorido (sem texto)
+            pdf.setFillColor(102, 51, 153);
+            pdf.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+            
+          } else {
+            // Layout retrato
+            // Fundo branco limpo
+            pdf.setFillColor(255, 255, 255);
+            pdf.rect(0, 0, 210, 297, 'F');
+            
+            // Título "Laboratório do Redator" centralizado
+            pdf.setTextColor(102, 51, 153);
+            pdf.setFontSize(22);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Laboratório do Redator', 105, 25, { align: 'center' });
+            
+            // Título "Informações da Redação"
+            pdf.setTextColor(102, 51, 153);
+            pdf.setFontSize(16);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Informações da Redação', 15, 45);
+            
+            // Informações do aluno diretamente na página
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`Aluno: ${redacao.nome_aluno}`, 15, 57);
+            pdf.text(`Data: ${new Date(redacao.data_envio).toLocaleDateString('pt-BR')}`, 15, 65);
+            pdf.text(`Tema: ${redacao.frase_tematica}`, 15, 73);
+            
+            // Área para imagem
+            const margin = 15;
+            const availableWidth = 210 - (margin * 2);
+            const availableHeight = 297 - 85 - 25; // 85 = cabeçalho + info, 25 = rodapé
+            
+            let width, height;
+            if (imgAspectRatio > availableWidth / availableHeight) {
+              width = availableWidth;
+              height = width / imgAspectRatio;
             } else {
-              const margin = 15;
-              const availableWidth = 210 - (margin * 2);
-              const availableHeight = 297 - 85;
-              
-              let width, height;
-              if (imgAspectRatio > availableWidth / availableHeight) {
-                width = availableWidth;
-                height = width / imgAspectRatio;
-              } else {
-                height = availableHeight;
-                width = height * imgAspectRatio;
-              }
-              
-              const x = (210 - width) / 2;
-              const y = 85;
-              
-              pdf.addImage(img, 'JPEG', x, y, width, height);
+              height = availableHeight;
+              width = height * imgAspectRatio;
             }
             
-            const fileName = `redacao_${redacao.nome_aluno.replace(/\s+/g, '_')}_${redacao.id.substring(0, 8)}.pdf`;
-            pdf.save(fileName);
+            // Centralizar a imagem
+            const x = (210 - width) / 2;
+            const y = 85;
             
-            toast({
-              title: "PDF gerado com sucesso!",
-              description: "A redação foi convertida para PDF e baixada com template personalizado.",
-            });
-          };
-          img.src = manuscritaUrl;
+            pdf.addImage(img, 'JPEG', x, y, width, height);
+            
+            // Rodapé colorido (sem texto)
+            pdf.setFillColor(102, 51, 153);
+            pdf.rect(0, 272, 210, 25, 'F');
+          }
+          
+          // Download do PDF
+          const fileName = `redacao_${redacao.nome_aluno.replace(/\s+/g, '_')}_${redacao.id.substring(0, 8)}.pdf`;
+          pdf.save(fileName);
+          
+          toast({
+            title: "PDF gerado com sucesso!",
+            description: "A redação foi convertida para PDF e baixada.",
+          });
         };
         
-        // Carregar logo do projeto
-        logoImg.src = '/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png';
+        img.onerror = () => {
+          console.error('Erro ao carregar imagem da redação');
+          toast({
+            title: "Erro ao gerar PDF",
+            description: "Não foi possível carregar a imagem. Baixando arquivo original.",
+            variant: "destructive"
+          });
+          window.open(manuscritaUrl, '_blank');
+        };
+        
+        img.src = manuscritaUrl;
         
       } else {
         // Se não for imagem, baixar arquivo original
