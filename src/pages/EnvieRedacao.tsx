@@ -344,7 +344,7 @@ const EnvieRedacao = () => {
                   />
 
                   {/* Radio buttons para tipo de redação */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+                  <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-6 rounded-lg border" style={{ borderColor: '#662f96' }}>
                     <label className="block text-lg font-semibold text-redator-primary mb-4">
                       Como deseja enviar sua redação? *
                     </label>
