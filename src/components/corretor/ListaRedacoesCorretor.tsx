@@ -81,12 +81,6 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
 
   return (
     <Card>
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-          <FileText className="w-5 h-5" />
-          Redações
-        </CardTitle>
-      </CardHeader>
       <CardContent>
         <Tabs defaultValue="pendentes" className="w-full">
           <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 gap-1 h-auto' : 'grid-cols-3'}`}>
