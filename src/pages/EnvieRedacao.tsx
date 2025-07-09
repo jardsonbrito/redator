@@ -93,7 +93,7 @@ const EnvieRedacao = () => {
     if (file.size > maxSize) {
       toast({
         title: "Arquivo muito grande",
-        description: "A imagem deve ter no máximo 5MB.",
+        description: "O arquivo deve ter no máximo 5MB.",
         variant: "destructive"
       });
       return;
@@ -445,11 +445,21 @@ const EnvieRedacao = () => {
 
                         {redacaoManuscritaUrl && (
                           <div className="relative inline-block">
-                            <img 
-                              src={redacaoManuscritaUrl} 
-                              alt="Preview da redação manuscrita" 
-                              className="max-w-sm max-h-80 rounded-lg border-2 border-amber-300 shadow-md"
-                            />
+                            {redacaoManuscrita?.type === 'application/pdf' ? (
+                              <embed 
+                                src={redacaoManuscritaUrl} 
+                                type="application/pdf"
+                                width="400"
+                                height="500"
+                                className="rounded-lg border-2 border-amber-300 shadow-md"
+                              />
+                            ) : (
+                              <img 
+                                src={redacaoManuscritaUrl} 
+                                alt="Preview da redação manuscrita" 
+                                className="max-w-sm max-h-80 rounded-lg border-2 border-amber-300 shadow-md"
+                              />
+                            )}
                             <Button
                               type="button"
                               variant="destructive"
