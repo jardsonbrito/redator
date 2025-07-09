@@ -445,18 +445,18 @@ const EnvieRedacao = () => {
                         </div>
 
                         {redacaoManuscritaUrl && (
-                          <div className="relative inline-block">
+                          <div className="relative w-full max-w-2xl mx-auto">
                             {redacaoManuscrita?.type === 'application/pdf' ? (
-                              <div className="bg-white rounded-lg border-2 border-amber-300 shadow-md overflow-hidden">
+                              <div className="bg-white rounded-lg border-2 border-amber-300 shadow-md overflow-hidden w-full">
                                 <object 
                                   data={redacaoManuscritaUrl}
                                   type="application/pdf"
-                                  width="400"
-                                  height="500"
+                                  width="100%"
+                                  height="600"
                                   className="w-full"
                                 >
                                   {/* Fallback para quando o PDF não carrega */}
-                                  <div className="flex flex-col items-center justify-center h-full p-8 bg-gray-50">
+                                  <div className="flex flex-col items-center justify-center h-96 p-8 bg-gray-50">
                                     <div className="text-6xl mb-4">📄</div>
                                     <h3 className="text-lg font-semibold text-gray-700 mb-2">
                                       PDF Selecionado
@@ -484,7 +484,7 @@ const EnvieRedacao = () => {
                               <img 
                                 src={redacaoManuscritaUrl} 
                                 alt="Preview da redação manuscrita" 
-                                className="max-w-sm max-h-80 rounded-lg border-2 border-amber-300 shadow-md"
+                                className="w-full h-auto min-h-96 max-h-screen rounded-lg border-2 border-amber-300 shadow-md object-contain bg-white"
                                 onError={(e) => {
                                   console.error('Erro ao carregar imagem:', e);
                                 }}

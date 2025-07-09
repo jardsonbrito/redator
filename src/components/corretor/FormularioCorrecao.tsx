@@ -201,11 +201,37 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
           </CardHeader>
           <CardContent>
             <div className="bg-gray-50 rounded-md p-4 max-h-96 overflow-y-auto">
-              <img 
-                src={manuscritaUrl} 
-                alt="Redação manuscrita" 
-                className="w-full h-auto rounded-md"
-              />
+              {manuscritaUrl?.toLowerCase().includes('.pdf') || manuscritaUrl?.includes('application/pdf') ? (
+                <div className="w-full">
+                  <object 
+                    data={manuscritaUrl}
+                    type="application/pdf"
+                    width="100%"
+                    height="300"
+                    className="w-full rounded-md"
+                  >
+                    <div className="flex flex-col items-center justify-center h-60 p-4 bg-white rounded-md">
+                      <div className="text-4xl mb-2">📄</div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">PDF da Redação</h4>
+                      <a 
+                        href={manuscritaUrl} 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                      >
+                        Abrir PDF
+                      </a>
+                    </div>
+                  </object>
+                </div>
+              ) : (
+                <img 
+                  src={manuscritaUrl} 
+                  alt="Redação manuscrita" 
+                  className="w-full h-auto rounded-md cursor-zoom-in"
+                  onClick={() => window.open(manuscritaUrl, '_blank')}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

@@ -349,13 +349,57 @@ export const FormularioCorrecaoCompleto = ({
         {/* Redação - 80-85% da tela */}
         <div className="flex-1 max-w-[85%]">
           {manuscritaUrl ? (
-            <div className="bg-white rounded-lg overflow-hidden">
-              <img 
-                src={manuscritaUrl} 
-                alt="Redação manuscrita" 
-                className="w-full h-auto object-contain"
-                style={{ maxHeight: '85vh' }}
-              />
+            <div className="bg-white rounded-lg overflow-hidden border-2 border-gray-200">
+              {manuscritaUrl.toLowerCase().includes('.pdf') || manuscritaUrl.includes('application/pdf') ? (
+                <div className="w-full">
+                  <object 
+                    data={manuscritaUrl}
+                    type="application/pdf"
+                    width="100%"
+                    height="85vh"
+                    className="w-full"
+                  >
+                    <div className="flex flex-col items-center justify-center h-96 p-8 bg-gray-50">
+                      <div className="text-6xl mb-4">📄</div>
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                        PDF da Redação
+                      </h3>
+                      <a 
+                        href={manuscritaUrl} 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                      >
+                        📥 Abrir PDF em nova aba
+                      </a>
+                      <p className="text-xs text-gray-400 mt-3 text-center">
+                        Clique para visualizar o PDF em uma nova aba
+                      </p>
+                    </div>
+                  </object>
+                </div>
+              ) : (
+                <img 
+                  src={manuscritaUrl} 
+                  alt="Redação manuscrita" 
+                  className="w-full h-auto object-contain cursor-zoom-in"
+                  style={{ maxHeight: '85vh', minHeight: '400px' }}
+                  onClick={() => window.open(manuscritaUrl, '_blank')}
+                  onError={(e) => {
+                    console.error('Erro ao carregar redação manuscrita:', e);
+                    e.currentTarget.style.display = 'none';
+                    const errorDiv = document.createElement('div');
+                    errorDiv.innerHTML = `
+                      <div class="flex flex-col items-center justify-center h-96 p-8 bg-gray-50">
+                        <div class="text-6xl mb-4">❌</div>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Erro ao carregar redação</h3>
+                        <p class="text-sm text-gray-600 text-center">Não foi possível exibir a redação manuscrita</p>
+                      </div>
+                    `;
+                    e.currentTarget.parentNode?.appendChild(errorDiv);
+                  }}
+                />
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-lg p-6 border">
