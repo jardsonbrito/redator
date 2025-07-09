@@ -433,9 +433,6 @@ const EnvieRedacao = () => {
                   {/* Campo para redação digitada - aparece apenas se selecionado */}
                   {tipoRedacao === "digitada" && (
                     <div className="bg-purple-50 p-6 rounded-lg border" style={{ borderColor: '#662f96' }}>
-                      <label className="block text-lg font-medium text-redator-primary mb-4">
-                        ✏️ Digite o texto da sua redação *
-                      </label>
                       <RedacaoTextarea
                         value={redacaoTexto}
                         onChange={setRedacaoTexto}
