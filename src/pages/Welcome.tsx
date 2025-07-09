@@ -111,9 +111,7 @@ const Welcome = () => {
           </div>
           
           <h1 className="text-2xl font-bold text-redator-primary mb-2">App do Redator</h1>
-          <p className="text-sm text-redator-accent mb-8">
-            Antes de entrar, selecione o tipo de perfil e em seguida preencha os dados solicitados.
-          </p>
+          <p className="text-sm text-redator-accent mb-8">Para continuar, escolha o tipo de perfil e informe os dados solicitados.</p>
         </div>
 
         <div className="space-y-6">
