@@ -101,6 +101,7 @@ const EnvieRedacao = () => {
 
     setRedacaoManuscrita(file);
     const tempUrl = URL.createObjectURL(file);
+    console.log('🔍 Arquivo selecionado:', file.name, 'Tipo:', file.type, 'URL:', tempUrl);
     setRedacaoManuscritaUrl(tempUrl);
   };
 
@@ -446,25 +447,47 @@ const EnvieRedacao = () => {
                         {redacaoManuscritaUrl && (
                           <div className="relative inline-block">
                             {redacaoManuscrita?.type === 'application/pdf' ? (
-                              <embed 
-                                src={redacaoManuscritaUrl} 
-                                type="application/pdf"
-                                width="400"
-                                height="500"
-                                className="rounded-lg border-2 border-amber-300 shadow-md"
-                              />
+                              <div className="bg-white rounded-lg border-2 border-amber-300 shadow-md overflow-hidden">
+                                <iframe 
+                                  src={`${redacaoManuscritaUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                                  width="400"
+                                  height="500"
+                                  className="w-full border-0"
+                                  title="Preview do PDF da redação"
+                                  style={{ minHeight: '500px' }}
+                                  onError={(e) => {
+                                    console.error('Erro ao carregar PDF no iframe:', e);
+                                  }}
+                                  onLoad={() => {
+                                    console.log('✅ PDF carregado com sucesso no iframe');
+                                  }}
+                                />
+                                <div className="p-2 bg-gray-50 text-sm text-gray-600 text-center border-t">
+                                  📄 PDF: {redacaoManuscrita?.name || 'redacao.pdf'}
+                                  <br />
+                                  <span className="text-xs text-gray-500">
+                                    {(redacaoManuscrita.size / 1024 / 1024).toFixed(2)} MB
+                                  </span>
+                                </div>
+                              </div>
                             ) : (
                               <img 
                                 src={redacaoManuscritaUrl} 
                                 alt="Preview da redação manuscrita" 
                                 className="max-w-sm max-h-80 rounded-lg border-2 border-amber-300 shadow-md"
+                                onError={(e) => {
+                                  console.error('Erro ao carregar imagem:', e);
+                                }}
+                                onLoad={() => {
+                                  console.log('✅ Imagem carregada com sucesso');
+                                }}
                               />
                             )}
                             <Button
                               type="button"
                               variant="destructive"
                               size="sm"
-                              className="absolute -top-2 -right-2 rounded-full w-8 h-8 p-0"
+                              className="absolute -top-2 -right-2 rounded-full w-8 h-8 p-0 z-10"
                               onClick={handleRemoveRedacaoManuscrita}
                             >
                               <X className="w-4 h-4" />
