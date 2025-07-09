@@ -420,7 +420,7 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
               <>
                 <Separator className="bg-primary/20" />
                 <div>
-                  <h3 className="font-semibold text-primary mb-4">Comentário Geral</h3>
+                  <h3 className="font-semibold text-primary mb-4">Relatório pedagógico de correção</h3>
                   <div className="bg-white border border-primary/20 rounded-lg p-4">
                     <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
                       {redacao.comentario_admin}

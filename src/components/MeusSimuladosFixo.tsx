@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, Calendar, User, FileText, Lock } from "lucide-react";
+import { Eye, Calendar, User, FileText, Lock, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
+import html2canvas from "html2canvas";
 
 interface MeusSimuladosFixoProps {
   turmaCode: string;
@@ -377,6 +378,51 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
   };
 
+  // Função para baixar a correção como imagem
+  const handleDownloadCorrection = async () => {
+    try {
+      const element = document.querySelector('.dialog-content-capture') as HTMLElement;
+      if (!element) {
+        toast({
+          title: "Erro no download",
+          description: "Não foi possível capturar a correção.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      // Criar link para download
+      const link = document.createElement('a');
+      link.download = `correcao-${authenticatedRedacao?.nome_aluno?.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Download concluído!",
+        description: "Sua correção foi baixada como imagem.",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar screenshot:', error);
+      toast({
+        title: "Erro no download",
+        description: "Ocorreu um erro ao gerar a imagem da correção.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       {/* Container principal com visibilidade garantida */}
@@ -560,11 +606,20 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           }
           setShowCorrecaoDialog(open);
         }}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto dialog-content-capture">
+            <DialogHeader className="flex flex-row items-center justify-between">
               <DialogTitle className="text-primary">
                 Vista Pedagógica
               </DialogTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadCorrection}
+                className="bg-primary text-white hover:bg-primary/90 flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Baixar correção
+              </Button>
             </DialogHeader>
             
             <div className="space-y-6">
