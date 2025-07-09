@@ -26,9 +26,6 @@ export const RedacaoTextarea = ({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="redacao-texto" className="text-redator-primary font-medium">
-        Texto da Redação *
-      </Label>
       <Textarea
         id="redacao-texto"
         placeholder={placeholder}
