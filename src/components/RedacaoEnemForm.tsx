@@ -73,19 +73,20 @@ export const RedacaoEnemForm = ({
         >
           {/* Numeração das linhas */}
           <div 
-            className="absolute left-0 top-0 flex flex-col justify-start text-gray-500 text-sm font-mono py-6"
+            className="absolute left-0 top-0 flex flex-col justify-start text-gray-500 text-sm font-mono"
             style={{
-              width: '8.33%', // 0.5cm de 18cm = 2.77%, mas ajustado para melhor visualização
-              height: '100%'
+              width: '8.33%', // 0.5cm de 18cm
+              height: '100%',
+              paddingTop: '24px' // Alinhamento inicial
             }}
           >
             {lineNumbers.map((num) => (
               <div 
                 key={num} 
-                className="flex items-start justify-center text-xs"
+                className="flex items-center justify-center text-xs"
                 style={{ 
-                  height: '3.33%', // 100% / 30 linhas
-                  paddingTop: '2px'
+                  height: '26.64px', // Mesma altura do line-height do texto
+                  lineHeight: '26.64px'
                 }}
               >
                 {num}
@@ -102,14 +103,14 @@ export const RedacaoEnemForm = ({
               paddingRight: '8px'
             }}
           >
-            {/* Linhas de fundo */}
-            <div className="absolute inset-0 pointer-events-none py-6">
+            {/* Linhas de fundo - exatamente 30 linhas */}
+            <div className="absolute inset-0 pointer-events-none">
               {lineNumbers.map((num) => (
                 <div 
                   key={num}
                   className="absolute w-full"
                   style={{
-                    top: `${(num - 1) * 3.33 + 2.8}%`, // Posiciona a linha na base do texto
+                    top: `${24 + (num - 1) * 26.64 + 20}px`, // Posição da linha na base do texto
                     height: '1px',
                     backgroundColor: 'rgba(0, 0, 0, 0.25)', // Linha preta com 25% de opacidade
                     borderBottom: '1px solid rgba(0, 0, 0, 0.25)'
@@ -124,11 +125,13 @@ export const RedacaoEnemForm = ({
               value={value}
               onChange={handleChange}
               placeholder={placeholder}
-              className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-900 font-sans p-0 pt-6"
+              className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-900 font-sans p-0"
               style={{
                 fontSize: '16px',
-                lineHeight: '26.64px', // Altura de cada linha (3.33% de 800px)
-                fontFamily: 'system-ui, -apple-system, sans-serif'
+                lineHeight: '26.64px', // Altura exata de cada linha
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                paddingTop: '24px', // Alinhamento com a numeração
+                paddingBottom: '24px'
               }}
               spellCheck={false}
             />
