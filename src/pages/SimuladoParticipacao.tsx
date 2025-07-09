@@ -12,7 +12,7 @@ import { format, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { RedacaoTextarea } from "@/components/RedacaoTextarea";
+import { RedacaoEnemForm } from "@/components/RedacaoEnemForm";
 import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -493,10 +493,11 @@ const SimuladoParticipacao = () => {
                     </p>
                   </div>
 
-                  <RedacaoTextarea
+                  <RedacaoEnemForm
                     value={redacaoTexto}
                     onChange={setRedacaoTexto}
                     onValidChange={setIsRedacaoValid}
+                    placeholder="Escreva sua redação para o simulado seguindo o formato oficial do ENEM..."
                   />
 
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
