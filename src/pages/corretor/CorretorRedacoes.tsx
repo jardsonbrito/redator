@@ -49,9 +49,6 @@ const CorretorRedacoes = () => {
           <h1 className="text-xl sm:text-3xl font-bold text-gray-900 break-words">
             Redações
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Gerencie suas correções pendentes, incompletas e finalizadas
-          </p>
         </div>
 
         {redacaoSelecionada ? (
