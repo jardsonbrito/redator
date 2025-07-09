@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
@@ -52,6 +53,7 @@ export const FormularioCorrecaoCompleto = ({
   const [modoEdicao, setModoEdicao] = useState(false);
   const [comentariosAbertos, setComentariosAbertos] = useState<{[key: string]: boolean}>({});
   const [elogiosAberto, setElogiosAberto] = useState(false);
+  const [modalUploadAberto, setModalUploadAberto] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -293,10 +295,53 @@ export const FormularioCorrecaoCompleto = ({
             Baixar
           </Button>
         )}
-        <Button variant="outline" size="sm" onClick={handleUploadCorrecao} disabled={!correcaoArquivo || uploadingCorrecao}>
-          <Upload className="w-4 h-4 mr-1" />
-          Subir
-        </Button>
+        <Dialog open={modalUploadAberto} onOpenChange={setModalUploadAberto}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Upload className="w-4 h-4 mr-1" />
+              Subir
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload de Correção Externa</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="correcao-upload">Selecionar arquivo de correção</Label>
+                <Input
+                  id="correcao-upload"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Formatos aceitos: PDF, DOC, DOCX, JPG, JPEG, PNG
+                </p>
+              </div>
+              {correcaoUrl && (
+                <div className="text-xs text-green-600">
+                  ✓ Correção enviada com sucesso!
+                </div>
+              )}
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setModalUploadAberto(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    await handleUploadCorrecao();
+                    setModalUploadAberto(false);
+                  }} 
+                  disabled={!correcaoArquivo || uploadingCorrecao}
+                >
+                  {uploadingCorrecao ? "Enviando..." : "Enviar"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         <Button variant="outline" size="sm" onClick={() => salvarCorrecao('incompleta')} disabled={loading}>
           <Save className="w-4 h-4 mr-1" />
           Incompleta
@@ -335,24 +380,6 @@ export const FormularioCorrecaoCompleto = ({
             </div>
           )}
 
-          {/* Upload de Correção */}
-          <Card className="bg-white mt-4">
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <Input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={(e) => setCorrecaoArquivo(e.target.files?.[0] || null)}
-                  className="flex-1 text-sm"
-                />
-              </div>
-              {correcaoUrl && (
-                <div className="text-xs text-green-600 mt-2">
-                  ✓ Correção enviada com sucesso!
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         {/* Vista Pedagógica - 15-20% da tela */}

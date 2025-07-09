@@ -52,12 +52,6 @@ const CorretorHome = () => {
           <h1 className="text-xl sm:text-3xl font-bold text-gray-900 break-words">
             Olá, {isMobile ? corretor.nome_completo.split(' ')[0] : corretor.nome_completo}!
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-            {isMobile 
-              ? "Bem-vindo ao painel do corretor." 
-              : "Bem-vindo ao painel do corretor. Aqui você pode corrigir as redações atribuídas a você com a nova Vista Pedagógica."
-            }
-          </p>
         </div>
 
         {redacaoSelecionada ? (

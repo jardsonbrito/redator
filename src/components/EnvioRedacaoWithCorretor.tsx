@@ -42,10 +42,12 @@ export const EnvioRedacaoWithCorretor = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
+    // Aceitar imagens e PDFs
+    const isValidType = file.type.startsWith('image/') || file.type === 'application/pdf';
+    if (!isValidType) {
       toast({
         title: "Formato inválido",
-        description: "Por favor, selecione apenas arquivos de imagem (JPG, JPEG ou PNG).",
+        description: "Por favor, selecione apenas arquivos de imagem (JPG, JPEG, PNG) ou PDF.",
         variant: "destructive"
       });
       return;
@@ -55,7 +57,7 @@ export const EnvioRedacaoWithCorretor = ({
     if (file.size > maxSize) {
       toast({
         title: "Arquivo muito grande",
-        description: "A imagem deve ter no máximo 5MB.",
+        description: "O arquivo deve ter no máximo 5MB.",
         variant: "destructive"
       });
       return;
@@ -250,14 +252,14 @@ export const EnvioRedacaoWithCorretor = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
+    <Card className="max-w-4xl mx-auto">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg">
           Enviar Redação {isSimulado ? "- Simulado" : exercicioId ? "- Exercício" : ""}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="nome_aluno">Nome do Aluno *</Label>
@@ -307,54 +309,67 @@ export const EnvioRedacaoWithCorretor = ({
             </div>
           )}
 
-          <CorretorSelector
-            selectedCorretores={selectedCorretores}
-            onCorretoresChange={setSelectedCorretores}
-            isSimulado={isSimulado}
-            required={true}
-          />
-
-          <div>
-            <Label className="text-base font-medium">Redação Manuscrita (opcional)</Label>
-            <div className="space-y-4 mt-2">
-              <div className="flex items-center gap-4">
-                <label htmlFor="redacao-manuscrita" className="cursor-pointer">
-                  <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
-                    <Upload className="w-4 h-4" />
-                    <span className="text-sm">Selecionar imagem</span>
-                  </div>
-                </label>
-                <input
-                  id="redacao-manuscrita"
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png"
-                  onChange={handleRedacaoManuscritaChange}
-                  className="hidden"
-                />
-              </div>
-
-              {redacaoManuscritaUrl && (
-                <div className="relative inline-block">
-                  <img 
-                    src={redacaoManuscritaUrl} 
-                    alt="Preview da redação manuscrita" 
-                    className="max-w-xs max-h-60 rounded-lg border"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0"
-                    onClick={handleRemoveRedacaoManuscrita}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <CorretorSelector
+                selectedCorretores={selectedCorretores}
+                onCorretoresChange={setSelectedCorretores}
+                isSimulado={isSimulado}
+                required={true}
+              />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Formatos aceitos: JPG, JPEG, PNG
-            </p>
+
+            <div>
+              <Label className="text-base font-medium">Como deseja enviar sua redação? *</Label>
+              <div className="space-y-3 mt-2">
+                <div className="flex items-center gap-4">
+                  <label htmlFor="redacao-manuscrita" className="cursor-pointer">
+                    <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-primary/30 rounded-lg hover:border-primary/50 transition-colors">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm">Selecionar arquivo</span>
+                    </div>
+                  </label>
+                  <input
+                    id="redacao-manuscrita"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,application/pdf"
+                    onChange={handleRedacaoManuscritaChange}
+                    className="hidden"
+                  />
+                </div>
+
+                {redacaoManuscritaUrl && (
+                  <div className="relative inline-block">
+                    {redacaoManuscrita?.type === 'application/pdf' ? (
+                      <div className="flex items-center gap-2 p-4 border rounded-lg bg-gray-50">
+                        <div className="w-8 h-8 bg-red-500 text-white rounded flex items-center justify-center text-xs font-bold">
+                          PDF
+                        </div>
+                        <span className="text-sm">{redacaoManuscrita.name}</span>
+                      </div>
+                    ) : (
+                      <img 
+                        src={redacaoManuscritaUrl} 
+                        alt="Preview da redação manuscrita" 
+                        className="max-w-xs max-h-40 rounded-lg border"
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0"
+                      onClick={handleRemoveRedacaoManuscrita}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Formatos aceitos: JPG, JPEG, PNG, PDF (máx. 5MB)
+                </p>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -364,7 +379,7 @@ export const EnvioRedacaoWithCorretor = ({
               value={formData.redacao_texto}
               onChange={(e) => setFormData(prev => ({ ...prev, redacao_texto: e.target.value }))}
               placeholder="Digite o texto da sua redação aqui..."
-              className="min-h-[300px]"
+              className="min-h-[200px]"
             />
           </div>
 
