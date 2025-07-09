@@ -563,7 +563,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-primary">
-                ✅ {authenticatedRedacao.frase_tematica}
+                Vista Pedagógica
               </DialogTitle>
             </DialogHeader>
             
