@@ -23,7 +23,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
     { icon: Video, label: "Aulas", path: "/corretor/aulas" },
     { icon: Video, label: "Videoteca", path: "/corretor/videoteca" },
     { icon: Library, label: "Biblioteca", path: "/corretor/biblioteca" },
-    { icon: FileText, label: "Redações", path: "/corretor/redacoes" },
+    { icon: FileText, label: "Exemplares", path: "/corretor/redacoes" },
     { icon: Trophy, label: "Top 5", path: "/corretor/top5" },
   ];
 
