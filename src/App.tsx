@@ -30,6 +30,7 @@ import { ExerciciosAdmin } from "./pages/admin/ExerciciosAdmin";
 import { CorretoresAdmin } from "./pages/admin/CorretoresAdmin";
 import CorretorLogin from "./pages/CorretorLogin";
 import CorretorHome from "./pages/CorretorHome";
+import CorretorRedacoes from "./pages/corretor/CorretorRedacoes";
 import CorretorTemas from "./pages/corretor/CorretorTemas";
 import CorretorSimulados from "./pages/corretor/CorretorSimulados";
 import CorretorAulas from "./pages/corretor/CorretorAulas";
@@ -84,6 +85,7 @@ function App() {
                 {/* Rotas do Corretor */}
                 <Route path="/corretor/login" element={<CorretorLogin />} />
                 <Route path="/corretor" element={<CorretorHome />} />
+                <Route path="/corretor/redacoes-corretor" element={<CorretorRedacoes />} />
                 <Route path="/corretor/temas" element={<CorretorTemas />} />
                 <Route path="/corretor/simulados" element={<CorretorSimulados />} />
                 <Route path="/corretor/aulas" element={<CorretorAulas />} />

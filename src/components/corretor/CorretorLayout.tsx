@@ -18,12 +18,13 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
 
   const menuItems = [
     { icon: Home, label: "Home", path: "/corretor" },
+    { icon: FileText, label: "Redações", path: "/corretor/redacoes-corretor" },
     { icon: BookOpen, label: "Temas", path: "/corretor/temas" },
     { icon: FileText, label: "Simulados", path: "/corretor/simulados" },
+    { icon: FileText, label: "Exemplares", path: "/corretor/redacoes" },
     { icon: Video, label: "Aulas", path: "/corretor/aulas" },
     { icon: Video, label: "Videoteca", path: "/corretor/videoteca" },
     { icon: Library, label: "Biblioteca", path: "/corretor/biblioteca" },
-    { icon: FileText, label: "Exemplares", path: "/corretor/redacoes" },
     { icon: Trophy, label: "Top 5", path: "/corretor/top5" },
   ];
 
