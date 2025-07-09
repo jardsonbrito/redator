@@ -146,7 +146,9 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
             corrigida,
             nota_total,
             comentario_admin,
-            data_correcao
+            data_correcao,
+            elogios_pontos_atencao_corretor_1,
+            elogios_pontos_atencao_corretor_2
           `)
           .ilike('email_aluno', alunoEmail.toLowerCase().trim())
           .neq('tipo_envio', 'visitante')
@@ -313,7 +315,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         status: redacaoBasica.status,
         corrigida: redacaoCompleta.corrigida,
         nota_total: redacaoCompleta.nota_total,
-        comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
+        comentario_admin: redacaoCompleta.elogios_pontos_atencao_corretor_1 || redacaoCompleta.elogios_pontos_atencao_corretor_2 || redacaoCompleta.comentario_admin,
         data_correcao: redacaoCompleta.data_correcao,
         redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "",
         nota_c1: redacaoCompleta.nota_c1,
@@ -606,7 +608,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           }
           setShowCorrecaoDialog(open);
         }}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto dialog-content-capture">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader className="flex flex-row items-center justify-between">
               <DialogTitle className="text-primary">
                 Vista Pedagógica
@@ -622,7 +624,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
               </Button>
             </DialogHeader>
             
-            <div className="space-y-6">
+            <div className="space-y-6 dialog-content-capture">
               <RedacaoEnviadaCard 
                 redacao={{
                   id: authenticatedRedacao.id,

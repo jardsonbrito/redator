@@ -163,7 +163,53 @@ export const RedacaoEnviadaCard = ({
         </CardContent>
       </Card>
 
-      {/* Área de exibição da redação corrigida - com lógica condicional */}
+      {/* Vista Pedagógica (se disponível) - PRIMEIRA NA ORDEM */}
+      {redacao.corrigida && <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                {redacao.data_correcao && <div className="flex items-center gap-2 text-sm text-primary/80">
+                    <Clock className="w-4 h-4" />
+                    Corrigido em: {formatDate(redacao.data_correcao)}
+                  </div>}
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Notas por competência - formato simplificado */}
+            <div>
+              <h3 className="font-semibold text-primary mb-4">Notas por Competência</h3>
+              
+              {/* Grid 5 competências + nota final */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[1, 2, 3, 4, 5].map(comp => {
+              const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
+              return <div key={comp} className="text-center">
+                      <div className="bg-white border border-primary/20 rounded-lg p-3">
+                        <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
+                        <div className="text-lg font-bold text-primary">
+                          {nota !== null ? nota : '-'}
+                        </div>
+                      </div>
+                    </div>;
+            })}
+                
+                {/* Nota Final */}
+                <div className="text-center col-span-2 sm:col-span-1">
+                  <div className="bg-primary text-white rounded-lg p-3">
+                    <div className="text-xs font-medium mb-1">Nota Final</div>
+                    <div className="text-lg font-bold">
+                      {redacao.nota_total !== null ? redacao.nota_total : '-'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>}
+
+      {/* Área de exibição da redação - SEGUNDA NA ORDEM */}
       <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-primary">
@@ -249,101 +295,20 @@ export const RedacaoEnviadaCard = ({
         </CardContent>
       </Card>
 
-      {/* Vista Pedagógica (se disponível) - layout mobile otimizado */}
-      {redacao.corrigida && <Card className="border-primary/20 bg-primary/5">
+      {/* Relatório pedagógico - TERCEIRO NA ORDEM */}
+      {redacao.corrigida && redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex flex-col sm:flex-row gap-2">
-                {redacao.data_correcao && <div className="flex items-center gap-2 text-sm text-primary/80">
-                    <Clock className="w-4 h-4" />
-                    Corrigido em: {formatDate(redacao.data_correcao)}
-                  </div>}
-              </div>
-            </div>
+            <CardTitle className="flex items-center gap-2 text-lg text-primary">
+              <MessageSquare className="w-5 h-5" />
+              Relatório pedagógico de correção
+            </CardTitle>
           </CardHeader>
-
-          <CardContent className="space-y-6">
-            {/* Notas por competência - formato simplificado */}
-            <div>
-              <h3 className="font-semibold text-primary mb-4">Notas por Competência</h3>
-              
-              {/* Grid 5 competências + nota final */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {[1, 2, 3, 4, 5].map(comp => {
-              const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
-              return <div key={comp} className="text-center">
-                      <div className="bg-white border border-primary/20 rounded-lg p-3">
-                        <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
-                        <div className="text-lg font-bold text-primary">
-                          {nota !== null ? nota : '-'}
-                        </div>
-                      </div>
-                    </div>;
-            })}
-                
-                {/* Nota Final */}
-                <div className="text-center col-span-2 sm:col-span-1">
-                  <div className="bg-primary text-white rounded-lg p-3">
-                    <div className="text-xs font-medium mb-1">Nota Final</div>
-                    <div className="text-lg font-bold">
-                      {redacao.nota_total !== null ? redacao.nota_total : '-'}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <CardContent>
+            <div className="bg-white border border-primary/20 rounded-lg p-4">
+              <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                {redacao.comentario_admin}
+              </p>
             </div>
-
-            {/* Comentários - apenas competências com comentários */}
-            {comentariosPedagogicos.length > 0 && <>
-                <Separator className="bg-primary/20" />
-                <div>
-                  <h3 className="font-semibold text-primary mb-4">Comentários</h3>
-                  <div className="space-y-3">
-                    {comentariosPedagogicos.map(({
-                competencia,
-                comentario1,
-                comentario2
-              }) => <div key={competencia} className="bg-white border border-primary/20 rounded-lg p-4">
-                        <h4 className="font-medium text-primary mb-3">C{competencia}</h4>
-                        {comentario1 && <div className="mb-3">
-                            <p className="text-sm text-gray-700">{comentario1}</p>
-                          </div>}
-                        {comentario2 && <div>
-                            <p className="text-sm text-gray-700">{comentario2}</p>
-                          </div>}
-                      </div>)}
-                  </div>
-                </div>
-              </>}
-
-            {/* Elogios e pontos de atenção */}
-            {(elogios1 || elogios2) && <>
-                <Separator className="bg-primary/20" />
-                <div>
-                  <h3 className="font-semibold text-primary mb-4">Elogios e Pontos de Atenção</h3>
-                  <div className="space-y-3">
-                    {elogios1 && <div className="bg-white border border-primary/20 rounded-lg p-4">
-                        <p className="text-sm text-gray-700">{elogios1}</p>
-                      </div>}
-                    {elogios2 && <div className="bg-white border border-primary/20 rounded-lg p-4">
-                        <p className="text-sm text-gray-700">{elogios2}</p>
-                      </div>}
-                  </div>
-                </div>
-              </>}
-
-            {/* Comentário do admin (legado) */}
-            {redacao.comentario_admin && <>
-                <Separator className="bg-primary/20" />
-                <div>
-                  <h3 className="font-semibold text-primary mb-4">Relatório pedagógico de correção</h3>
-                  <div className="bg-white border border-primary/20 rounded-lg p-4">
-                    <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
-                      {redacao.comentario_admin}
-                    </p>
-                  </div>
-                </div>
-              </>}
           </CardContent>
         </Card>}
     </div>;
