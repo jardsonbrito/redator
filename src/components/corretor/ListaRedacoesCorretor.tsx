@@ -84,7 +84,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
           <FileText className="w-5 h-5" />
-          Minhas Redações
+          Redações
         </CardTitle>
       </CardHeader>
       <CardContent>
