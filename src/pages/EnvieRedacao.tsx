@@ -75,10 +75,11 @@ const EnvieRedacao = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
       toast({
         title: "Formato inválido",
-        description: "Por favor, selecione apenas arquivos de imagem (JPG, JPEG ou PNG).",
+        description: "Por favor, selecione apenas arquivos de imagem (JPG, JPEG, PNG) ou PDF.",
         variant: "destructive"
       });
       return;
@@ -336,53 +337,57 @@ const EnvieRedacao = () => {
                     </p>
                   </div>
 
-                  <CorretorSelector
-                    selectedCorretores={selectedCorretores}
-                    onCorretoresChange={setSelectedCorretores}
-                    isSimulado={false}
-                    required={true}
-                  />
-
-                  {/* Radio buttons para tipo de redação */}
-                  <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-6 rounded-lg border" style={{ borderColor: '#662f96' }}>
-                    <label className="block text-lg font-semibold text-redator-primary mb-4">
-                      Como deseja enviar sua redação? *
-                    </label>
-                    <RadioGroup
-                      value={tipoRedacao}
-                      onValueChange={(value: "manuscrita" | "digitada") => {
-                        setTipoRedacao(value);
-                        // Limpar dados do tipo anterior quando mudar
-                        if (value === "manuscrita") {
-                          setRedacaoTexto("");
-                        } else {
-                          handleRemoveRedacaoManuscrita();
-                        }
-                      }}
-                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                    >
-                      <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-redator-accent transition-colors cursor-pointer bg-white">
-                        <RadioGroupItem value="manuscrita" id="manuscrita" />
-                        <Label htmlFor="manuscrita" className="flex items-center gap-2 cursor-pointer flex-1">
-                          <Camera className="w-5 h-5 text-redator-primary" />
-                          <div>
-                            <div className="font-medium text-redator-primary">Redação manuscrita (foto)</div>
-                            <div className="text-sm text-redator-accent">Envie uma foto da sua redação escrita à mão</div>
-                          </div>
-                        </Label>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-redator-accent transition-colors cursor-pointer bg-white">
-                        <RadioGroupItem value="digitada" id="digitada" />
-                        <Label htmlFor="digitada" className="flex items-center gap-2 cursor-pointer flex-1">
-                          <Edit3 className="w-5 h-5 text-redator-primary" />
-                          <div>
-                            <div className="font-medium text-redator-primary">Redação digitada (formulário)</div>
-                            <div className="text-sm text-redator-accent">Digite o texto da sua redação no campo abaixo</div>
-                          </div>
-                        </Label>
-                      </div>
-                    </RadioGroup>
+                  {/* Layout compacto: seletor de corretores e tipo de redação */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <CorretorSelector
+                        selectedCorretores={selectedCorretores}
+                        onCorretoresChange={setSelectedCorretores}
+                        isSimulado={false}
+                        required={true}
+                      />
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-6 rounded-lg border" style={{ borderColor: '#662f96' }}>
+                      <label className="block text-lg font-semibold text-redator-primary mb-4">
+                        Como deseja enviar sua redação? *
+                      </label>
+                      <RadioGroup
+                        value={tipoRedacao}
+                        onValueChange={(value: "manuscrita" | "digitada") => {
+                          setTipoRedacao(value);
+                          // Limpar dados do tipo anterior quando mudar
+                          if (value === "manuscrita") {
+                            setRedacaoTexto("");
+                          } else {
+                            handleRemoveRedacaoManuscrita();
+                          }
+                        }}
+                        className="space-y-3"
+                      >
+                        <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:border-redator-accent transition-colors cursor-pointer bg-white">
+                          <RadioGroupItem value="manuscrita" id="manuscrita" />
+                          <Label htmlFor="manuscrita" className="flex items-center gap-2 cursor-pointer flex-1">
+                            <Camera className="w-4 h-4 text-redator-primary" />
+                            <div>
+                              <div className="font-medium text-redator-primary text-sm">Manuscrita/PDF</div>
+                              <div className="text-xs text-redator-accent">Foto ou PDF da redação</div>
+                            </div>
+                          </Label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:border-redator-accent transition-colors cursor-pointer bg-white">
+                          <RadioGroupItem value="digitada" id="digitada" />
+                          <Label htmlFor="digitada" className="flex items-center gap-2 cursor-pointer flex-1">
+                            <Edit3 className="w-4 h-4 text-redator-primary" />
+                            <div>
+                              <div className="font-medium text-redator-primary text-sm">Digitada</div>
+                              <div className="text-xs text-redator-accent">Formulário de texto</div>
+                            </div>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
                   </div>
 
                   {/* Campo para redação manuscrita - aparece apenas se selecionado */}
@@ -394,15 +399,15 @@ const EnvieRedacao = () => {
                             <div className="flex items-center gap-3 px-6 py-4 border-2 border-dashed rounded-lg transition-colors bg-white" style={{ borderColor: '#3f0077' }}>
                               <Camera className="w-6 h-6" style={{ color: '#3f0077' }} />
                               <div>
-                                <span className="text-base font-medium" style={{ color: '#3f0077' }}>Selecionar foto da redação</span>
-                                <div className="text-sm" style={{ color: '#3f0077' }}>JPG, JPEG ou PNG (máx. 5MB)</div>
+                                 <span className="text-base font-medium" style={{ color: '#3f0077' }}>Selecionar arquivo da redação</span>
+                                 <div className="text-sm" style={{ color: '#3f0077' }}>JPG, JPEG, PNG ou PDF (máx. 5MB)</div>
                               </div>
                             </div>
                           </label>
                           <input
                             id="redacao-manuscrita"
                             type="file"
-                            accept="image/jpeg,image/jpg,image/png"
+                            accept="image/jpeg,image/jpg,image/png,application/pdf"
                             onChange={handleRedacaoManuscritaChange}
                             className="hidden"
                           />
@@ -441,16 +446,13 @@ const EnvieRedacao = () => {
                     </div>
                   )}
 
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p className="text-sm text-blue-800">
-                      <strong>Tipo de envio:</strong> {
-                        tipoEnvio === 'regular' ? `Regular - Aluno da ${alunoTurma}` : 'Avulsa - Visitante'
-                      }
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Sua redação ficará disponível no card "Minhas Redações" na página inicial e será corrigida pelos corretores selecionados.
-                    </p>
-                  </div>
+                   <div className="bg-purple-50 p-4 rounded-lg border border-redator-accent/30">
+                     <p className="text-sm text-redator-primary">
+                       <strong>Tipo de envio:</strong> {
+                         tipoEnvio === 'regular' ? `Regular - Aluno da ${alunoTurma}` : 'Avulsa - Visitante'
+                       }
+                     </p>
+                   </div>
 
                   <Button 
                     type="submit" 
