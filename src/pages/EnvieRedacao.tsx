@@ -394,11 +394,11 @@ const EnvieRedacao = () => {
                       <div className="space-y-4">
                         <div className="flex items-center gap-4">
                           <label htmlFor="redacao-manuscrita" className="cursor-pointer">
-                            <div className="flex items-center gap-3 px-6 py-4 border-2 border-dashed border-amber-300 rounded-lg hover:border-amber-400 transition-colors bg-white">
-                              <Camera className="w-6 h-6 text-amber-600" />
+                            <div className="flex items-center gap-3 px-6 py-4 border-2 border-dashed rounded-lg transition-colors bg-white" style={{ borderColor: '#3f0077' }}>
+                              <Camera className="w-6 h-6" style={{ color: '#3f0077' }} />
                               <div>
-                                <span className="text-base font-medium text-amber-700">Selecionar foto da redação</span>
-                                <div className="text-sm text-amber-600">JPG, JPEG ou PNG (máx. 5MB)</div>
+                                <span className="text-base font-medium" style={{ color: '#3f0077' }}>Selecionar foto da redação</span>
+                                <div className="text-sm" style={{ color: '#3f0077' }}>JPG, JPEG ou PNG (máx. 5MB)</div>
                               </div>
                             </div>
                           </label>
