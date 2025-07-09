@@ -1,55 +1,41 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail } from "lucide-react";
-
 interface CorretorLoginFormProps {
-  onLogin: (data: { email: string }) => void;
+  onLogin: (data: {
+    email: string;
+  }) => void;
   loading: boolean;
 }
-
-export const CorretorLoginForm = ({ onLogin, loading }: CorretorLoginFormProps) => {
+export const CorretorLoginForm = ({
+  onLogin,
+  loading
+}: CorretorLoginFormProps) => {
   const [email, setEmail] = useState("");
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email.trim()) {
-      onLogin({ email: email.trim() });
+      onLogin({
+        email: email.trim()
+      });
     }
   };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+  return <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="corretor-email" className="text-redator-primary">
           E-mail do Corretor
         </Label>
         <div className="relative">
           <Mail className="absolute left-3 top-3 h-4 w-4 text-redator-accent" />
-          <Input
-            id="corretor-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Digite seu e-mail de corretor"
-            className="pl-10 border-redator-accent/30 focus:border-redator-primary"
-            required
-          />
+          <Input id="corretor-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Digite seu e-mail de corretor" className="pl-10 border-redator-accent/30 focus:border-redator-primary" required />
         </div>
-        <p className="text-xs text-redator-accent mt-1">
-          Digite o e-mail cadastrado como corretor para acessar o painel
-        </p>
+        <p className="text-xs text-redator-accent mt-1"></p>
       </div>
       
-      <Button 
-        type="submit" 
-        className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
-        disabled={loading}
-      >
+      <Button type="submit" className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white" disabled={loading}>
         {loading ? "Verificando..." : "Acessar Painel"}
       </Button>
-    </form>
-  );
+    </form>;
 };
