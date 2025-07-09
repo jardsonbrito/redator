@@ -43,13 +43,13 @@ export const AtividadeAtiva = () => {
     }
   });
 
-  // Query para exercícios ativos
+  // Query para exercícios ativos e verificar se aluno já enviou redação
   const { data: exercicios, isLoading: loadingExercicios } = useQuery({
-    queryKey: ['exercicios-ativos'],
+    queryKey: ['exercicios-ativos', studentData.email],
     queryFn: async () => {
       console.log('📝 Carregando exercícios ativos...');
       
-      const { data, error } = await supabase
+      const { data: exerciciosData, error } = await supabase
         .from('exercicios')
         .select(`
           *,
@@ -66,9 +66,33 @@ export const AtividadeAtiva = () => {
         throw error;
       }
 
-      console.log('✅ Exercícios carregados:', data);
-      return data || [];
-    }
+      // Se há exercícios e temos email do aluno, verificar se já enviou redações
+      if (exerciciosData?.length && studentData.email) {
+        console.log('🔍 Verificando redações já enviadas para exercícios...');
+        
+        const { data: redacoesEnviadas, error: redacoesError } = await supabase
+          .from('redacoes_exercicio')
+          .select('exercicio_id')
+          .ilike('email_aluno', studentData.email.toLowerCase().trim());
+
+        if (redacoesError) {
+          console.error('❌ Erro ao verificar redações enviadas:', redacoesError);
+        }
+
+        // Filtrar exercícios que o aluno ainda não enviou redação
+        const exerciciosIdsEnviados = redacoesEnviadas?.map(r => r.exercicio_id) || [];
+        const exerciciosDisponiveis = exerciciosData.filter(exercicio => 
+          !exerciciosIdsEnviados.includes(exercicio.id)
+        );
+
+        console.log('✅ Exercícios disponíveis (sem redação enviada):', exerciciosDisponiveis.length);
+        return exerciciosDisponiveis;
+      }
+
+      console.log('✅ Exercícios carregados:', exerciciosData?.length || 0);
+      return exerciciosData || [];
+    },
+    enabled: !!studentData.email
   });
 
   const getSimuladoStatus = (simulado: any) => {
