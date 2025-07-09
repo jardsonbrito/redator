@@ -389,17 +389,7 @@ export const MinhasRedacoes = () => {
       setAuthenticatedRedacao(redacaoAutenticada);
       setShowRedacaoDialog(true);
       
-      console.log('🎉 Redação liberada com segurança total', {
-        comentarios: {
-          c1_1: redacaoCompleta.comentario_c1_corretor_1,
-          c1_2: redacaoCompleta.comentario_c1_corretor_2,
-          c2_1: redacaoCompleta.comentario_c2_corretor_1,
-          c2_2: redacaoCompleta.comentario_c2_corretor_2,
-          elogios_1: redacaoCompleta.elogios_pontos_atencao_corretor_1,
-          elogios_2: redacaoCompleta.elogios_pontos_atencao_corretor_2
-        },
-        redacaoAutenticada
-      });
+      console.log('🎉 Redação liberada com segurança total');
       toast({
         title: "✅ Redação liberada!",
         description: "E-mail confirmado. Visualizando redação completa.",
@@ -664,7 +654,7 @@ export const MinhasRedacoes = () => {
             <DialogHeader>
               <DialogTitle className="text-redator-primary flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-600" />
-                Vista Pedagógica - Correção Completa
+                Vista Pedagógica
               </DialogTitle>
             </DialogHeader>
             

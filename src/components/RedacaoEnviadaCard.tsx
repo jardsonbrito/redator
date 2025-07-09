@@ -79,20 +79,25 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
   const getComentariosPedagogicos = () => {
     const comentarios = [];
     
+    console.log('🔍 VERIFICANDO COMENTÁRIOS:', redacao);
+    
     // Comentários por competência
     for (let i = 1; i <= 5; i++) {
       const comentario1 = redacao[`comentario_c${i}_corretor_1` as keyof typeof redacao] as string | null;
       const comentario2 = redacao[`comentario_c${i}_corretor_2` as keyof typeof redacao] as string | null;
       
-      if (comentario1 || comentario2) {
+      console.log(`📝 C${i}:`, { comentario1, comentario2 });
+      
+      if (comentario1?.trim() || comentario2?.trim()) {
         comentarios.push({
           competencia: i,
-          comentario1: comentario1?.trim(),
-          comentario2: comentario2?.trim()
+          comentario1: comentario1?.trim() || null,
+          comentario2: comentario2?.trim() || null
         });
       }
     }
     
+    console.log('📋 COMENTÁRIOS FINAIS:', comentarios);
     return comentarios;
   };
 
@@ -116,23 +121,17 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
   const { elogios1, elogios2 } = getElogiosEPontosAtencao();
   const { correcao1, correcao2 } = getCorrecaoExterna();
 
-  console.log('🔍 DEBUG RedacaoEnviadaCard:', {
+  console.log('🔍 DEBUG RedacaoEnviadaCard - RESULTADO FINAL:', {
     comentariosPedagogicos,
-    elogios1,
-    elogios2,
-    correcao1,
-    correcao2,
-    redacao: {
-      comentario_c1_corretor_1: redacao.comentario_c1_corretor_1,
-      comentario_c2_corretor_1: redacao.comentario_c2_corretor_1,
-      elogios_pontos_atencao_corretor_1: redacao.elogios_pontos_atencao_corretor_1,
-      elogios_pontos_atencao_corretor_2: redacao.elogios_pontos_atencao_corretor_2
-    }
+    totalComentarios: comentariosPedagogicos.length,
+    elogios1: !!elogios1,
+    elogios2: !!elogios2,
+    temCorrecaoExterna: !!(correcao1 || correcao2)
   });
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header da redação - otimizado para mobile */}
+      {/* Header simplificado conforme solicitado */}
       <Card className="border-primary/20">
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -157,31 +156,11 @@ export const RedacaoEnviadaCard = ({ redacao }: RedacaoEnviadaCardProps) => {
         </CardHeader>
         
         <CardContent className="pt-0">
-          {/* Informações do aluno - layout mobile melhorado */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-primary shrink-0" />
-              <span className="font-medium">Aluno:</span>
-              <span className="truncate">{redacao.nome_aluno}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-primary shrink-0" />
-              <span className="font-medium">E-mail:</span>
-              <span className="truncate text-xs sm:text-sm">{redacao.email_aluno}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-primary shrink-0" />
-              <span className="font-medium">Turma:</span>
-              <span>{redacao.turma}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-primary shrink-0" />
-              <span className="font-medium">Enviado:</span>
-              <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
-            </div>
+          {/* Apenas data e horário conforme solicitado */}
+          <div className="flex items-center gap-2 text-sm">
+            <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+            <span className="font-medium">Enviado:</span>
+            <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
           </div>
         </CardContent>
       </Card>
