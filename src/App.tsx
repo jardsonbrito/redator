@@ -40,6 +40,7 @@ import CorretorRedacoesExemplar from "./pages/corretor/CorretorRedacoesExemplar"
 import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 import CadastroAluno from "./pages/CadastroAluno";
+import AtualizarEmail from "./pages/AtualizarEmail";
 
 function App() {
   return (
@@ -56,6 +57,7 @@ function App() {
                 <Route path="/aluno-login" element={<AlunoLogin />} />
                 <Route path="/visitante-login" element={<VisitanteLogin />} />
                 <Route path="/cadastro-aluno" element={<CadastroAluno />} />
+                <Route path="/atualizar-email" element={<AtualizarEmail />} />
 
                 <Route path="/app" element={<Index />} />
                 <Route path="/temas" element={<Temas />} />
