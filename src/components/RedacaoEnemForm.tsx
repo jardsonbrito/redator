@@ -25,15 +25,22 @@ export const RedacaoEnemForm = ({
   const getVisualLineCount = (textarea: HTMLTextAreaElement | null): number => {
     if (!textarea || !textarea.value.trim()) return 0;
     
+    // Força o recálculo do scrollHeight
+    const originalHeight = textarea.style.height;
+    textarea.style.height = 'auto';
+    
     const lineHeight = 26.64; // Altura definida no CSS
     const paddingTop = 24; // Padding top definido
     const paddingBottom = 24; // Padding bottom definido
     
-    // Calcula linhas baseado no scrollHeight
+    // Calcula linhas baseado no scrollHeight real
     const contentHeight = textarea.scrollHeight - paddingTop - paddingBottom;
-    const lines = Math.ceil(contentHeight / lineHeight);
+    const lines = Math.max(1, Math.ceil(contentHeight / lineHeight));
     
-    return Math.max(1, lines); // Mínimo 1 linha quando há conteúdo
+    // Restaura a altura original
+    textarea.style.height = originalHeight;
+    
+    return lines;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -59,14 +66,18 @@ export const RedacaoEnemForm = ({
   };
 
   useEffect(() => {
-    // Valida se há texto
-    const valid = value.trim().length > 0;
-    onValidChange(valid);
-    
     // Atualiza o contador de linhas quando o valor muda
     if (textareaRef.current) {
       const lines = getVisualLineCount(textareaRef.current);
       setCurrentLines(lines);
+      
+      // Valida se há pelo menos 8 linhas preenchidas
+      const valid = lines >= 8;
+      onValidChange(valid);
+    } else {
+      // Se não há referência do textarea, valida pelo comprimento do texto
+      const valid = value.trim().length > 0;
+      onValidChange(valid);
     }
   }, [value, onValidChange]);
 
