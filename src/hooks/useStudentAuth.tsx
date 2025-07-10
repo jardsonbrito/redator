@@ -13,8 +13,8 @@ interface StudentAuthContextType {
       email: string;
     };
   };
-  loginAsStudent: (turma: string, nome: string, email: string) => void;
-  loginAsVisitante: (nome: string, email: string) => void;
+  loginAsStudent: (turma: string, nome: string, email: string) => Promise<void>;
+  loginAsVisitante: (nome: string, email: string) => Promise<void>;
   logoutStudent: () => void;
 }
 
@@ -128,7 +128,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     };
   }, [isStudentLoggedIn]);
 
-  const loginAsStudent = (turma: string, nome: string, email: string) => {
+  const loginAsStudent = async (turma: string, nome: string, email: string) => {
     console.log('🔐 Login como aluno - turma:', turma, 'nome:', nome, 'email:', email);
     
     const alunoInfo = {
@@ -136,6 +136,21 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       email: email.trim().toLowerCase(),
       turma: turma
     };
+    
+    try {
+      // Verificação automática de contas duplicadas e merge
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: mergeResult } = await supabase.rpc('auto_merge_student_accounts', {
+        student_email: email.trim().toLowerCase()
+      });
+      
+      if (mergeResult && typeof mergeResult === 'object' && 'auto_merged' in mergeResult && mergeResult.auto_merged) {
+        console.log('✅ Redações anteriores reconectadas automaticamente:', mergeResult.total_redacoes_merged);
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro na verificação automática de merge:', error);
+      // Não bloquear o login se a verificação falhar
+    }
     
     // Garantir persistência com múltiplas estratégias
     localStorage.setItem("alunoTurma", turma);
@@ -155,13 +170,28 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     });
   };
 
-  const loginAsVisitante = (nome: string, email: string) => {
+  const loginAsVisitante = async (nome: string, email: string) => {
     console.log('🔐 Login como visitante - nome:', nome, 'email:', email);
     const visitanteInfo = {
       nome: nome.trim(),
       email: email.trim().toLowerCase(),
       tipo: "visitante"
     };
+
+    try {
+      // Verificação automática de contas duplicadas e merge para visitantes também
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: mergeResult } = await supabase.rpc('auto_merge_student_accounts', {
+        student_email: email.trim().toLowerCase()
+      });
+      
+      if (mergeResult && typeof mergeResult === 'object' && 'auto_merged' in mergeResult && mergeResult.auto_merged) {
+        console.log('✅ Redações anteriores reconectadas automaticamente para visitante:', mergeResult.total_redacoes_merged);
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro na verificação automática de merge para visitante:', error);
+      // Não bloquear o login se a verificação falhar
+    }
 
     // Garantir persistência com múltiplas estratégias
     localStorage.setItem("visitanteData", JSON.stringify(visitanteInfo));

@@ -7,7 +7,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Eye, RotateCcw } from "lucide-react";
+import { Trash2, Eye, RotateCcw, Download } from "lucide-react";
+import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { getStatusColor, getTurmaColor } from "@/utils/redacaoUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -184,6 +185,24 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                         <p>Visualizar</p>
                       </TooltipContent>
                     </Tooltip>
+
+                    {redacao.corrigida && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadRedacaoCorrigida(redacao)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Download className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Download PDF</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
 
                     <Tooltip>
                       <TooltipTrigger asChild>
