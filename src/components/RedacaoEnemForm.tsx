@@ -35,12 +35,13 @@ export const RedacaoEnemForm = ({
     
     // Calcula linhas baseado no scrollHeight real
     const contentHeight = textarea.scrollHeight - paddingTop - paddingBottom;
-    const lines = Math.max(1, Math.ceil(contentHeight / lineHeight));
+    const lines = Math.floor(contentHeight / lineHeight);
     
     // Restaura a altura original
     textarea.style.height = originalHeight;
     
-    return lines;
+    // Retorna pelo menos 1 linha se há conteúdo, mas não infla a contagem
+    return Math.max(1, lines);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
