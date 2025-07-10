@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RedacaoEnemFormProps {
   value: string;
@@ -20,6 +21,12 @@ export const RedacaoEnemForm = ({
   const [showAlert, setShowAlert] = useState(false);
   const [currentLines, setCurrentLines] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isMobile = useIsMobile();
+  
+  // Conta palavras do texto
+  const getWordCount = (text: string): number => {
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
   
   // Calcula o número real de linhas visuais baseado no scrollHeight
   const getVisualLineCount = (textarea: HTMLTextAreaElement | null): number => {
@@ -53,9 +60,15 @@ export const RedacaoEnemForm = ({
     textarea.value = newValue;
     
     const visualLines = getVisualLineCount(textarea);
+    const wordCount = getWordCount(newValue);
     
-    if (visualLines > 30) {
-      // Reverte para o valor anterior se exceder 30 linhas
+    // No mobile, considera também o limite de palavras (350)
+    const isOverLimit = isMobile 
+      ? visualLines > 30 && wordCount > 350
+      : visualLines > 30;
+    
+    if (isOverLimit) {
+      // Reverte para o valor anterior se exceder os limites
       textarea.value = prevValue;
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
