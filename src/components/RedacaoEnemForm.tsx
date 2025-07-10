@@ -27,8 +27,25 @@ export const RedacaoEnemForm = ({
   const getWordCount = (text: string): number => {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
+
+  // Calcula linhas baseado em critério objetivo para mobile
+  const getObjectiveLineCount = (text: string): number => {
+    if (!text.trim()) return 0;
+    
+    // No mobile, calculamos baseado em uma média de palavras por linha
+    // Estimativa: ~12 palavras por linha no formato ENEM
+    const wordsPerLine = 12;
+    const wordCount = getWordCount(text);
+    const estimatedLines = Math.ceil(wordCount / wordsPerLine);
+    
+    // Também consideramos quebras de linha manuais
+    const manualBreaks = text.split('\n').length;
+    
+    // Retorna o maior entre os dois cálculos, limitado a 30
+    return Math.min(30, Math.max(estimatedLines, manualBreaks));
+  };
   
-  // Calcula o número real de linhas visuais baseado no scrollHeight
+  // Calcula o número real de linhas visuais baseado no scrollHeight (desktop)
   const getVisualLineCount = (textarea: HTMLTextAreaElement | null): number => {
     if (!textarea || !textarea.value.trim()) return 0;
     
@@ -59,13 +76,20 @@ export const RedacaoEnemForm = ({
     const prevValue = textarea.value;
     textarea.value = newValue;
     
-    const visualLines = getVisualLineCount(textarea);
     const wordCount = getWordCount(newValue);
+    let currentLineCount: number;
+    let isOverLimit: boolean;
     
-    // No mobile, considera também o limite de palavras (350)
-    const isOverLimit = isMobile 
-      ? visualLines > 30 && wordCount > 350
-      : visualLines > 30;
+    if (isMobile) {
+      // No mobile, usa cálculo objetivo baseado em palavras
+      currentLineCount = getObjectiveLineCount(newValue);
+      // Limite: 30 linhas OU 350 palavras (o que for atingido primeiro)
+      isOverLimit = currentLineCount > 30 || wordCount > 350;
+    } else {
+      // No desktop, usa cálculo visual tradicional
+      currentLineCount = getVisualLineCount(textarea);
+      isOverLimit = currentLineCount > 30;
+    }
     
     if (isOverLimit) {
       // Reverte para o valor anterior se exceder os limites
@@ -75,25 +99,32 @@ export const RedacaoEnemForm = ({
       return;
     }
     
-    setCurrentLines(visualLines);
+    setCurrentLines(currentLineCount);
     onChange(newValue);
   };
 
   useEffect(() => {
     // Atualiza o contador de linhas quando o valor muda
-    if (textareaRef.current) {
-      const lines = getVisualLineCount(textareaRef.current);
-      setCurrentLines(lines);
-      
-      // Valida se há pelo menos 8 linhas preenchidas
-      const valid = lines >= 8;
-      onValidChange(valid);
+    let lines: number;
+    
+    if (isMobile) {
+      // No mobile, usa cálculo objetivo
+      lines = getObjectiveLineCount(value);
     } else {
-      // Se não há referência do textarea, valida pelo comprimento do texto
-      const valid = value.trim().length > 0;
-      onValidChange(valid);
+      // No desktop, usa cálculo visual
+      if (textareaRef.current) {
+        lines = getVisualLineCount(textareaRef.current);
+      } else {
+        lines = 0;
+      }
     }
-  }, [value, onValidChange]);
+    
+    setCurrentLines(lines);
+    
+    // Valida se há pelo menos 8 linhas preenchidas
+    const valid = lines >= 8;
+    onValidChange(valid);
+  }, [value, onValidChange, isMobile]);
 
   // Gera array de números de 1 a 30 para numeração
   const lineNumbers = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -112,22 +143,26 @@ export const RedacaoEnemForm = ({
       <div className="relative mx-auto max-w-4xl">
         {/* Container principal com proporções da folha ENEM */}
         <div 
-          className="relative bg-white rounded-xl shadow-lg border border-gray-200"
+          className={`relative bg-white rounded-xl shadow-lg border border-gray-200 ${
+            isMobile ? 'w-full' : ''
+          }`}
           style={{
             width: '100%',
-            aspectRatio: '18/20', // 18cm x 20cm
-            maxWidth: '720px', // 18cm * 40px/cm
-            height: '848px', // Altura fixa para garantir que todas as 30 linhas caibam (24px + 30*26.64px + 24px)
-            minHeight: '848px'
+            aspectRatio: isMobile ? 'auto' : '18/20', // No mobile, permite altura automática
+            maxWidth: isMobile ? '100%' : '720px',
+            height: isMobile ? 'auto' : '848px', // No mobile, altura automática
+            minHeight: isMobile ? '600px' : '848px' // Altura mínima menor no mobile
           }}
         >
           {/* Numeração das linhas */}
           <div 
-            className="absolute left-0 top-0 flex flex-col justify-start text-gray-500 text-sm font-mono"
+            className={`absolute left-0 top-0 flex flex-col justify-start text-gray-500 font-mono ${
+              isMobile ? 'text-xs' : 'text-sm'
+            }`}
             style={{
-              width: '8.33%', // 0.5cm de 18cm
+              width: isMobile ? '12%' : '8.33%', // Mais espaço no mobile
               height: '100%',
-              paddingTop: '24px' // Alinhamento inicial
+              paddingTop: '24px'
             }}
           >
             {lineNumbers.map((num) => (
@@ -148,9 +183,9 @@ export const RedacaoEnemForm = ({
           <div 
             className="absolute right-0 top-0 h-full"
             style={{
-              width: '91.67%', // 17.5cm de 18cm
-              paddingLeft: '8px',
-              paddingRight: '8px'
+              width: isMobile ? '88%' : '91.67%', // Menos espaço no mobile para compensar numeração
+              paddingLeft: isMobile ? '4px' : '8px',
+              paddingRight: isMobile ? '4px' : '8px'
             }}
           >
             {/* Linhas de fundo - exatamente 30 linhas */}
@@ -176,7 +211,12 @@ export const RedacaoEnemForm = ({
               onChange={handleChange}
               onKeyDown={(e) => {
                 // Permite apenas backspace/delete quando no limite
-                if (currentLines >= 30 && 
+                const wordCount = getWordCount(value);
+                const isAtLimit = isMobile 
+                  ? (currentLines >= 30 || wordCount >= 350)
+                  : currentLines >= 30;
+                  
+                if (isAtLimit && 
                     e.key !== 'Backspace' && 
                     e.key !== 'Delete' && 
                     e.key !== 'ArrowLeft' && 
@@ -189,10 +229,10 @@ export const RedacaoEnemForm = ({
               placeholder={placeholder}
               className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-900 font-sans p-0 overflow-hidden"
               style={{
-                fontSize: '16px',
-                lineHeight: '26.64px', // Altura exata de cada linha
+                fontSize: isMobile ? '14px' : '16px', // Fonte menor no mobile
+                lineHeight: '26.64px',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
-                paddingTop: '24px', // Alinhamento com a numeração
+                paddingTop: '24px',
                 paddingBottom: '24px'
               }}
               spellCheck={false}
@@ -204,6 +244,11 @@ export const RedacaoEnemForm = ({
         <div className="mt-4 text-center">
           <span className="text-sm text-gray-500">
             Linhas utilizadas: {currentLines}/30
+            {isMobile && (
+              <span className="ml-2 text-xs">
+                ({getWordCount(value)}/350 palavras)
+              </span>
+            )}
           </span>
         </div>
       </div>
