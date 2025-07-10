@@ -1444,6 +1444,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      auto_merge_student_accounts: {
+        Args: { student_email: string }
+        Returns: Json
+      }
       calcular_tempo_presenca: {
         Args: { p_aula_id: string; p_email_aluno: string }
         Returns: number
@@ -1471,6 +1475,17 @@ export type Database = {
           user_type: string
           created_at: string
           updated_at: string
+        }[]
+      }
+      detect_duplicate_students: {
+        Args: { student_email: string }
+        Returns: {
+          current_student_id: string
+          duplicate_student_id: string
+          current_email: string
+          duplicate_email: string
+          student_name: string
+          redacoes_count: number
         }[]
       }
       get_avisos_corretor: {
@@ -1597,6 +1612,10 @@ export type Database = {
           redacao_id: string
         }
         Returns: undefined
+      }
+      merge_student_redacoes: {
+        Args: { target_student_id: string; source_student_id: string }
+        Returns: Json
       }
       salvar_correcao_corretor: {
         Args: {
