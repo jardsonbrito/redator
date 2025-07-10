@@ -18,24 +18,43 @@ export const RedacaoEnemForm = ({
   placeholder = "Escreva sua redação aqui..." 
 }: RedacaoEnemFormProps) => {
   const [showAlert, setShowAlert] = useState(false);
+  const [currentLines, setCurrentLines] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  // Controla o número de linhas baseado em quebras de linha
-  const getLineCount = (text: string) => {
-    if (!text) return 0;
-    return text.split('\n').length;
+  // Calcula o número real de linhas visuais baseado no scrollHeight
+  const getVisualLineCount = (textarea: HTMLTextAreaElement | null): number => {
+    if (!textarea) return 0;
+    
+    const lineHeight = 26.64; // Altura definida no CSS
+    const paddingTop = 24; // Padding top definido
+    const paddingBottom = 24; // Padding bottom definido
+    
+    // Calcula linhas baseado no scrollHeight
+    const contentHeight = textarea.scrollHeight - paddingTop - paddingBottom;
+    const lines = Math.ceil(contentHeight / lineHeight);
+    
+    return Math.max(1, lines); // Mínimo 1 linha
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    const lineCount = getLineCount(newValue);
+    const textarea = e.target;
+    const newValue = textarea.value;
     
-    if (lineCount > 30) {
+    // Temporariamente define o valor para calcular as linhas
+    const prevValue = textarea.value;
+    textarea.value = newValue;
+    
+    const visualLines = getVisualLineCount(textarea);
+    
+    if (visualLines > 30) {
+      // Reverte para o valor anterior se exceder 30 linhas
+      textarea.value = prevValue;
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
       return;
     }
     
+    setCurrentLines(visualLines);
     onChange(newValue);
   };
 
@@ -43,6 +62,12 @@ export const RedacaoEnemForm = ({
     // Valida se há texto
     const valid = value.trim().length > 0;
     onValidChange(valid);
+    
+    // Atualiza o contador de linhas quando o valor muda
+    if (textareaRef.current) {
+      const lines = getVisualLineCount(textareaRef.current);
+      setCurrentLines(lines);
+    }
   }, [value, onValidChange]);
 
   // Gera array de números de 1 a 30 para numeração
@@ -124,8 +149,20 @@ export const RedacaoEnemForm = ({
               ref={textareaRef}
               value={value}
               onChange={handleChange}
+              onKeyDown={(e) => {
+                // Permite apenas backspace/delete quando no limite
+                if (currentLines >= 30 && 
+                    e.key !== 'Backspace' && 
+                    e.key !== 'Delete' && 
+                    e.key !== 'ArrowLeft' && 
+                    e.key !== 'ArrowRight' && 
+                    e.key !== 'ArrowUp' && 
+                    e.key !== 'ArrowDown') {
+                  e.preventDefault();
+                }
+              }}
               placeholder={placeholder}
-              className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-900 font-sans p-0"
+              className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-900 font-sans p-0 overflow-hidden"
               style={{
                 fontSize: '16px',
                 lineHeight: '26.64px', // Altura exata de cada linha
@@ -141,7 +178,7 @@ export const RedacaoEnemForm = ({
         {/* Contador de linhas */}
         <div className="mt-4 text-center">
           <span className="text-sm text-gray-500">
-            Linhas utilizadas: {getLineCount(value)}/30
+            Linhas utilizadas: {currentLines}/30
           </span>
         </div>
       </div>
