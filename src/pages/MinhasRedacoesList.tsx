@@ -76,92 +76,20 @@ export default function MinhasRedacoesList() {
       console.log('🔒 Buscando redações do usuário logado');
       
       if (userType === "aluno" && alunoEmail) {
-        console.log('👨‍🎓 Buscando redações do aluno:', alunoEmail);
+        // Para alunos, usar função atualizada que busca por user_id primeiro
+        console.log('👨‍🎓 Buscando redações de aluno usando função get_student_redacoes:', alunoEmail);
         
-        // Buscar redações regulares
-        const { data: redacoesRegulares, error: errorRegulares } = await supabase
-          .from('redacoes_enviadas')
-          .select(`
-            id,
-            frase_tematica,
-            nome_aluno,
-            email_aluno,
-            tipo_envio,
-            data_envio,
-            status,
-            corrigida,
-            nota_total,
-            comentario_admin,
-            data_correcao
-          `)
-          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
-          .neq('tipo_envio', 'visitante')
-          .order('data_envio', { ascending: false });
+        const { data, error } = await supabase.rpc('get_student_redacoes', {
+          student_email: alunoEmail.toLowerCase().trim()
+        });
 
-        console.log('📧 Query redações regulares para email:', alunoEmail);
-        if (errorRegulares) {
-          console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
-        } else {
-          console.log('✅ Redações regulares encontradas:', redacoesRegulares?.length || 0);
+        if (error) {
+          console.error('❌ Erro ao buscar redações do aluno:', error);
+          throw error;
         }
 
-        // Buscar redações de simulado
-        const { data: redacoesSimulado, error: errorSimulado } = await supabase
-          .from('redacoes_simulado')
-          .select(`
-            id,
-            nome_aluno,
-            email_aluno,
-            data_envio,
-            corrigida,
-            nota_total,
-            data_correcao,
-            simulados!inner(frase_tematica)
-          `)
-          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
-          .order('data_envio', { ascending: false });
-
-        if (errorSimulado) {
-          console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
-        } else {
-          console.log('✅ Redações de simulado encontradas:', redacoesSimulado?.length || 0);
-        }
-
-        // Combinar e formatar os dados
-        const todasRedacoes: RedacaoTurma[] = [];
-        
-        // Adicionar redações regulares
-        if (redacoesRegulares) {
-          const regularesFormatadas = redacoesRegulares.map(redacao => ({
-            ...redacao,
-            status: redacao.corrigida ? 'corrigida' : 'aguardando'
-          }));
-          todasRedacoes.push(...regularesFormatadas);
-        }
-
-        // Adicionar redações de simulado
-        if (redacoesSimulado) {
-          const simuladosFormatados = redacoesSimulado.map(simulado => ({
-            id: simulado.id,
-            frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
-            nome_aluno: simulado.nome_aluno,
-            email_aluno: simulado.email_aluno,
-            tipo_envio: 'simulado',
-            data_envio: simulado.data_envio,
-            status: simulado.corrigida ? 'corrigida' : 'aguardando',
-            corrigida: simulado.corrigida,
-            nota_total: simulado.nota_total,
-            comentario_admin: null,
-            data_correcao: simulado.data_correcao
-          }));
-          todasRedacoes.push(...simuladosFormatados);
-        }
-
-        // Ordenar por data de envio (mais recente primeiro)
-        todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
-        
-        console.log('✅ Redações do aluno encontradas:', todasRedacoes.length);
-        return todasRedacoes;
+        console.log('✅ Total de redações encontradas para aluno:', data?.length || 0);
+        return data || [];
         
       } else if (userType === "visitante" && visitanteEmail) {
         console.log('👤 Buscando redações do visitante:', visitanteEmail);

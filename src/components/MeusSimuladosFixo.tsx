@@ -93,14 +93,14 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     return turmasMap[turmaNome as keyof typeof turmasMap] || turmaNome;
   };
 
-  // Query otimizada para buscar apenas redações do usuário logado
+  // Query usando função atualizada que busca por user_id primeiro
   const { data: redacoesRecentes, isLoading } = useQuery({
     queryKey: ['redacoes-home-usuario', alunoEmail, visitanteEmail],
     queryFn: async () => {
-      console.log('🔍 Buscando redações do usuário logado para home');
+      console.log('🔍 Buscando redações do usuário logado para home usando função atualizada');
       
       if (userType === "visitante" && visitanteEmail) {
-        // Para visitantes, usar email do visitante
+        // Para visitantes, ainda usar busca direta pois não estão na tabela profiles
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -129,87 +129,22 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
         console.log('✅ Redações encontradas para visitante:', data?.length || 0);
         return data || [];
       } else if (userType === "aluno" && alunoEmail) {
-        // Para alunos, buscar por email do aluno
-        console.log('👨‍🎓 Buscando redações do aluno:', alunoEmail);
+        // Para alunos, usar a função atualizada que busca por user_id primeiro
+        console.log('👨‍🎓 Buscando redações do aluno usando função get_student_redacoes:', alunoEmail);
         
-        // Buscar da tabela redacoes_enviadas
-        const { data: redacoesRegulares, error: errorRegulares } = await supabase
-          .from('redacoes_enviadas')
-          .select(`
-            id,
-            frase_tematica,
-            nome_aluno,
-            email_aluno,
-            tipo_envio,
-            data_envio,
-            status,
-            corrigida,
-            nota_total,
-            comentario_admin,
-            data_correcao,
-            elogios_pontos_atencao_corretor_1,
-            elogios_pontos_atencao_corretor_2
-          `)
-          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
-          .neq('tipo_envio', 'visitante')
-          .order('data_envio', { ascending: false });
+        const { data, error } = await supabase.rpc('get_student_redacoes', {
+          student_email: alunoEmail.toLowerCase().trim()
+        });
 
-        if (errorRegulares) {
-          console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
+        if (error) {
+          console.error('❌ Erro ao buscar redações do aluno:', error);
           return [];
         }
 
-        // Buscar da tabela redacoes_simulado
-        const { data: redacoesSimulado, error: errorSimulado } = await supabase
-          .from('redacoes_simulado')
-          .select(`
-            id,
-            nome_aluno,
-            email_aluno,
-            data_envio,
-            corrigida,
-            nota_total,
-            data_correcao,
-            simulados!inner(frase_tematica)
-          `)
-          .ilike('email_aluno', alunoEmail.toLowerCase().trim())
-          .order('data_envio', { ascending: false });
-
-        if (errorSimulado) {
-          console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
-        }
-
-        // Combinar os dados
-        const todasRedacoes: RedacaoTurma[] = [];
+        console.log('✅ Redações encontradas para aluno:', data?.length || 0);
         
-        // Adicionar redações regulares
-        if (redacoesRegulares?.length) {
-          todasRedacoes.push(...redacoesRegulares);
-        }
-
-        // Adicionar redações de simulado (formatadas)
-        if (redacoesSimulado?.length) {
-          const simuladosFormatados = redacoesSimulado.map(simulado => ({
-            id: simulado.id,
-            frase_tematica: (simulado.simulados as any)?.frase_tematica || 'Simulado',
-            nome_aluno: simulado.nome_aluno,
-            email_aluno: simulado.email_aluno,
-            tipo_envio: 'simulado',
-            data_envio: simulado.data_envio,
-            status: simulado.corrigida ? 'corrigido' : 'aguardando',
-            corrigida: simulado.corrigida,
-            nota_total: simulado.nota_total,
-            comentario_admin: null,
-            data_correcao: simulado.data_correcao
-          }));
-          todasRedacoes.push(...simuladosFormatados);
-        }
-
-        // Ordenar por data de envio (mais recente primeiro) e limitar a 3
-        todasRedacoes.sort((a, b) => new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime());
-        
-        console.log('✅ Redações encontradas para aluno:', todasRedacoes.length);
-        return todasRedacoes.slice(0, 3);
+        // Limitar a 3 redações mais recentes para a home
+        return (data || []).slice(0, 3);
       }
       
       return [];
