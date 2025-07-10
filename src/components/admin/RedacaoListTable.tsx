@@ -186,6 +186,12 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                       </TooltipContent>
                     </Tooltip>
 
+                    {/* Debug: Verificar se redação está corrigida */}
+                    {(() => {
+                      console.log('🔍 Debug redação:', redacao.nome_aluno, 'corrigida:', redacao.corrigida);
+                      return null;
+                    })()}
+                    
                     {redacao.corrigida && (
                       <Tooltip>
                         <TooltipTrigger asChild>
