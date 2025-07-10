@@ -28,21 +28,14 @@ export const RedacaoEnemForm = ({
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
 
-  // Calcula linhas baseado em critério objetivo para mobile
-  const getObjectiveLineCount = (text: string): number => {
+  // Calcula linhas baseado apenas em palavras para mobile (mais confiável)
+  const getWordBasedLineCount = (text: string): number => {
     if (!text.trim()) return 0;
     
-    // No mobile, calculamos baseado em uma média de palavras por linha
-    // Estimativa: ~12 palavras por linha no formato ENEM
+    // Estimativa simples: ~12 palavras por linha no formato ENEM
     const wordsPerLine = 12;
     const wordCount = getWordCount(text);
-    const estimatedLines = Math.ceil(wordCount / wordsPerLine);
-    
-    // Também consideramos quebras de linha manuais
-    const manualBreaks = text.split('\n').length;
-    
-    // Retorna o maior entre os dois cálculos, limitado a 30
-    return Math.min(30, Math.max(estimatedLines, manualBreaks));
+    return Math.ceil(wordCount / wordsPerLine);
   };
   
   // Calcula o número real de linhas visuais baseado no scrollHeight (desktop)
@@ -81,10 +74,10 @@ export const RedacaoEnemForm = ({
     let isOverLimit: boolean;
     
     if (isMobile) {
-      // No mobile, usa cálculo objetivo baseado em palavras
-      currentLineCount = getObjectiveLineCount(newValue);
-      // Limite: 30 linhas OU 350 palavras (o que for atingido primeiro)
-      isOverLimit = currentLineCount > 30 || wordCount > 350;
+      // No mobile, usa apenas contagem de palavras para evitar problemas de responsividade
+      currentLineCount = getWordBasedLineCount(newValue);
+      // Limite principal: 350 palavras (mais confiável que contagem visual)
+      isOverLimit = wordCount > 350;
     } else {
       // No desktop, usa cálculo visual tradicional
       currentLineCount = getVisualLineCount(textarea);
@@ -108,8 +101,8 @@ export const RedacaoEnemForm = ({
     let lines: number;
     
     if (isMobile) {
-      // No mobile, usa cálculo objetivo
-      lines = getObjectiveLineCount(value);
+      // No mobile, usa estimativa baseada em palavras
+      lines = getWordBasedLineCount(value);
     } else {
       // No desktop, usa cálculo visual
       if (textareaRef.current) {
@@ -121,8 +114,8 @@ export const RedacaoEnemForm = ({
     
     setCurrentLines(lines);
     
-    // Valida se há pelo menos 8 linhas preenchidas
-    const valid = lines >= 8;
+    // Valida se há pelo menos 8 linhas preenchidas (ou ~96 palavras no mobile)
+    const valid = isMobile ? getWordCount(value) >= 96 : lines >= 8;
     onValidChange(valid);
   }, [value, onValidChange, isMobile]);
 
@@ -135,7 +128,10 @@ export const RedacaoEnemForm = ({
         <Alert className="border-orange-200 bg-orange-50">
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
-            Você atingiu o limite de linhas permitidas pela folha oficial.
+            {isMobile 
+              ? "Você atingiu o limite de 350 palavras permitidas."
+              : "Você atingiu o limite de linhas permitidas pela folha oficial."
+            }
           </AlertDescription>
         </Alert>
       )}
@@ -213,8 +209,9 @@ export const RedacaoEnemForm = ({
                 // Permite apenas backspace/delete quando no limite
                 const wordCount = getWordCount(value);
                 const isAtLimit = isMobile 
-                  ? (currentLines >= 30 || wordCount >= 350)
-                  : currentLines >= 30;
+                  ? wordCount >= 350  // No mobile, só considera palavras
+                  : currentLines >= 30; // No desktop, considera linhas visuais
+                  
                   
                 if (isAtLimit && 
                     e.key !== 'Backspace' && 
@@ -240,14 +237,16 @@ export const RedacaoEnemForm = ({
           </div>
         </div>
         
-        {/* Contador de linhas */}
+        {/* Contador adaptado para mobile */}
         <div className="mt-4 text-center">
           <span className="text-sm text-gray-500">
-            Linhas utilizadas: {currentLines}/30
-            {isMobile && (
-              <span className="ml-2 text-xs">
-                ({getWordCount(value)}/350 palavras)
-              </span>
+            {isMobile ? (
+              <>
+                Palavras: {getWordCount(value)}/350 
+                <span className="ml-2 text-xs">({currentLines} linhas aprox.)</span>
+              </>
+            ) : (
+              <>Linhas utilizadas: {currentLines}/30</>
             )}
           </span>
         </div>
