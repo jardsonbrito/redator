@@ -23,7 +23,7 @@ export const RedacaoEnemForm = ({
   
   // Calcula o número real de linhas visuais baseado no scrollHeight
   const getVisualLineCount = (textarea: HTMLTextAreaElement | null): number => {
-    if (!textarea) return 0;
+    if (!textarea || !textarea.value.trim()) return 0;
     
     const lineHeight = 26.64; // Altura definida no CSS
     const paddingTop = 24; // Padding top definido
@@ -33,7 +33,7 @@ export const RedacaoEnemForm = ({
     const contentHeight = textarea.scrollHeight - paddingTop - paddingBottom;
     const lines = Math.ceil(contentHeight / lineHeight);
     
-    return Math.max(1, lines); // Mínimo 1 linha
+    return Math.max(1, lines); // Mínimo 1 linha quando há conteúdo
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
