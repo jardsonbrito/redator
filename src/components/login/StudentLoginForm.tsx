@@ -23,6 +23,8 @@ export const StudentLoginForm = ({
     toast
   } = useToast();
   const handleLogin = async () => {
+    console.log('🔄 StudentLoginForm - handleLogin iniciado, email:', email);
+    
     if (!email.trim()) {
       toast({
         title: "Campo obrigatório",
@@ -63,11 +65,16 @@ export const StudentLoginForm = ({
         }
         logLoginAttempt(email, emailNormalizado, 'success');
         console.log('✅ LOGIN SUCESSO - Aluno:', aluno.nome, 'Turma:', aluno.turma);
+        console.log('🔄 StudentLoginForm - Chamando onLogin, mantendo email:', email);
+        
+        // Não limpar o email aqui - manter para debug
         onLogin({
           turma: aluno.turma,
           nome: aluno.nome,
           email: aluno.email
         });
+        
+        console.log('✅ StudentLoginForm - onLogin executado, email ainda é:', email);
         return;
       }
 
