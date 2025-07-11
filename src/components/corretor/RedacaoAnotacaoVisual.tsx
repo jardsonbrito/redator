@@ -61,49 +61,41 @@ export const RedacaoAnotacaoVisual = ({
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
   const { toast } = useToast();
 
-  // Carregar anotações existentes usando query raw
+  // Carregar anotações existentes usando query direta
   const carregarAnotacoes = async () => {
     try {
-      const { data, error } = await supabase
-        .rpc('get_anotacoes_visuais', { redacao_id_param: redacaoId });
-
-      if (error) {
-        console.error('Erro ao carregar anotações:', error);
-        // Se a função não existir, usar uma query direta como fallback
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('marcacoes_visuais')
-          .select('*')
-          .eq('redacao_id', redacaoId);
-        
-        if (fallbackError) {
-          console.error('Erro no fallback:', fallbackError);
-          return;
-        }
-        
-        // Converter dados do formato antigo para o novo se necessário
-        const convertedData = (fallbackData || []).map(item => ({
-          id: item.id,
-          redacao_id: item.redacao_id,
-          corretor_id: item.corretor_id,
-          competencia: item.competencia,
-          cor_marcacao: item.cor_marcacao,
-          comentario: item.comentario,
-          tabela_origem: item.tabela_origem,
-          x_start: item.x_start,
-          y_start: item.y_start,
-          x_end: item.x_end,
-          y_end: item.y_end,
-          imagem_largura: item.imagem_largura,
-          imagem_altura: item.imagem_altura,
-          criado_em: item.criado_em,
-          atualizado_em: item.atualizado_em
-        }));
-        
-        setAnotacoes(convertedData);
+      // Primeiro tentar buscar na tabela marcacoes_visuais
+      const { data: marcacoesData, error: marcacoesError } = await supabase
+        .from('marcacoes_visuais')
+        .select('*')
+        .eq('redacao_id', redacaoId);
+      
+      if (marcacoesError) {
+        console.error('Erro ao carregar anotações:', marcacoesError);
+        setAnotacoes([]);
         return;
       }
       
-      setAnotacoes(data || []);
+      // Converter dados do formato da tabela marcacoes_visuais para o formato esperado
+      const convertedData: AnotacaoVisual[] = (marcacoesData || []).map(item => ({
+        id: item.id,
+        redacao_id: item.redacao_id,
+        corretor_id: item.corretor_id,
+        competencia: item.competencia,
+        cor_marcacao: item.cor_marcacao,
+        comentario: item.comentario,
+        tabela_origem: item.tabela_origem,
+        x_start: Number(item.x_start),
+        y_start: Number(item.y_start),
+        x_end: Number(item.x_end),
+        y_end: Number(item.y_end),
+        imagem_largura: item.imagem_largura,
+        imagem_altura: item.imagem_altura,
+        criado_em: item.criado_em,
+        atualizado_em: item.atualizado_em
+      }));
+      
+      setAnotacoes(convertedData);
     } catch (error) {
       console.error('Erro ao carregar anotações:', error);
       setAnotacoes([]);
@@ -200,7 +192,7 @@ export const RedacaoAnotacaoVisual = ({
     });
   }, [anotacoes]);
 
-  // Salvar anotação usando insert direto
+  // Salvar anotação usando insert direto na tabela marcacoes_visuais
   const salvarAnotacao = async () => {
     if (!anotacaoTemp || !comentarioTemp.trim() || !imageRef.current) return;
 
@@ -225,24 +217,12 @@ export const RedacaoAnotacaoVisual = ({
         imagem_altura: imageRef.current.naturalHeight
       };
 
-      // Tentar inserir na nova tabela primeiro
-      let insertError = null;
-      try {
-        const { error } = await supabase.rpc('insert_anotacao_visual', novaAnotacao);
-        insertError = error;
-      } catch (err) {
-        insertError = err;
-      }
-
-      // Se falhar, usar a tabela de marcações visuais como fallback
-      if (insertError) {
-        console.log('Usando fallback para marcacoes_visuais');
-        const { error: fallbackError } = await supabase
-          .from('marcacoes_visuais')
-          .insert(novaAnotacao);
-        
-        if (fallbackError) throw fallbackError;
-      }
+      // Inserir diretamente na tabela marcacoes_visuais
+      const { error } = await supabase
+        .from('marcacoes_visuais')
+        .insert(novaAnotacao);
+      
+      if (error) throw error;
 
       // Aplicar estilo à anotação
       setTimeout(() => {
