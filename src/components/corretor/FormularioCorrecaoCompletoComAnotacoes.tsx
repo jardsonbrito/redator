@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,11 @@ interface FormularioCorrecaoCompletoComAnotacoesProps {
   onVoltar: () => void;
   onSucesso: () => void;
   onRefreshList?: () => void;
+}
+
+interface RedacaoAnotacaoVisualRef {
+  salvarTodasAnotacoes: () => Promise<void>;
+  gerarImagemComAnotacoes: () => Promise<string>;
 }
 
 export const FormularioCorrecaoCompletoComAnotacoes = ({ 
@@ -47,7 +52,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [uploadingCorrecao, setUploadingCorrecao] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
   const [modalUploadAberto, setModalUploadAberto] = useState(false);
-  const [anotacaoVisualRef, setAnotacaoVisualRef] = useState<any>(null);
+  
+  // Use useRef instead of state to avoid re-renders
+  const anotacaoVisualRef = useRef<RedacaoAnotacaoVisualRef | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -103,13 +110,13 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   };
 
   const salvarAnotacoesVisuais = async () => {
-    if (!anotacaoVisualRef || !anotacaoVisualRef.salvarTodasAnotacoes) {
+    if (!anotacaoVisualRef.current?.salvarTodasAnotacoes) {
       console.log('Referência de anotação visual não disponível');
       return true; // Não bloquear se não há anotações visuais
     }
 
     try {
-      await anotacaoVisualRef.salvarTodasAnotacoes();
+      await anotacaoVisualRef.current.salvarTodasAnotacoes();
       return true;
     } catch (error) {
       console.error('Erro ao salvar anotações visuais:', error);
@@ -249,7 +256,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               redacaoId={redacao.id}
               corretorId={redacao.eh_corretor_1 ? redacao.id : redacao.id} // Simplificado para demo
               readonly={false}
-              ref={setAnotacaoVisualRef}
+              ref={(ref) => {
+                anotacaoVisualRef.current = ref;
+              }}
             />
           ) : (
             <div className="bg-white rounded-lg p-6 border">

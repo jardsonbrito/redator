@@ -1,5 +1,4 @@
 
-
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -68,6 +67,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   const [anotacaoTemp, setAnotacaoTemp] = useState<any>(null);
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
   const [anotacoesPendentes, setAnotacoesPendentes] = useState<any[]>([]);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const { toast } = useToast();
 
   // Expor métodos para o componente pai
@@ -79,7 +79,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   // Carregar anotações existentes usando query direta
   const carregarAnotacoes = async () => {
     try {
-      // Primeiro tentar buscar na tabela marcacoes_visuais
       const { data: marcacoesData, error: marcacoesError } = await supabase
         .from('marcacoes_visuais')
         .select('*')
@@ -117,80 +116,97 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
   };
 
-  // Inicializar Annotorious
+  // Inicializar Annotorious apenas quando a imagem estiver carregada
   useEffect(() => {
-    if (!imageRef.current) return;
+    if (!imageRef.current || !imageLoaded) return;
 
     const initAnnotorious = () => {
+      // Cleanup previous instance
       if (annoRef.current) {
-        annoRef.current.destroy();
+        try {
+          annoRef.current.destroy();
+        } catch (error) {
+          console.warn('Error destroying previous Annotorious instance:', error);
+        }
+        annoRef.current = null;
       }
 
-      const anno = new Annotorious({
-        image: imageRef.current!,
-        readOnly: readonly,
-        widgets: readonly ? [] : ['COMMENT'],
-      });
-
-      // Configurar eventos apenas se não for readonly
-      if (!readonly) {
-        anno.on('createAnnotation', (annotation: any) => {
-          setAnotacaoTemp(annotation);
-          setComentarioTemp("");
-          setDialogAberto(true);
+      try {
+        const anno = new Annotorious({
+          image: imageRef.current!,
+          readOnly: readonly,
+          widgets: readonly ? [] : ['COMMENT'],
         });
 
-        anno.on('deleteAnnotation', (annotation: any) => {
-          // Remover anotação da lista pendente se existir
-          setAnotacoesPendentes(prev => prev.filter(a => a.id !== annotation.id));
-          // Remover da base de dados se já foi salva
-          removerAnotacao(annotation.id);
-        });
+        // Configurar eventos apenas se não for readonly
+        if (!readonly) {
+          anno.on('createAnnotation', (annotation: any) => {
+            setAnotacaoTemp(annotation);
+            setComentarioTemp("");
+            setDialogAberto(true);
+          });
 
-        anno.on('updateAnnotation', (annotation: any, previous: any) => {
-          // Atualizar anotação pendente
-          setAnotacoesPendentes(prev => 
-            prev.map(a => a.id === annotation.id ? annotation : a)
-          );
-        });
+          anno.on('deleteAnnotation', (annotation: any) => {
+            // Remover anotação da lista pendente se existir
+            setAnotacoesPendentes(prev => prev.filter(a => a.id !== annotation.id));
+            // Remover da base de dados se já foi salva
+            removerAnotacao(annotation.id);
+          });
+
+          anno.on('updateAnnotation', (annotation: any, previous: any) => {
+            // Atualizar anotação pendente
+            setAnotacoesPendentes(prev => 
+              prev.map(a => a.id === annotation.id ? annotation : a)
+            );
+          });
+        }
+
+        // Para modo readonly, mostrar comentários ao clicar
+        if (readonly) {
+          anno.on('selectAnnotation', (annotation: any) => {
+            const anotacao = anotacoes.find(a => a.id === annotation.id);
+            if (anotacao) {
+              toast({
+                title: `${CORES_COMPETENCIAS[anotacao.competencia].label}`,
+                description: anotacao.comentario,
+                duration: 4000,
+              });
+            }
+          });
+        }
+
+        annoRef.current = anno;
+
+        // Carregar anotações existentes
+        carregarAnotacoes();
+      } catch (error) {
+        console.error('Error initializing Annotorious:', error);
       }
-
-      // Para modo readonly, mostrar comentários ao clicar
-      if (readonly) {
-        anno.on('selectAnnotation', (annotation: any) => {
-          const anotacao = anotacoes.find(a => a.id === annotation.id);
-          if (anotacao) {
-            toast({
-              title: `${CORES_COMPETENCIAS[anotacao.competencia].label}`,
-              description: anotacao.comentario,
-              duration: 4000,
-            });
-          }
-        });
-      }
-
-      annoRef.current = anno;
-
-      // Carregar anotações existentes
-      carregarAnotacoes();
     };
 
-    if (imageRef.current.complete) {
-      initAnnotorious();
-    } else {
-      imageRef.current.onload = initAnnotorious;
-    }
-
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(initAnnotorious, 100);
+    
     return () => {
+      clearTimeout(timer);
       if (annoRef.current) {
-        annoRef.current.destroy();
+        try {
+          annoRef.current.destroy();
+        } catch (error) {
+          console.warn('Error destroying Annotorious on cleanup:', error);
+        }
       }
     };
-  }, [imagemUrl, readonly, redacaoId]);
+  }, [imageLoaded, readonly, redacaoId]);
+
+  // Handle image load
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
 
   // Aplicar estilo às anotações carregadas
   useEffect(() => {
-    if (!annoRef.current || anotacoes.length === 0) return;
+    if (!annoRef.current || anotacoes.length === 0 || !imageLoaded) return;
 
     anotacoes.forEach((anotacao) => {
       const annotation = {
@@ -209,18 +225,22 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         }]
       };
 
-      annoRef.current.addAnnotation(annotation);
-      
-      // Aplicar estilo personalizado
-      setTimeout(() => {
-        const element = document.querySelector(`[data-id="${anotacao.id}"]`);
-        if (element) {
-          (element as HTMLElement).style.border = `2px solid ${anotacao.cor_marcacao}`;
-          (element as HTMLElement).style.backgroundColor = anotacao.cor_marcacao + '33';
-        }
-      }, 100);
+      try {
+        annoRef.current.addAnnotation(annotation);
+        
+        // Aplicar estilo personalizado
+        setTimeout(() => {
+          const element = document.querySelector(`[data-id="${anotacao.id}"]`);
+          if (element) {
+            (element as HTMLElement).style.border = `2px solid ${anotacao.cor_marcacao}`;
+            (element as HTMLElement).style.backgroundColor = anotacao.cor_marcacao + '33';
+          }
+        }, 100);
+      } catch (error) {
+        console.warn('Error adding annotation:', error);
+      }
     });
-  }, [anotacoes]);
+  }, [anotacoes, imageLoaded]);
 
   // Salvar anotação individual
   const salvarAnotacao = async () => {
@@ -421,6 +441,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             alt="Redação para correção" 
             className="max-w-full h-auto"
             style={{ display: 'block' }}
+            onLoad={handleImageLoad}
           />
         </div>
         
@@ -487,6 +508,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           alt="Redação para correção" 
           className="max-w-full h-auto cursor-crosshair"
           style={{ display: 'block' }}
+          onLoad={handleImageLoad}
         />
       </div>
 
