@@ -19,7 +19,6 @@ export const RedacaoEnemForm = ({
   className = "", 
   placeholder = "Escreva sua redação aqui..." 
 }: RedacaoEnemFormProps) => {
-  const [showAlert, setShowAlert] = useState(false);
   const [currentLines, setCurrentLines] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isMobile = useIsMobile();
@@ -66,15 +65,6 @@ export const RedacaoEnemForm = ({
     const textarea = e.target;
     const newValue = textarea.value;
     
-    const wordCount = getWordCount(newValue);
-    
-    // Validação apenas por palavras - máximo 500
-    if (wordCount > 500) {
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 3000);
-      return;
-    }
-    
     // Atualiza contagem de linhas apenas para exibição
     let currentLineCount: number;
     if (isMobile) {
@@ -105,7 +95,7 @@ export const RedacaoEnemForm = ({
     
     setCurrentLines(lines);
     
-    // Valida apenas se há texto (sem limite mínimo de linhas)
+    // Valida apenas se há texto
     const valid = value.trim().length > 0;
     onValidChange(valid);
   }, [value, onValidChange, isMobile]);
@@ -115,15 +105,6 @@ export const RedacaoEnemForm = ({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {showAlert && (
-        <Alert className="border-orange-200 bg-orange-50">
-          <AlertTriangle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
-            Limite de 500 palavras excedido.
-          </AlertDescription>
-        </Alert>
-      )}
-      
       <div className="relative mx-auto max-w-4xl">
         {/* Container principal com proporções da folha ENEM */}
         <div 
@@ -193,21 +174,6 @@ export const RedacaoEnemForm = ({
               ref={textareaRef}
               value={value}
               onChange={handleChange}
-              onKeyDown={(e) => {
-                // Permite apenas backspace/delete quando no limite de palavras
-                const wordCount = getWordCount(value);
-                const isAtLimit = wordCount >= 500;
-                  
-                if (isAtLimit && 
-                    e.key !== 'Backspace' && 
-                    e.key !== 'Delete' && 
-                    e.key !== 'ArrowLeft' && 
-                    e.key !== 'ArrowRight' && 
-                    e.key !== 'ArrowUp' && 
-                    e.key !== 'ArrowDown') {
-                  e.preventDefault();
-                }
-              }}
               placeholder={placeholder}
               className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-900 font-sans p-0 overflow-hidden"
               style={{
@@ -222,10 +188,10 @@ export const RedacaoEnemForm = ({
           </div>
         </div>
         
-        {/* Contador adaptado para mostrar palavras */}
+        {/* Contador mostrando apenas informações estatísticas */}
         <div className="mt-4 text-center">
           <span className="text-sm text-gray-500">
-            Palavras: {getWordCount(value)}/500
+            Palavras: {getWordCount(value)}
             <span className="ml-2 text-xs">({currentLines} linhas aprox.)</span>
           </span>
         </div>
