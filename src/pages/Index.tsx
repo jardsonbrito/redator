@@ -12,6 +12,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
+import { MeuDesempenho } from "@/components/MeuDesempenho";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -139,6 +140,9 @@ const Index = () => {
                 </div>
               )}
             </div>
+
+            {/* Componente Meu Desempenho */}
+            <MeuDesempenho />
 
             {/* Atividade Ativa - Simulados ou Exercícios - SEMPRE em destaque no topo */}
             <AtividadeAtiva />
