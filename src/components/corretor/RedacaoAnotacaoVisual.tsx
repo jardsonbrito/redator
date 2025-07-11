@@ -176,11 +176,45 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           anno.on('selectAnnotation', (annotation: any) => {
             const anotacao = anotacoes.find(a => a.id === annotation.id);
             if (anotacao) {
-              toast({
-                title: `${CORES_COMPETENCIAS[anotacao.competencia].label}`,
-                description: anotacao.comentario,
-                duration: 4000,
-              });
+              // Criar pop-up customizado para visualização
+              const popup = document.createElement('div');
+              popup.className = 'fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 max-w-xs';
+              popup.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 1000;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                padding: 12px;
+                max-width: 300px;
+                font-family: system-ui, -apple-system, sans-serif;
+              `;
+              
+              popup.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <div style="width: 12px; height: 12px; border-radius: 50%; background: ${anotacao.cor_marcacao};"></div>
+                  <span style="font-weight: 600; color: #374151; font-size: 14px;">C${anotacao.competencia}</span>
+                </div>
+                <p style="margin: 0; color: #4b5563; font-size: 14px; line-height: 1.4;">${anotacao.comentario}</p>
+                <button onclick="this.parentNode.remove()" style="position: absolute; top: 4px; right: 8px; background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 18px;">×</button>
+              `;
+              
+              document.body.appendChild(popup);
+              
+              // Remover popup ao clicar fora
+              setTimeout(() => {
+                const handleClickOutside = (e: MouseEvent) => {
+                  if (!popup.contains(e.target as Node)) {
+                    popup.remove();
+                    document.removeEventListener('click', handleClickOutside);
+                  }
+                };
+                document.addEventListener('click', handleClickOutside);
+              }, 100);
             }
           });
         }
@@ -219,7 +253,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       const b = parseInt(cor.slice(5, 7), 16);
       
       element.style.border = `1px solid ${cor}`;
-      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.15)`;
+      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.12)`;
       element.style.boxSizing = 'border-box';
     }
   };
@@ -430,7 +464,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           </div>
           <Button variant="outline" size="sm" onClick={baixarImagemCorrigida}>
             <Download className="w-4 h-4 mr-2" />
-            Baixar redação corrigida com marcações
+            📥 Baixar redação corrigida
           </Button>
         </div>
         
@@ -446,7 +480,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
                     style={{ backgroundColor: CORES_COMPETENCIAS[competencia].cor }}
                   />
                   <span className="text-xs font-medium">
-                    {CORES_COMPETENCIAS[competencia].label}
+                    C{competencia}
                   </span>
                 </div>
               ))}
@@ -474,9 +508,11 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             {anotacoes.map((anotacao, index) => (
               <div key={index} className="p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge style={{ backgroundColor: anotacao.cor_marcacao, color: 'white' }}>
-                    {CORES_COMPETENCIAS[anotacao.competencia].label}
-                  </Badge>
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: anotacao.cor_marcacao }}
+                  />
+                  <span className="font-medium text-sm">C{anotacao.competencia}</span>
                 </div>
                 <p className="text-sm leading-relaxed">{anotacao.comentario}</p>
               </div>

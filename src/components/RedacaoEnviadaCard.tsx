@@ -194,12 +194,12 @@ export const RedacaoEnviadaCard = ({
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Notas por competência - formato simplificado */}
+            {/* Notas por competência - formato ajustado conforme Prompt 3 */}
             <div>
               <h3 className="font-semibold text-primary mb-4">Notas por Competência</h3>
               
-              {/* Grid 5 competências + nota final */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {/* Grid horizontal das competências C1-C5 + Nota Final */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                 {[1, 2, 3, 4, 5].map(comp => {
                   const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
                   return (
@@ -215,9 +215,9 @@ export const RedacaoEnviadaCard = ({
                 })}
                 
                 {/* Nota Final */}
-                <div className="text-center col-span-2 sm:col-span-1">
+                <div className="text-center">
                   <div className="bg-primary text-white rounded-lg p-3">
-                    <div className="text-xs font-medium mb-1">Nota Final</div>
+                    <div className="text-xs font-medium mb-1">Total</div>
                     <div className="text-lg font-bold">
                       {redacao.nota_total !== null ? redacao.nota_total : '-'}
                     </div>
