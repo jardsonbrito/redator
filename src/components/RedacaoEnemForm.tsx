@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -65,31 +66,21 @@ export const RedacaoEnemForm = ({
     const textarea = e.target;
     const newValue = textarea.value;
     
-    // Temporariamente define o valor para calcular as linhas
-    const prevValue = textarea.value;
-    textarea.value = newValue;
-    
     const wordCount = getWordCount(newValue);
-    let currentLineCount: number;
-    let isOverLimit: boolean;
     
-    if (isMobile) {
-      // No mobile, usa apenas contagem de palavras para evitar problemas de responsividade
-      currentLineCount = getWordBasedLineCount(newValue);
-      // Limite principal: 350 palavras (mais confiável que contagem visual)
-      isOverLimit = wordCount > 350;
-    } else {
-      // No desktop, usa cálculo visual tradicional
-      currentLineCount = getVisualLineCount(textarea);
-      isOverLimit = currentLineCount > 30;
-    }
-    
-    if (isOverLimit) {
-      // Reverte para o valor anterior se exceder os limites
-      textarea.value = prevValue;
+    // Validação apenas por palavras - máximo 500
+    if (wordCount > 500) {
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000);
       return;
+    }
+    
+    // Atualiza contagem de linhas apenas para exibição
+    let currentLineCount: number;
+    if (isMobile) {
+      currentLineCount = getWordBasedLineCount(newValue);
+    } else {
+      currentLineCount = getVisualLineCount(textarea);
     }
     
     setCurrentLines(currentLineCount);
@@ -114,8 +105,8 @@ export const RedacaoEnemForm = ({
     
     setCurrentLines(lines);
     
-    // Valida se há pelo menos 8 linhas preenchidas (ou ~96 palavras no mobile)
-    const valid = isMobile ? getWordCount(value) >= 96 : lines >= 8;
+    // Valida apenas se há texto (sem limite mínimo de linhas)
+    const valid = value.trim().length > 0;
     onValidChange(valid);
   }, [value, onValidChange, isMobile]);
 
@@ -128,10 +119,7 @@ export const RedacaoEnemForm = ({
         <Alert className="border-orange-200 bg-orange-50">
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
-            {isMobile 
-              ? "Você atingiu o limite de 350 palavras permitidas."
-              : "Você atingiu o limite de linhas permitidas pela folha oficial."
-            }
+            Limite de 500 palavras excedido.
           </AlertDescription>
         </Alert>
       )}
@@ -206,12 +194,9 @@ export const RedacaoEnemForm = ({
               value={value}
               onChange={handleChange}
               onKeyDown={(e) => {
-                // Permite apenas backspace/delete quando no limite
+                // Permite apenas backspace/delete quando no limite de palavras
                 const wordCount = getWordCount(value);
-                const isAtLimit = isMobile 
-                  ? wordCount >= 350  // No mobile, só considera palavras
-                  : currentLines >= 30; // No desktop, considera linhas visuais
-                  
+                const isAtLimit = wordCount >= 500;
                   
                 if (isAtLimit && 
                     e.key !== 'Backspace' && 
@@ -237,17 +222,11 @@ export const RedacaoEnemForm = ({
           </div>
         </div>
         
-        {/* Contador adaptado para mobile */}
+        {/* Contador adaptado para mostrar palavras */}
         <div className="mt-4 text-center">
           <span className="text-sm text-gray-500">
-            {isMobile ? (
-              <>
-                Palavras: {getWordCount(value)}/350 
-                <span className="ml-2 text-xs">({currentLines} linhas aprox.)</span>
-              </>
-            ) : (
-              <>Linhas utilizadas: {currentLines}/30</>
-            )}
+            Palavras: {getWordCount(value)}/500
+            <span className="ml-2 text-xs">({currentLines} linhas aprox.)</span>
           </span>
         </div>
       </div>
