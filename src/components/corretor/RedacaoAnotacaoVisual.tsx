@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,9 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Save, Download, Trash2 } from "lucide-react";
 import html2canvas from 'html2canvas';
 
-// Importar Annotorious
-import { Annotorious } from '@recogito/annotorious';
-import '@recogito/annotorious/dist/annotorious.min.css';
+// Importar Fabric.js
+import { Canvas as FabricCanvas, Rect, type TPointerEvent } from "fabric";
 
 // Interface que corresponde à estrutura real da tabela no banco
 interface AnotacaoVisual {
@@ -61,7 +59,8 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const annoRef = useRef<any>(null);
+  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
+  
   const [competenciaSelecionada, setCompetenciaSelecionada] = useState<number>(1);
   const [dialogAberto, setDialogAberto] = useState<boolean>(false);
   const [comentarioTemp, setComentarioTemp] = useState<string>("");
@@ -69,6 +68,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [tempRect, setTempRect] = useState<Rect | null>(null);
   const { toast } = useToast();
 
   // Expor métodos para o componente pai
@@ -116,154 +116,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
   };
 
-  // Sistema de marcação manual (sem Annotorious)
-  const [isDragging, setIsDragging] = useState(false);
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
-
-  // Event handlers para desenhar retângulo manualmente
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (readonly) return;
-    
-    const rect = imageRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
-    
-    setStartPos({ x, y });
-    setCurrentPos({ x, y });
-    setIsDragging(true);
-    
-    // Remover retângulo temporário anterior
-    const existingTemp = containerRef.current?.querySelector('.temp-rectangle');
-    if (existingTemp) {
-      existingTemp.remove();
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || readonly) return;
-    
-    const rect = imageRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
-    
-    setCurrentPos({ x, y });
-    
-    // Atualizar retângulo temporário
-    updateTempRectangle();
-  };
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (!isDragging || readonly) return;
-    
-    const rect = imageRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const endX = Math.round(e.clientX - rect.left);
-    const endY = Math.round(e.clientY - rect.top);
-    
-    setIsDragging(false);
-    
-    // Calcular dimensões do retângulo
-    const x = Math.min(startPos.x, endX);
-    const y = Math.min(startPos.y, endY);
-    const width = Math.abs(endX - startPos.x);
-    const height = Math.abs(endY - startPos.y);
-    
-    // Verificar se o retângulo é grande o suficiente
-    if (width < 10 || height < 10) {
-      const tempRect = containerRef.current?.querySelector('.temp-rectangle');
-      if (tempRect) tempRect.remove();
-      return;
-    }
-    
-    console.log('Retângulo criado:', { x, y, width, height });
-    
-    // Salvar dados da seleção e abrir popup
-    const selecaoData = {
-      x, y, width, height,
-      competencia: competenciaSelecionada
-    };
-    
-    setSelecaoTemp(selecaoData);
-    setComentarioTemp("");
-    setDialogAberto(true);
-  };
-
-  // Atualizar retângulo temporário durante o arraste
-  const updateTempRectangle = () => {
-    if (!containerRef.current || !isDragging) return;
-
-    let tempRect = containerRef.current.querySelector('.temp-rectangle') as HTMLElement;
-    
-    if (!tempRect) {
-      tempRect = document.createElement('div');
-      tempRect.className = 'temp-rectangle';
-      containerRef.current.appendChild(tempRect);
-    }
-
-    const x = Math.min(startPos.x, currentPos.x);
-    const y = Math.min(startPos.y, currentPos.y);
-    const width = Math.abs(currentPos.x - startPos.x);
-    const height = Math.abs(currentPos.y - startPos.y);
-    
-    const corCompetencia = CORES_COMPETENCIAS[competenciaSelecionada];
-    const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
-    const g = parseInt(corCompetencia.cor.slice(3, 5), 16);
-    const b = parseInt(corCompetencia.cor.slice(5, 7), 16);
-    
-    tempRect.style.cssText = `
-      position: absolute;
-      left: ${x}px;
-      top: ${y}px;
-      width: ${width}px;
-      height: ${height}px;
-      border: 1px solid ${corCompetencia.cor};
-      background-color: rgba(${r}, ${g}, ${b}, 0.10);
-      pointer-events: none;
-      z-index: 10;
-      box-sizing: border-box;
-    `;
-  };
-
-  // Criar retângulo visual
-  const createVisualRectangle = (x: number, y: number, width: number, height: number) => {
-    if (!containerRef.current || !imageRef.current) return;
-
-    // Remover retângulo temporário anterior se existir
-    const existingTemp = containerRef.current.querySelector('.temp-rectangle');
-    if (existingTemp) {
-      existingTemp.remove();
-    }
-
-    const rect = document.createElement('div');
-    rect.className = 'temp-rectangle';
-    
-    const corCompetencia = CORES_COMPETENCIAS[competenciaSelecionada];
-    const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
-    const g = parseInt(corCompetencia.cor.slice(3, 5), 16);
-    const b = parseInt(corCompetencia.cor.slice(5, 7), 16);
-    
-    rect.style.cssText = `
-      position: absolute;
-      left: ${x}px;
-      top: ${y}px;
-      width: ${width}px;
-      height: ${height}px;
-      border: 1px solid ${corCompetencia.cor};
-      background-color: rgba(${r}, ${g}, ${b}, 0.10);
-      pointer-events: none;
-      z-index: 10;
-      box-sizing: border-box;
-    `;
-    
-    containerRef.current.appendChild(rect);
-  };
-
   // Handle image load
   const handleImageLoad = () => {
     if (imageRef.current) {
@@ -279,95 +131,213 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
   };
 
-  // Aplicar anotações salvas
+  // Inicializar Fabric.js Canvas
   useEffect(() => {
-    if (!imageLoaded || anotacoes.length === 0 || !containerRef.current) return;
+    if (!canvasRef.current || !imageLoaded || readonly) return;
 
-    // Limpar anotações visuais existentes
-    const existingAnnotations = containerRef.current.querySelectorAll('.saved-annotation');
-    existingAnnotations.forEach(el => el.remove());
+    const initFabricCanvas = () => {
+      // Limpar canvas anterior se existir
+      if (fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+      }
 
-    anotacoes.forEach((anotacao) => {
-      createSavedAnnotation(anotacao);
-    });
-  }, [anotacoes, imageLoaded]);
-
-  // Criar anotação salva visual
-  const createSavedAnnotation = (anotacao: AnotacaoVisual) => {
-    if (!containerRef.current) return;
-
-    const rect = document.createElement('div');
-    rect.className = 'saved-annotation';
-    rect.dataset.annotationId = anotacao.id;
-    
-    const r = parseInt(anotacao.cor_marcacao.slice(1, 3), 16);
-    const g = parseInt(anotacao.cor_marcacao.slice(3, 5), 16);
-    const b = parseInt(anotacao.cor_marcacao.slice(5, 7), 16);
-    
-    rect.style.cssText = `
-      position: absolute;
-      left: ${anotacao.x_start}px;
-      top: ${anotacao.y_start}px;
-      width: ${anotacao.x_end - anotacao.x_start}px;
-      height: ${anotacao.y_end - anotacao.y_start}px;
-      border: 1px solid ${anotacao.cor_marcacao};
-      background-color: rgba(${r}, ${g}, ${b}, 0.10);
-      cursor: pointer;
-      z-index: 10;
-      box-sizing: border-box;
-    `;
-
-    // Adicionar botão de lixeira se não for readonly
-    if (!readonly) {
-      const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑️';
-      deleteBtn.className = 'delete-annotation-btn';
-      deleteBtn.style.cssText = `
-        position: absolute;
-        top: -12px;
-        right: -12px;
-        background: #ef4444;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 24px;
-        height: 24px;
-        font-size: 12px;
-        cursor: pointer;
-        display: none;
-        z-index: 100;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      `;
-      
-      deleteBtn.onclick = (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        removerAnotacao(anotacao.id!);
-      };
-      
-      // Eventos de hover
-      rect.addEventListener('mouseenter', () => {
-        deleteBtn.style.display = 'block';
-      });
-      
-      rect.addEventListener('mouseleave', () => {
-        deleteBtn.style.display = 'none';
-      });
-      
-      rect.appendChild(deleteBtn);
-    } else {
-      // Para modo readonly, mostrar comentário ao clicar
-      rect.addEventListener('click', () => {
-        toast({
-          title: `${CORES_COMPETENCIAS[anotacao.competencia].label}`,
-          description: anotacao.comentario,
-          duration: 4000,
+      try {
+        console.log('Inicializando Fabric.js Canvas...');
+        
+        const canvas = new FabricCanvas(canvasRef.current!, {
+          width: imageDimensions.width,
+          height: imageDimensions.height,
+          backgroundColor: 'transparent',
+          selection: false
         });
-      });
-    }
+
+        let isDrawing = false;
+        let startPointer = { x: 0, y: 0 };
+
+        // Evento de mouse down
+        canvas.on('mouse:down', (options: any) => {
+          if (readonly) return;
+          
+          isDrawing = true;
+          const pointer = canvas.getScenePoint(options.e);
+          startPointer = { x: pointer.x, y: pointer.y };
+
+          // Remover retângulo temporário anterior
+          if (tempRect) {
+            canvas.remove(tempRect);
+            setTempRect(null);
+          }
+
+          console.log('Mouse down at:', startPointer);
+        });
+
+        // Evento de mouse move
+        canvas.on('mouse:move', (options: any) => {
+          if (!isDrawing || readonly) return;
+
+          const pointer = canvas.getScenePoint(options.e);
+          
+          // Calcular dimensões do retângulo
+          const left = Math.min(startPointer.x, pointer.x);
+          const top = Math.min(startPointer.y, pointer.y);
+          const width = Math.abs(pointer.x - startPointer.x);
+          const height = Math.abs(pointer.y - startPointer.y);
+
+          // Remover retângulo temporário anterior
+          if (tempRect) {
+            canvas.remove(tempRect);
+          }
+
+          // Criar novo retângulo temporário
+          const corCompetencia = CORES_COMPETENCIAS[competenciaSelecionada];
+          const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
+          const g = parseInt(corCompetencia.cor.slice(3, 5), 16);
+          const b = parseInt(corCompetencia.cor.slice(5, 7), 16);
+
+          const rect = new Rect({
+            left,
+            top,
+            width,
+            height,
+            fill: `rgba(${r}, ${g}, ${b}, 0.1)`,
+            stroke: corCompetencia.cor,
+            strokeWidth: 1,
+            selectable: false,
+            evented: false
+          });
+
+          canvas.add(rect);
+          setTempRect(rect);
+          canvas.renderAll();
+        });
+
+        // Evento de mouse up
+        canvas.on('mouse:up', (options: any) => {
+          if (!isDrawing || readonly) return;
+          
+          isDrawing = false;
+          const pointer = canvas.getScenePoint(options.e);
+          
+          // Calcular dimensões finais
+          const x = Math.min(startPointer.x, pointer.x);
+          const y = Math.min(startPointer.y, pointer.y);
+          const width = Math.abs(pointer.x - startPointer.x);
+          const height = Math.abs(pointer.y - startPointer.y);
+
+          console.log('Mouse up - final rect:', { x, y, width, height });
+
+          // Verificar se o retângulo é grande o suficiente
+          if (width < 10 || height < 10) {
+            if (tempRect) {
+              canvas.remove(tempRect);
+              setTempRect(null);
+              canvas.renderAll();
+            }
+            return;
+          }
+
+          // Salvar dados da seleção e abrir popup
+          const selecaoData = {
+            x: Math.round(x),
+            y: Math.round(y),
+            width: Math.round(width),
+            height: Math.round(height),
+            competencia: competenciaSelecionada
+          };
+
+          console.log('Seleção criada:', selecaoData);
+          
+          setSelecaoTemp(selecaoData);
+          setComentarioTemp("");
+          setDialogAberto(true);
+        });
+
+        fabricCanvasRef.current = canvas;
+        console.log('Fabric.js Canvas configurado com sucesso');
+
+      } catch (error) {
+        console.error('Erro ao inicializar Fabric.js:', error);
+      }
+    };
+
+    const timer = setTimeout(initFabricCanvas, 100);
     
-    containerRef.current.appendChild(rect);
-  };
+    return () => {
+      clearTimeout(timer);
+      if (fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+      }
+    };
+  }, [imageLoaded, readonly, competenciaSelecionada, imageDimensions]);
+
+  // Aplicar anotações salvas no canvas
+  useEffect(() => {
+    if (!fabricCanvasRef.current || anotacoes.length === 0) return;
+
+    // Limpar anotações existentes (exceto temporária)
+    const objects = fabricCanvasRef.current.getObjects();
+    objects.forEach(obj => {
+      if (obj !== tempRect && (obj as any).annotationId) {
+        fabricCanvasRef.current!.remove(obj);
+      }
+    });
+
+    // Adicionar anotações salvas
+    anotacoes.forEach((anotacao) => {
+      const r = parseInt(anotacao.cor_marcacao.slice(1, 3), 16);
+      const g = parseInt(anotacao.cor_marcacao.slice(3, 5), 16);
+      const b = parseInt(anotacao.cor_marcacao.slice(5, 7), 16);
+
+      const rect = new Rect({
+        left: anotacao.x_start,
+        top: anotacao.y_start,
+        width: anotacao.x_end - anotacao.x_start,
+        height: anotacao.y_end - anotacao.y_start,
+        fill: `rgba(${r}, ${g}, ${b}, 0.1)`,
+        stroke: anotacao.cor_marcacao,
+        strokeWidth: 1,
+        selectable: false,
+        evented: true
+      });
+
+      (rect as any).annotationId = anotacao.id;
+      (rect as any).annotationData = anotacao;
+
+      // Adicionar eventos para mostrar lixeira e comentário
+      if (!readonly) {
+        rect.on('mouseover', () => {
+          rect.set({ stroke: anotacao.cor_marcacao, strokeWidth: 2 });
+          fabricCanvasRef.current!.renderAll();
+        });
+
+        rect.on('mouseout', () => {
+          rect.set({ stroke: anotacao.cor_marcacao, strokeWidth: 1 });
+          fabricCanvasRef.current!.renderAll();
+        });
+
+        rect.on('mouseup', () => {
+          const shouldDelete = confirm(`Remover esta anotação?\n\n${CORES_COMPETENCIAS[anotacao.competencia].label}: ${anotacao.comentario}`);
+          if (shouldDelete) {
+            removerAnotacao(anotacao.id!);
+          }
+        });
+      } else {
+        rect.on('mouseup', () => {
+          toast({
+            title: `${CORES_COMPETENCIAS[anotacao.competencia].label}`,
+            description: anotacao.comentario,
+            duration: 4000,
+          });
+        });
+      }
+
+      fabricCanvasRef.current!.add(rect);
+    });
+
+    fabricCanvasRef.current.renderAll();
+  }, [anotacoes, readonly, tempRect]);
 
   // Salvar anotação
   const salvarAnotacao = async () => {
@@ -410,10 +380,11 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
       console.log('Anotação salva com sucesso:', data);
 
-      // Remover retângulo temporário
-      const tempRect = containerRef.current?.querySelector('.temp-rectangle');
-      if (tempRect) {
-        tempRect.remove();
+      // Remover retângulo temporário do canvas
+      if (tempRect && fabricCanvasRef.current) {
+        fabricCanvasRef.current.remove(tempRect);
+        setTempRect(null);
+        fabricCanvasRef.current.renderAll();
       }
 
       toast({
@@ -440,10 +411,11 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
   // Cancelar anotação
   const cancelarAnotacao = () => {
-    // Remover retângulo temporário
-    const tempRect = containerRef.current?.querySelector('.temp-rectangle');
-    if (tempRect) {
-      tempRect.remove();
+    // Remover retângulo temporário do canvas
+    if (tempRect && fabricCanvasRef.current) {
+      fabricCanvasRef.current.remove(tempRect);
+      setTempRect(null);
+      fabricCanvasRef.current.renderAll();
     }
     
     setDialogAberto(false);
@@ -527,94 +499,86 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
   if (readonly) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">Redação Corrigida</span>
-          </div>
-          <Button variant="outline" size="sm" onClick={baixarImagemCorrigida}>
+      <div className="w-full">
+        {/* Controles para aluno */}
+        <div className="mb-6">
+          <Button 
+            onClick={baixarImagemCorrigida}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
             <Download className="w-4 h-4 mr-2" />
-            Baixar redação corrigida
+            Baixar Correção Visual
           </Button>
         </div>
-        
-        {/* Legenda de Cores */}
+
+        {/* Vista pedagógica simplificada para aluno */}
         {anotacoes.length > 0 && (
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <h4 className="font-medium text-sm mb-2">Legenda das Competências:</h4>
-            <div className="flex flex-wrap gap-2">
-              {[...new Set(anotacoes.map(a => a.competencia))].sort().map(competencia => (
-                <div key={competencia} className="flex items-center gap-1">
-                  <div 
-                    className="w-3 h-3 rounded-sm" 
-                    style={{ backgroundColor: CORES_COMPETENCIAS[competencia].cor }}
-                  />
-                  <span className="text-xs font-medium">
-                    {CORES_COMPETENCIAS[competencia].label}
-                  </span>
-                </div>
-              ))}
+          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+            <h3 className="text-lg font-semibold mb-3">Resumo da Correção</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => {
+                const anotacoesCompetencia = anotacoes.filter(a => a.competencia === parseInt(num));
+                return (
+                  <div key={num} className="text-center">
+                    <div 
+                      className="w-3 h-3 rounded-full mx-auto mb-1"
+                      style={{ backgroundColor: info.cor }}
+                    ></div>
+                    <div className="text-sm font-medium">C{num}</div>
+                    <div className="text-xs text-gray-600">
+                      {anotacoesCompetencia.length} marcação{anotacoesCompetencia.length !== 1 ? 'ões' : ''}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              💡 Clique nas marcações coloridas para ver os comentários
-            </p>
           </div>
         )}
-        
+
+        {/* Imagem da Redação - Modo Leitura */}
         <div ref={containerRef} className="border rounded-lg p-4 bg-white relative">
           <img 
             ref={imageRef}
             src={imagemUrl} 
-            alt="Redação para correção" 
+            alt="Redação corrigida" 
             className="max-w-full h-auto block"
             onLoad={handleImageLoad}
           />
+          {imageLoaded && (
+            <canvas 
+              ref={canvasRef}
+              className="absolute top-4 left-4 pointer-events-none"
+              style={{ zIndex: 10 }}
+            />
+          )}
         </div>
-        
-        {anotacoes.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="font-medium">Feedback por Competência:</h4>
-            {anotacoes.map((anotacao, index) => (
-              <div key={index} className="p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow">
-                <div className="flex items-center gap-2 mb-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: anotacao.cor_marcacao }}
-                  />
-                  <span className="font-medium text-sm">{CORES_COMPETENCIAS[anotacao.competencia].label}</span>
-                </div>
-                <p className="text-sm leading-relaxed">{anotacao.comentario}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Painel de Competências */}
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Selecionar Competência:</span>
-          {Object.entries(CORES_COMPETENCIAS).map(([num, { cor, nome, label }]) => (
+    <div className="w-full">
+      {/* Seletor de Competências */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-3">Selecione a Competência</h3>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
             <Button
               key={num}
-              size="sm"
               variant={competenciaSelecionada === parseInt(num) ? "default" : "outline"}
-              onClick={() => {
-                console.log('Competência selecionada:', parseInt(num));
-                setCompetenciaSelecionada(parseInt(num));
+              onClick={() => setCompetenciaSelecionada(parseInt(num))}
+              className="flex items-center gap-2"
+              style={{
+                backgroundColor: competenciaSelecionada === parseInt(num) ? info.cor : 'transparent',
+                borderColor: info.cor,
+                color: competenciaSelecionada === parseInt(num) ? 'white' : info.cor
               }}
-              className="flex items-center gap-1"
-              style={competenciaSelecionada === parseInt(num) ? { backgroundColor: cor, borderColor: cor } : {}}
             >
               <div 
-                className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: cor }}
-              />
-              C{num}
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: info.cor }}
+              ></div>
+              {info.label}
             </Button>
           ))}
         </div>
@@ -626,52 +590,47 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           ref={imageRef}
           src={imagemUrl} 
           alt="Redação para correção" 
-          className="max-w-full h-auto cursor-crosshair block"
+          className="max-w-full h-auto block"
           onLoad={handleImageLoad}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
           style={{ userSelect: 'none' }}
         />
+        {imageLoaded && (
+          <canvas 
+            ref={canvasRef}
+            className="absolute top-4 left-4 cursor-crosshair"
+            style={{ zIndex: 10 }}
+          />
+        )}
       </div>
 
-      {/* Dialog para comentário personalizado */}
-      <Dialog open={dialogAberto} onOpenChange={(open) => {
-        if (!open) {
-          cancelarAnotacao();
-        }
-      }}>
-        <DialogContent>
+      {/* Dialog para adicionar comentário */}
+      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <div 
-                className="w-4 h-4 rounded-full" 
-                style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada].cor }}
-              />
-              {CORES_COMPETENCIAS[competenciaSelecionada].label}
+                className="w-4 h-4 rounded-full"
+                style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada]?.cor }}
+              ></div>
+              {CORES_COMPETENCIAS[competenciaSelecionada]?.label}
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
             <Textarea
-              placeholder="Área para digitação do comentário"
+              placeholder="Digite seu comentário sobre esta marcação..."
               value={comentarioTemp}
               onChange={(e) => setComentarioTemp(e.target.value)}
               rows={4}
-              className="resize-none"
               autoFocus
             />
             
-            <div className="flex gap-2 justify-end">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={cancelarAnotacao}>
                 Cancelar
               </Button>
-              <Button 
-                onClick={salvarAnotacao}
-                disabled={!comentarioTemp.trim()}
-                className="flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
+              <Button onClick={salvarAnotacao}>
+                <Save className="w-4 h-4 mr-2" />
                 Salvar Comentário
               </Button>
             </div>
