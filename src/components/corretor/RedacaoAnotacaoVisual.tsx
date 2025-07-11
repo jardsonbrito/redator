@@ -1,12 +1,14 @@
 
-import { useEffect, useRef, useState } from "react";
+
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Palette, Save } from "lucide-react";
+import { Palette, Save, Download } from "lucide-react";
+import html2canvas from 'html2canvas';
 
 // Importar Annotorious
 import { Annotorious } from '@recogito/annotorious';
@@ -38,6 +40,11 @@ interface RedacaoAnotacaoVisualProps {
   readonly?: boolean;
 }
 
+interface RedacaoAnotacaoVisualRef {
+  salvarTodasAnotacoes: () => Promise<void>;
+  gerarImagemComAnotacoes: () => Promise<string>;
+}
+
 const CORES_COMPETENCIAS = {
   1: { cor: '#F94C4C', nome: 'Vermelho', label: 'C1 - Norma Culta' },
   2: { cor: '#3CD856', nome: 'Verde', label: 'C2 - Compreensão' },
@@ -46,20 +53,28 @@ const CORES_COMPETENCIAS = {
   5: { cor: '#FF8C32', nome: 'Laranja', label: 'C5 - Proposta' },
 };
 
-export const RedacaoAnotacaoVisual = ({ 
+export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps>(({ 
   imagemUrl, 
   redacaoId, 
   corretorId,
   readonly = false 
-}: RedacaoAnotacaoVisualProps) => {
+}, ref) => {
   const imageRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const annoRef = useRef<any>(null);
   const [competenciaSelecionada, setCompetenciaSelecionada] = useState<number>(1);
   const [dialogAberto, setDialogAberto] = useState<boolean>(false);
   const [comentarioTemp, setComentarioTemp] = useState<string>("");
   const [anotacaoTemp, setAnotacaoTemp] = useState<any>(null);
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
+  const [anotacoesPendentes, setAnotacoesPendentes] = useState<any[]>([]);
   const { toast } = useToast();
+
+  // Expor métodos para o componente pai
+  useImperativeHandle(ref, () => ({
+    salvarTodasAnotacoes,
+    gerarImagemComAnotacoes
+  }));
 
   // Carregar anotações existentes usando query direta
   const carregarAnotacoes = async () => {
@@ -125,16 +140,31 @@ export const RedacaoAnotacaoVisual = ({
           setDialogAberto(true);
         });
 
+        anno.on('deleteAnnotation', (annotation: any) => {
+          // Remover anotação da lista pendente se existir
+          setAnotacoesPendentes(prev => prev.filter(a => a.id !== annotation.id));
+          // Remover da base de dados se já foi salva
+          removerAnotacao(annotation.id);
+        });
+
+        anno.on('updateAnnotation', (annotation: any, previous: any) => {
+          // Atualizar anotação pendente
+          setAnotacoesPendentes(prev => 
+            prev.map(a => a.id === annotation.id ? annotation : a)
+          );
+        });
+      }
+
+      // Para modo readonly, mostrar comentários ao clicar
+      if (readonly) {
         anno.on('selectAnnotation', (annotation: any) => {
-          if (readonly) {
-            const anotacao = anotacoes.find(a => a.id === annotation.id);
-            if (anotacao) {
-              toast({
-                title: `${CORES_COMPETENCIAS[anotacao.competencia].label}`,
-                description: anotacao.comentario,
-                duration: 4000,
-              });
-            }
+          const anotacao = anotacoes.find(a => a.id === annotation.id);
+          if (anotacao) {
+            toast({
+              title: `${CORES_COMPETENCIAS[anotacao.competencia].label}`,
+              description: anotacao.comentario,
+              duration: 4000,
+            });
           }
         });
       }
@@ -192,7 +222,7 @@ export const RedacaoAnotacaoVisual = ({
     });
   }, [anotacoes]);
 
-  // Salvar anotação usando insert direto na tabela marcacoes_visuais
+  // Salvar anotação individual
   const salvarAnotacao = async () => {
     if (!anotacaoTemp || !comentarioTemp.trim() || !imageRef.current) return;
 
@@ -217,12 +247,9 @@ export const RedacaoAnotacaoVisual = ({
         imagem_altura: imageRef.current.naturalHeight
       };
 
-      // Inserir diretamente na tabela marcacoes_visuais
-      const { error } = await supabase
-        .from('marcacoes_visuais')
-        .insert(novaAnotacao);
-      
-      if (error) throw error;
+      // Adicionar à lista de anotações pendentes para salvar depois
+      const anotacaoComId = { ...anotacaoTemp, ...novaAnotacao };
+      setAnotacoesPendentes(prev => [...prev, anotacaoComId]);
 
       // Aplicar estilo à anotação
       setTimeout(() => {
@@ -234,20 +261,117 @@ export const RedacaoAnotacaoVisual = ({
       }, 100);
 
       toast({
-        title: "Anotação salva!",
-        description: "Comentário adicionado com sucesso.",
+        title: "Anotação adicionada!",
+        description: "A anotação será salva quando você finalizar a correção.",
       });
 
       setDialogAberto(false);
       setAnotacaoTemp(null);
       setComentarioTemp("");
-      await carregarAnotacoes();
 
     } catch (error) {
-      console.error('Erro ao salvar anotação:', error);
+      console.error('Erro ao preparar anotação:', error);
       toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar a anotação.",
+        title: "Erro ao adicionar anotação",
+        description: "Não foi possível adicionar a anotação.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Salvar todas as anotações pendentes
+  const salvarTodasAnotacoes = async () => {
+    if (anotacoesPendentes.length === 0) return;
+
+    try {
+      // Primeiro, remover anotações existentes para este corretor e redação
+      await supabase
+        .from('marcacoes_visuais')
+        .delete()
+        .eq('redacao_id', redacaoId)
+        .eq('corretor_id', corretorId);
+
+      // Inserir todas as anotações pendentes
+      const anotacoesParaSalvar = anotacoesPendentes.map(anotacao => {
+        const bounds = anotacao.target.selector.value.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
+        if (!bounds) return null;
+        
+        const [, x, y, width, height] = bounds.map(Number);
+        
+        return {
+          redacao_id: redacaoId,
+          corretor_id: corretorId,
+          competencia: competenciaSelecionada,
+          cor_marcacao: CORES_COMPETENCIAS[competenciaSelecionada].cor,
+          comentario: anotacao.body?.[0]?.value || '',
+          tabela_origem: 'redacoes_enviadas',
+          x_start: x,
+          y_start: y,
+          x_end: x + width,
+          y_end: y + height,
+          imagem_largura: imageRef.current?.naturalWidth || 0,
+          imagem_altura: imageRef.current?.naturalHeight || 0
+        };
+      }).filter(Boolean);
+
+      if (anotacoesParaSalvar.length > 0) {
+        const { error } = await supabase
+          .from('marcacoes_visuais')
+          .insert(anotacoesParaSalvar);
+        
+        if (error) throw error;
+      }
+
+      setAnotacoesPendentes([]);
+    } catch (error) {
+      console.error('Erro ao salvar anotações:', error);
+      throw error;
+    }
+  };
+
+  // Remover anotação
+  const removerAnotacao = async (annotationId: string) => {
+    try {
+      await supabase
+        .from('marcacoes_visuais')
+        .delete()
+        .eq('id', annotationId);
+    } catch (error) {
+      console.error('Erro ao remover anotação:', error);
+    }
+  };
+
+  // Gerar imagem com anotações para download
+  const gerarImagemComAnotacoes = async (): Promise<string> => {
+    if (!containerRef.current) throw new Error('Container não encontrado');
+
+    const canvas = await html2canvas(containerRef.current, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff'
+    });
+
+    return canvas.toDataURL('image/png');
+  };
+
+  // Função para download da imagem corrigida
+  const baixarImagemCorrigida = async () => {
+    try {
+      const dataUrl = await gerarImagemComAnotacoes();
+      const link = document.createElement('a');
+      link.download = `correcao_redacao_${redacaoId.substring(0, 8)}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      toast({
+        title: "Download iniciado",
+        description: "A imagem da correção está sendo baixada.",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar imagem:', error);
+      toast({
+        title: "Erro no download",
+        description: "Não foi possível gerar a imagem.",
         variant: "destructive",
       });
     }
@@ -256,9 +380,15 @@ export const RedacaoAnotacaoVisual = ({
   if (readonly) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Palette className="w-4 h-4" />
-          <span className="font-medium">Correção com Anotações Visuais</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            <span className="font-medium">Correção com Anotações Visuais</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={baixarImagemCorrigida}>
+            <Download className="w-4 h-4 mr-2" />
+            Baixar redação corrigida com marcações
+          </Button>
         </div>
         
         {/* Legenda de Cores */}
@@ -284,7 +414,7 @@ export const RedacaoAnotacaoVisual = ({
           </div>
         )}
         
-        <div className="border rounded-lg p-4 bg-white">
+        <div ref={containerRef} className="border rounded-lg p-4 bg-white">
           <img 
             ref={imageRef}
             src={imagemUrl} 
@@ -345,12 +475,12 @@ export const RedacaoAnotacaoVisual = ({
           <li>1. Selecione uma competência (C1 a C5)</li>
           <li>2. Clique e arraste sobre a imagem para marcar uma área</li>
           <li>3. Digite seu comentário no pop-up que aparecer</li>
-          <li>4. A marcação será salva com a cor da competência escolhida</li>
+          <li>4. As marcações serão salvas quando você clicar em "Completa"</li>
         </ul>
       </div>
 
       {/* Imagem da Redação */}
-      <div className="border rounded-lg p-4 bg-white">
+      <div ref={containerRef} className="border rounded-lg p-4 bg-white">
         <img 
           ref={imageRef}
           src={imagemUrl} 
@@ -360,20 +490,13 @@ export const RedacaoAnotacaoVisual = ({
         />
       </div>
 
-      {/* Lista de anotações salvas */}
-      {anotacoes.length > 0 && (
+      {/* Lista de anotações pendentes */}
+      {anotacoesPendentes.length > 0 && (
         <div className="space-y-2">
-          <h4 className="font-medium">Anotações Salvas:</h4>
-          {anotacoes.map((anotacao, index) => (
-            <div key={index} className="p-3 bg-white border rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge style={{ backgroundColor: anotacao.cor_marcacao, color: 'white' }}>
-                  {CORES_COMPETENCIAS[anotacao.competencia].label}
-                </Badge>
-              </div>
-              <p className="text-sm">{anotacao.comentario}</p>
-            </div>
-          ))}
+          <h4 className="font-medium">Anotações Adicionadas ({anotacoesPendentes.length}):</h4>
+          <p className="text-sm text-muted-foreground">
+            Essas anotações serão salvas quando você finalizar a correção.
+          </p>
         </div>
       )}
 
@@ -422,4 +545,6 @@ export const RedacaoAnotacaoVisual = ({
       </Dialog>
     </div>
   );
-};
+});
+
+RedacaoAnotacaoVisual.displayName = "RedacaoAnotacaoVisual";

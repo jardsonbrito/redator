@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [uploadingCorrecao, setUploadingCorrecao] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
   const [modalUploadAberto, setModalUploadAberto] = useState(false);
+  const [anotacaoVisualRef, setAnotacaoVisualRef] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -100,10 +102,39 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     return notas.c1 + notas.c2 + notas.c3 + notas.c4 + notas.c5;
   };
 
+  const salvarAnotacoesVisuais = async () => {
+    if (!anotacaoVisualRef || !anotacaoVisualRef.salvarTodasAnotacoes) {
+      console.log('Referência de anotação visual não disponível');
+      return true; // Não bloquear se não há anotações visuais
+    }
+
+    try {
+      await anotacaoVisualRef.salvarTodasAnotacoes();
+      return true;
+    } catch (error) {
+      console.error('Erro ao salvar anotações visuais:', error);
+      toast({
+        title: "Erro ao salvar anotações visuais",
+        description: "As anotações visuais não puderam ser salvas.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   const salvarCorrecao = async (status: 'incompleta' | 'corrigida') => {
     setLoading(true);
     
     try {
+      // Primeiro salvar as anotações visuais se existirem
+      if (status === 'corrigida') {
+        const anotacoesSalvas = await salvarAnotacoesVisuais();
+        if (!anotacoesSalvas) {
+          setLoading(false);
+          return;
+        }
+      }
+
       const tabela = redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
                     redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio';
       const notaTotal = calcularNotaTotal();
@@ -218,6 +249,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               redacaoId={redacao.id}
               corretorId={redacao.eh_corretor_1 ? redacao.id : redacao.id} // Simplificado para demo
               readonly={false}
+              ref={setAnotacaoVisualRef}
             />
           ) : (
             <div className="bg-white rounded-lg p-6 border">

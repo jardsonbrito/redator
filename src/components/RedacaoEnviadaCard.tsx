@@ -1,8 +1,11 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download } from "lucide-react";
+import { RedacaoAnotacaoVisual } from "./corretor/RedacaoAnotacaoVisual";
+
 interface RedacaoEnviadaCardProps {
   redacao: {
     id: string;
@@ -41,6 +44,7 @@ interface RedacaoEnviadaCardProps {
     correcao_arquivo_url_corretor_2?: string | null;
   };
 }
+
 export const RedacaoEnviadaCard = ({
   redacao
 }: RedacaoEnviadaCardProps) => {
@@ -53,6 +57,7 @@ export const RedacaoEnviadaCard = ({
       minute: '2-digit'
     });
   };
+
   const getTipoEnvioLabel = (tipo: string) => {
     const tipos = {
       'regular': 'Regular',
@@ -62,6 +67,7 @@ export const RedacaoEnviadaCard = ({
     };
     return tipos[tipo as keyof typeof tipos] || tipo;
   };
+
   const getTipoEnvioColor = (tipo: string) => {
     const cores = {
       'regular': 'bg-blue-100 text-blue-800',
@@ -116,6 +122,7 @@ export const RedacaoEnviadaCard = ({
       correcao2
     };
   };
+
   const comentariosPedagogicos = getComentariosPedagogicos();
   const {
     elogios1,
@@ -125,6 +132,7 @@ export const RedacaoEnviadaCard = ({
     correcao1,
     correcao2
   } = getCorrecaoExterna();
+
   console.log('🔍 DEBUG RedacaoEnviadaCard - RESULTADO FINAL:', {
     comentariosPedagogicos,
     totalComentarios: comentariosPedagogicos.length,
@@ -132,7 +140,9 @@ export const RedacaoEnviadaCard = ({
     elogios2: !!elogios2,
     temCorrecaoExterna: !!(correcao1 || correcao2)
   });
-  return <div className="space-y-4 sm:space-y-6">
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
       {/* Header simplificado conforme solicitado */}
       <Card className="border-primary/20">
         <CardHeader className="pb-4">
@@ -141,11 +151,15 @@ export const RedacaoEnviadaCard = ({
               {redacao.frase_tematica}
             </CardTitle>
             <div className="flex flex-wrap gap-2 shrink-0">
-              {redacao.corrigida ? <Badge className="bg-green-100 text-green-800 text-xs">
+              {redacao.corrigida ? (
+                <Badge className="bg-green-100 text-green-800 text-xs">
                   Corrigido
-                </Badge> : <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                </Badge>
+              ) : (
+                <Badge className="bg-yellow-100 text-yellow-800 text-xs">
                   Aguardando
-                </Badge>}
+                </Badge>
+              )}
               <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
                 {getTipoEnvioLabel(redacao.tipo_envio)}
               </Badge>
@@ -164,14 +178,17 @@ export const RedacaoEnviadaCard = ({
       </Card>
 
       {/* Vista Pedagógica (se disponível) - PRIMEIRA NA ORDEM */}
-      {redacao.corrigida && <Card className="border-primary/20 bg-primary/5">
+      {redacao.corrigida && (
+        <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex flex-col sm:flex-row gap-2">
-                {redacao.data_correcao && <div className="flex items-center gap-2 text-sm text-primary/80">
+                {redacao.data_correcao && (
+                  <div className="flex items-center gap-2 text-sm text-primary/80">
                     <Clock className="w-4 h-4" />
                     Corrigido em: {formatDate(redacao.data_correcao)}
-                  </div>}
+                  </div>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -184,16 +201,18 @@ export const RedacaoEnviadaCard = ({
               {/* Grid 5 competências + nota final */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[1, 2, 3, 4, 5].map(comp => {
-              const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
-              return <div key={comp} className="text-center">
+                  const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
+                  return (
+                    <div key={comp} className="text-center">
                       <div className="bg-white border border-primary/20 rounded-lg p-3">
                         <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
                         <div className="text-lg font-bold text-primary">
                           {nota !== null ? nota : '-'}
                         </div>
                       </div>
-                    </div>;
-            })}
+                    </div>
+                  );
+                })}
                 
                 {/* Nota Final */}
                 <div className="text-center col-span-2 sm:col-span-1">
@@ -207,28 +226,31 @@ export const RedacaoEnviadaCard = ({
               </div>
             </div>
           </CardContent>
-        </Card>}
+        </Card>
+      )}
 
       {/* Área de exibição da redação - SEGUNDA NA ORDEM */}
       <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-primary">
             <FileText className="w-5 h-5" />
-            Redação
+            Redação Corrigida
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="bg-gray-50 p-4 rounded-lg border min-h-[200px]">
             {/* Lógica condicional baseada no tipo de envio e correção externa */}
             {(() => {
-            const temCorrecaoExterna = correcao1 || correcao2;
-            const redacaoFoiManuscrita = redacao.redacao_manuscrita_url;
+              const temCorrecaoExterna = correcao1 || correcao2;
+              const redacaoFoiManuscrita = redacao.redacao_manuscrita_url;
 
-            // Se há correção externa e redação foi manuscrita, mostrar apenas a correção
-            if (temCorrecaoExterna && redacaoFoiManuscrita) {
-              const urlCorrecao = correcao1 || correcao2;
-              return <div className="flex flex-col items-center">
-                    {urlCorrecao?.toLowerCase().includes('.pdf') ? <div className="w-full">
+              // Se há correção externa e redação foi manuscrita, mostrar apenas a correção
+              if (temCorrecaoExterna && redacaoFoiManuscrita) {
+                const urlCorrecao = correcao1 || correcao2;
+                return (
+                  <div className="flex flex-col items-center">
+                    {urlCorrecao?.toLowerCase().includes('.pdf') ? (
+                      <div className="w-full">
                         <embed src={urlCorrecao} type="application/pdf" className="w-full h-[600px] rounded-md" />
                         <div className="mt-2 text-center">
                           <Button variant="outline" size="sm" onClick={() => window.open(urlCorrecao, '_blank')} className="text-primary border-primary hover:bg-primary/10">
@@ -236,47 +258,32 @@ export const RedacaoEnviadaCard = ({
                             Visualizar PDF em nova aba
                           </Button>
                         </div>
-                      </div> : <img src={urlCorrecao} alt="Correção do professor" className="w-full h-auto rounded-md max-h-[80vh] object-contain" />}
-                  </div>;
-            }
+                      </div>
+                    ) : (
+                      <img src={urlCorrecao} alt="Correção do professor" className="w-full h-auto rounded-md max-h-[80vh] object-contain" />
+                    )}
+                  </div>
+                );
+              }
 
-            // Se redação foi digitada, mostrar sempre o texto + correção externa (se houver)
-            if (!redacaoFoiManuscrita) {
-              return <div className="space-y-4">
-                    {redacao.redacao_texto?.trim() ? <div>
-                        <h4 className="font-medium text-primary mb-2"></h4>
-                        <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800 p-3 bg-white rounded border">
-                          {redacao.redacao_texto}
-                        </p>
-                      </div> : <p className="text-sm text-gray-500 italic">
-                        Conteúdo da redação não disponível
-                      </p>}
-                    
-                    {/* Mostrar correção externa se existir */}
-                    {temCorrecaoExterna && <div>
-                        <h4 className="font-medium text-primary mb-2">Correção do Professor:</h4>
-                        <div className="flex flex-col items-center">
-                          {(() => {
-                      const urlCorrecao = correcao1 || correcao2;
-                      return urlCorrecao?.toLowerCase().includes('.pdf') ? <div className="w-full">
-                                <embed src={urlCorrecao} type="application/pdf" className="w-full h-[600px] rounded-md" />
-                                <div className="mt-2 text-center">
-                                  <Button variant="outline" size="sm" onClick={() => window.open(urlCorrecao, '_blank')} className="text-primary border-primary hover:bg-primary/10">
-                                    <Download className="w-4 h-4 mr-2" />
-                                    Visualizar PDF em nova aba
-                                  </Button>
-                                </div>
-                              </div> : <img src={urlCorrecao} alt="Correção do professor" className="w-full h-auto rounded-md max-h-[80vh] object-contain" />;
-                    })()}
-                        </div>
-                      </div>}
-                  </div>;
-            }
+              // Se redação foi manuscrita, mostrar com anotações visuais
+              if (redacaoFoiManuscrita && redacao.corrigida) {
+                return (
+                  <RedacaoAnotacaoVisual
+                    imagemUrl={redacao.redacao_manuscrita_url}
+                    redacaoId={redacao.id}
+                    corretorId={redacao.id} // Simplificado para visualização
+                    readonly={true}
+                  />
+                );
+              }
 
-            // Se redação foi manuscrita mas não há correção externa, mostrar original
-            if (redacaoFoiManuscrita && !temCorrecaoExterna) {
-              return <div className="flex flex-col items-center">
-                    {redacao.redacao_manuscrita_url?.toLowerCase().includes('.pdf') ? <div className="w-full">
+              // Se redação foi manuscrita mas não corrigida, mostrar original
+              if (redacaoFoiManuscrita && !redacao.corrigida) {
+                return (
+                  <div className="flex flex-col items-center">
+                    {redacao.redacao_manuscrita_url?.toLowerCase().includes('.pdf') ? (
+                      <div className="w-full">
                         <embed src={redacao.redacao_manuscrita_url} type="application/pdf" className="w-full h-[600px] rounded-md" />
                         <div className="mt-2 text-center">
                           <Button variant="outline" size="sm" onClick={() => window.open(redacao.redacao_manuscrita_url, '_blank')} className="text-primary border-primary hover:bg-primary/10">
@@ -284,7 +291,9 @@ export const RedacaoEnviadaCard = ({
                             Visualizar PDF em nova aba
                           </Button>
                         </div>
-                      </div> : <img 
+                      </div>
+                    ) : (
+                      <img 
                         src={redacao.redacao_manuscrita_url} 
                         alt="Redação manuscrita" 
                         className="w-full h-auto rounded-md cursor-zoom-in"
@@ -306,19 +315,70 @@ export const RedacaoEnviadaCard = ({
                           `;
                           e.currentTarget.parentNode?.appendChild(errorDiv);
                         }}
-                      />}
-                  </div>;
-            }
-            return <p className="text-sm text-gray-500 italic">
+                      />
+                    )}
+                  </div>
+                );
+              }
+
+              // Se redação foi digitada, mostrar sempre o texto + correção externa (se houver)
+              if (!redacaoFoiManuscrita) {
+                return (
+                  <div className="space-y-4">
+                    {redacao.redacao_texto?.trim() ? (
+                      <div>
+                        <h4 className="font-medium text-primary mb-2"></h4>
+                        <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800 p-3 bg-white rounded border">
+                          {redacao.redacao_texto}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 italic">
+                        Conteúdo da redação não disponível
+                      </p>
+                    )}
+                    
+                    {/* Mostrar correção externa se existir */}
+                    {temCorrecaoExterna && (
+                      <div>
+                        <h4 className="font-medium text-primary mb-2">Correção do Professor:</h4>
+                        <div className="flex flex-col items-center">
+                          {(() => {
+                            const urlCorrecao = correcao1 || correcao2;
+                            return urlCorrecao?.toLowerCase().includes('.pdf') ? (
+                              <div className="w-full">
+                                <embed src={urlCorrecao} type="application/pdf" className="w-full h-[600px] rounded-md" />
+                                <div className="mt-2 text-center">
+                                  <Button variant="outline" size="sm" onClick={() => window.open(urlCorrecao, '_blank')} className="text-primary border-primary hover:bg-primary/10">
+                                    <Download className="w-4 h-4 mr-2" />
+                                    Visualizar PDF em nova aba
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <img src={urlCorrecao} alt="Correção do professor" className="w-full h-auto rounded-md max-h-[80vh] object-contain" />
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <p className="text-sm text-gray-500 italic">
                   Conteúdo da redação não disponível
-                </p>;
-          })()}
+                </p>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>
 
       {/* Relatório pedagógico - TERCEIRO NA ORDEM */}
-      {redacao.corrigida && redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && <Card className="border-primary/20 bg-primary/5">
+      {redacao.corrigida && redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && (
+        <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-primary">
               <MessageSquare className="w-5 h-5" />
@@ -332,6 +392,8 @@ export const RedacaoEnviadaCard = ({
               </p>
             </div>
           </CardContent>
-        </Card>}
-    </div>;
+        </Card>
+      )}
+    </div>
+  );
 };
