@@ -1,16 +1,16 @@
+
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { ListaRedacoesCorretor } from "@/components/corretor/ListaRedacoesCorretor";
-import { FormularioCorrecaoCompleto } from "@/components/corretor/FormularioCorrecaoCompleto";
+import { FormularioCorrecaoCompletoComAnotacoes } from "@/components/corretor/FormularioCorrecaoCompletoComAnotacoes";
 import { RedacaoCorretor, useCorretorRedacoes } from "@/hooks/useCorretorRedacoes";
 
 const CorretorRedacoes = () => {
   const { corretor, loading } = useCorretorAuth();
   const [redacaoSelecionada, setRedacaoSelecionada] = useState<RedacaoCorretor | null>(null);
   
-  // Usar o hook para ter acesso à função de refresh
   const { refreshRedacoes } = useCorretorRedacoes(corretor?.email || '');
 
   if (loading) {
@@ -38,7 +38,6 @@ const CorretorRedacoes = () => {
 
   const handleSucessoCorrecao = () => {
     setRedacaoSelecionada(null);
-    // Atualizar a lista após correção
     refreshRedacoes();
   };
 
@@ -47,12 +46,12 @@ const CorretorRedacoes = () => {
       <div className="space-y-4 sm:space-y-6">
         <div className="space-y-2">
           <h1 className="text-xl sm:text-3xl font-bold text-gray-900 break-words">
-            Redações
+            Redações com Sistema de Correção Visual
           </h1>
         </div>
 
         {redacaoSelecionada ? (
-          <FormularioCorrecaoCompleto
+          <FormularioCorrecaoCompletoComAnotacoes
             redacao={redacaoSelecionada}
             corretorEmail={corretor.email}
             onVoltar={handleVoltarLista}
