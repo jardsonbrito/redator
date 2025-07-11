@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Palette, Save, Download } from "lucide-react";
+import { Save, Download } from "lucide-react";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -135,12 +135,18 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         const anno = new Annotorious({
           image: imageRef.current!,
           readOnly: readonly,
-          widgets: readonly ? [] : ['COMMENT'],
+          widgets: [], // Remove widgets padrão para usar nosso pop-up personalizado
         });
 
         // Configurar eventos apenas se não for readonly
         if (!readonly) {
           anno.on('createAnnotation', (annotation: any) => {
+            // Aplicar estilo imediatamente
+            setTimeout(() => {
+              aplicarEstiloAnotacao(annotation.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
+            }, 50);
+            
+            // Abrir nosso pop-up personalizado
             setAnotacaoTemp(annotation);
             setComentarioTemp("");
             setDialogAberto(true);
@@ -158,6 +164,10 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             setAnotacoesPendentes(prev => 
               prev.map(a => a.id === annotation.id ? annotation : a)
             );
+            // Aplicar estilo novamente
+            setTimeout(() => {
+              aplicarEstiloAnotacao(annotation.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
+            }, 50);
           });
         }
 
@@ -199,6 +209,21 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     };
   }, [imageLoaded, readonly, redacaoId]);
 
+  // Função para aplicar estilo personalizado às anotações
+  const aplicarEstiloAnotacao = (annotationId: string, cor: string) => {
+    const element = document.querySelector(`[data-id="${annotationId}"]`) as HTMLElement;
+    if (element) {
+      // Converter HEX para RGBA para transparência
+      const r = parseInt(cor.slice(1, 3), 16);
+      const g = parseInt(cor.slice(3, 5), 16);
+      const b = parseInt(cor.slice(5, 7), 16);
+      
+      element.style.border = `1px solid ${cor}`;
+      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.15)`;
+      element.style.boxSizing = 'border-box';
+    }
+  };
+
   // Handle image load
   const handleImageLoad = () => {
     setImageLoaded(true);
@@ -230,11 +255,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         
         // Aplicar estilo personalizado
         setTimeout(() => {
-          const element = document.querySelector(`[data-id="${anotacao.id}"]`);
-          if (element) {
-            (element as HTMLElement).style.border = `2px solid ${anotacao.cor_marcacao}`;
-            (element as HTMLElement).style.backgroundColor = anotacao.cor_marcacao + '33';
-          }
+          aplicarEstiloAnotacao(anotacao.id!, anotacao.cor_marcacao);
         }, 100);
       } catch (error) {
         console.warn('Error adding annotation:', error);
@@ -244,7 +265,14 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
   // Salvar anotação individual
   const salvarAnotacao = async () => {
-    if (!anotacaoTemp || !comentarioTemp.trim() || !imageRef.current) return;
+    if (!anotacaoTemp || !comentarioTemp.trim() || !imageRef.current) {
+      toast({
+        title: "Erro",
+        description: "Comentário não pode estar vazio.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const bounds = anotacaoTemp.target.selector.value.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
@@ -273,11 +301,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
       // Aplicar estilo à anotação
       setTimeout(() => {
-        const element = document.querySelector(`[data-id="${anotacaoTemp.id}"]`);
-        if (element) {
-          (element as HTMLElement).style.border = `2px solid ${CORES_COMPETENCIAS[competenciaSelecionada].cor}`;
-          (element as HTMLElement).style.backgroundColor = CORES_COMPETENCIAS[competenciaSelecionada].cor + '33';
-        }
+        aplicarEstiloAnotacao(anotacaoTemp.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
       }, 100);
 
       toast({
@@ -402,7 +426,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4" />
             <span className="font-medium">Correção com Anotações Visuais</span>
           </div>
           <Button variant="outline" size="sm" onClick={baixarImagemCorrigida}>
@@ -489,17 +512,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         </div>
       </div>
 
-      {/* Instruções */}
-      <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
-        <p className="font-medium text-blue-700 mb-1">📝 Como usar:</p>
-        <ul className="text-blue-600 space-y-1">
-          <li>1. Selecione uma competência (C1 a C5)</li>
-          <li>2. Clique e arraste sobre a imagem para marcar uma área</li>
-          <li>3. Digite seu comentário no pop-up que aparecer</li>
-          <li>4. As marcações serão salvas quando você clicar em "Completa"</li>
-        </ul>
-      </div>
-
       {/* Imagem da Redação */}
       <div ref={containerRef} className="border rounded-lg p-4 bg-white">
         <img 
@@ -522,31 +534,26 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         </div>
       )}
 
-      {/* Dialog para comentário */}
+      {/* Dialog para comentário personalizado */}
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              Adicionar Comentário - {CORES_COMPETENCIAS[competenciaSelecionada].label}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2">
+              Adicionar Comentário
               <div 
                 className="w-4 h-4 rounded-full" 
                 style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada].cor }}
               />
-              <span className="font-medium">
-                {CORES_COMPETENCIAS[competenciaSelecionada].label}
-              </span>
-            </div>
-            
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
             <Textarea
               placeholder="Digite seu comentário sobre esta área da redação..."
               value={comentarioTemp}
               onChange={(e) => setComentarioTemp(e.target.value)}
               rows={4}
+              className="border-2 focus:border-primary"
             />
             
             <div className="flex gap-2 justify-end">

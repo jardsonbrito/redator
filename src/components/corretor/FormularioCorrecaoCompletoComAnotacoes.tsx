@@ -5,15 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 
-import { ArrowLeft, Save, CheckCircle, Download, Upload, Edit, FileText } from "lucide-react";
-import jsPDF from 'jspdf';
+import { ArrowLeft, Save, CheckCircle } from "lucide-react";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -47,11 +44,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [loading, setLoading] = useState(false);
   const [loadingCorrecao, setLoadingCorrecao] = useState(true);
   const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
-  const [correcaoArquivo, setCorrecaoArquivo] = useState<File | null>(null);
-  const [correcaoUrl, setCorrecaoUrl] = useState<string | null>(null);
-  const [uploadingCorrecao, setUploadingCorrecao] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
-  const [modalUploadAberto, setModalUploadAberto] = useState(false);
   
   // Use useRef instead of state to avoid re-renders
   const anotacaoVisualRef = useRef<RedacaoAnotacaoVisualRef | null>(null);
@@ -92,7 +85,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         
         setRelatorioPedagogico(data[`elogios_pontos_atencao_${prefixo}`] || "");
         setManuscritaUrl(data.redacao_manuscrita_url || null);
-        setCorrecaoUrl(data[`correcao_arquivo_url_${prefixo}`] || null);
         
         if (data[`status_${prefixo}`] === 'incompleta' || data[`status_${prefixo}`] === 'corrigida') {
           setModoEdicao(true);
@@ -210,34 +202,15 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           </Button>
           <h1 className="text-xl font-bold">Correção Visual Avançada</h1>
         </div>
-        
-        {modoEdicao && (
-          <Button variant="outline" onClick={() => setModoEdicao(!modoEdicao)}>
-            <Edit className="w-4 h-4 mr-2" />
-            Editar Correção
-          </Button>
-        )}
       </div>
 
-      {/* Informações compactas com Botões de Ação integrados */}
+      {/* Informações da redação */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg text-sm">
         <div className="grid grid-cols-2 gap-4">
           <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
           <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
           <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
           <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
-        </div>
-        
-        {/* Botões de Ação integrados */}
-        <div className="flex gap-2 justify-end items-center">
-          <Button variant="outline" size="sm" onClick={() => salvarCorrecao('incompleta')} disabled={loading}>
-            <Save className="w-4 h-4 mr-1" />
-            Incompleta
-          </Button>
-          <Button size="sm" onClick={() => salvarCorrecao('corrigida')} disabled={loading}>
-            <CheckCircle className="w-4 h-4 mr-1" />
-            Completa
-          </Button>
         </div>
       </div>
 
@@ -246,87 +219,96 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         <strong>Tema:</strong> {redacao.frase_tematica}
       </div>
 
-      {/* Layout principal: Redação com Anotações + Vista Pedagógica */}
-      <div className="flex gap-4 items-start">
-        {/* Redação com Sistema de Anotações Visuais - 80-85% da tela */}
-        <div className="flex-1 max-w-[85%]">
-          {manuscritaUrl ? (
-            <RedacaoAnotacaoVisual
-              imagemUrl={manuscritaUrl}
-              redacaoId={redacao.id}
-              corretorId={redacao.eh_corretor_1 ? redacao.id : redacao.id} // Simplificado para demo
-              readonly={false}
-              ref={(ref) => {
-                anotacaoVisualRef.current = ref;
-              }}
-            />
-          ) : (
-            <div className="bg-white rounded-lg p-6 border">
-              <div className="prose prose-base max-w-none">
-                <p className="text-base leading-relaxed whitespace-pre-wrap text-gray-800">
-                  {redacao.texto}
-                </p>
+      {/* Vista Pedagógica - Movida para o topo */}
+      <Card className="bg-white">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Vista Pedagógica</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-6 gap-4 items-center">
+            {/* Competências C1 a C5 */}
+            {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
+              const cores = ['#F94C4C', '#3CD856', '#4285F4', '#B76AF8', '#FF8C32'];
+              const corCompetencia = cores[index];
+              
+              return (
+                <div key={competencia} className="flex flex-col items-center space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: corCompetencia }}
+                    />
+                    <Label className="text-sm font-medium">C{index + 1}</Label>
+                  </div>
+                  <Select
+                    value={notas[competencia as keyof typeof notas].toString()}
+                    onValueChange={(value) => 
+                      setNotas(prev => ({
+                        ...prev,
+                        [competencia]: parseInt(value)
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-20 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {opcoesNota.map(nota => (
+                        <SelectItem key={nota} value={nota.toString()}>
+                          {nota}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-gray-500">/200</span>
+                </div>
+              );
+            })}
+            
+            {/* Nota Total */}
+            <div className="flex flex-col items-center">
+              <Label className="text-sm font-medium mb-2">Nota Total</Label>
+              <div className="text-xl font-bold text-primary bg-primary/10 px-4 py-2 rounded-lg">
+                {calcularNotaTotal()}/1000
               </div>
             </div>
-          )}
-        </div>
+          </div>
+          
+          {/* Botões de ação */}
+          <div className="flex gap-2 justify-end mt-4 pt-4 border-t">
+            <Button variant="outline" onClick={() => salvarCorrecao('incompleta')} disabled={loading}>
+              <Save className="w-4 h-4 mr-1" />
+              Salvar Incompleta
+            </Button>
+            <Button onClick={() => salvarCorrecao('corrigida')} disabled={loading}>
+              <CheckCircle className="w-4 h-4 mr-1" />
+              Finalizar Correção
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Vista Pedagógica - 15-20% da tela */}
-        <div className="w-64 min-w-64">
-          <Card className="bg-white">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Vista Pedagógica</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
-                const cores = ['#F94C4C', '#3CD856', '#4285F4', '#B76AF8', '#FF8C32'];
-                const corCompetencia = cores[index];
-                
-                return (
-                  <div key={competencia} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: corCompetencia }}
-                        />
-                        <Label className="text-sm font-medium">C{index + 1}</Label>
-                      </div>
-                      <Select
-                        value={notas[competencia as keyof typeof notas].toString()}
-                        onValueChange={(value) => 
-                          setNotas(prev => ({
-                            ...prev,
-                            [competencia]: parseInt(value)
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="w-16 h-7 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {opcoesNota.map(nota => (
-                            <SelectItem key={nota} value={nota.toString()}>
-                              {nota}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span className="text-xs text-gray-500">/200</span>
-                    </div>
-                  </div>
-                );
-              })}
-              
-              <div className="pt-3 border-t space-y-3">
-                <div className="text-center">
-                  <Label className="text-sm font-medium">Nota Total</Label>
-                  <div className="text-lg font-bold text-primary">{calcularNotaTotal()}/1000</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Redação com Sistema de Anotações Visuais - Agora ocupa toda a largura */}
+      <div className="w-full">
+        {manuscritaUrl ? (
+          <RedacaoAnotacaoVisual
+            imagemUrl={manuscritaUrl}
+            redacaoId={redacao.id}
+            corretorId={redacao.eh_corretor_1 ? redacao.id : redacao.id} // Simplificado para demo
+            readonly={false}
+            ref={(ref) => {
+              anotacaoVisualRef.current = ref;
+            }}
+          />
+        ) : (
+          <div className="bg-white rounded-lg p-6 border">
+            <div className="prose prose-base max-w-none">
+              <p className="text-base leading-relaxed whitespace-pre-wrap text-gray-800">
+                {redacao.texto}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Relatório pedagógico de correção */}
