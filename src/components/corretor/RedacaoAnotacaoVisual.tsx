@@ -116,91 +116,119 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
   };
 
-  // Inicializar Annotorious
-  useEffect(() => {
-    if (!imageRef.current || !imageLoaded || readonly) return;
+  // Sistema de marcação manual (sem Annotorious)
+  const [isDragging, setIsDragging] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
 
-    const initAnnotorious = () => {
-      // Cleanup previous instance
-      if (annoRef.current) {
-        try {
-          annoRef.current.destroy();
-        } catch (error) {
-          console.warn('Error destroying previous Annotorious instance:', error);
-        }
-        annoRef.current = null;
-      }
-
-      try {
-        console.log('Inicializando Annotorious...');
-        
-        const anno = new Annotorious({
-          image: imageRef.current!,
-          readOnly: false,
-          disableEditor: true, // Desabilita completamente o editor nativo
-          widgets: [] // Remove todos os widgets nativos
-        });
-
-        console.log('Annotorious inicializado:', anno);
-
-        // Interceptar seleção ANTES da criação da anotação
-        anno.on('createSelection', (selection: any) => {
-          console.log('Selection created:', selection);
-          
-          // Cancelar a criação automática da anotação
-          setTimeout(() => {
-            try {
-              anno.cancelSelected();
-            } catch (e) {
-              console.warn('Selection already cancelled');
-            }
-          }, 10);
-
-          // Extrair as coordenadas da seleção
-          const bounds = selection.selector?.value?.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
-          if (bounds && imageRef.current) {
-            const [, x, y, width, height] = bounds.map(Number);
-            
-            console.log('Coordenadas extraídas:', { x, y, width, height });
-            
-            // Criar retângulo visual com a cor da competência
-            createVisualRectangle(x, y, width, height);
-            
-            // Salvar dados da seleção
-            const selecaoData = {
-              x, y, width, height,
-              selector: selection.selector,
-              competencia: competenciaSelecionada
-            };
-            
-            setSelecaoTemp(selecaoData);
-            setComentarioTemp("");
-            setDialogAberto(true);
-          }
-        });
-
-        annoRef.current = anno;
-        console.log('Annotorious configurado com sucesso');
-
-      } catch (error) {
-        console.error('Error initializing Annotorious:', error);
-      }
-    };
-
-    // Delay para garantir que o DOM está pronto
-    const timer = setTimeout(initAnnotorious, 200);
+  // Event handlers para desenhar retângulo manualmente
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (readonly) return;
     
-    return () => {
-      clearTimeout(timer);
-      if (annoRef.current) {
-        try {
-          annoRef.current.destroy();
-        } catch (error) {
-          console.warn('Error destroying Annotorious on cleanup:', error);
-        }
-      }
+    const rect = imageRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+    
+    setStartPos({ x, y });
+    setCurrentPos({ x, y });
+    setIsDragging(true);
+    
+    // Remover retângulo temporário anterior
+    const existingTemp = containerRef.current?.querySelector('.temp-rectangle');
+    if (existingTemp) {
+      existingTemp.remove();
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || readonly) return;
+    
+    const rect = imageRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+    
+    setCurrentPos({ x, y });
+    
+    // Atualizar retângulo temporário
+    updateTempRectangle();
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!isDragging || readonly) return;
+    
+    const rect = imageRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const endX = Math.round(e.clientX - rect.left);
+    const endY = Math.round(e.clientY - rect.top);
+    
+    setIsDragging(false);
+    
+    // Calcular dimensões do retângulo
+    const x = Math.min(startPos.x, endX);
+    const y = Math.min(startPos.y, endY);
+    const width = Math.abs(endX - startPos.x);
+    const height = Math.abs(endY - startPos.y);
+    
+    // Verificar se o retângulo é grande o suficiente
+    if (width < 10 || height < 10) {
+      const tempRect = containerRef.current?.querySelector('.temp-rectangle');
+      if (tempRect) tempRect.remove();
+      return;
+    }
+    
+    console.log('Retângulo criado:', { x, y, width, height });
+    
+    // Salvar dados da seleção e abrir popup
+    const selecaoData = {
+      x, y, width, height,
+      competencia: competenciaSelecionada
     };
-  }, [imageLoaded, readonly, redacaoId, competenciaSelecionada]);
+    
+    setSelecaoTemp(selecaoData);
+    setComentarioTemp("");
+    setDialogAberto(true);
+  };
+
+  // Atualizar retângulo temporário durante o arraste
+  const updateTempRectangle = () => {
+    if (!containerRef.current || !isDragging) return;
+
+    let tempRect = containerRef.current.querySelector('.temp-rectangle') as HTMLElement;
+    
+    if (!tempRect) {
+      tempRect = document.createElement('div');
+      tempRect.className = 'temp-rectangle';
+      containerRef.current.appendChild(tempRect);
+    }
+
+    const x = Math.min(startPos.x, currentPos.x);
+    const y = Math.min(startPos.y, currentPos.y);
+    const width = Math.abs(currentPos.x - startPos.x);
+    const height = Math.abs(currentPos.y - startPos.y);
+    
+    const corCompetencia = CORES_COMPETENCIAS[competenciaSelecionada];
+    const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
+    const g = parseInt(corCompetencia.cor.slice(3, 5), 16);
+    const b = parseInt(corCompetencia.cor.slice(5, 7), 16);
+    
+    tempRect.style.cssText = `
+      position: absolute;
+      left: ${x}px;
+      top: ${y}px;
+      width: ${width}px;
+      height: ${height}px;
+      border: 1px solid ${corCompetencia.cor};
+      background-color: rgba(${r}, ${g}, ${b}, 0.10);
+      pointer-events: none;
+      z-index: 10;
+      box-sizing: border-box;
+    `;
+  };
 
   // Criar retângulo visual
   const createVisualRectangle = (x: number, y: number, width: number, height: number) => {
@@ -600,6 +628,10 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           alt="Redação para correção" 
           className="max-w-full h-auto cursor-crosshair block"
           onLoad={handleImageLoad}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          style={{ userSelect: 'none' }}
         />
       </div>
 
