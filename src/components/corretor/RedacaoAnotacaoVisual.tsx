@@ -64,11 +64,9 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   const [competenciaSelecionada, setCompetenciaSelecionada] = useState<number>(1);
   const [dialogAberto, setDialogAberto] = useState<boolean>(false);
   const [comentarioTemp, setComentarioTemp] = useState<string>("");
-  const [anotacaoTemp, setAnotacaoTemp] = useState<any>(null);
+  const [selecaoTemp, setSelecaoTemp] = useState<any>(null);
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
-  const [anotacoesPendentes, setAnotacoesPendentes] = useState<any[]>([]);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [hoveredAnnotation, setHoveredAnnotation] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Expor métodos para o componente pai
@@ -137,33 +135,29 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           image: imageRef.current!,
           readOnly: readonly,
           widgets: [],
-          disableEditor: true, // Desabilita completamente o editor nativo
+          disableEditor: true,
         });
 
-        // Desabilitar completamente o pop-up nativo do Annotorious
+        // Desabilitar completamente o editor nativo
         if (!readonly) {
-          // Interceptar criação de anotações e impedir o pop-up nativo
-          anno.on('createAnnotation', (annotation: any) => {
-            // Prevenir comportamento padrão imediatamente
-            annotation.preventDefault?.();
-            
-            // Remover a anotação temporária criada pelo Annotorious
+          // Interceptar seleção de área ANTES da criação da anotação
+          anno.on('createSelection', (selection: any) => {
+            // Cancelar a criação automática da anotação
             setTimeout(() => {
               try {
-                anno.removeAnnotation(annotation.id);
+                anno.cancelSelected();
               } catch (e) {
-                console.warn('Annotation already removed');
+                console.warn('Selection already cancelled');
               }
-            }, 0);
-            
-            // Criar retângulo temporário com estilo customizado
-            const tempRect = document.createElement('div');
-            const bounds = annotation.target.selector.value.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
+            }, 10);
+
+            // Extrair as coordenadas da seleção
+            const bounds = selection.selector?.value?.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
             if (bounds && imageRef.current) {
               const [, x, y, width, height] = bounds.map(Number);
-              const imageRect = imageRef.current.getBoundingClientRect();
-              const containerRect = imageRef.current.parentElement!.getBoundingClientRect();
               
+              // Criar retângulo visual temporário
+              const tempRect = document.createElement('div');
               const r = parseInt(CORES_COMPETENCIAS[competenciaSelecionada].cor.slice(1, 3), 16);
               const g = parseInt(CORES_COMPETENCIAS[competenciaSelecionada].cor.slice(3, 5), 16);
               const b = parseInt(CORES_COMPETENCIAS[competenciaSelecionada].cor.slice(5, 7), 16);
@@ -178,25 +172,33 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
                 background-color: rgba(${r}, ${g}, ${b}, 0.10);
                 pointer-events: none;
                 z-index: 10;
+                box-sizing: border-box;
               `;
               
-              imageRef.current.parentElement!.appendChild(tempRect);
+              // Adicionar ao container da imagem
+              const imageContainer = imageRef.current.parentElement;
+              if (imageContainer) {
+                // Garantir que o container tenha posição relativa
+                imageContainer.style.position = 'relative';
+                imageContainer.appendChild(tempRect);
+              }
               
-              // Armazenar referência para remoção posterior
-              annotation.tempElement = tempRect;
+              // Salvar dados da seleção temporariamente
+              const selecaoData = {
+                x, y, width, height,
+                tempElement: tempRect,
+                selector: selection.selector
+              };
+              
+              setSelecaoTemp(selecaoData);
+              setComentarioTemp("");
+              setDialogAberto(true);
             }
-            
-            // Abrir nosso pop-up personalizado
-            setAnotacaoTemp(annotation);
-            setComentarioTemp("");
-            setDialogAberto(true);
           });
 
-          anno.on('deleteAnnotation', (annotation: any) => {
-            // Remover anotação da lista pendente se existir
-            setAnotacoesPendentes(prev => prev.filter(a => a.id !== annotation.id));
-            // Remover da base de dados se já foi salva
-            removerAnotacao(annotation.id);
+          // Limpar seleções não utilizadas
+          anno.on('selectAnnotation', () => {
+            anno.selectAnnotation();
           });
         }
 
@@ -207,7 +209,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             if (anotacao) {
               // Criar pop-up customizado para visualização
               const popup = document.createElement('div');
-              popup.className = 'fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3 max-w-xs';
               popup.style.cssText = `
                 position: fixed;
                 top: 50%;
@@ -270,35 +271,28 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         }
       }
     };
-  }, [imageLoaded, readonly, redacaoId]);
-
-  // Função para aplicar estilo personalizado às anotações
-  const aplicarEstiloAnotacao = (annotationId: string, cor: string) => {
-    const element = document.querySelector(`[data-id="${annotationId}"]`) as HTMLElement;
-    if (element) {
-      // Converter HEX para RGBA para transparência
-      const r = parseInt(cor.slice(1, 3), 16);
-      const g = parseInt(cor.slice(3, 5), 16);
-      const b = parseInt(cor.slice(5, 7), 16);
-      
-      element.style.border = `1px solid ${cor}`;
-      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.10)`;
-      element.style.boxSizing = 'border-box';
-    }
-  };
+  }, [imageLoaded, readonly, redacaoId, competenciaSelecionada]);
 
   // Handle image load
   const handleImageLoad = () => {
     setImageLoaded(true);
   };
 
-  // Aplicar estilo às anotações carregadas
+  // Aplicar anotações salvas no Annotorious
   useEffect(() => {
     if (!annoRef.current || anotacoes.length === 0 || !imageLoaded) return;
+
+    // Limpar anotações existentes
+    try {
+      annoRef.current.clearAnnotations();
+    } catch (e) {
+      console.warn('Error clearing annotations:', e);
+    }
 
     anotacoes.forEach((anotacao) => {
       const annotation = {
         id: anotacao.id,
+        type: 'Annotation',
         target: {
           selector: {
             type: 'FragmentSelector',
@@ -322,59 +316,80 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           
           // Adicionar botão de lixeira se não for readonly
           if (!readonly) {
-            const element = document.querySelector(`[data-id="${anotacao.id}"]`) as HTMLElement;
-            if (element) {
-              // Configurar posição relativa para o elemento pai
-              element.style.position = 'relative';
-              
-              // Criar botão de lixeira
-              const deleteBtn = document.createElement('button');
-              deleteBtn.innerHTML = '🗑️';
-              deleteBtn.style.cssText = `
-                position: absolute;
-                top: -12px;
-                right: -12px;
-                background: #ef4444;
-                color: white;
-                border: none;
-                border-radius: 50%;
-                width: 24px;
-                height: 24px;
-                font-size: 12px;
-                cursor: pointer;
-                display: none;
-                z-index: 100;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-              `;
-              
-              deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                removerAnotacao(anotacao.id!);
-              };
-              
-              // Eventos de hover
-              element.addEventListener('mouseenter', () => {
-                deleteBtn.style.display = 'block';
-              });
-              
-              element.addEventListener('mouseleave', () => {
-                deleteBtn.style.display = 'none';
-              });
-              
-              element.appendChild(deleteBtn);
-            }
+            adicionarBotaoLixeira(anotacao.id!, anotacao.cor_marcacao);
           }
         }, 100);
       } catch (error) {
         console.warn('Error adding annotation:', error);
       }
     });
-  }, [anotacoes, imageLoaded, readonly, hoveredAnnotation]);
+  }, [anotacoes, imageLoaded, readonly]);
+
+  // Função para aplicar estilo personalizado às anotações
+  const aplicarEstiloAnotacao = (annotationId: string, cor: string) => {
+    const element = document.querySelector(`[data-id="${annotationId}"]`) as HTMLElement;
+    if (element) {
+      // Converter HEX para RGBA para transparência
+      const r = parseInt(cor.slice(1, 3), 16);
+      const g = parseInt(cor.slice(3, 5), 16);
+      const b = parseInt(cor.slice(5, 7), 16);
+      
+      element.style.border = `1px solid ${cor}`;
+      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.10)`;
+      element.style.boxSizing = 'border-box';
+    }
+  };
+
+  // Função para adicionar botão de lixeira
+  const adicionarBotaoLixeira = (annotationId: string, cor: string) => {
+    const element = document.querySelector(`[data-id="${annotationId}"]`) as HTMLElement;
+    if (element && !element.querySelector('.delete-btn')) {
+      // Configurar posição relativa para o elemento pai
+      element.style.position = 'relative';
+      
+      // Criar botão de lixeira
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.style.cssText = `
+        position: absolute;
+        top: -12px;
+        right: -12px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+        cursor: pointer;
+        display: none;
+        z-index: 100;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      `;
+      
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        removerAnotacao(annotationId);
+      };
+      
+      // Eventos de hover
+      element.addEventListener('mouseenter', () => {
+        deleteBtn.style.display = 'block';
+      });
+      
+      element.addEventListener('mouseleave', () => {
+        deleteBtn.style.display = 'none';
+      });
+      
+      element.appendChild(deleteBtn);
+    }
+  };
 
   // Salvar anotação individual
   const salvarAnotacao = async () => {
-    if (!anotacaoTemp || !comentarioTemp.trim() || !imageRef.current) {
+    if (!selecaoTemp || !comentarioTemp.trim() || !imageRef.current) {
       toast({
         title: "Erro",
         description: "Comentário não pode estar vazio.",
@@ -384,10 +399,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
 
     try {
-      const bounds = anotacaoTemp.target.selector.value.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
-      if (!bounds) throw new Error('Coordenadas inválidas');
-
-      const [, x, y, width, height] = bounds.map(Number);
+      const { x, y, width, height } = selecaoTemp;
 
       const novaAnotacao = {
         redacao_id: redacaoId,
@@ -412,28 +424,10 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
       if (error) throw error;
 
-      // Remover elemento temporário se existir
-      if (anotacaoTemp.tempElement) {
-        anotacaoTemp.tempElement.remove();
+      // Remover elemento temporário
+      if (selecaoTemp.tempElement && selecaoTemp.tempElement.parentNode) {
+        selecaoTemp.tempElement.parentNode.removeChild(selecaoTemp.tempElement);
       }
-
-      // Recriar a anotação no Annotorious com o ID correto
-      const newAnnotation = {
-        id: data.id,
-        target: anotacaoTemp.target,
-        body: [{
-          type: 'TextualBody',
-          purpose: 'commenting',
-          value: comentarioTemp.trim()
-        }]
-      };
-
-      annoRef.current.addAnnotation(newAnnotation);
-      
-      // Aplicar estilo à anotação
-      setTimeout(() => {
-        aplicarEstiloAnotacao(data.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
-      }, 100);
 
       toast({
         title: "Anotação salva!",
@@ -441,7 +435,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       });
 
       setDialogAberto(false);
-      setAnotacaoTemp(null);
+      setSelecaoTemp(null);
       setComentarioTemp("");
       
       // Recarregar anotações
@@ -455,6 +449,16 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         variant: "destructive",
       });
     }
+  };
+
+  // Cancelar anotação
+  const cancelarAnotacao = () => {
+    if (selecaoTemp?.tempElement && selecaoTemp.tempElement.parentNode) {
+      selecaoTemp.tempElement.parentNode.removeChild(selecaoTemp.tempElement);
+    }
+    setDialogAberto(false);
+    setSelecaoTemp(null);
+    setComentarioTemp("");
   };
 
   // Salvar todas as anotações pendentes
@@ -472,11 +476,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         .eq('id', annotationId);
       
       if (error) throw error;
-
-      // Remover do Annotorious
-      if (annoRef.current) {
-        annoRef.current.removeAnnotation(annotationId);
-      }
 
       toast({
         title: "Anotação removida",
@@ -638,11 +637,9 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
       {/* Dialog para comentário personalizado */}
       <Dialog open={dialogAberto} onOpenChange={(open) => {
-        if (!open && anotacaoTemp?.tempElement) {
-          // Remover elemento temporário se cancelar
-          anotacaoTemp.tempElement.remove();
+        if (!open) {
+          cancelarAnotacao();
         }
-        setDialogAberto(open);
       }}>
         <DialogContent>
           <DialogHeader>
@@ -666,15 +663,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             />
             
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => {
-                // Remover elemento temporário
-                if (anotacaoTemp?.tempElement) {
-                  anotacaoTemp.tempElement.remove();
-                }
-                setDialogAberto(false);
-                setAnotacaoTemp(null);
-                setComentarioTemp("");
-              }}>
+              <Button variant="outline" onClick={cancelarAnotacao}>
                 Cancelar
               </Button>
               <Button 
