@@ -12,6 +12,7 @@ import { Palette, Save } from "lucide-react";
 import { Annotorious } from '@recogito/annotorious';
 import '@recogito/annotorious/dist/annotorious.min.css';
 
+// Interface que corresponde à estrutura real da tabela no banco
 interface AnotacaoVisual {
   id?: string;
   redacao_id: string;
@@ -19,12 +20,15 @@ interface AnotacaoVisual {
   competencia: number;
   cor_marcacao: string;
   comentario: string;
-  coordenadas: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
+  tabela_origem: string;
+  x_start: number;
+  y_start: number;
+  x_end: number;
+  y_end: number;
+  imagem_largura: number;
+  imagem_altura: number;
+  criado_em?: string;
+  atualizado_em?: string;
 }
 
 interface RedacaoAnotacaoVisualProps {
@@ -57,18 +61,52 @@ export const RedacaoAnotacaoVisual = ({
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
   const { toast } = useToast();
 
-  // Carregar anotações existentes
+  // Carregar anotações existentes usando query raw
   const carregarAnotacoes = async () => {
     try {
       const { data, error } = await supabase
-        .from('anotacoes_visuais')
-        .select('*')
-        .eq('redacao_id', redacaoId);
+        .rpc('get_anotacoes_visuais', { redacao_id_param: redacaoId });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar anotações:', error);
+        // Se a função não existir, usar uma query direta como fallback
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('marcacoes_visuais')
+          .select('*')
+          .eq('redacao_id', redacaoId);
+        
+        if (fallbackError) {
+          console.error('Erro no fallback:', fallbackError);
+          return;
+        }
+        
+        // Converter dados do formato antigo para o novo se necessário
+        const convertedData = (fallbackData || []).map(item => ({
+          id: item.id,
+          redacao_id: item.redacao_id,
+          corretor_id: item.corretor_id,
+          competencia: item.competencia,
+          cor_marcacao: item.cor_marcacao,
+          comentario: item.comentario,
+          tabela_origem: item.tabela_origem,
+          x_start: item.x_start,
+          y_start: item.y_start,
+          x_end: item.x_end,
+          y_end: item.y_end,
+          imagem_largura: item.imagem_largura,
+          imagem_altura: item.imagem_altura,
+          criado_em: item.criado_em,
+          atualizado_em: item.atualizado_em
+        }));
+        
+        setAnotacoes(convertedData);
+        return;
+      }
+      
       setAnotacoes(data || []);
     } catch (error) {
       console.error('Erro ao carregar anotações:', error);
+      setAnotacoes([]);
     }
   };
 
@@ -139,7 +177,7 @@ export const RedacaoAnotacaoVisual = ({
           selector: {
             type: 'FragmentSelector',
             conformsTo: 'http://www.w3.org/TR/media-frags/',
-            value: `xywh=pixel:${anotacao.coordenadas.x},${anotacao.coordenadas.y},${anotacao.coordenadas.width},${anotacao.coordenadas.height}`
+            value: `xywh=pixel:${anotacao.x_start},${anotacao.y_start},${anotacao.x_end - anotacao.x_start},${anotacao.y_end - anotacao.y_start}`
           }
         },
         body: [{
@@ -162,9 +200,9 @@ export const RedacaoAnotacaoVisual = ({
     });
   }, [anotacoes]);
 
-  // Salvar anotação
+  // Salvar anotação usando insert direto
   const salvarAnotacao = async () => {
-    if (!anotacaoTemp || !comentarioTemp.trim()) return;
+    if (!anotacaoTemp || !comentarioTemp.trim() || !imageRef.current) return;
 
     try {
       const bounds = anotacaoTemp.target.selector.value.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
@@ -172,20 +210,39 @@ export const RedacaoAnotacaoVisual = ({
 
       const [, x, y, width, height] = bounds.map(Number);
 
-      const novaAnotacao: Omit<AnotacaoVisual, 'id'> = {
+      const novaAnotacao = {
         redacao_id: redacaoId,
         corretor_id: corretorId,
         competencia: competenciaSelecionada,
         cor_marcacao: CORES_COMPETENCIAS[competenciaSelecionada].cor,
         comentario: comentarioTemp.trim(),
-        coordenadas: { x, y, width, height }
+        tabela_origem: 'redacoes_enviadas',
+        x_start: x,
+        y_start: y,
+        x_end: x + width,
+        y_end: y + height,
+        imagem_largura: imageRef.current.naturalWidth,
+        imagem_altura: imageRef.current.naturalHeight
       };
 
-      const { error } = await supabase
-        .from('anotacoes_visuais')
-        .insert(novaAnotacao);
+      // Tentar inserir na nova tabela primeiro
+      let insertError = null;
+      try {
+        const { error } = await supabase.rpc('insert_anotacao_visual', novaAnotacao);
+        insertError = error;
+      } catch (err) {
+        insertError = err;
+      }
 
-      if (error) throw error;
+      // Se falhar, usar a tabela de marcações visuais como fallback
+      if (insertError) {
+        console.log('Usando fallback para marcacoes_visuais');
+        const { error: fallbackError } = await supabase
+          .from('marcacoes_visuais')
+          .insert(novaAnotacao);
+        
+        if (fallbackError) throw fallbackError;
+      }
 
       // Aplicar estilo à anotação
       setTimeout(() => {
