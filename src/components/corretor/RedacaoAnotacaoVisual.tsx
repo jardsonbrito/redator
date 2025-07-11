@@ -136,22 +136,55 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         const anno = new Annotorious({
           image: imageRef.current!,
           readOnly: readonly,
-          widgets: [], // Remove widgets padrão para usar nosso pop-up personalizado
+          widgets: [],
+          disableEditor: true, // Desabilita completamente o editor nativo
         });
 
-        // Desabilitar o pop-up nativo do Annotorious
+        // Desabilitar completamente o pop-up nativo do Annotorious
         if (!readonly) {
-          // Interceptar criação de anotações
+          // Interceptar criação de anotações e impedir o pop-up nativo
           anno.on('createAnnotation', (annotation: any) => {
-            // Impedir que o Annotorious processe a anotação normalmente
-            setTimeout(() => {
-              anno.removeAnnotation(annotation);
-            }, 10);
+            // Prevenir comportamento padrão imediatamente
+            annotation.preventDefault?.();
             
-            // Aplicar estilo imediatamente
+            // Remover a anotação temporária criada pelo Annotorious
             setTimeout(() => {
-              aplicarEstiloAnotacao(annotation.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
-            }, 50);
+              try {
+                anno.removeAnnotation(annotation.id);
+              } catch (e) {
+                console.warn('Annotation already removed');
+              }
+            }, 0);
+            
+            // Criar retângulo temporário com estilo customizado
+            const tempRect = document.createElement('div');
+            const bounds = annotation.target.selector.value.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
+            if (bounds && imageRef.current) {
+              const [, x, y, width, height] = bounds.map(Number);
+              const imageRect = imageRef.current.getBoundingClientRect();
+              const containerRect = imageRef.current.parentElement!.getBoundingClientRect();
+              
+              const r = parseInt(CORES_COMPETENCIAS[competenciaSelecionada].cor.slice(1, 3), 16);
+              const g = parseInt(CORES_COMPETENCIAS[competenciaSelecionada].cor.slice(3, 5), 16);
+              const b = parseInt(CORES_COMPETENCIAS[competenciaSelecionada].cor.slice(5, 7), 16);
+              
+              tempRect.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${width}px;
+                height: ${height}px;
+                border: 1px solid ${CORES_COMPETENCIAS[competenciaSelecionada].cor};
+                background-color: rgba(${r}, ${g}, ${b}, 0.10);
+                pointer-events: none;
+                z-index: 10;
+              `;
+              
+              imageRef.current.parentElement!.appendChild(tempRect);
+              
+              // Armazenar referência para remoção posterior
+              annotation.tempElement = tempRect;
+            }
             
             // Abrir nosso pop-up personalizado
             setAnotacaoTemp(annotation);
@@ -249,7 +282,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       const b = parseInt(cor.slice(5, 7), 16);
       
       element.style.border = `1px solid ${cor}`;
-      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.1)`;
+      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.10)`;
       element.style.boxSizing = 'border-box';
     }
   };
@@ -291,17 +324,16 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           if (!readonly) {
             const element = document.querySelector(`[data-id="${anotacao.id}"]`) as HTMLElement;
             if (element) {
-              element.addEventListener('mouseenter', () => setHoveredAnnotation(anotacao.id!));
-              element.addEventListener('mouseleave', () => setHoveredAnnotation(null));
+              // Configurar posição relativa para o elemento pai
+              element.style.position = 'relative';
               
               // Criar botão de lixeira
               const deleteBtn = document.createElement('button');
               deleteBtn.innerHTML = '🗑️';
-              deleteBtn.className = 'absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 text-xs hover:bg-red-600 transition-colors';
               deleteBtn.style.cssText = `
                 position: absolute;
-                top: -8px;
-                right: -8px;
+                top: -12px;
+                right: -12px;
                 background: #ef4444;
                 color: white;
                 border: none;
@@ -310,14 +342,25 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
                 height: 24px;
                 font-size: 12px;
                 cursor: pointer;
-                display: ${hoveredAnnotation === anotacao.id ? 'block' : 'none'};
+                display: none;
                 z-index: 100;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
               `;
               
               deleteBtn.onclick = (e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 removerAnotacao(anotacao.id!);
               };
+              
+              // Eventos de hover
+              element.addEventListener('mouseenter', () => {
+                deleteBtn.style.display = 'block';
+              });
+              
+              element.addEventListener('mouseleave', () => {
+                deleteBtn.style.display = 'none';
+              });
               
               element.appendChild(deleteBtn);
             }
@@ -368,6 +411,11 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         .single();
 
       if (error) throw error;
+
+      // Remover elemento temporário se existir
+      if (anotacaoTemp.tempElement) {
+        anotacaoTemp.tempElement.remove();
+      }
 
       // Recriar a anotação no Annotorious com o ID correto
       const newAnnotation = {
@@ -589,27 +637,27 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       </div>
 
       {/* Dialog para comentário personalizado */}
-      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+      <Dialog open={dialogAberto} onOpenChange={(open) => {
+        if (!open && anotacaoTemp?.tempElement) {
+          // Remover elemento temporário se cancelar
+          anotacaoTemp.tempElement.remove();
+        }
+        setDialogAberto(open);
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              Adicionar Comentário
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
               <div 
                 className="w-4 h-4 rounded-full" 
                 style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada].cor }}
               />
-              <span className="font-medium">
-                {CORES_COMPETENCIAS[competenciaSelecionada].label}
-              </span>
-            </div>
-            
+              Competência {competenciaSelecionada}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
             <Textarea
-              placeholder="Digite seu comentário sobre esta área da redação..."
+              placeholder="Área para digitação do comentário"
               value={comentarioTemp}
               onChange={(e) => setComentarioTemp(e.target.value)}
               rows={4}
@@ -618,7 +666,15 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             />
             
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setDialogAberto(false)}>
+              <Button variant="outline" onClick={() => {
+                // Remover elemento temporário
+                if (anotacaoTemp?.tempElement) {
+                  anotacaoTemp.tempElement.remove();
+                }
+                setDialogAberto(false);
+                setAnotacaoTemp(null);
+                setComentarioTemp("");
+              }}>
                 Cancelar
               </Button>
               <Button 
