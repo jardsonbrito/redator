@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Download } from "lucide-react";
+import { Save, Download, Trash2 } from "lucide-react";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -45,11 +45,11 @@ interface RedacaoAnotacaoVisualRef {
 }
 
 const CORES_COMPETENCIAS = {
-  1: { cor: '#F94C4C', nome: 'Vermelho', label: 'C1 - Norma Culta' },
-  2: { cor: '#3CD856', nome: 'Verde', label: 'C2 - Compreensão' },
-  3: { cor: '#4285F4', nome: 'Azul', label: 'C3 - Argumentação' },
-  4: { cor: '#B76AF8', nome: 'Roxo', label: 'C4 - Coesão' },
-  5: { cor: '#FF8C32', nome: 'Laranja', label: 'C5 - Proposta' },
+  1: { cor: '#E53935', nome: 'Vermelho', label: 'Competência 1' },
+  2: { cor: '#43A047', nome: 'Verde', label: 'Competência 2' },
+  3: { cor: '#1E88E5', nome: 'Azul', label: 'Competência 3' },
+  4: { cor: '#8E24AA', nome: 'Roxo', label: 'Competência 4' },
+  5: { cor: '#FB8C00', nome: 'Laranja', label: 'Competência 5' },
 };
 
 export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps>(({ 
@@ -68,6 +68,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
   const [anotacoesPendentes, setAnotacoesPendentes] = useState<any[]>([]);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [hoveredAnnotation, setHoveredAnnotation] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Expor métodos para o componente pai
@@ -138,9 +139,15 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           widgets: [], // Remove widgets padrão para usar nosso pop-up personalizado
         });
 
-        // Configurar eventos apenas se não for readonly
+        // Desabilitar o pop-up nativo do Annotorious
         if (!readonly) {
+          // Interceptar criação de anotações
           anno.on('createAnnotation', (annotation: any) => {
+            // Impedir que o Annotorious processe a anotação normalmente
+            setTimeout(() => {
+              anno.removeAnnotation(annotation);
+            }, 10);
+            
             // Aplicar estilo imediatamente
             setTimeout(() => {
               aplicarEstiloAnotacao(annotation.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
@@ -157,17 +164,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             setAnotacoesPendentes(prev => prev.filter(a => a.id !== annotation.id));
             // Remover da base de dados se já foi salva
             removerAnotacao(annotation.id);
-          });
-
-          anno.on('updateAnnotation', (annotation: any, previous: any) => {
-            // Atualizar anotação pendente
-            setAnotacoesPendentes(prev => 
-              prev.map(a => a.id === annotation.id ? annotation : a)
-            );
-            // Aplicar estilo novamente
-            setTimeout(() => {
-              aplicarEstiloAnotacao(annotation.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
-            }, 50);
           });
         }
 
@@ -197,7 +193,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
               popup.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                   <div style="width: 12px; height: 12px; border-radius: 50%; background: ${anotacao.cor_marcacao};"></div>
-                  <span style="font-weight: 600; color: #374151; font-size: 14px;">C${anotacao.competencia}</span>
+                  <span style="font-weight: 600; color: #374151; font-size: 14px;">${CORES_COMPETENCIAS[anotacao.competencia].label}</span>
                 </div>
                 <p style="margin: 0; color: #4b5563; font-size: 14px; line-height: 1.4;">${anotacao.comentario}</p>
                 <button onclick="this.parentNode.remove()" style="position: absolute; top: 4px; right: 8px; background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 18px;">×</button>
@@ -253,7 +249,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       const b = parseInt(cor.slice(5, 7), 16);
       
       element.style.border = `1px solid ${cor}`;
-      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.12)`;
+      element.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.1)`;
       element.style.boxSizing = 'border-box';
     }
   };
@@ -290,12 +286,48 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         // Aplicar estilo personalizado
         setTimeout(() => {
           aplicarEstiloAnotacao(anotacao.id!, anotacao.cor_marcacao);
+          
+          // Adicionar botão de lixeira se não for readonly
+          if (!readonly) {
+            const element = document.querySelector(`[data-id="${anotacao.id}"]`) as HTMLElement;
+            if (element) {
+              element.addEventListener('mouseenter', () => setHoveredAnnotation(anotacao.id!));
+              element.addEventListener('mouseleave', () => setHoveredAnnotation(null));
+              
+              // Criar botão de lixeira
+              const deleteBtn = document.createElement('button');
+              deleteBtn.innerHTML = '🗑️';
+              deleteBtn.className = 'absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 text-xs hover:bg-red-600 transition-colors';
+              deleteBtn.style.cssText = `
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                background: #ef4444;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                font-size: 12px;
+                cursor: pointer;
+                display: ${hoveredAnnotation === anotacao.id ? 'block' : 'none'};
+                z-index: 100;
+              `;
+              
+              deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                removerAnotacao(anotacao.id!);
+              };
+              
+              element.appendChild(deleteBtn);
+            }
+          }
         }, 100);
       } catch (error) {
         console.warn('Error adding annotation:', error);
       }
     });
-  }, [anotacoes, imageLoaded]);
+  }, [anotacoes, imageLoaded, readonly, hoveredAnnotation]);
 
   // Salvar anotação individual
   const salvarAnotacao = async () => {
@@ -329,29 +361,49 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         imagem_altura: imageRef.current.naturalHeight
       };
 
-      // Adicionar à lista de anotações pendentes para salvar depois
-      const anotacaoComId = { ...anotacaoTemp, ...novaAnotacao };
-      setAnotacoesPendentes(prev => [...prev, anotacaoComId]);
+      const { data, error } = await supabase
+        .from('marcacoes_visuais')
+        .insert(novaAnotacao)
+        .select()
+        .single();
 
+      if (error) throw error;
+
+      // Recriar a anotação no Annotorious com o ID correto
+      const newAnnotation = {
+        id: data.id,
+        target: anotacaoTemp.target,
+        body: [{
+          type: 'TextualBody',
+          purpose: 'commenting',
+          value: comentarioTemp.trim()
+        }]
+      };
+
+      annoRef.current.addAnnotation(newAnnotation);
+      
       // Aplicar estilo à anotação
       setTimeout(() => {
-        aplicarEstiloAnotacao(anotacaoTemp.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
+        aplicarEstiloAnotacao(data.id, CORES_COMPETENCIAS[competenciaSelecionada].cor);
       }, 100);
 
       toast({
-        title: "Anotação adicionada!",
-        description: "A anotação será salva quando você finalizar a correção.",
+        title: "Anotação salva!",
+        description: "Comentário adicionado com sucesso.",
       });
 
       setDialogAberto(false);
       setAnotacaoTemp(null);
       setComentarioTemp("");
+      
+      // Recarregar anotações
+      await carregarAnotacoes();
 
     } catch (error) {
-      console.error('Erro ao preparar anotação:', error);
+      console.error('Erro ao salvar anotação:', error);
       toast({
-        title: "Erro ao adicionar anotação",
-        description: "Não foi possível adicionar a anotação.",
+        title: "Erro ao salvar anotação",
+        description: "Não foi possível salvar a anotação.",
         variant: "destructive",
       });
     }
@@ -359,63 +411,39 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
   // Salvar todas as anotações pendentes
   const salvarTodasAnotacoes = async () => {
-    if (anotacoesPendentes.length === 0) return;
-
-    try {
-      // Primeiro, remover anotações existentes para este corretor e redação
-      await supabase
-        .from('marcacoes_visuais')
-        .delete()
-        .eq('redacao_id', redacaoId)
-        .eq('corretor_id', corretorId);
-
-      // Inserir todas as anotações pendentes
-      const anotacoesParaSalvar = anotacoesPendentes.map(anotacao => {
-        const bounds = anotacao.target.selector.value.match(/xywh=pixel:(\d+),(\d+),(\d+),(\d+)/);
-        if (!bounds) return null;
-        
-        const [, x, y, width, height] = bounds.map(Number);
-        
-        return {
-          redacao_id: redacaoId,
-          corretor_id: corretorId,
-          competencia: competenciaSelecionada,
-          cor_marcacao: CORES_COMPETENCIAS[competenciaSelecionada].cor,
-          comentario: anotacao.body?.[0]?.value || '',
-          tabela_origem: 'redacoes_enviadas',
-          x_start: x,
-          y_start: y,
-          x_end: x + width,
-          y_end: y + height,
-          imagem_largura: imageRef.current?.naturalWidth || 0,
-          imagem_altura: imageRef.current?.naturalHeight || 0
-        };
-      }).filter(Boolean);
-
-      if (anotacoesParaSalvar.length > 0) {
-        const { error } = await supabase
-          .from('marcacoes_visuais')
-          .insert(anotacoesParaSalvar);
-        
-        if (error) throw error;
-      }
-
-      setAnotacoesPendentes([]);
-    } catch (error) {
-      console.error('Erro ao salvar anotações:', error);
-      throw error;
-    }
+    // As anotações já são salvas individualmente, então não há nada a fazer aqui
+    return;
   };
 
   // Remover anotação
   const removerAnotacao = async (annotationId: string) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from('marcacoes_visuais')
         .delete()
         .eq('id', annotationId);
+      
+      if (error) throw error;
+
+      // Remover do Annotorious
+      if (annoRef.current) {
+        annoRef.current.removeAnnotation(annotationId);
+      }
+
+      toast({
+        title: "Anotação removida",
+        description: "A marcação foi excluída com sucesso.",
+      });
+
+      // Recarregar anotações
+      await carregarAnotacoes();
     } catch (error) {
       console.error('Erro ao remover anotação:', error);
+      toast({
+        title: "Erro ao remover",
+        description: "Não foi possível remover a anotação.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -437,7 +465,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     try {
       const dataUrl = await gerarImagemComAnotacoes();
       const link = document.createElement('a');
-      link.download = `correcao_redacao_${redacaoId.substring(0, 8)}.png`;
+      link.download = `redacao_corrigida_${redacaoId.substring(0, 8)}.png`;
       link.href = dataUrl;
       link.click();
       
@@ -460,11 +488,11 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-medium">Correção com Anotações Visuais</span>
+            <span className="font-medium">Redação Corrigida</span>
           </div>
           <Button variant="outline" size="sm" onClick={baixarImagemCorrigida}>
             <Download className="w-4 h-4 mr-2" />
-            📥 Baixar redação corrigida
+            Baixar redação corrigida
           </Button>
         </div>
         
@@ -480,7 +508,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
                     style={{ backgroundColor: CORES_COMPETENCIAS[competencia].cor }}
                   />
                   <span className="text-xs font-medium">
-                    C{competencia}
+                    {CORES_COMPETENCIAS[competencia].label}
                   </span>
                 </div>
               ))}
@@ -512,7 +540,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
                     className="w-3 h-3 rounded-full" 
                     style={{ backgroundColor: anotacao.cor_marcacao }}
                   />
-                  <span className="font-medium text-sm">C{anotacao.competencia}</span>
+                  <span className="font-medium text-sm">{CORES_COMPETENCIAS[anotacao.competencia].label}</span>
                 </div>
                 <p className="text-sm leading-relaxed">{anotacao.comentario}</p>
               </div>
@@ -560,36 +588,33 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         />
       </div>
 
-      {/* Lista de anotações pendentes */}
-      {anotacoesPendentes.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="font-medium">Anotações Adicionadas ({anotacoesPendentes.length}):</h4>
-          <p className="text-sm text-muted-foreground">
-            Essas anotações serão salvas quando você finalizar a correção.
-          </p>
-        </div>
-      )}
-
       {/* Dialog para comentário personalizado */}
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Adicionar Comentário
-              <div 
-                className="w-4 h-4 rounded-full" 
-                style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada].cor }}
-              />
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-4 h-4 rounded-full" 
+                style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada].cor }}
+              />
+              <span className="font-medium">
+                {CORES_COMPETENCIAS[competenciaSelecionada].label}
+              </span>
+            </div>
+            
             <Textarea
               placeholder="Digite seu comentário sobre esta área da redação..."
               value={comentarioTemp}
               onChange={(e) => setComentarioTemp(e.target.value)}
               rows={4}
-              className="border-2 focus:border-primary"
+              className="resize-none"
+              autoFocus
             />
             
             <div className="flex gap-2 justify-end">

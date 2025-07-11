@@ -219,71 +219,73 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         <strong>Tema:</strong> {redacao.frase_tematica}
       </div>
 
-      {/* Vista Pedagógica - Movida para o topo */}
+      {/* Vista Pedagógica - Movida para o topo com layout ajustado */}
       <Card className="bg-white">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Vista Pedagógica</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-6 gap-4 items-center">
-            {/* Competências C1 a C5 */}
-            {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
-              const cores = ['#F94C4C', '#3CD856', '#4285F4', '#B76AF8', '#FF8C32'];
-              const corCompetencia = cores[index];
-              
-              return (
-                <div key={competencia} className="flex flex-col items-center space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: corCompetencia }}
-                    />
-                    <Label className="text-sm font-medium">C{index + 1}</Label>
+          <div className="flex items-center justify-between">
+            {/* Competências C1 a C5 - Layout horizontal compacto */}
+            <div className="flex gap-6">
+              {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
+                const cores = ['#E53935', '#43A047', '#1E88E5', '#8E24AA', '#FB8C00'];
+                const corCompetencia = cores[index];
+                
+                return (
+                  <div key={competencia} className="flex flex-col items-center space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: corCompetencia }}
+                      />
+                      <Label className="text-sm font-medium">C{index + 1}</Label>
+                    </div>
+                    <Select
+                      value={notas[competencia as keyof typeof notas].toString()}
+                      onValueChange={(value) => 
+                        setNotas(prev => ({
+                          ...prev,
+                          [competencia]: parseInt(value)
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-20 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {opcoesNota.map(nota => (
+                          <SelectItem key={nota} value={nota.toString()}>
+                            {nota}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Select
-                    value={notas[competencia as keyof typeof notas].toString()}
-                    onValueChange={(value) => 
-                      setNotas(prev => ({
-                        ...prev,
-                        [competencia]: parseInt(value)
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-20 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {opcoesNota.map(nota => (
-                        <SelectItem key={nota} value={nota.toString()}>
-                          {nota}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-xs text-gray-500">/200</span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
             
-            {/* Nota Total */}
-            <div className="flex flex-col items-center">
-              <Label className="text-sm font-medium mb-2">Nota Total</Label>
-              <div className="text-xl font-bold text-primary bg-primary/10 px-4 py-2 rounded-lg">
-                {calcularNotaTotal()}/1000
+            {/* Nota Total e Botões de ação */}
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center">
+                <Label className="text-sm font-medium mb-2">Nota Total</Label>
+                <div className="text-xl font-bold text-primary bg-primary/10 px-4 py-2 rounded-lg">
+                  {calcularNotaTotal()}/1000
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => salvarCorrecao('incompleta')} disabled={loading}>
+                  <Save className="w-4 h-4 mr-1" />
+                  Salvar Incompleta
+                </Button>
+                <Button onClick={() => salvarCorrecao('corrigida')} disabled={loading}>
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Finalizar Correção
+                </Button>
               </div>
             </div>
-          </div>
-          
-          {/* Botões de ação */}
-          <div className="flex gap-2 justify-end mt-4 pt-4 border-t">
-            <Button variant="outline" onClick={() => salvarCorrecao('incompleta')} disabled={loading}>
-              <Save className="w-4 h-4 mr-1" />
-              Salvar Incompleta
-            </Button>
-            <Button onClick={() => salvarCorrecao('corrigida')} disabled={loading}>
-              <CheckCircle className="w-4 h-4 mr-1" />
-              Finalizar Correção
-            </Button>
           </div>
         </CardContent>
       </Card>
