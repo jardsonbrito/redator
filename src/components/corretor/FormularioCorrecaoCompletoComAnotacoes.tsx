@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
@@ -49,6 +50,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   // Use useRef instead of state to avoid re-renders
   const anotacaoVisualRef = useRef<RedacaoAnotacaoVisualRef | null>(null);
   const { toast } = useToast();
+  const { corretor } = useCorretorAuth();
 
   useEffect(() => {
     setManuscritaUrl(redacao.redacao_manuscrita_url || null);
@@ -292,16 +294,20 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
       {/* Redação com Sistema de Anotações Visuais - Agora ocupa toda a largura */}
       <div className="w-full">
-        {manuscritaUrl ? (
+        {manuscritaUrl && corretor?.id ? (
           <RedacaoAnotacaoVisual
             imagemUrl={manuscritaUrl}
             redacaoId={redacao.id}
-            corretorId={redacao.eh_corretor_1 ? redacao.id : redacao.id} // Simplificado para demo
+            corretorId={corretor.id}
             readonly={false}
             ref={(ref) => {
               anotacaoVisualRef.current = ref;
             }}
           />
+        ) : manuscritaUrl ? (
+          <div className="bg-white rounded-lg p-6 border">
+            <p className="text-center text-gray-600">Carregando sistema de correção visual...</p>
+          </div>
         ) : (
           <div className="bg-white rounded-lg p-6 border">
             <div className="prose prose-base max-w-none">

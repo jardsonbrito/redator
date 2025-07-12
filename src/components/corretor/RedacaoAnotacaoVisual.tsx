@@ -187,12 +187,16 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             setTimeout(() => {
               anno.cancelSelected();
               
-              // Extrair coordenadas da seleção
+              // Extrair coordenadas da seleção (já em valores relativos)
               const bounds = selection.target.selector.value;
+              
+              // Converter para coordenadas de pixel absolutas
               const x = Math.round(bounds.x * imageDimensions.width);
               const y = Math.round(bounds.y * imageDimensions.height);
               const width = Math.round(bounds.w * imageDimensions.width);
               const height = Math.round(bounds.h * imageDimensions.height);
+
+              console.log('Coordenadas calculadas:', { x, y, width, height, imageDimensions });
 
               const annotationData = {
                 id: `temp_${Date.now()}`,
@@ -536,9 +540,14 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             ref={imageRef}
             src={imagemUrl} 
             alt="Redação corrigida" 
-            className="w-full h-auto block mx-auto"
+            className="img-redacao block mx-auto"
             onLoad={handleImageLoad}
-            style={{ maxWidth: 'none', width: 'auto', height: 'auto' }}
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '85vh', 
+              width: 'auto', 
+              height: 'auto' 
+            }}
           />
         </div>
       </div>
