@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +32,7 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
   const [formData, setFormData] = useState({
     titulo: avisoEditando?.titulo || "",
     descricao: avisoEditando?.descricao || "",
-    prioridade: avisoEditando?.prioridade || "comum",
+    prioridade: avisoEditando?.prioridade || "media",
     status: avisoEditando?.status || "rascunho",
     turmasAutorizadas: avisoEditando?.turmas_autorizadas || [],
     corretoresDestinatarios: avisoEditando?.corretores_destinatarios || [],
@@ -143,7 +142,7 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
       setFormData({
         titulo: "",
         descricao: "",
-        prioridade: "comum",
+        prioridade: "media",
         status: "rascunho",
         turmasAutorizadas: [],
         corretoresDestinatarios: [],
@@ -171,7 +170,7 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
     setFormData({
       titulo: "",
       descricao: "",
-      prioridade: "comum",
+      prioridade: "media",
       status: "rascunho",
       turmasAutorizadas: [],
       corretoresDestinatarios: [],
