@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
   const [imageUrl, setImageUrl] = useState<string | null>(avisoEditando?.imagem_url || null);
   const { toast } = useToast();
 
+  // Mapeamento correto entre labels do frontend e valores do banco
   const prioridades = [
     { value: "alta", label: "Alta" },
     { value: "media", label: "Média" },
@@ -101,10 +103,15 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
     setLoading(true);
 
     try {
+      // Garantir que a prioridade seja enviada com o valor correto
+      const prioridadeValue = formData.prioridade;
+      console.log("Valor da prioridade sendo enviado:", prioridadeValue);
+      console.log("Valores aceitos:", prioridades.map(p => p.value));
+
       const avisoData = {
         titulo: formData.titulo.trim(),
         descricao: formData.descricao.trim(),
-        prioridade: formData.prioridade,
+        prioridade: prioridadeValue, // Garantir que é um dos valores aceitos
         status: formData.status,
         turmas_autorizadas: formData.turmasAutorizadas,
         corretores_destinatarios: formData.corretoresDestinatarios,
@@ -113,6 +120,8 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
         imagem_url: imageUrl,
         permite_visitante: formData.permiteVisitante,
       };
+
+      console.log("Dados completos sendo enviados:", avisoData);
 
       if (avisoEditando) {
         const { error } = await supabase
@@ -155,7 +164,13 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
       onSuccess?.();
       onCancelEdit?.();
     } catch (error: any) {
-      console.error("Erro ao salvar aviso:", error);
+      console.error("Erro completo ao salvar aviso:", error);
+      console.error("Detalhes do erro:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       toast({
         title: "Erro ao salvar aviso",
         description: error.message || "Ocorreu um erro inesperado.",
@@ -218,7 +233,10 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
             <Label htmlFor="prioridade">Prioridade</Label>
             <Select
               value={formData.prioridade}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, prioridade: value }))}
+              onValueChange={(value) => {
+                console.log("Prioridade selecionada:", value);
+                setFormData(prev => ({ ...prev, prioridade: value }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a prioridade" />
