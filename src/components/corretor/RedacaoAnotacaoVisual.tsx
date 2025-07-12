@@ -557,11 +557,15 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             zoom: 1 !important;
           }
 
-          .painel-correcao img {
-            max-width: none !important;
+          .img-redacao {
+            max-width: 100% !important;
+            max-height: 85vh !important;
             width: auto !important;
             height: auto !important;
+            display: block !important;
+            margin: 0 auto !important;
             transform: none !important;
+            cursor: default !important;
           }
 
           .annotorious-annotationlayer .a9s-annotation {
@@ -570,6 +574,13 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
           .annotorious-editor {
             display: none !important;
+          }
+
+          /* Garantir cursor padrão em todas as interações */
+          .annotorious-annotationlayer, 
+          .annotorious-annotationlayer svg,
+          .annotorious-annotationlayer * {
+            cursor: default !important;
           }
 
           @media (max-width: 1024px) {
@@ -615,14 +626,15 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           ref={imageRef}
           src={imagemUrl} 
           alt="Redação para correção" 
-          className="block mx-auto"
+          className="img-redacao block mx-auto"
           onLoad={handleImageLoad}
           style={{ 
             userSelect: 'none', 
-            maxWidth: 'none', 
+            maxWidth: '100%',
+            maxHeight: '85vh',
             width: 'auto', 
             height: 'auto',
-            minWidth: '800px' // Garantir tamanho mínimo para desktop
+            cursor: 'default' // Cursor sempre padrão
           }}
         />
       </div>
