@@ -271,7 +271,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               <div className="flex flex-col items-center">
                 <Label className="text-sm font-medium mb-2">Nota Total</Label>
                 <div className="text-xl font-bold text-primary bg-primary/10 px-4 py-2 rounded-lg">
-                  {calcularNotaTotal()}/1000
+                  {calcularNotaTotal()}
                 </div>
               </div>
               

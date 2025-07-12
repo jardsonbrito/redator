@@ -5,11 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Download, Trash2 } from "lucide-react";
+import { Save, Download, Trash2, X } from "lucide-react";
 import html2canvas from 'html2canvas';
 
-// Importar Fabric.js
-import { Canvas as FabricCanvas, Rect, type TPointerEvent } from "fabric";
+// Importar Annotorious
+import { Annotorious } from '@recogito/annotorious';
+
+// Importar CSS do Annotorious
+import '@recogito/annotorious/dist/annotorious.min.css';
 
 // Interface que corresponde à estrutura real da tabela no banco
 interface AnotacaoVisual {
@@ -57,18 +60,16 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   readonly = false 
 }, ref) => {
   const imageRef = useRef<HTMLImageElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
+  const annotoriousRef = useRef<any>(null);
   
   const [competenciaSelecionada, setCompetenciaSelecionada] = useState<number>(1);
   const [dialogAberto, setDialogAberto] = useState<boolean>(false);
   const [comentarioTemp, setComentarioTemp] = useState<string>("");
-  const [selecaoTemp, setSelecaoTemp] = useState<any>(null);
+  const [currentAnnotation, setCurrentAnnotation] = useState<any>(null);
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
-  const [tempRect, setTempRect] = useState<Rect | null>(null);
   const { toast } = useToast();
 
   // Expor métodos para o componente pai
@@ -131,217 +132,193 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
   };
 
-  // Inicializar Fabric.js Canvas
+  // Inicializar Annotorious
   useEffect(() => {
-    if (!canvasRef.current || !imageLoaded || readonly) return;
+    if (!imageRef.current || !imageLoaded) return;
 
-    const initFabricCanvas = () => {
-      // Limpar canvas anterior se existir
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose();
-        fabricCanvasRef.current = null;
-      }
+    // Verificar se é desktop (>= 1024px)
+    if (window.innerWidth < 1024) {
+      toast({
+        title: "Aviso",
+        description: "A ferramenta de correção visual não está disponível para dispositivos móveis.",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    let anno: any = null;
+
+    const initAnnotorious = async () => {
       try {
-        console.log('Inicializando Fabric.js Canvas...');
+        console.log('Inicializando Annotorious...');
         
-        const canvas = new FabricCanvas(canvasRef.current!, {
-          width: imageDimensions.width,
-          height: imageDimensions.height,
-          backgroundColor: 'transparent',
-          selection: false
+        // Criar instância do Annotorious
+        anno = new Annotorious({
+          image: imageRef.current!,
+          disableEditor: true, // Desabilitamos o editor padrão
+          allowEmpty: false,
+          drawOnSingleClick: false,
+          formatters: [
+            function(annotation: any) {
+              const competencia = annotation.body?.[0]?.purpose || competenciaSelecionada;
+              const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
+              
+              if (corCompetencia) {
+                const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
+                const g = parseInt(corCompetencia.cor.slice(3, 5), 16);
+                const b = parseInt(corCompetencia.cor.slice(5, 7), 16);
+                
+                return {
+                  className: `competencia-${competencia}`,
+                  style: `fill: rgba(${r}, ${g}, ${b}, 0.12); stroke: ${corCompetencia.cor}; stroke-width: 1px; cursor: pointer;`
+                };
+              }
+              return {};
+            }
+          ]
         });
 
-        let isDrawing = false;
-        let startPointer = { x: 0, y: 0 };
+        if (!readonly) {
+          // Event listeners para modo de edição
+          anno.on('createSelection', (selection: any) => {
+            console.log('Selection created:', selection);
+            
+            // Cancelar seleção padrão e abrir nosso popup
+            setTimeout(() => {
+              anno.cancelSelected();
+              
+              // Extrair coordenadas da seleção
+              const bounds = selection.target.selector.value;
+              const x = Math.round(bounds.x * imageDimensions.width);
+              const y = Math.round(bounds.y * imageDimensions.height);
+              const width = Math.round(bounds.w * imageDimensions.width);
+              const height = Math.round(bounds.h * imageDimensions.height);
 
-        // Evento de mouse down
-        canvas.on('mouse:down', (options: any) => {
-          if (readonly) return;
-          
-          isDrawing = true;
-          const pointer = canvas.getScenePoint(options.e);
-          startPointer = { x: pointer.x, y: pointer.y };
+              const annotationData = {
+                id: `temp_${Date.now()}`,
+                target: {
+                  selector: {
+                    type: "FragmentSelector",
+                    value: `xywh=pixel:${x},${y},${width},${height}`
+                  }
+                },
+                body: [{
+                  type: "TextualBody",
+                  purpose: competenciaSelecionada,
+                  value: ""
+                }],
+                bounds: { x, y, width, height }
+              };
 
-          // Remover retângulo temporário anterior
-          if (tempRect) {
-            canvas.remove(tempRect);
-            setTempRect(null);
-          }
-
-          console.log('Mouse down at:', startPointer);
-        });
-
-        // Evento de mouse move
-        canvas.on('mouse:move', (options: any) => {
-          if (!isDrawing || readonly) return;
-
-          const pointer = canvas.getScenePoint(options.e);
-          
-          // Calcular dimensões do retângulo
-          const left = Math.min(startPointer.x, pointer.x);
-          const top = Math.min(startPointer.y, pointer.y);
-          const width = Math.abs(pointer.x - startPointer.x);
-          const height = Math.abs(pointer.y - startPointer.y);
-
-          // Remover retângulo temporário anterior
-          if (tempRect) {
-            canvas.remove(tempRect);
-          }
-
-          // Criar novo retângulo temporário
-          const corCompetencia = CORES_COMPETENCIAS[competenciaSelecionada];
-          const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
-          const g = parseInt(corCompetencia.cor.slice(3, 5), 16);
-          const b = parseInt(corCompetencia.cor.slice(5, 7), 16);
-
-          const rect = new Rect({
-            left,
-            top,
-            width,
-            height,
-            fill: `rgba(${r}, ${g}, ${b}, 0.1)`,
-            stroke: corCompetencia.cor,
-            strokeWidth: 1,
-            selectable: false,
-            evented: false
+              setCurrentAnnotation(annotationData);
+              setComentarioTemp("");
+              setDialogAberto(true);
+            }, 10);
           });
 
-          canvas.add(rect);
-          setTempRect(rect);
-          canvas.renderAll();
-        });
-
-        // Evento de mouse up
-        canvas.on('mouse:up', (options: any) => {
-          if (!isDrawing || readonly) return;
-          
-          isDrawing = false;
-          const pointer = canvas.getScenePoint(options.e);
-          
-          // Calcular dimensões finais
-          const x = Math.min(startPointer.x, pointer.x);
-          const y = Math.min(startPointer.y, pointer.y);
-          const width = Math.abs(pointer.x - startPointer.x);
-          const height = Math.abs(pointer.y - startPointer.y);
-
-          console.log('Mouse up - final rect:', { x, y, width, height });
-
-          // Verificar se o retângulo é grande o suficiente
-          if (width < 10 || height < 10) {
-            if (tempRect) {
-              canvas.remove(tempRect);
-              setTempRect(null);
-              canvas.renderAll();
+          anno.on('clickAnnotation', (annotation: any) => {
+            // Modo edição - confirmar remoção
+            const comment = annotation.body?.[0]?.value || '';
+            const competencia = annotation.body?.[0]?.purpose || 1;
+            const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
+            
+            const shouldDelete = confirm(`Remover esta anotação?\n\n${corCompetencia?.label}: ${comment}`);
+            if (shouldDelete && annotation.id) {
+              removerAnotacao(annotation.id);
             }
-            return;
-          }
+          });
+        } else {
+          // Event listeners para modo de leitura
+          anno.on('clickAnnotation', (annotation: any) => {
+            const comment = annotation.body?.[0]?.value || '';
+            const competencia = annotation.body?.[0]?.purpose || 1;
+            const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
+            
+            toast({
+              title: `${corCompetencia?.label || 'Anotação'}`,
+              description: comment,
+              duration: 4000,
+            });
+          });
+        }
 
-          // Salvar dados da seleção e abrir popup
-          const selecaoData = {
-            x: Math.round(x),
-            y: Math.round(y),
-            width: Math.round(width),
-            height: Math.round(height),
-            competencia: competenciaSelecionada
-          };
+        annotoriousRef.current = anno;
 
-          console.log('Seleção criada:', selecaoData);
-          
-          setSelecaoTemp(selecaoData);
-          setComentarioTemp("");
-          setDialogAberto(true);
-        });
+        // Carregar anotações existentes
+        await carregarEAplicarAnotacoes();
 
-        fabricCanvasRef.current = canvas;
-        console.log('Fabric.js Canvas configurado com sucesso');
+        console.log('Annotorious inicializado com sucesso');
 
       } catch (error) {
-        console.error('Erro ao inicializar Fabric.js:', error);
+        console.error('Erro ao inicializar Annotorious:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível inicializar o sistema de anotações.",
+          variant: "destructive"
+        });
       }
     };
 
-    const timer = setTimeout(initFabricCanvas, 100);
+    const timer = setTimeout(initAnnotorious, 100);
     
     return () => {
       clearTimeout(timer);
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose();
-        fabricCanvasRef.current = null;
+      if (anno) {
+        anno.destroy();
+        annotoriousRef.current = null;
       }
     };
   }, [imageLoaded, readonly, competenciaSelecionada, imageDimensions]);
 
-  // Aplicar anotações salvas no canvas
-  useEffect(() => {
-    if (!fabricCanvasRef.current || anotacoes.length === 0) return;
+  // Carregar e aplicar anotações no Annotorious
+  const carregarEAplicarAnotacoes = async () => {
+    if (!annotoriousRef.current) return;
+    
+    try {
+      await carregarAnotacoes();
+      
+      // Converter anotações do banco para formato Annotorious
+      const annotoriousAnnotations = anotacoes.map((anotacao) => {
+        const x = anotacao.x_start / imageDimensions.width;
+        const y = anotacao.y_start / imageDimensions.height;
+        const w = (anotacao.x_end - anotacao.x_start) / imageDimensions.width;
+        const h = (anotacao.y_end - anotacao.y_start) / imageDimensions.height;
 
-    // Limpar anotações existentes (exceto temporária)
-    const objects = fabricCanvasRef.current.getObjects();
-    objects.forEach(obj => {
-      if (obj !== tempRect && (obj as any).annotationId) {
-        fabricCanvasRef.current!.remove(obj);
-      }
-    });
-
-    // Adicionar anotações salvas
-    anotacoes.forEach((anotacao) => {
-      const r = parseInt(anotacao.cor_marcacao.slice(1, 3), 16);
-      const g = parseInt(anotacao.cor_marcacao.slice(3, 5), 16);
-      const b = parseInt(anotacao.cor_marcacao.slice(5, 7), 16);
-
-      const rect = new Rect({
-        left: anotacao.x_start,
-        top: anotacao.y_start,
-        width: anotacao.x_end - anotacao.x_start,
-        height: anotacao.y_end - anotacao.y_start,
-        fill: `rgba(${r}, ${g}, ${b}, 0.1)`,
-        stroke: anotacao.cor_marcacao,
-        strokeWidth: 1,
-        selectable: false,
-        evented: true
+        return {
+          id: anotacao.id,
+          type: "Annotation",
+          target: {
+            selector: {
+              type: "FragmentSelector",
+              value: `xywh=percent:${x},${y},${w},${h}`
+            }
+          },
+          body: [{
+            type: "TextualBody",
+            purpose: anotacao.competencia,
+            value: anotacao.comentario
+          }]
+        };
       });
 
-      (rect as any).annotationId = anotacao.id;
-      (rect as any).annotationData = anotacao;
+      // Aplicar anotações no Annotorious
+      annotoriousRef.current.setAnnotations(annotoriousAnnotations);
 
-      // Adicionar eventos para mostrar lixeira e comentário
-      if (!readonly) {
-        rect.on('mouseover', () => {
-          rect.set({ stroke: anotacao.cor_marcacao, strokeWidth: 2 });
-          fabricCanvasRef.current!.renderAll();
-        });
+    } catch (error) {
+      console.error('Erro ao carregar anotações:', error);
+    }
+  };
 
-        rect.on('mouseout', () => {
-          rect.set({ stroke: anotacao.cor_marcacao, strokeWidth: 1 });
-          fabricCanvasRef.current!.renderAll();
-        });
-
-        rect.on('mouseup', () => {
-          const shouldDelete = confirm(`Remover esta anotação?\n\n${CORES_COMPETENCIAS[anotacao.competencia].label}: ${anotacao.comentario}`);
-          if (shouldDelete) {
-            removerAnotacao(anotacao.id!);
-          }
-        });
-      } else {
-        rect.on('mouseup', () => {
-          toast({
-            title: `${CORES_COMPETENCIAS[anotacao.competencia].label}`,
-            description: anotacao.comentario,
-            duration: 4000,
-          });
-        });
-      }
-
-      fabricCanvasRef.current!.add(rect);
-    });
-
-    fabricCanvasRef.current.renderAll();
-  }, [anotacoes, readonly, tempRect]);
+  // Atualizar anotações quando mudarem
+  useEffect(() => {
+    if (annotoriousRef.current && anotacoes.length >= 0) {
+      carregarEAplicarAnotacoes();
+    }
+  }, [anotacoes, imageDimensions]);
 
   // Salvar anotação
   const salvarAnotacao = async () => {
-    if (!selecaoTemp || !comentarioTemp.trim() || !imageRef.current) {
+    if (!currentAnnotation || !comentarioTemp.trim()) {
       toast({
         title: "Erro",
         description: "Comentário não pode estar vazio.",
@@ -351,7 +328,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
 
     try {
-      const { x, y, width, height } = selecaoTemp;
+      const { bounds } = currentAnnotation;
 
       const novaAnotacao = {
         redacao_id: redacaoId,
@@ -360,10 +337,10 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         cor_marcacao: CORES_COMPETENCIAS[competenciaSelecionada].cor,
         comentario: comentarioTemp.trim(),
         tabela_origem: 'redacoes_enviadas',
-        x_start: x,
-        y_start: y,
-        x_end: x + width,
-        y_end: y + height,
+        x_start: bounds.x,
+        y_start: bounds.y,
+        x_end: bounds.x + bounds.width,
+        y_end: bounds.y + bounds.height,
         imagem_largura: imageDimensions.width,
         imagem_altura: imageDimensions.height
       };
@@ -380,11 +357,31 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
       console.log('Anotação salva com sucesso:', data);
 
-      // Remover retângulo temporário do canvas
-      if (tempRect && fabricCanvasRef.current) {
-        fabricCanvasRef.current.remove(tempRect);
-        setTempRect(null);
-        fabricCanvasRef.current.renderAll();
+      // Criar anotação para Annotorious
+      const x = bounds.x / imageDimensions.width;
+      const y = bounds.y / imageDimensions.height;
+      const w = bounds.width / imageDimensions.width;
+      const h = bounds.height / imageDimensions.height;
+
+      const annotoriousAnnotation = {
+        id: data.id,
+        type: "Annotation",
+        target: {
+          selector: {
+            type: "FragmentSelector",
+            value: `xywh=percent:${x},${y},${w},${h}`
+          }
+        },
+        body: [{
+          type: "TextualBody",
+          purpose: competenciaSelecionada,
+          value: comentarioTemp.trim()
+        }]
+      };
+
+      // Adicionar ao Annotorious
+      if (annotoriousRef.current) {
+        annotoriousRef.current.addAnnotation(annotoriousAnnotation);
       }
 
       toast({
@@ -393,7 +390,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       });
 
       setDialogAberto(false);
-      setSelecaoTemp(null);
+      setCurrentAnnotation(null);
       setComentarioTemp("");
       
       // Recarregar anotações
@@ -411,15 +408,8 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
   // Cancelar anotação
   const cancelarAnotacao = () => {
-    // Remover retângulo temporário do canvas
-    if (tempRect && fabricCanvasRef.current) {
-      fabricCanvasRef.current.remove(tempRect);
-      setTempRect(null);
-      fabricCanvasRef.current.renderAll();
-    }
-    
     setDialogAberto(false);
-    setSelecaoTemp(null);
+    setCurrentAnnotation(null);
     setComentarioTemp("");
   };
 
@@ -438,6 +428,11 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         .eq('id', annotationId);
       
       if (error) throw error;
+
+      // Remover do Annotorious
+      if (annotoriousRef.current) {
+        annotoriousRef.current.removeAnnotation(annotationId);
+      }
 
       toast({
         title: "Anotação removida",
@@ -536,31 +531,58 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         )}
 
         {/* Imagem da Redação - Modo Leitura */}
-        <div ref={containerRef} className="border rounded-lg p-4 bg-white relative">
+        <div ref={containerRef} className="border rounded-lg p-4 bg-white relative overflow-hidden">
           <img 
             ref={imageRef}
             src={imagemUrl} 
             alt="Redação corrigida" 
-            className="max-w-full h-auto block"
+            className="w-full h-auto block mx-auto"
             onLoad={handleImageLoad}
+            style={{ maxWidth: 'none', width: 'auto', height: 'auto' }}
           />
-          {imageLoaded && (
-            <canvas 
-              ref={canvasRef}
-              className="absolute top-4 left-4 pointer-events-none"
-              style={{ zIndex: 10 }}
-            />
-          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full" style={{ width: '100vw', maxWidth: 'none' }}>
+      {/* Meta tag para desativar zoom em mobile */}
+      <style>
+        {`
+          .painel-correcao {
+            max-width: unset !important;
+            transform: none !important;
+            overflow: visible !important;
+            zoom: 1 !important;
+          }
+
+          .painel-correcao img {
+            max-width: none !important;
+            width: auto !important;
+            height: auto !important;
+            transform: none !important;
+          }
+
+          .annotorious-annotationlayer .a9s-annotation {
+            cursor: pointer !important;
+          }
+
+          .annotorious-editor {
+            display: none !important;
+          }
+
+          @media (max-width: 1024px) {
+            .painel-correcao {
+              display: none !important;
+            }
+          }
+        `}
+      </style>
+
       {/* Seletor de Competências */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-3">Selecione a Competência</h3>
+      <div className="mb-6 painel-correcao">
+        <h3 className="text-lg font-semibold mb-3">Selecione a Competência para Marcar</h3>
         <div className="flex flex-wrap gap-2">
           {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
             <Button
@@ -582,25 +604,27 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             </Button>
           ))}
         </div>
+        <p className="text-sm text-gray-600 mt-2">
+          Selecione uma competência e clique e arraste sobre a imagem para criar uma marcação.
+        </p>
       </div>
 
       {/* Imagem da Redação */}
-      <div ref={containerRef} className="border rounded-lg p-4 bg-white relative">
+      <div ref={containerRef} className="border rounded-lg p-4 bg-white relative painel-correcao" style={{ width: '100%', overflowX: 'auto' }}>
         <img 
           ref={imageRef}
           src={imagemUrl} 
           alt="Redação para correção" 
-          className="max-w-full h-auto block"
+          className="block mx-auto"
           onLoad={handleImageLoad}
-          style={{ userSelect: 'none' }}
+          style={{ 
+            userSelect: 'none', 
+            maxWidth: 'none', 
+            width: 'auto', 
+            height: 'auto',
+            minWidth: '800px' // Garantir tamanho mínimo para desktop
+          }}
         />
-        {imageLoaded && (
-          <canvas 
-            ref={canvasRef}
-            className="absolute top-4 left-4 cursor-crosshair"
-            style={{ zIndex: 10 }}
-          />
-        )}
       </div>
 
       {/* Dialog para adicionar comentário */}
