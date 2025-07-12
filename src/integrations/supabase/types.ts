@@ -184,6 +184,7 @@ export type Database = {
           id: string
           imagem_url: string | null
           link_externo: string | null
+          permite_visitante: boolean | null
           prioridade: string
           status: string
           titulo: string
@@ -199,6 +200,7 @@ export type Database = {
           id?: string
           imagem_url?: string | null
           link_externo?: string | null
+          permite_visitante?: boolean | null
           prioridade?: string
           status?: string
           titulo: string
@@ -214,6 +216,7 @@ export type Database = {
           id?: string
           imagem_url?: string | null
           link_externo?: string | null
+          permite_visitante?: boolean | null
           prioridade?: string
           status?: string
           titulo?: string
