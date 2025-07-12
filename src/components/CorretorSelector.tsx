@@ -61,10 +61,11 @@ export const CorretorSelector = ({
     let newSelected = [...selectedCorretores];
 
     if (checked) {
-      if (newSelected.length >= 2) {
+      // Para simulados, manter limite de 2
+      if (isSimulado && newSelected.length >= 2) {
         toast({
           title: "Limite excedido",
-          description: "Você pode selecionar no máximo 2 corretores.",
+          description: "Simulados requerem exatamente 2 corretores.",
           variant: "destructive"
         });
         return;
@@ -75,6 +76,23 @@ export const CorretorSelector = ({
     }
 
     onCorretoresChange(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (isSimulado) {
+      toast({
+        title: "Não disponível para simulados",
+        description: "Simulados requerem exatamente 2 corretores.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (checked) {
+      onCorretoresChange(corretores.map(c => c.id));
+    } else {
+      onCorretoresChange([]);
+    }
   };
 
   if (loading) {
@@ -98,7 +116,7 @@ export const CorretorSelector = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="w-5 h-5" />
-          Seleção de Corretores {required && <span className="text-red-500">*</span>}
+          Selecione os corretores {required && <span className="text-red-500">*</span>}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -112,9 +130,18 @@ export const CorretorSelector = ({
         )}
 
         <div className="space-y-3">
-          <Label className="text-sm font-medium">
-            Selecione {isSimulado ? '2 corretores' : '1 ou 2 corretores'}:
-          </Label>
+          {!isSimulado && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="select-all-corretores"
+                checked={selectedCorretores.length === corretores.length && corretores.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
+              <Label htmlFor="select-all-corretores" className="font-medium">
+                Selecionar todos os corretores
+              </Label>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 gap-3">
             {corretores.map((corretor) => (
@@ -149,7 +176,7 @@ export const CorretorSelector = ({
         </div>
 
         <div className="text-xs text-muted-foreground">
-          <p>Corretores selecionados: {selectedCorretores.length}/2</p>
+          <p>Corretores selecionados: {selectedCorretores.length}/{corretores.length}</p>
           {isSimulado && selectedCorretores.length !== 2 && (
             <p className="text-red-500 mt-1">
               ⚠️ Simulados requerem exatamente 2 corretores

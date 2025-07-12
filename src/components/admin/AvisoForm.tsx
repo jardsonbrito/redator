@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { TurmaSelector } from "@/components/TurmaSelector";
@@ -39,6 +39,7 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
     corretoresDestinatarios: avisoEditando?.corretores_destinatarios || [],
     linkExterno: avisoEditando?.link_externo || "",
     dataAgendamento: avisoEditando?.data_agendamento ? new Date(avisoEditando.data_agendamento).toISOString().slice(0, 16) : "",
+    permiteVisitante: avisoEditando?.permite_visitante || false,
   });
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(avisoEditando?.imagem_url || null);
@@ -52,13 +53,23 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
 
   const statusOptions = [
     { value: "rascunho", label: "Rascunho" },
-    { value: "ativo", label: "Ativo" },
+    { value: "publicado", label: "Publicado" },
     { value: "inativo", label: "Inativo" },
     { value: "agendado", label: "Agendado" },
   ];
 
   const handleImageUpload = (url: string | null) => {
     setImageUrl(url);
+  };
+
+  const isFormValid = () => {
+    // Validação: pelo menos um destinatário deve estar selecionado
+    const hasDestinatarios = 
+      formData.turmasAutorizadas.length > 0 || 
+      formData.corretoresDestinatarios.length > 0 || 
+      formData.permiteVisitante;
+    
+    return formData.titulo.trim() && formData.descricao.trim() && hasDestinatarios;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,6 +79,21 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
       toast({
         title: "Erro de validação",
         description: "Título e descrição são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validação de destinatários
+    const hasDestinatarios = 
+      formData.turmasAutorizadas.length > 0 || 
+      formData.corretoresDestinatarios.length > 0 || 
+      formData.permiteVisitante;
+
+    if (!hasDestinatarios) {
+      toast({
+        title: "Erro de validação",
+        description: "Selecione pelo menos um destinatário (turma, corretor ou visitante)",
         variant: "destructive"
       });
       return;
@@ -86,6 +112,7 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
         link_externo: formData.linkExterno.trim() || null,
         data_agendamento: formData.dataAgendamento ? new Date(formData.dataAgendamento).toISOString() : null,
         imagem_url: imageUrl,
+        permite_visitante: formData.permiteVisitante,
       };
 
       if (avisoEditando) {
@@ -122,6 +149,7 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
         corretoresDestinatarios: [],
         linkExterno: "",
         dataAgendamento: "",
+        permiteVisitante: false,
       });
       setImageUrl(null);
 
@@ -149,6 +177,7 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
       corretoresDestinatarios: [],
       linkExterno: "",
       dataAgendamento: "",
+      permiteVisitante: false,
     });
     setImageUrl(null);
     onCancelEdit?.();
@@ -225,17 +254,19 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
           </div>
 
           <div>
-            <Label>Destinatários - Turmas</Label>
             <TurmaSelector
               selectedTurmas={formData.turmasAutorizadas}
               onTurmasChange={(turmas) => 
                 setFormData(prev => ({ ...prev, turmasAutorizadas: turmas }))
               }
+              permiteeVisitante={formData.permiteVisitante}
+              onPermiteVisitanteChange={(permite) =>
+                setFormData(prev => ({ ...prev, permiteVisitante: permite }))
+              }
             />
           </div>
 
           <div>
-            <Label>Destinatários - Corretores</Label>
             <CorretorSelector
               selectedCorretores={formData.corretoresDestinatarios}
               onCorretoresChange={(corretores) => 
@@ -274,7 +305,10 @@ export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormP
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading || !isFormValid()}
+            >
               {loading ? "Salvando..." : (avisoEditando ? "Atualizar" : "Criar")}
             </Button>
             {avisoEditando && (
