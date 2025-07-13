@@ -225,19 +225,37 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   // Carregar anotações e aplicar no Annotorious
   const carregarEAplicarAnotacoes = () => {
     if (!annotoriousRef.current || !imageDimensions.width || !imageDimensions.height) {
+      console.log('❌ Não pode aplicar anotações:', { 
+        annotorious: !!annotoriousRef.current, 
+        imageDimensions 
+      });
+      return;
+    }
+
+    if (anotacoes.length === 0) {
+      console.log('📝 Nenhuma anotação para aplicar');
       return;
     }
 
     try {
+      console.log('🔄 Iniciando aplicação de', anotacoes.length, 'anotações');
+      
       // Limpar anotações existentes primeiro
       annotoriousRef.current.clearAnnotations();
 
       // Converter anotações do banco para formato Annotorious
-      const annotoriousAnnotations = anotacoes.map((anotacao) => {
+      const annotoriousAnnotations = anotacoes.map((anotacao, index) => {
         const x = (anotacao.x_start / anotacao.imagem_largura) * 100;
         const y = (anotacao.y_start / anotacao.imagem_altura) * 100;
         const w = ((anotacao.x_end - anotacao.x_start) / anotacao.imagem_largura) * 100;
         const h = ((anotacao.y_end - anotacao.y_start) / anotacao.imagem_altura) * 100;
+
+        console.log(`📍 Anotação ${index + 1}:`, {
+          original: { x: anotacao.x_start, y: anotacao.y_start, w: anotacao.x_end - anotacao.x_start, h: anotacao.y_end - anotacao.y_start },
+          converted: { x, y, w, h },
+          competencia: anotacao.competencia,
+          numero: anotacao.numero_sequencial
+        });
 
         return {
           id: anotacao.id,
@@ -257,13 +275,24 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         };
       });
 
-      console.log('Aplicando anotações:', annotoriousAnnotations.length);
+      console.log('✅ Anotações convertidas para Annotorious:', annotoriousAnnotations.length);
 
-      // Aplicar anotações no Annotorious
-      annotoriousRef.current.setAnnotations(annotoriousAnnotations);
+      // Aplicar anotações no Annotorious uma por uma para debug
+      annotoriousAnnotations.forEach((annotation, index) => {
+        try {
+          annotoriousRef.current.addAnnotation(annotation);
+          console.log(`✅ Anotação ${index + 1} adicionada com sucesso`);
+        } catch (error) {
+          console.error(`❌ Erro ao adicionar anotação ${index + 1}:`, error);
+        }
+      });
+
+      // Verificar se as anotações foram aplicadas
+      const appliedAnnotations = annotoriousRef.current.getAnnotations();
+      console.log('🔍 Anotações atualmente no Annotorious:', appliedAnnotations.length);
 
     } catch (error) {
-      console.error('Erro ao carregar anotações:', error);
+      console.error('❌ Erro ao carregar anotações:', error);
     }
   };
 
