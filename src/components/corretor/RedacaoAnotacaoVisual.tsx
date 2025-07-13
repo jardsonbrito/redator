@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Download, Trash2, X, Maximize2, Minimize2, ZoomIn, ZoomOut } from "lucide-react";
+import { Save, Trash2, Maximize2, Minimize2 } from "lucide-react";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -14,8 +14,20 @@ import { Annotorious } from '@recogito/annotorious';
 // Importar CSS do Annotorious
 import '@recogito/annotorious/dist/annotorious.min.css';
 
-// Estilos customizados para anotações numeradas
+// Estilos customizados para desabilitar pop-ups nativos e estilizar anotações
 const customStyles = `
+  /* DESABILITAR POP-UPS NATIVOS DO ANNOTORIOUS */
+  .r6o-editor, 
+  .r6o-widget, 
+  .r6o-popup,
+  .r6o-annotation-popup {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  
+  /* Estilos para anotações por competência */
   .r6o-annotation.competencia-1 .r6o-shape {
     fill: rgba(229, 57, 53, 0.15) !important;
     stroke: #E53935 !important;
@@ -42,10 +54,12 @@ const customStyles = `
     stroke-width: 2px !important;
   }
   
-  .annotation-number {
+  /* Numeração das anotações */
+  .r6o-annotation::before {
+    content: attr(data-numero);
     position: absolute;
-    top: -8px;
-    left: -8px;
+    top: -10px;
+    left: -10px;
     background: #333;
     color: white;
     border-radius: 50%;
@@ -59,8 +73,24 @@ const customStyles = `
     z-index: 1000;
   }
   
+  /* Garantir que a imagem não se mova */
   .container-imagem-redacao img {
     transition: none !important;
+    transform: none !important;
+  }
+  
+  /* Estilo para contêiner em tela cheia */
+  .fullscreen-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    background: white !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 `;
 
@@ -132,7 +162,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const [comentarioTemp, setComentarioTemp] = useState("");
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isZoomed, setIsZoomed] = useState(false);
   const [contadorSequencial, setContadorSequencial] = useState(1);
 
   // Expor métodos via ref
@@ -177,15 +206,18 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
-  // Carregar anotações no Annotorious
+  // Carregar anotações e aplicar no Annotorious
   const carregarEAplicarAnotacoes = () => {
     if (!annotoriousRef.current || !imageDimensions.width || !imageDimensions.height) {
       return;
     }
 
     try {
+      // Limpar anotações existentes primeiro
+      annotoriousRef.current.clearAnnotations();
+
       // Converter anotações do banco para formato Annotorious
-      const annotoriousAnnotations = anotacoes.map((anotacao, index) => {
+      const annotoriousAnnotations = anotacoes.map((anotacao) => {
         const x = (anotacao.x_start / anotacao.imagem_largura) * 100;
         const y = (anotacao.y_start / anotacao.imagem_altura) * 100;
         const w = ((anotacao.x_end - anotacao.x_start) / anotacao.imagem_largura) * 100;
@@ -205,9 +237,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             purpose: anotacao.competencia,
             value: anotacao.comentario
           }],
-          numero: index + 1
+          numero: anotacao.numero_sequencial || 1
         };
       });
+
+      console.log('Aplicando anotações:', annotoriousAnnotations.length);
 
       // Aplicar anotações no Annotorious
       annotoriousRef.current.setAnnotations(annotoriousAnnotations);
@@ -241,6 +275,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           allowEmpty: false,
           drawOnSingleClick: false,
           readOnly: readonly,
+          widgets: [], // Desabilitar widgets nativos
           formatters: [
             function(annotation: any) {
               const competencia = annotation.body?.[0]?.purpose || competenciaSelecionada;
@@ -271,18 +306,16 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             console.log('Selection created:', selection);
             
             try {
-              // Extrair e validar coordenadas
-              const selectorValue = selection.target?.selector?.value;
-              if (!selectorValue) {
-                console.error('Seletor inválido:', selection);
-                return;
-              }
+              // Prevenir pop-up nativo
+              selection.preventDefault?.();
               
+              // Extrair coordenadas
+              const selectorValue = selection.target?.selector?.value || '';
               console.log('Selector value:', selectorValue);
               
               let x: number, y: number, width: number, height: number;
               
-              // Parse das coordenadas - suportar múltiplos formatos
+              // Parse das coordenadas
               if (selectorValue.includes('xywh=percent:')) {
                 const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
                 if (!match || match.length !== 5) {
@@ -291,7 +324,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 }
                 
                 const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
-                
                 x = Math.round(xPercent / 100 * imageDimensions.width);
                 y = Math.round(yPercent / 100 * imageDimensions.height);
                 width = Math.round(wPercent / 100 * imageDimensions.width);
@@ -302,21 +334,19 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                   console.error('Formato pixel inválido:', selectorValue);
                   return;
                 }
-                
                 [, x, y, width, height] = match.map(parseFloat);
               } else {
                 console.error('Formato desconhecido do seletor:', selectorValue);
                 return;
               }
 
-              console.log('Coordenadas calculadas:', { x, y, width, height });
-
-              // Validar coordenadas finais
+              // Validar coordenadas
               if (x < 0 || y < 0 || width <= 0 || height <= 0) {
-                console.error('Coordenadas fora dos limites:', { x, y, width, height });
+                console.error('Coordenadas inválidas:', { x, y, width, height });
                 return;
               }
 
+              // Criar dados da anotação
               const annotationData = {
                 id: `temp_${Date.now()}`,
                 target: {
@@ -336,8 +366,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
               setCurrentAnnotation(annotationData);
               setComentarioTemp("");
-              console.log('Abrindo popup de anotação');
-              setTimeout(() => setDialogAberto(true), 0);
+              setDialogAberto(true);
               
             } catch (error) {
               console.error('Erro ao processar seleção:', error);
@@ -362,6 +391,17 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           // Registrar eventos
           anno.on('createSelection', onCreateSelection);
           anno.on('clickAnnotation', onClickAnnotation);
+
+          // Desabilitar completamente editores nativos
+          setTimeout(() => {
+            const editors = document.querySelectorAll('.r6o-editor, .r6o-widget, .r6o-popup');
+            editors.forEach(el => {
+              (el as HTMLElement).style.display = 'none';
+              (el as HTMLElement).style.visibility = 'hidden';
+              (el as HTMLElement).style.opacity = '0';
+              (el as HTMLElement).style.pointerEvents = 'none';
+            });
+          }, 100);
 
           cleanupFunctions.push(() => {
             if (anno) {
@@ -511,71 +551,40 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       console.log('=== ANOTAÇÃO SALVA COM SUCESSO ===');
       console.log('data salva:', data);
 
-      // Criar anotação para Annotorious
-      const x = bounds.x / imageDimensions.width;
-      const y = bounds.y / imageDimensions.height;
-      const w = bounds.width / imageDimensions.width;
-      const h = bounds.height / imageDimensions.height;
-
-      const annotoriousAnnotation = {
-        id: data.id,
-        type: "Annotation",
-        target: {
-          selector: {
-            type: "FragmentSelector",
-            value: `xywh=percent:${x * 100},${y * 100},${w * 100},${h * 100}`
-          }
-        },
-        body: [{
-          type: "TextualBody",
-          purpose: competenciaSelecionada,
-          value: comentarioTemp.trim()
-        }],
-        numero: contadorSequencial
-      };
-
-      console.log('=== ADICIONANDO AO ANNOTORIOUS ===');
-      console.log('annotoriousAnnotation:', annotoriousAnnotation);
-
-      // Adicionar ao Annotorious
-      if (annotoriousRef.current) {
-        annotoriousRef.current.addAnnotation(annotoriousAnnotation);
-        console.log('Anotação adicionada ao Annotorious');
-      } else {
-        console.warn('Annotorious não disponível');
-      }
-
-      // Incrementar contador
+      // Incrementar contador para próxima marcação
       setContadorSequencial(prev => prev + 1);
 
+      // Atualizar lista de anotações
+      setAnotacoes(prev => [...prev, data as AnotacaoVisual]);
+
       toast({
-        title: "Anotação salva!",
-        description: "Comentário adicionado com sucesso.",
+        title: "Comentário salvo!",
+        description: "Marcação adicionada com sucesso.",
       });
 
       setDialogAberto(false);
       setCurrentAnnotation(null);
       setComentarioTemp("");
       
-      // Recarregar anotações
-      console.log('=== RECARREGANDO ANOTAÇÕES ===');
+      // Recarregar anotações para sincronizar
       await carregarAnotacoes();
-      console.log('=== FINALIZADO COM SUCESSO ===');
 
-    } catch (error) {
-      console.error('=== ERRO GERAL NO SALVAMENTO ===');
-      console.error('Error object:', error);
+    } catch (error: any) {
+      console.error('Erro ao salvar anotação:', error);
       
-      const errorMessage = error?.message || error?.toString() || 'Erro desconhecido ao salvar anotação';
-      console.error('Error message:', errorMessage);
+      let errorMessage = 'Erro desconhecido ao salvar comentário';
       
-      if (error?.stack) {
-        console.error('Error stack:', error.stack);
+      if (error && typeof error === 'object') {
+        if (error.message && typeof error.message === 'string') {
+          errorMessage = error.message;
+        } else if (typeof error.toString === 'function') {
+          errorMessage = error.toString();
+        }
       }
       
       toast({
-        title: "Erro ao salvar anotação",
-        description: `Erro detalhado: ${errorMessage}`,
+        title: "Erro ao salvar comentário",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -652,11 +661,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     setIsFullscreen(!isFullscreen);
   };
 
-  // Toggle zoom
-  const toggleZoom = () => {
-    setIsZoomed(!isZoomed);
-  };
-
   // Estilo dinâmico para a imagem
   const getImageStyle = () => {
     const baseStyle = {
@@ -665,17 +669,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       maxWidth: '100%',
       maxHeight: '100%',
       objectFit: 'contain' as const,
-      transition: 'transform 0.3s ease',
+      transition: 'none', // Remover transição para evitar movimento
     };
-
-    if (isZoomed) {
-      return {
-        ...baseStyle,
-        width: '95vw',
-        height: '95vh',
-        transform: 'scale(1)',
-      };
-    }
 
     if (isFullscreen) {
       return {
@@ -698,26 +693,15 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       <div className="mb-4 painel-correcao">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">Selecione a Competência</h3>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleZoom}
-              className="flex items-center gap-2"
-              title={isZoomed ? "Reduzir zoom" : "Ampliar com zoom"}
-            >
-              {isZoomed ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleFullscreen}
-              className="flex items-center gap-2"
-              title="Visualizar em tela cheia"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleFullscreen}
+            className="flex items-center gap-2"
+            title="Visualizar em tela cheia"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </Button>
         </div>
         <div className="flex gap-4 items-center">
           {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
@@ -741,8 +725,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         </div>
       </div>
 
-      {/* Barra flutuante para modo zoom/fullscreen */}
-      {(isFullscreen || isZoomed) && (
+      {/* Barra flutuante para tela cheia */}
+      {isFullscreen && (
         <div className="fixed top-4 left-4 z-50 bg-white rounded-lg shadow-lg p-3 border">
           <div className="flex gap-3 items-center">
             <span className="text-sm font-medium">Competência:</span>
@@ -767,10 +751,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             <Button
               variant="outline"
               size="sm"
-              onClick={isZoomed ? toggleZoom : toggleFullscreen}
+              onClick={toggleFullscreen}
               className="ml-2"
             >
-              {isZoomed ? <ZoomOut className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+              <Minimize2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -778,7 +762,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
       {/* Container da Imagem da Redação */}
       <div className={`container-imagem-redacao border rounded-lg relative painel-correcao ${
-        isFullscreen || isZoomed ? 'fixed inset-0 z-40 bg-white' : ''
+        isFullscreen ? 'fullscreen-container' : ''
       }`}>
         
         <div ref={containerRef} className="flex justify-center items-center w-full h-full p-4">
@@ -798,13 +782,13 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         <div className="mt-6 bg-gray-50 rounded-lg p-4">
           <h4 className="text-lg font-semibold mb-3">Comentários ({anotacoes.length})</h4>
           <div className="space-y-2">
-            {anotacoes.map((anotacao, index) => (
+            {anotacoes.map((anotacao) => (
               <div key={anotacao.id} className="flex items-start gap-3 p-3 bg-white rounded border">
                 <div 
                   className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
                   style={{ backgroundColor: anotacao.cor_marcacao }}
                 >
-                  {index + 1}
+                  {anotacao.numero_sequencial || 1}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
