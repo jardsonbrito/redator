@@ -14,6 +14,65 @@ import { Annotorious } from '@recogito/annotorious';
 // Importar CSS do Annotorious
 import '@recogito/annotorious/dist/annotorious.min.css';
 
+// Estilos customizados para anotações numeradas
+const customStyles = `
+  .r6o-annotation.competencia-1 .r6o-shape {
+    fill: rgba(229, 57, 53, 0.15) !important;
+    stroke: #E53935 !important;
+    stroke-width: 2px !important;
+  }
+  .r6o-annotation.competencia-2 .r6o-shape {
+    fill: rgba(67, 160, 71, 0.15) !important;
+    stroke: #43A047 !important;
+    stroke-width: 2px !important;
+  }
+  .r6o-annotation.competencia-3 .r6o-shape {
+    fill: rgba(33, 150, 243, 0.15) !important;
+    stroke: #2196F3 !important;
+    stroke-width: 2px !important;
+  }
+  .r6o-annotation.competencia-4 .r6o-shape {
+    fill: rgba(255, 152, 0, 0.15) !important;
+    stroke: #FF9800 !important;
+    stroke-width: 2px !important;
+  }
+  .r6o-annotation.competencia-5 .r6o-shape {
+    fill: rgba(156, 39, 176, 0.15) !important;
+    stroke: #9C27B0 !important;
+    stroke-width: 2px !important;
+  }
+  
+  .annotation-number {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    background: #333;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 1000;
+  }
+  
+  .container-imagem-redacao img {
+    transition: none !important;
+  }
+`;
+
+// Adicionar estilos ao head
+if (typeof document !== 'undefined' && !document.getElementById('custom-annotation-styles')) {
+  const styleSheet = document.createElement('style');
+  styleSheet.id = 'custom-annotation-styles';
+  styleSheet.type = 'text/css';
+  styleSheet.innerText = customStyles;
+  document.head.appendChild(styleSheet);
+}
+
 // Interface que corresponde à estrutura real da tabela no banco
 interface AnotacaoVisual {
   id?: string;
