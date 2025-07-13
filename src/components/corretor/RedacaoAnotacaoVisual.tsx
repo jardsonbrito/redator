@@ -542,12 +542,17 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     } catch (error) {
       console.error('=== ERRO GERAL NO SALVAMENTO ===');
       console.error('Error object:', error);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
+      
+      const errorMessage = error?.message || error?.toString() || 'Erro desconhecido ao salvar anotação';
+      console.error('Error message:', errorMessage);
+      
+      if (error?.stack) {
+        console.error('Error stack:', error.stack);
+      }
       
       toast({
         title: "Erro ao salvar anotação",
-        description: `Erro detalhado: ${error.message}`,
+        description: `Erro detalhado: ${errorMessage}`,
         variant: "destructive",
       });
     }
