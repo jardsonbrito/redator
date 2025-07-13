@@ -153,6 +153,12 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       try {
         console.log('Inicializando Annotorious...');
         
+        // Limpar anotação anterior se existir
+        if (annotoriousRef.current) {
+          annotoriousRef.current.destroy();
+          annotoriousRef.current = null;
+        }
+        
         // Criar instância do Annotorious
         anno = new Annotorious({
           image: imageRef.current!,
@@ -268,12 +274,16 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     
     return () => {
       clearTimeout(timer);
-      if (anno) {
-        anno.destroy();
+      if (anno && anno.destroy) {
+        try {
+          anno.destroy();
+        } catch (e) {
+          console.log('Erro ao destruir Annotorious:', e);
+        }
         annotoriousRef.current = null;
       }
     };
-  }, [imageLoaded, readonly, competenciaSelecionada, imageDimensions]);
+  }, [imageLoaded, readonly, imageDimensions]); // Removido competenciaSelecionada do array de dependências
 
   // Carregar e aplicar anotações no Annotorious
   const carregarEAplicarAnotacoes = async () => {
@@ -323,6 +333,13 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
   // Salvar anotação
   const salvarAnotacao = async () => {
+    console.log('=== INICIANDO SALVAMENTO ===');
+    console.log('currentAnnotation:', currentAnnotation);
+    console.log('comentarioTemp:', comentarioTemp);
+    console.log('competenciaSelecionada:', competenciaSelecionada);
+    console.log('redacaoId:', redacaoId);
+    console.log('corretorId:', corretorId);
+    
     if (!currentAnnotation || !comentarioTemp.trim()) {
       toast({
         title: "Erro",
@@ -334,6 +351,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
     try {
       const { bounds } = currentAnnotation;
+      console.log('bounds:', bounds);
 
       const novaAnotacao = {
         redacao_id: redacaoId,
@@ -350,7 +368,8 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         imagem_altura: imageDimensions.height
       };
 
-      console.log('Salvando anotação:', novaAnotacao);
+      console.log('=== DADOS DA ANOTAÇÃO ===');
+      console.log('novaAnotacao:', JSON.stringify(novaAnotacao, null, 2));
 
       const { data, error } = await supabase
         .from('marcacoes_visuais')
@@ -358,9 +377,21 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('=== RESULTADO DO SUPABASE ===');
+      console.log('data:', data);
+      console.log('error:', error);
 
-      console.log('Anotação salva com sucesso:', data);
+      if (error) {
+        console.error('=== ERRO SUPABASE DETALHADO ===');
+        console.error('message:', error.message);
+        console.error('details:', error.details);
+        console.error('hint:', error.hint);
+        console.error('code:', error.code);
+        throw error;
+      }
+
+      console.log('=== ANOTAÇÃO SALVA COM SUCESSO ===');
+      console.log('data salva:', data);
 
       // Criar anotação para Annotorious
       const x = bounds.x / imageDimensions.width;
@@ -384,9 +415,15 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         }]
       };
 
+      console.log('=== ADICIONANDO AO ANNOTORIOUS ===');
+      console.log('annotoriousAnnotation:', annotoriousAnnotation);
+
       // Adicionar ao Annotorious
       if (annotoriousRef.current) {
         annotoriousRef.current.addAnnotation(annotoriousAnnotation);
+        console.log('Anotação adicionada ao Annotorious');
+      } else {
+        console.warn('Annotorious não disponível');
       }
 
       toast({
@@ -399,13 +436,19 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       setComentarioTemp("");
       
       // Recarregar anotações
+      console.log('=== RECARREGANDO ANOTAÇÕES ===');
       await carregarAnotacoes();
+      console.log('=== FINALIZADO COM SUCESSO ===');
 
     } catch (error) {
-      console.error('Erro ao salvar anotação:', error);
+      console.error('=== ERRO GERAL NO SALVAMENTO ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
       toast({
         title: "Erro ao salvar anotação",
-        description: "Não foi possível salvar a anotação.",
+        description: `Erro detalhado: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -583,26 +626,36 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   }
 
   return (
-    <div className="w-full" style={{ width: '100vw', maxWidth: 'none' }}>
-      {/* Meta tag para desativar zoom em mobile */}
+    <div className={isFullscreen ? "fixed inset-0 z-50 bg-black" : "w-full"}>
+      {/* Estilos melhorados para imagem e correção do salto */}
       <style>
         {`
           .painel-correcao {
-            max-width: unset !important;
+            max-width: none !important;
             transform: none !important;
             overflow: visible !important;
             zoom: 1 !important;
           }
 
+          .container-imagem-redacao {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            min-height: ${isFullscreen ? '100vh' : '70vh'};
+            background: ${isFullscreen ? 'black' : 'white'};
+          }
+
           .img-redacao {
-            max-width: 100% !important;
-            max-height: 85vh !important;
+            max-width: ${isFullscreen ? '95vw' : '100%'} !important;
+            max-height: ${isFullscreen ? '95vh' : '75vh'} !important;
             width: auto !important;
             height: auto !important;
             display: block !important;
             margin: 0 auto !important;
             transform: none !important;
             cursor: default !important;
+            object-fit: contain !important;
           }
 
           .annotorious-annotationlayer .a9s-annotation {
@@ -620,6 +673,23 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             cursor: default !important;
           }
 
+          /* Prevenir scrolling desnecessário */
+          .painel-correcao .container-imagem-redacao {
+            overflow: hidden;
+          }
+
+          /* Modo tela cheia */
+          .fullscreen-controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          }
+
           @media (max-width: 1024px) {
             .painel-correcao {
               display: none !important;
@@ -628,9 +698,21 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         `}
       </style>
 
-      {/* Seletor de Competências - Bolinhas coloridas */}
+      {/* Seletor de Competências - Layout melhorado com lupa */}
       <div className="mb-4 painel-correcao">
-        <h3 className="text-lg font-semibold mb-3">Selecione a Competência</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold">Selecione a Competência</h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleFullscreen}
+            className="flex items-center gap-2"
+            title="Visualizar em tela cheia"
+          >
+            <Maximize2 className="w-4 h-4" />
+            Ampliar
+          </Button>
+        </div>
         <div className="flex gap-4 items-center">
           {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
             <button
@@ -688,34 +770,33 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         </div>
       )}
 
-      {/* Imagem da Redação */}
-      <div ref={containerRef} className="border rounded-lg p-4 bg-white relative painel-correcao" style={{ width: '100%', overflowX: 'auto' }}>
-        {/* Botão de tela cheia */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleFullscreen}
-          className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white"
-          title="Visualizar em tela cheia"
-        >
-          <Maximize2 className="w-4 h-4" />
-        </Button>
+      {/* Container da Imagem da Redação com melhor estrutura */}
+      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao ${isFullscreen ? 'fixed inset-0 z-40' : ''}`}>
+        {!isFullscreen && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleFullscreen}
+            className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white"
+            title="Visualizar em tela cheia"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </Button>
+        )}
         
-        <img 
-          ref={imageRef}
-          src={imagemUrl} 
-          alt="Redação para correção" 
-          className="img-redacao block mx-auto"
-          onLoad={handleImageLoad}
-          style={{ 
-            userSelect: 'none', 
-            maxWidth: '100%',
-            maxHeight: '85vh',
-            width: 'auto', 
-            height: 'auto',
-            cursor: 'default' // Cursor sempre padrão
-          }}
-        />
+        <div ref={containerRef} className="flex justify-center items-center w-full h-full p-4">
+          <img 
+            ref={imageRef}
+            src={imagemUrl} 
+            alt="Redação para correção" 
+            className="img-redacao"
+            onLoad={handleImageLoad}
+            style={{ 
+              userSelect: 'none',
+              cursor: 'default'
+            }}
+          />
+        </div>
       </div>
 
       {/* Dialog para adicionar comentário */}
