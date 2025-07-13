@@ -189,19 +189,31 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           // Event listeners para modo de edição
           anno.on('createSelection', (selection: any) => {
             console.log('Selection created:', selection);
+            console.log('imageDimensions:', imageDimensions);
             
             // Cancelar seleção padrão e abrir nosso popup
             setTimeout(() => {
               anno.cancelSelected();
               
-              // Extrair coordenadas da seleção (já em valores relativos)
-              const bounds = selection.target.selector.value;
+              // Extrair coordenadas da seleção (string no formato "xywh=percent:x,y,w,h")
+              const selectorValue = selection.target.selector.value;
+              console.log('selectorValue:', selectorValue);
+              
+              // Parse do valor do seletor
+              const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+              if (!match) {
+                console.error('Formato inválido do seletor:', selectorValue);
+                return;
+              }
+              
+              const [, xPercent, yPercent, wPercent, hPercent] = match.map(Number);
+              console.log('Valores em porcentagem:', { xPercent, yPercent, wPercent, hPercent });
               
               // Converter para coordenadas de pixel absolutas
-              const x = Math.round(bounds.x * imageDimensions.width);
-              const y = Math.round(bounds.y * imageDimensions.height);
-              const width = Math.round(bounds.w * imageDimensions.width);
-              const height = Math.round(bounds.h * imageDimensions.height);
+              const x = Math.round(xPercent * imageDimensions.width);
+              const y = Math.round(yPercent * imageDimensions.height);
+              const width = Math.round(wPercent * imageDimensions.width);
+              const height = Math.round(hPercent * imageDimensions.height);
 
               console.log('Coordenadas calculadas:', { x, y, width, height, imageDimensions });
 
