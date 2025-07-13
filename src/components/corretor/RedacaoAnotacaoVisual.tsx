@@ -209,11 +209,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             console.log('Selection created:', selection);
             
             try {
-              // Cancelar seleção padrão imediatamente
-              if (anno && anno.cancelSelected) {
-                anno.cancelSelected();
-              }
-              
               // Extrair e validar coordenadas
               const selectorValue = selection.target?.selector?.value;
               if (!selectorValue) {
@@ -223,26 +218,34 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
               
               console.log('Selector value:', selectorValue);
               
-              // Parse das coordenadas (formato: "xywh=percent:x,y,w,h")
-              const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
-              if (!match || match.length !== 5) {
-                console.error('Formato inválido do seletor:', selectorValue);
+              let x: number, y: number, width: number, height: number;
+              
+              // Parse das coordenadas - suportar múltiplos formatos
+              if (selectorValue.includes('xywh=percent:')) {
+                const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+                if (!match || match.length !== 5) {
+                  console.error('Formato percent inválido:', selectorValue);
+                  return;
+                }
+                
+                const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
+                
+                x = Math.round(xPercent / 100 * imageDimensions.width);
+                y = Math.round(yPercent / 100 * imageDimensions.height);
+                width = Math.round(wPercent / 100 * imageDimensions.width);
+                height = Math.round(hPercent / 100 * imageDimensions.height);
+              } else if (selectorValue.includes('xywh=pixel:')) {
+                const match = selectorValue.match(/xywh=pixel:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+                if (!match || match.length !== 5) {
+                  console.error('Formato pixel inválido:', selectorValue);
+                  return;
+                }
+                
+                [, x, y, width, height] = match.map(parseFloat);
+              } else {
+                console.error('Formato desconhecido do seletor:', selectorValue);
                 return;
               }
-              
-              const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
-              
-              // Validar porcentagens
-              if (isNaN(xPercent) || isNaN(yPercent) || isNaN(wPercent) || isNaN(hPercent)) {
-                console.error('Coordenadas inválidas:', { xPercent, yPercent, wPercent, hPercent });
-                return;
-              }
-              
-              // Converter para pixels
-              const x = Math.round(xPercent / 100 * imageDimensions.width);
-              const y = Math.round(yPercent / 100 * imageDimensions.height);
-              const width = Math.round(wPercent / 100 * imageDimensions.width);
-              const height = Math.round(hPercent / 100 * imageDimensions.height);
 
               console.log('Coordenadas calculadas:', { x, y, width, height });
 
@@ -270,7 +273,9 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
               setCurrentAnnotation(annotationData);
               setComentarioTemp("");
-              setDialogAberto(true);
+              console.log('Abrindo popup de anotação');
+              // Forçar abertura imediata do dialog
+              setTimeout(() => setDialogAberto(true), 0);
               
             } catch (error) {
               console.error('Erro ao processar seleção:', error);
@@ -292,7 +297,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             }
           };
 
-          // Adicionar event listeners
+          // Registrar eventos corretamente (sem duplicação)
           anno.on('createSelection', onCreateSelection);
           anno.on('clickAnnotation', onClickAnnotation);
 
