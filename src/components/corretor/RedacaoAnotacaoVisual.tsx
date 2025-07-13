@@ -89,8 +89,24 @@ const customStyles = `
     z-index: 9999 !important;
     background: white !important;
     display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
+    padding-top: 80px !important;
+  }
+  
+  /* Barra flutuante centralizada em tela cheia */
+  .fullscreen-competency-bar {
+    position: fixed !important;
+    top: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 10000 !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    padding: 16px !important;
+    border: 1px solid #e5e7eb !important;
   }
 `;
 
@@ -725,16 +741,16 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         </div>
       </div>
 
-      {/* Barra flutuante para tela cheia */}
+      {/* Barra flutuante centralizada para tela cheia */}
       {isFullscreen && (
-        <div className="fixed top-4 left-4 z-50 bg-white rounded-lg shadow-lg p-3 border">
+        <div className="fullscreen-competency-bar">
           <div className="flex gap-3 items-center">
             <span className="text-sm font-medium">Competência:</span>
             {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
               <button
                 key={num}
                 onClick={() => setCompetenciaSelecionada(parseInt(num))}
-                className={`w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                className={`w-7 h-7 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
                   competenciaSelecionada === parseInt(num) 
                     ? 'border-gray-800 shadow-lg scale-110' 
                     : 'border-gray-300 hover:border-gray-500'
@@ -742,7 +758,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 style={{ 
                   backgroundColor: info.cor,
                   boxShadow: competenciaSelecionada === parseInt(num) 
-                    ? `0 0 0 2px ${info.cor}33` 
+                    ? `0 0 0 3px ${info.cor}33` 
                     : 'none'
                 }}
                 title={info.label}
@@ -752,7 +768,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               variant="outline"
               size="sm"
               onClick={toggleFullscreen}
-              className="ml-2"
+              className="ml-3"
+              title="Sair da tela cheia"
             >
               <Minimize2 className="w-4 h-4" />
             </Button>
