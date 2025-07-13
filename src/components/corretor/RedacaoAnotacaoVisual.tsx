@@ -350,8 +350,13 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
 
     try {
-      const { bounds } = currentAnnotation;
+      const bounds = currentAnnotation.bounds;
       console.log('bounds:', bounds);
+
+      if (!bounds || bounds.x === undefined || bounds.y === undefined) {
+        console.error('Bounds inválido:', bounds);
+        throw new Error('Coordenadas da anotação não encontradas');
+      }
 
       const novaAnotacao = {
         redacao_id: redacaoId,
