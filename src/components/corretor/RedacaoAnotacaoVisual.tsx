@@ -261,35 +261,47 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           id: anotacao.id,
           type: "Annotation",
           target: {
+            source: imagemUrl,
             selector: {
               type: "FragmentSelector",
+              conformsTo: "http://www.w3.org/TR/media-frags/",
               value: `xywh=percent:${x},${y},${w},${h}`
             }
           },
           body: [{
             type: "TextualBody",
-            purpose: anotacao.competencia,
+            purpose: "commenting",
             value: anotacao.comentario
           }],
+          // Dados customizados para a competência e numeração
+          competencia: anotacao.competencia,
           numero: anotacao.numero_sequencial || 1
         };
       });
 
       console.log('✅ Anotações convertidas para Annotorious:', annotoriousAnnotations.length);
 
-      // Aplicar anotações no Annotorious uma por uma para debug
-      annotoriousAnnotations.forEach((annotation, index) => {
-        try {
-          annotoriousRef.current.addAnnotation(annotation);
-          console.log(`✅ Anotação ${index + 1} adicionada com sucesso`);
-        } catch (error) {
-          console.error(`❌ Erro ao adicionar anotação ${index + 1}:`, error);
-        }
-      });
-
-      // Verificar se as anotações foram aplicadas
-      const appliedAnnotations = annotoriousRef.current.getAnnotations();
-      console.log('🔍 Anotações atualmente no Annotorious:', appliedAnnotations.length);
+      // Usar setAnnotations para aplicar todas de uma vez
+      try {
+        annotoriousRef.current.setAnnotations(annotoriousAnnotations);
+        console.log(`✅ ${annotoriousAnnotations.length} anotações aplicadas com sucesso`);
+        
+        // Verificar se as anotações foram aplicadas
+        const appliedAnnotations = annotoriousRef.current.getAnnotations();
+        console.log('🔍 Anotações atualmente no Annotorious:', appliedAnnotations.length);
+      } catch (error) {
+        console.error('❌ Erro ao aplicar anotações:', error);
+        
+        // Fallback: tentar adicionar uma por uma
+        annotoriousAnnotations.forEach((annotation, index) => {
+          try {
+            annotoriousRef.current.addAnnotation(annotation);
+            console.log(`✅ Anotação ${index + 1} adicionada individualmente`);
+          } catch (err) {
+            console.error(`❌ Erro na anotação ${index + 1}:`, err);
+          }
+        });
+      }
 
     } catch (error) {
       console.error('❌ Erro ao carregar anotações:', error);
@@ -523,8 +535,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
   // Atualizar anotações quando mudarem
   useEffect(() => {
-    if (annotoriousRef.current && anotacoes.length >= 0) {
-      carregarEAplicarAnotacoes();
+    if (annotoriousRef.current && imageDimensions.width > 0) {
+      // Aguardar um frame para garantir que o Annotorious está pronto
+      requestAnimationFrame(() => {
+        carregarEAplicarAnotacoes();
+      });
     }
   }, [anotacoes, imageDimensions]);
 
