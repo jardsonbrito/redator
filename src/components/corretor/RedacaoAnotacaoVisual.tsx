@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Download, Trash2, X } from "lucide-react";
+import { Save, Download, Trash2, X, Maximize2, Minimize2 } from "lucide-react";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -70,6 +70,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const { toast } = useToast();
 
   // Expor métodos para o componente pai
@@ -491,6 +492,33 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
   };
 
+  // Função para entrar/sair de tela cheia
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
+
+  // Detectar saída de tela cheia via ESC
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   // Carregar anotações no início
   useEffect(() => {
     carregarAnotacoes();
@@ -600,37 +628,79 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         `}
       </style>
 
-      {/* Seletor de Competências */}
-      <div className="mb-6 painel-correcao">
-        <h3 className="text-lg font-semibold mb-3">Selecione a Competência para Marcar</h3>
-        <div className="flex flex-wrap gap-2">
+      {/* Seletor de Competências - Bolinhas coloridas */}
+      <div className="mb-4 painel-correcao">
+        <h3 className="text-lg font-semibold mb-3">Selecione a Competência</h3>
+        <div className="flex gap-4 items-center">
           {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
-            <Button
+            <button
               key={num}
-              variant={competenciaSelecionada === parseInt(num) ? "default" : "outline"}
               onClick={() => setCompetenciaSelecionada(parseInt(num))}
-              className="flex items-center gap-2"
-              style={{
-                backgroundColor: competenciaSelecionada === parseInt(num) ? info.cor : 'transparent',
-                borderColor: info.cor,
-                color: competenciaSelecionada === parseInt(num) ? 'white' : info.cor
+              className={`w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                competenciaSelecionada === parseInt(num) 
+                  ? 'border-gray-800 shadow-lg scale-110' 
+                  : 'border-gray-300 hover:border-gray-500'
+              }`}
+              style={{ 
+                backgroundColor: info.cor,
+                boxShadow: competenciaSelecionada === parseInt(num) 
+                  ? `0 0 0 3px ${info.cor}33` 
+                  : 'none'
               }}
-            >
-              <div 
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: info.cor }}
-              ></div>
-              {info.label}
-            </Button>
+              title={info.label}
+            />
           ))}
         </div>
-        <p className="text-sm text-gray-600 mt-2">
-          Selecione uma competência e clique e arraste sobre a imagem para criar uma marcação.
-        </p>
       </div>
+
+      {/* Barra flutuante para tela cheia */}
+      {isFullscreen && (
+        <div className="fixed top-4 left-4 z-50 bg-white rounded-lg shadow-lg p-3 border">
+          <div className="flex gap-3 items-center">
+            <span className="text-sm font-medium">Competência:</span>
+            {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
+              <button
+                key={num}
+                onClick={() => setCompetenciaSelecionada(parseInt(num))}
+                className={`w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                  competenciaSelecionada === parseInt(num) 
+                    ? 'border-gray-800 shadow-lg scale-110' 
+                    : 'border-gray-300 hover:border-gray-500'
+                }`}
+                style={{ 
+                  backgroundColor: info.cor,
+                  boxShadow: competenciaSelecionada === parseInt(num) 
+                    ? `0 0 0 2px ${info.cor}33` 
+                    : 'none'
+                }}
+                title={info.label}
+              />
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleFullscreen}
+              className="ml-2"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Imagem da Redação */}
       <div ref={containerRef} className="border rounded-lg p-4 bg-white relative painel-correcao" style={{ width: '100%', overflowX: 'auto' }}>
+        {/* Botão de tela cheia */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleFullscreen}
+          className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white"
+          title="Visualizar em tela cheia"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </Button>
+        
         <img 
           ref={imageRef}
           src={imagemUrl} 
