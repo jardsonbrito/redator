@@ -135,7 +135,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 
   // Inicializar Annotorious
   useEffect(() => {
-    if (!imageRef.current || !imageLoaded) return;
+    if (!imageRef.current || !imageLoaded || imageDimensions.width === 0) return;
 
     // Verificar se é desktop (>= 1024px)
     if (window.innerWidth < 1024) {
@@ -148,23 +148,39 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
 
     let anno: any = null;
+    let cleanupFunctions: (() => void)[] = [];
 
     const initAnnotorious = async () => {
       try {
         console.log('Inicializando Annotorious...');
+        console.log('Image dimensions:', imageDimensions);
         
-        // Limpar anotação anterior se existir
+        // Limpar instância anterior
         if (annotoriousRef.current) {
-          annotoriousRef.current.destroy();
+          try {
+            annotoriousRef.current.destroy();
+          } catch (e) {
+            console.log('Erro ao destruir instância anterior:', e);
+          }
           annotoriousRef.current = null;
         }
+
+        // Aguardar um momento para garantir que a imagem esteja totalmente carregada
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Criar instância do Annotorious
+        // Verificar se a imagem ainda existe e está carregada
+        if (!imageRef.current || !imageRef.current.complete) {
+          console.error('Imagem não está pronta');
+          return;
+        }
+        
+        // Configuração mais robusta do Annotorious
         anno = new Annotorious({
-          image: imageRef.current!,
-          disableEditor: true, // Desabilitamos o editor padrão
+          image: imageRef.current,
+          disableEditor: true,
           allowEmpty: false,
           drawOnSingleClick: false,
+          readOnly: readonly,
           formatters: [
             function(annotation: any) {
               const competencia = annotation.body?.[0]?.purpose || competenciaSelecionada;
@@ -177,45 +193,64 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
                 
                 return {
                   className: `competencia-${competencia}`,
-                  style: `fill: rgba(${r}, ${g}, ${b}, 0.12); stroke: ${corCompetencia.cor}; stroke-width: 1px; cursor: pointer;`
+                  style: `fill: rgba(${r}, ${g}, ${b}, 0.15); stroke: ${corCompetencia.cor}; stroke-width: 2px; cursor: pointer;`
                 };
               }
-              return {};
+              return {
+                style: 'fill: rgba(255, 0, 0, 0.15); stroke: #ff0000; stroke-width: 2px; cursor: pointer;'
+              };
             }
           ]
         });
 
         if (!readonly) {
-          // Event listeners para modo de edição
-          anno.on('createSelection', (selection: any) => {
+          // Configurar eventos para modo de edição
+          const onCreateSelection = (selection: any) => {
             console.log('Selection created:', selection);
-            console.log('imageDimensions:', imageDimensions);
             
-            // Cancelar seleção padrão e abrir nosso popup
-            setTimeout(() => {
-              anno.cancelSelected();
+            try {
+              // Cancelar seleção padrão imediatamente
+              if (anno && anno.cancelSelected) {
+                anno.cancelSelected();
+              }
               
-              // Extrair coordenadas da seleção (string no formato "xywh=percent:x,y,w,h")
-              const selectorValue = selection.target.selector.value;
-              console.log('selectorValue:', selectorValue);
+              // Extrair e validar coordenadas
+              const selectorValue = selection.target?.selector?.value;
+              if (!selectorValue) {
+                console.error('Seletor inválido:', selection);
+                return;
+              }
               
-              // Parse do valor do seletor
+              console.log('Selector value:', selectorValue);
+              
+              // Parse das coordenadas (formato: "xywh=percent:x,y,w,h")
               const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
-              if (!match) {
+              if (!match || match.length !== 5) {
                 console.error('Formato inválido do seletor:', selectorValue);
                 return;
               }
               
-              const [, xPercent, yPercent, wPercent, hPercent] = match.map(Number);
-              console.log('Valores em porcentagem:', { xPercent, yPercent, wPercent, hPercent });
+              const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
               
-              // Converter para coordenadas de pixel absolutas
-              const x = Math.round(xPercent * imageDimensions.width);
-              const y = Math.round(yPercent * imageDimensions.height);
-              const width = Math.round(wPercent * imageDimensions.width);
-              const height = Math.round(hPercent * imageDimensions.height);
+              // Validar porcentagens
+              if (isNaN(xPercent) || isNaN(yPercent) || isNaN(wPercent) || isNaN(hPercent)) {
+                console.error('Coordenadas inválidas:', { xPercent, yPercent, wPercent, hPercent });
+                return;
+              }
+              
+              // Converter para pixels
+              const x = Math.round(xPercent / 100 * imageDimensions.width);
+              const y = Math.round(yPercent / 100 * imageDimensions.height);
+              const width = Math.round(wPercent / 100 * imageDimensions.width);
+              const height = Math.round(hPercent / 100 * imageDimensions.height);
 
-              console.log('Coordenadas calculadas:', { x, y, width, height, imageDimensions });
+              console.log('Coordenadas calculadas:', { x, y, width, height });
+
+              // Validar coordenadas finais
+              if (x < 0 || y < 0 || width <= 0 || height <= 0) {
+                console.error('Coordenadas fora dos limites:', { x, y, width, height });
+                return;
+              }
 
               const annotationData = {
                 id: `temp_${Date.now()}`,
@@ -236,39 +271,70 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
               setCurrentAnnotation(annotationData);
               setComentarioTemp("");
               setDialogAberto(true);
-            }, 10);
-          });
+              
+            } catch (error) {
+              console.error('Erro ao processar seleção:', error);
+            }
+          };
 
-          anno.on('clickAnnotation', (annotation: any) => {
-            // Modo edição - confirmar remoção
-            const comment = annotation.body?.[0]?.value || '';
-            const competencia = annotation.body?.[0]?.purpose || 1;
-            const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
-            
-            const shouldDelete = confirm(`Remover esta anotação?\n\n${corCompetencia?.label}: ${comment}`);
-            if (shouldDelete && annotation.id) {
-              removerAnotacao(annotation.id);
+          const onClickAnnotation = (annotation: any) => {
+            try {
+              const comment = annotation.body?.[0]?.value || '';
+              const competencia = annotation.body?.[0]?.purpose || 1;
+              const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
+              
+              const shouldDelete = confirm(`Remover esta anotação?\n\n${corCompetencia?.label}: ${comment}`);
+              if (shouldDelete && annotation.id) {
+                removerAnotacao(annotation.id);
+              }
+            } catch (error) {
+              console.error('Erro ao processar clique na anotação:', error);
+            }
+          };
+
+          // Adicionar event listeners
+          anno.on('createSelection', onCreateSelection);
+          anno.on('clickAnnotation', onClickAnnotation);
+
+          // Adicionar às funções de limpeza
+          cleanupFunctions.push(() => {
+            if (anno) {
+              anno.off('createSelection', onCreateSelection);
+              anno.off('clickAnnotation', onClickAnnotation);
             }
           });
         } else {
-          // Event listeners para modo de leitura
-          anno.on('clickAnnotation', (annotation: any) => {
-            const comment = annotation.body?.[0]?.value || '';
-            const competencia = annotation.body?.[0]?.purpose || 1;
-            const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
-            
-            toast({
-              title: `${corCompetencia?.label || 'Anotação'}`,
-              description: comment,
-              duration: 4000,
-            });
+          // Modo de leitura
+          const onClickAnnotation = (annotation: any) => {
+            try {
+              const comment = annotation.body?.[0]?.value || '';
+              const competencia = annotation.body?.[0]?.purpose || 1;
+              const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
+              
+              toast({
+                title: `${corCompetencia?.label || 'Anotação'}`,
+                description: comment,
+                duration: 4000,
+              });
+            } catch (error) {
+              console.error('Erro ao mostrar anotação:', error);
+            }
+          };
+
+          anno.on('clickAnnotation', onClickAnnotation);
+          cleanupFunctions.push(() => {
+            if (anno) {
+              anno.off('clickAnnotation', onClickAnnotation);
+            }
           });
         }
 
         annotoriousRef.current = anno;
 
         // Carregar anotações existentes
-        await carregarEAplicarAnotacoes();
+        setTimeout(() => {
+          carregarEAplicarAnotacoes();
+        }, 100);
 
         console.log('Annotorious inicializado com sucesso');
 
@@ -282,11 +348,22 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       }
     };
 
-    const timer = setTimeout(initAnnotorious, 100);
+    // Inicializar após um pequeno delay
+    const timer = setTimeout(initAnnotorious, 200);
     
     return () => {
       clearTimeout(timer);
-      if (anno && anno.destroy) {
+      
+      // Executar todas as funções de limpeza
+      cleanupFunctions.forEach(cleanup => {
+        try {
+          cleanup();
+        } catch (e) {
+          console.log('Erro na limpeza:', e);
+        }
+      });
+      
+      if (anno) {
         try {
           anno.destroy();
         } catch (e) {
@@ -295,7 +372,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         annotoriousRef.current = null;
       }
     };
-  }, [imageLoaded, readonly, imageDimensions]); // Removido competenciaSelecionada do array de dependências
+  }, [imageLoaded, imageDimensions.width, imageDimensions.height, readonly]);
 
   // Carregar e aplicar anotações no Annotorious
   const carregarEAplicarAnotacoes = async () => {
