@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Download, Trash2, X, Maximize2, Minimize2 } from "lucide-react";
+import { Save, Download, Trash2, X, Maximize2, Minimize2, ZoomIn, ZoomOut } from "lucide-react";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -29,6 +29,7 @@ interface AnotacaoVisual {
   y_end: number;
   imagem_largura: number;
   imagem_altura: number;
+  numero_sequencial?: number;
   criado_em?: string;
   atualizado_em?: string;
 }
@@ -48,136 +49,136 @@ interface RedacaoAnotacaoVisualRef {
 const CORES_COMPETENCIAS = {
   1: { cor: '#E53935', nome: 'Vermelho', label: 'Competência 1' },
   2: { cor: '#43A047', nome: 'Verde', label: 'Competência 2' },
-  3: { cor: '#1E88E5', nome: 'Azul', label: 'Competência 3' },
-  4: { cor: '#8E24AA', nome: 'Roxo', label: 'Competência 4' },
-  5: { cor: '#FB8C00', nome: 'Laranja', label: 'Competência 5' },
-};
+  3: { cor: '#2196F3', nome: 'Azul', label: 'Competência 3' },
+  4: { cor: '#FF9800', nome: 'Laranja', label: 'Competência 4' },
+  5: { cor: '#9C27B0', nome: 'Roxo', label: 'Competência 5' }
+} as const;
 
-export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps>(({ 
-  imagemUrl, 
-  redacaoId, 
+const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps>(({
+  imagemUrl,
+  redacaoId,
   corretorId,
-  readonly = false 
+  readonly = false
 }, ref) => {
+  const { toast } = useToast();
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const annotoriousRef = useRef<any>(null);
   
+  // Estados
   const [competenciaSelecionada, setCompetenciaSelecionada] = useState<number>(1);
-  const [dialogAberto, setDialogAberto] = useState<boolean>(false);
-  const [comentarioTemp, setComentarioTemp] = useState<string>("");
-  const [currentAnnotation, setCurrentAnnotation] = useState<any>(null);
   const [anotacoes, setAnotacoes] = useState<AnotacaoVisual[]>([]);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [currentAnnotation, setCurrentAnnotation] = useState<any>(null);
+  const [comentarioTemp, setComentarioTemp] = useState("");
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { toast } = useToast();
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [contadorSequencial, setContadorSequencial] = useState(1);
 
-  // Expor métodos para o componente pai
+  // Expor métodos via ref
   useImperativeHandle(ref, () => ({
     salvarTodasAnotacoes,
     gerarImagemComAnotacoes
   }));
 
-  // Carregar anotações existentes
-  const carregarAnotacoes = async () => {
-    try {
-      const { data: marcacoesData, error: marcacoesError } = await supabase
-        .from('marcacoes_visuais')
-        .select('*')
-        .eq('redacao_id', redacaoId);
-      
-      if (marcacoesError) {
-        console.error('Erro ao carregar anotações:', marcacoesError);
-        setAnotacoes([]);
-        return;
-      }
-      
-      const convertedData: AnotacaoVisual[] = (marcacoesData || []).map(item => ({
-        id: item.id,
-        redacao_id: item.redacao_id,
-        corretor_id: item.corretor_id,
-        competencia: item.competencia,
-        cor_marcacao: item.cor_marcacao,
-        comentario: item.comentario,
-        tabela_origem: item.tabela_origem,
-        x_start: Number(item.x_start),
-        y_start: Number(item.y_start),
-        x_end: Number(item.x_end),
-        y_end: Number(item.y_end),
-        imagem_largura: item.imagem_largura,
-        imagem_altura: item.imagem_altura,
-        criado_em: item.criado_em,
-        atualizado_em: item.atualizado_em
-      }));
-      
-      setAnotacoes(convertedData);
-    } catch (error) {
-      console.error('Erro ao carregar anotações:', error);
-      setAnotacoes([]);
+  // Função para carregar dimensões da imagem
+  const handleImageLoad = () => {
+    if (imageRef.current) {
+      const { naturalWidth, naturalHeight } = imageRef.current;
+      setImageDimensions({ width: naturalWidth, height: naturalHeight });
+      console.log('Dimensões da imagem carregadas:', { width: naturalWidth, height: naturalHeight });
     }
   };
 
-  // Handle image load
-  const handleImageLoad = () => {
-    if (imageRef.current) {
-      setImageDimensions({
-        width: imageRef.current.naturalWidth,
-        height: imageRef.current.naturalHeight
+  // Carregar anotações do banco
+  const carregarAnotacoes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('marcacoes_visuais')
+        .select('*')
+        .eq('redacao_id', redacaoId)
+        .eq('tabela_origem', 'redacoes_enviadas')
+        .order('criado_em', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao carregar anotações:', error);
+        return;
+      }
+
+      console.log('Anotações carregadas:', data);
+      setAnotacoes(data || []);
+      
+      // Definir próximo número sequencial
+      const proximoNumero = (data?.length || 0) + 1;
+      setContadorSequencial(proximoNumero);
+      
+    } catch (error) {
+      console.error('Erro ao carregar anotações:', error);
+    }
+  };
+
+  // Carregar anotações no Annotorious
+  const carregarEAplicarAnotacoes = () => {
+    if (!annotoriousRef.current || !imageDimensions.width || !imageDimensions.height) {
+      return;
+    }
+
+    try {
+      // Converter anotações do banco para formato Annotorious
+      const annotoriousAnnotations = anotacoes.map((anotacao, index) => {
+        const x = (anotacao.x_start / anotacao.imagem_largura) * 100;
+        const y = (anotacao.y_start / anotacao.imagem_altura) * 100;
+        const w = ((anotacao.x_end - anotacao.x_start) / anotacao.imagem_largura) * 100;
+        const h = ((anotacao.y_end - anotacao.y_start) / anotacao.imagem_altura) * 100;
+
+        return {
+          id: anotacao.id,
+          type: "Annotation",
+          target: {
+            selector: {
+              type: "FragmentSelector",
+              value: `xywh=percent:${x},${y},${w},${h}`
+            }
+          },
+          body: [{
+            type: "TextualBody",
+            purpose: anotacao.competencia,
+            value: anotacao.comentario
+          }],
+          numero: index + 1
+        };
       });
-      setImageLoaded(true);
-      console.log('Imagem carregada:', {
-        width: imageRef.current.naturalWidth,
-        height: imageRef.current.naturalHeight
-      });
+
+      // Aplicar anotações no Annotorious
+      annotoriousRef.current.setAnnotations(annotoriousAnnotations);
+
+    } catch (error) {
+      console.error('Erro ao carregar anotações:', error);
     }
   };
 
   // Inicializar Annotorious
   useEffect(() => {
-    if (!imageRef.current || !imageLoaded || imageDimensions.width === 0) return;
-
-    // Verificar se é desktop (>= 1024px)
-    if (window.innerWidth < 1024) {
-      toast({
-        title: "Aviso",
-        description: "A ferramenta de correção visual não está disponível para dispositivos móveis.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    let anno: any = null;
     let cleanupFunctions: (() => void)[] = [];
 
-    const initAnnotorious = async () => {
+    const initAnnotorious = () => {
+      if (!imageRef.current || !imageDimensions.width) {
+        return;
+      }
+
       try {
         console.log('Inicializando Annotorious...');
-        console.log('Image dimensions:', imageDimensions);
         
-        // Limpar instância anterior
+        // Destruir instância anterior se existir
         if (annotoriousRef.current) {
-          try {
-            annotoriousRef.current.destroy();
-          } catch (e) {
-            console.log('Erro ao destruir instância anterior:', e);
-          }
+          annotoriousRef.current.destroy();
           annotoriousRef.current = null;
         }
 
-        // Aguardar um momento para garantir que a imagem esteja totalmente carregada
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Verificar se a imagem ainda existe e está carregada
-        if (!imageRef.current || !imageRef.current.complete) {
-          console.error('Imagem não está pronta');
-          return;
-        }
-        
-        // Configuração mais robusta do Annotorious
-        anno = new Annotorious({
+        const anno = new Annotorious({
           image: imageRef.current,
-          disableEditor: true,
+          locale: 'auto',
           allowEmpty: false,
           drawOnSingleClick: false,
           readOnly: readonly,
@@ -185,6 +186,7 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             function(annotation: any) {
               const competencia = annotation.body?.[0]?.purpose || competenciaSelecionada;
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
+              const numero = annotation.numero || '';
               
               if (corCompetencia) {
                 const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
@@ -193,7 +195,8 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
                 
                 return {
                   className: `competencia-${competencia}`,
-                  style: `fill: rgba(${r}, ${g}, ${b}, 0.15); stroke: ${corCompetencia.cor}; stroke-width: 2px; cursor: pointer;`
+                  style: `fill: rgba(${r}, ${g}, ${b}, 0.15); stroke: ${corCompetencia.cor}; stroke-width: 2px; cursor: pointer;`,
+                  'data-numero': numero
                 };
               }
               return {
@@ -268,13 +271,13 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
                   purpose: competenciaSelecionada,
                   value: ""
                 }],
-                bounds: { x, y, width, height }
+                bounds: { x, y, width, height },
+                numero: contadorSequencial
               };
 
               setCurrentAnnotation(annotationData);
               setComentarioTemp("");
               console.log('Abrindo popup de anotação');
-              // Forçar abertura imediata do dialog
               setTimeout(() => setDialogAberto(true), 0);
               
             } catch (error) {
@@ -297,11 +300,10 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             }
           };
 
-          // Registrar eventos corretamente (sem duplicação)
+          // Registrar eventos
           anno.on('createSelection', onCreateSelection);
           anno.on('clickAnnotation', onClickAnnotation);
 
-          // Adicionar às funções de limpeza
           cleanupFunctions.push(() => {
             if (anno) {
               anno.off('createSelection', onCreateSelection);
@@ -353,70 +355,27 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       }
     };
 
-    // Inicializar após um pequeno delay
-    const timer = setTimeout(initAnnotorious, 200);
-    
+    if (imageDimensions.width > 0) {
+      setTimeout(initAnnotorious, 100);
+    }
+
     return () => {
-      clearTimeout(timer);
-      
-      // Executar todas as funções de limpeza
-      cleanupFunctions.forEach(cleanup => {
+      cleanupFunctions.forEach(fn => fn());
+      if (annotoriousRef.current) {
         try {
-          cleanup();
-        } catch (e) {
-          console.log('Erro na limpeza:', e);
-        }
-      });
-      
-      if (anno) {
-        try {
-          anno.destroy();
-        } catch (e) {
-          console.log('Erro ao destruir Annotorious:', e);
+          annotoriousRef.current.destroy();
+        } catch (error) {
+          console.warn('Erro ao destruir Annotorious:', error);
         }
         annotoriousRef.current = null;
       }
     };
-  }, [imageLoaded, imageDimensions.width, imageDimensions.height, readonly]);
+  }, [imageDimensions, readonly, competenciaSelecionada]);
 
-  // Carregar e aplicar anotações no Annotorious
-  const carregarEAplicarAnotacoes = async () => {
-    if (!annotoriousRef.current) return;
-    
-    try {
-      await carregarAnotacoes();
-      
-      // Converter anotações do banco para formato Annotorious
-      const annotoriousAnnotations = anotacoes.map((anotacao) => {
-        const x = anotacao.x_start / imageDimensions.width;
-        const y = anotacao.y_start / imageDimensions.height;
-        const w = (anotacao.x_end - anotacao.x_start) / imageDimensions.width;
-        const h = (anotacao.y_end - anotacao.y_start) / imageDimensions.height;
-
-        return {
-          id: anotacao.id,
-          type: "Annotation",
-          target: {
-            selector: {
-              type: "FragmentSelector",
-              value: `xywh=percent:${x},${y},${w},${h}`
-            }
-          },
-          body: [{
-            type: "TextualBody",
-            purpose: anotacao.competencia,
-            value: anotacao.comentario
-          }]
-        };
-      });
-
-      // Aplicar anotações no Annotorious
-      annotoriousRef.current.setAnnotations(annotoriousAnnotations);
-
-    } catch (error) {
-      console.error('Erro ao carregar anotações:', error);
-    }
-  };
+  // Carregar anotações quando o componente monta
+  useEffect(() => {
+    carregarAnotacoes();
+  }, [redacaoId]);
 
   // Atualizar anotações quando mudarem
   useEffect(() => {
@@ -464,7 +423,8 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         x_end: bounds.x + bounds.width,
         y_end: bounds.y + bounds.height,
         imagem_largura: imageDimensions.width,
-        imagem_altura: imageDimensions.height
+        imagem_altura: imageDimensions.height,
+        numero_sequencial: contadorSequencial
       };
 
       console.log('=== DADOS DA ANOTAÇÃO ===');
@@ -504,14 +464,15 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         target: {
           selector: {
             type: "FragmentSelector",
-            value: `xywh=percent:${x},${y},${w},${h}`
+            value: `xywh=percent:${x * 100},${y * 100},${w * 100},${h * 100}`
           }
         },
         body: [{
           type: "TextualBody",
           purpose: competenciaSelecionada,
           value: comentarioTemp.trim()
-        }]
+        }],
+        numero: contadorSequencial
       };
 
       console.log('=== ADICIONANDO AO ANNOTORIOUS ===');
@@ -524,6 +485,9 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
       } else {
         console.warn('Annotorious não disponível');
       }
+
+      // Incrementar contador
+      setContadorSequencial(prev => prev + 1);
 
       toast({
         title: "Anotação salva!",
@@ -603,219 +567,98 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
     }
   };
 
-  // Gerar imagem com anotações para download
+  // Gerar imagem com anotações
   const gerarImagemComAnotacoes = async (): Promise<string> => {
-    if (!containerRef.current) throw new Error('Container não encontrado');
+    if (!containerRef.current) {
+      throw new Error('Container não encontrado');
+    }
 
-    const canvas = await html2canvas(containerRef.current, {
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff'
-    });
-
-    return canvas.toDataURL('image/png');
-  };
-
-  // Função para download da imagem corrigida
-  const baixarImagemCorrigida = async () => {
     try {
-      const dataUrl = await gerarImagemComAnotacoes();
-      const link = document.createElement('a');
-      link.download = `redacao_corrigida_${redacaoId.substring(0, 8)}.png`;
-      link.href = dataUrl;
-      link.click();
-      
-      toast({
-        title: "Download iniciado",
-        description: "A imagem da correção está sendo baixada.",
+      const canvas = await html2canvas(containerRef.current, {
+        allowTaint: true,
+        useCORS: true,
+        backgroundColor: null,
+        scale: 2
       });
+
+      return canvas.toDataURL('image/png');
     } catch (error) {
       console.error('Erro ao gerar imagem:', error);
-      toast({
-        title: "Erro no download",
-        description: "Não foi possível gerar a imagem.",
-        variant: "destructive",
-      });
+      throw error;
     }
   };
 
-  // Função para entrar/sair de tela cheia
+  // Toggle fullscreen
   const toggleFullscreen = () => {
-    if (!isFullscreen) {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen();
-        setIsFullscreen(true);
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    }
+    setIsFullscreen(!isFullscreen);
   };
 
-  // Detectar saída de tela cheia via ESC
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+  // Toggle zoom
+  const toggleZoom = () => {
+    setIsZoomed(!isZoomed);
+  };
+
+  // Estilo dinâmico para a imagem
+  const getImageStyle = () => {
+    const baseStyle = {
+      userSelect: 'none' as const,
+      cursor: 'default' as const,
+      maxWidth: '100%',
+      maxHeight: '100%',
+      objectFit: 'contain' as const,
+      transition: 'transform 0.3s ease',
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    if (isZoomed) {
+      return {
+        ...baseStyle,
+        width: '95vw',
+        height: '95vh',
+        transform: 'scale(1)',
+      };
+    }
+
+    if (isFullscreen) {
+      return {
+        ...baseStyle,
+        width: '90vw',
+        height: '90vh',
+      };
+    }
+
+    return {
+      ...baseStyle,
+      width: 'auto',
+      height: '70vh',
     };
-  }, []);
-
-  // Carregar anotações no início
-  useEffect(() => {
-    carregarAnotacoes();
-  }, [redacaoId]);
-
-  if (readonly) {
-    return (
-      <div className="w-full">
-        {/* Controles para aluno */}
-        <div className="mb-6">
-          <Button 
-            onClick={baixarImagemCorrigida}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Baixar Correção Visual
-          </Button>
-        </div>
-
-        {/* Vista pedagógica simplificada para aluno */}
-        {anotacoes.length > 0 && (
-          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-            <h3 className="text-lg font-semibold mb-3">Resumo da Correção</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-              {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => {
-                const anotacoesCompetencia = anotacoes.filter(a => a.competencia === parseInt(num));
-                return (
-                  <div key={num} className="text-center">
-                    <div 
-                      className="w-3 h-3 rounded-full mx-auto mb-1"
-                      style={{ backgroundColor: info.cor }}
-                    ></div>
-                    <div className="text-sm font-medium">C{num}</div>
-                    <div className="text-xs text-gray-600">
-                      {anotacoesCompetencia.length} marcação{anotacoesCompetencia.length !== 1 ? 'ões' : ''}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Imagem da Redação - Modo Leitura */}
-        <div ref={containerRef} className="border rounded-lg p-4 bg-white relative overflow-hidden">
-          <img 
-            ref={imageRef}
-            src={imagemUrl} 
-            alt="Redação corrigida" 
-            className="img-redacao block mx-auto"
-            onLoad={handleImageLoad}
-            style={{ 
-              maxWidth: '100%', 
-              maxHeight: '85vh', 
-              width: 'auto', 
-              height: 'auto' 
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
+  };
 
   return (
-    <div className={isFullscreen ? "fixed inset-0 z-50 bg-black" : "w-full"}>
-      {/* Estilos melhorados para imagem e correção do salto */}
-      <style>
-        {`
-          .painel-correcao {
-            max-width: none !important;
-            transform: none !important;
-            overflow: visible !important;
-            zoom: 1 !important;
-          }
-
-          .container-imagem-redacao {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            min-height: ${isFullscreen ? '100vh' : '70vh'};
-            background: ${isFullscreen ? 'black' : 'white'};
-          }
-
-          .img-redacao {
-            max-width: ${isFullscreen ? '95vw' : '100%'} !important;
-            max-height: ${isFullscreen ? '95vh' : '75vh'} !important;
-            width: auto !important;
-            height: auto !important;
-            display: block !important;
-            margin: 0 auto !important;
-            transform: none !important;
-            cursor: default !important;
-            object-fit: contain !important;
-          }
-
-          .annotorious-annotationlayer .a9s-annotation {
-            cursor: pointer !important;
-          }
-
-          .annotorious-editor {
-            display: none !important;
-          }
-
-          /* Garantir cursor padrão em todas as interações */
-          .annotorious-annotationlayer, 
-          .annotorious-annotationlayer svg,
-          .annotorious-annotationlayer * {
-            cursor: default !important;
-          }
-
-          /* Prevenir scrolling desnecessário */
-          .painel-correcao .container-imagem-redacao {
-            overflow: hidden;
-          }
-
-          /* Modo tela cheia */
-          .fullscreen-controls {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 8px;
-            padding: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          }
-
-          @media (max-width: 1024px) {
-            .painel-correcao {
-              display: none !important;
-            }
-          }
-        `}
-      </style>
-
-      {/* Seletor de Competências - Layout melhorado com lupa */}
+    <div className="space-y-4">
+      {/* Painel de competências */}
       <div className="mb-4 painel-correcao">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold">Selecione a Competência</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleFullscreen}
-            className="flex items-center gap-2"
-            title="Visualizar em tela cheia"
-          >
-            <Maximize2 className="w-4 h-4" />
-            Ampliar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleZoom}
+              className="flex items-center gap-2"
+              title={isZoomed ? "Reduzir zoom" : "Ampliar com zoom"}
+            >
+              {isZoomed ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleFullscreen}
+              className="flex items-center gap-2"
+              title="Visualizar em tela cheia"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         <div className="flex gap-4 items-center">
           {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
@@ -839,8 +682,8 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
         </div>
       </div>
 
-      {/* Barra flutuante para tela cheia */}
-      {isFullscreen && (
+      {/* Barra flutuante para modo zoom/fullscreen */}
+      {(isFullscreen || isZoomed) && (
         <div className="fixed top-4 left-4 z-50 bg-white rounded-lg shadow-lg p-3 border">
           <div className="flex gap-3 items-center">
             <span className="text-sm font-medium">Competência:</span>
@@ -865,28 +708,19 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             <Button
               variant="outline"
               size="sm"
-              onClick={toggleFullscreen}
+              onClick={isZoomed ? toggleZoom : toggleFullscreen}
               className="ml-2"
             >
-              <Minimize2 className="w-4 h-4" />
+              {isZoomed ? <ZoomOut className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
             </Button>
           </div>
         </div>
       )}
 
-      {/* Container da Imagem da Redação com melhor estrutura */}
-      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao ${isFullscreen ? 'fixed inset-0 z-40' : ''}`}>
-        {!isFullscreen && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleFullscreen}
-            className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-white"
-            title="Visualizar em tela cheia"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </Button>
-        )}
+      {/* Container da Imagem da Redação */}
+      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao ${
+        isFullscreen || isZoomed ? 'fixed inset-0 z-40 bg-white' : ''
+      }`}>
         
         <div ref={containerRef} className="flex justify-center items-center w-full h-full p-4">
           <img 
@@ -895,13 +729,47 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
             alt="Redação para correção" 
             className="img-redacao"
             onLoad={handleImageLoad}
-            style={{ 
-              userSelect: 'none',
-              cursor: 'default'
-            }}
+            style={getImageStyle()}
           />
         </div>
       </div>
+
+      {/* Lista de comentários */}
+      {anotacoes.length > 0 && (
+        <div className="mt-6 bg-gray-50 rounded-lg p-4">
+          <h4 className="text-lg font-semibold mb-3">Comentários ({anotacoes.length})</h4>
+          <div className="space-y-2">
+            {anotacoes.map((anotacao, index) => (
+              <div key={anotacao.id} className="flex items-start gap-3 p-3 bg-white rounded border">
+                <div 
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  style={{ backgroundColor: anotacao.cor_marcacao }}
+                >
+                  {index + 1}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline" style={{ color: anotacao.cor_marcacao, borderColor: anotacao.cor_marcacao }}>
+                      {CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.label}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-700">{anotacao.comentario}</p>
+                </div>
+                {!readonly && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removerAnotacao(anotacao.id!)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Dialog para adicionar comentário */}
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
@@ -909,9 +777,11 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <div 
-                className="w-4 h-4 rounded-full"
+                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
                 style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada]?.cor }}
-              ></div>
+              >
+                {contadorSequencial}
+              </div>
               {CORES_COMPETENCIAS[competenciaSelecionada]?.label}
             </DialogTitle>
           </DialogHeader>
@@ -942,3 +812,6 @@ export const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, Redaca
 });
 
 RedacaoAnotacaoVisual.displayName = "RedacaoAnotacaoVisual";
+
+export { RedacaoAnotacaoVisual };
+export type { RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps };
