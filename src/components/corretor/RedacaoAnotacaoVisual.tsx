@@ -489,60 +489,63 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         return;
       }
 
-      // Buscar grupos de anotação no SVG
-      const annotationGroups = svgElement.querySelectorAll('g[data-id], g.r6o-annotation, g > rect');
+      // Buscar retângulos únicos (evitar duplicação)
+      const rectangles = svgElement.querySelectorAll('rect[data-id], rect:not(.numero-svg-bg)');
+      const uniqueRects = Array.from(rectangles).filter((rect, index, array) => {
+        const x = rect.getAttribute('x');
+        const y = rect.getAttribute('y');
+        const w = rect.getAttribute('width');
+        const h = rect.getAttribute('height');
+        
+        // Verificar se já existe um retângulo com as mesmas coordenadas
+        return array.findIndex(r => 
+          r.getAttribute('x') === x && 
+          r.getAttribute('y') === y &&
+          r.getAttribute('width') === w &&
+          r.getAttribute('height') === h
+        ) === index;
+      });
       
-      if (annotationGroups.length === 0) {
-        console.log('⚠️ Nenhum grupo de anotação encontrado no SVG');
+      if (uniqueRects.length === 0) {
+        console.log('⚠️ Nenhum retângulo único encontrado no SVG');
         setTimeout(() => adicionarNumeracaoAnotacoes(), 1000);
         return;
       }
 
-      console.log(`🔢 Processando ${annotationGroups.length} anotações no SVG`);
+      console.log(`🔢 Processando ${uniqueRects.length} retângulos únicos no SVG`);
 
       // Ordenar anotações por número sequencial
       const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
 
-      // Remover numerações existentes
-      svgElement.querySelectorAll('.numero-svg').forEach(el => el.remove());
+      // Remover numerações existentes primeiro
+      svgElement.querySelectorAll('.numero-svg, .numero-svg-bg').forEach(el => el.remove());
 
-      annotationGroups.forEach((group, index) => {
+      uniqueRects.forEach((rect, index) => {
         try {
           const anotacao = anotacoesOrdenadas[index];
           const numero = anotacao?.numero_sequencial || (index + 1);
 
-          // Buscar o retângulo dentro do grupo para obter coordenadas
-          let rect = group.querySelector('rect');
-          if (!rect && group.tagName === 'rect') {
-            rect = group as SVGRectElement;
-          }
-
-          if (!rect) {
-            console.log(`⚠️ Retângulo não encontrado no grupo ${index}`);
-            return;
-          }
-
           const x = parseFloat(rect.getAttribute('x') || '0');
           const y = parseFloat(rect.getAttribute('y') || '0');
 
-          // Criar círculo de fundo para o número
+          // Criar círculo de fundo maior para o número
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          circle.setAttribute('cx', (x + 15).toString());
-          circle.setAttribute('cy', (y + 15).toString());
-          circle.setAttribute('r', '12');
+          circle.setAttribute('cx', (x + 20).toString());
+          circle.setAttribute('cy', (y + 20).toString());
+          circle.setAttribute('r', '18'); // Aumentado de 12 para 18
           circle.setAttribute('fill', '#000000');
           circle.setAttribute('stroke', '#ffffff');
-          circle.setAttribute('stroke-width', '2');
-          circle.classList.add('numero-svg');
+          circle.setAttribute('stroke-width', '3'); // Aumentado de 2 para 3
+          circle.classList.add('numero-svg-bg');
 
-          // Criar texto do número
+          // Criar texto do número maior
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', (x + 15).toString());
-          text.setAttribute('y', (y + 20).toString());
+          text.setAttribute('x', (x + 20).toString());
+          text.setAttribute('y', (y + 27).toString()); // Ajustado para melhor centralização
           text.setAttribute('text-anchor', 'middle');
           text.setAttribute('fill', '#ffffff');
-          text.setAttribute('font-family', 'Arial, sans-serif');
-          text.setAttribute('font-size', '12');
+          text.setAttribute('font-family', 'Arial Black, Arial, sans-serif');
+          text.setAttribute('font-size', '16'); // Aumentado de 12 para 16
           text.setAttribute('font-weight', 'bold');
           text.textContent = numero.toString();
           text.classList.add('numero-svg');
@@ -551,14 +554,14 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           svgElement.appendChild(circle);
           svgElement.appendChild(text);
 
-          console.log(`✅ Número ${numero} adicionado no SVG na posição (${x + 15}, ${y + 15})`);
+          console.log(`✅ Número ${numero} adicionado no SVG na posição (${x + 20}, ${y + 20})`);
 
         } catch (err) {
           console.error(`❌ Erro ao adicionar número SVG ${index}:`, err);
         }
       });
 
-      console.log(`✅ Numeração SVG concluída para ${annotationGroups.length} elementos`);
+      console.log(`✅ Numeração SVG concluída para ${uniqueRects.length} elementos únicos`);
 
     } catch (error) {
       console.error('❌ Erro geral na numeração SVG:', error);
@@ -1035,6 +1038,46 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
+  // Limpar todas as anotações
+  const limparTodasAnotacoes = async () => {
+    const shouldClear = confirm('Tem certeza que deseja limpar todas as anotações? Esta ação não pode ser desfeita.');
+    
+    if (!shouldClear) return;
+
+    try {
+      // Remover do banco de dados
+      const { error } = await supabase
+        .from('marcacoes_visuais')
+        .delete()
+        .eq('redacao_id', redacaoId)
+        .eq('tabela_origem', 'redacoes_enviadas');
+      
+      if (error) throw error;
+
+      // Limpar do Annotorious
+      if (annotoriousRef.current) {
+        annotoriousRef.current.clearAnnotations();
+      }
+
+      // Resetar estados
+      setAnotacoes([]);
+      setContadorSequencial(1);
+
+      toast({
+        title: "Anotações removidas",
+        description: "Todas as marcações foram excluídas com sucesso.",
+      });
+
+    } catch (error) {
+      console.error('Erro ao limpar anotações:', error);
+      toast({
+        title: "Erro ao limpar",
+        description: "Não foi possível remover todas as anotações.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Gerar imagem com anotações
   const gerarImagemComAnotacoes = async (): Promise<string> => {
     if (!containerRef.current) {
@@ -1123,6 +1166,19 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               title={info.label}
             />
           ))}
+          
+          {/* Botão para limpar todas as anotações */}
+          {!readonly && anotacoes.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={limparTodasAnotacoes}
+              className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50"
+              title="Limpar todas as anotações"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
 
