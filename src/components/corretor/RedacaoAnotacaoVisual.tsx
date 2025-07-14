@@ -54,36 +54,58 @@ const customStyles = `
     stroke-width: 2px !important;
   }
   
-  /* Numeração das anotações - Abordagem mais robusta */
+  /* Numeração das anotações - Forçar exibição */
   .r6o-annotation {
     position: relative !important;
   }
   
-  .r6o-annotation::after {
-    content: attr(data-numero);
+  /* Numeração via CSS como backup */
+  .r6o-annotation::before {
+    content: attr(data-numero) !important;
     position: absolute !important;
-    top: -8px !important;
-    left: -8px !important;
-    background: #333 !important;
-    color: white !important;
+    top: -12px !important;
+    left: -12px !important;
+    background: #000000 !important;
+    color: #ffffff !important;
     border-radius: 50% !important;
-    width: 18px !important;
-    height: 18px !important;
+    width: 24px !important;
+    height: 24px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 10px !important;
+    font-size: 12px !important;
     font-weight: bold !important;
-    font-family: system-ui, -apple-system, sans-serif !important;
-    z-index: 1000 !important;
-    border: 2px solid white !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    font-family: Arial, sans-serif !important;
+    z-index: 10001 !important;
+    border: 3px solid #ffffff !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
     pointer-events: none !important;
+    line-height: 1 !important;
+    text-align: center !important;
   }
   
-  /* Garantir visibilidade em diferentes fundos */
-  .r6o-annotation::after {
-    text-shadow: 0 0 2px rgba(0,0,0,0.8) !important;
+  /* Garantir que números DOM tenham prioridade */
+  .numero-anotacao {
+    position: absolute !important;
+    top: -12px !important;
+    left: -12px !important;
+    background: #000000 !important;
+    color: #ffffff !important;
+    border-radius: 50% !important;
+    width: 24px !important;
+    height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    font-family: Arial, sans-serif !important;
+    z-index: 10002 !important;
+    border: 3px solid #ffffff !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
+    pointer-events: none !important;
+    line-height: 1 !important;
+    text-align: center !important;
   }
   
   /* Garantir que a imagem não se mova */
@@ -307,6 +329,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         setTimeout(() => {
           adicionarNumeracaoAnotacoes();
         }, 300);
+        
+        // Verificação adicional após mais tempo
+        setTimeout(() => {
+          verificarENumerarAnotacoes();
+        }, 800);
 
       } catch (error) {
         console.error('❌ Erro ao aplicar anotações:', error);
@@ -325,6 +352,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         setTimeout(() => {
           adicionarNumeracaoAnotacoes();
         }, 500);
+        
+        // Verificação adicional
+        setTimeout(() => {
+          verificarENumerarAnotacoes();
+        }, 1000);
       }
 
     } catch (error) {
@@ -332,76 +364,158 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
-  // Adicionar numeração diretamente no DOM
+  // Adicionar numeração diretamente no DOM - Versão melhorada
   const adicionarNumeracaoAnotacoes = () => {
     if (!containerRef.current) return;
 
     try {
-      const annotationElements = containerRef.current.querySelectorAll('.r6o-annotation');
-      console.log('🔢 Adicionando numeração para', annotationElements.length, 'anotações');
-
-      // Ordenar anotações por número sequencial para mapear corretamente
-      const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
-
-      annotationElements.forEach((element, index) => {
-        // Remover numeração existente se houver
-        const existingNumber = element.querySelector('.annotation-number');
-        if (existingNumber) {
-          existingNumber.remove();
+      // Aguardar um pouco para garantir que os elementos estejam renderizados
+      setTimeout(() => {
+        const annotationElements = containerRef.current?.querySelectorAll('.r6o-annotation');
+        if (!annotationElements || annotationElements.length === 0) {
+          console.log('⚠️ Nenhum elemento de anotação encontrado para numeração');
+          return;
         }
 
-        // Usar o número sequencial da anotação correspondente ou index + 1 como fallback
-        const anotacao = anotacoesOrdenadas[index];
-        const numero = anotacao?.numero_sequencial || (index + 1);
+        console.log('🔢 Adicionando numeração para', annotationElements.length, 'anotações');
 
-        console.log(`🔢 Aplicando número ${numero} para anotação ${index + 1}`, anotacao);
+        // Ordenar anotações por número sequencial
+        const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
 
-        // Criar elemento de numeração
-        const numberElement = document.createElement('div');
-        numberElement.className = 'annotation-number';
-        numberElement.textContent = numero.toString();
-        
-        // Estilizar elemento de numeração
-        Object.assign(numberElement.style, {
-          position: 'absolute',
-          top: '-10px',
-          left: '-10px',
-          background: '#1a1a1a',
-          color: 'white',
-          borderRadius: '50%',
-          width: '20px',
-          height: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '11px',
-          fontWeight: 'bold',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          zIndex: '1001',
-          border: '2px solid white',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-          pointerEvents: 'none',
-          textShadow: 'none'
+        annotationElements.forEach((element, index) => {
+          try {
+            // Remover numeração existente
+            const existingNumbers = element.querySelectorAll('.annotation-number, .numero-anotacao');
+            existingNumbers.forEach(num => num.remove());
+
+            // Obter número da anotação
+            const anotacao = anotacoesOrdenadas[index];
+            const numero = anotacao?.numero_sequencial || (index + 1);
+
+            console.log(`🔢 Adicionando número ${numero} para elemento ${index + 1}`);
+
+            // Criar container do número
+            const numberContainer = document.createElement('div');
+            numberContainer.className = 'numero-anotacao';
+            numberContainer.textContent = numero.toString();
+            
+            // Aplicar estilos inline fortes
+            numberContainer.style.cssText = `
+              position: absolute !important;
+              top: -12px !important;
+              left: -12px !important;
+              background: #000000 !important;
+              color: #ffffff !important;
+              border-radius: 50% !important;
+              width: 24px !important;
+              height: 24px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              font-size: 12px !important;
+              font-weight: bold !important;
+              font-family: Arial, sans-serif !important;
+              z-index: 10000 !important;
+              border: 3px solid #ffffff !important;
+              box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
+              pointer-events: none !important;
+              line-height: 1 !important;
+              text-align: center !important;
+            `;
+
+            // Garantir posicionamento do pai
+            const elementStyle = (element as HTMLElement).style;
+            elementStyle.position = 'relative';
+            elementStyle.zIndex = '999';
+            
+            // Adicionar ao elemento
+            element.appendChild(numberContainer);
+
+            console.log(`✅ Número ${numero} aplicado com sucesso`);
+
+          } catch (err) {
+            console.error(`❌ Erro ao processar anotação ${index}:`, err);
+          }
         });
 
-        // Garantir que o elemento pai tenha position relative
-        (element as HTMLElement).style.position = 'relative';
-        
-        // Adicionar ao elemento da anotação
-        element.appendChild(numberElement);
+        // Forçar re-render se necessário
+        setTimeout(() => {
+          const container = containerRef.current;
+          if (container) {
+            container.style.transform = 'translateZ(0)';
+            setTimeout(() => {
+              container.style.transform = '';
+            }, 10);
+          }
+        }, 100);
 
-        console.log(`✅ Número ${numero} adicionado à anotação ${index + 1}`);
-      });
+      }, 200);
 
-      // Também adicionar o atributo data-numero aos elementos para compatibilidade com CSS
+    } catch (error) {
+      console.error('❌ Erro geral ao adicionar numeração:', error);
+    }
+  };
+
+  // Função de verificação e numeração adicional
+  const verificarENumerarAnotacoes = () => {
+    if (!containerRef.current) return;
+
+    try {
+      const annotationElements = containerRef.current.querySelectorAll('.r6o-annotation');
+      console.log('🔍 Verificando numeração para', annotationElements.length, 'anotações');
+
       annotationElements.forEach((element, index) => {
-        const anotacao = anotacoesOrdenadas[index];
-        const numero = anotacao?.numero_sequencial || (index + 1);
-        element.setAttribute('data-numero', numero.toString());
+        // Verificar se já tem número visível
+        const hasVisibleNumber = element.querySelector('.numero-anotacao') || 
+                                 element.getAttribute('data-numero');
+
+        if (!hasVisibleNumber) {
+          console.log(`⚠️ Anotação ${index + 1} sem numeração - corrigindo...`);
+          
+          const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
+          const anotacao = anotacoesOrdenadas[index];
+          const numero = anotacao?.numero_sequencial || (index + 1);
+
+          // Adicionar data-numero para CSS
+          element.setAttribute('data-numero', numero.toString());
+
+          // Criar elemento DOM também
+          const numberContainer = document.createElement('div');
+          numberContainer.className = 'numero-anotacao';
+          numberContainer.textContent = numero.toString();
+          
+          numberContainer.style.cssText = `
+            position: absolute !important;
+            top: -12px !important;
+            left: -12px !important;
+            background: #000000 !important;
+            color: #ffffff !important;
+            border-radius: 50% !important;
+            width: 24px !important;
+            height: 24px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            font-family: Arial, sans-serif !important;
+            z-index: 10002 !important;
+            border: 3px solid #ffffff !important;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
+            pointer-events: none !important;
+            line-height: 1 !important;
+            text-align: center !important;
+          `;
+
+          (element as HTMLElement).style.position = 'relative';
+          element.appendChild(numberContainer);
+          
+          console.log(`✅ Numeração ${numero} corrigida para elemento ${index + 1}`);
+        }
       });
 
     } catch (error) {
-      console.error('❌ Erro ao adicionar numeração:', error);
+      console.error('❌ Erro na verificação de numeração:', error);
     }
   };
 
