@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle, User } from "lucide-react";
+import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle, User, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
 import { getStatusColor, getStatusLabel } from "@/utils/redacaoUtils";
+import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
 
 type RedacaoTurma = {
   id: string;
@@ -163,8 +164,55 @@ export const MinhasRedacoes = () => {
     refetchInterval: 60 * 1000,
   });
 
-  const handleViewRedacao = (redacao: RedacaoTurma) => {
+  const handleViewRedacao = async (redacao: RedacaoTurma) => {
     console.log('🔐 Iniciando fluxo SEGURO para visualização de redação');
+    
+    // Verificar se é redação manuscrita - se for, fazer download direto
+    try {
+      // Buscar dados completos da redação para verificar se tem imagem
+      let redacaoCompleta;
+      
+      if (redacao.tipo_envio === 'simulado') {
+        const { data, error } = await supabase
+          .from('redacoes_simulado')
+          .select('redacao_manuscrita_url')
+          .eq('id', redacao.id)
+          .single();
+        redacaoCompleta = data;
+      } else {
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('redacao_manuscrita_url')
+          .eq('id', redacao.id)
+          .single();
+        redacaoCompleta = data;
+      }
+
+      // Se tem URL de manuscrita, é redação por imagem -> fazer download direto
+      if (redacaoCompleta?.redacao_manuscrita_url) {
+        console.log('📄 Redação manuscrita detectada - iniciando download direto');
+        
+        // Validar email primeiro
+        const isValid = await validarEmailRigoroso(redacao.email_aluno, alunoEmail || visitanteEmail);
+        
+        if (!isValid) {
+          toast({
+            title: "🚫 Acesso negado",
+            description: "Não foi possível validar seu acesso a esta redação.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Buscar dados completos para download
+        await iniciarDownloadCorrecaoCompleta(redacao);
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao verificar tipo de redação:', error);
+    }
+
+    // Para redações de texto, seguir fluxo normal com pop-up
     setAuthenticatedRedacao(null);
     setShowRedacaoDialog(false);
     setSelectedRedacaoId(redacao.id);
@@ -334,6 +382,88 @@ export const MinhasRedacoes = () => {
       });
     } finally {
       setIsAuthenticating(false);
+    }
+  };
+
+  const iniciarDownloadCorrecaoCompleta = async (redacao: RedacaoTurma) => {
+    try {
+      console.log('📥 Iniciando download da correção completa para redação manuscrita');
+      
+      // Buscar dados completos da redação
+      let redacaoCompleta;
+      
+      if (redacao.tipo_envio === 'simulado') {
+        const { data, error } = await supabase
+          .from('redacoes_simulado')
+          .select('*, simulados!inner(frase_tematica)')
+          .eq('id', redacao.id)
+          .single();
+          
+        if (error) throw new Error('Erro ao carregar redação de simulado');
+        
+        redacaoCompleta = {
+          ...data,
+          redacao_texto: data.texto,
+          frase_tematica: (data.simulados as any)?.frase_tematica || 'Simulado'
+        };
+      } else {
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('id', redacao.id)
+          .single();
+
+        if (error) throw new Error('Erro ao carregar redação');
+        redacaoCompleta = data;
+      }
+
+      // Preparar dados para download
+      const dadosDownload = {
+        id: redacaoCompleta.id,
+        nome_aluno: redacaoCompleta.nome_aluno,
+        email_aluno: redacaoCompleta.email_aluno,
+        frase_tematica: redacaoCompleta.frase_tematica,
+        redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "Redação manuscrita - veja imagem anexa",
+        data_envio: redacaoCompleta.data_envio,
+        nota_total: redacaoCompleta.nota_total,
+        nota_c1: redacaoCompleta.nota_c1,
+        nota_c2: redacaoCompleta.nota_c2,
+        nota_c3: redacaoCompleta.nota_c3,
+        nota_c4: redacaoCompleta.nota_c4,
+        nota_c5: redacaoCompleta.nota_c5,
+        comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
+        comentario_c1_corretor_1: redacaoCompleta.comentario_c1_corretor_1,
+        comentario_c2_corretor_1: redacaoCompleta.comentario_c2_corretor_1,
+        comentario_c3_corretor_1: redacaoCompleta.comentario_c3_corretor_1,
+        comentario_c4_corretor_1: redacaoCompleta.comentario_c4_corretor_1,
+        comentario_c5_corretor_1: redacaoCompleta.comentario_c5_corretor_1,
+        elogios_pontos_atencao_corretor_1: redacaoCompleta.elogios_pontos_atencao_corretor_1,
+        comentario_c1_corretor_2: redacaoCompleta.comentario_c1_corretor_2,
+        comentario_c2_corretor_2: redacaoCompleta.comentario_c2_corretor_2,
+        comentario_c3_corretor_2: redacaoCompleta.comentario_c3_corretor_2,
+        comentario_c4_corretor_2: redacaoCompleta.comentario_c4_corretor_2,
+        comentario_c5_corretor_2: redacaoCompleta.comentario_c5_corretor_2,
+        elogios_pontos_atencao_corretor_2: redacaoCompleta.elogios_pontos_atencao_corretor_2,
+        data_correcao: redacaoCompleta.data_correcao,
+        turma: redacaoCompleta.turma || (userType === "aluno" ? turmaCode : "visitante"),
+        tipo_envio: redacao.tipo_envio
+      };
+
+      // Executar download
+      downloadRedacaoCorrigida(dadosDownload);
+      
+      toast({
+        title: "📥 Download iniciado!",
+        description: "A correção completa será baixada em breve.",
+      });
+
+    } catch (error) {
+      console.error('❌ Erro no download:', error);
+      toast({
+        title: "❌ Erro no download",
+        description: error instanceof Error ? error.message : "Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 

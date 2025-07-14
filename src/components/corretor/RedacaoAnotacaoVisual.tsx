@@ -340,6 +340,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       const annotationElements = containerRef.current.querySelectorAll('.r6o-annotation');
       console.log('🔢 Adicionando numeração para', annotationElements.length, 'anotações');
 
+      // Ordenar anotações por número sequencial para mapear corretamente
+      const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
+
       annotationElements.forEach((element, index) => {
         // Remover numeração existente se houver
         const existingNumber = element.querySelector('.annotation-number');
@@ -347,10 +350,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           existingNumber.remove();
         }
 
-        // Encontrar a anotação correspondente no array
-        const annotationId = element.getAttribute('data-id');
-        const anotacao = anotacoes.find(a => a.id === annotationId);
+        // Usar o número sequencial da anotação correspondente ou index + 1 como fallback
+        const anotacao = anotacoesOrdenadas[index];
         const numero = anotacao?.numero_sequencial || (index + 1);
+
+        console.log(`🔢 Aplicando número ${numero} para anotação ${index + 1}`, anotacao);
 
         // Criar elemento de numeração
         const numberElement = document.createElement('div');
@@ -360,31 +364,40 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         // Estilizar elemento de numeração
         Object.assign(numberElement.style, {
           position: 'absolute',
-          top: '-8px',
-          left: '-8px',
-          background: '#333',
+          top: '-10px',
+          left: '-10px',
+          background: '#1a1a1a',
           color: 'white',
           borderRadius: '50%',
-          width: '18px',
-          height: '18px',
+          width: '20px',
+          height: '20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '10px',
+          fontSize: '11px',
           fontWeight: 'bold',
           fontFamily: 'system-ui, -apple-system, sans-serif',
-          zIndex: '1000',
+          zIndex: '1001',
           border: '2px solid white',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
           pointerEvents: 'none',
-          textShadow: '0 0 2px rgba(0,0,0,0.8)'
+          textShadow: 'none'
         });
 
-        // Adicionar ao elemento da anotação
+        // Garantir que o elemento pai tenha position relative
         (element as HTMLElement).style.position = 'relative';
+        
+        // Adicionar ao elemento da anotação
         element.appendChild(numberElement);
 
-        console.log(`🔢 Número ${numero} adicionado à anotação ${index + 1}`);
+        console.log(`✅ Número ${numero} adicionado à anotação ${index + 1}`);
+      });
+
+      // Também adicionar o atributo data-numero aos elementos para compatibilidade com CSS
+      annotationElements.forEach((element, index) => {
+        const anotacao = anotacoesOrdenadas[index];
+        const numero = anotacao?.numero_sequencial || (index + 1);
+        element.setAttribute('data-numero', numero.toString());
       });
 
     } catch (error) {
