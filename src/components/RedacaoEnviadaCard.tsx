@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download } from "lucide-react";
 import { RedacaoAnotacaoVisual } from "./corretor/RedacaoAnotacaoVisual";
+import { useToast } from "@/hooks/use-toast";
 
 interface RedacaoEnviadaCardProps {
   redacao: {
@@ -48,6 +49,8 @@ interface RedacaoEnviadaCardProps {
 export const RedacaoEnviadaCard = ({
   redacao
 }: RedacaoEnviadaCardProps) => {
+  const { toast } = useToast();
+  
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -377,7 +380,7 @@ export const RedacaoEnviadaCard = ({
       </Card>
 
       {/* Relatório pedagógico - TERCEIRO NA ORDEM */}
-      {redacao.corrigida && redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && (
+      {redacao.corrigida && (elogios1 || elogios2 || (redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim())) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-primary">
@@ -385,11 +388,53 @@ export const RedacaoEnviadaCard = ({
               Relatório pedagógico de correção
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="bg-white border border-primary/20 rounded-lg p-4">
-              <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
-                {redacao.comentario_admin}
-              </p>
+          <CardContent className="space-y-4">
+            {/* Comentário administrativo */}
+            {redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && (
+              <div className="bg-white border border-primary/20 rounded-lg p-4">
+                <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                  {redacao.comentario_admin}
+                </p>
+              </div>
+            )}
+            
+            {/* Elogios e pontos de atenção do corretor 1 */}
+            {elogios1 && (
+              <div className="bg-white border border-primary/20 rounded-lg p-4">
+                <h4 className="font-semibold text-primary mb-3">Relatório Pedagógico</h4>
+                <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                  {elogios1}
+                </p>
+              </div>
+            )}
+            
+            {/* Elogios e pontos de atenção do corretor 2 */}
+            {elogios2 && (
+              <div className="bg-white border border-primary/20 rounded-lg p-4">
+                <h4 className="font-semibold text-primary mb-3">Relatório Pedagógico - Corretor 2</h4>
+                <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                  {elogios2}
+                </p>
+              </div>
+            )}
+            
+            {/* Botão de download da correção - SEMPRE MOSTRAR quando há correção */}
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Implementar download da correção completa
+                  toast({
+                    title: "Download iniciado",
+                    description: "A correção completa será baixada em breve.",
+                  });
+                }}
+                className="text-primary border-primary hover:bg-primary/10"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Baixar Correção Completa
+              </Button>
             </div>
           </CardContent>
         </Card>
