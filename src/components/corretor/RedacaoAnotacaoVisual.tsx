@@ -239,7 +239,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         .select('*')
         .eq('redacao_id', redacaoId)
         .eq('tabela_origem', 'redacoes_enviadas')
-        .order('criado_em', { ascending: true });
+        .order('criado_em', { ascending: true }); // Ordenar pela data real de criação
 
       if (error) {
         console.error('Erro ao carregar anotações:', error);
@@ -247,10 +247,17 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       }
 
       console.log('Anotações carregadas:', data);
-      setAnotacoes(data || []);
       
-      // Definir próximo número sequencial
-      const proximoNumero = (data?.length || 0) + 1;
+      // Renumerar anotações baseado na ordem cronológica real
+      const anotacoesRenumeradas = data?.map((anotacao, index) => ({
+        ...anotacao,
+        numero_sequencial: index + 1 // Força numeração sequencial baseada na ordem de criação
+      })) || [];
+      
+      setAnotacoes(anotacoesRenumeradas);
+      
+      // Definir próximo número sequencial baseado na quantidade real
+      const proximoNumero = (anotacoesRenumeradas?.length || 0) + 1;
       setContadorSequencial(proximoNumero);
       
     } catch (error) {
@@ -530,22 +537,22 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
           // Criar círculo de fundo maior para o número
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          circle.setAttribute('cx', (x + 25).toString());
-          circle.setAttribute('cy', (y + 25).toString());
-          circle.setAttribute('r', '22'); // Aumentado para 22
+          circle.setAttribute('cx', (x + 35).toString());
+          circle.setAttribute('cy', (y + 35).toString());
+          circle.setAttribute('r', '30'); // Dobrado de 22 para 30
           circle.setAttribute('fill', '#000000');
           circle.setAttribute('stroke', '#ffffff');
-          circle.setAttribute('stroke-width', '3');
+          circle.setAttribute('stroke-width', '4'); // Aumentado para 4
           circle.classList.add('numero-svg-bg');
 
           // Criar texto do número muito maior
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', (x + 25).toString());
-          text.setAttribute('y', (y + 32).toString()); // Ajustado para o novo tamanho
+          text.setAttribute('x', (x + 35).toString());
+          text.setAttribute('y', (y + 45).toString()); // Ajustado para centralizar no círculo maior
           text.setAttribute('text-anchor', 'middle');
           text.setAttribute('fill', '#ffffff');
           text.setAttribute('font-family', 'Arial Black, Arial, sans-serif');
-          text.setAttribute('font-size', '20'); // Aumentado para 20
+          text.setAttribute('font-size', '28'); // Dobrado de 20 para 28
           text.setAttribute('font-weight', 'bold');
           text.textContent = numero.toString();
           text.classList.add('numero-svg');
