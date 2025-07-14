@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
+import { getStatusColor, getStatusLabel } from "@/utils/redacaoUtils";
 
 type RedacaoTurma = {
   id: string;
@@ -283,7 +284,7 @@ export const MinhasRedacoes = () => {
         email_aluno: redacaoCompleta.email_aluno,
         tipo_envio: redacaoBasica.tipo_envio,
         data_envio: redacaoCompleta.data_envio,
-        status: redacaoCompleta.corrigida ? 'corrigida' : 'aguardando', // Corrigindo status
+        status: redacaoCompleta.status || (redacaoCompleta.corrigida ? 'corrigido' : 'aguardando'),
         corrigida: redacaoCompleta.corrigida,
         nota_total: redacaoCompleta.nota_total,
         comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
@@ -461,8 +462,8 @@ export const MinhasRedacoes = () => {
                     <h3 className="font-medium text-redator-primary text-sm line-clamp-2 flex-1">
                       {redacao.frase_tematica}
                     </h3>
-                    <Badge className="bg-green-100 text-green-800 shrink-0 text-xs">
-                      ✅ Corrigida
+                    <Badge className={`${getStatusColor(redacao.status, redacao.corrigida)} shrink-0 text-xs`}>
+                      {getStatusLabel(redacao.status, redacao.corrigida)}
                     </Badge>
                   </div>
                   

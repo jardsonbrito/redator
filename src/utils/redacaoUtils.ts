@@ -1,8 +1,16 @@
 
 export const getStatusColor = (status: string, corrigida: boolean) => {
   if (corrigida || status === "corrigido") return "bg-green-100 text-green-800";
+  if (status === "em_correcao") return "bg-orange-100 text-orange-800";
   if (status === "aguardando") return "bg-yellow-100 text-yellow-800";
   return "bg-gray-100 text-gray-800";
+};
+
+export const getStatusLabel = (status: string, corrigida: boolean) => {
+  if (corrigida || status === "corrigido") return "🟢 Corrigida";
+  if (status === "em_correcao") return "🟠 Em correção";
+  if (status === "aguardando") return "🟡 Aguardando correção";
+  return "🔹 Pendente";
 };
 
 export const getTurmaColor = (turma: string) => {

@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getStatusColor, getStatusLabel } from "@/utils/redacaoUtils";
 
 type RedacaoTurma = {
   id: string;
@@ -521,8 +522,8 @@ export default function MinhasRedacoesList() {
                                 <Badge className={getTipoEnvioColor(redacao.tipo_envio)}>
                                   {getTipoEnvioLabel(redacao.tipo_envio)}
                                 </Badge>
-                                <Badge variant="outline" className="text-green-600 border-green-200">
-                                  ✅ Corrigida
+                                <Badge className={getStatusColor(redacao.status, redacao.corrigida)}>
+                                  {getStatusLabel(redacao.status, redacao.corrigida)}
                                 </Badge>
                               </div>
 
