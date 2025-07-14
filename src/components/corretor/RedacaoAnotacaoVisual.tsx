@@ -471,125 +471,97 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     console.log('👀 Observer de mutações iniciado');
   };
 
-  // Adicionar numeração para todas as anotações visíveis
+  // Adicionar numeração diretamente no SVG usando elementos SVG nativos
   const adicionarNumeracaoAnotacoes = () => {
     if (!containerRef.current) return;
 
     try {
-      console.log('🔢 Iniciando numeração das anotações...');
+      console.log('🔢 Iniciando numeração SVG das anotações...');
       
-      // Buscar todos os elementos de anotação possíveis com mais seletores
-      const selectors = [
-        '.r6o-annotation',
-        'g.r6o-annotation', 
-        '.r6o-annotation-layer g',
-        'svg g[class*="annotation"]',
-        'g[data-id]',
-        '[class*="r6o"] g',
-        'svg g'
-      ];
+      // Buscar o SVG principal do Annotorious
+      const svgElement = containerRef.current.querySelector('svg.a9s-annotationlayer') || 
+                        containerRef.current.querySelector('svg') ||
+                        containerRef.current.querySelector('.r6o-svg-canvas svg');
       
-      let annotationElements: NodeListOf<Element> | null = null;
-      
-      for (const selector of selectors) {
-        annotationElements = containerRef.current.querySelectorAll(selector);
-        if (annotationElements && annotationElements.length > 0) {
-          console.log(`✅ Encontrados ${annotationElements.length} elementos com seletor: ${selector}`);
-          break;
-        }
+      if (!svgElement) {
+        console.log('⚠️ SVG não encontrado, tentando novamente...');
+        setTimeout(() => adicionarNumeracaoAnotacoes(), 500);
+        return;
       }
 
-      if (!annotationElements || annotationElements.length === 0) {
-        console.log('⚠️ Nenhum elemento de anotação encontrado para numeração');
-        // Tentar novamente em breve
+      // Buscar grupos de anotação no SVG
+      const annotationGroups = svgElement.querySelectorAll('g[data-id], g.r6o-annotation, g > rect');
+      
+      if (annotationGroups.length === 0) {
+        console.log('⚠️ Nenhum grupo de anotação encontrado no SVG');
         setTimeout(() => adicionarNumeracaoAnotacoes(), 1000);
         return;
       }
 
-      // Filtrar apenas elementos válidos de anotação
-      const validAnnotations = Array.from(annotationElements).filter(element => {
-        return element.tagName === 'g' || 
-               element.classList.contains('r6o-annotation') ||
-               element.querySelector('rect, path, polygon');
-      });
-
-      if (validAnnotations.length === 0) {
-        console.log('⚠️ Nenhuma anotação válida encontrada');
-        return;
-      }
-
-      console.log(`🔢 Processando ${validAnnotations.length} anotações válidas`);
+      console.log(`🔢 Processando ${annotationGroups.length} anotações no SVG`);
 
       // Ordenar anotações por número sequencial
       const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
 
-      validAnnotations.forEach((element, index) => {
-        try {
-          // Verificar se já tem número
-          if (element.querySelector('.numero-anotacao')) {
-            console.log(`🔢 Elemento ${index + 1} já tem numeração`);
-            return;
-          }
+      // Remover numerações existentes
+      svgElement.querySelectorAll('.numero-svg').forEach(el => el.remove());
 
-          // Obter número da anotação correspondente
+      annotationGroups.forEach((group, index) => {
+        try {
           const anotacao = anotacoesOrdenadas[index];
           const numero = anotacao?.numero_sequencial || (index + 1);
 
-          console.log(`🔢 Adicionando número ${numero} ao elemento ${index + 1}`);
+          // Buscar o retângulo dentro do grupo para obter coordenadas
+          let rect = group.querySelector('rect');
+          if (!rect && group.tagName === 'rect') {
+            rect = group as SVGRectElement;
+          }
 
-          // Criar container do número
-          const numberContainer = document.createElement('div');
-          numberContainer.className = 'numero-anotacao';
-          numberContainer.textContent = numero.toString();
-          
-          // Estilos com máxima especificidade
-          numberContainer.style.cssText = `
-            position: absolute !important;
-            top: -18px !important;
-            left: -18px !important;
-            background: #000000 !important;
-            color: #ffffff !important;
-            border-radius: 50% !important;
-            width: 36px !important;
-            height: 36px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 16px !important;
-            font-weight: 900 !important;
-            font-family: 'Arial Black', Arial, sans-serif !important;
-            z-index: 99999 !important;
-            border: 4px solid #ffffff !important;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.8) !important;
-            pointer-events: none !important;
-            line-height: 1 !important;
-            text-align: center !important;
-            transform: none !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-          `;
+          if (!rect) {
+            console.log(`⚠️ Retângulo não encontrado no grupo ${index}`);
+            return;
+          }
 
-          // Garantir posicionamento do pai
-          (element as HTMLElement).style.position = 'relative';
-          (element as HTMLElement).style.zIndex = '2000';
-          
-          // Adicionar número como primeiro filho para garantir visibilidade
-          element.insertBefore(numberContainer, element.firstChild);
+          const x = parseFloat(rect.getAttribute('x') || '0');
+          const y = parseFloat(rect.getAttribute('y') || '0');
 
-          // Forçar repaint
-          numberContainer.offsetHeight;
+          // Criar círculo de fundo para o número
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', (x + 15).toString());
+          circle.setAttribute('cy', (y + 15).toString());
+          circle.setAttribute('r', '12');
+          circle.setAttribute('fill', '#000000');
+          circle.setAttribute('stroke', '#ffffff');
+          circle.setAttribute('stroke-width', '2');
+          circle.classList.add('numero-svg');
 
-          console.log(`✅ Número ${numero} aplicado com sucesso ao elemento ${index + 1}`);
+          // Criar texto do número
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', (x + 15).toString());
+          text.setAttribute('y', (y + 20).toString());
+          text.setAttribute('text-anchor', 'middle');
+          text.setAttribute('fill', '#ffffff');
+          text.setAttribute('font-family', 'Arial, sans-serif');
+          text.setAttribute('font-size', '12');
+          text.setAttribute('font-weight', 'bold');
+          text.textContent = numero.toString();
+          text.classList.add('numero-svg');
+
+          // Adicionar ao SVG
+          svgElement.appendChild(circle);
+          svgElement.appendChild(text);
+
+          console.log(`✅ Número ${numero} adicionado no SVG na posição (${x + 15}, ${y + 15})`);
 
         } catch (err) {
-          console.error(`❌ Erro no elemento ${index}:`, err);
+          console.error(`❌ Erro ao adicionar número SVG ${index}:`, err);
         }
       });
 
-      console.log(`✅ Numeração concluída para ${validAnnotations.length} elementos`);
+      console.log(`✅ Numeração SVG concluída para ${annotationGroups.length} elementos`);
 
     } catch (error) {
-      console.error('❌ Erro geral na numeração:', error);
+      console.error('❌ Erro geral na numeração SVG:', error);
     }
   };
 
