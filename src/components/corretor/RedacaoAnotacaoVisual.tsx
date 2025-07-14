@@ -530,22 +530,22 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
           // Criar círculo de fundo maior para o número
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          circle.setAttribute('cx', (x + 20).toString());
-          circle.setAttribute('cy', (y + 20).toString());
-          circle.setAttribute('r', '18'); // Aumentado de 12 para 18
+          circle.setAttribute('cx', (x + 25).toString());
+          circle.setAttribute('cy', (y + 25).toString());
+          circle.setAttribute('r', '22'); // Aumentado para 22
           circle.setAttribute('fill', '#000000');
           circle.setAttribute('stroke', '#ffffff');
-          circle.setAttribute('stroke-width', '3'); // Aumentado de 2 para 3
+          circle.setAttribute('stroke-width', '3');
           circle.classList.add('numero-svg-bg');
 
-          // Criar texto do número maior
+          // Criar texto do número muito maior
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', (x + 20).toString());
-          text.setAttribute('y', (y + 27).toString()); // Ajustado para melhor centralização
+          text.setAttribute('x', (x + 25).toString());
+          text.setAttribute('y', (y + 32).toString()); // Ajustado para o novo tamanho
           text.setAttribute('text-anchor', 'middle');
           text.setAttribute('fill', '#ffffff');
           text.setAttribute('font-family', 'Arial Black, Arial, sans-serif');
-          text.setAttribute('font-size', '16'); // Aumentado de 12 para 16
+          text.setAttribute('font-size', '20'); // Aumentado para 20
           text.setAttribute('font-weight', 'bold');
           text.textContent = numero.toString();
           text.classList.add('numero-svg');
@@ -1054,9 +1054,22 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       
       if (error) throw error;
 
+      // Limpar números fantasma primeiro
+      if (containerRef.current) {
+        const numerosFantasma = containerRef.current.querySelectorAll('.numero-svg, .numero-svg-bg, .numero-anotacao');
+        numerosFantasma.forEach(el => el.remove());
+        console.log(`🧹 Removidos ${numerosFantasma.length} números fantasma`);
+      }
+
       // Limpar do Annotorious
       if (annotoriousRef.current) {
         annotoriousRef.current.clearAnnotations();
+      }
+
+      // Parar observador de mutações para evitar duplicação
+      if (mutationObserverRef.current) {
+        mutationObserverRef.current.disconnect();
+        mutationObserverRef.current = null;
       }
 
       // Resetar estados
