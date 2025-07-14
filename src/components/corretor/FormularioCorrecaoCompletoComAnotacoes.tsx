@@ -318,7 +318,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         )}
       </div>
 
-      {/* Relatório pedagógico de correção */}
+      {/* Relatório pedagógico de correção - Menor espaçamento */}
       <Card className="bg-white">
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Relatório pedagógico de correção</CardTitle>

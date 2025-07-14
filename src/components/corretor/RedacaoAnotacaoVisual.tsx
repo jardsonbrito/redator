@@ -270,7 +270,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           },
           body: [{
             type: "TextualBody",
-            purpose: "commenting",
+            purpose: anotacao.competencia, // Usar a competência da anotação salva
             value: anotacao.comentario
           }],
           // Dados customizados para a competência e numeração
@@ -335,9 +335,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           widgets: [], // Desabilitar widgets nativos
           formatters: [
             function(annotation: any) {
-              const competencia = annotation.body?.[0]?.purpose || competenciaSelecionada;
+              // Primeiro tentar pegar a competência do body, depois do objeto de anotação, senão usar a selecionada
+              const competencia = annotation.body?.[0]?.purpose || annotation.competencia || competenciaSelecionada;
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
               const numero = annotation.numero || '';
+              
+              console.log('🎨 Formatando anotação:', { competencia, corCompetencia: corCompetencia?.cor });
               
               if (corCompetencia) {
                 const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
@@ -742,8 +745,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
     return {
       ...baseStyle,
-      width: 'auto',
-      height: '70vh',
+      width: '100%',
+      height: 'auto',
+      minHeight: '80vh',
     };
   };
 
@@ -826,7 +830,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         isFullscreen ? 'fullscreen-container' : ''
       }`}>
         
-        <div ref={containerRef} className="flex justify-center items-center w-full h-full p-4">
+        <div ref={containerRef} className="flex justify-center items-center w-full h-full p-2">
           <img 
             ref={imageRef}
             src={imagemUrl} 
