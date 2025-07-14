@@ -27,16 +27,32 @@ type RedacaoTurma = {
   comentario_admin: string | null;
   data_correcao: string | null;
   redacao_texto?: string;
+  redacao_manuscrita_url?: string | null;
   nota_c1?: number | null;
   nota_c2?: number | null;
   nota_c3?: number | null;
   nota_c4?: number | null;
   nota_c5?: number | null;
+  // Campos para comentários pedagógicos
+  comentario_c1_corretor_1?: string | null;
+  comentario_c2_corretor_1?: string | null;
+  comentario_c3_corretor_1?: string | null;
+  comentario_c4_corretor_1?: string | null;
+  comentario_c5_corretor_1?: string | null;
+  elogios_pontos_atencao_corretor_1?: string | null;
+  comentario_c1_corretor_2?: string | null;
+  comentario_c2_corretor_2?: string | null;
+  comentario_c3_corretor_2?: string | null;
+  comentario_c4_corretor_2?: string | null;
+  comentario_c5_corretor_2?: string | null;
+  elogios_pontos_atencao_corretor_2?: string | null;
+  correcao_arquivo_url_corretor_1?: string | null;
+  correcao_arquivo_url_corretor_2?: string | null;
 };
 
 export default function MinhasRedacoesList() {
   const [selectedRedacaoId, setSelectedRedacaoId] = useState<string | null>(null);
-  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<RedacaoTurma & { redacao_texto: string } | null>(null);
+  const [authenticatedRedacao, setAuthenticatedRedacao] = useState<RedacaoTurma | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
@@ -76,7 +92,6 @@ export default function MinhasRedacoesList() {
       console.log('🔒 Buscando redações do usuário logado');
       
       if (userType === "aluno" && alunoEmail) {
-        // Para alunos, usar função atualizada que busca por user_id primeiro
         console.log('👨‍🎓 Buscando redações de aluno usando função get_student_redacoes:', alunoEmail);
         
         const { data, error } = await supabase.rpc('get_student_redacoes', {
@@ -175,13 +190,16 @@ export default function MinhasRedacoesList() {
 
       console.log('✅ E-mail validado com sucesso');
 
-      // Buscar dados completos da redação
+      // Buscar dados COMPLETOS da redação incluindo comentários pedagógicos
       let redacaoCompleta;
       
       if (redacaoBasica.tipo_envio === 'simulado') {
         const { data, error } = await supabase
           .from('redacoes_simulado')
-          .select('*, simulados!inner(frase_tematica)')
+          .select(`
+            *,
+            simulados!inner(frase_tematica)
+          `)
           .eq('id', selectedRedacaoId)
           .single();
           
@@ -210,7 +228,8 @@ export default function MinhasRedacoesList() {
         redacaoCompleta = data;
       }
 
-      const redacaoAutenticada: RedacaoTurma & { redacao_texto: string } = {
+      // Estruturar dados completos para o RedacaoEnviadaCard
+      const redacaoAutenticada: RedacaoTurma = {
         id: redacaoCompleta.id,
         frase_tematica: redacaoCompleta.frase_tematica,
         nome_aluno: redacaoCompleta.nome_aluno,
@@ -223,11 +242,27 @@ export default function MinhasRedacoesList() {
         comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
         data_correcao: redacaoCompleta.data_correcao,
         redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "",
+        redacao_manuscrita_url: redacaoCompleta.redacao_manuscrita_url,
         nota_c1: redacaoCompleta.nota_c1,
         nota_c2: redacaoCompleta.nota_c2,
         nota_c3: redacaoCompleta.nota_c3,
         nota_c4: redacaoCompleta.nota_c4,
         nota_c5: redacaoCompleta.nota_c5,
+        // Incluir TODOS os campos de comentários pedagógicos
+        comentario_c1_corretor_1: redacaoCompleta.comentario_c1_corretor_1,
+        comentario_c2_corretor_1: redacaoCompleta.comentario_c2_corretor_1,
+        comentario_c3_corretor_1: redacaoCompleta.comentario_c3_corretor_1,
+        comentario_c4_corretor_1: redacaoCompleta.comentario_c4_corretor_1,
+        comentario_c5_corretor_1: redacaoCompleta.comentario_c5_corretor_1,
+        elogios_pontos_atencao_corretor_1: redacaoCompleta.elogios_pontos_atencao_corretor_1,
+        comentario_c1_corretor_2: redacaoCompleta.comentario_c1_corretor_2,
+        comentario_c2_corretor_2: redacaoCompleta.comentario_c2_corretor_2,
+        comentario_c3_corretor_2: redacaoCompleta.comentario_c3_corretor_2,
+        comentario_c4_corretor_2: redacaoCompleta.comentario_c4_corretor_2,
+        comentario_c5_corretor_2: redacaoCompleta.comentario_c5_corretor_2,
+        elogios_pontos_atencao_corretor_2: redacaoCompleta.elogios_pontos_atencao_corretor_2,
+        correcao_arquivo_url_corretor_1: redacaoCompleta.correcao_arquivo_url_corretor_1,
+        correcao_arquivo_url_corretor_2: redacaoCompleta.correcao_arquivo_url_corretor_2,
       };
 
       setIsAuthDialogOpen(false);
@@ -664,7 +699,8 @@ export default function MinhasRedacoesList() {
                       redacao={{
                         id: authenticatedRedacao.id,
                         frase_tematica: authenticatedRedacao.frase_tematica,
-                        redacao_texto: authenticatedRedacao.redacao_texto,
+                        redacao_texto: authenticatedRedacao.redacao_texto || "",
+                        redacao_manuscrita_url: authenticatedRedacao.redacao_manuscrita_url,
                         data_envio: authenticatedRedacao.data_envio,
                         nota_c1: authenticatedRedacao.nota_c1,
                         nota_c2: authenticatedRedacao.nota_c2,
@@ -680,6 +716,21 @@ export default function MinhasRedacoesList() {
                         tipo_envio: authenticatedRedacao.tipo_envio,
                         status: authenticatedRedacao.status,
                         turma: userType === "aluno" ? "Turma A" : "visitante",
+                        // Incluir todos os campos de comentários pedagógicos
+                        comentario_c1_corretor_1: authenticatedRedacao.comentario_c1_corretor_1,
+                        comentario_c2_corretor_1: authenticatedRedacao.comentario_c2_corretor_1,
+                        comentario_c3_corretor_1: authenticatedRedacao.comentario_c3_corretor_1,
+                        comentario_c4_corretor_1: authenticatedRedacao.comentario_c4_corretor_1,
+                        comentario_c5_corretor_1: authenticatedRedacao.comentario_c5_corretor_1,
+                        elogios_pontos_atencao_corretor_1: authenticatedRedacao.elogios_pontos_atencao_corretor_1,
+                        comentario_c1_corretor_2: authenticatedRedacao.comentario_c1_corretor_2,
+                        comentario_c2_corretor_2: authenticatedRedacao.comentario_c2_corretor_2,
+                        comentario_c3_corretor_2: authenticatedRedacao.comentario_c3_corretor_2,
+                        comentario_c4_corretor_2: authenticatedRedacao.comentario_c4_corretor_2,
+                        comentario_c5_corretor_2: authenticatedRedacao.comentario_c5_corretor_2,
+                        elogios_pontos_atencao_corretor_2: authenticatedRedacao.elogios_pontos_atencao_corretor_2,
+                        correcao_arquivo_url_corretor_1: authenticatedRedacao.correcao_arquivo_url_corretor_1,
+                        correcao_arquivo_url_corretor_2: authenticatedRedacao.correcao_arquivo_url_corretor_2,
                       }} 
                     />
                   </div>
