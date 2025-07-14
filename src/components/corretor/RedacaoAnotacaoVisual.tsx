@@ -54,23 +54,36 @@ const customStyles = `
     stroke-width: 2px !important;
   }
   
-  /* Numeração das anotações */
-  .r6o-annotation::before {
+  /* Numeração das anotações - Abordagem mais robusta */
+  .r6o-annotation {
+    position: relative !important;
+  }
+  
+  .r6o-annotation::after {
     content: attr(data-numero);
-    position: absolute;
-    top: -10px;
-    left: -10px;
-    background: #333;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: bold;
-    z-index: 1000;
+    position: absolute !important;
+    top: -8px !important;
+    left: -8px !important;
+    background: #333 !important;
+    color: white !important;
+    border-radius: 50% !important;
+    width: 18px !important;
+    height: 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 10px !important;
+    font-weight: bold !important;
+    font-family: system-ui, -apple-system, sans-serif !important;
+    z-index: 1000 !important;
+    border: 2px solid white !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    pointer-events: none !important;
+  }
+  
+  /* Garantir visibilidade em diferentes fundos */
+  .r6o-annotation::after {
+    text-shadow: 0 0 2px rgba(0,0,0,0.8) !important;
   }
   
   /* Garantir que a imagem não se mova */
@@ -289,6 +302,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         // Verificar se as anotações foram aplicadas
         const appliedAnnotations = annotoriousRef.current.getAnnotations();
         console.log('🔍 Anotações atualmente no Annotorious:', appliedAnnotations.length);
+
+        // Adicionar numeração diretamente no DOM após um pequeno delay
+        setTimeout(() => {
+          adicionarNumeracaoAnotacoes();
+        }, 300);
+
       } catch (error) {
         console.error('❌ Erro ao aplicar anotações:', error);
         
@@ -301,10 +320,75 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             console.error(`❌ Erro na anotação ${index + 1}:`, err);
           }
         });
+
+        // Adicionar numeração após fallback também
+        setTimeout(() => {
+          adicionarNumeracaoAnotacoes();
+        }, 500);
       }
 
     } catch (error) {
       console.error('❌ Erro ao carregar anotações:', error);
+    }
+  };
+
+  // Adicionar numeração diretamente no DOM
+  const adicionarNumeracaoAnotacoes = () => {
+    if (!containerRef.current) return;
+
+    try {
+      const annotationElements = containerRef.current.querySelectorAll('.r6o-annotation');
+      console.log('🔢 Adicionando numeração para', annotationElements.length, 'anotações');
+
+      annotationElements.forEach((element, index) => {
+        // Remover numeração existente se houver
+        const existingNumber = element.querySelector('.annotation-number');
+        if (existingNumber) {
+          existingNumber.remove();
+        }
+
+        // Encontrar a anotação correspondente no array
+        const annotationId = element.getAttribute('data-id');
+        const anotacao = anotacoes.find(a => a.id === annotationId);
+        const numero = anotacao?.numero_sequencial || (index + 1);
+
+        // Criar elemento de numeração
+        const numberElement = document.createElement('div');
+        numberElement.className = 'annotation-number';
+        numberElement.textContent = numero.toString();
+        
+        // Estilizar elemento de numeração
+        Object.assign(numberElement.style, {
+          position: 'absolute',
+          top: '-8px',
+          left: '-8px',
+          background: '#333',
+          color: 'white',
+          borderRadius: '50%',
+          width: '18px',
+          height: '18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '10px',
+          fontWeight: 'bold',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          zIndex: '1000',
+          border: '2px solid white',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          pointerEvents: 'none',
+          textShadow: '0 0 2px rgba(0,0,0,0.8)'
+        });
+
+        // Adicionar ao elemento da anotação
+        (element as HTMLElement).style.position = 'relative';
+        element.appendChild(numberElement);
+
+        console.log(`🔢 Número ${numero} adicionado à anotação ${index + 1}`);
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao adicionar numeração:', error);
     }
   };
 
@@ -340,7 +424,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
               const numero = annotation.numero || '';
               
-              console.log('🎨 Formatando anotação:', { competencia, corCompetencia: corCompetencia?.cor });
+              console.log('🎨 Formatando anotação:', { 
+                competencia, 
+                corCompetencia: corCompetencia?.cor,
+                numero,
+                annotation: annotation
+              });
               
               if (corCompetencia) {
                 const r = parseInt(corCompetencia.cor.slice(1, 3), 16);
