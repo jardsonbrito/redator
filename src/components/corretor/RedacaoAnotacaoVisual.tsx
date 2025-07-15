@@ -248,16 +248,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
       console.log('Anotações carregadas:', data);
       
-      // Renumerar anotações baseado na ordem cronológica real
-      const anotacoesRenumeradas = data?.map((anotacao, index) => ({
-        ...anotacao,
-        numero_sequencial: index + 1 // Força numeração sequencial baseada na ordem de criação
-      })) || [];
+      // Usar numeração original salva no banco (respeita ordem real de criação)
+      setAnotacoes(data || []);
       
-      setAnotacoes(anotacoesRenumeradas);
-      
-      // Definir próximo número sequencial baseado na quantidade real
-      const proximoNumero = (anotacoesRenumeradas?.length || 0) + 1;
+      // Definir próximo número sequencial baseado no maior número existente
+      const maiorNumero = Math.max(0, ...(data?.map(a => a.numero_sequencial || 0) || []));
+      const proximoNumero = maiorNumero + 1;
       setContadorSequencial(proximoNumero);
       
     } catch (error) {
