@@ -593,48 +593,68 @@ export type Database = {
       }
       profiles: {
         Row: {
+          aprovado_por: string | null
           ativo: boolean | null
           created_at: string | null
           creditos: number | null
+          data_aprovacao: string | null
+          data_solicitacao: string | null
           email: string
           id: string
           is_authenticated_student: boolean | null
           nome: string
           sobrenome: string
+          status_aprovacao: string | null
           turma: string | null
           turma_codigo: string | null
           updated_at: string | null
           user_type: string | null
         }
         Insert: {
+          aprovado_por?: string | null
           ativo?: boolean | null
           created_at?: string | null
           creditos?: number | null
+          data_aprovacao?: string | null
+          data_solicitacao?: string | null
           email: string
           id: string
           is_authenticated_student?: boolean | null
           nome: string
           sobrenome: string
+          status_aprovacao?: string | null
           turma?: string | null
           turma_codigo?: string | null
           updated_at?: string | null
           user_type?: string | null
         }
         Update: {
+          aprovado_por?: string | null
           ativo?: boolean | null
           created_at?: string | null
           creditos?: number | null
+          data_aprovacao?: string | null
+          data_solicitacao?: string | null
           email?: string
           id?: string
           is_authenticated_student?: boolean | null
           nome?: string
           sobrenome?: string
+          status_aprovacao?: string | null
           turma?: string | null
           turma_codigo?: string | null
           updated_at?: string | null
           user_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       radar_dados: {
         Row: {
@@ -1450,6 +1470,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      aprovar_aluno: {
+        Args: { aluno_id: string; admin_id: string }
+        Returns: boolean
+      }
       auto_merge_student_accounts: {
         Args: { student_email: string }
         Returns: Json
@@ -1492,6 +1516,16 @@ export type Database = {
           duplicate_email: string
           student_name: string
           redacoes_count: number
+        }[]
+      }
+      get_alunos_pendentes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          nome: string
+          email: string
+          turma: string
+          data_solicitacao: string
         }[]
       }
       get_avisos_corretor: {
@@ -1622,6 +1656,10 @@ export type Database = {
       merge_student_redacoes: {
         Args: { target_student_id: string; source_student_id: string }
         Returns: Json
+      }
+      recusar_aluno: {
+        Args: { aluno_id: string; admin_id: string }
+        Returns: boolean
       }
       salvar_correcao_corretor: {
         Args: {

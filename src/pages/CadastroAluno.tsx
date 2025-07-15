@@ -58,7 +58,9 @@ export default function CadastroAluno() {
         turma,
         user_type: "aluno",
         is_authenticated_student: true,
-        ativo: false // Alunos cadastrados via link ficam inativos
+        ativo: false, // Alunos cadastrados via autoatendimento ficam inativos
+        status_aprovacao: 'pendente', // Status pendente para aprovação
+        data_solicitacao: new Date().toISOString()
       };
 
       const { error } = await supabase
