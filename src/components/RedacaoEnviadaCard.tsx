@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download } from "lucide-react";
 import { RedacaoAnotacaoVisual } from "./corretor/RedacaoAnotacaoVisual";
 import { useToast } from "@/hooks/use-toast";
+import { downloadRedacaoManuscritaCorrigida } from "@/utils/redacaoDownload";
 
 interface RedacaoEnviadaCardProps {
   redacao: {
