@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,8 +18,7 @@ import {
   MessageSquare,
   Radar,
   Users,
-  UserCheck,
-  AlertTriangle
+  UserCheck
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,10 +69,6 @@ import { AlunoList } from "@/components/admin/AlunoList";
 import { CorretorForm } from "@/components/admin/CorretorForm";
 import { CorretorList } from "@/components/admin/CorretorList";
 
-// Import componentes de aprovação de alunos
-import { AlunosAprovacaoPopup } from "@/components/admin/AlunosAprovacaoPopup";
-import { useAlunosPendentes } from "@/hooks/useAlunosPendentes";
-
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
@@ -84,17 +79,6 @@ const Admin = () => {
   const [alunoEditando, setAlunoEditando] = useState(null);
   const [refreshCorretores, setRefreshCorretores] = useState(false);
   const [corretorEditando, setCorretorEditando] = useState(null);
-  
-  // Hook para gerenciar alunos pendentes
-  const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
-  const [mostrarPopupAprovacao, setMostrarPopupAprovacao] = useState(false);
-
-  // Mostrar popup automaticamente quando há alunos pendentes
-  useEffect(() => {
-    if (temAlunosPendentes && !mostrarPopupAprovacao) {
-      setMostrarPopupAprovacao(true);
-    }
-  }, [temAlunosPendentes, mostrarPopupAprovacao]);
 
   console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
 
@@ -439,15 +423,6 @@ const Admin = () => {
     }
   };
 
-  const handleFecharPopupAprovacao = () => {
-    setMostrarPopupAprovacao(false);
-  };
-
-  const handleAlunosProcessados = () => {
-    resetarVerificacao();
-    verificarAlunosPendentes(); // Recarregar para verificar se ainda há pendentes
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
       {/* Header */}
@@ -468,18 +443,6 @@ const Admin = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              {/* Indicador de alunos pendentes */}
-              {temAlunosPendentes && (
-                <Button
-                  onClick={() => setMostrarPopupAprovacao(true)}
-                  className="bg-orange-500 hover:bg-orange-600 text-white animate-pulse"
-                  size="sm"
-                >
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Alunos Pendentes
-                </Button>
-              )}
-              
               <div className="bg-secondary/20 px-3 py-1 rounded-full">
                 <span className="text-sm font-medium text-primary">Olá, {user.email}</span>
               </div>
@@ -523,13 +486,6 @@ const Admin = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderContent()}
       </main>
-
-      {/* Pop-up de aprovação de alunos */}
-      <AlunosAprovacaoPopup
-        isOpen={mostrarPopupAprovacao}
-        onClose={handleFecharPopupAprovacao}
-        onAlunosProcessados={handleAlunosProcessados}
-      />
     </div>
   );
 };
