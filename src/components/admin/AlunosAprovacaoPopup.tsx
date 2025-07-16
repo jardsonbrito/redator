@@ -26,21 +26,37 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
   const [alunos, setAlunos] = useState<AlunoPendente[]>([]);
   const [loading, setLoading] = useState(true);
   const [processando, setProcessando] = useState<string | null>(null);
+  const [adminProfileId, setAdminProfileId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const carregarAlunosPendentes = async () => {
+  const carregarDados = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_alunos_pendentes');
       
-      if (error) {
-        throw error;
+      // Buscar o profile ID do admin atual
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', user?.email)
+        .single();
+
+      if (profileError) {
+        throw new Error('Perfil do administrador não encontrado');
       }
 
-      setAlunos(data || []);
+      setAdminProfileId(profile.id);
+
+      // Buscar alunos pendentes
+      const { data: alunosPendentes, error: alunosError } = await supabase.rpc('get_alunos_pendentes');
+      
+      if (alunosError) {
+        throw alunosError;
+      }
+
+      setAlunos(alunosPendentes || []);
     } catch (error) {
-      console.error('Erro ao carregar alunos pendentes:', error);
+      console.error('Erro ao carregar dados:', error);
       toast({
         title: "Erro ao carregar dados",
         description: "Não foi possível carregar a lista de alunos pendentes.",
@@ -52,20 +68,39 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
   };
 
   useEffect(() => {
-    if (isOpen) {
-      carregarAlunosPendentes();
+    if (isOpen && user?.email) {
+      carregarDados();
     }
+  }, [isOpen, user?.email]);
+
+  // Adicionar suporte para ESC
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
   }, [isOpen]);
 
   const aprovarAluno = async (alunoId: string, nomeAluno: string) => {
-    if (!user?.id) return;
+    if (!adminProfileId) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Perfil do administrador não encontrado. Tente fazer login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       setProcessando(alunoId);
       
       const { data, error } = await supabase.rpc('aprovar_aluno', {
         aluno_id: alunoId,
-        admin_id: user.id
+        admin_id: adminProfileId
       });
 
       if (error) {
@@ -87,7 +122,7 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
       console.error('Erro ao aprovar aluno:', error);
       toast({
         title: "Erro ao aprovar aluno",
-        description: error.message || "Não foi possível aprovar o aluno.",
+        description: error.message || "Não foi possível aprovar o aluno. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -96,14 +131,21 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
   };
 
   const recusarAluno = async (alunoId: string, nomeAluno: string) => {
-    if (!user?.id) return;
+    if (!adminProfileId) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Perfil do administrador não encontrado. Tente fazer login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       setProcessando(alunoId);
       
       const { data, error } = await supabase.rpc('recusar_aluno', {
         aluno_id: alunoId,
-        admin_id: user.id
+        admin_id: adminProfileId
       });
 
       if (error) {
@@ -126,7 +168,7 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
       console.error('Erro ao recusar aluno:', error);
       toast({
         title: "Erro ao recusar aluno",
-        description: error.message || "Não foi possível recusar o aluno.",
+        description: error.message || "Não foi possível recusar o aluno. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -145,6 +187,7 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
   };
 
   const handleClose = () => {
+    setProcessando(null); // Limpar processamento
     onClose();
     if (alunos.length === 0) {
       onAlunosProcessados();
@@ -156,28 +199,11 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-6 h-6 text-orange-500" />
-              <span>Novos alunos aguardando aprovação</span>
-            </div>
-            <Badge variant="secondary" className="ml-auto">
-              <Users className="w-4 h-4 mr-1" />
-              {alunos.length} pendente{alunos.length !== 1 ? 's' : ''}
-            </Badge>
+            <span>Novos alunos aguardando aprovação</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-orange-800">
-                  ⚠️ Há novos alunos cadastrados via autoatendimento. Você precisa revisar e ativar ou recusar o acesso.
-                </p>
-              </div>
-            </div>
-          </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -222,10 +248,10 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2 justify-center">
-                          <Button
+                           <Button
                             size="sm"
                             onClick={() => aprovarAluno(aluno.id, aluno.nome)}
-                            disabled={processando === aluno.id}
+                            disabled={processando !== null}
                             className="bg-green-600 hover:bg-green-700"
                           >
                             {processando === aluno.id ? (
@@ -241,7 +267,7 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
                             size="sm"
                             variant="destructive"
                             onClick={() => recusarAluno(aluno.id, aluno.nome)}
-                            disabled={processando === aluno.id}
+                            disabled={processando !== null}
                           >
                             {processando === aluno.id ? (
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
@@ -262,7 +288,11 @@ export const AlunosAprovacaoPopup = ({ isOpen, onClose, onAlunosProcessados }: A
           )}
 
           <div className="flex justify-end pt-4 border-t">
-            <Button variant="outline" onClick={handleClose}>
+            <Button 
+              variant="outline" 
+              onClick={handleClose}
+              disabled={processando !== null}
+            >
               {alunos.length === 0 ? 'Fechar' : 'Fechar e revisar depois'}
             </Button>
           </div>

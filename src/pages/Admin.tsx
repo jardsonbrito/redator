@@ -468,18 +468,6 @@ const Admin = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              {/* Indicador de alunos pendentes */}
-              {temAlunosPendentes && (
-                <Button
-                  onClick={() => setMostrarPopupAprovacao(true)}
-                  className="bg-orange-500 hover:bg-orange-600 text-white animate-pulse"
-                  size="sm"
-                >
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Alunos Pendentes
-                </Button>
-              )}
-              
               <div className="bg-secondary/20 px-3 py-1 rounded-full">
                 <span className="text-sm font-medium text-primary">Olá, {user.email}</span>
               </div>
