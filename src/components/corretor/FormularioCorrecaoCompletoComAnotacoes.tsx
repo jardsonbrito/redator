@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 
-import { ArrowLeft, Save, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle, Copy } from "lucide-react";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -309,6 +309,23 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           </div>
         ) : (
           <div className="bg-white rounded-lg p-6 border">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-semibold">Redação Digitada</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const conteudo = `Nome do aluno: ${redacao.nome_aluno}\nFrase temática: ${redacao.frase_tematica}\nRedação:\n${redacao.texto}`;
+                  navigator.clipboard.writeText(conteudo);
+                  toast({
+                    title: "Copiado com sucesso!",
+                    description: "Conteúdo da redação foi copiado para a área de transferência.",
+                  });
+                }}
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
             <div className="prose prose-base max-w-none">
               <p className="text-base leading-relaxed whitespace-pre-wrap text-gray-800">
                 {redacao.texto}
