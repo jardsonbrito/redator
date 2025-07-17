@@ -14,33 +14,75 @@ interface StudentAvatarProps {
 
 export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }: StudentAvatarProps) => {
   const { user } = useAuth();
-  const { studentData } = useStudentAuth();
+  const { studentData, isStudentLoggedIn } = useStudentAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Carregar avatar do usuário autenticado
+  // Carregar avatar do usuário (autenticado ou estudante simples)
   useEffect(() => {
     const loadUserProfile = async () => {
+      console.log('🔄 Carregando perfil do usuário...', { user: !!user, studentData });
+      
+      // Primeiro, tentar carregar do localStorage (cache rápido)
+      const cachedAvatar = localStorage.getItem('student_avatar_url');
+      if (cachedAvatar) {
+        setAvatarUrl(cachedAvatar);
+        onAvatarUpdate?.(true);
+      }
+
       if (user) {
+        // Usuário autenticado do Supabase Auth
+        console.log('📸 Carregando avatar para usuário autenticado:', user.id);
         const { data } = await supabase
           .from('profiles')
           .select('avatar_url')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
-        if (data) {
+        if (data && data.avatar_url) {
+          console.log('✅ Avatar encontrado para usuário autenticado:', data.avatar_url);
           setUserProfile(data);
           setAvatarUrl(data.avatar_url);
-          onAvatarUpdate?.(!!data.avatar_url);
+          localStorage.setItem('student_avatar_url', data.avatar_url);
+          onAvatarUpdate?.(true);
+        } else {
+          console.log('❌ Nenhum avatar encontrado para usuário autenticado');
+          if (!cachedAvatar) {
+            setAvatarUrl(null);
+            onAvatarUpdate?.(false);
+          }
+        }
+      } else if (isStudentLoggedIn && studentData.email) {
+        // Estudante simples (useStudentAuth)
+        console.log('📸 Carregando avatar para estudante simples:', studentData.email);
+        const { data } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('email', studentData.email)
+          .eq('user_type', 'aluno')
+          .maybeSingle();
+        
+        if (data && data.avatar_url) {
+          console.log('✅ Avatar encontrado para estudante simples:', data.avatar_url);
+          setUserProfile(data);
+          setAvatarUrl(data.avatar_url);
+          localStorage.setItem('student_avatar_url', data.avatar_url);
+          onAvatarUpdate?.(true);
+        } else {
+          console.log('❌ Nenhum avatar encontrado para estudante simples');
+          if (!cachedAvatar) {
+            setAvatarUrl(null);
+            onAvatarUpdate?.(false);
+          }
         }
       }
     };
 
     loadUserProfile();
-  }, [user]);
+  }, [user, studentData.email, isStudentLoggedIn, onAvatarUpdate]);
 
   const sizeClasses = {
     sm: 'w-8 h-8',
@@ -76,8 +118,11 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
     try {
       // Criar nome único para o arquivo
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id || 'guest'}_${Date.now()}.${fileExt}`;
-      const filePath = `${user?.id || 'guest'}/${fileName}`;
+      const userIdentifier = user?.id || studentData.email || 'guest';
+      const fileName = `${userIdentifier}_${Date.now()}.${fileExt}`;
+      const filePath = `${userIdentifier}/${fileName}`;
+
+      console.log('📤 Iniciando upload do avatar:', { userIdentifier, fileName, filePath });
 
       // Upload para o Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -96,10 +141,13 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         .from('avatars')
         .getPublicUrl(filePath);
 
+      console.log('✅ Upload concluído. URL pública:', publicUrl);
       setAvatarUrl(publicUrl);
 
-      // Salvar URL no perfil do usuário se autenticado
+      // Salvar URL no perfil do usuário
       if (user) {
+        // Usuário autenticado do Supabase Auth
+        console.log('💾 Salvando avatar para usuário autenticado:', user.id);
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ avatar_url: publicUrl })
@@ -108,7 +156,23 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         if (updateError) {
           throw updateError;
         }
+      } else if (isStudentLoggedIn && studentData.email) {
+        // Estudante simples (useStudentAuth)
+        console.log('💾 Salvando avatar para estudante simples:', studentData.email);
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('email', studentData.email)
+          .eq('user_type', 'aluno');
+
+        if (updateError) {
+          console.warn('⚠️ Erro ao salvar avatar para estudante simples:', updateError);
+          // Não falhar se não conseguir salvar no banco - o cache local funciona
+        }
       }
+
+      // Salvar no cache local para persistência
+      localStorage.setItem('student_avatar_url', publicUrl);
 
       // Notificar o componente pai sobre a atualização
       onAvatarUpdate?.(true);
@@ -119,7 +183,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       });
 
     } catch (error) {
-      console.error('Erro no upload:', error);
+      console.error('❌ Erro no upload:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao fazer upload da imagem. Tente novamente.',
@@ -153,16 +217,18 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         </AvatarFallback>
       </Avatar>
       
-      {showUpload && !avatarUrl && (
+      {showUpload && (
         <>
-          <div 
-            className={`absolute -bottom-1 -right-1 bg-primary rounded-full shadow-lg cursor-pointer hover:bg-primary/80 transition-colors ${
-              size === 'lg' ? 'p-2' : 'p-1.5'
-            }`}
-            onClick={handleAvatarClick}
-          >
-            <Camera className={`text-primary-foreground ${size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'}`} />
-          </div>
+          {!avatarUrl && (
+            <div 
+              className={`absolute -bottom-1 -right-1 bg-primary rounded-full shadow-lg cursor-pointer hover:bg-primary/80 transition-colors ${
+                size === 'lg' ? 'p-2' : 'p-1.5'
+              }`}
+              onClick={handleAvatarClick}
+            >
+              <Camera className={`text-primary-foreground ${size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'}`} />
+            </div>
+          )}
           
           <input
             ref={fileInputRef}

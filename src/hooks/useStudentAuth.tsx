@@ -217,6 +217,9 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     localStorage.removeItem("visitanteData");
     localStorage.removeItem("loginTimestamp");
     
+    // Limpar cache do avatar
+    localStorage.removeItem("student_avatar_url");
+    
     setIsStudentLoggedIn(false);
     setStudentData({
       userType: null,

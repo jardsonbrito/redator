@@ -164,6 +164,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsAdmin(false);
       // Limpar sessão admin local
       localStorage.removeItem('admin_session');
+      // Limpar cache do avatar
+      localStorage.removeItem('student_avatar_url');
     } catch (error) {
       console.error('❌ Sign out error:', error);
     } finally {
