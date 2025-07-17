@@ -3,6 +3,7 @@ import React from "react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Welcome from "./pages/Welcome";
 import Admin from "./pages/Admin";
+import Exportacao from "./pages/admin/Exportacao";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import AlunoLogin from "./pages/AlunoLogin";
@@ -83,6 +84,7 @@ function App() {
                 <Route path="/admin/simulados" element={<SimuladosAdmin />} />
                 <Route path="/admin/exercicios" element={<ExerciciosAdmin />} />
                 <Route path="/admin/corretores" element={<CorretoresAdmin />} />
+                <Route path="/admin/exportacao" element={<Exportacao />} />
                 
                 {/* Rotas do Corretor */}
                 <Route path="/corretor/login" element={<CorretorLogin />} />

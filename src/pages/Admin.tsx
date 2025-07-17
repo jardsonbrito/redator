@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,8 @@ import {
   Radar,
   Users,
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,6 +77,7 @@ import { useAlunosPendentes } from "@/hooks/useAlunosPendentes";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState("dashboard");
   const [refreshAvisos, setRefreshAvisos] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState(null);
@@ -122,6 +124,7 @@ const Admin = () => {
     { id: "radar", label: "Radar", icon: Radar },
     { id: "cadastro-alunos", label: "Cadastro de Alunos", icon: Users },
     { id: "corretores", label: "Corretores", icon: UserCheck },
+    { id: "exportacao", label: "Exportação", icon: Download },
   ];
 
   const renderContent = () => {
@@ -412,6 +415,10 @@ const Admin = () => {
             />
           </div>
         );
+
+      case "exportacao":
+        navigate('/admin/exportacao');
+        return null;
       
       default:
         return (
