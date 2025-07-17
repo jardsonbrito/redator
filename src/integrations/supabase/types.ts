@@ -595,6 +595,7 @@ export type Database = {
         Row: {
           aprovado_por: string | null
           ativo: boolean | null
+          avatar_url: string | null
           created_at: string | null
           creditos: number | null
           data_aprovacao: string | null
@@ -605,6 +606,7 @@ export type Database = {
           nome: string
           sobrenome: string
           status_aprovacao: string | null
+          theme_preference: string | null
           turma: string | null
           turma_codigo: string | null
           updated_at: string | null
@@ -613,6 +615,7 @@ export type Database = {
         Insert: {
           aprovado_por?: string | null
           ativo?: boolean | null
+          avatar_url?: string | null
           created_at?: string | null
           creditos?: number | null
           data_aprovacao?: string | null
@@ -623,6 +626,7 @@ export type Database = {
           nome: string
           sobrenome: string
           status_aprovacao?: string | null
+          theme_preference?: string | null
           turma?: string | null
           turma_codigo?: string | null
           updated_at?: string | null
@@ -631,6 +635,7 @@ export type Database = {
         Update: {
           aprovado_por?: string | null
           ativo?: boolean | null
+          avatar_url?: string | null
           created_at?: string | null
           creditos?: number | null
           data_aprovacao?: string | null
@@ -641,6 +646,7 @@ export type Database = {
           nome?: string
           sobrenome?: string
           status_aprovacao?: string | null
+          theme_preference?: string | null
           turma?: string | null
           turma_codigo?: string | null
           updated_at?: string | null

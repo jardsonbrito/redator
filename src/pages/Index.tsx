@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
+import { StudentProfile } from "@/components/StudentProfile";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -116,9 +117,8 @@ const Index = () => {
 
           {/* Main Content */}
           <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Seção limpa com logo e badge da turma */}
-            <div className="text-center mb-12">
-              {/* Logo em destaque */}
+            {/* Seção limpa com logo */}
+            <div className="text-center mb-8">
               <div className="flex justify-center mb-6">
                 <img 
                   src="/lovable-uploads/d073fb44-8fd6-46e0-9ca1-f74baca3bb5b.png" 
@@ -126,20 +126,10 @@ const Index = () => {
                   className="h-20 w-auto" 
                 />
               </div>
-              
-              {/* Badge da turma */}
-              {studentData.userType && (
-                <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-lg border border-secondary">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                  <p className="text-sm font-semibold text-primary">
-                    {studentData.userType === "aluno" && studentData.turma ? 
-                      `Aluno da ${studentData.turma}` : 
-                      "Visitante"
-                    }
-                  </p>
-                </div>
-              )}
             </div>
+
+            {/* Perfil do Estudante */}
+            <StudentProfile />
 
             {/* Componente Meu Desempenho */}
             <MeuDesempenho />
