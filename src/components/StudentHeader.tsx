@@ -6,7 +6,6 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAvatar } from "@/components/StudentAvatar";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface StudentHeaderProps {
   pageTitle?: string;
@@ -49,9 +48,6 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
           <div className="flex items-center gap-3">
             {/* Avatar do estudante */}
             <StudentAvatar size="sm" showUpload={false} />
-            
-            {/* Toggle de tema */}
-            <ThemeToggle />
             
             {/* Link para Professor apenas se for admin autenticado */}
             {user && isAdmin && (

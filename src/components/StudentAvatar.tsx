@@ -9,9 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 interface StudentAvatarProps {
   size?: 'sm' | 'md' | 'lg';
   showUpload?: boolean;
+  onAvatarUpdate?: (hasAvatar: boolean) => void;
 }
 
-export const StudentAvatar = ({ size = 'md', showUpload = true }: StudentAvatarProps) => {
+export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }: StudentAvatarProps) => {
   const { user } = useAuth();
   const { studentData } = useStudentAuth();
   const { toast } = useToast();
@@ -33,6 +34,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true }: StudentAvatarP
         if (data) {
           setUserProfile(data);
           setAvatarUrl(data.avatar_url);
+          onAvatarUpdate?.(!!data.avatar_url);
         }
       }
     };
@@ -43,7 +45,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true }: StudentAvatarP
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-16 h-16',
-    lg: 'w-24 h-24'
+    lg: 'w-32 h-32'
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,6 +110,9 @@ export const StudentAvatar = ({ size = 'md', showUpload = true }: StudentAvatarP
         }
       }
 
+      // Notificar o componente pai sobre a atualização
+      onAvatarUpdate?.(true);
+
       toast({
         title: 'Sucesso',
         description: 'Foto de perfil atualizada com sucesso!',
@@ -139,19 +144,24 @@ export const StudentAvatar = ({ size = 'md', showUpload = true }: StudentAvatarP
   return (
     <div className="relative">
       <Avatar 
-        className={`${sizeClasses[size]} cursor-pointer transition-all hover:shadow-lg ${uploading ? 'opacity-50' : ''}`}
-        onClick={handleAvatarClick}
+        className={`${sizeClasses[size]} border border-primary/20 transition-all hover:shadow-lg ${uploading ? 'opacity-50' : ''} ${showUpload && !avatarUrl ? 'cursor-pointer' : ''}`}
+        onClick={showUpload && !avatarUrl ? handleAvatarClick : undefined}
       >
         <AvatarImage src={avatarUrl || undefined} alt="Foto de perfil" />
         <AvatarFallback className="bg-primary/10 text-primary">
-          {studentData.nomeUsuario ? getInitials() : <User className="w-5 h-5" />}
+          {studentData.nomeUsuario ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
       </Avatar>
       
-      {showUpload && (
+      {showUpload && !avatarUrl && (
         <>
-          <div className="absolute -bottom-1 -right-1 bg-primary rounded-full p-1 shadow-lg">
-            <Camera className="w-3 h-3 text-primary-foreground" />
+          <div 
+            className={`absolute -bottom-1 -right-1 bg-primary rounded-full shadow-lg cursor-pointer hover:bg-primary/80 transition-colors ${
+              size === 'lg' ? 'p-2' : 'p-1.5'
+            }`}
+            onClick={handleAvatarClick}
+          >
+            <Camera className={`text-primary-foreground ${size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'}`} />
           </div>
           
           <input

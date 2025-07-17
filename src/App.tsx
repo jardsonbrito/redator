@@ -22,7 +22,6 @@ import MinhasRedacoesList from "./pages/MinhasRedacoesList";
 import SimuladoParticipacao from "./pages/SimuladoParticipacao";
 import { AuthProvider } from "./hooks/useAuth";
 import { StudentAuthProvider } from "./hooks/useStudentAuth";
-import { ThemeProvider } from "./hooks/useTheme";
 import { Toaster } from "@/components/ui/toaster"
 import { Dashboard } from "./pages/admin/Dashboard";
 import { Avisos } from "./pages/admin/Avisos";
@@ -49,10 +48,9 @@ function App() {
     <CorretorAuthProvider>
       <StudentAuthProvider>
         <AuthProvider>
-          <ThemeProvider>
-            <Router>
-              <div className="min-h-screen bg-background">
-                <Toaster />
+          <Router>
+            <div className="min-h-screen bg-background">
+              <Toaster />
               <Routes>
                 {/* Rotas Públicas */}
                 <Route path="/" element={<Welcome />} />
@@ -102,11 +100,10 @@ function App() {
               </Routes>
             </div>
           </Router>
-        </ThemeProvider>
-      </AuthProvider>
-    </StudentAuthProvider>
-  </CorretorAuthProvider>
-);
+        </AuthProvider>
+      </StudentAuthProvider>
+    </CorretorAuthProvider>
+  );
 }
 
 export default App;
