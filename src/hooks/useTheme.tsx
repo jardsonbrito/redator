@@ -14,21 +14,34 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>('light');
-  const { user } = useAuth();
+  
+  // Usar useAuth de forma segura
+  let user = null;
+  try {
+    const authContext = useAuth();
+    user = authContext?.user;
+  } catch (error) {
+    // useAuth não está disponível ainda, usar apenas localStorage
+    console.log('AuthProvider not available yet, using localStorage only');
+  }
 
   useEffect(() => {
     // Carregar tema inicial
     const initializeTheme = async () => {
       if (user) {
-        // Carregar tema do banco de dados para usuários autenticados
-        const { data } = await supabase
-          .from('profiles')
-          .select('theme_preference')
-          .eq('id', user.id)
-          .single();
-        
-        if (data?.theme_preference) {
-          setThemeState(data.theme_preference as Theme);
+        try {
+          // Carregar tema do banco de dados para usuários autenticados
+          const { data } = await supabase
+            .from('profiles')
+            .select('theme_preference')
+            .eq('id', user.id)
+            .single();
+          
+          if (data?.theme_preference) {
+            setThemeState(data.theme_preference as Theme);
+          }
+        } catch (error) {
+          console.log('Error loading theme from database:', error);
         }
       } else {
         // Carregar tema do localStorage para usuários simples
@@ -53,11 +66,15 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setThemeState(newTheme);
     
     if (user) {
-      // Salvar no banco de dados para usuários autenticados
-      await supabase
-        .from('profiles')
-        .update({ theme_preference: newTheme })
-        .eq('id', user.id);
+      try {
+        // Salvar no banco de dados para usuários autenticados
+        await supabase
+          .from('profiles')
+          .update({ theme_preference: newTheme })
+          .eq('id', user.id);
+      } catch (error) {
+        console.log('Error saving theme to database:', error);
+      }
     } else {
       // Salvar no localStorage para usuários simples
       localStorage.setItem('theme', newTheme);
