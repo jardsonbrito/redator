@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Camera, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +18,27 @@ export const StudentAvatar = ({ size = 'md', showUpload = true }: StudentAvatarP
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Carregar avatar do usuário autenticado
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) {
+          setUserProfile(data);
+          setAvatarUrl(data.avatar_url);
+        }
+      }
+    };
+
+    loadUserProfile();
+  }, [user]);
 
   const sizeClasses = {
     sm: 'w-8 h-8',
