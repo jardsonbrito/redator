@@ -53,7 +53,7 @@ export default function Exportacao() {
       const { data, error } = await supabase
         .from('temas')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('publicado_em', { ascending: false });
 
       if (error) throw error;
 
