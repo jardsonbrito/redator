@@ -5,6 +5,7 @@ import { useCorretorMetricas } from "@/hooks/useCorretorMetricas";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Clock, FileText } from "lucide-react";
+import { AjudaRapidaCorretorCard } from "@/components/ajuda-rapida/AjudaRapidaCorretorCard";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, AreaChart } from "recharts";
 
 const CorretorDashboard = () => {
@@ -115,6 +116,11 @@ const CorretorDashboard = () => {
           <p className="text-sm sm:text-base text-muted-foreground">
             Acompanhe suas métricas de correção
           </p>
+        </div>
+
+        {/* Card Ajuda Rápida */}
+        <div className="mb-6">
+          <AjudaRapidaCorretorCard />
         </div>
 
         {/* Cards de métricas */}

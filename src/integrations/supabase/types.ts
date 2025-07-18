@@ -74,6 +74,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ajuda_rapida_mensagens: {
+        Row: {
+          aluno_id: string
+          autor: Database["public"]["Enums"]["autor_mensagem"]
+          corretor_id: string
+          criado_em: string
+          id: string
+          lida: boolean
+          mensagem: string
+        }
+        Insert: {
+          aluno_id: string
+          autor: Database["public"]["Enums"]["autor_mensagem"]
+          corretor_id: string
+          criado_em?: string
+          id?: string
+          lida?: boolean
+          mensagem: string
+        }
+        Update: {
+          aluno_id?: string
+          autor?: Database["public"]["Enums"]["autor_mensagem"]
+          corretor_id?: string
+          criado_em?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string
+        }
+        Relationships: []
+      }
       aulas: {
         Row: {
           ativo: boolean | null
@@ -1500,6 +1530,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: number
       }
+      contar_mensagens_nao_lidas_corretor: {
+        Args: { corretor_email: string }
+        Returns: number
+      }
       create_simple_profile: {
         Args: { p_nome: string; p_email: string; p_turma: string }
         Returns: {
@@ -1651,12 +1685,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      limpar_mensagens_antigas: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       log_denied_access: {
         Args: {
           attempted_email: string
           redacao_email: string
           redacao_id: string
         }
+        Returns: undefined
+      }
+      marcar_conversa_como_lida: {
+        Args: { p_aluno_id: string; p_corretor_id: string }
         Returns: undefined
       }
       merge_student_redacoes: {
@@ -1698,6 +1740,7 @@ export type Database = {
       }
     }
     Enums: {
+      autor_mensagem: "aluno" | "corretor"
       competencia_type: "C1" | "C2" | "C3" | "C4" | "C5"
       tipo_envio_enum: "regular" | "exercicio" | "simulado" | "visitante"
     }
@@ -1827,6 +1870,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      autor_mensagem: ["aluno", "corretor"],
       competencia_type: ["C1", "C2", "C3", "C4", "C5"],
       tipo_envio_enum: ["regular", "exercicio", "simulado", "visitante"],
     },

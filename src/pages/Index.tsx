@@ -1,6 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy } from "lucide-react";
+import { AjudaRapidaCard } from "@/components/ajuda-rapida/AjudaRapidaCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -146,6 +147,11 @@ const Index = () => {
             {/* Card "Minhas Redações" - SEMPRE FIXO E VISÍVEL - Garantir visibilidade total */}
             <div className="w-full block visible opacity-100 mb-8">
               <MeusSimuladosFixo turmaCode={turmaCode} />
+            </div>
+
+            {/* Card Ajuda Rápida */}
+            <div className="mb-8">
+              <AjudaRapidaCard />
             </div>
 
             {/* Menu Principal Horizontal */}

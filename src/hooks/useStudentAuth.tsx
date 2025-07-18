@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 interface StudentAuthContextType {
   isStudentLoggedIn: boolean;
   studentData: {
+    id: string;
     userType: 'aluno' | 'visitante' | null;
     turma: string | null;
     nomeUsuario: string;
@@ -23,6 +24,7 @@ const StudentAuthContext = createContext<StudentAuthContextType | undefined>(und
 export const StudentAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isStudentLoggedIn, setIsStudentLoggedIn] = useState(false);
   const [studentData, setStudentData] = useState<StudentAuthContextType['studentData']>({
+    id: '',
     userType: null,
     turma: null,
     nomeUsuario: '',
@@ -49,6 +51,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           const dados = JSON.parse(alunoData);
           setIsStudentLoggedIn(true);
           setStudentData({
+            id: dados.email, // usar email como ID para alunos
             userType: "aluno",
             turma: alunoTurma,
             nomeUsuario: dados.nome,
@@ -67,6 +70,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           const dados = JSON.parse(visitanteData);
           setIsStudentLoggedIn(true);
           setStudentData({
+            id: dados.email, // usar email como ID para visitantes
             userType: "visitante",
             turma: "visitante",
             nomeUsuario: dados.nome,
@@ -81,6 +85,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           localStorage.removeItem("alunoTurma");
           setIsStudentLoggedIn(false);
           setStudentData({
+            id: '',
             userType: null,
             turma: null,
             nomeUsuario: '',
@@ -90,6 +95,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       } else {
         setIsStudentLoggedIn(false);
         setStudentData({
+          id: '',
           userType: null,
           turma: null,
           nomeUsuario: '',
@@ -163,6 +169,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     
     setIsStudentLoggedIn(true);
     setStudentData({
+      id: email.toLowerCase(), // usar email como ID para alunos
       userType: "aluno",
       turma: turma,
       nomeUsuario: nome,
@@ -201,6 +208,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
 
     setIsStudentLoggedIn(true);
     setStudentData({
+      id: email.toLowerCase(), // usar email como ID para visitantes
       userType: "visitante",
       turma: "visitante",
       nomeUsuario: nome,
@@ -222,6 +230,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     
     setIsStudentLoggedIn(false);
     setStudentData({
+      id: '',
       userType: null,
       turma: null,
       nomeUsuario: '',
