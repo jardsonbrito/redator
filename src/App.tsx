@@ -42,6 +42,9 @@ import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 import CadastroAluno from "./pages/CadastroAluno";
 import AtualizarEmail from "./pages/AtualizarEmail";
+import AjudaRapida from "./pages/AjudaRapida";
+import CorretorAjudaRapida from "./pages/corretor/CorretorAjudaRapida";
+import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 
 function App() {
   return (
@@ -75,6 +78,7 @@ function App() {
                 <Route path="/biblioteca" element={<Biblioteca />} />
                 <Route path="/redacoes" element={<RedacoesExemplar />} />
                 <Route path="/top5" element={<Top5 />} />
+                <Route path="/ajuda-rapida" element={<AjudaRapida />} />
 
                 {/* Rotas do Admin */}
                 <Route path="/admin" element={<Admin />} />
@@ -85,6 +89,7 @@ function App() {
                 <Route path="/admin/exercicios" element={<ExerciciosAdmin />} />
                 <Route path="/admin/corretores" element={<CorretoresAdmin />} />
                 <Route path="/admin/exportacao" element={<Exportacao />} />
+                <Route path="/admin/ajuda-rapida" element={<AjudaRapidaAdmin />} />
                 
                 {/* Rotas do Corretor */}
                 <Route path="/corretor/login" element={<CorretorLogin />} />
@@ -97,6 +102,7 @@ function App() {
                 <Route path="/corretor/biblioteca" element={<CorretorBiblioteca />} />
                 <Route path="/corretor/redacoes" element={<CorretorRedacoesExemplar />} />
                 <Route path="/corretor/top5" element={<CorretorTop5 />} />
+                <Route path="/corretor/ajuda-rapida" element={<CorretorAjudaRapida />} />
               </Routes>
             </div>
           </Router>
