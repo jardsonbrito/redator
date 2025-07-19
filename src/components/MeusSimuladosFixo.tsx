@@ -546,15 +546,17 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
               <DialogTitle className="text-primary">
                 Vista Pedagógica
               </DialogTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadCorrection}
-                className="bg-primary text-white hover:bg-primary/90 flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Baixar correção
-              </Button>
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadCorrection}
+                  className="bg-primary text-white hover:bg-primary/90 p-2"
+                  title="Baixar correção"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+              </div>
             </DialogHeader>
             
             <div className="space-y-6 dialog-content-capture">
