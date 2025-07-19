@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Canvas as FabricCanvas, Rect, FabricText } from "fabric";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface MarcacaoVisual {
   comentario: string;
   imagem_largura: number;
   imagem_altura: number;
+  ordem_criacao: number; // Adicionar campo para ordem de criação
 }
 
 interface RedacaoAnotacaoProps {
@@ -56,6 +58,7 @@ export const RedacaoAnotacao = ({
   const [imagemCarregada, setImagemCarregada] = useState<boolean>(false);
   const [dimensoesImagem, setDimensoesImagem] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [marcacoesObjects, setMarcacoesObjects] = useState<Set<any>>(new Set());
+  const [proximaOrdem, setProximaOrdem] = useState<number>(1); // Controle de ordem sequencial
   const { toast } = useToast();
 
   // Carregar marcações existentes
@@ -65,10 +68,20 @@ export const RedacaoAnotacao = ({
         .from('marcacoes_visuais')
         .select('*')
         .eq('redacao_id', redacaoId)
-        .eq('tabela_origem', tabelaOrigem);
+        .eq('tabela_origem', tabelaOrigem)
+        .order('ordem_criacao', { ascending: true }); // Ordenar por ordem de criação
 
       if (error) throw error;
-      setMarcacoes(data || []);
+      
+      const marcacoesComOrdem = data || [];
+      setMarcacoes(marcacoesComOrdem);
+      
+      // Definir próxima ordem baseada na maior ordem existente
+      const maiorOrdem = marcacoesComOrdem.length > 0 
+        ? Math.max(...marcacoesComOrdem.map(m => m.ordem_criacao || 0))
+        : 0;
+      setProximaOrdem(maiorOrdem + 1);
+      
     } catch (error) {
       console.error('Erro ao carregar marcações:', error);
     }
@@ -187,6 +200,7 @@ export const RedacaoAnotacao = ({
           comentario: "",
           imagem_largura: dimensoesImagem.width,
           imagem_altura: dimensoesImagem.height,
+          ordem_criacao: proximaOrdem, // Usar ordem sequencial
         };
 
         setMarcacaoTemp(marcacao);
@@ -204,7 +218,7 @@ export const RedacaoAnotacao = ({
     return () => {
       canvas.dispose();
     };
-  }, [imagemUrl, readonly, modoSelecao, competenciaSelecionada, dimensoesImagem]);
+  }, [imagemUrl, readonly, modoSelecao, competenciaSelecionada, dimensoesImagem, proximaOrdem]);
 
   // Renderizar marcações no canvas
   useEffect(() => {
@@ -216,8 +230,10 @@ export const RedacaoAnotacao = ({
 
     const newObjects = new Set();
 
-    // Adicionar marcações
-    marcacoes.forEach((marcacao, index) => {
+    // Adicionar marcações ordenadas por ordem_criacao
+    const marcacoesOrdenadas = [...marcacoes].sort((a, b) => (a.ordem_criacao || 0) - (b.ordem_criacao || 0));
+    
+    marcacoesOrdenadas.forEach((marcacao) => {
       const scaleX = fabricCanvas.width! / marcacao.imagem_largura;
       const scaleY = fabricCanvas.height! / marcacao.imagem_altura;
 
@@ -234,28 +250,68 @@ export const RedacaoAnotacao = ({
       });
 
       // Adicionar propriedade customizada para identificar
-      (rect as any).marcacaoData = { marcacao, index };
+      (rect as any).marcacaoData = { marcacao };
 
-      // Adicionar texto da competência
-      const text = new FabricText(`C${marcacao.competencia}`, {
-        left: marcacao.x_start * scaleX + 5,
-        top: marcacao.y_start * scaleY + 5,
-        fontSize: 12,
+      // Criar círculo com número da ordem - tamanho proporcional melhorado
+      const centerX = marcacao.x_start * scaleX + ((marcacao.x_end - marcacao.x_start) * scaleX) / 2;
+      const centerY = marcacao.y_start * scaleY + ((marcacao.y_end - marcacao.y_start) * scaleY) / 2;
+      
+      // Círculo com tamanho proporcional ao número
+      const circleRadius = 16; // Reduzido para ser mais discreto
+      const circle = new FabricText((marcacao.ordem_criacao || 0).toString(), {
+        left: centerX,
+        top: centerY,
+        fontSize: 18, // Maior para ocupar 70% da área do círculo
         fill: 'white',
-        backgroundColor: marcacao.cor_marcacao,
+        backgroundColor: 'black',
+        textAlign: 'center',
+        originX: 'center',
+        originY: 'center',
+        selectable: false,
+        evented: true,
+        padding: 6, // Padding para criar o efeito de círculo
+        strokeWidth: 2,
+        stroke: 'white',
+        paintFirst: 'stroke',
+      });
+
+      // Adicionar círculo de fundo
+      const backgroundCircle = new Rect({
+        left: centerX,
+        top: centerY,
+        width: circleRadius * 2,
+        height: circleRadius * 2,
+        fill: 'black',
+        stroke: 'white',
+        strokeWidth: 2,
+        rx: circleRadius,
+        ry: circleRadius,
+        originX: 'center',
+        originY: 'center',
         selectable: false,
         evented: false,
       });
 
-      fabricCanvas.add(rect, text);
+      fabricCanvas.add(rect, backgroundCircle, circle);
       newObjects.add(rect);
-      newObjects.add(text);
+      newObjects.add(backgroundCircle);
+      newObjects.add(circle);
 
       // Adicionar click handler para mostrar comentário
       rect.on('mousedown', () => {
         if (readonly) {
           toast({
-            title: `${CORES_COMPETENCIAS[marcacao.competencia].label}`,
+            title: `${CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação ${marcacao.ordem_criacao}`,
+            description: marcacao.comentario,
+            duration: 4000,
+          });
+        }
+      });
+
+      circle.on('mousedown', () => {
+        if (readonly) {
+          toast({
+            title: `${CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação ${marcacao.ordem_criacao}`,
             description: marcacao.comentario,
             duration: 4000,
           });
@@ -265,7 +321,7 @@ export const RedacaoAnotacao = ({
 
     setMarcacoesObjects(newObjects);
     fabricCanvas.renderAll();
-  }, [fabricCanvas, marcacoes, imagemCarregada, readonly, toast, marcacoesObjects]);
+  }, [fabricCanvas, marcacoes, imagemCarregada, readonly, toast]);
 
   // Salvar marcação
   const salvarMarcacao = async () => {
@@ -287,6 +343,7 @@ export const RedacaoAnotacao = ({
           comentario: comentarioTemp.trim(),
           imagem_largura: marcacaoTemp.imagem_largura,
           imagem_altura: marcacaoTemp.imagem_altura,
+          ordem_criacao: marcacaoTemp.ordem_criacao, // Salvar ordem de criação
         });
 
       if (error) throw error;
@@ -299,6 +356,7 @@ export const RedacaoAnotacao = ({
       setDialogAberto(false);
       setMarcacaoTemp(null);
       setComentarioTemp("");
+      setProximaOrdem(prev => prev + 1); // Incrementar ordem para próxima marcação
       await carregarMarcacoes();
 
     } catch (error) {
@@ -354,11 +412,13 @@ export const RedacaoAnotacao = ({
         {marcacoes.length > 0 && (
           <div className="space-y-2">
             <h4 className="font-medium">Feedback por Competência:</h4>
-            {marcacoes.map((marcacao, index) => (
+            {marcacoes
+              .sort((a, b) => (a.ordem_criacao || 0) - (b.ordem_criacao || 0))
+              .map((marcacao, index) => (
               <div key={index} className="p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge style={{ backgroundColor: marcacao.cor_marcacao, color: 'white' }}>
-                    {CORES_COMPETENCIAS[marcacao.competencia].label}
+                    {CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação {marcacao.ordem_criacao}
                   </Badge>
                 </div>
                 <p className="text-sm leading-relaxed">{marcacao.comentario}</p>
@@ -424,11 +484,13 @@ export const RedacaoAnotacao = ({
       {marcacoes.length > 0 && (
         <div className="space-y-2">
           <h4 className="font-medium">Marcações Salvas:</h4>
-          {marcacoes.map((marcacao, index) => (
+          {marcacoes
+            .sort((a, b) => (a.ordem_criacao || 0) - (b.ordem_criacao || 0))
+            .map((marcacao, index) => (
             <div key={index} className="p-3 bg-white border rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <Badge style={{ backgroundColor: marcacao.cor_marcacao, color: 'white' }}>
-                  {CORES_COMPETENCIAS[marcacao.competencia].label}
+                  {CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação {marcacao.ordem_criacao}
                 </Badge>
                 {marcacao.id && (
                   <Button
@@ -466,7 +528,7 @@ export const RedacaoAnotacao = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Adicionar Comentário - {CORES_COMPETENCIAS[competenciaSelecionada].label}
+              Adicionar Comentário - {CORES_COMPETENCIAS[competenciaSelecionada].label} - Marcação {marcacaoTemp?.ordem_criacao}
             </DialogTitle>
           </DialogHeader>
           
