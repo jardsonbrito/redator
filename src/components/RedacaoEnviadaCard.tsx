@@ -155,13 +155,17 @@ export const RedacaoEnviadaCard = ({
               {redacao.frase_tematica}
             </CardTitle>
             <div className="flex flex-wrap gap-2 shrink-0">
-              {redacao.corrigida ? (
+              {redacao.corrigida && redacao.status === "corrigido" ? (
                 <Badge className="bg-green-100 text-green-800 text-xs">
-                  Corrigido
+                  Redação corrigida
+                </Badge>
+              ) : redacao.status === "em_correcao" ? (
+                <Badge className="bg-orange-100 text-orange-800 text-xs">
+                  Em correção
                 </Badge>
               ) : (
                 <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                  Aguardando
+                  Aguardando correção
                 </Badge>
               )}
               <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>

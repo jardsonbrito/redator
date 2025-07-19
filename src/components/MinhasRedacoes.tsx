@@ -616,15 +616,15 @@ export const MinhasRedacoes = () => {
                     
                   </div>
 
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500 mt-2"
-                    onClick={() => handleViewRedacao(redacao)}
-                  >
-                    <Shield className="w-3 h-3 mr-1" />
-                    🔒 Ver Correção
-                  </Button>
+                   <Button 
+                     variant="outline" 
+                     size="sm"
+                     className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500 mt-2"
+                     onClick={() => handleViewRedacao(redacao)}
+                   >
+                     <Shield className="w-3 h-3 mr-1" />
+                     🔒 Ver {redacao.corrigida && redacao.status === "corrigido" ? "Correção" : "Redação"}
+                   </Button>
                 </div>
               </CardContent>
             </Card>

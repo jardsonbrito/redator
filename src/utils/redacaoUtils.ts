@@ -8,11 +8,11 @@ export const getStatusColor = (status: string, corrigida: boolean) => {
 };
 
 export const getStatusLabel = (status: string, corrigida: boolean) => {
-  if (corrigida || status === "corrigido") return "🟢 Redação corrigida";
-  if (status === "em_correcao") return "🟠 Em correção";
-  if (status === "incompleta") return "🔵 Incompleta";
-  if (status === "aguardando" || status === "pendente") return "🟡 Aguardando correção";
-  return "🔹 Pendente";
+  if (corrigida || status === "corrigido") return "Redação corrigida";
+  if (status === "em_correcao") return "Em correção";
+  if (status === "incompleta") return "Em correção";
+  if (status === "aguardando" || status === "pendente") return "Aguardando correção";
+  return "Aguardando correção";
 };
 
 export const getTurmaColor = (turma: string) => {

@@ -63,12 +63,19 @@ export const NovaConversa = ({ alunoId, onVoltar, onConversaCriada }: NovaConver
 
     try {
       setLoading(true);
+      console.log('🔄 Enviando mensagem:', { alunoId, corretorSelecionado, mensagem: mensagem.trim() });
+      
       await enviarMensagem(alunoId, corretorSelecionado, mensagem.trim(), 'aluno');
       
       const corretorNome = corretores.find(c => c.id === corretorSelecionado)?.nome_completo || '';
       onConversaCriada(corretorSelecionado, corretorNome);
     } catch (error) {
-      console.error('Erro ao criar conversa:', error);
+      console.error('❌ Erro ao criar conversa:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
