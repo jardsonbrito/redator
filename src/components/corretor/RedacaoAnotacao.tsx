@@ -20,7 +20,7 @@ interface MarcacaoVisual {
   comentario: string;
   imagem_largura: number;
   imagem_altura: number;
-  ordem_criacao: number;
+  ordem_criacao?: number; // Made optional to handle nullable values from DB
 }
 
 interface RedacaoAnotacaoProps {
@@ -73,7 +73,12 @@ export const RedacaoAnotacao = ({
 
       if (error) throw error;
       
-      const marcacoesComOrdem = data || [];
+      // Transform data to ensure ordem_criacao has a default value
+      const marcacoesComOrdem = (data || []).map((marcacao, index) => ({
+        ...marcacao,
+        ordem_criacao: marcacao.ordem_criacao || (index + 1) // Provide fallback if null
+      }));
+      
       setMarcacoes(marcacoesComOrdem);
       
       // Definir próxima ordem baseada na maior ordem existente
@@ -302,7 +307,7 @@ export const RedacaoAnotacao = ({
       const showComment = () => {
         if (readonly) {
           toast({
-            title: `${CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação ${marcacao.ordem_criacao}`,
+            title: `${CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação ${marcacao.ordem_criacao || 0}`,
             description: marcacao.comentario,
             duration: 4000,
           });
@@ -337,7 +342,7 @@ export const RedacaoAnotacao = ({
           comentario: comentarioTemp.trim(),
           imagem_largura: marcacaoTemp.imagem_largura,
           imagem_altura: marcacaoTemp.imagem_altura,
-          ordem_criacao: marcacaoTemp.ordem_criacao,
+          ordem_criacao: marcacaoTemp.ordem_criacao || proximaOrdem,
         });
 
       if (error) throw error;
@@ -412,7 +417,7 @@ export const RedacaoAnotacao = ({
               <div key={index} className="p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge style={{ backgroundColor: marcacao.cor_marcacao, color: 'white' }}>
-                    {CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação {marcacao.ordem_criacao}
+                    {CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação {marcacao.ordem_criacao || 0}
                   </Badge>
                 </div>
                 <p className="text-sm leading-relaxed">{marcacao.comentario}</p>
@@ -484,7 +489,7 @@ export const RedacaoAnotacao = ({
             <div key={index} className="p-3 bg-white border rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <Badge style={{ backgroundColor: marcacao.cor_marcacao, color: 'white' }}>
-                  {CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação {marcacao.ordem_criacao}
+                  {CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação {marcacao.ordem_criacao || 0}
                 </Badge>
                 {marcacao.id && (
                   <Button
@@ -522,7 +527,7 @@ export const RedacaoAnotacao = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Adicionar Comentário - {CORES_COMPETENCIAS[competenciaSelecionada].label} - Marcação {marcacaoTemp?.ordem_criacao}
+              Adicionar Comentário - {CORES_COMPETENCIAS[competenciaSelecionada].label} - Marcação {marcacaoTemp?.ordem_criacao || proximaOrdem}
             </DialogTitle>
           </DialogHeader>
           
