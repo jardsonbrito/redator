@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,15 +20,17 @@ export const ListaConversasAluno = () => {
   } | null>(null);
 
   useEffect(() => {
-    if (studentData.id) {
-      buscarConversasAluno(studentData.id);
+    console.log('🔍 StudentData:', studentData);
+    if (studentData.email) {
+      console.log('📧 Buscando conversas por email:', studentData.email);
+      buscarConversasAluno(studentData.email);
     }
-  }, [studentData.id]);
+  }, [studentData.email]);
 
   if (conversaAtiva) {
     return (
       <ChatConversa
-        alunoId={studentData.id}
+        alunoId={studentData.email} // Passar email em vez de ID
         corretorId={conversaAtiva.corretorId}
         corretorNome={conversaAtiva.corretorNome}
         onVoltar={() => setConversaAtiva(null)}
@@ -39,7 +42,7 @@ export const ListaConversasAluno = () => {
   if (showNovaConversa) {
     return (
       <NovaConversa 
-        alunoId={studentData.id}
+        alunoId={studentData.email} // Passar email em vez de ID
         onVoltar={() => setShowNovaConversa(false)}
         onConversaCriada={(corretorId, corretorNome) => {
           setShowNovaConversa(false);

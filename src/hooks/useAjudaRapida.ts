@@ -45,9 +45,25 @@ export const useAjudaRapida = () => {
     return data;
   };
 
-  const buscarConversasAluno = async (alunoId: string) => {
+  const buscarConversasAluno = async (alunoEmail: string) => {
     try {
       setLoading(true);
+      console.log('🔍 Buscando conversas para email:', alunoEmail);
+
+      // Primeiro, buscar o perfil do aluno pelo email para obter o UUID
+      const perfilAluno = await buscarPerfilAluno(alunoEmail);
+      
+      if (!perfilAluno) {
+        console.error('❌ Perfil do aluno não encontrado para email:', alunoEmail);
+        toast({
+          title: "Erro",
+          description: "Perfil do aluno não encontrado",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('✅ Perfil encontrado:', perfilAluno);
 
       const { data, error } = await supabase
         .from('ajuda_rapida_mensagens')
@@ -58,17 +74,12 @@ export const useAjudaRapida = () => {
           criado_em,
           corretores(nome_completo)
         `)
-        .eq('aluno_id', alunoId)
+        .eq('aluno_id', perfilAluno.id)
         .order('criado_em', { ascending: false });
 
       if (error) throw error;
 
-      // Buscar dados do aluno
-      const { data: perfilAluno } = await supabase
-        .from('profiles')
-        .select('nome, sobrenome')
-        .eq('id', alunoId)
-        .maybeSingle();
+      console.log('📬 Mensagens encontradas:', data?.length || 0);
 
       // Agrupar por corretor e pegar a última mensagem de cada
       const conversasMap = new Map<string, Conversa>();
@@ -79,7 +90,7 @@ export const useAjudaRapida = () => {
           conversasMap.set(key, {
             aluno_id: msg.aluno_id,
             corretor_id: msg.corretor_id,
-            aluno_nome: perfilAluno ? `${perfilAluno.nome} ${perfilAluno.sobrenome}`.trim() : 'Aluno',
+            aluno_nome: `${perfilAluno.nome} ${perfilAluno.sobrenome || ''}`.trim(),
             corretor_nome: msg.corretores?.nome_completo || 'Corretor',
             ultima_mensagem: msg.mensagem,
             ultima_data: msg.criado_em,
@@ -90,8 +101,9 @@ export const useAjudaRapida = () => {
       });
 
       setConversas(Array.from(conversasMap.values()));
+      console.log('✅ Conversas carregadas:', conversasMap.size);
     } catch (error) {
-      console.error('Erro ao buscar conversas:', error);
+      console.error('❌ Erro ao buscar conversas:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar as conversas",
@@ -202,12 +214,28 @@ export const useAjudaRapida = () => {
 
   // Enviar mensagem
   const enviarMensagem = async (
-    alunoId: string, 
+    alunoEmail: string, 
     corretorId: string, 
     mensagem: string, 
     autor: 'aluno' | 'corretor'
   ) => {
     try {
+      console.log('📤 Enviando mensagem...', { alunoEmail, corretorId, mensagem, autor });
+      
+      // Se for aluno, precisamos converter email para UUID
+      let alunoId = alunoEmail;
+      if (autor === 'aluno') {
+        const perfilAluno = await buscarPerfilAluno(alunoEmail);
+        
+        if (!perfilAluno) {
+          console.error('❌ Perfil do aluno não encontrado para envio');
+          throw new Error('Perfil do aluno não encontrado');
+        }
+        
+        alunoId = perfilAluno.id;
+        console.log('✅ UUID do aluno:', alunoId);
+      }
+
       const { error } = await supabase
         .from('ajuda_rapida_mensagens')
         .insert({
@@ -219,9 +247,11 @@ export const useAjudaRapida = () => {
         });
 
       if (error) {
-        console.error('Erro detalhado ao inserir:', error);
+        console.error('❌ Erro detalhado ao inserir:', error);
         throw error;
       }
+
+      console.log('✅ Mensagem enviada com sucesso');
 
       // Recarregar mensagens da conversa
       await buscarMensagensConversa(alunoId, corretorId);
@@ -231,7 +261,7 @@ export const useAjudaRapida = () => {
         description: "Mensagem enviada!",
       });
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      console.error('❌ Erro ao enviar mensagem:', error);
       toast({
         title: "Erro",
         description: "Não foi possível enviar a mensagem",

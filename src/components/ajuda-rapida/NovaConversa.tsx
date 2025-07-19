@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ interface Corretor {
 }
 
 interface NovaConversaProps {
-  alunoId: string;
+  alunoId: string; // Agora aceita email também
   onVoltar: () => void;
   onConversaCriada: (corretorId: string, corretorNome: string) => void;
 }
