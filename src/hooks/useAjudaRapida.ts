@@ -45,21 +45,9 @@ export const useAjudaRapida = () => {
     return data;
   };
 
-  // Buscar conversas do aluno (usando email para obter UUID)
-  const buscarConversasAluno = async (emailAluno: string) => {
+  const buscarConversasAluno = async (alunoId: string) => {
     try {
       setLoading(true);
-      
-      // Primeiro buscar o UUID do aluno
-      const perfilAluno = await buscarPerfilAluno(emailAluno);
-      if (!perfilAluno) {
-        toast({
-          title: "Erro",
-          description: "Aluno não encontrado",
-          variant: "destructive",
-        });
-        return;
-      }
 
       const { data, error } = await supabase
         .from('ajuda_rapida_mensagens')
@@ -70,10 +58,17 @@ export const useAjudaRapida = () => {
           criado_em,
           corretores(nome_completo)
         `)
-        .eq('aluno_id', perfilAluno.id)
+        .eq('aluno_id', alunoId)
         .order('criado_em', { ascending: false });
 
       if (error) throw error;
+
+      // Buscar dados do aluno
+      const { data: perfilAluno } = await supabase
+        .from('profiles')
+        .select('nome, sobrenome')
+        .eq('id', alunoId)
+        .maybeSingle();
 
       // Agrupar por corretor e pegar a última mensagem de cada
       const conversasMap = new Map<string, Conversa>();
@@ -84,7 +79,7 @@ export const useAjudaRapida = () => {
           conversasMap.set(key, {
             aluno_id: msg.aluno_id,
             corretor_id: msg.corretor_id,
-            aluno_nome: `${perfilAluno.nome} ${perfilAluno.sobrenome}`.trim(),
+            aluno_nome: perfilAluno ? `${perfilAluno.nome} ${perfilAluno.sobrenome}`.trim() : 'Aluno',
             corretor_nome: msg.corretores?.nome_completo || 'Corretor',
             ultima_mensagem: msg.mensagem,
             ultima_data: msg.criado_em,
@@ -179,25 +174,9 @@ export const useAjudaRapida = () => {
   };
 
   // Buscar mensagens de uma conversa específica
-  const buscarMensagensConversa = async (emailAlunoOuId: string, corretorId: string) => {
+  const buscarMensagensConversa = async (alunoId: string, corretorId: string) => {
     try {
       setLoading(true);
-      
-      let alunoId = emailAlunoOuId;
-      
-      // Se parece com email, buscar o UUID
-      if (emailAlunoOuId.includes('@')) {
-        const perfilAluno = await buscarPerfilAluno(emailAlunoOuId);
-        if (!perfilAluno) {
-          toast({
-            title: "Erro",
-            description: "Aluno não encontrado",
-            variant: "destructive",
-          });
-          return;
-        }
-        alunoId = perfilAluno.id;
-      }
 
       const { data, error } = await supabase
         .from('ajuda_rapida_mensagens')
@@ -223,28 +202,12 @@ export const useAjudaRapida = () => {
 
   // Enviar mensagem
   const enviarMensagem = async (
-    emailAlunoOuId: string, 
+    alunoId: string, 
     corretorId: string, 
     mensagem: string, 
     autor: 'aluno' | 'corretor'
   ) => {
     try {
-      let alunoId = emailAlunoOuId;
-      
-      // Se parece com email, buscar o UUID
-      if (emailAlunoOuId.includes('@')) {
-        const perfilAluno = await buscarPerfilAluno(emailAlunoOuId);
-        if (!perfilAluno) {
-          toast({
-            title: "Erro",
-            description: "Aluno não encontrado",
-            variant: "destructive",
-          });
-          return;
-        }
-        alunoId = perfilAluno.id;
-      }
-
       const { error } = await supabase
         .from('ajuda_rapida_mensagens')
         .insert({
@@ -255,7 +218,10 @@ export const useAjudaRapida = () => {
           lida: autor === 'corretor' // Se o corretor envia, marca como lida automaticamente
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado ao inserir:', error);
+        throw error;
+      }
 
       // Recarregar mensagens da conversa
       await buscarMensagensConversa(alunoId, corretorId);
@@ -275,17 +241,8 @@ export const useAjudaRapida = () => {
   };
 
   // Marcar conversa como lida (para corretor)
-  const marcarComoLida = async (emailAlunoOuId: string, corretorId: string) => {
+  const marcarComoLida = async (alunoId: string, corretorId: string) => {
     try {
-      let alunoId = emailAlunoOuId;
-      
-      // Se parece com email, buscar o UUID
-      if (emailAlunoOuId.includes('@')) {
-        const perfilAluno = await buscarPerfilAluno(emailAlunoOuId);
-        if (!perfilAluno) return;
-        alunoId = perfilAluno.id;
-      }
-
       const { error } = await supabase.rpc('marcar_conversa_como_lida', {
         p_aluno_id: alunoId,
         p_corretor_id: corretorId

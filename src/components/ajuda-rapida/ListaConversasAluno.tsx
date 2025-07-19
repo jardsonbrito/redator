@@ -73,13 +73,6 @@ export const ListaConversasAluno = () => {
                 <p className="text-muted-foreground mb-4">
                   Você ainda não tem conversas ativas
                 </p>
-                <Button
-                  onClick={() => setShowNovaConversa(true)}
-                  variant="outline"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Iniciar nova conversa
-                </Button>
               </div>
             ) : (
               <div className="space-y-3">
