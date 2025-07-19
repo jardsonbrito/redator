@@ -20,7 +20,7 @@ interface MarcacaoVisual {
   comentario: string;
   imagem_largura: number;
   imagem_altura: number;
-  ordem_criacao: number; // Adicionar campo para ordem de criação
+  ordem_criacao: number;
 }
 
 interface RedacaoAnotacaoProps {
@@ -58,7 +58,7 @@ export const RedacaoAnotacao = ({
   const [imagemCarregada, setImagemCarregada] = useState<boolean>(false);
   const [dimensoesImagem, setDimensoesImagem] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [marcacoesObjects, setMarcacoesObjects] = useState<Set<any>>(new Set());
-  const [proximaOrdem, setProximaOrdem] = useState<number>(1); // Controle de ordem sequencial
+  const [proximaOrdem, setProximaOrdem] = useState<number>(1);
   const { toast } = useToast();
 
   // Carregar marcações existentes
@@ -69,7 +69,7 @@ export const RedacaoAnotacao = ({
         .select('*')
         .eq('redacao_id', redacaoId)
         .eq('tabela_origem', tabelaOrigem)
-        .order('ordem_criacao', { ascending: true }); // Ordenar por ordem de criação
+        .order('ordem_criacao', { ascending: true });
 
       if (error) throw error;
       
@@ -200,7 +200,7 @@ export const RedacaoAnotacao = ({
           comentario: "",
           imagem_largura: dimensoesImagem.width,
           imagem_altura: dimensoesImagem.height,
-          ordem_criacao: proximaOrdem, // Usar ordem sequencial
+          ordem_criacao: proximaOrdem,
         };
 
         setMarcacaoTemp(marcacao);
@@ -252,37 +252,23 @@ export const RedacaoAnotacao = ({
       // Adicionar propriedade customizada para identificar
       (rect as any).marcacaoData = { marcacao };
 
-      // Criar círculo com número da ordem - tamanho proporcional melhorado
+      // Criar círculo com número da ordem - tamanho proporcional otimizado
       const centerX = marcacao.x_start * scaleX + ((marcacao.x_end - marcacao.x_start) * scaleX) / 2;
       const centerY = marcacao.y_start * scaleY + ((marcacao.y_end - marcacao.y_start) * scaleY) / 2;
       
-      // Círculo com tamanho proporcional ao número
-      const circleRadius = 16; // Reduzido para ser mais discreto
-      const circle = new FabricText((marcacao.ordem_criacao || 0).toString(), {
-        left: centerX,
-        top: centerY,
-        fontSize: 18, // Maior para ocupar 70% da área do círculo
-        fill: 'white',
-        backgroundColor: 'black',
-        textAlign: 'center',
-        originX: 'center',
-        originY: 'center',
-        selectable: false,
-        evented: true,
-        padding: 6, // Padding para criar o efeito de círculo
-        strokeWidth: 2,
-        stroke: 'white',
-        paintFirst: 'stroke',
-      });
-
-      // Adicionar círculo de fundo
+      // Tamanho do círculo otimizado para o número ocupar 70% da área
+      const numeroTexto = (marcacao.ordem_criacao || 0).toString();
+      const fontSize = numeroTexto.length === 1 ? 14 : 12; // Ajustar fonte baseado no número de dígitos
+      const circleRadius = numeroTexto.length === 1 ? 12 : 14; // Círculo maior para múltiplos dígitos
+      
+      // Círculo de fundo preto com borda branca
       const backgroundCircle = new Rect({
         left: centerX,
         top: centerY,
         width: circleRadius * 2,
         height: circleRadius * 2,
-        fill: 'black',
-        stroke: 'white',
+        fill: '#000000',
+        stroke: '#ffffff',
         strokeWidth: 2,
         rx: circleRadius,
         ry: circleRadius,
@@ -292,13 +278,28 @@ export const RedacaoAnotacao = ({
         evented: false,
       });
 
-      fabricCanvas.add(rect, backgroundCircle, circle);
+      // Texto do número centralizado
+      const numeroElement = new FabricText(numeroTexto, {
+        left: centerX,
+        top: centerY,
+        fontSize: fontSize,
+        fill: '#ffffff',
+        textAlign: 'center',
+        originX: 'center',
+        originY: 'center',
+        selectable: false,
+        evented: true,
+        fontFamily: 'Arial, sans-serif',
+        fontWeight: 'bold',
+      });
+
+      fabricCanvas.add(rect, backgroundCircle, numeroElement);
       newObjects.add(rect);
       newObjects.add(backgroundCircle);
-      newObjects.add(circle);
+      newObjects.add(numeroElement);
 
       // Adicionar click handler para mostrar comentário
-      rect.on('mousedown', () => {
+      const showComment = () => {
         if (readonly) {
           toast({
             title: `${CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação ${marcacao.ordem_criacao}`,
@@ -306,17 +307,10 @@ export const RedacaoAnotacao = ({
             duration: 4000,
           });
         }
-      });
+      };
 
-      circle.on('mousedown', () => {
-        if (readonly) {
-          toast({
-            title: `${CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação ${marcacao.ordem_criacao}`,
-            description: marcacao.comentario,
-            duration: 4000,
-          });
-        }
-      });
+      rect.on('mousedown', showComment);
+      numeroElement.on('mousedown', showComment);
     });
 
     setMarcacoesObjects(newObjects);
@@ -343,7 +337,7 @@ export const RedacaoAnotacao = ({
           comentario: comentarioTemp.trim(),
           imagem_largura: marcacaoTemp.imagem_largura,
           imagem_altura: marcacaoTemp.imagem_altura,
-          ordem_criacao: marcacaoTemp.ordem_criacao, // Salvar ordem de criação
+          ordem_criacao: marcacaoTemp.ordem_criacao,
         });
 
       if (error) throw error;
@@ -356,7 +350,7 @@ export const RedacaoAnotacao = ({
       setDialogAberto(false);
       setMarcacaoTemp(null);
       setComentarioTemp("");
-      setProximaOrdem(prev => prev + 1); // Incrementar ordem para próxima marcação
+      setProximaOrdem(prev => prev + 1);
       await carregarMarcacoes();
 
     } catch (error) {

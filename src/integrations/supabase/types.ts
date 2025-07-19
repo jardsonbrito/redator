@@ -539,6 +539,7 @@ export type Database = {
           imagem_altura: number
           imagem_largura: number
           numero_sequencial: number | null
+          ordem_criacao: number | null
           redacao_id: string
           tabela_origem: string
           x_end: number
@@ -557,6 +558,7 @@ export type Database = {
           imagem_altura: number
           imagem_largura: number
           numero_sequencial?: number | null
+          ordem_criacao?: number | null
           redacao_id: string
           tabela_origem: string
           x_end: number
@@ -575,6 +577,7 @@ export type Database = {
           imagem_altura?: number
           imagem_largura?: number
           numero_sequencial?: number | null
+          ordem_criacao?: number | null
           redacao_id?: string
           tabela_origem?: string
           x_end?: number
