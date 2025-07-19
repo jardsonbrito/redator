@@ -1676,6 +1676,14 @@ export type Database = {
         Args: { turma_nome: string }
         Returns: string
       }
+      iniciar_correcao_redacao: {
+        Args: {
+          redacao_id: string
+          tabela_nome: string
+          corretor_email: string
+        }
+        Returns: boolean
+      }
       is_admin: {
         Args: { user_id?: string }
         Returns: boolean

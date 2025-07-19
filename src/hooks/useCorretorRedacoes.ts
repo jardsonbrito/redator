@@ -11,7 +11,7 @@ export interface RedacaoCorretor {
   frase_tematica: string;
   data_envio: string;
   texto: string;
-  status_minha_correcao: 'pendente' | 'incompleta' | 'corrigida';
+  status_minha_correcao: 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida';
   eh_corretor_1: boolean;
   eh_corretor_2: boolean;
   redacao_manuscrita_url?: string | null;
@@ -43,7 +43,7 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
       const redacoesFormatadas = (data || []).map(item => ({
         ...item,
         tipo_redacao: item.tipo_redacao as string,
-        status_minha_correcao: item.status_minha_correcao as 'pendente' | 'incompleta' | 'corrigida'
+        status_minha_correcao: item.status_minha_correcao as 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida'
       }));
 
       console.log('Redações carregadas:', redacoesFormatadas);
@@ -62,10 +62,11 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
 
   const getRedacoesPorStatus = () => {
     const pendentes = redacoes.filter(r => r.status_minha_correcao === 'pendente');
+    const emCorrecao = redacoes.filter(r => r.status_minha_correcao === 'em_correcao');
     const incompletas = redacoes.filter(r => r.status_minha_correcao === 'incompleta');
     const corrigidas = redacoes.filter(r => r.status_minha_correcao === 'corrigida');
 
-    return { pendentes, incompletas, corrigidas };
+    return { pendentes, emCorrecao, incompletas, corrigidas };
   };
 
   // Função para atualizar a lista após correção
