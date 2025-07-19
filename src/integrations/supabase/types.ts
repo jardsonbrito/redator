@@ -102,7 +102,22 @@ export type Database = {
           lida?: boolean
           mensagem?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_ajuda_rapida_aluno"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_ajuda_rapida_corretor"
+            columns: ["corretor_id"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aulas: {
         Row: {
