@@ -127,6 +127,16 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     setLoading(true);
     
     try {
+      // Se for a primeira vez salvando (mudando de pendente), iniciar correção
+      if (redacao.status_minha_correcao === 'pendente') {
+        await supabase.rpc('iniciar_correcao_redacao', {
+          redacao_id: redacao.id,
+          tabela_nome: redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                       redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio',
+          corretor_email: corretorEmail
+        });
+      }
+
       // Primeiro salvar as anotações visuais se existirem
       if (status === 'corrigida') {
         const anotacoesSalvas = await salvarAnotacoesVisuais();
