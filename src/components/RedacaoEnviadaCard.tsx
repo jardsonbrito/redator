@@ -155,11 +155,8 @@ export const RedacaoEnviadaCard = ({
               {redacao.frase_tematica}
             </CardTitle>
             <div className="flex flex-wrap gap-2 shrink-0">
-              {redacao.corrigida && redacao.status === "corrigido" ? (
-                <Badge className="bg-green-100 text-green-800 text-xs">
-                  Redação corrigida
-                </Badge>
-              ) : redacao.status === "em_correcao" ? (
+              {/* ETAPA 1: Removida tag "Corrigido" da home - status só aparece na vista pedagógica */}
+              {redacao.status === "em_correcao" ? (
                 <Badge className="bg-orange-100 text-orange-800 text-xs">
                   Em correção
                 </Badge>

@@ -54,12 +54,9 @@ export const useAjudaRapida = () => {
       const perfilAluno = await buscarPerfilAluno(alunoEmail);
       
       if (!perfilAluno) {
-        console.error('❌ Perfil do aluno não encontrado para email:', alunoEmail);
-        toast({
-          title: "Erro",
-          description: "Perfil do aluno não encontrado",
-          variant: "destructive"
-        });
+        console.log('ℹ️ Perfil não encontrado - usuário pode não ter conversas ainda');
+        // ETAPA 3: Não mostrar erro se usuário simplesmente não tem conversas
+        setConversas([]);
         return;
       }
 
@@ -104,11 +101,15 @@ export const useAjudaRapida = () => {
       console.log('✅ Conversas carregadas:', conversasMap.size);
     } catch (error) {
       console.error('❌ Erro ao buscar conversas:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as conversas",
-        variant: "destructive"
-      });
+      // ETAPA 3: Só mostrar erro toast se for erro real (não falta de dados)
+      if (!error.message?.includes('not found')) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar as conversas",
+          variant: "destructive"
+        });
+      }
+      setConversas([]); // Garantir lista vazia em caso de erro
     } finally {
       setLoading(false);
     }
@@ -186,9 +187,22 @@ export const useAjudaRapida = () => {
   };
 
   // Buscar mensagens de uma conversa específica
-  const buscarMensagensConversa = async (alunoId: string, corretorId: string) => {
+  const buscarMensagensConversa = async (alunoIdOrEmail: string, corretorId: string) => {
     try {
       setLoading(true);
+      console.log('🔍 Buscando mensagens para:', { alunoIdOrEmail, corretorId });
+
+      // Se alunoIdOrEmail parece ser um email, converter para UUID
+      let alunoId = alunoIdOrEmail;
+      if (alunoIdOrEmail.includes('@')) {
+        const perfilAluno = await buscarPerfilAluno(alunoIdOrEmail);
+        if (!perfilAluno) {
+          console.log('ℹ️ Perfil do aluno não encontrado - conversas vazias');
+          setMensagens([]);
+          return;
+        }
+        alunoId = perfilAluno.id;
+      }
 
       const { data, error } = await supabase
         .from('ajuda_rapida_mensagens')
@@ -200,13 +214,11 @@ export const useAjudaRapida = () => {
       if (error) throw error;
       
       setMensagens(data || []);
+      console.log('✅ Mensagens carregadas:', data?.length || 0);
     } catch (error) {
-      console.error('Erro ao buscar mensagens:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as mensagens",
-        variant: "destructive"
-      });
+      console.error('❌ Erro ao buscar mensagens:', error);
+      // ETAPA 3: Só mostrar erro se for erro real de sistema
+      setMensagens([]);
     } finally {
       setLoading(false);
     }

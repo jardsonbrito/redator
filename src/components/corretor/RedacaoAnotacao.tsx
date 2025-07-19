@@ -261,10 +261,10 @@ export const RedacaoAnotacao = ({
       const centerX = marcacao.x_start * scaleX + ((marcacao.x_end - marcacao.x_start) * scaleX) / 2;
       const centerY = marcacao.y_start * scaleY + ((marcacao.y_end - marcacao.y_start) * scaleY) / 2;
       
-      // Tamanho do círculo otimizado para o número ocupar 70% da área
+      // ETAPA 2.2: Tamanho otimizado conforme especificado (16px número, 28x28px círculo)
       const numeroTexto = (marcacao.ordem_criacao || 0).toString();
-      const fontSize = numeroTexto.length === 1 ? 14 : 12; // Ajustar fonte baseado no número de dígitos
-      const circleRadius = numeroTexto.length === 1 ? 12 : 14; // Círculo maior para múltiplos dígitos
+      const fontSize = 16; // Tamanho fixo conforme solicitado
+      const circleRadius = 14; // Para círculo de 28x28px (raio = 14)
       
       // Círculo de fundo preto com borda branca
       const backgroundCircle = new Rect({
