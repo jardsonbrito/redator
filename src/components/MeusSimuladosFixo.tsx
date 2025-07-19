@@ -421,9 +421,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
                           <h4 className="font-bold text-sm text-primary leading-tight break-words flex-1">
                             {redacao.frase_tematica}
                           </h4>
-                          <Badge className="bg-green-100 text-green-800 text-xs shrink-0">
-                            🔐 Corrigido
-                          </Badge>
+                          {/* ETAPA 1: Tag "Corrigido" removida da home conforme solicitado */}
                         </div>
                         
                         {/* Linha 2: Badges Tipo e Nota */}
