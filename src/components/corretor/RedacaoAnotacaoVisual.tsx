@@ -517,42 +517,17 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
       console.log(`🔢 Processando ${uniqueRects.length} retângulos únicos no SVG`);
 
-      // Criar mapa de anotações por posição para manter a ordem cronológica
-      const mapaAnotacoesPorPosicao = new Map();
-      
-      // Mapear cada anotação pela sua posição na tela
-      anotacoes.forEach(anotacao => {
-        const x = (anotacao.x_start / anotacao.imagem_largura) * 100;
-        const y = (anotacao.y_start / anotacao.imagem_altura) * 100;
-        const chave = `${x.toFixed(2)},${y.toFixed(2)}`;
-        mapaAnotacoesPorPosicao.set(chave, anotacao);
-      });
+      // Ordenar anotações por número sequencial (mantém ordem cronológica)
+      const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
 
       // Remover numerações existentes primeiro
       svgElement.querySelectorAll('.numero-svg, .numero-svg-bg').forEach(el => el.remove());
 
       uniqueRects.forEach((rect, index) => {
         try {
-          // Encontrar a anotação correspondente por posição
-          const rectX = parseFloat(rect.getAttribute('x') || '0');
-          const rectY = parseFloat(rect.getAttribute('y') || '0');
-          
-          // Procurar a anotação que corresponde a esta posição
-          let anotacaoCorrespondente = null;
-          let menorDistancia = Infinity;
-          
-          for (const [chave, anotacao] of mapaAnotacoesPorPosicao.entries()) {
-            const [anotacaoX, anotacaoY] = chave.split(',').map(parseFloat);
-            const distancia = Math.abs(rectX - anotacaoX) + Math.abs(rectY - anotacaoY);
-            
-            if (distancia < menorDistancia) {
-              menorDistancia = distancia;
-              anotacaoCorrespondente = anotacao;
-            }
-          }
-          
-          // Usar o número sequencial da anotação correspondente, mantendo a ordem cronológica
-          const numero = anotacaoCorrespondente?.numero_sequencial || (index + 1);
+          // Usar a anotação correspondente pelo índice (mantém ordem cronológica)
+          const anotacao = anotacoesOrdenadas[index];
+          const numero = anotacao?.numero_sequencial || (index + 1);
 
           const x = parseFloat(rect.getAttribute('x') || '0');
           const y = parseFloat(rect.getAttribute('y') || '0');
