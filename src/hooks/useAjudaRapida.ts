@@ -338,19 +338,12 @@ export const useAjudaRapida = () => {
   // Buscar número de mensagens não lidas para aluno
   const buscarMensagensNaoLidasAluno = async (alunoEmail: string) => {
     try {
-      // Primeiro buscar o perfil do aluno
-      const perfilAluno = await buscarPerfilAluno(alunoEmail);
-      if (!perfilAluno) return 0;
-
-      const { data, error } = await supabase
-        .from('ajuda_rapida_mensagens')
-        .select('id')
-        .eq('aluno_id', perfilAluno.id)
-        .eq('autor', 'corretor')
-        .eq('lida', false);
+      const { data, error } = await supabase.rpc('contar_mensagens_nao_lidas_aluno', {
+        aluno_email: alunoEmail
+      });
 
       if (error) throw error;
-      return data?.length || 0;
+      return data || 0;
     } catch (error) {
       console.error('Erro ao buscar mensagens não lidas do aluno:', error);
       return 0;

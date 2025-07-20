@@ -84,7 +84,7 @@ export const ChatConversa = ({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <Button
-                onClick={() => navigate('/student')}
+                onClick={() => navigate('/app')}
                 className="flex items-center gap-3 text-primary-foreground hover:text-secondary transition-colors duration-200 bg-transparent hover:bg-white/10 border-0 p-0"
               >
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">

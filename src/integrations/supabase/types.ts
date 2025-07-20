@@ -1548,6 +1548,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: number
       }
+      contar_mensagens_nao_lidas_aluno: {
+        Args: { aluno_email: string }
+        Returns: number
+      }
       contar_mensagens_nao_lidas_corretor: {
         Args: { corretor_email: string }
         Returns: number
