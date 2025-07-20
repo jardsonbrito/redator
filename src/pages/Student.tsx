@@ -2,6 +2,7 @@
 import { StudentHeader } from "@/components/StudentHeader";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
+import { AjudaRapidaAlunoCard } from "@/components/ajuda-rapida/AjudaRapidaAlunoCard";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy } from "lucide-react";
 
@@ -78,9 +79,10 @@ const Student = () => {
         <StudentHeader />
         <main className="container mx-auto px-4 py-8">
           <div className="space-y-8">
-            {/* Card das Minhas Redações */}
-            <div className="max-w-5xl mx-auto">
+            {/* Cards do painel */}
+            <div className="max-w-5xl mx-auto space-y-4">
               <MinhasRedacoes />
+              <AjudaRapidaAlunoCard />
             </div>
             
             {/* Grid de menus */}

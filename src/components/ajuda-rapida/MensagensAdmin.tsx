@@ -34,34 +34,52 @@ export const MensagensAdmin = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      const { data: mensagens, error } = await supabase
         .from('ajuda_rapida_mensagens')
         .select(`
           aluno_id,
           corretor_id,
           mensagem,
-          criado_em,
-          profiles!ajuda_rapida_mensagens_aluno_id_fkey(nome, sobrenome),
-          corretores(nome_completo)
+          criado_em
         `)
         .order('criado_em', { ascending: false });
 
       if (error) throw error;
 
-      // Agrupar por par aluno-corretor
+      // Buscar nomes de alunos e corretores separadamente
+      const alunoIds = [...new Set(mensagens?.map(m => m.aluno_id) || [])];
+      const corretorIds = [...new Set(mensagens?.map(m => m.corretor_id) || [])];
+
+      const [profilesResponse, corretoresResponse] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, nome, sobrenome')
+          .in('id', alunoIds),
+        supabase
+          .from('corretores')
+          .select('id, nome_completo')
+          .in('id', corretorIds)
+      ]);
+
+      if (profilesResponse.error) throw profilesResponse.error;
+      if (corretoresResponse.error) throw corretoresResponse.error;
+
+      // Criar mapas de nomes
+      const alunosMap = new Map(profilesResponse.data?.map(p => [p.id, `${p.nome} ${p.sobrenome || ''}`.trim()]) || []);
+      const corretoresMap = new Map(corretoresResponse.data?.map(c => [c.id, c.nome_completo]) || []);
+
+      // Agrupar conversas
       const conversasMap = new Map<string, ConversaAdmin>();
       
-      data?.forEach((msg: any) => {
+      mensagens?.forEach((msg: any) => {
         const key = `${msg.aluno_id}-${msg.corretor_id}`;
-        const nomeAluno = `${msg.profiles?.nome || ''} ${msg.profiles?.sobrenome || ''}`.trim();
-        const nomeCorretor = msg.corretores?.nome_completo || 'Corretor';
         
         if (!conversasMap.has(key)) {
           conversasMap.set(key, {
             aluno_id: msg.aluno_id,
             corretor_id: msg.corretor_id,
-            aluno_nome: nomeAluno || 'Aluno',
-            corretor_nome: nomeCorretor,
+            aluno_nome: alunosMap.get(msg.aluno_id) || 'Aluno',
+            corretor_nome: corretoresMap.get(msg.corretor_id) || 'Corretor',
             ultima_mensagem: msg.mensagem,
             ultima_data: msg.criado_em,
             total_mensagens: 1
@@ -69,6 +87,11 @@ export const MensagensAdmin = () => {
         } else {
           const conversa = conversasMap.get(key)!;
           conversa.total_mensagens++;
+          // Manter a mensagem mais recente
+          if (new Date(msg.criado_em) > new Date(conversa.ultima_data)) {
+            conversa.ultima_mensagem = msg.mensagem;
+            conversa.ultima_data = msg.criado_em;
+          }
         }
       });
 

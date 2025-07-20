@@ -1,0 +1,58 @@
+import { useEffect, useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { MessageCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAjudaRapida } from "@/hooks/useAjudaRapida";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+
+export const AjudaRapidaAlunoCard = () => {
+  const navigate = useNavigate();
+  const { buscarMensagensNaoLidasAluno } = useAjudaRapida();
+  const { studentData } = useStudentAuth();
+  const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
+
+  useEffect(() => {
+    if (studentData?.email) {
+      const fetchMensagensNaoLidas = async () => {
+        const count = await buscarMensagensNaoLidasAluno(studentData.email);
+        setMensagensNaoLidas(count);
+      };
+      
+      fetchMensagensNaoLidas();
+      
+      // Atualizar a cada 30 segundos
+      const interval = setInterval(fetchMensagensNaoLidas, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [studentData?.email]);
+
+  return (
+    <Card 
+      className="bg-white hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 border-l-primary"
+      onClick={() => navigate('/ajuda-rapida')}
+    >
+      <CardContent className="flex items-center justify-between p-6">
+        <div className="flex items-center space-x-4">
+          <div className="bg-primary/10 p-3 rounded-lg">
+            <MessageCircle className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg text-foreground">Ajuda Rápida</h3>
+            <p className="text-sm text-muted-foreground">
+              Converse com seus corretores
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          {mensagensNaoLidas > 0 && (
+            <Badge variant="destructive" className="rounded-full">
+              {mensagensNaoLidas}
+            </Badge>
+          )}
+          <MessageCircle className="w-5 h-5 text-primary" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+};

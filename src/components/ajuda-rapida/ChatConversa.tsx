@@ -27,19 +27,21 @@ export const ChatConversa = ({
   onVoltar, 
   tipoUsuario 
 }: ChatConversaProps) => {
-  const { mensagens, loading, buscarMensagensConversa, enviarMensagem, marcarComoLida } = useAjudaRapida();
+  const { mensagens, loading, buscarMensagensConversa, enviarMensagem, marcarComoLida, marcarComoLidaAluno } = useAjudaRapida();
   const [novaMensagem, setNovaMensagem] = useState('');
   const [enviando, setEnviando] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { logoutStudent } = useStudentAuth();
+  const { logoutStudent, studentData } = useStudentAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     buscarMensagensConversa(alunoId, corretorId);
     
-    // Marcar como lida se for corretor
+    // Marcar como lida quando carregar a conversa
     if (tipoUsuario === 'corretor') {
       marcarComoLida(alunoId, corretorId);
+    } else if (tipoUsuario === 'aluno' && studentData?.email) {
+      marcarComoLidaAluno(studentData.email, corretorId);
     }
   }, [alunoId, corretorId, tipoUsuario]);
 
@@ -82,7 +84,7 @@ export const ChatConversa = ({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <Button
-                onClick={onVoltar}
+                onClick={() => navigate('/student')}
                 className="flex items-center gap-3 text-primary-foreground hover:text-secondary transition-colors duration-200 bg-transparent hover:bg-white/10 border-0 p-0"
               >
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">

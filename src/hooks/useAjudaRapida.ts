@@ -335,6 +335,48 @@ export const useAjudaRapida = () => {
     }
   };
 
+  // Buscar número de mensagens não lidas para aluno
+  const buscarMensagensNaoLidasAluno = async (alunoEmail: string) => {
+    try {
+      // Primeiro buscar o perfil do aluno
+      const perfilAluno = await buscarPerfilAluno(alunoEmail);
+      if (!perfilAluno) return 0;
+
+      const { data, error } = await supabase
+        .from('ajuda_rapida_mensagens')
+        .select('id')
+        .eq('aluno_id', perfilAluno.id)
+        .eq('autor', 'corretor')
+        .eq('lida', false);
+
+      if (error) throw error;
+      return data?.length || 0;
+    } catch (error) {
+      console.error('Erro ao buscar mensagens não lidas do aluno:', error);
+      return 0;
+    }
+  };
+
+  // Marcar mensagens como lidas para aluno
+  const marcarComoLidaAluno = async (alunoEmail: string, corretorId: string) => {
+    try {
+      const perfilAluno = await buscarPerfilAluno(alunoEmail);
+      if (!perfilAluno) return;
+
+      const { error } = await supabase
+        .from('ajuda_rapida_mensagens')
+        .update({ lida: true })
+        .eq('aluno_id', perfilAluno.id)
+        .eq('corretor_id', corretorId)
+        .eq('autor', 'corretor')
+        .eq('lida', false);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao marcar mensagens como lidas para aluno:', error);
+    }
+  };
+
   return {
     mensagens,
     conversas,
@@ -344,6 +386,8 @@ export const useAjudaRapida = () => {
     buscarMensagensConversa,
     enviarMensagem,
     marcarComoLida,
-    buscarMensagensNaoLidas
+    marcarComoLidaAluno,
+    buscarMensagensNaoLidas,
+    buscarMensagensNaoLidasAluno
   };
 };
