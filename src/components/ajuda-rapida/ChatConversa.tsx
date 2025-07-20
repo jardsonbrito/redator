@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, LogOut, Home } from "lucide-react";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -71,20 +71,57 @@ export const ChatConversa = ({
   const nomeExibicao = tipoUsuario === 'aluno' ? corretorNome : alunoNome;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 p-4">
-      <div className="max-w-4xl mx-auto">
-        <Card className="h-[calc(100vh-2rem)]">
-          <CardHeader className="flex flex-row items-center space-y-0 pb-4 border-b">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onVoltar}
-              className="mr-4 p-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <CardTitle>{nomeExibicao || 'Conversa'}</CardTitle>
-          </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
+      {/* Cabeçalho do aluno apenas se for aluno */}
+      {tipoUsuario === 'aluno' && (
+        <div className="bg-primary shadow-lg sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <Button
+                onClick={onVoltar}
+                className="flex items-center gap-3 text-primary-foreground hover:text-secondary transition-colors duration-200 bg-transparent hover:bg-white/10 border-0 p-0"
+              >
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Home className="w-5 h-5" />
+                </div>
+                <span className="hidden sm:inline font-semibold text-lg">Início</span>
+              </Button>
+              
+              <h1 className="text-xl font-bold text-primary-foreground">{nomeExibicao || 'Conversa'}</h1>
+              
+              <Button 
+                onClick={() => {
+                  // Implementar logout do aluno
+                  window.location.href = '/';
+                }}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 border-secondary/30 text-primary-foreground hover:bg-secondary/20 hover:border-secondary/50 rounded-xl px-3 py-2 font-medium transition-colors duration-200 bg-transparent"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className={`max-w-4xl mx-auto ${tipoUsuario === 'aluno' ? 'p-4' : 'p-4'}`}>
+        <Card className={tipoUsuario === 'aluno' ? "h-[calc(100vh-6rem)]" : "h-[calc(100vh-2rem)]"}>
+          {/* Cabeçalho apenas para corretor/admin */}
+          {tipoUsuario !== 'aluno' && (
+            <CardHeader className="flex flex-row items-center space-y-0 pb-4 border-b">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onVoltar}
+                className="mr-4 p-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <CardTitle>{nomeExibicao || 'Conversa'}</CardTitle>
+            </CardHeader>
+          )}
           
           <CardContent className="flex flex-col h-full p-0">
             {/* Messages area */}

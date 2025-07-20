@@ -268,10 +268,7 @@ export const useAjudaRapida = () => {
       // Recarregar mensagens da conversa
       await buscarMensagensConversa(alunoId, corretorId);
       
-      toast({
-        title: "Sucesso",
-        description: "Mensagem enviada!",
-      });
+      // Toast removido conforme solicitado - mensagem aparece automaticamente no chat
     } catch (error) {
       console.error('❌ Erro ao enviar mensagem:', error);
       toast({

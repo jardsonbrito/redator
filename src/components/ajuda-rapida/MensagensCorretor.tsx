@@ -19,6 +19,7 @@ export const MensagensCorretor = () => {
 
   useEffect(() => {
     if (corretor?.id) {
+      console.log('🔍 Carregando conversas para corretor:', corretor.id);
       buscarConversasCorretor(corretor.id);
     }
   }, [corretor?.id]);
