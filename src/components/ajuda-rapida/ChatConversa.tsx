@@ -7,6 +7,8 @@ import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useNavigate } from "react-router-dom";
 
 interface ChatConversaProps {
   alunoId: string;
@@ -29,6 +31,8 @@ export const ChatConversa = ({
   const [novaMensagem, setNovaMensagem] = useState('');
   const [enviando, setEnviando] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { logoutStudent } = useStudentAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     buscarMensagensConversa(alunoId, corretorId);
@@ -91,8 +95,8 @@ export const ChatConversa = ({
               
               <Button 
                 onClick={() => {
-                  // Implementar logout do aluno
-                  window.location.href = '/';
+                  logoutStudent();
+                  navigate('/', { replace: true });
                 }}
                 variant="outline"
                 size="sm"
