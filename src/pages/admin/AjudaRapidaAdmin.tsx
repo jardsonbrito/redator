@@ -127,10 +127,7 @@ export const AjudaRapidaAdmin = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Ajuda Rápida - Administração</h1>
-          <p className="text-muted-foreground mt-2">
-            Gerencie as conversas entre alunos e corretores
-          </p>
+          <h1 className="text-3xl font-bold">Ajuda Rápida</h1>
         </div>
         <Button onClick={carregarConversas} disabled={loading}>
           {loading ? "Carregando..." : "Atualizar"}
@@ -144,11 +141,10 @@ export const AjudaRapidaAdmin = () => {
         </div>
       ) : conversas.length === 0 ? (
         <Card>
-          <CardContent className="text-center py-8">
-            <MessageSquare className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhuma conversa encontrada</h3>
-            <p className="text-muted-foreground">
-              Ainda não há conversas entre alunos e corretores para exibir.
+          <CardContent className="text-center py-12">
+            <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-60" />
+            <p className="text-muted-foreground text-lg">
+              Sem conversas no momento.
             </p>
           </CardContent>
         </Card>
