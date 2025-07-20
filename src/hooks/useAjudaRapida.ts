@@ -370,6 +370,93 @@ export const useAjudaRapida = () => {
     }
   };
 
+  // Buscar todas as conversas para admin
+  const buscarTodasConversas = async () => {
+    try {
+      // Buscar todas as mensagens
+      const { data: mensagens, error } = await supabase
+        .from('ajuda_rapida_mensagens')
+        .select('*')
+        .order('criado_em', { ascending: false });
+
+      if (error) throw error;
+
+      // Buscar IDs únicos de alunos e corretores
+      const alunoIds = [...new Set(mensagens?.map(m => m.aluno_id) || [])];
+      const corretorIds = [...new Set(mensagens?.map(m => m.corretor_id) || [])];
+
+      // Buscar perfis dos alunos
+      const { data: alunos, error: alunosError } = await supabase
+        .from('profiles')
+        .select('id, nome, sobrenome')
+        .in('id', alunoIds);
+
+      if (alunosError) throw alunosError;
+
+      // Buscar perfis dos corretores
+      const { data: corretores, error: corretoresError } = await supabase
+        .from('corretores')
+        .select('id, nome_completo')
+        .in('id', corretorIds);
+
+      if (corretoresError) throw corretoresError;
+
+      // Criar mapas para acesso rápido
+      const alunosMap = new Map(alunos?.map(a => [a.id, `${a.nome} ${a.sobrenome || ''}`.trim()]) || []);
+      const corretoresMap = new Map(corretores?.map(c => [c.id, c.nome_completo]) || []);
+
+      // Agrupar mensagens por conversa
+      const conversasMap = new Map();
+      
+      mensagens?.forEach((mensagem) => {
+        const chaveConversa = `${mensagem.aluno_id}-${mensagem.corretor_id}`;
+        
+        if (!conversasMap.has(chaveConversa)) {
+          conversasMap.set(chaveConversa, {
+            aluno_id: mensagem.aluno_id,
+            corretor_id: mensagem.corretor_id,
+            aluno_nome: alunosMap.get(mensagem.aluno_id) || 'Aluno',
+            corretor_nome: corretoresMap.get(mensagem.corretor_id) || 'Corretor',
+            ultima_mensagem: mensagem.mensagem,
+            ultima_data: mensagem.criado_em,
+            total_mensagens: 1,
+          });
+        } else {
+          const conversa = conversasMap.get(chaveConversa);
+          conversa.total_mensagens++;
+          // Manter a mensagem mais recente como última mensagem
+          if (new Date(mensagem.criado_em) > new Date(conversa.ultima_data)) {
+            conversa.ultima_mensagem = mensagem.mensagem;
+            conversa.ultima_data = mensagem.criado_em;
+          }
+        }
+      });
+
+      return Array.from(conversasMap.values()).sort((a, b) => 
+        new Date(b.ultima_data).getTime() - new Date(a.ultima_data).getTime()
+      );
+    } catch (error) {
+      console.error('Erro ao buscar todas as conversas:', error);
+      throw error;
+    }
+  };
+
+  // Deletar conversa (hard delete)
+  const deletarConversa = async (alunoId: string, corretorId: string) => {
+    try {
+      const { error } = await supabase
+        .from('ajuda_rapida_mensagens')
+        .delete()
+        .eq('aluno_id', alunoId)
+        .eq('corretor_id', corretorId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao deletar conversa:', error);
+      throw error;
+    }
+  };
+
   return {
     mensagens,
     conversas,
@@ -381,6 +468,8 @@ export const useAjudaRapida = () => {
     marcarComoLida,
     marcarComoLidaAluno,
     buscarMensagensNaoLidas,
-    buscarMensagensNaoLidasAluno
+    buscarMensagensNaoLidasAluno,
+    buscarTodasConversas,
+    deletarConversa,
   };
 };

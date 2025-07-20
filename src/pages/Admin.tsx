@@ -122,6 +122,7 @@ const Admin = () => {
     { id: "videos", label: "Vídeos", icon: Video },
     { id: "biblioteca", label: "Biblioteca", icon: File },
     { id: "radar", label: "Radar", icon: Radar },
+    { id: "ajuda-rapida", label: "Ajuda Rápida", icon: MessageSquare },
     { id: "cadastro-alunos", label: "Cadastro de Alunos", icon: Users },
     { id: "corretores", label: "Corretores", icon: UserCheck },
     { id: "exportacao", label: "Exportação", icon: Download },
@@ -415,6 +416,10 @@ const Admin = () => {
             />
           </div>
         );
+
+      case "ajuda-rapida":
+        navigate('/admin/ajuda-rapida');
+        return null;
 
       case "exportacao":
         navigate('/admin/exportacao');
