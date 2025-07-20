@@ -119,6 +119,7 @@ export const useAjudaRapida = () => {
   const buscarConversasCorretor = async (corretorId: string) => {
     try {
       setLoading(true);
+      console.log('🔍 Buscando conversas para corretor ID:', corretorId);
       
       const { data, error } = await supabase
         .from('ajuda_rapida_mensagens')
@@ -128,26 +129,50 @@ export const useAjudaRapida = () => {
           mensagem,
           criado_em,
           autor,
-          lida,
-          profiles!ajuda_rapida_mensagens_aluno_id_fkey(nome, sobrenome)
+          lida
         `)
         .eq('corretor_id', corretorId)
         .order('criado_em', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro na query de mensagens:', error);
+        throw error;
+      }
+
+      console.log('📦 Mensagens encontradas:', data?.length || 0);
+
+      // Buscar perfis dos alunos separadamente
+      const alunoIds = [...new Set(data?.map(msg => msg.aluno_id) || [])];
+      console.log('👥 IDs de alunos únicos:', alunoIds);
+      
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, nome, sobrenome')
+        .in('id', alunoIds);
+
+      if (profileError) {
+        console.error('❌ Erro ao buscar perfis:', profileError);
+        throw profileError;
+      }
+
+      console.log('👤 Perfis encontrados:', profiles?.length || 0);
+
+      // Criar mapa de perfis para acesso rápido
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
       // Agrupar por aluno
       const conversasMap = new Map<string, Conversa>();
       
       data?.forEach((msg: any) => {
         const key = msg.aluno_id;
-        const nomeCompleto = `${msg.profiles?.nome || ''} ${msg.profiles?.sobrenome || ''}`.trim();
+        const perfil = profilesMap.get(msg.aluno_id);
+        const nomeCompleto = perfil ? `${perfil.nome} ${perfil.sobrenome || ''}`.trim() : 'Aluno';
         
         if (!conversasMap.has(key)) {
           conversasMap.set(key, {
             aluno_id: msg.aluno_id,
             corretor_id: msg.corretor_id,
-            aluno_nome: nomeCompleto || 'Aluno',
+            aluno_nome: nomeCompleto,
             corretor_nome: '',
             ultima_mensagem: msg.mensagem,
             ultima_data: msg.criado_em,
@@ -173,7 +198,9 @@ export const useAjudaRapida = () => {
         }
       });
 
-      setConversas(Array.from(conversasMap.values()));
+      const conversasArray = Array.from(conversasMap.values());
+      console.log('✅ Conversas processadas:', conversasArray.length);
+      setConversas(conversasArray);
     } catch (error) {
       console.error('Erro ao buscar conversas do corretor:', error);
       toast({
