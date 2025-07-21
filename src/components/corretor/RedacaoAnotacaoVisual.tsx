@@ -517,39 +517,29 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
       console.log(`🔢 Processando ${uniqueRects.length} retângulos únicos no SVG`);
 
-      // Organizar anotações por ordem cronológica (criado_em)
+      // ✅ CORREÇÃO DEFINITIVA: Organizar anotações por ordem cronológica de criação
       const anotacoesOrdenadas = [...anotacoes].sort((a, b) => {
+        // Primeiro critério: data de criação (cronológica)
         if (a.criado_em && b.criado_em) {
           return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime();
         }
+        // Segundo critério: número sequencial (fallback)
         return (a.numero_sequencial || 0) - (b.numero_sequencial || 0);
       });
+
+      console.log('🔢 Anotações ordenadas cronologicamente:', anotacoesOrdenadas.map(a => `${a.numero_sequencial} (${a.criado_em})`));
 
       // Remover numerações existentes primeiro
       svgElement.querySelectorAll('.numero-svg, .numero-svg-bg').forEach(el => el.remove());
 
-      // Mapear cada retângulo à sua anotação correspondente por posição
+      // ✅ CORREÇÃO: Mapear diretamente na ordem cronológica - sem reordenação
       uniqueRects.forEach((rect, index) => {
         try {
-          const rectX = parseFloat(rect.getAttribute('x') || '0');
-          const rectY = parseFloat(rect.getAttribute('y') || '0');
+          // Usar a ordem cronológica diretamente - cada retângulo recebe o número sequencial da sua posição cronológica
+          const anotacao = anotacoesOrdenadas[index];
+          const numero = anotacao ? anotacao.numero_sequencial : (index + 1);
           
-          // Encontrar a anotação que corresponde a esta posição no SVG
-          let anotacaoCorrespondente = null;
-          let menorDistancia = Infinity;
-          
-          for (const anotacao of anotacoesOrdenadas) {
-            const svgX = (anotacao.x_start / anotacao.imagem_largura) * 100;
-            const svgY = (anotacao.y_start / anotacao.imagem_altura) * 100;
-            const distancia = Math.abs(rectX - svgX) + Math.abs(rectY - svgY);
-            
-            if (distancia < menorDistancia) {
-              menorDistancia = distancia;
-              anotacaoCorrespondente = anotacao;
-            }
-          }
-          
-          const numero = anotacaoCorrespondente?.numero_sequencial || (index + 1);
+          console.log(`📍 Retângulo ${index + 1} recebe número ${numero} da anotação criada em ${anotacao?.criado_em}`);
 
           const x = parseFloat(rect.getAttribute('x') || '0');
           const y = parseFloat(rect.getAttribute('y') || '0');
