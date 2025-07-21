@@ -517,17 +517,39 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
       console.log(`🔢 Processando ${uniqueRects.length} retângulos únicos no SVG`);
 
-      // Ordenar anotações por número sequencial (mantém ordem cronológica)
-      const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
+      // Organizar anotações por ordem cronológica (criado_em)
+      const anotacoesOrdenadas = [...anotacoes].sort((a, b) => {
+        if (a.criado_em && b.criado_em) {
+          return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime();
+        }
+        return (a.numero_sequencial || 0) - (b.numero_sequencial || 0);
+      });
 
       // Remover numerações existentes primeiro
       svgElement.querySelectorAll('.numero-svg, .numero-svg-bg').forEach(el => el.remove());
 
+      // Mapear cada retângulo à sua anotação correspondente por posição
       uniqueRects.forEach((rect, index) => {
         try {
-          // Usar a anotação correspondente pelo índice (mantém ordem cronológica)
-          const anotacao = anotacoesOrdenadas[index];
-          const numero = anotacao?.numero_sequencial || (index + 1);
+          const rectX = parseFloat(rect.getAttribute('x') || '0');
+          const rectY = parseFloat(rect.getAttribute('y') || '0');
+          
+          // Encontrar a anotação que corresponde a esta posição no SVG
+          let anotacaoCorrespondente = null;
+          let menorDistancia = Infinity;
+          
+          for (const anotacao of anotacoesOrdenadas) {
+            const svgX = (anotacao.x_start / anotacao.imagem_largura) * 100;
+            const svgY = (anotacao.y_start / anotacao.imagem_altura) * 100;
+            const distancia = Math.abs(rectX - svgX) + Math.abs(rectY - svgY);
+            
+            if (distancia < menorDistancia) {
+              menorDistancia = distancia;
+              anotacaoCorrespondente = anotacao;
+            }
+          }
+          
+          const numero = anotacaoCorrespondente?.numero_sequencial || (index + 1);
 
           const x = parseFloat(rect.getAttribute('x') || '0');
           const y = parseFloat(rect.getAttribute('y') || '0');
@@ -635,7 +657,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
-  // Inicializar Annotorious
+  // Inicializar Annotorious (SEM dependência de competenciaSelecionada para evitar piscada)
   useEffect(() => {
     let cleanupFunctions: (() => void)[] = [];
 
@@ -873,7 +895,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         annotoriousRef.current = null;
       }
     };
-  }, [imageDimensions, readonly, competenciaSelecionada]);
+  }, [imageDimensions, readonly]); // Remover competenciaSelecionada das dependências
 
   // Carregar anotações quando o componente monta
   useEffect(() => {
