@@ -532,24 +532,13 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       // Remover numerações existentes primeiro
       svgElement.querySelectorAll('.numero-svg, .numero-svg-bg').forEach(el => el.remove());
 
-      // ✅ CORREÇÃO DEFINITIVA: Mapear cada retângulo à sua anotação correspondente por posição
+      // ✅ CORREÇÃO FINAL: Numeração cronológica pura - sem mapeamento de posição
       uniqueRects.forEach((rect, index) => {
         try {
-          const rectX = parseFloat(rect.getAttribute('x') || '0');
-          const rectY = parseFloat(rect.getAttribute('y') || '0');
+          // Usar diretamente a ordem cronológica das anotações
+          const numero = index + 1;
           
-          // Encontrar a anotação que corresponde exatamente a esta posição
-          const anotacaoCorrespondente = anotacoesOrdenadas.find(anotacao => {
-            const svgX = (anotacao.x_start / anotacao.imagem_largura) * 100;
-            const svgY = (anotacao.y_start / anotacao.imagem_altura) * 100;
-            // Tolerância pequena para imprecisões de ponto flutuante
-            return Math.abs(rectX - svgX) < 0.1 && Math.abs(rectY - svgY) < 0.1;
-          });
-          
-          // Usar o número sequencial real da anotação, não o índice do array
-          const numero = anotacaoCorrespondente?.numero_sequencial || (index + 1);
-          
-          console.log(`📍 Retângulo na posição (${rectX}, ${rectY}) recebe número ${numero} da anotação ${anotacaoCorrespondente?.id}`);
+          console.log(`📍 Retângulo ${index + 1} recebe número ${numero} (ordem cronológica pura)`);
 
           const x = parseFloat(rect.getAttribute('x') || '0');
           const y = parseFloat(rect.getAttribute('y') || '0');
