@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { X, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
 interface BibliotecaFormProps {
   materialEditando?: any;
@@ -26,7 +26,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
   const [formData, setFormData] = useState({
     titulo: materialEditando?.titulo || '',
     descricao: materialEditando?.descricao || '',
-    competencia: materialEditando?.competencia || '',
+    categoria_id: materialEditando?.categoria_id || '',
     turmas_autorizadas: materialEditando?.turmas_autorizadas || [] as string[],
     permite_visitante: materialEditando?.permite_visitante || false,
     status: materialEditando?.status || 'publicado' as 'publicado' | 'rascunho'
@@ -40,7 +40,20 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
     'Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'
   ];
 
-  const competencias = ['C1', 'C2', 'C3', 'C4', 'C5'];
+  // Buscar categorias disponíveis
+  const { data: categorias = [], isLoading: loadingCategorias } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('ativa', true)
+        .order('ordem');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const adicionarTurma = () => {
     if (turmaSelecionada && !formData.turmas_autorizadas.includes(turmaSelecionada)) {
@@ -94,7 +107,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.titulo || !formData.competencia || (!arquivo && !materialEditando)) {
+    if (!formData.titulo || !formData.categoria_id || (!arquivo && !materialEditando)) {
       toast({
         title: "Erro",
         description: materialEditando ? "Preencha todos os campos obrigatórios." : "Preencha todos os campos obrigatórios e selecione um arquivo PDF.",
@@ -129,7 +142,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
           .update({
             titulo: formData.titulo,
             descricao: formData.descricao || null,
-            competencia: formData.competencia,
+            categoria_id: formData.categoria_id,
             arquivo_url,
             arquivo_nome,
             turmas_autorizadas: formData.turmas_autorizadas,
@@ -155,7 +168,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
           .insert([{
             titulo: formData.titulo,
             descricao: formData.descricao || null,
-            competencia: formData.competencia,
+            categoria_id: formData.categoria_id,
             arquivo_url,
             arquivo_nome,
             turmas_autorizadas: formData.turmas_autorizadas,
@@ -177,7 +190,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
         setFormData({
           titulo: '',
           descricao: '',
-          competencia: '',
+          categoria_id: '',
           turmas_autorizadas: [],
           permite_visitante: false,
           status: 'publicado'
@@ -244,17 +257,21 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
       </div>
 
       <div>
-        <Label htmlFor="competencia">Competência *</Label>
-        <Select value={formData.competencia} onValueChange={(value) => setFormData({...formData, competencia: value})}>
+        <Label htmlFor="categoria">Categoria *</Label>
+        <Select value={formData.categoria_id} onValueChange={(value) => setFormData({...formData, categoria_id: value})}>
           <SelectTrigger>
-            <SelectValue placeholder="Selecione a competência" />
+            <SelectValue placeholder="Selecione a categoria" />
           </SelectTrigger>
           <SelectContent>
-            {competencias.map((comp) => (
-              <SelectItem key={comp} value={comp}>
-                Competência {comp.replace('C', '')}
-              </SelectItem>
-            ))}
+            {loadingCategorias ? (
+              <SelectItem value="" disabled>Carregando categorias...</SelectItem>
+            ) : (
+              categorias.map((categoria) => (
+                <SelectItem key={categoria.id} value={categoria.id}>
+                  {categoria.nome}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>

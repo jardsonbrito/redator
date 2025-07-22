@@ -312,6 +312,7 @@ export type Database = {
           arquivo_nome: string
           arquivo_url: string
           atualizado_em: string | null
+          categoria_id: string
           competencia: string
           criado_em: string | null
           data_publicacao: string | null
@@ -326,6 +327,7 @@ export type Database = {
           arquivo_nome: string
           arquivo_url: string
           atualizado_em?: string | null
+          categoria_id: string
           competencia: string
           criado_em?: string | null
           data_publicacao?: string | null
@@ -340,6 +342,7 @@ export type Database = {
           arquivo_nome?: string
           arquivo_url?: string
           atualizado_em?: string | null
+          categoria_id?: string
           competencia?: string
           criado_em?: string | null
           data_publicacao?: string | null
@@ -349,6 +352,44 @@ export type Database = {
           status?: string | null
           titulo?: string
           turmas_autorizadas?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biblioteca_materiais_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categorias: {
+        Row: {
+          ativa: boolean
+          atualizado_em: string
+          criado_em: string
+          id: string
+          nome: string
+          ordem: number
+          slug: string
+        }
+        Insert: {
+          ativa?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          id?: string
+          nome: string
+          ordem?: number
+          slug: string
+        }
+        Update: {
+          ativa?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          slug?: string
         }
         Relationships: []
       }
