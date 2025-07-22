@@ -12,7 +12,14 @@ const CorretorBiblioteca = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('biblioteca_materiais')
-        .select('*')
+        .select(`
+          *,
+          categorias (
+            id,
+            nome,
+            slug
+          )
+        `)
         .eq('status', 'publicado')
         .order('data_publicacao', { ascending: false });
       
@@ -41,13 +48,13 @@ const CorretorBiblioteca = () => {
     );
   }
 
-  // Agrupar materiais por competência
-  const materiaisPorCompetencia = materiais?.reduce((acc, material) => {
-    const competencia = material.competencia || 'Outros';
-    if (!acc[competencia]) {
-      acc[competencia] = [];
+  // Agrupar materiais por categoria
+  const materiaisPorCategoria = materiais?.reduce((acc, material) => {
+    const categoria = material.categorias?.nome || 'Outros';
+    if (!acc[categoria]) {
+      acc[categoria] = [];
     }
-    acc[competencia].push(material);
+    acc[categoria].push(material);
     return acc;
   }, {} as Record<string, any[]>) || {};
 
@@ -59,7 +66,7 @@ const CorretorBiblioteca = () => {
           <p className="text-gray-600">Materiais disponíveis para consulta</p>
         </div>
 
-        {Object.keys(materiaisPorCompetencia).length === 0 ? (
+        {Object.keys(materiaisPorCategoria).length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <Library className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -73,10 +80,10 @@ const CorretorBiblioteca = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {Object.entries(materiaisPorCompetencia).map(([competencia, materiaisGrupo]) => (
-              <div key={competencia}>
+            {Object.entries(materiaisPorCategoria).map(([categoria, materiaisGrupo]) => (
+              <div key={categoria}>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  {competencia}
+                  {categoria}
                 </h2>
                 
                 <div className="grid gap-4">
@@ -95,7 +102,7 @@ const CorretorBiblioteca = () => {
                             )}
                             
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline">{material.competencia}</Badge>
+                              <Badge variant="outline">{material.categorias?.nome}</Badge>
                               <span className="text-sm text-gray-500">
                                 {material.arquivo_nome}
                               </span>

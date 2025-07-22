@@ -26,28 +26,50 @@ import {
 
 export const BibliotecaList = () => {
   const [busca, setBusca] = useState('');
-  const [competenciaFiltro, setCompetenciaFiltro] = useState('todas');
+  const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
   const [statusFiltro, setStatusFiltro] = useState('todos');
   const [materialEditando, setMaterialEditando] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Buscar categorias para o filtro
+  const { data: categorias = [] } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('ativa', true)
+        .order('ordem');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: materiais, isLoading, error } = useQuery({
-    queryKey: ['admin-biblioteca', busca, competenciaFiltro, statusFiltro],
+    queryKey: ['admin-biblioteca', busca, categoriaFiltro, statusFiltro],
     queryFn: async () => {
       try {
         let query = supabase
           .from('biblioteca_materiais')
-          .select('*')
+          .select(`
+            *,
+            categorias (
+              id,
+              nome,
+              slug
+            )
+          `)
           .order('data_publicacao', { ascending: false });
 
         if (busca) {
           query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
         }
 
-        if (competenciaFiltro && competenciaFiltro !== 'todas') {
-          query = query.eq('competencia', competenciaFiltro);
+        if (categoriaFiltro && categoriaFiltro !== 'todas') {
+          query = query.eq('categoria_id', categoriaFiltro);
         }
 
         if (statusFiltro && statusFiltro !== 'todos') {
@@ -232,17 +254,17 @@ export const BibliotecaList = () => {
             />
           </div>
           
-          <Select value={competenciaFiltro} onValueChange={setCompetenciaFiltro}>
+          <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
             <SelectTrigger>
-              <SelectValue placeholder="Competência" />
+              <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas</SelectItem>
-              <SelectItem value="C1">C1</SelectItem>
-              <SelectItem value="C2">C2</SelectItem>
-              <SelectItem value="C3">C3</SelectItem>
-              <SelectItem value="C4">C4</SelectItem>
-              <SelectItem value="C5">C5</SelectItem>
+              {categorias.map((categoria) => (
+                <SelectItem key={categoria.id} value={categoria.id}>
+                  {categoria.nome}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -289,7 +311,7 @@ export const BibliotecaList = () => {
                     
                     <div className="flex flex-wrap gap-2 mb-4">
                       <Badge className="bg-redator-primary text-white">
-                        {material.competencia}
+                        {material.categorias?.nome || 'Categoria não definida'}
                       </Badge>
                       <Badge variant={material.status === 'publicado' ? 'default' : 'secondary'}>
                         {material.status === 'publicado' ? 'Publicado' : 'Rascunho'}

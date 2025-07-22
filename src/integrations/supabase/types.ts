@@ -313,7 +313,6 @@ export type Database = {
           arquivo_url: string
           atualizado_em: string | null
           categoria_id: string
-          competencia: string
           criado_em: string | null
           data_publicacao: string | null
           descricao: string | null
@@ -328,7 +327,6 @@ export type Database = {
           arquivo_url: string
           atualizado_em?: string | null
           categoria_id: string
-          competencia: string
           criado_em?: string | null
           data_publicacao?: string | null
           descricao?: string | null
@@ -343,7 +341,6 @@ export type Database = {
           arquivo_url?: string
           atualizado_em?: string | null
           categoria_id?: string
-          competencia?: string
           criado_em?: string | null
           data_publicacao?: string | null
           descricao?: string | null

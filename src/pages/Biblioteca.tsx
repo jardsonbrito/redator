@@ -18,7 +18,7 @@ import { useState } from "react";
 const Biblioteca = () => {
   const { studentData } = useStudentAuth();
   const [busca, setBusca] = useState("");
-  const [competenciaFiltro, setCompetenciaFiltro] = useState("todas");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
   
   // Determina a turma do usuário
   let turmaCode = "Visitante";
@@ -26,13 +26,35 @@ const Biblioteca = () => {
     turmaCode = studentData.turma;
   }
 
+  // Buscar categorias disponíveis
+  const { data: categorias = [] } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('ativa', true)
+        .order('ordem');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: materiais, isLoading, error } = useQuery({
-    queryKey: ['biblioteca-materiais', turmaCode, busca, competenciaFiltro],
+    queryKey: ['biblioteca-materiais', turmaCode, busca, categoriaFiltro],
     queryFn: async () => {
       try {
         let query = supabase
           .from('biblioteca_materiais')
-          .select('*')
+          .select(`
+            *,
+            categorias (
+              id,
+              nome,
+              slug
+            )
+          `)
           .eq('status', 'publicado')
           .order('data_publicacao', { ascending: false });
 
@@ -48,8 +70,8 @@ const Biblioteca = () => {
           query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
         }
 
-        if (competenciaFiltro && competenciaFiltro !== "todas") {
-          query = query.eq('competencia', competenciaFiltro);
+        if (categoriaFiltro && categoriaFiltro !== "todas") {
+          query = query.eq('categoria_id', categoriaFiltro);
         }
         
         const { data, error } = await query;
@@ -122,7 +144,7 @@ const Biblioteca = () => {
             Materiais Disponíveis
           </h2>
           <p className="text-redator-accent">
-            Acesse materiais em PDF organizados por competência para aprimorar seus estudos.
+            Acesse materiais em PDF organizados por categoria para aprimorar seus estudos.
           </p>
         </div>
 
@@ -139,17 +161,17 @@ const Biblioteca = () => {
               />
             </div>
             
-            <Select value={competenciaFiltro} onValueChange={setCompetenciaFiltro}>
+            <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
               <SelectTrigger>
-                <SelectValue placeholder="Filtrar por competência" />
+                <SelectValue placeholder="Filtrar por categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todas">Todas as competências</SelectItem>
-                <SelectItem value="C1">Competência 1</SelectItem>
-                <SelectItem value="C2">Competência 2</SelectItem>
-                <SelectItem value="C3">Competência 3</SelectItem>
-                <SelectItem value="C4">Competência 4</SelectItem>
-                <SelectItem value="C5">Competência 5</SelectItem>
+                <SelectItem value="todas">Todas as categorias</SelectItem>
+                {categorias.map((categoria) => (
+                  <SelectItem key={categoria.id} value={categoria.id}>
+                    {categoria.nome}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -186,7 +208,7 @@ const Biblioteca = () => {
                       
                       <div className="flex flex-wrap gap-2 mb-4">
                         <Badge className="bg-redator-primary text-white">
-                          {material.competencia}
+                          {material.categorias?.nome || 'Categoria não definida'}
                         </Badge>
                         <Badge variant="outline">
                           <Calendar className="w-3 h-3 mr-1" />

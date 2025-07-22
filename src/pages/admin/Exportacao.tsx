@@ -233,7 +233,12 @@ export default function Exportacao() {
     try {
       const { data, error } = await supabase
         .from('biblioteca_materiais')
-        .select('*')
+        .select(`
+          *,
+          categorias (
+            nome
+          )
+        `)
         .order('criado_em', { ascending: false });
 
       if (error) throw error;
@@ -241,7 +246,7 @@ export default function Exportacao() {
       const csvData = data.map(item => ({
         'Título': item.titulo || '',
         'Descrição': item.descricao || '',
-        'Competência': item.competencia || '',
+        'Categoria': item.categorias?.nome || 'Não definida',
         'Nome do PDF': item.arquivo_nome || '',
         'Status': item.status || '',
         'Turmas': item.turmas_autorizadas ? item.turmas_autorizadas.join(', ') : '',
