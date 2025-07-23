@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Home, Download, Search, Calendar } from "lucide-react";
+import { Home, Download, Search, Calendar, BookOpen, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,11 +14,14 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
+import { PDFViewer } from "@/components/admin/PDFViewer";
 
 const Biblioteca = () => {
   const { studentData } = useStudentAuth();
   const [busca, setBusca] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [selectedPdf, setSelectedPdf] = useState({ url: '', title: '' });
   
   // Determina a turma do usuário
   let turmaCode = "Visitante";
@@ -113,6 +116,41 @@ const Biblioteca = () => {
     }
   };
 
+  const handleViewPdf = async (arquivoUrl: string, titulo: string, categoria: string) => {
+    try {
+      // Para livros digitais, usar visualização inline
+      if (categoria.toLowerCase().includes('livro digital')) {
+        const { data } = await supabase.storage
+          .from('biblioteca-pdfs')
+          .getPublicUrl(arquivoUrl);
+        
+        setSelectedPdf({
+          url: data.publicUrl,
+          title: titulo
+        });
+        setPdfViewerOpen(true);
+      } else {
+        // Para outras categorias, fazer download normal
+        await handleDownload(arquivoUrl, titulo);
+      }
+    } catch (error) {
+      console.error('Erro ao visualizar arquivo:', error);
+    }
+  };
+
+  // Agrupar materiais por categoria
+  const materiaisAgrupados = materiais?.reduce((grupos: any, material: any) => {
+    const categoriaNome = material.categorias?.nome || 'Sem categoria';
+    if (!grupos[categoriaNome]) {
+      grupos[categoriaNome] = [];
+    }
+    grupos[categoriaNome].push(material);
+    return grupos;
+  }, {}) || {};
+
+  // Verificar se é visitante
+  const isVisitante = turmaCode === "Visitante";
+
   if (isLoading) {
     return (
       <ProtectedRoute>
@@ -182,7 +220,7 @@ const Biblioteca = () => {
           </div>
         </div>
 
-        {!materiais || materiais.length === 0 ? (
+{!materiais || materiais.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -195,50 +233,140 @@ const Biblioteca = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6">
-            {materiais.map((material) => (
-              <Card key={material.id} className="border-l-4 border-l-redator-primary hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl mb-2">{material.titulo}</CardTitle>
-                      {material.descricao && (
-                        <p className="text-gray-600 mb-3">{material.descricao}</p>
-                      )}
-                      
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <Badge className="bg-redator-primary text-white">
-                          {material.categorias?.nome || 'Categoria não definida'}
-                        </Badge>
-                        <Badge variant="outline">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
-                        </Badge>
-                        {material.permite_visitante && (
-                          <Badge variant="outline" className="text-redator-secondary">
-                            Público
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="ml-4">
-                      <Button
-                        onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
-                        className="bg-redator-primary hover:bg-redator-secondary"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Baixar PDF
-                      </Button>
-                    </div>
+          <div className="space-y-8">
+            {/* Exibir todas as categorias, mesmo vazias */}
+            {categorias.map((categoria) => {
+              const materiaisCategoria = materiaisAgrupados[categoria.nome] || [];
+              
+              return (
+                <div key={categoria.id} className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-2xl font-bold text-redator-primary">
+                      {categoria.nome}
+                    </h3>
+                    <Badge variant="outline" className="text-sm">
+                      {materiaisCategoria.length} material(is)
+                    </Badge>
                   </div>
-                </CardHeader>
-              </Card>
-            ))}
+                  
+                  {materiaisCategoria.length === 0 ? (
+                    <Card className="border-dashed">
+                      <CardContent className="text-center py-8">
+                        <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">Nenhum material nesta categoria</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {materiaisCategoria.map((material) => {
+                        const isLivroDigital = categoria.nome.toLowerCase().includes('livro digital');
+                        const podeAcessar = !isVisitante || material.permite_visitante;
+                        
+                        return (
+                          <Card 
+                            key={material.id} 
+                            className={`border-l-4 hover:shadow-lg transition-shadow ${
+                              isLivroDigital ? 'border-l-emerald-500' : 'border-l-redator-primary'
+                            } ${!podeAcessar ? 'opacity-60' : ''}`}
+                          >
+                            <CardHeader>
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <CardTitle className="text-xl mb-2 flex items-center gap-2">
+                                    {material.titulo}
+                                    {isLivroDigital && (
+                                      <Badge className="bg-emerald-500 text-white text-xs">
+                                        <BookOpen className="w-3 h-3 mr-1" />
+                                        E-book
+                                      </Badge>
+                                    )}
+                                    {!podeAcessar && (
+                                      <Lock className="w-4 h-4 text-gray-400" />
+                                    )}
+                                  </CardTitle>
+                                  {material.descricao && (
+                                    <p className="text-gray-600 mb-3">{material.descricao}</p>
+                                  )}
+                                  
+                                  <div className="flex flex-wrap gap-2 mb-4">
+                                    <Badge 
+                                      className={
+                                        isLivroDigital 
+                                          ? "bg-emerald-500 text-white" 
+                                          : "bg-redator-primary text-white"
+                                      }
+                                    >
+                                      {material.categorias?.nome || 'Categoria não definida'}
+                                    </Badge>
+                                    <Badge variant="outline">
+                                      <Calendar className="w-3 h-3 mr-1" />
+                                      {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
+                                    </Badge>
+                                    {material.permite_visitante && (
+                                      <Badge variant="outline" className="text-redator-secondary">
+                                        Público
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="ml-4">
+                                  {!podeAcessar ? (
+                                    <div className="text-center">
+                                      <Lock className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                                      <p className="text-sm text-gray-500">
+                                        Disponível apenas<br />para alunos
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      onClick={() => handleViewPdf(
+                                        material.arquivo_url, 
+                                        material.titulo,
+                                        categoria.nome
+                                      )}
+                                      className={
+                                        isLivroDigital 
+                                          ? "bg-emerald-500 hover:bg-emerald-600" 
+                                          : "bg-redator-primary hover:bg-redator-secondary"
+                                      }
+                                    >
+                                      {isLivroDigital ? (
+                                        <>
+                                          <BookOpen className="w-4 h-4 mr-2" />
+                                          Ler Agora
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Download className="w-4 h-4 mr-2" />
+                                          Baixar PDF
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </CardHeader>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         </main>
         </div>
+
+        {/* Modal do PDF Viewer */}
+        <PDFViewer
+          open={pdfViewerOpen}
+          onOpenChange={setPdfViewerOpen}
+          pdfUrl={selectedPdf.url}
+          title={selectedPdf.title}
+        />
       </TooltipProvider>
     </ProtectedRoute>
   );

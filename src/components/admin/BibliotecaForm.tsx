@@ -7,10 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { CategoriaModal } from './CategoriaModal';
 
 interface BibliotecaFormProps {
   materialEditando?: any;
@@ -34,6 +35,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
 
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [turmaSelecionada, setTurmaSelecionada] = useState('');
+  const [showCategoriaModal, setShowCategoriaModal] = useState(false);
 
   // Lista oficial de turmas do sistema
   const turmasOficiais = [
@@ -258,22 +260,33 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
 
       <div>
         <Label htmlFor="categoria">Categoria *</Label>
-        <Select value={formData.categoria_id} onValueChange={(value) => setFormData({...formData, categoria_id: value})}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            {loadingCategorias ? (
-              <SelectItem value="" disabled>Carregando categorias...</SelectItem>
-            ) : (
-              categorias.map((categoria) => (
-                <SelectItem key={categoria.id} value={categoria.id}>
-                  {categoria.nome}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={formData.categoria_id} onValueChange={(value) => setFormData({...formData, categoria_id: value})}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Selecione a categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              {loadingCategorias ? (
+                <SelectItem value="" disabled>Carregando categorias...</SelectItem>
+              ) : (
+                categorias.map((categoria) => (
+                  <SelectItem key={categoria.id} value={categoria.id}>
+                    {categoria.nome}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => setShowCategoriaModal(true)}
+            title="Nova Categoria"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <div>
@@ -359,6 +372,12 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
         {loading ? (materialEditando ? 'Atualizando...' : 'Cadastrando...') : (materialEditando ? 'Atualizar Material' : 'Cadastrar Material')}
       </Button>
     </form>
+
+    {/* Modal para criar nova categoria */}
+    <CategoriaModal 
+      open={showCategoriaModal} 
+      onOpenChange={setShowCategoriaModal} 
+    />
     </div>
   );
 };

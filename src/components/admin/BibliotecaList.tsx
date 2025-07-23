@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Download, Search, Calendar } from 'lucide-react';
+import { Edit, Trash2, Download, Search, Calendar, Grid, List } from 'lucide-react';
 import { BibliotecaForm } from './BibliotecaForm';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -30,6 +30,7 @@ export const BibliotecaList = () => {
   const [statusFiltro, setStatusFiltro] = useState('todos');
   const [materialEditando, setMaterialEditando] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showGrouped, setShowGrouped] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -214,6 +215,16 @@ export const BibliotecaList = () => {
     setShowForm(false);
   };
 
+  // Agrupar materiais por categoria
+  const materiaisAgrupados = materiais?.reduce((grupos: any, material: any) => {
+    const categoriaNome = material.categorias?.nome || 'Sem categoria';
+    if (!grupos[categoriaNome]) {
+      grupos[categoriaNome] = [];
+    }
+    grupos[categoriaNome].push(material);
+    return grupos;
+  }, {}) || {};
+
   if (isLoading) {
     return <div className="text-center py-8">Carregando materiais...</div>;
   }
@@ -279,10 +290,20 @@ export const BibliotecaList = () => {
             </SelectContent>
           </Select>
 
-          <div className="text-sm text-gray-600 flex items-center">
-            <Calendar className="w-4 h-4 mr-2" />
-            {materiais?.length || 0} material(is)
-          </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showGrouped ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowGrouped(!showGrouped)}
+              >
+                {showGrouped ? <List className="w-4 h-4 mr-2" /> : <Grid className="w-4 h-4 mr-2" />}
+                {showGrouped ? 'Lista' : 'Agrupar'}
+              </Button>
+              <div className="text-sm text-gray-600 flex items-center">
+                <Calendar className="w-4 h-4 mr-2" />
+                {materiais?.length || 0} material(is)
+              </div>
+            </div>
         </div>
       </div>
 
@@ -297,6 +318,134 @@ export const BibliotecaList = () => {
             </p>
           </CardContent>
         </Card>
+      ) : showGrouped ? (
+        <div className="space-y-8">
+          {/* Exibir materiais agrupados por categoria */}
+          {categorias.map((categoria) => {
+            const materiaisCategoria = materiaisAgrupados[categoria.nome] || [];
+            
+            return (
+              <div key={categoria.id} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-bold text-redator-primary">
+                    {categoria.nome}
+                  </h3>
+                  <Badge variant="outline" className="text-sm">
+                    {materiaisCategoria.length} material(is)
+                  </Badge>
+                </div>
+                
+                {materiaisCategoria.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="text-center py-8">
+                      <p className="text-gray-500">Nenhum material nesta categoria</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4">
+                    {materiaisCategoria.map((material) => (
+                      <Card key={material.id} className="border-l-4 border-l-redator-primary">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg mb-2">{material.titulo}</CardTitle>
+                              {material.descricao && (
+                                <p className="text-gray-600 mb-3">{material.descricao}</p>
+                              )}
+                              
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                <Badge className="bg-redator-primary text-white">
+                                  {material.categorias?.nome || 'Categoria não definida'}
+                                </Badge>
+                                <Badge variant={material.status === 'publicado' ? 'default' : 'secondary'}>
+                                  {material.status === 'publicado' ? 'Publicado' : 'Rascunho'}
+                                </Badge>
+                                <Badge variant="outline">
+                                  <Calendar className="w-3 h-3 mr-1" />
+                                  {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
+                                </Badge>
+                                {material.permite_visitante && (
+                                  <Badge variant="outline" className="text-redator-secondary">
+                                    Visitantes
+                                  </Badge>
+                                )}
+                                {material.turmas_autorizadas && material.turmas_autorizadas.length > 0 && (
+                                  <Badge variant="outline">
+                                    {material.turmas_autorizadas.length} turma(s)
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <p className="text-sm text-gray-500">
+                                Arquivo: {material.arquivo_nome}
+                              </p>
+                            </div>
+                            
+                            <div className="ml-4 flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(material)}
+                                title="Editar material"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => toggleStatusMutation.mutate({
+                                  id: material.id,
+                                  novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
+                                })}
+                                title={material.status === 'publicado' ? 'Tornar rascunho' : 'Publicar'}
+                              >
+                                {material.status === 'publicado' ? '📝' : '✅'}
+                              </Button>
+
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja excluir este material? Esta ação não pode ser desfeita.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteMutation.mutate(material.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Excluir
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="grid gap-4">
           {materiais.map((material) => (
