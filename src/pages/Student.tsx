@@ -13,7 +13,8 @@ const Student = () => {
       path: "/temas",
       icon: BookOpen,
       tooltip: "Explore propostas de redação organizadas por eixo temático.",
-      showAlways: true
+      showAlways: true,
+      resourceType: "temas"
     },
     {
       title: "Simulados",

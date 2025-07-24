@@ -114,12 +114,6 @@ export const PDFViewer = ({ open, onOpenChange, pdfUrl, title }: PDFViewerProps)
         
         <div className="flex-1 overflow-auto bg-gray-100 rounded-lg">
           <div className="h-full flex items-center justify-center p-4">
-            {loading && (
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-redator-primary mx-auto mb-4"></div>
-                <p className="text-gray-600">Carregando PDF...</p>
-              </div>
-            )}
             <Document
               file={pdfUrl}
               onLoadSuccess={onDocumentLoadSuccess}
@@ -127,20 +121,34 @@ export const PDFViewer = ({ open, onOpenChange, pdfUrl, title }: PDFViewerProps)
                 console.error('Erro ao carregar PDF:', error);
                 setLoading(false);
               }}
+              loading={
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Carregando PDF...</p>
+                </div>
+              }
+              error={
+                <div className="text-center text-red-500">
+                  <p className="text-lg font-semibold mb-2">Arquivo não encontrado</p>
+                  <p className="text-sm">Não foi possível carregar o PDF. Verifique se o arquivo existe.</p>
+                </div>
+              }
               className="max-w-full"
             >
-              <div 
-                onContextMenu={(e) => e.preventDefault()}
-                style={{ userSelect: 'none' }}
-              >
-                <Page
-                  pageNumber={pageNumber}
-                  scale={scale}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  className="shadow-lg"
-                />
-              </div>
+              {!loading && (
+                <div 
+                  onContextMenu={(e) => e.preventDefault()}
+                  style={{ userSelect: 'none' }}
+                >
+                  <Page
+                    pageNumber={pageNumber}
+                    scale={scale}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    className="shadow-lg"
+                  />
+                </div>
+              )}
             </Document>
           </div>
         </div>

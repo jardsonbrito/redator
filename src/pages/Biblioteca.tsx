@@ -15,6 +15,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { PDFViewer } from "@/components/admin/PDFViewer";
+import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
+import { LockedResourceCard } from "@/components/LockedResourceCard";
 
 const Biblioteca = () => {
   const { studentData } = useStudentAuth();
@@ -272,42 +274,38 @@ const Biblioteca = () => {
                             <CardHeader>
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <CardTitle className="text-xl mb-2 flex items-center gap-2">
-                                    {material.titulo}
-                                    {isLivroDigital && (
-                                      <Badge className="bg-emerald-500 text-white text-xs">
-                                        <BookOpen className="w-3 h-3 mr-1" />
-                                        E-book
-                                      </Badge>
-                                    )}
-                                    {!podeAcessar && (
-                                      <Lock className="w-4 h-4 text-gray-400" />
-                                    )}
-                                  </CardTitle>
-                                  {material.descricao && (
-                                    <p className="text-gray-600 mb-3">{material.descricao}</p>
-                                  )}
-                                  
-                                  <div className="flex flex-wrap gap-2 mb-4">
-                                    <Badge 
-                                      className={
-                                        isLivroDigital 
-                                          ? "bg-emerald-500 text-white" 
-                                          : "bg-redator-primary text-white"
-                                      }
-                                    >
-                                      {material.categorias?.nome || 'Categoria não definida'}
-                                    </Badge>
-                                    <Badge variant="outline">
-                                      <Calendar className="w-3 h-3 mr-1" />
-                                      {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
-                                    </Badge>
-                                    {material.permite_visitante && (
-                                      <Badge variant="outline" className="text-redator-secondary">
-                                        Público
-                                      </Badge>
-                                    )}
-                                  </div>
+                                   <CardTitle className="text-xl mb-2 flex items-center gap-2">
+                                     {material.titulo}
+                                     {!podeAcessar && (
+                                       <Lock className="w-4 h-4 text-gray-400" />
+                                     )}
+                                   </CardTitle>
+                                   {material.descricao && (
+                                     <p className="text-gray-600 mb-3">{material.descricao}</p>
+                                   )}
+                                   
+                                   <div className="flex flex-wrap gap-2 mb-4">
+                                     <Badge 
+                                       className={
+                                         isLivroDigital 
+                                           ? "bg-emerald-500 text-white" 
+                                           : "bg-redator-primary text-white"
+                                       }
+                                     >
+                                       {material.categorias?.nome || 'Categoria não definida'}
+                                     </Badge>
+                                     {!isLivroDigital && (
+                                       <Badge variant="outline">
+                                         <Calendar className="w-3 h-3 mr-1" />
+                                         {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
+                                       </Badge>
+                                     )}
+                                     {material.permite_visitante && (
+                                       <Badge variant="outline" className="text-redator-secondary">
+                                         Público
+                                       </Badge>
+                                     )}
+                                   </div>
                                 </div>
                                 
                                 <div className="ml-4">
@@ -319,30 +317,27 @@ const Biblioteca = () => {
                                       </p>
                                     </div>
                                   ) : (
-                                    <Button
-                                      onClick={() => handleViewPdf(
-                                        material.arquivo_url, 
-                                        material.titulo,
-                                        categoria.nome
-                                      )}
-                                      className={
-                                        isLivroDigital 
-                                          ? "bg-emerald-500 hover:bg-emerald-600" 
-                                          : "bg-redator-primary hover:bg-redator-secondary"
-                                      }
-                                    >
-                                      {isLivroDigital ? (
-                                        <>
-                                          <BookOpen className="w-4 h-4 mr-2" />
-                                          Ler Agora
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Download className="w-4 h-4 mr-2" />
-                                          Baixar PDF
-                                        </>
-                                      )}
-                                    </Button>
+                                     <Button
+                                       onClick={() => handleViewPdf(
+                                         material.arquivo_url, 
+                                         material.titulo,
+                                         categoria.nome
+                                       )}
+                                       className={
+                                         isLivroDigital 
+                                           ? "bg-emerald-500 hover:bg-emerald-600" 
+                                           : "bg-redator-primary hover:bg-redator-secondary"
+                                       }
+                                     >
+                                       {isLivroDigital ? (
+                                         "Ler agora"
+                                       ) : (
+                                         <>
+                                           <Download className="w-4 h-4 mr-2" />
+                                           Baixar PDF
+                                         </>
+                                       )}
+                                     </Button>
                                   )}
                                 </div>
                               </div>
