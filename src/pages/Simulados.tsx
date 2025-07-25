@@ -51,11 +51,11 @@ const Simulados = () => {
     const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
     
     if (isBefore(agora, inicioSimulado)) {
-      return { status: "Agendado", color: "bg-blue-500", canParticipate: false };
+      return { status: "Agendado", color: "bg-blue-100 border-blue-200", canParticipate: false, timeInfo: `Inicia em ${format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}` };
     } else if (isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado })) {
-      return { status: "Em progresso", color: "bg-green-500", canParticipate: true };
+      return { status: "Em progresso", color: "bg-green-100 border-green-200", canParticipate: true, timeInfo: `Termina em ${format(fimSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}` };
     } else {
-      return { status: "Encerrado", color: "bg-gray-500", canParticipate: false };
+      return { status: "Encerrado", color: "bg-gray-100 border-gray-200", canParticipate: false, timeInfo: "" };
     }
   };
 
@@ -106,63 +106,47 @@ const Simulados = () => {
           <div className="grid gap-6">
             {simulados.map((simulado) => {
               const statusInfo = getStatusSimulado(simulado);
-              const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-              const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
 
               return (
-                <Card key={simulado.id} className="border-l-4 border-l-redator-primary hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
+                <Card key={simulado.id} className={`${statusInfo.color} border transition-shadow`}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-xl mb-2">{simulado.titulo}</CardTitle>
-                        {/* NÃO MOSTRAR frase temática na listagem conforme solicitado */}
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          {simulado.titulo}
+                        </h3>
                         
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <Badge className={`${statusInfo.color} text-white font-medium`}>
-                            {statusInfo.status}
-                          </Badge>
-                          <Badge variant="outline">
-                            <Users className="w-3 h-3 mr-1" />
-                            Turma: {turmaCode}
-                          </Badge>
-                          {simulado.permite_visitante && (
-                            <Badge variant="outline" className="text-redator-secondary">
-                              Aceita visitantes
+                        {statusInfo.status === "Agendado" && (
+                          <div className="space-y-2">
+                            <Badge className="bg-blue-500 text-white font-medium">
+                              Agendado
                             </Badge>
-                          )}
-                        </div>
+                            <p className="text-gray-700 text-sm">
+                              {statusInfo.timeInfo}
+                            </p>
+                          </div>
+                        )}
                         
-                        <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            <span>
-                              Início: {format(inicioSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </span>
+                        {statusInfo.status === "Em progresso" && (
+                          <div className="space-y-2">
+                            <p className="text-gray-700 text-sm">
+                              {statusInfo.timeInfo}
+                            </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            <span>
-                              Término: {format(fimSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                       
-                      <div className="ml-4">
-                        <Link to={`/simulados/${simulado.id}`}>
-                          <Button 
-                            variant={statusInfo.canParticipate ? "default" : "outline"}
-                            size="sm"
-                            className={statusInfo.canParticipate ? "bg-green-600 hover:bg-green-700" : ""}
-                          >
-                            {statusInfo.status === "Encerrado" ? "Ver Proposta" : 
-                             statusInfo.canParticipate ? "Participar" : "Ver Detalhes"}
-                            <ArrowRight className="w-4 h-4 ml-1" />
-                          </Button>
-                        </Link>
-                      </div>
+                      {statusInfo.canParticipate && (
+                        <div className="ml-4">
+                          <Link to={`/simulados/${simulado.id}`}>
+                            <Button className="bg-green-600 hover:bg-green-700 text-white">
+                              Participar do Simulado
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
                     </div>
-                  </CardHeader>
+                  </CardContent>
                 </Card>
               );
             })}

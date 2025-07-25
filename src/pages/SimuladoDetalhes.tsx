@@ -191,14 +191,15 @@ export default function SimuladoDetalhes() {
         <Card className="mb-6 border-l-4 border-l-purple-500">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Brain className="w-8 h-8 text-purple-600" />
-                <div>
-                  <CardTitle className="text-2xl font-bold text-purple-800">
-                    {simulado.titulo}
-                  </CardTitle>
-                  <p className="text-gray-600">Simulado ENEM</p>
-                </div>
+              <div>
+                <CardTitle className="text-2xl font-bold text-purple-800">
+                  {simulado.titulo}
+                </CardTitle>
+                {simuladoDisponivel && (
+                  <p className="text-gray-600 text-sm mt-1">
+                    Termina em {format(fimSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}
+                  </p>
+                )}
               </div>
               <div className="text-right">
                 {simuladoDisponivel && (
@@ -212,17 +213,6 @@ export default function SimuladoDetalhes() {
                 {simuladoEncerrado && (
                   <Badge className="bg-gray-500 text-white">ENCERRADO</Badge>
                 )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Calendar className="w-4 h-4" />
-                <span>Início: {format(inicioSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Clock className="w-4 h-4" />
-                <span>Término: {format(fimSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
               </div>
             </div>
           </CardHeader>
