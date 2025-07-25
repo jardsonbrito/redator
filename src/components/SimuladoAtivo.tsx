@@ -178,8 +178,8 @@ export const SimuladoAtivo = () => {
             }`}
           >
             <CardHeader 
-              className="cursor-pointer"
-              onClick={() => setExpandedCard(isExpanded ? null : simulado.id)}
+              className={status !== 'agendado' ? "cursor-pointer" : ""}
+              onClick={status !== 'agendado' ? () => setExpandedCard(isExpanded ? null : simulado.id) : undefined}
             >
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">
