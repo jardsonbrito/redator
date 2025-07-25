@@ -200,7 +200,7 @@ export const SimuladoAtivo = () => {
             </CardHeader>
 
             <CardContent className="pt-0">
-              {isExpanded && (
+              {isExpanded && status === 'em_progresso' && (
                 <div className="mb-4 p-4 bg-white rounded-lg border">
                   <h4 className="font-semibold text-primary mb-2">Tema da Redação:</h4>
                   <p className="text-gray-700 font-medium">
