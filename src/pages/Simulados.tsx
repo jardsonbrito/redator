@@ -108,44 +108,52 @@ const Simulados = () => {
               const statusInfo = getStatusSimulado(simulado);
 
               return (
-                <Card key={simulado.id} className={`${statusInfo.color} border transition-shadow`}>
+                <Card key={simulado.id} className={`border transition-shadow ${statusInfo.status === "Agendado" ? "bg-blue-50 border-blue-200" : statusInfo.status === "Em progresso" ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {statusInfo.status === "Agendado" && (
+                      <div className="space-y-3">
+                        <h3 className="text-xl font-semibold text-gray-900">
                           {simulado.titulo}
                         </h3>
-                        
-                        {statusInfo.status === "Agendado" && (
-                          <div className="space-y-2">
-                            <Badge className="bg-blue-500 text-white font-medium">
-                              Agendado
-                            </Badge>
-                            <p className="text-gray-700 text-sm">
-                              {statusInfo.timeInfo}
-                            </p>
-                          </div>
-                        )}
-                        
-                        {statusInfo.status === "Em progresso" && (
-                          <div className="space-y-2">
-                            <p className="text-gray-700 text-sm">
-                              {statusInfo.timeInfo}
-                            </p>
-                          </div>
-                        )}
+                        <Badge className="bg-blue-500 text-white font-medium">
+                          Agendado
+                        </Badge>
+                        <p className="text-gray-700 text-sm">
+                          {statusInfo.timeInfo}
+                        </p>
                       </div>
-                      
-                      {statusInfo.canParticipate && (
-                        <div className="ml-4">
+                    )}
+                    
+                    {statusInfo.status === "Em progresso" && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 space-y-2">
+                          <h3 className="text-xl font-semibold text-gray-900">
+                            {simulado.titulo}
+                          </h3>
+                          <p className="text-gray-700 text-sm">
+                            {statusInfo.timeInfo}
+                          </p>
+                        </div>
+                        <div className="ml-6">
                           <Link to={`/simulados/${simulado.id}`}>
-                            <Button className="bg-green-600 hover:bg-green-700 text-white">
+                            <Button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2">
                               Participar do Simulado
                             </Button>
                           </Link>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                    
+                    {statusInfo.status === "Encerrado" && (
+                      <div className="space-y-3">
+                        <h3 className="text-xl font-semibold text-gray-900">
+                          {simulado.titulo}
+                        </h3>
+                        <Badge className="bg-gray-500 text-white font-medium">
+                          Encerrado
+                        </Badge>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
