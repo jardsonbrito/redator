@@ -5,10 +5,6 @@ import { AjudaRapidaCard } from "@/components/ajuda-rapida/AjudaRapidaCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { MinhasRedacoes } from "@/components/MinhasRedacoes";
-import { AtividadeAtiva } from "@/components/AtividadeAtiva";
-import { AulaVirtualAtiva } from "@/components/AulaVirtualAtiva";
-import { MeusSimuladosFixo } from "@/components/MeusSimuladosFixo";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
@@ -103,6 +99,13 @@ const Index = () => {
       icon: File,
       tooltip: "Acesse materiais em PDF organizados por competência.",
       showAlways: true
+    },
+    {
+      title: "Minhas Redações",
+      path: "/minhas-redacoes",
+      icon: FileText,
+      tooltip: "Acompanhe todas as suas redações corrigidas com segurança.",
+      showAlways: true
     }
   ];
 
@@ -135,19 +138,8 @@ const Index = () => {
             {/* Componente Meu Desempenho */}
             <MeuDesempenho />
 
-            {/* Atividade Ativa - Simulados ou Exercícios - SEMPRE em destaque no topo */}
-            <AtividadeAtiva />
-
-            {/* Aula Virtual Ativa */}
-            <AulaVirtualAtiva turmaCode={turmaCode} />
-
             {/* Mural de Avisos */}
             <MuralAvisos turmaCode={turmaCode} />
-
-            {/* Card "Minhas Redações" - SEMPRE FIXO E VISÍVEL - Garantir visibilidade total */}
-            <div className="w-full block visible opacity-100 mb-8">
-              <MeusSimuladosFixo turmaCode={turmaCode} />
-            </div>
 
             {/* Card Ajuda Rápida */}
             <div className="mb-8">

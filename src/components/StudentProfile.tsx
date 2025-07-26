@@ -10,7 +10,7 @@ export const StudentProfile = () => {
       <CardContent className="p-8">
         <div className="flex flex-col items-center text-center">
           <div className="mb-4">
-            <StudentAvatar size="lg" />
+            <StudentAvatar size="md" />
           </div>
           <div>
             <h2 className="text-3xl font-bold text-primary mb-2">
