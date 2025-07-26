@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Edit, CheckCircle, Calendar, User, Mail } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Eye, Edit, CheckCircle, Calendar, User, Mail, RotateCcw, Copy, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,8 +22,11 @@ const RedacaoSimuladoList = () => {
   const queryClient = useQueryClient();
   const [filtroTurma, setFiltroTurma] = useState<string>("todas");
   const [filtroStatus, setFiltroStatus] = useState<string>("todas");
+  const [filtroSimulado, setFiltroSimulado] = useState<string>("todos");
   const [buscaNome, setBuscaNome] = useState("");
   const [redacaoSelecionada, setRedacaoSelecionada] = useState<any>(null);
+  const [duplicandoRedacao, setDuplicandoRedacao] = useState<any>(null);
+  const [novoCorretor, setNovoCorretor] = useState("");
   const [notas, setNotas] = useState({
     nota_c1: 0,
     nota_c2: 0,
@@ -39,12 +43,90 @@ const RedacaoSimuladoList = () => {
         .from('redacoes_simulado')
         .select(`
           *,
-          simulados!inner(titulo, frase_tematica)
+          simulados!inner(titulo, frase_tematica),
+          corretor_1:corretores!corretor_id_1(nome_completo),
+          corretor_2:corretores!corretor_id_2(nome_completo)
         `)
         .order('data_envio', { ascending: false });
       
       if (error) throw error;
       return data;
+    }
+  });
+
+  const { data: corretores } = useQuery({
+    queryKey: ['corretores-ativos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('corretores')
+        .select('*')
+        .eq('ativo', true)
+        .order('nome_completo');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: simulados } = useQuery({
+    queryKey: ['simulados-filtro'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('simulados')
+        .select('id, titulo')
+        .eq('ativo', true)
+        .order('criado_em', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const duplicarRedacao = useMutation({
+    mutationFn: async ({ redacaoId, novoCorretorId }: { redacaoId: string, novoCorretorId: string }) => {
+      // Buscar dados da redação original
+      const { data: redacaoOriginal, error: fetchError } = await supabase
+        .from('redacoes_simulado')
+        .select('*')
+        .eq('id', redacaoId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Criar nova entrada duplicada
+      const { data, error } = await supabase
+        .from('redacoes_simulado')
+        .insert([{
+          id_simulado: redacaoOriginal.id_simulado,
+          nome_aluno: redacaoOriginal.nome_aluno,
+          email_aluno: redacaoOriginal.email_aluno,
+          texto: redacaoOriginal.texto,
+          turma: redacaoOriginal.turma,
+          data_envio: redacaoOriginal.data_envio,
+          user_id: redacaoOriginal.user_id,
+          corretor_id_1: novoCorretorId,
+          status_corretor_1: 'pendente'
+        }]);
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Redação duplicada com sucesso!",
+        description: "Uma nova entrada foi criada para o corretor selecionado.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-simulado'] });
+      setDuplicandoRedacao(null);
+      setNovoCorretor("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao duplicar redação",
+        description: "Não foi possível criar a duplicata.",
+        variant: "destructive",
+      });
+      console.error("Erro ao duplicar redação:", error);
     }
   });
 
@@ -98,6 +180,31 @@ const RedacaoSimuladoList = () => {
     }
   });
 
+  const excluirRedacao = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('redacoes_simulado')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Redação excluída com sucesso!",
+      });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-simulado'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir redação",
+        description: "Não foi possível excluir a redação.",
+        variant: "destructive",
+      });
+      console.error("Erro ao excluir redação:", error);
+    }
+  });
+
   const handleCorrigir = () => {
     if (!redacaoSelecionada) return;
     
@@ -107,6 +214,15 @@ const RedacaoSimuladoList = () => {
         ...notas,
         comentario_pedagogico: comentarioPedagogico
       }
+    });
+  };
+
+  const handleDuplicar = () => {
+    if (!duplicandoRedacao || !novoCorretor) return;
+    
+    duplicarRedacao.mutate({
+      redacaoId: duplicandoRedacao.id,
+      novoCorretorId: novoCorretor
     });
   };
 
@@ -122,20 +238,92 @@ const RedacaoSimuladoList = () => {
     setComentarioPedagogico(redacao.comentario_pedagogico || "");
   };
 
-  // Filtrar redações
-  const redacoesFiltradas = redacoes?.filter(redacao => {
+  const abrirDuplicacao = (redacao: any) => {
+    setDuplicandoRedacao(redacao);
+    setNovoCorretor("");
+  };
+
+  const truncateText = (text: string, maxWords: number) => {
+    const words = text.split(' ');
+    if (words.length <= maxWords) return text;
+    return words.slice(0, maxWords).join(' ') + '...';
+  };
+
+  const truncateName = (name: string, maxWords: number = 3) => {
+    const words = name.split(' ');
+    if (words.length <= maxWords) return name;
+    return words.slice(0, maxWords).join(' ');
+  };
+
+  // Expandir redações para múltiplas entradas (corretor 1 e corretor 2)
+  const redacoesExpandidas = redacoes?.flatMap(redacao => {
+    const entradas = [];
+    
+    // Entrada para corretor 1
+    if (redacao.corretor_id_1) {
+      entradas.push({
+        ...redacao,
+        corretor_atual: redacao.corretor_1?.nome_completo || 'Não atribuído',
+        corretor_id_atual: redacao.corretor_id_1,
+        status_atual: redacao.status_corretor_1 || 'pendente',
+        tipo_corretor: 'corretor_1'
+      });
+    }
+    
+    // Entrada para corretor 2
+    if (redacao.corretor_id_2) {
+      entradas.push({
+        ...redacao,
+        corretor_atual: redacao.corretor_2?.nome_completo || 'Não atribuído',
+        corretor_id_atual: redacao.corretor_id_2,
+        status_atual: redacao.status_corretor_2 || 'pendente',
+        tipo_corretor: 'corretor_2'
+      });
+    }
+    
+    // Se não tem nenhum corretor, mostrar como pendente
+    if (!redacao.corretor_id_1 && !redacao.corretor_id_2) {
+      entradas.push({
+        ...redacao,
+        corretor_atual: 'Não atribuído',
+        corretor_id_atual: null,
+        status_atual: 'pendente',
+        tipo_corretor: null
+      });
+    }
+    
+    return entradas;
+  }) || [];
+
+  // Filtrar redações expandidas
+  const redacoesFiltradas = redacoesExpandidas?.filter(redacao => {
     const matchTurma = filtroTurma === "todas" || redacao.turma === filtroTurma;
     const matchStatus = filtroStatus === "todas" || 
-      (filtroStatus === "corrigidas" && redacao.corrigida) ||
-      (filtroStatus === "pendentes" && !redacao.corrigida);
+      (filtroStatus === "corrigidas" && redacao.status_atual === 'corrigida') ||
+      (filtroStatus === "pendentes" && redacao.status_atual === 'pendente') ||
+      (filtroStatus === "em_correcao" && redacao.status_atual === 'em_correcao');
+    const matchSimulado = filtroSimulado === "todos" || redacao.id_simulado === filtroSimulado;
     const matchNome = buscaNome === "" || 
       redacao.nome_aluno.toLowerCase().includes(buscaNome.toLowerCase()) ||
       redacao.email_aluno.toLowerCase().includes(buscaNome.toLowerCase());
     
-    return matchTurma && matchStatus && matchNome;
+    return matchTurma && matchStatus && matchSimulado && matchNome;
   });
 
   const turmasDisponiveis = ["LRA2025", "LRB2025", "LRC2025", "LRD2025", "LRE2025", "visitante"];
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'corrigida':
+        return <Badge className="bg-green-500 text-white">Corrigida</Badge>;
+      case 'em_correcao':
+        return <Badge className="bg-blue-500 text-white">Em correção</Badge>;
+      case 'pendente':
+        return <Badge className="bg-yellow-500 text-white">Pendente</Badge>;
+      default:
+        return <Badge variant="secondary">Aguardando</Badge>;
+    }
+  };
 
   if (isLoading) {
     return <div className="text-center py-8">Carregando redações...</div>;
@@ -146,7 +334,7 @@ const RedacaoSimuladoList = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-redator-primary">Redações de Simulados</h2>
         <Badge variant="outline" className="text-sm">
-          {redacoesFiltradas?.length || 0} redação(ões) encontrada(s)
+          {redacoesFiltradas?.length || 0} entrada(s) encontrada(s)
         </Badge>
       </div>
 
@@ -156,7 +344,7 @@ const RedacaoSimuladoList = () => {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <Label>Buscar por nome/email</Label>
               <Input
@@ -192,168 +380,297 @@ const RedacaoSimuladoList = () => {
                 <SelectContent>
                   <SelectItem value="todas">Todas</SelectItem>
                   <SelectItem value="pendentes">Pendentes</SelectItem>
+                  <SelectItem value="em_correcao">Em correção</SelectItem>
                   <SelectItem value="corrigidas">Corrigidas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Label>Simulado</Label>
+              <Select value={filtroSimulado} onValueChange={setFiltroSimulado}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os simulados</SelectItem>
+                  {simulados?.map(simulado => (
+                    <SelectItem key={simulado.id} value={simulado.id}>
+                      {simulado.titulo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Tags de simulados */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Button
+              variant={filtroSimulado === "todos" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFiltroSimulado("todos")}
+            >
+              Todos
+            </Button>
+            {simulados?.map(simulado => (
+              <Button
+                key={simulado.id}
+                variant={filtroSimulado === simulado.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFiltroSimulado(simulado.id)}
+              >
+                {simulado.titulo}
+              </Button>
+            ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Lista de redações */}
-      <div className="grid gap-4">
-        {!redacoesFiltradas || redacoesFiltradas.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-gray-500">Nenhuma redação encontrada com os filtros aplicados.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          redacoesFiltradas.map((redacao) => (
-            <Card key={redacao.id} className="border-l-4 border-l-redator-primary">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{redacao.simulados.titulo}</CardTitle>
-                    <p className="text-sm text-gray-600 mb-2">{redacao.simulados.frase_tematica}</p>
-                    
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      <Badge className={redacao.corrigida ? "bg-green-500" : "bg-yellow-500"}>
-                        {redacao.corrigida ? "Corrigida" : "Pendente"}
-                      </Badge>
-                      <Badge variant="outline">{redacao.turma === "visitante" ? "Visitante" : redacao.turma}</Badge>
-                      {redacao.corrigida && (
-                        <Badge variant="secondary">Nota: {redacao.nota_total}</Badge>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        {redacao.nome_aluno}
+      {/* Tabela de redações */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Aluno</TableHead>
+                <TableHead>Turma</TableHead>
+                <TableHead>Tema</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Corretor</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {!redacoesFiltradas || redacoesFiltradas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <p className="text-gray-500">Nenhuma redação encontrada com os filtros aplicados.</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                redacoesFiltradas.map((redacao) => (
+                  <TableRow key={`${redacao.id}-${redacao.tipo_corretor || 'single'}`}>
+                    <TableCell>
+                      <div className="font-medium">
+                        {truncateName(redacao.nome_aluno, 3)}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Mail className="w-4 h-4" />
+                      <div className="text-sm text-gray-600">
                         {redacao.email_aluno}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {format(new Date(redacao.data_envio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4 mr-1" />
-                          Ver
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Redação - {redacao.nome_aluno}</DialogTitle>
-                        </DialogHeader>
-                        <div className="mt-4">
-                          <div className="bg-gray-50 p-4 rounded mb-4">
-                            <h3 className="font-bold text-redator-primary mb-2">{redacao.simulados.frase_tematica}</h3>
-                          </div>
-                          <div className="bg-white p-4 border rounded whitespace-pre-wrap">
-                            {redacao.texto}
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    </TableCell>
                     
-                    <Dialog>
-                      <DialogTrigger asChild>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {redacao.turma === "visitante" ? "Visitante" : redacao.turma}
+                      </Badge>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="max-w-[200px]">
+                        {truncateText(redacao.simulados.frase_tematica, 4)}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      {format(new Date(redacao.data_envio), "dd/MM/yy", { locale: ptBR })}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="font-medium text-sm">
+                        {redacao.corretor_atual}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      {getStatusBadge(redacao.status_atual)}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {/* Visualizar */}
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" title="Visualizar">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Redação - {redacao.nome_aluno}</DialogTitle>
+                            </DialogHeader>
+                            <div className="mt-4">
+                              <div className="bg-gray-50 p-4 rounded mb-4">
+                                <h3 className="font-bold text-redator-primary mb-2">{redacao.simulados.frase_tematica}</h3>
+                              </div>
+                              <div className="bg-white p-4 border rounded whitespace-pre-wrap">
+                                {redacao.texto}
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                        {/* Duplicar */}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          title="Duplicar"
+                          onClick={() => abrirDuplicacao(redacao)}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+
+                        {/* Corrigir */}
                         <Button 
                           variant="default" 
                           size="sm"
+                          title={redacao.status_atual === 'corrigida' ? "Editar" : "Corrigir"}
                           onClick={() => abrirCorrecao(redacao)}
                           className="bg-redator-primary"
                         >
-                          <Edit className="w-4 h-4 mr-1" />
-                          {redacao.corrigida ? "Editar" : "Corrigir"}
+                          <Edit className="w-4 h-4" />
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Correção - {redacao.nome_aluno}</DialogTitle>
-                        </DialogHeader>
-                        
-                        {redacaoSelecionada && (
-                          <Tabs defaultValue="redacao" className="mt-4">
-                            <TabsList>
-                              <TabsTrigger value="redacao">Redação</TabsTrigger>
-                              <TabsTrigger value="correcao">Correção</TabsTrigger>
-                            </TabsList>
-                            
-                            <TabsContent value="redacao">
-                              <div className="bg-gray-50 p-4 rounded mb-4">
-                                <h3 className="font-bold text-redator-primary">{redacao.simulados.frase_tematica}</h3>
-                              </div>
-                              <div className="bg-white p-4 border rounded whitespace-pre-wrap max-h-96 overflow-y-auto">
-                                {redacao.texto}
-                              </div>
-                            </TabsContent>
-                            
-                            <TabsContent value="correcao" className="space-y-4">
-                              <div className="grid grid-cols-5 gap-4">
-                                {[1, 2, 3, 4, 5].map(num => (
-                                  <div key={num}>
-                                    <Label>Competência {num}</Label>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      max="200"
-                                      step="20"
-                                      value={notas[`nota_c${num}` as keyof typeof notas]}
-                                      onChange={(e) => setNotas({
-                                        ...notas,
-                                        [`nota_c${num}`]: parseInt(e.target.value) || 0
-                                      })}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                              
-                              <div>
-                                <Label>Comentário Pedagógico</Label>
-                                <Textarea
-                                  value={comentarioPedagogico}
-                                  onChange={(e) => setComentarioPedagogico(e.target.value)}
-                                  placeholder="Digite sua correção pedagógica detalhada..."
-                                  className="min-h-[200px]"
-                                />
-                              </div>
-                              
-                              <div className="flex justify-between items-center">
-                                <div className="text-lg font-bold">
-                                  Nota Total: {Object.values(notas).reduce((acc: number, nota: any) => acc + parseInt(nota), 0)}
-                                </div>
-                                <Button 
-                                  onClick={handleCorrigir}
-                                  disabled={corrigirRedacao.isPending}
-                                  className="bg-redator-primary"
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  {corrigirRedacao.isPending ? "Salvando..." : "Salvar Correção"}
-                                </Button>
-                              </div>
-                            </TabsContent>
-                          </Tabs>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+
+                        {/* Excluir */}
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          title="Excluir"
+                          onClick={() => excluirRedacao.mutate(redacao.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Modal de Duplicação */}
+      <Dialog open={!!duplicandoRedacao} onOpenChange={() => setDuplicandoRedacao(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicar Redação para Novo Corretor</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>Corretor atual (não editável)</Label>
+              <Input 
+                value={duplicandoRedacao?.corretor_atual || 'Não atribuído'} 
+                disabled
+                className="bg-gray-100"
+              />
+            </div>
+
+            <div>
+              <Label>Novo corretor</Label>
+              <Select value={novoCorretor} onValueChange={setNovoCorretor}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um corretor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {corretores?.filter(c => c.id !== duplicandoRedacao?.corretor_id_atual).map(corretor => (
+                    <SelectItem key={corretor.id} value={corretor.id}>
+                      {corretor.nome_completo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDuplicandoRedacao(null)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleDuplicar}
+                disabled={!novoCorretor || duplicarRedacao.isPending}
+                className="bg-redator-primary"
+              >
+                {duplicarRedacao.isPending ? "Duplicando..." : "Confirmar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Correção */}
+      <Dialog open={!!redacaoSelecionada} onOpenChange={() => setRedacaoSelecionada(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Correção - {redacaoSelecionada?.nome_aluno}</DialogTitle>
+          </DialogHeader>
+          
+          {redacaoSelecionada && (
+            <Tabs defaultValue="redacao" className="mt-4">
+              <TabsList>
+                <TabsTrigger value="redacao">Redação</TabsTrigger>
+                <TabsTrigger value="correcao">Correção</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="redacao">
+                <div className="bg-gray-50 p-4 rounded mb-4">
+                  <h3 className="font-bold text-redator-primary">{redacaoSelecionada.simulados.frase_tematica}</h3>
                 </div>
-              </CardHeader>
-            </Card>
-          ))
-        )}
-      </div>
+                <div className="bg-white p-4 border rounded whitespace-pre-wrap max-h-96 overflow-y-auto">
+                  {redacaoSelecionada.texto}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="correcao" className="space-y-4">
+                <div className="grid grid-cols-5 gap-4">
+                  {[1, 2, 3, 4, 5].map(num => (
+                    <div key={num}>
+                      <Label>Competência {num}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="200"
+                        step="20"
+                        value={notas[`nota_c${num}` as keyof typeof notas]}
+                        onChange={(e) => setNotas({
+                          ...notas,
+                          [`nota_c${num}`]: parseInt(e.target.value) || 0
+                        })}
+                      />
+                    </div>
+                  ))}
+                </div>
+                
+                <div>
+                  <Label>Comentário Pedagógico</Label>
+                  <Textarea
+                    value={comentarioPedagogico}
+                    onChange={(e) => setComentarioPedagogico(e.target.value)}
+                    placeholder="Digite sua correção pedagógica detalhada..."
+                    className="min-h-[200px]"
+                  />
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <div className="text-lg font-bold">
+                    Nota Total: {Object.values(notas).reduce((acc: number, nota: any) => acc + parseInt(nota), 0)}
+                  </div>
+                  <Button 
+                    onClick={handleCorrigir}
+                    disabled={corrigirRedacao.isPending}
+                    className="bg-redator-primary"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {corrigirRedacao.isPending ? "Salvando..." : "Salvar Correção"}
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
