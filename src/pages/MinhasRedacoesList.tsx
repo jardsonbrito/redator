@@ -72,6 +72,16 @@ const MinhasRedacoesList = () => {
   // Verificar se o usuário está logado
   const isStudentLoggedIn = localStorage.getItem('isStudentLoggedIn') === 'true';
 
+  // Debug completo do localStorage
+  console.log('🔍 Debug localStorage completo:');
+  console.log('- student_data (string):', studentDataStr);
+  console.log('- student_data (parsed):', studentData);
+  console.log('- isStudentLoggedIn:', isStudentLoggedIn);
+  console.log('- Todos os itens do localStorage:', Object.keys(localStorage).reduce((acc, key) => {
+    acc[key] = localStorage.getItem(key);
+    return acc;
+  }, {} as any));
+
   const { data: redacoes = [], isLoading, error } = useQuery({
     queryKey: ['minhas-redacoes', studentData?.email],
     queryFn: async () => {
@@ -80,84 +90,126 @@ const MinhasRedacoesList = () => {
         return [];
       }
 
-      console.log('🔍 Buscando redações para:', studentData.email);
+      console.log('🔍 Buscando redações para email:', studentData.email);
       console.log('📊 Tipo de usuário:', studentData.userType);
       console.log('📋 Dados completos do estudante:', studentData);
 
       try {
-        // Buscar todas as redações do usuário (regulares, simulado e exercício)
-        const promises = [];
-
-        // 1. Redações regulares
-        promises.push(
-          supabase
-            .from('redacoes_enviadas')
-            .select('*')
-            .eq('email_aluno', studentData.email)
-            .then(({ data, error }) => {
-              if (error) throw error;
-              return (data || []).map(item => ({
-                ...item,
-                tipo_envio: item.tipo_envio || 'regular',
-                corrigida: item.status === 'corrigida' || item.status === 'corrigido'
-              }));
-            })
-        );
-
-        // 2. Redações de simulado
-        promises.push(
-          supabase
-            .from('redacoes_simulado')
-            .select('*')
-            .eq('email_aluno', studentData.email)
-            .then(({ data, error }) => {
-              if (error) throw error;
-              return (data || []).map(item => ({
-                ...item,
-                id: item.id,
-                frase_tematica: 'Simulado - ' + (item.id_simulado || 'Não identificado'),
-                redacao_texto: item.texto,
-                tipo_envio: 'simulado',
-                status: item.corrigida ? 'corrigida' : 'aguardando',
-                corrigida: !!item.corrigida
-              }));
-            })
-        );
-
-        // 3. Redações de exercício  
-        promises.push(
-          supabase
-            .from('redacoes_exercicio')
-            .select('*')
-            .eq('email_aluno', studentData.email)
-            .then(({ data, error }) => {
-              if (error) throw error;
-              return (data || []).map(item => ({
-                ...item,
-                id: item.id,
-                frase_tematica: 'Exercício - ' + (item.exercicio_id || 'Não identificado'),
-                redacao_texto: item.redacao_texto,
-                tipo_envio: 'exercicio',
-                status: item.corrigida ? 'corrigida' : 'aguardando',
-                corrigida: !!item.corrigida
-              }));
-            })
-        );
-
-        const results = await Promise.all(promises);
-        const todasRedacoes = results.flat();
+        // Buscar APENAS redações regulares primeiro para debug
+        console.log('⚡ Iniciando busca de redações regulares...');
         
+        const { data: redacoesRegulares, error: errorRegulares } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('email_aluno', studentData.email);
+
+        console.log('📊 Resultado redações regulares:', {
+          data: redacoesRegulares,
+          error: errorRegulares,
+          count: redacoesRegulares?.length || 0
+        });
+
+        if (errorRegulares) {
+          console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
+          throw errorRegulares;
+        }
+
+        // Buscar redações de simulado
+        console.log('⚡ Iniciando busca de redações de simulado...');
+        
+        const { data: redacoesSimulado, error: errorSimulado } = await supabase
+          .from('redacoes_simulado')
+          .select('*')
+          .eq('email_aluno', studentData.email);
+
+        console.log('📊 Resultado redações simulado:', {
+          data: redacoesSimulado,
+          error: errorSimulado,
+          count: redacoesSimulado?.length || 0
+        });
+
+        if (errorSimulado) {
+          console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
+          // Não fazer throw aqui, apenas logar
+        }
+
+        // Buscar redações de exercício
+        console.log('⚡ Iniciando busca de redações de exercício...');
+        
+        const { data: redacoesExercicio, error: errorExercicio } = await supabase
+          .from('redacoes_exercicio')
+          .select('*')
+          .eq('email_aluno', studentData.email);
+
+        console.log('📊 Resultado redações exercício:', {
+          data: redacoesExercicio,
+          error: errorExercicio,
+          count: redacoesExercicio?.length || 0
+        });
+
+        if (errorExercicio) {
+          console.error('❌ Erro ao buscar redações de exercício:', errorExercicio);
+          // Não fazer throw aqui, apenas logar
+        }
+
+        // Processar e combinar resultados
+        const todasRedacoes = [];
+
+        // Adicionar redações regulares
+        if (redacoesRegulares && redacoesRegulares.length > 0) {
+          console.log('✅ Processando redações regulares...');
+          redacoesRegulares.forEach(item => {
+            todasRedacoes.push({
+              ...item,
+              tipo_envio: item.tipo_envio || 'regular',
+              corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida
+            });
+          });
+        }
+
+        // Adicionar redações de simulado
+        if (redacoesSimulado && redacoesSimulado.length > 0) {
+          console.log('✅ Processando redações de simulado...');
+          redacoesSimulado.forEach(item => {
+            todasRedacoes.push({
+              ...item,
+              id: item.id,
+              frase_tematica: 'Simulado',
+              redacao_texto: item.texto,
+              tipo_envio: 'simulado',
+              status: item.corrigida ? 'corrigida' : 'aguardando',
+              corrigida: !!item.corrigida
+            });
+          });
+        }
+
+        // Adicionar redações de exercício
+        if (redacoesExercicio && redacoesExercicio.length > 0) {
+          console.log('✅ Processando redações de exercício...');
+          redacoesExercicio.forEach(item => {
+            todasRedacoes.push({
+              ...item,
+              id: item.id,
+              frase_tematica: 'Exercício',
+              redacao_texto: item.redacao_texto,
+              tipo_envio: 'exercicio',
+              status: item.corrigida ? 'corrigida' : 'aguardando',
+              corrigida: !!item.corrigida
+            });
+          });
+        }
+
         // Ordenar por data de envio (mais recente primeiro)
         const redacoesOrdenadas = todasRedacoes.sort((a, b) => 
           new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime()
         );
 
         console.log('📄 Total de redações encontradas:', redacoesOrdenadas.length);
-        console.log('📝 Redações:', redacoesOrdenadas);
+        console.log('📝 Redações processadas:', redacoesOrdenadas);
 
         return redacoesOrdenadas;
       } catch (error) {
-        console.error('❌ Erro ao buscar redações:', error);
+        console.error('❌ Erro geral ao buscar redações:', error);
         throw error;
       }
     },
