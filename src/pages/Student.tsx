@@ -25,15 +25,6 @@ const Student = () => {
       tooltip: "Submeta seu texto para correção detalhada.",
       showAlways: true
     },
-    // Linha 2, Coluna 1: Minhas Redações
-    {
-      title: "Minhas Redações",
-      path: "/minhas-redacoes", 
-      icon: FileText,
-      tooltip: "Visualize suas redações enviadas e correções recebidas.",
-      showAlways: true,
-      isSpecialCard: true
-    },
     // Linha 2, Coluna 2: Redações Exemplares
     {
       title: "Redações Exemplares",
@@ -98,12 +89,13 @@ const Student = () => {
         <StudentHeader />
         <main className="container mx-auto px-4 py-8">
           <div className="space-y-8">
-            {/* Card de Ajuda Rápida separado */}
-            <div className="max-w-5xl mx-auto">
+            {/* Cards do painel fixos */}
+            <div className="max-w-5xl mx-auto space-y-4">
+              <MinhasRedacoes />
               <AjudaRapidaAlunoCard />
             </div>
             
-            {/* Grid integrado com todos os cards na nova ordem */}
+            {/* Grid de menus na ordem correta */}
             <MenuGrid menuItems={menuItems} showMinhasRedacoes={false} />
           </div>
         </main>
