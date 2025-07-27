@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Eye, Trash2, ArrowLeft } from "lucide-react";
+import { MessageSquare, Eye, Trash2, ArrowLeft, Home } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { ChatConversa } from "@/components/ajuda-rapida/ChatConversa";
@@ -17,6 +17,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 
 interface ConversaAdmin {
   aluno_id: string;
@@ -34,6 +37,7 @@ export const AjudaRapidaAdmin = () => {
   const [conversaAtiva, setConversaAtiva] = useState<{ alunoId: string; corretorId: string } | null>(null);
   const { buscarTodasConversas, deletarConversa } = useAjudaRapida();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const carregarConversas = async () => {
     setLoading(true);
@@ -124,22 +128,67 @@ export const AjudaRapidaAdmin = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Recados dos Alunos</h1>
-      
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <p className="text-muted-foreground">Gerenciar conversas entre alunos e corretores</p>
-        <Button onClick={carregarConversas} disabled={loading} className="w-full sm:w-auto">
-          {loading ? "Carregando..." : "Atualizar"}
-        </Button>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando conversas...</p>
+    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
+      {/* Header exatamente igual ao painel administrativo */}
+      <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <Link to="/app" className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 px-3 py-2 rounded-lg transition-all duration-300 text-primary hover:text-primary font-medium">
+                <Home className="w-5 h-5" />
+                <span>Voltar ao App</span>
+              </Link>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  Painel Administrativo
+                </h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/5 backdrop-blur-sm px-4 py-2 rounded-full border border-primary/10">
+                <span className="text-sm text-muted-foreground">Olá, </span>
+                <span className="text-sm font-medium text-primary">{user?.email}</span>
+              </div>
+            </div>
+          </div>
         </div>
-      ) : conversas.length === 0 ? (
+      </header>
+
+      {/* Conteúdo principal */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin" className="text-primary font-medium">
+                Dashboard
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-foreground">Ajuda Rápida</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Recados dos Alunos</h1>
+              <p className="text-muted-foreground mt-1">Gerenciar conversas entre alunos e corretores</p>
+            </div>
+            <Button onClick={carregarConversas} disabled={loading} className="w-full sm:w-auto">
+              {loading ? "Carregando..." : "Atualizar"}
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando conversas...</p>
+            </div>
+          ) : conversas.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-60" />
@@ -230,8 +279,10 @@ export const AjudaRapidaAdmin = () => {
               </CardContent>
             </Card>
           ))}
+            </div>
+          )}
         </div>
-      )}
+      </main>
     </div>
   );
 };
