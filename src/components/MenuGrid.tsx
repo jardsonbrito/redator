@@ -57,7 +57,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
   return (
     <div className="space-y-8">
       {/* Grid de cards coloridos inspirado na referência */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+      <div className="grid grid-cols-2 gap-4 max-w-5xl mx-auto">
         {visibleMenuItems.map((item, index) => {
           const cardColor = getCardColor(index, item.title);
           const isBlocked = item.resourceType && isBlockedResource(item.resourceType);
@@ -65,7 +65,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           // Renderizar card especial "Minhas Redações"
           if (item.isSpecialCard && item.title === "Minhas Redações") {
             return (
-              <div key={index} className="col-span-2 md:col-span-1">
+              <div key={index}>
                 <MinhasRedacoes />
               </div>
             );
