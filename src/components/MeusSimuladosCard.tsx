@@ -294,9 +294,10 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
                       
                       <div className="flex items-center gap-2">
                         {getStatusBadge(redacao.status_atual)}
+                        {/* Só exibir nota se o corretor FINALIZOU a correção (não apenas salvou incompleta) */}
                         {redacao.status_atual === 'corrigida' && redacao.nota_total !== null && (
                           <Badge variant="outline" className="text-xs">
-                            Nota: {redacao.nota_total}/1000
+                            <span className="text-green-600 font-medium">Nota: {redacao.nota_total}</span>
                           </Badge>
                         )}
                       </div>

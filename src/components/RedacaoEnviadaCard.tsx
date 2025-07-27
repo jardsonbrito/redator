@@ -178,7 +178,7 @@ export const RedacaoEnviadaCard = ({
         </CardContent>
       </Card>
 
-      {/* Vista Pedagógica (se disponível) - PRIMEIRA NA ORDEM */}
+          {/* Vista Pedagógica - só exibir se correção foi FINALIZADA (não apenas salva incompleta) */}
       {redacao.corrigida && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
@@ -389,7 +389,7 @@ export const RedacaoEnviadaCard = ({
         </CardContent>
       </Card>
 
-      {/* Relatório pedagógico - TERCEIRO NA ORDEM */}
+      {/* Relatório pedagógico - só exibir se correção foi FINALIZADA */}
       {redacao.corrigida && (elogios1 || elogios2 || (redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim())) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
