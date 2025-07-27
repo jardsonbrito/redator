@@ -1,11 +1,13 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CorretorSelector } from "./CorretorSelector";
 import { Upload, X } from "lucide-react";
@@ -25,6 +27,8 @@ export const EnvioRedacaoWithCorretor = ({
   exercicioId,
   onSuccess 
 }: EnvioRedacaoProps) => {
+  const navigate = useNavigate();
+  const { studentData } = useStudentAuth();
   const [formData, setFormData] = useState({
     nome_aluno: "",
     email_aluno: "",
@@ -37,6 +41,18 @@ export const EnvioRedacaoWithCorretor = ({
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  // Preencher dados automaticamente quando o usuário está logado
+  useEffect(() => {
+    if (studentData.nomeUsuario && studentData.email && studentData.turma) {
+      setFormData(prev => ({
+        ...prev,
+        nome_aluno: studentData.nomeUsuario,
+        email_aluno: studentData.email,
+        turma: studentData.turma
+      }));
+    }
+  }, [studentData]);
 
   const handleRedacaoManuscritaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -229,16 +245,21 @@ export const EnvioRedacaoWithCorretor = ({
       });
 
       setFormData({
-        nome_aluno: "",
-        email_aluno: "",
-        turma: "",
+        nome_aluno: studentData.nomeUsuario || "",
+        email_aluno: studentData.email || "",
+        turma: studentData.turma || "",
         frase_tematica: fraseTematica || "",
         redacao_texto: "",
       });
       setSelectedCorretores([]);
       handleRemoveRedacaoManuscrita();
 
-      onSuccess?.();
+      // Redirecionar para a home após envio bem-sucedido
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/app');
+      }
     } catch (error: any) {
       console.error("Erro ao enviar redação:", error);
       toast({

@@ -83,10 +83,12 @@ const MinhasRedacoesList = () => {
   }, {} as any));
 
   const { data: redacoes = [], isLoading, error } = useQuery({
-    queryKey: ['minhas-redacoes', studentData?.email],
+    queryKey: ['minhas-redacoes', studentData?.email, isStudentLoggedIn],
     queryFn: async () => {
+      console.log('🔍 Iniciando busca de redações para usuário logado');
+      
       if (!studentData?.email) {
-        console.log('❌ Email não encontrado nos dados do estudante');
+        console.log('❌ Email não encontrado nos dados do estudante:', studentData);
         return [];
       }
 
@@ -136,15 +138,15 @@ const MinhasRedacoesList = () => {
 
         // Adicionar redações regulares
         if (redacoesRegulares && redacoesRegulares.length > 0) {
-          console.log('✅ Processando', redacoesRegulares.length, 'redações regulares');
-          redacoesRegulares.forEach(item => {
-            todasRedacoes.push({
-              ...item,
-              tipo_envio: item.tipo_envio || 'regular',
-              corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
-              status: item.status || 'aguardando'
-            } as RedacaoTurma);
-          });
+        console.log('✅ Processando', redacoesRegulares.length, 'redações regulares');
+        redacoesRegulares.forEach(item => {
+          todasRedacoes.push({
+            ...item,
+            tipo_envio: item.tipo_envio || 'tema_livre',
+            corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
+            status: item.status || 'aguardando'
+          } as RedacaoTurma);
+        });
         }
 
         // Adicionar redações de simulado
@@ -201,7 +203,8 @@ const MinhasRedacoesList = () => {
         throw error;
       }
     },
-    enabled: !!studentData?.email
+    enabled: !!studentData?.email && isStudentLoggedIn,
+    refetchOnWindowFocus: true
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {

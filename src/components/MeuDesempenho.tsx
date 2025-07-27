@@ -22,30 +22,49 @@ export const MeuDesempenho = () => {
         return { totalEnviadas: 0, maiorNota: null, menorNota: null };
       }
 
-      // Busca redações enviadas pelo email do aluno
-      const { data: redacoes, error } = await supabase
-        .from('redacoes_enviadas')
-        .select('nota_total')
-        .eq('email_aluno', studentData.email?.toLowerCase().trim())
-        .not('nota_total', 'is', null);
+      const emailBusca = studentData.email?.toLowerCase().trim();
+      console.log('📊 Buscando desempenho para email:', emailBusca);
 
-      if (error) {
-        console.error('Erro ao buscar dados de desempenho:', error);
-        return { totalEnviadas: 0, maiorNota: null, menorNota: null };
+      // Buscar todas as redações (regular, simulado, exercício) para o contador total
+      const [redacoesRegulares, redacoesSimulado, redacoesExercicio] = await Promise.all([
+        supabase.from('redacoes_enviadas').select('nota_total').ilike('email_aluno', emailBusca),
+        supabase.from('redacoes_simulado').select('nota_total').ilike('email_aluno', emailBusca),
+        supabase.from('redacoes_exercicio').select('nota_total').ilike('email_aluno', emailBusca)
+      ]);
+
+      if (redacoesRegulares.error) {
+        console.error('Erro ao buscar redações regulares:', redacoesRegulares.error);
+      }
+      if (redacoesSimulado.error) {
+        console.error('Erro ao buscar redações de simulado:', redacoesSimulado.error);
+      }
+      if (redacoesExercicio.error) {
+        console.error('Erro ao buscar redações de exercício:', redacoesExercicio.error);
       }
 
-      // Busca total de redações (incluindo as não corrigidas)
-      const { count: totalCount } = await supabase
-        .from('redacoes_enviadas')
-        .select('*', { count: 'exact', head: true })
-        .eq('email_aluno', studentData.email?.toLowerCase().trim());
+      // Combinar todas as notas válidas
+      const todasNotas = [
+        ...(redacoesRegulares.data || []),
+        ...(redacoesSimulado.data || []),
+        ...(redacoesExercicio.data || [])
+      ].map(r => r.nota_total).filter(nota => nota !== null && nota !== undefined);
 
-      const notasValidas = redacoes?.map(r => r.nota_total).filter(nota => nota !== null) || [];
-      
+      // Contar total de redações enviadas
+      const totalEnviadas = 
+        (redacoesRegulares.data?.length || 0) + 
+        (redacoesSimulado.data?.length || 0) + 
+        (redacoesExercicio.data?.length || 0);
+
+      console.log(`📊 Encontradas ${totalEnviadas} redações total para ${emailBusca}:`, {
+        regulares: redacoesRegulares.data?.length || 0,
+        simulados: redacoesSimulado.data?.length || 0,
+        exercicios: redacoesExercicio.data?.length || 0
+      });
+
       return {
-        totalEnviadas: totalCount || 0,
-        maiorNota: notasValidas.length > 0 ? Math.max(...notasValidas) : null,
-        menorNota: notasValidas.length > 0 ? Math.min(...notasValidas) : null
+        totalEnviadas: totalEnviadas,
+        maiorNota: todasNotas.length > 0 ? Math.max(...todasNotas) : null,
+        menorNota: todasNotas.length > 0 ? Math.min(...todasNotas) : null
       };
     },
     enabled: !!studentData.email,

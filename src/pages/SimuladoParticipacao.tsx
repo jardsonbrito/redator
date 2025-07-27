@@ -34,9 +34,13 @@ const SimuladoParticipacao = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // Preencher automaticamente os dados do usuário logado
     if (studentData.userType === "visitante" && studentData.visitanteInfo) {
       setNomeCompleto(studentData.visitanteInfo.nome);
       setEmail(studentData.visitanteInfo.email);
+    } else if (studentData.nomeUsuario && studentData.email) {
+      setNomeCompleto(studentData.nomeUsuario);
+      setEmail(studentData.email);
     }
   }, [studentData]);
 
@@ -156,19 +160,20 @@ const SimuladoParticipacao = () => {
       return;
     }
 
-    if (selectedCorretores.length === 0) {
+    if (selectedCorretores.length !== 2) {
       toast({
-        title: "Selecione pelo menos um corretor",
-        description: "É necessário selecionar pelo menos um corretor.",
+        title: "Simulado requer 2 corretores",
+        description: "Para simulados, é obrigatório selecionar exatamente 2 corretores.",
         variant: "destructive"
       });
       return;
     }
 
-    if (selectedCorretores.length > 2) {
+    const uniqueCorretores = new Set(selectedCorretores);
+    if (uniqueCorretores.size !== selectedCorretores.length) {
       toast({
-        title: "Limite de corretores excedido",
-        description: "Você pode selecionar no máximo 2 corretores.",
+        title: "Corretores duplicados",
+        description: "Não é possível selecionar o mesmo corretor duas vezes.",
         variant: "destructive"
       });
       return;
