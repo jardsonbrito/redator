@@ -8,6 +8,7 @@ import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, N
 
 const Student = () => {
   const menuItems = [
+    // Linha 1
     {
       title: "Temas",
       path: "/temas",
@@ -17,25 +18,20 @@ const Student = () => {
       resourceType: "temas"
     },
     {
-      title: "Simulados",
-      path: "/simulados",
-      icon: ClipboardCheck,
-      tooltip: "Participe de simulados com horário controlado e correção detalhada.",
-      showAlways: true
-    },
-    {
-      title: "Exercícios",
-      path: "/exercicios", 
-      icon: NotebookPen,
-      tooltip: "Pratique com exercícios direcionados.",
-      showAlways: true
-    },
-    {
       title: "Enviar Redação",
       path: "/envie-redacao",
       icon: Send,
       tooltip: "Submeta seu texto para correção detalhada.",
       showAlways: true
+    },
+    // Linha 2 - Posição especial para Minhas Redações
+    {
+      title: "Minhas Redações",
+      path: "/minhas-redacoes", 
+      icon: FileText,
+      tooltip: "Visualize suas redações enviadas e correções recebidas.",
+      showAlways: true,
+      isSpecialCard: true // Flag para identificar o card especial
     },
     {
       title: "Redações Exemplares",
@@ -44,6 +40,7 @@ const Student = () => {
       tooltip: "Veja textos nota 1000 e aprenda estratégias eficazes.",
       showAlways: true
     },
+    // Linha 3
     {
       title: "Videoteca",
       path: "/videoteca",
@@ -58,11 +55,12 @@ const Student = () => {
       tooltip: "Acesse aulas organizadas por competência.",
       showAlways: true
     },
+    // Linha 4
     {
-      title: "Top 5",
-      path: "/top5",
-      icon: Trophy,
-      tooltip: "Veja o ranking dos melhores desempenhos em redações.",
+      title: "Exercícios",
+      path: "/exercicios", 
+      icon: NotebookPen,
+      tooltip: "Pratique com exercícios direcionados.",
       showAlways: true
     },
     {
@@ -70,6 +68,21 @@ const Student = () => {
       path: "/biblioteca",
       icon: File,
       tooltip: "Acesse materiais em PDF organizados por competência.",
+      showAlways: true
+    },
+    // Linha 5
+    {
+      title: "Simulados",
+      path: "/simulados",
+      icon: ClipboardCheck,
+      tooltip: "Participe de simulados com horário controlado e correção detalhada.",
+      showAlways: true
+    },
+    {
+      title: "Top 5",
+      path: "/top5",
+      icon: Trophy,
+      tooltip: "Veja o ranking dos melhores desempenhos em redações.",
       showAlways: true
     }
   ];
@@ -80,14 +93,13 @@ const Student = () => {
         <StudentHeader />
         <main className="container mx-auto px-4 py-8">
           <div className="space-y-8">
-            {/* Cards do painel */}
-            <div className="max-w-5xl mx-auto space-y-4">
-              <MinhasRedacoes />
+            {/* Card de Ajuda Rápida separado */}
+            <div className="max-w-5xl mx-auto">
               <AjudaRapidaAlunoCard />
             </div>
             
-            {/* Grid de menus */}
-            <MenuGrid menuItems={menuItems} showMinhasRedacoes={true} />
+            {/* Grid integrado com todos os cards na nova ordem */}
+            <MenuGrid menuItems={menuItems} showMinhasRedacoes={false} />
           </div>
         </main>
       </div>

@@ -5,6 +5,7 @@ import { LucideIcon, Lock } from "lucide-react";
 import { useState } from "react";
 import { UnlockModal } from "./UnlockModal";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
+import { MinhasRedacoes } from "./MinhasRedacoes";
 
 interface MenuItem {
   title: string;
@@ -14,6 +15,7 @@ interface MenuItem {
   showAlways: boolean;
   showCondition?: boolean;
   resourceType?: string;
+  isSpecialCard?: boolean;
 }
 
 interface MenuGridProps {
@@ -59,6 +61,15 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
         {visibleMenuItems.map((item, index) => {
           const cardColor = getCardColor(index, item.title);
           const isBlocked = item.resourceType && isBlockedResource(item.resourceType);
+          
+          // Renderizar card especial "Minhas Redações"
+          if (item.isSpecialCard && item.title === "Minhas Redações") {
+            return (
+              <div key={index} className="col-span-2 md:col-span-1">
+                <MinhasRedacoes />
+              </div>
+            );
+          }
           
           return (
             <Tooltip key={index}>
