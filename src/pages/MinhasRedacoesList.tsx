@@ -82,122 +82,108 @@ const MinhasRedacoesList = () => {
     return acc;
   }, {} as any));
 
-  // Verificar se a query vai executar
-  const queryEnabled = !!studentData?.email;
-  console.log('🔍 Query enabled?', queryEnabled, 'Email:', studentData?.email);
-
   const { data: redacoes = [], isLoading, error } = useQuery({
     queryKey: ['minhas-redacoes', studentData?.email],
     queryFn: async () => {
-      // Para debug: usar email que sabemos que tem redação 
-      const emailBusca = studentData?.email || 'jhoao.ferreira@aluno.ce.gov.br';
-      
+      if (!studentData?.email) {
+        console.log('❌ Email não encontrado nos dados do estudante');
+        return [];
+      }
+
+      const emailBusca = studentData.email.toLowerCase().trim();
       console.log('🔍 Buscando redações para email:', emailBusca);
-      console.log('📊 Tipo de usuário:', studentData?.userType);
-      console.log('📋 Dados completos do estudante:', studentData);
 
       try {
-        // Buscar APENAS redações regulares primeiro para debug
-        console.log('⚡ Iniciando busca de redações regulares...');
-        
+        // Buscar redações regulares
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select('*')
-          .eq('email_aluno', emailBusca);
-
-        console.log('📊 Resultado redações regulares:', {
-          data: redacoesRegulares,
-          error: errorRegulares,
-          count: redacoesRegulares?.length || 0
-        });
+          .ilike('email_aluno', emailBusca);
 
         if (errorRegulares) {
           console.error('❌ Erro ao buscar redações regulares:', errorRegulares);
           throw errorRegulares;
         }
 
-        // Buscar redações de simulado
-        console.log('⚡ Iniciando busca de redações de simulado...');
-        
+        // Buscar redações de simulado com join para obter frase temática
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
-          .select('*')
-          .eq('email_aluno', emailBusca);
-
-        console.log('📊 Resultado redações simulado:', {
-          data: redacoesSimulado,
-          error: errorSimulado,
-          count: redacoesSimulado?.length || 0
-        });
+          .select(`
+            *,
+            simulados(frase_tematica)
+          `)
+          .ilike('email_aluno', emailBusca);
 
         if (errorSimulado) {
           console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
-          // Não fazer throw aqui, apenas logar
         }
 
-        // Buscar redações de exercício
-        console.log('⚡ Iniciando busca de redações de exercício...');
-        
+        // Buscar redações de exercício com join para obter título
         const { data: redacoesExercicio, error: errorExercicio } = await supabase
           .from('redacoes_exercicio')
-          .select('*')
-          .eq('email_aluno', emailBusca);
-
-        console.log('📊 Resultado redações exercício:', {
-          data: redacoesExercicio,
-          error: errorExercicio,
-          count: redacoesExercicio?.length || 0
-        });
+          .select(`
+            *,
+            exercicios(titulo)
+          `)
+          .ilike('email_aluno', emailBusca);
 
         if (errorExercicio) {
           console.error('❌ Erro ao buscar redações de exercício:', errorExercicio);
-          // Não fazer throw aqui, apenas logar
         }
 
         // Processar e combinar resultados
-        const todasRedacoes = [];
+        const todasRedacoes: RedacaoTurma[] = [];
 
         // Adicionar redações regulares
         if (redacoesRegulares && redacoesRegulares.length > 0) {
-          console.log('✅ Processando redações regulares...');
+          console.log('✅ Processando', redacoesRegulares.length, 'redações regulares');
           redacoesRegulares.forEach(item => {
             todasRedacoes.push({
               ...item,
               tipo_envio: item.tipo_envio || 'regular',
-              corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida
-            });
+              corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
+              status: item.status || 'aguardando'
+            } as RedacaoTurma);
           });
         }
 
         // Adicionar redações de simulado
         if (redacoesSimulado && redacoesSimulado.length > 0) {
-          console.log('✅ Processando redações de simulado...');
-          redacoesSimulado.forEach(item => {
+          console.log('✅ Processando', redacoesSimulado.length, 'redações de simulado');
+          redacoesSimulado.forEach((item: any) => {
             todasRedacoes.push({
               ...item,
               id: item.id,
-              frase_tematica: 'Simulado',
-              redacao_texto: item.texto,
+              frase_tematica: item.simulados?.frase_tematica || 'Simulado',
+              redacao_texto: item.texto || '',
               tipo_envio: 'simulado',
               status: item.corrigida ? 'corrigida' : 'aguardando',
-              corrigida: !!item.corrigida
-            });
+              corrigida: !!item.corrigida,
+              nome_aluno: item.nome_aluno || '',
+              email_aluno: item.email_aluno || '',
+              turma: item.turma || '',
+              data_envio: item.data_envio
+            } as RedacaoTurma);
           });
         }
 
         // Adicionar redações de exercício
         if (redacoesExercicio && redacoesExercicio.length > 0) {
-          console.log('✅ Processando redações de exercício...');
-          redacoesExercicio.forEach(item => {
+          console.log('✅ Processando', redacoesExercicio.length, 'redações de exercício');
+          redacoesExercicio.forEach((item: any) => {
             todasRedacoes.push({
               ...item,
               id: item.id,
-              frase_tematica: 'Exercício',
-              redacao_texto: item.redacao_texto,
+              frase_tematica: item.exercicios?.titulo || 'Exercício',
+              redacao_texto: item.redacao_texto || '',
               tipo_envio: 'exercicio',
               status: item.corrigida ? 'corrigida' : 'aguardando',
-              corrigida: !!item.corrigida
-            });
+              corrigida: !!item.corrigida,
+              nome_aluno: item.nome_aluno || '',
+              email_aluno: item.email_aluno || '',
+              turma: item.turma || '',
+              data_envio: item.data_envio
+            } as RedacaoTurma);
           });
         }
 
@@ -207,7 +193,7 @@ const MinhasRedacoesList = () => {
         );
 
         console.log('📄 Total de redações encontradas:', redacoesOrdenadas.length);
-        console.log('📝 Redações processadas:', redacoesOrdenadas);
+        console.log('📝 Redações do usuário', emailBusca, ':', redacoesOrdenadas);
 
         return redacoesOrdenadas;
       } catch (error) {
@@ -215,7 +201,7 @@ const MinhasRedacoesList = () => {
         throw error;
       }
     },
-    enabled: true, // Sempre executar para debug
+    enabled: !!studentData?.email
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
@@ -228,34 +214,78 @@ const MinhasRedacoesList = () => {
       return;
     }
 
-    // Para redações digitadas, seguir o fluxo de autenticação
+    // Para redações digitadas, validar automaticamente se o email bate
+    if (studentData?.email) {
+      const normalizeEmail = (email: string) => email?.trim().toLowerCase() || '';
+      const emailUsuario = normalizeEmail(studentData.email);
+      const emailRedacao = normalizeEmail(redacao.email_aluno);
+      
+      if (emailUsuario === emailRedacao) {
+        console.log('✅ Email validado automaticamente - abrindo redação diretamente');
+        setSelectedRedacao(redacao);
+        setShowAuthDialog(false);
+        return;
+      }
+    }
+
+    // Se não conseguir validar automaticamente, pedir autenticação
     setSelectedRedacao(redacao);
     setEmailInput("");
     setShowAuthDialog(true);
   };
 
   const handleEmailAuth = async () => {
-    if (!selectedRedacao) return;
+    if (!selectedRedacao || !studentData?.email) return;
     
-    console.log('🔐 Iniciando autenticação por email para redação:', selectedRedacao.id);
+    console.log('🔐 Iniciando autenticação automática para redação:', selectedRedacao.id);
     
     setIsAuthenticating(true);
     
     try {
-      // Validação simples de email
+      // Validação automática - compara email do usuário logado com email da redação
       const normalizeEmail = (email: string) => email?.trim().toLowerCase() || '';
-      const isEmailValid = normalizeEmail(selectedRedacao.email_aluno) === normalizeEmail(emailInput);
+      const emailUsuario = normalizeEmail(studentData.email);
+      const emailRedacao = normalizeEmail(selectedRedacao.email_aluno);
       
-      if (isEmailValid) {
-        console.log('✅ Email validado com sucesso');
+      console.log('🔍 Comparando emails:', {
+        emailUsuario,
+        emailRedacao,
+        match: emailUsuario === emailRedacao
+      });
+      
+      if (emailUsuario === emailRedacao) {
+        console.log('✅ Email validado automaticamente');
         setShowAuthDialog(false);
         
-        // Buscar redação completa autenticada
-        const { data: redacaoCompleta, error } = await supabase
-          .from('redacoes_enviadas')
-          .select('*')
-          .eq('id', selectedRedacao.id)
-          .single();
+        // Buscar redação completa de acordo com o tipo
+        let redacaoCompleta = null;
+        let error = null;
+        
+        if (selectedRedacao.tipo_envio === 'simulado') {
+          const { data, error: err } = await supabase
+            .from('redacoes_simulado')
+            .select('*')
+            .eq('id', selectedRedacao.id)
+            .single();
+          redacaoCompleta = data;
+          error = err;
+        } else if (selectedRedacao.tipo_envio === 'exercicio') {
+          const { data, error: err } = await supabase
+            .from('redacoes_exercicio')
+            .select('*')
+            .eq('id', selectedRedacao.id)
+            .single();
+          redacaoCompleta = data;
+          error = err;
+        } else {
+          const { data, error: err } = await supabase
+            .from('redacoes_enviadas')
+            .select('*')
+            .eq('id', selectedRedacao.id)
+            .single();
+          redacaoCompleta = data;
+          error = err;
+        }
 
         if (error) {
           console.error('❌ Erro ao buscar redação completa:', error);
@@ -268,27 +298,24 @@ const MinhasRedacoesList = () => {
         }
 
         if (redacaoCompleta) {
-          // Converter dados para o formato esperado pelo RedacaoEnviadaCard
-          const redacaoFormatada: RedacaoTurma = {
-            ...redacaoCompleta,
-            corrigida: redacaoCompleta.status === 'corrigida',
-            redacao_texto: (redacaoCompleta as any).redacao_texto || (redacaoCompleta as any).texto_redacao || '',
-            nota_c1: (redacaoCompleta as any).nota_c1,
-            nota_c2: (redacaoCompleta as any).nota_c2,
-            nota_c3: (redacaoCompleta as any).nota_c3,
-            nota_c4: (redacaoCompleta as any).nota_c4,
-            nota_c5: (redacaoCompleta as any).nota_c5,
-          };
-          setSelectedRedacao(redacaoFormatada);
+          // Manter a redação atual já formatada
           setShowAuthDialog(false);
         }
       } else {
-        console.log('❌ Falha na validação do email');
-        toast({
-          title: "Email incorreto",
-          description: "O email digitado não confere com o email de envio da redação.",
-          variant: "destructive"
-        });
+        console.log('❌ Falha na validação do email automática');
+        // Permitir autenticação manual
+        const isEmailValid = normalizeEmail(selectedRedacao.email_aluno) === normalizeEmail(emailInput);
+        
+        if (isEmailValid) {
+          console.log('✅ Email validado manualmente');
+          setShowAuthDialog(false);
+        } else {
+          toast({
+            title: "Email incorreto",
+            description: "O email digitado não confere com o email de envio da redação.",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
       console.error('❌ Erro durante autenticação:', error);
