@@ -384,21 +384,23 @@ const MinhasRedacoesList = () => {
 
   const getTipoEnvioLabel = (tipo: string) => {
     switch (tipo) {
-      case 'tema_livre': return 'Tema Livre';
+      case 'tema_livre': return 'Exercício';
       case 'simulado': return 'Simulado';
       case 'exercicio': return 'Exercício';
-      case 'manuscrita': return 'Manuscrita';
-      default: return tipo;
+      case 'manuscrita': return 'Regular';
+      case 'regular': return 'Regular';
+      default: return 'Regular';
     }
   };
 
   const getTipoEnvioColor = (tipo: string) => {
     switch (tipo) {
-      case 'tema_livre': return 'bg-blue-100 text-blue-800';
+      case 'tema_livre': return 'bg-green-100 text-green-800';
       case 'simulado': return 'bg-purple-100 text-purple-800';
       case 'exercicio': return 'bg-green-100 text-green-800';
-      case 'manuscrita': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'manuscrita': return 'bg-blue-100 text-blue-800';
+      case 'regular': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-blue-100 text-blue-800';
     }
   };
 
@@ -469,18 +471,18 @@ const MinhasRedacoesList = () => {
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                       <div className="flex flex-wrap items-center gap-2 mb-2">
                         <Badge 
                           variant="outline" 
                           className={getTipoEnvioColor(redacao.tipo_envio)}
                         >
                           {getTipoEnvioLabel(redacao.tipo_envio)}
                         </Badge>
-                        <Badge 
-                          variant={redacao.corrigida ? 'default' : 'secondary'}
-                        >
-                          {redacao.corrigida ? '✅ Corrigida' : '⏳ Aguardando correção'}
-                        </Badge>
+                        {redacao.corrigida && (
+                          <Badge variant="default">
+                            Corrigida
+                          </Badge>
+                        )}
                         {redacao.nota_total && (
                           <Badge variant="outline">
                             Nota: {redacao.nota_total}
@@ -500,9 +502,11 @@ const MinhasRedacoesList = () => {
                       </p>
                     </div>
                     
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Ver detalhes →</span>
-                    </div>
+                     {redacao.corrigida && (
+                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                         <span>Ver detalhes →</span>
+                       </div>
+                     )}
                   </div>
                 </CardContent>
               </Card>
