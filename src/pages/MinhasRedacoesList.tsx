@@ -287,14 +287,7 @@ const MinhasRedacoesList = () => {
     }
   };
 
-  // Se não há usuário logado, mostrar rota protegida
-  if (!isStudentLoggedIn || !studentData) {
-    return (
-      <ProtectedRoute>
-        <div>Acesso não autorizado</div>
-      </ProtectedRoute>
-    );
-  }
+  // Verificação removida - a proteção de rota já é feita no App.tsx
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
