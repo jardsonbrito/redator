@@ -38,12 +38,18 @@ export const ChatConversa = ({
     buscarMensagensConversa(alunoId, corretorId);
     
     // Marcar como lida quando carregar a conversa
-    if (tipoUsuario === 'corretor') {
-      marcarComoLida(alunoId, corretorId);
-    } else if (tipoUsuario === 'aluno' && studentData?.email) {
-      marcarComoLidaAluno(studentData.email, corretorId);
-    }
-  }, [alunoId, corretorId, tipoUsuario]);
+    const marcarMensagensLidas = async () => {
+      if (tipoUsuario === 'corretor') {
+        await marcarComoLida(alunoId, corretorId);
+      } else if (tipoUsuario === 'aluno' && studentData?.email) {
+        await marcarComoLidaAluno(studentData.email, corretorId);
+        // Disparar evento customizado para atualizar o badge
+        window.dispatchEvent(new CustomEvent('mensagensLidas'));
+      }
+    };
+    
+    marcarMensagensLidas();
+  }, [alunoId, corretorId, tipoUsuario, studentData?.email]);
 
   useEffect(() => {
     scrollToBottom();

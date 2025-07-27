@@ -23,9 +23,20 @@ export const AjudaRapidaAlunoCard = () => {
       
       // Atualizar a cada 30 segundos
       const interval = setInterval(fetchMensagensNaoLidas, 30000);
-      return () => clearInterval(interval);
+      
+      // Escutar evento customizado de mensagens lidas
+      const handleMensagensLidas = () => {
+        fetchMensagensNaoLidas();
+      };
+      
+      window.addEventListener('mensagensLidas', handleMensagensLidas);
+      
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('mensagensLidas', handleMensagensLidas);
+      };
     }
-  }, [studentData?.email]);
+  }, [studentData?.email, buscarMensagensNaoLidasAluno]);
 
   return (
     <Card 
