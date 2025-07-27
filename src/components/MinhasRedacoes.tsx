@@ -113,7 +113,7 @@ export const MinhasRedacoes = () => {
         // Para alunos, usar a função atualizada que busca por user_id primeiro
         console.log('👨‍🎓 Buscando redações de aluno usando função get_student_redacoes:', alunoEmail);
         
-        const { data, error } = await supabase.rpc('get_student_redacoes', {
+        const { data, error } = await supabase.rpc('get_student_redacoes_com_status_finalizado', {
           student_email: alunoEmail.toLowerCase().trim()
         });
 

@@ -54,19 +54,12 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
     queryFn: async () => {
       if (!turmaCode || turmaCode === "visitante") return [];
       
-      const { data, error } = await supabase
-        .from('redacoes_simulado')
-        .select(`
-          *,
-          simulados!inner(titulo, frase_tematica),
-          corretor_1:corretores!corretor_id_1(nome_completo),
-          corretor_2:corretores!corretor_id_2(nome_completo)
-        `)
-        .eq('turma', turmaCode)
-        .order('data_envio', { ascending: false });
+      const { data, error } = await supabase.rpc('get_simulados_por_corretor', {
+        turma_code: turmaCode
+      });
       
       if (error) throw error;
-      return data as RedacaoSimulado[];
+      return data || [];
     },
     enabled: !!turmaCode && turmaCode !== "visitante"
   });
@@ -76,35 +69,47 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
     const entradas = [];
     
     // Entrada para corretor 1
-    if (redacao.corretor_1) {
+    if (redacao.corretor_1_nome) {
       entradas.push({
         ...redacao,
-        corretor_atual: redacao.corretor_1.nome_completo,
+        corretor_atual: redacao.corretor_1_nome,
         status_atual: redacao.status_corretor_1 || 'pendente',
         tipo_corretor: 'corretor_1',
-        display_id: `${redacao.id}-c1`
+        display_id: `${redacao.id}-c1`,
+        simulados: {
+          titulo: redacao.simulado_titulo,
+          frase_tematica: redacao.simulado_frase_tematica
+        }
       });
     }
     
     // Entrada para corretor 2
-    if (redacao.corretor_2) {
+    if (redacao.corretor_2_nome) {
       entradas.push({
         ...redacao,
-        corretor_atual: redacao.corretor_2.nome_completo,
+        corretor_atual: redacao.corretor_2_nome,
         status_atual: redacao.status_corretor_2 || 'pendente',
         tipo_corretor: 'corretor_2',
-        display_id: `${redacao.id}-c2`
+        display_id: `${redacao.id}-c2`,
+        simulados: {
+          titulo: redacao.simulado_titulo,
+          frase_tematica: redacao.simulado_frase_tematica
+        }
       });
     }
     
     // Se não tem corretor, mostrar uma entrada sem corretor
-    if (!redacao.corretor_1 && !redacao.corretor_2) {
+    if (!redacao.corretor_1_nome && !redacao.corretor_2_nome) {
       entradas.push({
         ...redacao,
         corretor_atual: 'Aguardando atribuição',
         status_atual: 'pendente',
         tipo_corretor: null,
-        display_id: redacao.id
+        display_id: redacao.id,
+        simulados: {
+          titulo: redacao.simulado_titulo,
+          frase_tematica: redacao.simulado_frase_tematica
+        }
       });
     }
     

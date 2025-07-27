@@ -1701,6 +1701,33 @@ export type Database = {
           redacao_manuscrita_url: string
         }[]
       }
+      get_simulados_por_corretor: {
+        Args: { turma_code: string }
+        Returns: {
+          id: string
+          id_simulado: string
+          nome_aluno: string
+          email_aluno: string
+          texto: string
+          turma: string
+          data_envio: string
+          corrigida: boolean
+          nota_c1: number
+          nota_c2: number
+          nota_c3: number
+          nota_c4: number
+          nota_c5: number
+          nota_total: number
+          comentario_pedagogico: string
+          data_correcao: string
+          status_corretor_1: string
+          status_corretor_2: string
+          corretor_1_nome: string
+          corretor_2_nome: string
+          simulado_titulo: string
+          simulado_frase_tematica: string
+        }[]
+      }
       get_student_redacoes: {
         Args: { student_email: string }
         Returns: {
@@ -1715,6 +1742,23 @@ export type Database = {
           nota_total: number
           comentario_admin: string
           data_correcao: string
+        }[]
+      }
+      get_student_redacoes_com_status_finalizado: {
+        Args: { student_email: string }
+        Returns: {
+          id: string
+          frase_tematica: string
+          nome_aluno: string
+          email_aluno: string
+          tipo_envio: string
+          data_envio: string
+          status: string
+          corrigida: boolean
+          nota_total: number
+          comentario_admin: string
+          data_correcao: string
+          correcao_finalizada: boolean
         }[]
       }
       get_turma_codigo: {
