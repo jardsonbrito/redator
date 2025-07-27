@@ -104,7 +104,13 @@ const CorretorTop5 = () => {
         }
       }
       
-      const { data, error } = await query.order('nota_total', { ascending: false });
+      let data, error;
+      
+      if (selectedType === "simulado") {
+        ({ data, error } = await query);
+      } else {
+        ({ data, error } = await query.order('nota_total', { ascending: false }));
+      }
       
       if (error) throw error;
       
@@ -113,7 +119,7 @@ const CorretorTop5 = () => {
       if (selectedType === "simulado") {
         processedData = (data || []).map(item => ({
           ...item,
-          nota_total: Math.round((item.nota_final_corretor_1 + item.nota_final_corretor_2) / 2)
+          nota_total: Math.round((Number(item.nota_final_corretor_1) + Number(item.nota_final_corretor_2)) / 2)
         })).sort((a, b) => b.nota_total - a.nota_total);
       }
       
@@ -125,27 +131,28 @@ const CorretorTop5 = () => {
         simulado_titulo?: string;
       }> = [];
       
-      let posicaoAtual = 1;
-      let proximaPosicao = 1;
+      // Obter as 5 notas distintas mais altas
+      const notasUnicas = [...new Set(processedData.map(item => 
+        selectedType === "simulado" ? Number(item.nota_total) : Number(item.nota_total)
+      ))].sort((a, b) => Number(b) - Number(a));
+      const top5Notas = notasUnicas.slice(0, 5);
       
-      for (let i = 0; i < processedData.length; i++) {
-        // Se a nota mudou, atualizar a posição atual
-        if (i > 0 && processedData[i].nota_total !== processedData[i-1].nota_total) {
-          posicaoAtual = proximaPosicao;
-        }
+      // Para cada uma das 5 notas mais altas, incluir TODOS os alunos com essa nota
+      top5Notas.forEach((nota, index) => {
+        const alunosComEssaNota = processedData.filter(item => 
+          (selectedType === "simulado" ? item.nota_total : Number(item.nota_total)) === nota
+        );
+        const posicao = index + 1;
         
-        // Só incluir se estiver nas 5 primeiras posições
-        if (posicaoAtual <= 5) {
+        alunosComEssaNota.forEach(aluno => {
           rankingComPosicao.push({
-            posicao: posicaoAtual,
-            nome_aluno: processedData[i].nome_aluno,
-            nota_total: processedData[i].nota_total,
-            simulado_titulo: processedData[i].simulados?.titulo
+            posicao: posicao,
+            nome_aluno: aluno.nome_aluno,
+            nota_total: selectedType === "simulado" ? aluno.nota_total : Number(aluno.nota_total),
+            simulado_titulo: aluno.simulados?.titulo
           });
-        }
-        
-        proximaPosicao = i + 2; // Próxima posição disponível
-      }
+        });
+      });
       
       return rankingComPosicao;
     }
