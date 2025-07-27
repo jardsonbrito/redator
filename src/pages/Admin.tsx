@@ -112,7 +112,7 @@ const Admin = () => {
 
   const menuItems = [
     { id: "temas", label: "Temas", icon: BookOpen },
-    { id: "redacoes", label: "Redações Exemplares", icon: FileText },
+    { id: "redacoes", label: "Redações Recebidas", icon: FileText },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
     { id: "simulados", label: "Simulados", icon: ClipboardCheck },
     { id: "exercicios", label: "Exercícios", icon: NotebookPen },
