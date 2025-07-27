@@ -124,31 +124,31 @@ export const AjudaRapidaAdmin = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 px-4 pb-4">
       {/* Breadcrumb padronizado */}
-      <div className="flex items-center space-x-2 text-sm">
+      <div className="flex items-center space-x-2 text-sm pt-4">
         <span className="text-primary font-medium">Dashboard</span>
         <span className="text-muted-foreground">/</span>
         <span className="text-foreground">Ajuda Rápida</span>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Recados dos Alunos</h1>
-          <p className="text-muted-foreground mt-1">Gerenciar conversas entre alunos e corretores</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Recados dos Alunos</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Gerenciar conversas entre alunos e corretores</p>
         </div>
-        <Button onClick={carregarConversas} disabled={loading}>
+        <Button onClick={carregarConversas} disabled={loading} className="w-full sm:w-auto">
           {loading ? "Carregando..." : "Atualizar"}
         </Button>
       </div>
 
       {loading ? (
-        <div className="text-center py-8">
+        <div className="text-center py-12">
           <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando conversas...</p>
         </div>
       ) : conversas.length === 0 ? (
-        <Card>
+        <Card className="mx-4">
           <CardContent className="text-center py-12">
             <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-60" />
             <p className="text-muted-foreground text-lg">
@@ -157,47 +157,46 @@ export const AjudaRapidaAdmin = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="space-y-4">
           {conversas.map((conversa) => (
             <Card key={`${conversa.aluno_id}-${conversa.corretor_id}`} className="bg-white hover:shadow-md transition-all duration-200 border border-border/20 rounded-lg shadow-sm">
               <CardContent className="p-4">
-                {/* Topo com nomes */}
-                <div className="flex items-center gap-3 mb-3">
+                {/* Topo com nomes - Layout responsivo */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
                   <div className="flex-1">
-                    <h3 className="font-bold text-lg text-foreground">{conversa.aluno_nome}</h3>
-                    <p className="text-sm text-muted-foreground">Aluno</p>
+                    <h3 className="font-bold text-base sm:text-lg text-foreground">{conversa.aluno_nome}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Aluno</p>
                   </div>
-                  <div className="text-muted-foreground text-lg">↔</div>
-                  <div className="flex-1 text-right">
-                    <h3 className="font-bold text-lg text-foreground">{conversa.corretor_nome}</h3>
-                    <p className="text-sm text-muted-foreground">Corretor</p>
+                  <div className="hidden sm:block text-muted-foreground text-lg">↔</div>
+                  <div className="flex-1 sm:text-right">
+                    <h3 className="font-bold text-base sm:text-lg text-foreground">{conversa.corretor_nome}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Corretor</p>
                   </div>
                 </div>
                 
                 {/* Centro com última mensagem */}
-                <div className="bg-muted/30 p-3 rounded-md mb-3">
-                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Última mensagem:</p>
-                  <p className="text-sm text-foreground line-clamp-2">{formatarMensagem(conversa.ultima_mensagem)}</p>
+                <div className="bg-muted/30 p-3 rounded-md mb-4">
+                  <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide font-medium">Última mensagem:</p>
+                  <p className="text-sm text-foreground leading-relaxed">{formatarMensagem(conversa.ultima_mensagem)}</p>
                 </div>
                 
                 {/* Data e contador */}
-                <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                  <span>{formatarData(conversa.ultima_data)}</span>
-                  <Badge variant="secondary" className="text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                  <span className="text-xs sm:text-sm text-muted-foreground">{formatarData(conversa.ultima_data)}</span>
+                  <Badge variant="secondary" className="text-xs w-fit">
                     {conversa.total_mensagens} mensagem{conversa.total_mensagens !== 1 ? 's' : ''}
                   </Badge>
                 </div>
                 
-                {/* Rodapé com botões */}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/20">
+                {/* Rodapé com botões - Layout responsivo */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-border/20">
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={() => setConversaAtiva({
                       alunoId: conversa.aluno_id,
                       corretorId: conversa.corretor_id
                     })}
-                    className="flex items-center gap-2 h-8"
+                    className="flex items-center justify-center gap-2 h-10 w-full sm:w-auto"
                   >
                     <Eye className="w-4 h-4" />
                     Visualizar
@@ -207,10 +206,9 @@ export const AjudaRapidaAdmin = () => {
                     <AlertDialogTrigger asChild>
                       <Button
                         variant="outline"
-                        size="sm"
-                        className="text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10 h-8"
+                        className="text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10 h-10 w-full sm:w-auto"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 mr-2" />
                         Excluir
                       </Button>
                     </AlertDialogTrigger>
