@@ -37,6 +37,8 @@ interface RedacaoTurma {
   turma: string;
   created_at?: string;
   corretor?: string;
+  corretor_numero?: number;
+  original_id?: string;
   observacoes_coordenacao?: string;
   // Campos pedagógicos
   comentario_c1_corretor_1?: string | null;
@@ -139,23 +141,89 @@ const MinhasRedacoesList = () => {
         });
         }
 
-        // Adicionar redações de simulado
+        // Adicionar redações de simulado (duplicar por corretor)
         if (redacoesSimulado && redacoesSimulado.length > 0) {
           console.log('✅ Processando', redacoesSimulado.length, 'redações de simulado');
+          
+          // Buscar nomes dos corretores para usar nas redações
+          const idsCorretores: string[] = [];
           redacoesSimulado.forEach((item: any) => {
-            todasRedacoes.push({
-              ...item,
-              id: item.id,
-              frase_tematica: item.simulados?.frase_tematica || 'Simulado',
-              redacao_texto: item.texto || '',
-              tipo_envio: 'simulado',
-              status: item.corrigida ? 'corrigida' : 'aguardando',
-              corrigida: !!item.corrigida,
-              nome_aluno: item.nome_aluno || '',
-              email_aluno: item.email_aluno || '',
-              turma: item.turma || '',
-              data_envio: item.data_envio
-            } as RedacaoTurma);
+            if (item.corretor_id_1) idsCorretores.push(item.corretor_id_1);
+            if (item.corretor_id_2) idsCorretores.push(item.corretor_id_2);
+          });
+
+          let nomes_corretores: Record<string, string> = {};
+          if (idsCorretores.length > 0) {
+            const { data: corretores } = await supabase
+              .from('corretores')
+              .select('id, nome_completo')
+              .in('id', idsCorretores);
+            
+            if (corretores) {
+              nomes_corretores = corretores.reduce((acc, corretor) => {
+                acc[corretor.id] = corretor.nome_completo;
+                return acc;
+              }, {} as Record<string, string>);
+            }
+          }
+
+          redacoesSimulado.forEach((item: any) => {
+            // Se há corretor 1, adicionar uma entrada
+            if (item.corretor_id_1) {
+              todasRedacoes.push({
+                ...item,
+                id: `${item.id}-corretor1`, // ID único para cada entrada
+                original_id: item.id, // Manter ID original para busca
+                frase_tematica: item.simulados?.frase_tematica || 'Simulado',
+                redacao_texto: item.texto || '',
+                tipo_envio: 'simulado',
+                status: item.corrigida ? 'corrigida' : 'aguardando',
+                corrigida: !!item.corrigida,
+                nome_aluno: item.nome_aluno || '',
+                email_aluno: item.email_aluno || '',
+                turma: item.turma || '',
+                data_envio: item.data_envio,
+                corretor: nomes_corretores[item.corretor_id_1] || 'Corretor 1',
+                corretor_numero: 1
+              } as RedacaoTurma);
+            }
+
+            // Se há corretor 2, adicionar segunda entrada
+            if (item.corretor_id_2) {
+              todasRedacoes.push({
+                ...item,
+                id: `${item.id}-corretor2`, // ID único para cada entrada
+                original_id: item.id, // Manter ID original para busca
+                frase_tematica: item.simulados?.frase_tematica || 'Simulado',
+                redacao_texto: item.texto || '',
+                tipo_envio: 'simulado',
+                status: item.corrigida ? 'corrigida' : 'aguardando',
+                corrigida: !!item.corrigida,
+                nome_aluno: item.nome_aluno || '',
+                email_aluno: item.email_aluno || '',
+                turma: item.turma || '',
+                data_envio: item.data_envio,
+                corretor: nomes_corretores[item.corretor_id_2] || 'Corretor 2',
+                corretor_numero: 2
+              } as RedacaoTurma);
+            }
+
+            // Se não há corretores definidos, manter entrada única
+            if (!item.corretor_id_1 && !item.corretor_id_2) {
+              todasRedacoes.push({
+                ...item,
+                id: item.id,
+                frase_tematica: item.simulados?.frase_tematica || 'Simulado',
+                redacao_texto: item.texto || '',
+                tipo_envio: 'simulado',
+                status: item.corrigida ? 'corrigida' : 'aguardando',
+                corrigida: !!item.corrigida,
+                nome_aluno: item.nome_aluno || '',
+                email_aluno: item.email_aluno || '',
+                turma: item.turma || '',
+                data_envio: item.data_envio
+              } as RedacaoTurma);
+            }
           });
         }
 
@@ -255,10 +323,11 @@ const MinhasRedacoesList = () => {
         let error = null;
         
         if (selectedRedacao.tipo_envio === 'simulado') {
+          const searchId = selectedRedacao.original_id || selectedRedacao.id;
           const { data, error: err } = await supabase
             .from('redacoes_simulado')
             .select('*')
-            .eq('id', selectedRedacao.id)
+            .eq('id', searchId)
             .single();
           redacaoCompleta = data;
           error = err;
@@ -326,8 +395,20 @@ const MinhasRedacoesList = () => {
     console.log('📥 Iniciando download da correção completa para redação:', redacao.id);
     
     try {
-      const { downloadRedacaoManuscritaCorrigida } = await import('@/utils/redacaoDownload');
-      await downloadRedacaoManuscritaCorrigida(redacao);
+      toast({
+        title: "Download iniciado",
+        description: "Seu arquivo será baixado em breve",
+      });
+
+      // Para redações manuscritas, usar função específica
+      if (redacao.redacao_manuscrita_url) {
+        const { downloadRedacaoManuscritaCorrigida } = await import('@/utils/redacaoDownload');
+        await downloadRedacaoManuscritaCorrigida(redacao);
+      } else {
+        // Para redações digitadas, usar nova função
+        const { downloadRedacaoDigitadaCorrigida } = await import('@/utils/redacaoDownload');
+        await downloadRedacaoDigitadaCorrigida(redacao);
+      }
     } catch (error) {
       console.error('❌ Erro ao baixar correção:', error);
       toast({
@@ -490,9 +571,15 @@ const MinhasRedacoesList = () => {
                         )}
                       </div>
                       
-                      <h3 className="font-semibold text-foreground mb-1 line-clamp-2">
+                       <h3 className="font-semibold text-foreground mb-1 line-clamp-2">
                         {redacao.frase_tematica}
-                      </h3>
+                       </h3>
+                       
+                       {redacao.corretor && (
+                         <p className="text-sm text-muted-foreground font-medium">
+                           Corretor: {redacao.corretor}
+                         </p>
+                       )}
                       
                       <p className="text-sm text-muted-foreground">
                         Enviado em: {formatDate(redacao.data_envio)}
