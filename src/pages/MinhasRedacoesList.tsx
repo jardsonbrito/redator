@@ -564,7 +564,8 @@ const MinhasRedacoesList = () => {
                             Corrigida
                           </Badge>
                         )}
-                        {redacao.nota_total && (
+                        {/* Só mostrar nota se a correção foi FINALIZADA */}
+                        {redacao.corrigida && redacao.nota_total && (
                           <Badge variant="outline">
                             Nota: {redacao.nota_total}
                           </Badge>
