@@ -244,6 +244,7 @@ export const EnvioRedacaoWithCorretor = ({
         description: "Sua redação foi enviada e será corrigida pelos corretores selecionados.",
       });
 
+      // Limpar formulário
       setFormData({
         nome_aluno: studentData.nomeUsuario || "",
         email_aluno: studentData.email || "",
@@ -255,11 +256,14 @@ export const EnvioRedacaoWithCorretor = ({
       handleRemoveRedacaoManuscrita();
 
       // Redirecionar para a home após envio bem-sucedido
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        navigate('/app');
-      }
+      setTimeout(() => {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          navigate('/app');
+        }
+      }, 1500);
+    
     } catch (error: any) {
       console.error("Erro ao enviar redação:", error);
       toast({

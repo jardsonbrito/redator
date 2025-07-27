@@ -66,21 +66,11 @@ const MinhasRedacoesList = () => {
   const { toast } = useToast();
 
   // Obter dados do usuário do localStorage
-  const studentDataStr = localStorage.getItem('student_data');
+  const studentDataStr = localStorage.getItem('alunoData');
   const studentData = studentDataStr ? JSON.parse(studentDataStr) : null;
 
   // Verificar se o usuário está logado
-  const isStudentLoggedIn = localStorage.getItem('isStudentLoggedIn') === 'true';
-
-  // Debug completo do localStorage
-  console.log('🔍 Debug localStorage completo:');
-  console.log('- student_data (string):', studentDataStr);
-  console.log('- student_data (parsed):', studentData);
-  console.log('- isStudentLoggedIn:', isStudentLoggedIn);
-  console.log('- Todos os itens do localStorage:', Object.keys(localStorage).reduce((acc, key) => {
-    acc[key] = localStorage.getItem(key);
-    return acc;
-  }, {} as any));
+  const isStudentLoggedIn = localStorage.getItem('userType') === 'aluno';
 
   const { data: redacoes = [], isLoading, error } = useQuery({
     queryKey: ['minhas-redacoes', studentData?.email, isStudentLoggedIn],
@@ -487,9 +477,9 @@ const MinhasRedacoesList = () => {
                           {getTipoEnvioLabel(redacao.tipo_envio)}
                         </Badge>
                         <Badge 
-                          variant={redacao.status === 'corrigida' ? 'default' : 'secondary'}
+                          variant={redacao.corrigida ? 'default' : 'secondary'}
                         >
-                          {redacao.status === 'corrigida' ? 'Corrigida' : 'Em correção'}
+                          {redacao.corrigida ? '✅ Corrigida' : '⏳ Aguardando correção'}
                         </Badge>
                         {redacao.nota_total && (
                           <Badge variant="outline">
