@@ -82,41 +82,82 @@ const MinhasRedacoesList = () => {
 
       console.log('🔍 Buscando redações para:', studentData.email);
       console.log('📊 Tipo de usuário:', studentData.userType);
+      console.log('📋 Dados completos do estudante:', studentData);
 
       try {
-        let query;
-        
-        if (studentData.userType === "aluno") {
-          // Para alunos, usar a função get_student_redacoes
-          const { data, error } = await supabase.rpc('get_student_redacoes', {
-            student_email: studentData.email
-          });
-          
-          if (error) {
-            console.error('❌ Erro na função get_student_redacoes:', error);
-            throw error;
-          }
-          
-          return data || [];
-        } else {
-          // Para visitantes, buscar direto na tabela redacoes_enviadas
-          query = supabase
+        // Buscar todas as redações do usuário (regulares, simulado e exercício)
+        const promises = [];
+
+        // 1. Redações regulares
+        promises.push(
+          supabase
             .from('redacoes_enviadas')
             .select('*')
             .eq('email_aluno', studentData.email)
-            .order('created_at', { ascending: false });
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return (data || []).map(item => ({
+                ...item,
+                tipo_envio: item.tipo_envio || 'regular',
+                corrigida: item.status === 'corrigida' || item.status === 'corrigido'
+              }));
+            })
+        );
 
-          const { data, error } = await query;
-          
-          if (error) {
-            console.error('❌ Erro na consulta direta:', error);
-            throw error;
-          }
+        // 2. Redações de simulado
+        promises.push(
+          supabase
+            .from('redacoes_simulado')
+            .select('*')
+            .eq('email_aluno', studentData.email)
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return (data || []).map(item => ({
+                ...item,
+                id: item.id,
+                frase_tematica: 'Simulado - ' + (item.id_simulado || 'Não identificado'),
+                redacao_texto: item.texto,
+                tipo_envio: 'simulado',
+                status: item.corrigida ? 'corrigida' : 'aguardando',
+                corrigida: !!item.corrigida
+              }));
+            })
+        );
 
-          return data || [];
-        }
+        // 3. Redações de exercício  
+        promises.push(
+          supabase
+            .from('redacoes_exercicio')
+            .select('*')
+            .eq('email_aluno', studentData.email)
+            .then(({ data, error }) => {
+              if (error) throw error;
+              return (data || []).map(item => ({
+                ...item,
+                id: item.id,
+                frase_tematica: 'Exercício - ' + (item.exercicio_id || 'Não identificado'),
+                redacao_texto: item.redacao_texto,
+                tipo_envio: 'exercicio',
+                status: item.corrigida ? 'corrigida' : 'aguardando',
+                corrigida: !!item.corrigida
+              }));
+            })
+        );
+
+        const results = await Promise.all(promises);
+        const todasRedacoes = results.flat();
+        
+        // Ordenar por data de envio (mais recente primeiro)
+        const redacoesOrdenadas = todasRedacoes.sort((a, b) => 
+          new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime()
+        );
+
+        console.log('📄 Total de redações encontradas:', redacoesOrdenadas.length);
+        console.log('📝 Redações:', redacoesOrdenadas);
+
+        return redacoesOrdenadas;
       } catch (error) {
-        console.error('❌ Erro geral ao buscar redações:', error);
+        console.error('❌ Erro ao buscar redações:', error);
         throw error;
       }
     },
