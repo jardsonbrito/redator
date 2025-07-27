@@ -13,9 +13,12 @@ export const AjudaRapidaAlunoCard = () => {
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
 
   useEffect(() => {
+    console.log('🔔 AjudaRapidaAlunoCard - studentData.email:', studentData?.email);
     if (studentData?.email) {
       const fetchMensagensNaoLidas = async () => {
+        console.log('🔔 Buscando mensagens não lidas para:', studentData.email);
         const count = await buscarMensagensNaoLidasAluno(studentData.email);
+        console.log('🔔 Resultado da busca:', count);
         setMensagensNaoLidas(count);
       };
       
@@ -60,6 +63,10 @@ export const AjudaRapidaAlunoCard = () => {
             <Badge variant="destructive" className="rounded-full">
               {mensagensNaoLidas}
             </Badge>
+          )}
+          {/* Debug visual */}
+          {mensagensNaoLidas === 0 && (
+            <span className="text-xs text-gray-400">({mensagensNaoLidas} msgs)</span>
           )}
           <MessageCircle className="w-5 h-5 text-primary" />
         </div>
