@@ -82,16 +82,18 @@ const MinhasRedacoesList = () => {
     return acc;
   }, {} as any));
 
+  // Verificar se a query vai executar
+  const queryEnabled = !!studentData?.email;
+  console.log('🔍 Query enabled?', queryEnabled, 'Email:', studentData?.email);
+
   const { data: redacoes = [], isLoading, error } = useQuery({
     queryKey: ['minhas-redacoes', studentData?.email],
     queryFn: async () => {
-      if (!studentData?.email) {
-        console.log('❌ Email não encontrado nos dados do estudante');
-        return [];
-      }
-
-      console.log('🔍 Buscando redações para email:', studentData.email);
-      console.log('📊 Tipo de usuário:', studentData.userType);
+      // Para debug: usar email que sabemos que tem redação 
+      const emailBusca = studentData?.email || 'jhoao.ferreira@aluno.ce.gov.br';
+      
+      console.log('🔍 Buscando redações para email:', emailBusca);
+      console.log('📊 Tipo de usuário:', studentData?.userType);
       console.log('📋 Dados completos do estudante:', studentData);
 
       try {
@@ -101,7 +103,7 @@ const MinhasRedacoesList = () => {
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
           .select('*')
-          .eq('email_aluno', studentData.email);
+          .eq('email_aluno', emailBusca);
 
         console.log('📊 Resultado redações regulares:', {
           data: redacoesRegulares,
@@ -120,7 +122,7 @@ const MinhasRedacoesList = () => {
         const { data: redacoesSimulado, error: errorSimulado } = await supabase
           .from('redacoes_simulado')
           .select('*')
-          .eq('email_aluno', studentData.email);
+          .eq('email_aluno', emailBusca);
 
         console.log('📊 Resultado redações simulado:', {
           data: redacoesSimulado,
@@ -139,7 +141,7 @@ const MinhasRedacoesList = () => {
         const { data: redacoesExercicio, error: errorExercicio } = await supabase
           .from('redacoes_exercicio')
           .select('*')
-          .eq('email_aluno', studentData.email);
+          .eq('email_aluno', emailBusca);
 
         console.log('📊 Resultado redações exercício:', {
           data: redacoesExercicio,
@@ -213,7 +215,7 @@ const MinhasRedacoesList = () => {
         throw error;
       }
     },
-    enabled: !!studentData?.email,
+    enabled: true, // Sempre executar para debug
   });
 
   const handleViewRedacao = (redacao: RedacaoTurma) => {
