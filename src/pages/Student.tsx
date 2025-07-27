@@ -8,7 +8,7 @@ import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, N
 
 const Student = () => {
   const menuItems = [
-    // Linha 1
+    // Linha 1, Coluna 1: Temas
     {
       title: "Temas",
       path: "/temas",
@@ -17,6 +17,7 @@ const Student = () => {
       showAlways: true,
       resourceType: "temas"
     },
+    // Linha 1, Coluna 2: Enviar Redação - Tema Livre
     {
       title: "Enviar Redação",
       path: "/envie-redacao",
@@ -24,15 +25,16 @@ const Student = () => {
       tooltip: "Submeta seu texto para correção detalhada.",
       showAlways: true
     },
-    // Linha 2 - Posição especial para Minhas Redações
+    // Linha 2, Coluna 1: Minhas Redações
     {
       title: "Minhas Redações",
       path: "/minhas-redacoes", 
       icon: FileText,
       tooltip: "Visualize suas redações enviadas e correções recebidas.",
       showAlways: true,
-      isSpecialCard: true // Flag para identificar o card especial
+      isSpecialCard: true
     },
+    // Linha 2, Coluna 2: Redações Exemplares
     {
       title: "Redações Exemplares",
       path: "/redacoes",
@@ -40,7 +42,7 @@ const Student = () => {
       tooltip: "Veja textos nota 1000 e aprenda estratégias eficazes.",
       showAlways: true
     },
-    // Linha 3
+    // Linha 3, Coluna 1: Videoteca
     {
       title: "Videoteca",
       path: "/videoteca",
@@ -48,6 +50,7 @@ const Student = () => {
       tooltip: "Acesse vídeos para enriquecer seu repertório sociocultural.",
       showAlways: true
     },
+    // Linha 3, Coluna 2: Aulas
     {
       title: "Aulas",
       path: "/aulas",
@@ -55,7 +58,7 @@ const Student = () => {
       tooltip: "Acesse aulas organizadas por competência.",
       showAlways: true
     },
-    // Linha 4
+    // Linha 4, Coluna 1: Exercícios
     {
       title: "Exercícios",
       path: "/exercicios", 
@@ -63,6 +66,7 @@ const Student = () => {
       tooltip: "Pratique com exercícios direcionados.",
       showAlways: true
     },
+    // Linha 4, Coluna 2: Biblioteca
     {
       title: "Biblioteca",
       path: "/biblioteca",
@@ -70,7 +74,7 @@ const Student = () => {
       tooltip: "Acesse materiais em PDF organizados por competência.",
       showAlways: true
     },
-    // Linha 5
+    // Linha 5, Coluna 1: Simulados
     {
       title: "Simulados",
       path: "/simulados",
@@ -78,6 +82,7 @@ const Student = () => {
       tooltip: "Participe de simulados com horário controlado e correção detalhada.",
       showAlways: true
     },
+    // Linha 5, Coluna 2: Top 5
     {
       title: "Top 5",
       path: "/top5",
