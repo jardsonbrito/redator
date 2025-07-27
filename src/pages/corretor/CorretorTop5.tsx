@@ -71,14 +71,21 @@ const CorretorTop5 = () => {
       let query;
       
       if (selectedType === "simulado") {
+        // Para simulados, só incluir redações com ambas correções finalizadas
         query = supabase
           .from('redacoes_simulado')
           .select(`
             nome_aluno,
-            nota_total,
+            nota_final_corretor_1,
+            nota_final_corretor_2,
+            status_corretor_1,
+            status_corretor_2,
             simulados!inner(titulo)
           `)
-          .not('nota_total', 'is', null);
+          .eq('status_corretor_1', 'corrigida')
+          .eq('status_corretor_2', 'corrigida')
+          .not('nota_final_corretor_1', 'is', null)
+          .not('nota_final_corretor_2', 'is', null);
           
         if (selectedSimulado) {
           query = query.eq('id_simulado', selectedSimulado);
@@ -87,7 +94,8 @@ const CorretorTop5 = () => {
         query = supabase
           .from('redacoes_enviadas')
           .select('nome_aluno, nota_total, tipo_envio')
-          .not('nota_total', 'is', null);
+          .not('nota_total', 'is', null)
+          .eq('corrigida', true);
           
         if (selectedType === "regular") {
           query = query.eq('tipo_envio', 'regular');
@@ -100,7 +108,16 @@ const CorretorTop5 = () => {
       
       if (error) throw error;
       
-      const rankingData = data || [];
+      // Processar dados dos simulados (calcular média)
+      let processedData = data || [];
+      if (selectedType === "simulado") {
+        processedData = (data || []).map(item => ({
+          ...item,
+          nota_total: Math.round((item.nota_final_corretor_1 + item.nota_final_corretor_2) / 2)
+        })).sort((a, b) => b.nota_total - a.nota_total);
+      }
+      
+      // Processar ranking com lógica de empates justos
       const rankingComPosicao: Array<{
         posicao: number;
         nome_aluno: string;
@@ -109,19 +126,25 @@ const CorretorTop5 = () => {
       }> = [];
       
       let posicaoAtual = 1;
-      for (let i = 0; i < rankingData.length; i++) {
-        if (i > 0 && rankingData[i].nota_total !== rankingData[i-1].nota_total) {
-          posicaoAtual = i + 1;
+      let proximaPosicao = 1;
+      
+      for (let i = 0; i < processedData.length; i++) {
+        // Se a nota mudou, atualizar a posição atual
+        if (i > 0 && processedData[i].nota_total !== processedData[i-1].nota_total) {
+          posicaoAtual = proximaPosicao;
         }
         
-        rankingComPosicao.push({
-          posicao: posicaoAtual,
-          nome_aluno: rankingData[i].nome_aluno,
-          nota_total: rankingData[i].nota_total,
-          simulado_titulo: rankingData[i].simulados?.titulo
-        });
+        // Só incluir se estiver nas 5 primeiras posições
+        if (posicaoAtual <= 5) {
+          rankingComPosicao.push({
+            posicao: posicaoAtual,
+            nome_aluno: processedData[i].nome_aluno,
+            nota_total: processedData[i].nota_total,
+            simulado_titulo: processedData[i].simulados?.titulo
+          });
+        }
         
-        if (posicaoAtual > 5) break;
+        proximaPosicao = i + 2; // Próxima posição disponível
       }
       
       return rankingComPosicao;
