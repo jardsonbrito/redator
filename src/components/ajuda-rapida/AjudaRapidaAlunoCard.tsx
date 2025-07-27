@@ -43,9 +43,21 @@ export const AjudaRapidaAlunoCard = () => {
 
   return (
     <Card 
-      className="bg-white hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 border-l-primary"
+      className="bg-white hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 border-l-primary relative"
       onClick={() => navigate('/ajuda-rapida')}
     >
+      {/* Badge de notificação no canto superior direito */}
+      {mensagensNaoLidas > 0 && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Badge 
+            variant="destructive" 
+            className="rounded-full min-w-[24px] h-6 flex items-center justify-center text-xs font-bold bg-red-500 text-white border-2 border-white shadow-lg"
+          >
+            {mensagensNaoLidas}
+          </Badge>
+        </div>
+      )}
+      
       <CardContent className="flex items-center justify-between p-6">
         <div className="flex items-center space-x-4">
           <div className="bg-primary/10 p-3 rounded-lg">
@@ -58,15 +70,7 @@ export const AjudaRapidaAlunoCard = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2 relative">
-          {mensagensNaoLidas > 0 && (
-            <Badge 
-              variant="destructive" 
-              className="rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs font-semibold bg-red-500 text-white border-0"
-            >
-              {mensagensNaoLidas}
-            </Badge>
-          )}
+        <div className="flex items-center space-x-2">
           <MessageCircle className="w-5 h-5 text-primary" />
         </div>
       </CardContent>
