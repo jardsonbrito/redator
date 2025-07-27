@@ -156,13 +156,9 @@ export const RedacaoEnviadaCard = ({
             </CardTitle>
             <div className="flex flex-wrap gap-2 shrink-0">
               {/* ETAPA 1: Removida tag "Corrigido" da home - status só aparece na vista pedagógica */}
-              {redacao.status === "em_correcao" ? (
+              {redacao.status === "em_correcao" && (
                 <Badge className="bg-orange-100 text-orange-800 text-xs">
                   Em correção
-                </Badge>
-              ) : (
-                <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                  Aguardando correção
                 </Badge>
               )}
               <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
