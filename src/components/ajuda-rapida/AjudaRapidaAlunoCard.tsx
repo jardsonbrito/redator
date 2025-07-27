@@ -58,15 +58,14 @@ export const AjudaRapidaAlunoCard = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 relative">
           {mensagensNaoLidas > 0 && (
-            <Badge variant="destructive" className="rounded-full">
+            <Badge 
+              variant="destructive" 
+              className="rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs font-semibold bg-red-500 text-white border-0"
+            >
               {mensagensNaoLidas}
             </Badge>
-          )}
-          {/* Debug visual */}
-          {mensagensNaoLidas === 0 && (
-            <span className="text-xs text-gray-400">({mensagensNaoLidas} msgs)</span>
           )}
           <MessageCircle className="w-5 h-5 text-primary" />
         </div>

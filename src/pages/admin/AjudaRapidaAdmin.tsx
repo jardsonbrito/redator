@@ -125,9 +125,17 @@ export const AjudaRapidaAdmin = () => {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb padronizado */}
+      <div className="flex items-center space-x-2 text-sm">
+        <span className="text-primary font-medium">Dashboard</span>
+        <span className="text-muted-foreground">/</span>
+        <span className="text-foreground">Ajuda Rápida</span>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Ajuda Rápida</h1>
+          <h1 className="text-3xl font-bold">Recados dos Alunos</h1>
+          <p className="text-muted-foreground mt-1">Gerenciar conversas entre alunos e corretores</p>
         </div>
         <Button onClick={carregarConversas} disabled={loading}>
           {loading ? "Carregando..." : "Atualizar"}
@@ -151,82 +159,83 @@ export const AjudaRapidaAdmin = () => {
       ) : (
         <div className="grid gap-4">
           {conversas.map((conversa) => (
-            <Card key={`${conversa.aluno_id}-${conversa.corretor_id}`} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">{conversa.aluno_nome}</h3>
-                        <p className="text-sm text-muted-foreground">Aluno</p>
-                      </div>
-                      <div className="text-muted-foreground">↔</div>
-                      <div>
-                        <h3 className="font-semibold text-lg">{conversa.corretor_nome}</h3>
-                        <p className="text-sm text-muted-foreground">Corretor</p>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-muted/50 p-3 rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-1">Última mensagem:</p>
-                      <p className="text-sm">{formatarMensagem(conversa.ultima_mensagem)}</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{formatarData(conversa.ultima_data)}</span>
-                      <Badge variant="secondary">
-                        {conversa.total_mensagens} mensagem{conversa.total_mensagens !== 1 ? 's' : ''}
-                      </Badge>
-                    </div>
+            <Card key={`${conversa.aluno_id}-${conversa.corretor_id}`} className="bg-white hover:shadow-md transition-all duration-200 border border-border/20 rounded-lg shadow-sm">
+              <CardContent className="p-4">
+                {/* Topo com nomes */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg text-foreground">{conversa.aluno_nome}</h3>
+                    <p className="text-sm text-muted-foreground">Aluno</p>
                   </div>
+                  <div className="text-muted-foreground text-lg">↔</div>
+                  <div className="flex-1 text-right">
+                    <h3 className="font-bold text-lg text-foreground">{conversa.corretor_nome}</h3>
+                    <p className="text-sm text-muted-foreground">Corretor</p>
+                  </div>
+                </div>
+                
+                {/* Centro com última mensagem */}
+                <div className="bg-muted/30 p-3 rounded-md mb-3">
+                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Última mensagem:</p>
+                  <p className="text-sm text-foreground line-clamp-2">{formatarMensagem(conversa.ultima_mensagem)}</p>
+                </div>
+                
+                {/* Data e contador */}
+                <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                  <span>{formatarData(conversa.ultima_data)}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {conversa.total_mensagens} mensagem{conversa.total_mensagens !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
+                
+                {/* Rodapé com botões */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/20">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConversaAtiva({
+                      alunoId: conversa.aluno_id,
+                      corretorId: conversa.corretor_id
+                    })}
+                    className="flex items-center gap-2 h-8"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Visualizar
+                  </Button>
                   
-                  <div className="flex items-center gap-2 ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setConversaAtiva({
-                        alunoId: conversa.aluno_id,
-                        corretorId: conversa.corretor_id
-                      })}
-                      className="flex items-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Visualizar
-                    </Button>
-                    
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10"
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10 h-8"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Excluir
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir Conversa</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir permanentemente esta conversa entre{" "}
+                          <strong>{conversa.aluno_nome}</strong> e{" "}
+                          <strong>{conversa.corretor_nome}</strong>?
+                          <br /><br />
+                          Esta ação não pode ser desfeita e todas as mensagens serão perdidas.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeletarConversa(conversa.aluno_id, conversa.corretor_id)}
+                          className="bg-destructive hover:bg-destructive/90"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir Conversa</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir permanentemente esta conversa entre{" "}
-                            <strong>{conversa.aluno_nome}</strong> e{" "}
-                            <strong>{conversa.corretor_nome}</strong>?
-                            <br /><br />
-                            Esta ação não pode ser desfeita e todas as mensagens serão perdidas.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeletarConversa(conversa.aluno_id, conversa.corretor_id)}
-                            className="bg-destructive hover:bg-destructive/90"
-                          >
-                            Excluir Permanentemente
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+                          Excluir Permanentemente
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>
