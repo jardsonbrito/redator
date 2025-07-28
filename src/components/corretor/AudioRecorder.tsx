@@ -161,7 +161,7 @@ export const AudioRecorder = ({
 
       // Update database with audio URL
       const { error: dbError } = await supabase
-        .from(tabela)
+        .from(tabela as any)
         .update({ audio_url: publicUrl })
         .eq('id', redacaoId);
 
@@ -202,7 +202,7 @@ export const AudioRecorder = ({
 
       // Update database
       const { error: dbError } = await supabase
-        .from(tabela)
+        .from(tabela as any)
         .update({ audio_url: null })
         .eq('id', redacaoId);
 
