@@ -228,6 +228,16 @@ export const RedacaoEnviadaCard = ({
                 </div>
               </div>
             </div>
+
+            {/* Player de áudio do corretor - logo após as notas */}
+            {redacao.audio_url && (
+              <div className="pt-4 border-t border-primary/20">
+                <AudioPlayerAluno 
+                  audioUrl={redacao.audio_url} 
+                  corretorNome="Corretor"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -430,13 +440,6 @@ export const RedacaoEnviadaCard = ({
               </div>
             )}
             
-            {/* Player de áudio do corretor - só exibir se áudio existe */}
-            {redacao.audio_url && (
-              <AudioPlayerAluno 
-                audioUrl={redacao.audio_url} 
-                corretorNome="Corretor"
-              />
-            )}
             
             {/* Botão de download da correção - SEMPRE MOSTRAR quando há correção */}
             <div className="flex justify-center pt-4">

@@ -15,22 +15,45 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    if (!audioUrl) {
+      setIsLoading(false);
+      setHasError(true);
+      return;
+    }
+
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Reset states
+    setIsLoading(true);
+    setHasError(false);
+    setDuration(0);
+    setCurrentTime(0);
+    setIsPlaying(false);
+
     const handleLoadedMetadata = () => {
+      console.log('🎵 Metadata carregada:', audio.duration);
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
         setDuration(audio.duration);
         setIsLoading(false);
       }
     };
 
+    const handleCanPlay = () => {
+      console.log('🎵 Can play:', audio.duration);
+      if (!duration && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+        setIsLoading(false);
+      }
+    };
+
     const handleTimeUpdate = () => {
-      if (audio.currentTime && !isNaN(audio.currentTime) && isFinite(audio.currentTime)) {
+      if (audio.currentTime !== undefined && !isNaN(audio.currentTime) && isFinite(audio.currentTime)) {
         setCurrentTime(audio.currentTime);
       }
     };
@@ -44,36 +67,44 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
     };
 
     const handleError = (e: Event) => {
+      console.error('❌ Erro ao carregar áudio:', e);
       setIsLoading(false);
-      console.error('Erro ao carregar áudio:', e);
+      setHasError(true);
     };
 
-    const handleCanPlay = () => {
-      // Fallback se loadedmetadata não funcionar
-      if (!duration && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+    const handleLoadStart = () => {
+      console.log('🎵 Iniciando carregamento do áudio');
+      setIsLoading(true);
+    };
+
+    const handleDurationChange = () => {
+      console.log('🎵 Duração mudou:', audio.duration);
+      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
         setDuration(audio.duration);
         setIsLoading(false);
       }
     };
 
-    // Adicionar múltiplos listeners para maior compatibilidade
+    // Event listeners
+    audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('durationchange', handleDurationChange);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
 
-    // Forçar carregamento dos metadados
-    audio.load();
-
+    // Cleanup
     return () => {
+      audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [audioUrl, duration]);
+  }, [audioUrl]);
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds)) return "00:00";
@@ -110,77 +141,47 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
     setCurrentTime(newTime);
   };
 
+  if (hasError) {
+    return (
+      <div className="flex items-center gap-3 text-gray-500 text-sm">
+        <span>🔊 Comentário do corretor</span>
+        <span className="text-xs">(Erro ao carregar áudio)</span>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <Card className="w-full">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Áudio do corretor</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-4 text-gray-500">
-            Carregando áudio...
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-3 text-gray-500 text-sm">
+        <span>🔊 Comentário do corretor</span>
+        <span className="text-xs">Carregando áudio...</span>
+      </div>
     );
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Áudio do corretor</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4">
-          <audio
-            ref={audioRef}
-            src={audioUrl}
-            preload="metadata"
-          />
-          
-          <Button
-            onClick={togglePlay}
-            size="sm"
-            variant="outline"
-            className="rounded-full w-10 h-10 p-0 flex-shrink-0"
-            disabled={duration === 0}
-          >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </Button>
-          
-          <div className="flex-1 flex items-center gap-3">
-            <div 
-              className="flex-1 bg-gray-200 rounded-full h-2 cursor-pointer relative overflow-hidden"
-              onClick={handleSeek}
-            >
-              <div 
-                className="bg-primary h-2 rounded-full transition-all duration-200"
-                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-              />
-            </div>
-            
-            <div className="text-sm text-gray-600 font-mono min-w-[80px] text-center">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </div>
-          </div>
-          
-          {(corretorNome || corretorAvatar) && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={corretorAvatar} alt={corretorNome} />
-                <AvatarFallback className="text-xs">
-                  {corretorNome ? corretorNome.charAt(0).toUpperCase() : 'C'}
-                </AvatarFallback>
-              </Avatar>
-              {corretorNome && (
-                <span className="text-sm text-gray-600 hidden sm:inline">
-                  {corretorNome}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex items-center gap-3">
+      <audio
+        ref={audioRef}
+        src={audioUrl}
+        preload="metadata"
+      />
+      
+      <span className="text-sm font-medium text-gray-700">🔊 Comentário do corretor</span>
+      
+      <Button
+        onClick={togglePlay}
+        size="sm"
+        variant="outline"
+        className="rounded-full w-8 h-8 p-0 flex-shrink-0"
+        disabled={duration === 0}
+      >
+        {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+      </Button>
+      
+      <span className="text-xs text-gray-600 font-mono">
+        {formatTime(duration)}
+      </span>
+    </div>
   );
 };
