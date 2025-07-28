@@ -127,11 +127,16 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         .select("id")
         .eq("email", userEmail)
         .eq("user_type", "aluno")
-        .single();
+        .maybeSingle();
 
-      if (fetchError || !profileData?.id) {
-        console.error("❌ Falha ao buscar o ID do usuário:", fetchError);
-        throw new Error(`Usuário não encontrado no banco: ${fetchError?.message || 'ID não localizado'}`);
+      if (fetchError) {
+        console.error("❌ Erro na consulta ao banco:", fetchError);
+        throw new Error(`Erro na busca do usuário: ${fetchError.message}`);
+      }
+
+      if (!profileData?.id) {
+        console.error("❌ Usuário não encontrado no banco para o email:", userEmail);
+        throw new Error('Usuário não encontrado no sistema. Verifique se o cadastro foi realizado corretamente.');
       }
 
       const userId = profileData.id;
