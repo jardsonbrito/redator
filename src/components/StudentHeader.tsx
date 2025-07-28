@@ -6,6 +6,7 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAvatar } from "@/components/StudentAvatar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface StudentHeaderProps {
   pageTitle?: string;
@@ -16,6 +17,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleLogout = () => {
     logoutStudent();
@@ -46,8 +48,8 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
           )}
           
           <div className="flex items-center gap-3">
-            {/* Avatar do estudante */}
-            <StudentAvatar size="sm" showUpload={false} />
+            {/* Avatar do estudante - apenas no desktop */}
+            {!isMobile && <StudentAvatar size="sm" showUpload={false} />}
             
             {/* Link para Professor apenas se for admin autenticado */}
             {user && isAdmin && (

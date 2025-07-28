@@ -140,14 +140,19 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
 
       const userId = profileData.id;
       const fileExt = file.name.split(".").pop();
-      const filePath = `avatars/${userId}.${fileExt}`;
+      // Usar timestamp para criar nome único e evitar cache
+      const timestamp = Date.now();
+      const filePath = `avatars/${userId}-${timestamp}.${fileExt}`;
 
-      console.log("📁 Path final do novo avatar:", filePath);
+      console.log("📁 Path final do novo avatar com timestamp:", filePath);
 
-      // 2. Upload no Supabase Storage com sobrescrita
+      // 2. Upload no Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { 
+          cacheControl: '3600',
+          upsert: true 
+        });
 
       if (uploadError) {
         console.error("❌ Erro no upload:", uploadError);
@@ -156,22 +161,21 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
 
       console.log("✅ Upload realizado com sucesso!");
 
-      // 3. Gerar URL com timestamp para forçar nova versão
+      // 3. Gerar URL pública do novo arquivo
       const { data: publicData } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
       
-      const timestamp = new Date().getTime();
-      const newAvatarUrl = `${publicData.publicUrl}?t=${timestamp}`;
+      const newAvatarUrl = publicData.publicUrl;
       
-      console.log("🌐 Nova URL gerada com bust de cache:", newAvatarUrl);
+      console.log("🌐 Nova URL pública gerada:", newAvatarUrl);
 
       // 4. Atualizar avatar_url no banco COM VERIFICAÇÃO
       console.log("🔍 Tentando atualizar avatar_url para userId:", userId);
       
       const { error: updateError, data: updateResult } = await supabase
         .from("profiles")
-        .update({ avatar_url: newAvatarUrl })
+        .update({ avatar_url: filePath })
         .eq("id", userId)
         .select("*");
 
@@ -196,9 +200,9 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       
       console.log("🌐 URL pública da nova imagem gerada:", publicData?.publicUrl);
 
-      // Cache para alunos simples
+      // Cache para alunos simples com nova URL
       if (!user?.id && studentData.email) {
-        localStorage.setItem(`avatar_${studentData.email}`, publicData?.publicUrl || '');
+        localStorage.setItem(`avatar_${studentData.email}`, newAvatarUrl);
         console.log('💾 Avatar salvo no cache local');
       }
 
