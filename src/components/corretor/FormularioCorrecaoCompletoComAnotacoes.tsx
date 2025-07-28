@@ -12,6 +12,7 @@ import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 
 import { ArrowLeft, Save, CheckCircle, Copy } from "lucide-react";
+import { AudioRecorder } from "./AudioRecorder";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -46,6 +47,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [loadingCorrecao, setLoadingCorrecao] = useState(true);
   const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
   const [modoEdicao, setModoEdicao] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   
   // Use useRef instead of state to avoid re-renders
   const anotacaoVisualRef = useRef<RedacaoAnotacaoVisualRef | null>(null);
@@ -87,6 +89,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         
         setRelatorioPedagogico(data[`elogios_pontos_atencao_${prefixo}`] || "");
         setManuscritaUrl(data.redacao_manuscrita_url || null);
+        setAudioUrl(data.audio_url || null);
         
         if (data[`status_${prefixo}`] === 'incompleta' || data[`status_${prefixo}`] === 'corrigida') {
           setModoEdicao(true);
@@ -286,16 +289,30 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               </div>
             </div>
             
-            {/* Botões de ação - Mais espaçados */}
-            <div className="flex gap-4">
-              <Button variant="outline" onClick={() => salvarCorrecao('incompleta')} disabled={loading} className="px-6">
-                <Save className="w-4 h-4 mr-2" />
-                Salvar Incompleta
-              </Button>
-              <Button onClick={() => salvarCorrecao('corrigida')} disabled={loading} className="px-6">
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Finalizar Correção
-              </Button>
+            {/* Gravação de áudio e botões de ação */}
+            <div className="flex items-center gap-4">
+              {/* Componente de gravação de áudio */}
+              <AudioRecorder
+                redacaoId={redacao.id}
+                tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                        redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                disabled={redacao.status_minha_correcao === 'corrigida'}
+                existingAudioUrl={audioUrl}
+                onAudioSaved={(url) => setAudioUrl(url)}
+                onAudioDeleted={() => setAudioUrl(null)}
+              />
+              
+              {/* Botões de ação */}
+              <div className="flex gap-4">
+                <Button variant="outline" onClick={() => salvarCorrecao('incompleta')} disabled={loading} className="px-6">
+                  <Save className="w-4 h-4 mr-2" />
+                  Salvar Incompleta
+                </Button>
+                <Button onClick={() => salvarCorrecao('corrigida')} disabled={loading} className="px-6">
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Finalizar Correção
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

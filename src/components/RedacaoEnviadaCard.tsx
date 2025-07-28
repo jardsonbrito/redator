@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download } from "lucide-react";
 import { RedacaoAnotacaoVisual } from "./corretor/RedacaoAnotacaoVisual";
+import { AudioPlayerAluno } from "./AudioPlayerAluno";
 import { useToast } from "@/hooks/use-toast";
 import { downloadRedacaoManuscritaCorrigida } from "@/utils/redacaoDownload";
 
@@ -44,6 +45,7 @@ interface RedacaoEnviadaCardProps {
     elogios_pontos_atencao_corretor_2?: string | null;
     correcao_arquivo_url_corretor_1?: string | null;
     correcao_arquivo_url_corretor_2?: string | null;
+    audio_url?: string | null;
   };
 }
 
@@ -426,6 +428,14 @@ export const RedacaoEnviadaCard = ({
                   {elogios2}
                 </p>
               </div>
+            )}
+            
+            {/* Player de áudio do corretor - só exibir se áudio existe */}
+            {redacao.audio_url && (
+              <AudioPlayerAluno 
+                audioUrl={redacao.audio_url} 
+                corretorNome="Corretor"
+              />
             )}
             
             {/* Botão de download da correção - SEMPRE MOSTRAR quando há correção */}

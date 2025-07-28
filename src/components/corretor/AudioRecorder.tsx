@@ -5,9 +5,11 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+type TabelaTipo = 'redacoes_enviadas' | 'redacoes_simulado' | 'redacoes_exercicio';
+
 interface AudioRecorderProps {
   redacaoId: string;
-  tabela: string;
+  tabela: TabelaTipo;
   disabled?: boolean;
   onAudioSaved?: (audioUrl: string) => void;
   onAudioDeleted?: () => void;
@@ -159,11 +161,27 @@ export const AudioRecorder = ({
         .from('audios-corretores')
         .getPublicUrl(fileName);
 
-      // Update database with audio URL
-      const { error: dbError } = await supabase
-        .from(tabela as any)
-        .update({ audio_url: publicUrl })
-        .eq('id', redacaoId);
+      // Update database with audio URL based on table type
+      let dbError;
+      if (tabela === 'redacoes_enviadas') {
+        const { error } = await supabase
+          .from('redacoes_enviadas')
+          .update({ audio_url: publicUrl })
+          .eq('id', redacaoId);
+        dbError = error;
+      } else if (tabela === 'redacoes_simulado') {
+        const { error } = await supabase
+          .from('redacoes_simulado')
+          .update({ audio_url: publicUrl })
+          .eq('id', redacaoId);
+        dbError = error;
+      } else if (tabela === 'redacoes_exercicio') {
+        const { error } = await supabase
+          .from('redacoes_exercicio')
+          .update({ audio_url: publicUrl })
+          .eq('id', redacaoId);
+        dbError = error;
+      }
 
       if (dbError) throw dbError;
 
@@ -200,11 +218,27 @@ export const AudioRecorder = ({
           .remove([filePath]);
       }
 
-      // Update database
-      const { error: dbError } = await supabase
-        .from(tabela as any)
-        .update({ audio_url: null })
-        .eq('id', redacaoId);
+      // Update database based on table type
+      let dbError;
+      if (tabela === 'redacoes_enviadas') {
+        const { error } = await supabase
+          .from('redacoes_enviadas')
+          .update({ audio_url: null })
+          .eq('id', redacaoId);
+        dbError = error;
+      } else if (tabela === 'redacoes_simulado') {
+        const { error } = await supabase
+          .from('redacoes_simulado')
+          .update({ audio_url: null })
+          .eq('id', redacaoId);
+        dbError = error;
+      } else if (tabela === 'redacoes_exercicio') {
+        const { error } = await supabase
+          .from('redacoes_exercicio')
+          .update({ audio_url: null })
+          .eq('id', redacaoId);
+        dbError = error;
+      }
 
       if (dbError) throw dbError;
 
