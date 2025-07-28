@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface AudioPlayerAlunoProps {
   audioUrl: string;
@@ -12,86 +10,69 @@ interface AudioPlayerAlunoProps {
 
 export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: AudioPlayerAlunoProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [useNativePlayer, setUseNativePlayer] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Verificar se URL é válida
+  if (!audioUrl || !audioUrl.trim()) {
+    return null;
+  }
+
   useEffect(() => {
-    if (!audioUrl) {
-      setIsLoading(false);
-      setHasError(true);
+    console.log('🎵 AudioPlayerAluno montado com URL:', audioUrl);
+    
+    const audio = audioRef.current;
+    if (!audio) {
+      console.log('❌ Ref do audio não encontrada');
       return;
     }
 
-    const audio = audioRef.current;
-    if (!audio) return;
-
     // Reset states
-    setIsLoading(true);
+    setIsReady(false);
     setHasError(false);
     setDuration(0);
-    setCurrentTime(0);
     setIsPlaying(false);
 
     const handleLoadedMetadata = () => {
-      console.log('🎵 Metadata carregada:', audio.duration);
+      console.log('✅ Metadata carregada, duração:', audio.duration);
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
         setDuration(audio.duration);
-        setIsLoading(false);
+        setIsReady(true);
       }
     };
 
     const handleCanPlay = () => {
-      console.log('🎵 Can play:', audio.duration);
-      if (!duration && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-        setDuration(audio.duration);
-        setIsLoading(false);
-      }
-    };
-
-    const handleTimeUpdate = () => {
-      if (audio.currentTime !== undefined && !isNaN(audio.currentTime) && isFinite(audio.currentTime)) {
-        setCurrentTime(audio.currentTime);
-      }
-    };
-
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-      if (audio) {
-        audio.currentTime = 0;
+      console.log('✅ Can play evento disparado');
+      if (!isReady) {
+        setIsReady(true);
+        if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+          setDuration(audio.duration);
+        }
       }
     };
 
     const handleError = (e: Event) => {
       console.error('❌ Erro ao carregar áudio:', e);
-      setIsLoading(false);
       setHasError(true);
+      setIsReady(false);
+      // Fallback para player nativo após 3 segundos
+      setTimeout(() => {
+        setUseNativePlayer(true);
+      }, 3000);
     };
 
     const handleLoadStart = () => {
-      console.log('🎵 Iniciando carregamento do áudio');
-      setIsLoading(true);
-    };
-
-    const handleDurationChange = () => {
-      console.log('🎵 Duração mudou:', audio.duration);
-      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-        setDuration(audio.duration);
-        setIsLoading(false);
-      }
+      console.log('🔄 Começando a carregar áudio...');
     };
 
     // Event listeners
     audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('durationchange', handleDurationChange);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
 
     // Cleanup
@@ -99,12 +80,21 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('durationchange', handleDurationChange);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [audioUrl]);
+  }, [audioUrl, isReady]);
+
+  // Timeout fallback - se não carregar em 5 segundos, usar player nativo
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!isReady && !hasError) {
+        console.log('⏰ Timeout atingido, usando player nativo');
+        setUseNativePlayer(true);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, [isReady, hasError]);
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds)) return "00:00";
@@ -122,59 +112,65 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
       setIsPlaying(false);
     } else {
       audio.play().catch(error => {
-        console.error('Erro ao reproduzir áudio:', error);
+        console.error('❌ Erro ao reproduzir áudio:', error);
+        setHasError(true);
       });
       setIsPlaying(true);
     }
   };
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const audio = audioRef.current;
-    if (!audio || duration === 0) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
-    const newTime = percentage * duration;
-    
-    audio.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
-
-  if (hasError) {
+  // Se deve usar player nativo ou teve erro muito tempo
+  if (useNativePlayer || hasError) {
     return (
-      <div className="flex items-center gap-3 text-gray-500 text-sm">
-        <span>🔊 Comentário do corretor</span>
-        <span className="text-xs">(Erro ao carregar áudio)</span>
+      <div className="flex items-center gap-3 py-2">
+        <Volume2 className="w-4 h-4 text-gray-600" />
+        <span className="text-sm font-medium text-gray-700">Comentário do corretor</span>
+        <audio 
+          controls 
+          preload="metadata"
+          className="max-w-[200px] h-8"
+          style={{ filter: 'sepia(20%) saturate(70%) hue-rotate(200deg)' }}
+        >
+          <source src={audioUrl} type="audio/webm" />
+          <source src={audioUrl} type="audio/mp3" />
+          Seu navegador não suporta áudio.
+        </audio>
       </div>
     );
   }
 
-  if (isLoading) {
+  // Ainda carregando
+  if (!isReady) {
     return (
-      <div className="flex items-center gap-3 text-gray-500 text-sm">
-        <span>🔊 Comentário do corretor</span>
-        <span className="text-xs">Carregando áudio...</span>
+      <div className="flex items-center gap-3 text-gray-500 text-sm py-2">
+        <audio ref={audioRef} src={audioUrl} preload="metadata" />
+        <Volume2 className="w-4 h-4" />
+        <span>Comentário do corretor</span>
+        <span className="text-xs animate-pulse">Carregando áudio...</span>
       </div>
     );
   }
 
+  // Player customizado pronto
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 py-2">
       <audio
         ref={audioRef}
         src={audioUrl}
         preload="metadata"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
       />
       
-      <span className="text-sm font-medium text-gray-700">🔊 Comentário do corretor</span>
+      <Volume2 className="w-4 h-4 text-gray-600" />
+      <span className="text-sm font-medium text-gray-700">Comentário do corretor</span>
       
       <Button
         onClick={togglePlay}
         size="sm"
         variant="outline"
         className="rounded-full w-8 h-8 p-0 flex-shrink-0"
-        disabled={duration === 0}
       >
         {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
       </Button>
