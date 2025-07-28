@@ -1,19 +1,22 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Volume2 } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface AudioPlayerAlunoProps {
   audioUrl: string;
   corretorNome?: string;
   corretorAvatar?: string;
+  isStudentView?: boolean; // Nova prop para distinguir visualização do aluno
 }
 
-export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: AudioPlayerAlunoProps) => {
+export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStudentView = false }: AudioPlayerAlunoProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [useNativePlayer, setUseNativePlayer] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -35,6 +38,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
     setIsReady(false);
     setHasError(false);
     setDuration(0);
+    setCurrentTime(0);
     setIsPlaying(false);
 
     const handleLoadedMetadata = () => {
@@ -55,6 +59,10 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
       }
     };
 
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+
     const handleError = (e: Event) => {
       console.error('❌ Erro ao carregar áudio:', e);
       setHasError(true);
@@ -73,6 +81,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
     audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('error', handleError);
 
     // Cleanup
@@ -80,6 +89,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('error', handleError);
     };
   }, [audioUrl, isReady]);
@@ -119,6 +129,29 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
     }
   };
 
+  const toggleMute = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    audio.muted = !audio.muted;
+    setIsMuted(audio.muted);
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const clickTime = (clickX / width) * duration;
+    
+    audio.currentTime = clickTime;
+    setCurrentTime(clickTime);
+  };
+
+  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   // Se deve usar player nativo ou teve erro muito tempo
   if (useNativePlayer || hasError) {
     return (
@@ -151,7 +184,55 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
     );
   }
 
-  // Player customizado pronto
+  // Player customizado para visualização do aluno
+  if (isStudentView) {
+    return (
+      <div className="audio-player-aluno flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-[12px] shadow-sm max-w-[420px] w-full">
+        <audio
+          ref={audioRef}
+          src={audioUrl}
+          preload="auto"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => setIsPlaying(false)}
+        />
+        
+        {/* Botão Play/Pause */}
+        <button
+          onClick={togglePlay}
+          className="play-button bg-black text-white border-none rounded-full w-9 h-9 flex items-center justify-center text-lg cursor-pointer hover:bg-gray-800 transition-colors"
+        >
+          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+        </button>
+        
+        {/* Barra de Progresso */}
+        <div 
+          className="progress-bar flex-1 h-[6px] bg-gray-200 rounded-[3px] relative overflow-hidden cursor-pointer"
+          onClick={handleProgressClick}
+        >
+          <div 
+            className="progress h-full bg-[#3C0D99] transition-all duration-300 ease-out"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+        
+        {/* Tempo */}
+        <span className="time text-sm text-gray-800 min-w-[36px] text-center font-mono">
+          {formatTime(currentTime)}
+        </span>
+        
+        {/* Botão Volume */}
+        <button
+          onClick={toggleMute}
+          className="volume-button bg-black text-white border-none rounded-full w-9 h-9 flex items-center justify-center text-lg cursor-pointer hover:bg-gray-800 transition-colors"
+        >
+          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        </button>
+      </div>
+    );
+  }
+
+  // Player padrão para outros perfis
   return (
     <div className="bg-white border border-gray-200 rounded-[10px] p-3 shadow-sm">
       <audio

@@ -235,6 +235,7 @@ export const RedacaoEnviadaCard = ({
                 <AudioPlayerAluno 
                   audioUrl={redacao.audio_url} 
                   corretorNome="Corretor"
+                  isStudentView={true}
                 />
               </div>
             )}
