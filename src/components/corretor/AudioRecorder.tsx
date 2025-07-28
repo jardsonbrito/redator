@@ -147,6 +147,13 @@ export const AudioRecorder = ({
       const timestamp = Date.now();
       const fileName = `${redacaoId}/${timestamp}.webm`;
       
+      console.log('🎵 AUDIO DEBUG - Iniciando upload:', {
+        redacaoId,
+        tabela,
+        fileName,
+        audioBlobSize: audioBlob.size
+      });
+      
       // Upload to Supabase Storage
       const { data, error: uploadError } = await supabase.storage
         .from('audios-corretores')
@@ -155,28 +162,44 @@ export const AudioRecorder = ({
           upsert: true
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('🎵 AUDIO DEBUG - Erro no upload para storage:', uploadError);
+        throw uploadError;
+      }
+      
+      console.log('🎵 AUDIO DEBUG - Upload para storage bem-sucedido:', data);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('audios-corretores')
         .getPublicUrl(fileName);
+      
+      console.log('🎵 AUDIO DEBUG - URL pública gerada:', publicUrl);
 
       // Update database with audio URL based on table type
+      console.log('🎵 AUDIO DEBUG - Tentando atualizar banco:', {
+        tabela,
+        redacaoId,
+        publicUrl
+      });
+      
       let dbError;
       if (tabela === 'redacoes_enviadas') {
+        console.log('🎵 AUDIO DEBUG - Atualizando redacoes_enviadas...');
         const { error } = await supabase
           .from('redacoes_enviadas')
           .update({ audio_url: publicUrl })
           .eq('id', redacaoId);
         dbError = error;
       } else if (tabela === 'redacoes_simulado') {
+        console.log('🎵 AUDIO DEBUG - Atualizando redacoes_simulado...');
         const { error } = await supabase
           .from('redacoes_simulado')
           .update({ audio_url: publicUrl })
           .eq('id', redacaoId);
         dbError = error;
       } else if (tabela === 'redacoes_exercicio') {
+        console.log('🎵 AUDIO DEBUG - Atualizando redacoes_exercicio...');
         const { error } = await supabase
           .from('redacoes_exercicio')
           .update({ audio_url: publicUrl })
@@ -184,7 +207,17 @@ export const AudioRecorder = ({
         dbError = error;
       }
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('🎵 AUDIO DEBUG - ERRO NO BANCO DE DADOS:', {
+          error: dbError,
+          tabela,
+          redacaoId,
+          publicUrl
+        });
+        throw dbError;
+      }
+      
+      console.log('🎵 AUDIO DEBUG - Atualização do banco bem-sucedida!');
 
       toast({
         title: "Áudio salvo!",
