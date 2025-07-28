@@ -134,6 +134,48 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     };
   }, [isStudentLoggedIn]);
 
+  // Função para garantir que o perfil existe no banco
+  const ensureProfileExists = async (email: string, nome: string, turma: string) => {
+    try {
+      console.log("🔍 Verificando se perfil existe para:", email);
+      const { supabase } = await import('@/integrations/supabase/client');
+
+      // Primeiro verifica se já existe
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .eq("user_type", "aluno")
+        .maybeSingle();
+
+      if (existingProfile) {
+        console.log("✅ Perfil já existe:", existingProfile.id);
+        return existingProfile.id;
+      }
+
+      // Se não existe, tenta criar
+      console.log("⚠️ Perfil não encontrado. Criando novo perfil para:", email);
+      
+      const { data: newProfile, error: insertError } = await supabase
+        .rpc('create_simple_profile', {
+          p_nome: nome || 'Aluno',
+          p_email: email,
+          p_turma: turma || ''
+        });
+
+      if (insertError) {
+        console.error("❌ Erro ao criar perfil:", insertError.message);
+        return null;
+      }
+
+      console.log("✅ Perfil criado com sucesso:", newProfile?.[0]?.id);
+      return newProfile?.[0]?.id;
+    } catch (error) {
+      console.error("❌ Erro inesperado ao verificar/criar perfil:", error);
+      return null;
+    }
+  };
+
   const loginAsStudent = async (turma: string, nome: string, email: string) => {
     console.log('🔐 Login como aluno - turma:', turma, 'nome:', nome, 'email:', email);
     
@@ -144,6 +186,9 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     };
     
     try {
+      // Garantir que o perfil existe no banco de dados
+      await ensureProfileExists(email.trim().toLowerCase(), nome.trim(), turma);
+      
       // Verificação automática de contas duplicadas e merge
       const { supabase } = await import('@/integrations/supabase/client');
       const { data: mergeResult } = await supabase.rpc('auto_merge_student_accounts', {
@@ -154,7 +199,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
         console.log('✅ Redações anteriores reconectadas automaticamente:', mergeResult.total_redacoes_merged);
       }
     } catch (error) {
-      console.warn('⚠️ Erro na verificação automática de merge:', error);
+      console.warn('⚠️ Erro na verificação automática:', error);
       // Não bloquear o login se a verificação falhar
     }
     
