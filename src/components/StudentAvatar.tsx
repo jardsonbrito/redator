@@ -162,10 +162,9 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       const fileExt = file.name.split(".").pop();
       const filePath = `avatars/${userId}.${fileExt}`;
 
-      console.log("📁 Path final do arquivo:", filePath);
-      console.log("🆔 ID do usuário encontrado:", userId);
+      console.log("📁 Path final do novo avatar:", filePath);
 
-      // 2. Upload no Supabase Storage
+      // 2. Upload no Supabase Storage com sobrescrita
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, file, { upsert: true });
@@ -189,7 +188,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         throw updateError;
       }
 
-      console.log("📝 avatar_url atualizado com sucesso!", updateResult);
+      console.log("📝 avatar_url atualizado na tabela profiles");
 
       // 4. Atualizar visualização
       const { data: publicData } = supabase.storage
@@ -199,7 +198,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       setAvatarUrl(publicData?.publicUrl);
       onAvatarUpdate?.(true);
       
-      console.log("🌐 URL pública do avatar:", publicData?.publicUrl);
+      console.log("🌐 URL pública da nova imagem gerada:", publicData?.publicUrl);
 
       // Cache para alunos simples
       if (!user?.id && studentData.email) {
@@ -225,7 +224,8 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
   };
 
   const handleAvatarClick = () => {
-    if (showUpload && fileInputRef.current) {
+    if (fileInputRef.current) {
+      console.log('🖱️ Avatar clicado. Abrindo seletor de arquivo...');
       fileInputRef.current.click();
     }
   };
@@ -238,8 +238,8 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
   return (
     <div className="relative">
       <Avatar 
-        className={`${sizeClasses[size]} border border-primary/20 transition-all hover:shadow-lg ${uploading ? 'opacity-50' : ''} ${showUpload && !avatarUrl ? 'cursor-pointer' : ''}`}
-        onClick={showUpload && !avatarUrl ? handleAvatarClick : undefined}
+        className={`${sizeClasses[size]} border border-primary/20 transition-all hover:shadow-lg ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer' : ''}`}
+        onClick={showUpload ? handleAvatarClick : undefined}
       >
         <AvatarImage src={avatarUrl || undefined} alt="Foto de perfil" />
         <AvatarFallback className="bg-primary/10 text-primary">
@@ -249,16 +249,14 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       
       {showUpload && (
         <>
-          {!avatarUrl && (
-            <div 
-              className={`absolute -bottom-1 -right-1 bg-primary rounded-full shadow-lg cursor-pointer hover:bg-primary/80 transition-colors ${
-                size === 'lg' ? 'p-2' : 'p-1.5'
-              }`}
-              onClick={handleAvatarClick}
-            >
-              <Camera className={`text-primary-foreground ${size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'}`} />
-            </div>
-          )}
+          <div 
+            className={`absolute -bottom-1 -right-1 bg-primary rounded-full shadow-lg cursor-pointer hover:bg-primary/80 transition-colors ${
+              size === 'lg' ? 'p-2' : 'p-1.5'
+            }`}
+            onClick={handleAvatarClick}
+          >
+            <Camera className={`text-primary-foreground ${size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'}`} />
+          </div>
           
           <input
             ref={fileInputRef}
