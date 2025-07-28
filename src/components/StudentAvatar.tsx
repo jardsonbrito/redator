@@ -119,55 +119,96 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       const userIdentifier = user?.id || studentData.email?.replace(/[^a-zA-Z0-9]/g, '_') || 'guest';
       const filePath = `${userIdentifier}.${fileExt}`;
 
+      console.log('🔄 Iniciando upload do avatar:', {
+        userIdentifier,
+        filePath,
+        hasUser: !!user?.id,
+        hasStudentData: !!studentData.email,
+        isStudentLoggedIn
+      });
+
       // 1. Upload da imagem para o Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
+        console.error('❌ Erro no upload do Storage:', uploadError);
         throw uploadError;
       }
+
+      console.log('✅ Upload do Storage concluído com sucesso');
 
       // 2. Obter URL pública da imagem
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
+      console.log('🔗 URL pública gerada:', publicUrl);
+
       // 3. Atualizar avatar_url na tabela profiles (salvar apenas o path, não a URL completa)
+      let updateSuccess = false;
+      
       if (user?.id) {
         // Usuário autenticado
-        const { error: updateError } = await supabase
+        console.log('👤 Tentando atualizar perfil autenticado. User ID:', user.id);
+        
+        const { data, error: updateError } = await supabase
           .from('profiles')
           .update({ avatar_url: filePath })
-          .eq('id', user.id);
+          .eq('id', user.id)
+          .select();
+
+        console.log('📊 Resultado do update autenticado:', { data, error: updateError });
 
         if (updateError) {
+          console.error('❌ Erro ao atualizar perfil autenticado:', updateError);
           throw updateError;
         }
+        
+        updateSuccess = !!data && data.length > 0;
+        console.log('✅ Update autenticado:', updateSuccess ? 'SUCESSO' : 'NENHUMA LINHA AFETADA');
+        
       } else if (isStudentLoggedIn && studentData.email) {
         // Aluno simples - salvar path e cache
-        const { error: updateError } = await supabase
+        console.log('🎓 Tentando atualizar perfil simples. Email:', studentData.email);
+        
+        const { data, error: updateError } = await supabase
           .from('profiles')
           .update({ avatar_url: filePath })
           .eq('email', studentData.email)
-          .eq('user_type', 'aluno');
+          .eq('user_type', 'aluno')
+          .select();
+
+        console.log('📊 Resultado do update simples:', { data, error: updateError });
 
         if (updateError) {
-          console.warn('Erro ao salvar no perfil, mantendo apenas no cache:', updateError);
+          console.error('❌ Erro ao atualizar perfil simples:', updateError);
+          console.warn('⚠️ Mantendo apenas no cache devido ao erro');
+        } else {
+          updateSuccess = !!data && data.length > 0;
+          console.log('✅ Update simples:', updateSuccess ? 'SUCESSO' : 'NENHUMA LINHA AFETADA');
         }
 
-        // Cache para alunos simples
+        // Cache para alunos simples (sempre, independente do update)
         localStorage.setItem(`avatar_${studentData.email}`, publicUrl);
+        console.log('💾 Avatar salvo no cache local');
       }
 
       // 4. Atualizar a imagem exibida
       setAvatarUrl(publicUrl);
       onAvatarUpdate?.(true);
 
+      const message = updateSuccess 
+        ? 'Foto de perfil atualizada com sucesso!' 
+        : 'Upload realizado! Foto será exibida localmente.';
+
       toast({
         title: 'Sucesso',
-        description: 'Foto de perfil atualizada com sucesso!',
+        description: message,
       });
+
+      console.log('🎉 Processo de upload concluído com sucesso');
 
     } catch (error) {
       console.error('❌ Erro no upload:', error);
