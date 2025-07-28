@@ -23,37 +23,57 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar }: Aud
     if (!audio) return;
 
     const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-      setIsLoading(false);
+      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+        setIsLoading(false);
+      }
     };
 
     const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
+      if (audio.currentTime && !isNaN(audio.currentTime) && isFinite(audio.currentTime)) {
+        setCurrentTime(audio.currentTime);
+      }
     };
 
     const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
-      audio.currentTime = 0;
+      if (audio) {
+        audio.currentTime = 0;
+      }
     };
 
-    const handleError = () => {
+    const handleError = (e: Event) => {
       setIsLoading(false);
-      console.error('Erro ao carregar áudio');
+      console.error('Erro ao carregar áudio:', e);
     };
 
+    const handleCanPlay = () => {
+      // Fallback se loadedmetadata não funcionar
+      if (!duration && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+        setIsLoading(false);
+      }
+    };
+
+    // Adicionar múltiplos listeners para maior compatibilidade
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
 
+    // Forçar carregamento dos metadados
+    audio.load();
+
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [audioUrl]);
+  }, [audioUrl, duration]);
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds)) return "00:00";

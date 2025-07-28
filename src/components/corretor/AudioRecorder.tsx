@@ -56,6 +56,7 @@ export const AudioRecorder = ({
   }, []);
 
   const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || !isFinite(seconds)) return "00:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -284,13 +285,13 @@ export const AudioRecorder = ({
   };
 
   const handleAudioLoad = () => {
-    if (audioRef.current) {
+    if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration) && isFinite(audioRef.current.duration)) {
       setDuration(audioRef.current.duration);
     }
   };
 
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
+    if (audioRef.current && audioRef.current.currentTime && !isNaN(audioRef.current.currentTime) && isFinite(audioRef.current.currentTime)) {
       setPlaybackTime(audioRef.current.currentTime);
     }
   };
