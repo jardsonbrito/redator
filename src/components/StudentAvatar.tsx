@@ -176,12 +176,22 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
 
       console.log("✅ Upload realizado com sucesso!");
 
-      // 3. Atualizar avatar_url no banco COM VERIFICAÇÃO
+      // 3. Gerar URL com timestamp para forçar nova versão
+      const { data: publicData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+      
+      const timestamp = new Date().getTime();
+      const newAvatarUrl = `${publicData.publicUrl}?t=${timestamp}`;
+      
+      console.log("🌐 Nova URL gerada com bust de cache:", newAvatarUrl);
+
+      // 4. Atualizar avatar_url no banco COM VERIFICAÇÃO
       console.log("🔍 Tentando atualizar avatar_url para userId:", userId);
       
-      const { error: updateError, data: updateResult, count } = await supabase
+      const { error: updateError, data: updateResult } = await supabase
         .from("profiles")
-        .update({ avatar_url: filePath })
+        .update({ avatar_url: newAvatarUrl })
         .eq("id", userId)
         .select("*");
 
@@ -200,12 +210,8 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       console.log("✅ avatar_url atualizado na tabela profiles! Linhas afetadas:", updateResult.length);
       console.log("📝 Dados atualizados:", updateResult[0]);
 
-      // 4. Atualizar visualização SOMENTE se foi bem-sucedido
-      const { data: publicData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
-      setAvatarUrl(publicData?.publicUrl);
+      // 5. Atualizar visualização SOMENTE após confirmação do banco
+      setAvatarUrl(newAvatarUrl);
       onAvatarUpdate?.(true);
       
       console.log("🌐 URL pública da nova imagem gerada:", publicData?.publicUrl);
