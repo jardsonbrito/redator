@@ -23,6 +23,7 @@ const RedacaoSimuladoList = () => {
   const [filtroTurma, setFiltroTurma] = useState<string>("todas");
   const [filtroStatus, setFiltroStatus] = useState<string>("todas");
   const [filtroSimulado, setFiltroSimulado] = useState<string>("todos");
+  const [filtroCorretor, setFiltroCorretor] = useState<string>("todos");
   const [buscaNome, setBuscaNome] = useState("");
   const [redacaoSelecionada, setRedacaoSelecionada] = useState<any>(null);
   const [duplicandoRedacao, setDuplicandoRedacao] = useState<any>(null);
@@ -303,11 +304,12 @@ const RedacaoSimuladoList = () => {
       (filtroStatus === "pendentes" && redacao.status_atual === 'pendente') ||
       (filtroStatus === "em_correcao" && redacao.status_atual === 'em_correcao');
     const matchSimulado = filtroSimulado === "todos" || redacao.id_simulado === filtroSimulado;
+    const matchCorretor = filtroCorretor === "todos" || redacao.corretor_id_atual === filtroCorretor;
     const matchNome = buscaNome === "" || 
       redacao.nome_aluno.toLowerCase().includes(buscaNome.toLowerCase()) ||
       redacao.email_aluno.toLowerCase().includes(buscaNome.toLowerCase());
     
-    return matchTurma && matchStatus && matchSimulado && matchNome;
+    return matchTurma && matchStatus && matchSimulado && matchCorretor && matchNome;
   });
 
   const turmasDisponiveis = ["LRA2025", "LRB2025", "LRC2025", "LRD2025", "LRE2025", "visitante"];
@@ -387,16 +389,16 @@ const RedacaoSimuladoList = () => {
             </div>
 
             <div>
-              <Label>Simulado</Label>
-              <Select value={filtroSimulado} onValueChange={setFiltroSimulado}>
+              <Label>Corretor</Label>
+              <Select value={filtroCorretor} onValueChange={setFiltroCorretor}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos os simulados</SelectItem>
-                  {simulados?.map(simulado => (
-                    <SelectItem key={simulado.id} value={simulado.id}>
-                      {simulado.titulo}
+                  <SelectItem value="todos">Todos os corretores</SelectItem>
+                  {corretores?.map(corretor => (
+                    <SelectItem key={corretor.id} value={corretor.id}>
+                      {corretor.nome_completo}
                     </SelectItem>
                   ))}
                 </SelectContent>
