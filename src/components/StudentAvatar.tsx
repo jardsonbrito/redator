@@ -134,12 +134,31 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         throw new Error(`Erro na busca do usuário: ${fetchError.message}`);
       }
 
-      if (!profileData?.id) {
-        console.error("❌ Usuário não encontrado no banco para o email:", userEmail);
-        throw new Error('Usuário não encontrado no sistema. Verifique se o cadastro foi realizado corretamente.');
+      let userId = profileData?.id;
+
+      // 2. Se não encontrou o perfil, criar automaticamente
+      if (!profileData) {
+        console.warn("⚠️ Nenhum perfil encontrado. Criando novo perfil para:", userEmail);
+
+        const { data: newProfile, error: insertError } = await supabase
+          .rpc('create_simple_profile', {
+            p_nome: studentData.nomeUsuario || 'Aluno',
+            p_email: userEmail,
+            p_turma: studentData.turma || ''
+          });
+
+        if (insertError) {
+          console.error("❌ Erro ao criar perfil:", insertError.message);
+          throw new Error('Erro ao criar perfil do usuário. Tente novamente.');
+        }
+
+        userId = newProfile?.[0]?.id;
+        console.log("✅ Perfil criado com sucesso para ID:", userId);
       }
 
-      const userId = profileData.id;
+      if (!userId) {
+        throw new Error('Erro ao obter ID do usuário.');
+      }
       const fileExt = file.name.split(".").pop();
       const filePath = `avatars/${userId}.${fileExt}`;
 
