@@ -21,67 +21,65 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
   const [uploading, setUploading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Carregar avatar do usuário (autenticado ou estudante simples)
+  // Carregar avatar do usuário
   useEffect(() => {
-    const loadUserProfile = async () => {
-      console.log('🔄 Carregando perfil do usuário...', { user: !!user, studentData });
-      
-      // Primeiro, tentar carregar do localStorage (cache rápido)
-      const cachedAvatar = localStorage.getItem('student_avatar_url');
-      if (cachedAvatar) {
-        setAvatarUrl(cachedAvatar);
-        onAvatarUpdate?.(true);
-      }
+    const loadAvatar = async () => {
+      try {
+        let avatarPath = null;
+        
+        if (user?.id) {
+          // Usuário autenticado - buscar do perfil
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('avatar_url')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          avatarPath = profileData?.avatar_url;
+        } else if (isStudentLoggedIn && studentData.email) {
+          // Aluno simples - usar localStorage primeiro
+          const storedAvatar = localStorage.getItem(`avatar_${studentData.email}`);
+          if (storedAvatar) {
+            setAvatarUrl(storedAvatar);
+            onAvatarUpdate?.(true);
+            return;
+          }
+          
+          // Buscar no perfil por email
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('avatar_url')
+            .eq('email', studentData.email)
+            .eq('user_type', 'aluno')
+            .maybeSingle();
+          
+          avatarPath = profileData?.avatar_url;
+        }
 
-      if (user) {
-        // Usuário autenticado do Supabase Auth
-        console.log('📸 Carregando avatar para usuário autenticado:', user.id);
-        const { data } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('id', user.id)
-          .maybeSingle();
-        
-        if (data && data.avatar_url) {
-          console.log('✅ Avatar encontrado para usuário autenticado:', data.avatar_url);
-          setUserProfile(data);
-          setAvatarUrl(data.avatar_url);
-          localStorage.setItem('student_avatar_url', data.avatar_url);
+        if (avatarPath) {
+          const { data } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(avatarPath);
+          
+          setAvatarUrl(data.publicUrl);
           onAvatarUpdate?.(true);
-        } else {
-          console.log('❌ Nenhum avatar encontrado para usuário autenticado');
-          if (!cachedAvatar) {
-            setAvatarUrl(null);
-            onAvatarUpdate?.(false);
+          
+          // Cache para alunos simples
+          if (!user?.id && studentData.email) {
+            localStorage.setItem(`avatar_${studentData.email}`, data.publicUrl);
           }
-        }
-      } else if (isStudentLoggedIn && studentData.email) {
-        // Estudante simples (useStudentAuth)
-        console.log('📸 Carregando avatar para estudante simples:', studentData.email);
-        const { data } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('email', studentData.email)
-          .eq('user_type', 'aluno')
-          .maybeSingle();
-        
-        if (data && data.avatar_url) {
-          console.log('✅ Avatar encontrado para estudante simples:', data.avatar_url);
-          setUserProfile(data);
-          setAvatarUrl(data.avatar_url);
-          localStorage.setItem('student_avatar_url', data.avatar_url);
-          onAvatarUpdate?.(true);
         } else {
-          console.log('❌ Nenhum avatar encontrado para estudante simples');
-          if (!cachedAvatar) {
-            setAvatarUrl(null);
-            onAvatarUpdate?.(false);
-          }
+          setAvatarUrl(null);
+          onAvatarUpdate?.(false);
         }
+      } catch (error) {
+        console.error('Erro ao carregar avatar:', error);
+        setAvatarUrl(null);
+        onAvatarUpdate?.(false);
       }
     };
 
-    loadUserProfile();
+    loadAvatar();
   }, [user, studentData.email, isStudentLoggedIn, onAvatarUpdate]);
 
   const sizeClasses = {
@@ -118,63 +116,52 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
     try {
       // Criar nome único para o arquivo
       const fileExt = file.name.split('.').pop();
-      const userIdentifier = user?.id || studentData.email || 'guest';
-      const fileName = `${userIdentifier}_${Date.now()}.${fileExt}`;
-      const filePath = `${userIdentifier}/${fileName}`;
+      const userIdentifier = user?.id || studentData.email?.replace(/[^a-zA-Z0-9]/g, '_') || 'guest';
+      const filePath = `${userIdentifier}.${fileExt}`;
 
-      console.log('📤 Iniciando upload do avatar:', { userIdentifier, fileName, filePath });
-
-      // Upload para o Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // 1. Upload da imagem para o Supabase Storage
+      const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
         throw uploadError;
       }
 
-      // Obter URL pública
+      // 2. Obter URL pública da imagem
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      console.log('✅ Upload concluído. URL pública:', publicUrl);
-      setAvatarUrl(publicUrl);
-
-      // Salvar URL no perfil do usuário
-      if (user) {
-        // Usuário autenticado do Supabase Auth
-        console.log('💾 Salvando avatar para usuário autenticado:', user.id);
+      // 3. Atualizar avatar_url na tabela profiles (salvar apenas o path, não a URL completa)
+      if (user?.id) {
+        // Usuário autenticado
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ avatar_url: publicUrl })
+          .update({ avatar_url: filePath })
           .eq('id', user.id);
 
         if (updateError) {
           throw updateError;
         }
       } else if (isStudentLoggedIn && studentData.email) {
-        // Estudante simples (useStudentAuth)
-        console.log('💾 Salvando avatar para estudante simples:', studentData.email);
+        // Aluno simples - salvar path e cache
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ avatar_url: publicUrl })
+          .update({ avatar_url: filePath })
           .eq('email', studentData.email)
           .eq('user_type', 'aluno');
 
         if (updateError) {
-          console.warn('⚠️ Erro ao salvar avatar para estudante simples:', updateError);
-          // Não falhar se não conseguir salvar no banco - o cache local funciona
+          console.warn('Erro ao salvar no perfil, mantendo apenas no cache:', updateError);
         }
+
+        // Cache para alunos simples
+        localStorage.setItem(`avatar_${studentData.email}`, publicUrl);
       }
 
-      // Salvar no cache local para persistência
-      localStorage.setItem('student_avatar_url', publicUrl);
-
-      // Notificar o componente pai sobre a atualização
+      // 4. Atualizar a imagem exibida
+      setAvatarUrl(publicUrl);
       onAvatarUpdate?.(true);
 
       toast({
