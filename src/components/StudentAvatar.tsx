@@ -176,21 +176,31 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
 
       console.log("✅ Upload realizado com sucesso!");
 
-      // 3. Atualizar avatar_url no banco
-      const { error: updateError, data: updateResult } = await supabase
+      // 3. Atualizar avatar_url no banco COM VERIFICAÇÃO
+      console.log("🔍 Tentando atualizar avatar_url para userId:", userId);
+      
+      const { error: updateError, data: updateResult, count } = await supabase
         .from("profiles")
         .update({ avatar_url: filePath })
         .eq("id", userId)
-        .select();
+        .select("*");
 
       if (updateError) {
-        console.error("❌ Erro ao atualizar avatar_url no banco:", updateError);
+        console.error("❌ Erro ao atualizar avatar_url:", updateError);
         throw updateError;
       }
 
-      console.log("📝 avatar_url atualizado na tabela profiles");
+      // Verificar se alguma linha foi realmente afetada
+      if (!updateResult || updateResult.length === 0) {
+        console.error("❌ avatar_url NÃO foi atualizado! Nenhuma linha afetada.");
+        console.error("🔍 Dados retornados:", { updateResult, userId });
+        throw new Error("Nenhuma linha foi atualizada no banco de dados");
+      }
 
-      // 4. Atualizar visualização
+      console.log("✅ avatar_url atualizado na tabela profiles! Linhas afetadas:", updateResult.length);
+      console.log("📝 Dados atualizados:", updateResult[0]);
+
+      // 4. Atualizar visualização SOMENTE se foi bem-sucedido
       const { data: publicData } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
