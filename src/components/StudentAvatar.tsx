@@ -21,59 +21,51 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
   const [uploading, setUploading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Carregar avatar do usuário
+  // Carregar avatar do usuário - SEMPRE da tabela profiles
   useEffect(() => {
     const loadAvatar = async () => {
       try {
-        let avatarPath = null;
+        let profileData = null;
         
+        // Priorizar user.id se disponível (usuário autenticado)
         if (user?.id) {
-          // Usuário autenticado - buscar do perfil
-          const { data: profileData } = await supabase
+          const { data } = await supabase
             .from('profiles')
-            .select('avatar_url')
+            .select('avatar_url, id')
             .eq('id', user.id)
             .maybeSingle();
-          
-          avatarPath = profileData?.avatar_url;
-        } else if (isStudentLoggedIn && studentData.email) {
-          // Aluno simples - usar localStorage primeiro
-          const storedAvatar = localStorage.getItem(`avatar_${studentData.email}`);
-          if (storedAvatar) {
-            setAvatarUrl(storedAvatar);
-            onAvatarUpdate?.(true);
-            return;
-          }
-          
-          // Buscar no perfil por email
-          const { data: profileData } = await supabase
+          profileData = data;
+        } 
+        // Fallback para email se for aluno simples
+        else if (isStudentLoggedIn && studentData.email) {
+          const { data } = await supabase
             .from('profiles')
-            .select('avatar_url')
+            .select('avatar_url, id')
             .eq('email', studentData.email)
             .eq('user_type', 'aluno')
             .maybeSingle();
-          
-          avatarPath = profileData?.avatar_url;
+          profileData = data;
         }
 
-        if (avatarPath) {
+        // Se encontrou perfil com avatar_url, gerar URL pública
+        if (profileData?.avatar_url) {
           const { data } = supabase.storage
             .from('avatars')
-            .getPublicUrl(avatarPath);
+            .getPublicUrl(profileData.avatar_url);
           
           setAvatarUrl(data.publicUrl);
           onAvatarUpdate?.(true);
+          setUserProfile(profileData);
           
-          // Cache para alunos simples
-          if (!user?.id && studentData.email) {
-            localStorage.setItem(`avatar_${studentData.email}`, data.publicUrl);
-          }
+          console.log('✅ Avatar carregado do Supabase:', data.publicUrl);
         } else {
           setAvatarUrl(null);
           onAvatarUpdate?.(false);
+          setUserProfile(profileData);
+          console.log('ℹ️ Nenhum avatar encontrado no perfil');
         }
       } catch (error) {
-        console.error('Erro ao carregar avatar:', error);
+        console.error('❌ Erro ao carregar avatar:', error);
         setAvatarUrl(null);
         onAvatarUpdate?.(false);
       }
@@ -114,31 +106,46 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
     setUploading(true);
     
     try {
-      const userEmail = user?.email || studentData.email;
-      if (!userEmail) {
-        throw new Error('Email do usuário não encontrado');
+      // Usar perfil já carregado ou buscar novamente se necessário
+      let userId = userProfile?.id;
+      
+      if (!userId) {
+        const userEmail = user?.email || studentData.email;
+        if (!userEmail) {
+          throw new Error('Email do usuário não encontrado');
+        }
+
+        console.log("🔍 Buscando perfil para o e-mail:", userEmail);
+
+        // Buscar perfil por user.id primeiro, depois por email
+        let profileData = null;
+        
+        if (user?.id) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
+          profileData = data;
+        }
+        
+        if (!profileData && userEmail) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("email", userEmail)
+            .eq("user_type", "aluno")
+            .maybeSingle();
+          profileData = data;
+        }
+
+        if (!profileData?.id) {
+          throw new Error('Perfil do usuário não encontrado. Verifique se você está logado corretamente.');
+        }
+
+        userId = profileData.id;
+        setUserProfile(profileData);
       }
-
-      console.log("🔍 Iniciando upload de avatar para o e-mail:", userEmail);
-
-      // 1. Buscar o ID do usuário pela tabela profiles
-      const { data: profileData, error: fetchError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", userEmail)
-        .eq("user_type", "aluno")
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error("❌ Erro na consulta ao banco:", fetchError);
-        throw new Error(`Erro na busca do usuário: ${fetchError.message}`);
-      }
-
-      if (!profileData?.id) {
-        throw new Error('Perfil do usuário não encontrado. Faça login novamente.');
-      }
-
-      const userId = profileData.id;
       const fileExt = file.name.split(".").pop();
       // Usar timestamp para criar nome único e evitar cache
       const timestamp = Date.now();
@@ -198,13 +205,8 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       setAvatarUrl(newAvatarUrl);
       onAvatarUpdate?.(true);
       
-      console.log("🌐 URL pública da nova imagem gerada:", publicData?.publicUrl);
-
-      // Cache para alunos simples com nova URL
-      if (!user?.id && studentData.email) {
-        localStorage.setItem(`avatar_${studentData.email}`, newAvatarUrl);
-        console.log('💾 Avatar salvo no cache local');
-      }
+      console.log("✅ Avatar atualizado com sucesso! Nova URL:", newAvatarUrl);
+      console.log("📁 Caminho salvo no banco:", filePath);
 
       toast({
         title: 'Sucesso',
@@ -242,6 +244,13 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         onClick={showUpload ? handleAvatarClick : undefined}
       >
         
+        {avatarUrl && (
+          <AvatarImage 
+            src={avatarUrl} 
+            alt="Avatar do usuário"
+            className="object-cover"
+          />
+        )}
         <AvatarFallback className="bg-primary/10 text-primary">
           {studentData.nomeUsuario ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
