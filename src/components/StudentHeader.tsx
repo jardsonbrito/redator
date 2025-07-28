@@ -48,8 +48,6 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
           )}
           
           <div className="flex items-center gap-3">
-            {/* Avatar do estudante - apenas no desktop */}
-            {!isMobile && <StudentAvatar size="sm" showUpload={false} />}
             
             {/* Link para Professor apenas se for admin autenticado */}
             {user && isAdmin && (
