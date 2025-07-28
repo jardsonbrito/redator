@@ -114,107 +114,85 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
     setUploading(true);
     
     try {
-      // Criar nome único para o arquivo
-      const fileExt = file.name.split('.').pop();
-      const userIdentifier = user?.id || studentData.email?.replace(/[^a-zA-Z0-9]/g, '_') || 'guest';
-      const filePath = `${userIdentifier}.${fileExt}`;
+      const userEmail = user?.email || studentData.email;
+      if (!userEmail) {
+        throw new Error('Email do usuário não encontrado');
+      }
 
-      console.log('🔄 Iniciando upload do avatar:', {
-        userIdentifier,
-        filePath,
-        hasUser: !!user?.id,
-        hasStudentData: !!studentData.email,
-        isStudentLoggedIn
-      });
+      console.log("🔍 Iniciando upload de avatar para o e-mail:", userEmail);
 
-      // 1. Upload da imagem para o Supabase Storage
+      // 1. Buscar o ID do usuário pela tabela profiles
+      const { data: profileData, error: fetchError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", userEmail)
+        .eq("user_type", "aluno")
+        .single();
+
+      if (fetchError || !profileData?.id) {
+        console.error("❌ Falha ao buscar o ID do usuário:", fetchError);
+        throw new Error(`Usuário não encontrado no banco: ${fetchError?.message || 'ID não localizado'}`);
+      }
+
+      const userId = profileData.id;
+      const fileExt = file.name.split(".").pop();
+      const filePath = `avatars/${userId}.${fileExt}`;
+
+      console.log("📁 Path final do arquivo:", filePath);
+      console.log("🆔 ID do usuário encontrado:", userId);
+
+      // 2. Upload no Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from("avatars")
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        console.error('❌ Erro no upload do Storage:', uploadError);
+        console.error("❌ Erro no upload:", uploadError);
         throw uploadError;
       }
 
-      console.log('✅ Upload do Storage concluído com sucesso');
+      console.log("✅ Upload realizado com sucesso!");
 
-      // 2. Obter URL pública da imagem
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+      // 3. Atualizar avatar_url no banco
+      const { error: updateError, data: updateResult } = await supabase
+        .from("profiles")
+        .update({ avatar_url: filePath })
+        .eq("id", userId)
+        .select();
+
+      if (updateError) {
+        console.error("❌ Erro ao atualizar avatar_url no banco:", updateError);
+        throw updateError;
+      }
+
+      console.log("📝 avatar_url atualizado com sucesso!", updateResult);
+
+      // 4. Atualizar visualização
+      const { data: publicData } = supabase.storage
+        .from("avatars")
         .getPublicUrl(filePath);
 
-      console.log('🔗 URL pública gerada:', publicUrl);
-
-      // 3. Atualizar avatar_url na tabela profiles (salvar apenas o path, não a URL completa)
-      let updateSuccess = false;
+      setAvatarUrl(publicData?.publicUrl);
+      onAvatarUpdate?.(true);
       
-      if (user?.id) {
-        // Usuário autenticado
-        console.log('👤 Tentando atualizar perfil autenticado. User ID:', user.id);
-        
-        const { data, error: updateError } = await supabase
-          .from('profiles')
-          .update({ avatar_url: filePath })
-          .eq('id', user.id)
-          .select();
+      console.log("🌐 URL pública do avatar:", publicData?.publicUrl);
 
-        console.log('📊 Resultado do update autenticado:', { data, error: updateError });
-
-        if (updateError) {
-          console.error('❌ Erro ao atualizar perfil autenticado:', updateError);
-          throw updateError;
-        }
-        
-        updateSuccess = !!data && data.length > 0;
-        console.log('✅ Update autenticado:', updateSuccess ? 'SUCESSO' : 'NENHUMA LINHA AFETADA');
-        
-      } else if (isStudentLoggedIn && studentData.email) {
-        // Aluno simples - salvar path e cache
-        console.log('🎓 Tentando atualizar perfil simples. Email:', studentData.email);
-        
-        const { data, error: updateError } = await supabase
-          .from('profiles')
-          .update({ avatar_url: filePath })
-          .eq('email', studentData.email)
-          .eq('user_type', 'aluno')
-          .select();
-
-        console.log('📊 Resultado do update simples:', { data, error: updateError });
-
-        if (updateError) {
-          console.error('❌ Erro ao atualizar perfil simples:', updateError);
-          console.warn('⚠️ Mantendo apenas no cache devido ao erro');
-        } else {
-          updateSuccess = !!data && data.length > 0;
-          console.log('✅ Update simples:', updateSuccess ? 'SUCESSO' : 'NENHUMA LINHA AFETADA');
-        }
-
-        // Cache para alunos simples (sempre, independente do update)
-        localStorage.setItem(`avatar_${studentData.email}`, publicUrl);
+      // Cache para alunos simples
+      if (!user?.id && studentData.email) {
+        localStorage.setItem(`avatar_${studentData.email}`, publicData?.publicUrl || '');
         console.log('💾 Avatar salvo no cache local');
       }
 
-      // 4. Atualizar a imagem exibida
-      setAvatarUrl(publicUrl);
-      onAvatarUpdate?.(true);
-
-      const message = updateSuccess 
-        ? 'Foto de perfil atualizada com sucesso!' 
-        : 'Upload realizado! Foto será exibida localmente.';
-
       toast({
         title: 'Sucesso',
-        description: message,
+        description: 'Foto de perfil atualizada com sucesso!',
       });
 
-      console.log('🎉 Processo de upload concluído com sucesso');
-
     } catch (error) {
-      console.error('❌ Erro no upload:', error);
+      console.error("❌ Erro inesperado:", error);
       toast({
         title: 'Erro',
-        description: 'Erro ao fazer upload da imagem. Tente novamente.',
+        description: error instanceof Error ? error.message : 'Erro ao fazer upload da imagem. Tente novamente.',
         variant: 'destructive',
       });
     } finally {
