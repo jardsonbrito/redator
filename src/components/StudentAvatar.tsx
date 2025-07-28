@@ -241,7 +241,7 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         className={`${sizeClasses[size]} border border-primary/20 transition-all hover:shadow-lg ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer' : ''}`}
         onClick={showUpload ? handleAvatarClick : undefined}
       >
-        <AvatarImage src={avatarUrl || undefined} alt="Foto de perfil" />
+        
         <AvatarFallback className="bg-primary/10 text-primary">
           {studentData.nomeUsuario ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
