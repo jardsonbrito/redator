@@ -190,7 +190,6 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
       <div className="space-y-3">
         {/* Texto "Comentário do corretor" acima do player */}
         <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-          <Volume2 className="w-4 h-4 text-gray-600" />
           <span>Comentário do corretor</span>
         </div>
         
