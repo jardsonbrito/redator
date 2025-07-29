@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download } from "lucide-react";
+import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download, Volume2 } from "lucide-react";
 import { RedacaoAnotacaoVisual } from "./corretor/RedacaoAnotacaoVisual";
 import { AudioPlayerAluno } from "./AudioPlayerAluno";
 import { useToast } from "@/hooks/use-toast";
@@ -232,11 +232,17 @@ export const RedacaoEnviadaCard = ({
             {/* Player de áudio do corretor - logo após as notas */}
             {redacao.audio_url && (
               <div className="pt-4 border-t border-primary/20">
-                <AudioPlayerAluno 
-                  audioUrl={redacao.audio_url} 
-                  corretorNome="Corretor"
-                  isStudentView={true}
-                />
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Volume2 className="w-4 h-4 text-gray-600" />
+                    <span>Comentário do corretor</span>
+                  </div>
+                  <AudioPlayerAluno 
+                    audioUrl={redacao.audio_url} 
+                    corretorNome="Corretor"
+                    isStudentView={true}
+                  />
+                </div>
               </div>
             )}
           </CardContent>
