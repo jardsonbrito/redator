@@ -187,7 +187,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
   // Player customizado para visualização do aluno
   if (isStudentView) {
     return (
-      <div className="audio-player-aluno flex items-center gap-4 p-4 bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] max-w-[420px] w-full border border-gray-100">
+      <div className="audio-player-aluno flex items-center gap-4 p-3 bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.1)] max-w-[420px] w-full border border-gray-100">
         <audio
           ref={audioRef}
           src={audioUrl}
@@ -197,23 +197,23 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
           onEnded={() => setIsPlaying(false)}
         />
         
-        {/* Botão Play/Pause - Estilo moderno conforme mockup */}
+        {/* Botão Play/Pause - Estilo conforme mockup */}
         <button
           onClick={togglePlay}
-          className="play-button bg-[#3C0D99] text-white border-none rounded-full w-12 h-12 flex items-center justify-center cursor-pointer hover:bg-[#2d0a7a] transition-all duration-200 shadow-md active:scale-95"
+          className="play-button bg-[#3C0D99] text-white border-none rounded-full w-12 h-12 flex items-center justify-center cursor-pointer hover:bg-[#2d0a7a] transition-all duration-200 shadow-lg active:scale-95 flex-shrink-0"
         >
           {isPlaying ? (
-            <Pause className="w-5 h-5 ml-0.5" />
+            <Pause className="w-5 h-5" />
           ) : (
-            <Play className="w-5 h-5 ml-1" />
+            <Play className="w-5 h-5 ml-0.5" />
           )}
         </button>
         
-        {/* Container da barra e tempo */}
-        <div className="flex-1 flex flex-col gap-2">
+        {/* Container central da barra e tempo */}
+        <div className="flex-1 flex flex-col items-center gap-3">
           {/* Barra de Progresso - Estilo conforme mockup */}
           <div 
-            className="progress-bar w-full h-2 bg-gray-200 rounded-full relative overflow-hidden cursor-pointer"
+            className="progress-bar w-full h-[6px] bg-gray-200 rounded-full relative overflow-hidden cursor-pointer"
             onClick={handleProgressClick}
           >
             <div 
@@ -222,23 +222,23 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
             />
           </div>
           
-          {/* Tempo centralizado */}
+          {/* Tempo centralizado abaixo da barra conforme mockup */}
           <div className="text-center">
-            <span className="text-lg font-semibold text-gray-800 tracking-wide">
+            <span className="text-xl font-bold text-gray-900 tracking-wide">
               {formatTime(currentTime)}
             </span>
           </div>
         </div>
         
-        {/* Botão Volume - Estilo moderno conforme mockup */}
+        {/* Botão Volume - Estilo conforme mockup */}
         <button
           onClick={toggleMute}
-          className="volume-button text-gray-600 hover:text-[#3C0D99] transition-colors duration-200 p-2"
+          className="volume-button text-gray-600 hover:text-[#3C0D99] transition-colors duration-200 p-1 flex-shrink-0"
         >
           {isMuted ? (
-            <VolumeX className="w-6 h-6 md:w-7 md:h-7" />
+            <VolumeX className="w-7 h-7" />
           ) : (
-            <Volume2 className="w-6 h-6 md:w-7 md:h-7" />
+            <Volume2 className="w-7 h-7" />
           )}
         </button>
       </div>
