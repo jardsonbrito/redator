@@ -94,8 +94,10 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
     };
   }, [audioUrl, isReady]);
 
-  // Timeout fallback - se não carregar em 5 segundos, usar player nativo
+  // Timeout fallback - se não carregar em 5 segundos, usar player nativo (exceto para visualização do aluno)
   useEffect(() => {
+    if (isStudentView) return; // Não usar fallback para alunos
+    
     const timeout = setTimeout(() => {
       if (!isReady && !hasError) {
         console.log('⏰ Timeout atingido, usando player nativo');
@@ -104,7 +106,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
     }, 5000);
 
     return () => clearTimeout(timeout);
-  }, [isReady, hasError]);
+  }, [isReady, hasError, isStudentView]);
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds)) return "00:00";
@@ -193,7 +195,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
         </div>
         
         {/* Player de áudio */}
-        <div className="audio-player-aluno flex items-center gap-3 p-4 bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.1)] max-w-[420px] w-full border border-gray-100">
+        <div className="audio-player-aluno flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.1)] max-w-[420px] w-full border border-gray-100">
           <audio
             ref={audioRef}
             src={audioUrl}
@@ -203,23 +205,23 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
             onEnded={() => setIsPlaying(false)}
           />
           
-          {/* Botão Play/Pause circular conforme mockup */}
+          {/* Botão Play/Pause circular conforme mockup - responsivo */}
           <button
             onClick={togglePlay}
-            className="play-button bg-[#3C0D99] text-white border-none rounded-full w-14 h-14 flex items-center justify-center cursor-pointer hover:bg-[#2d0a7a] transition-all duration-200 shadow-lg active:scale-95 flex-shrink-0"
+            className="play-button bg-[#3C0D99] text-white border-none rounded-full w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center cursor-pointer hover:bg-[#2d0a7a] transition-all duration-200 shadow-lg active:scale-95 flex-shrink-0"
           >
             {isPlaying ? (
-              <Pause className="w-6 h-6" />
+              <Pause className="w-5 h-5 sm:w-6 sm:h-6" />
             ) : (
-              <Play className="w-6 h-6 ml-0.5" />
+              <Play className="w-5 h-5 sm:w-6 sm:h-6 ml-0.5" />
             )}
           </button>
           
           {/* Container central da barra e tempo */}
-          <div className="flex-1 flex flex-col items-center gap-2">
+          <div className="flex-1 flex flex-col items-center gap-1.5 sm:gap-2">
             {/* Barra de Progresso horizontal */}
             <div 
-              className="progress-bar w-full h-2 bg-gray-200 rounded-full relative overflow-hidden cursor-pointer"
+              className="progress-bar w-full h-1.5 sm:h-2 bg-gray-200 rounded-full relative overflow-hidden cursor-pointer"
               onClick={handleProgressClick}
             >
               <div 
@@ -230,21 +232,21 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
             
             {/* Tempo centralizado abaixo da barra */}
             <div className="text-center">
-              <span className="text-lg font-bold text-gray-900 tracking-wide">
+              <span className="text-base sm:text-lg font-bold text-gray-900 tracking-wide">
                 {formatTime(currentTime)}
               </span>
             </div>
           </div>
           
-          {/* Ícone de Volume conforme mockup */}
+          {/* Ícone de Volume conforme mockup - responsivo */}
           <button
             onClick={toggleMute}
             className="volume-button text-gray-700 hover:text-[#3C0D99] transition-colors duration-200 p-1 flex-shrink-0"
           >
             {isMuted ? (
-              <VolumeX className="w-8 h-8" />
+              <VolumeX className="w-6 h-6 sm:w-8 sm:h-8" />
             ) : (
-              <Volume2 className="w-8 h-8" />
+              <Volume2 className="w-6 h-6 sm:w-8 sm:h-8" />
             )}
           </button>
         </div>
