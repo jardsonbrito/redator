@@ -248,7 +248,7 @@ export const RedacaoEnviadaCard = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-primary">
             <FileText className="w-5 h-5" />
-            Redação Corrigida
+            Redação Enviada
           </CardTitle>
         </CardHeader>
         <CardContent>
