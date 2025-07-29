@@ -177,7 +177,6 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
     return (
       <div className="flex items-center gap-3 text-gray-500 text-sm py-2">
         <audio ref={audioRef} src={audioUrl} preload="metadata" />
-        <Volume2 className="w-4 h-4" />
         <span>Comentário do corretor</span>
         <span className="text-xs animate-pulse">Carregando áudio...</span>
       </div>
