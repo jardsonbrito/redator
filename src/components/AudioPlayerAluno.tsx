@@ -26,36 +26,21 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
   }
 
   useEffect(() => {
-    console.log('🎵 AudioPlayerAluno montado com URL:', audioUrl);
-    
     const audio = audioRef.current;
-    if (!audio) {
-      console.log('❌ Ref do audio não encontrada');
-      return;
-    }
+    if (!audio) return;
 
-    // Reset states
-    setIsReady(false);
-    setHasError(false);
-    setDuration(0);
-    setCurrentTime(0);
-    setIsPlaying(false);
+    // Simplifcar: sempre assumir que está pronto após um pequeno delay
+    const timer = setTimeout(() => {
+      setIsReady(true);
+      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    }, 100);
 
     const handleLoadedMetadata = () => {
-      console.log('✅ Metadata carregada, duração:', audio.duration);
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
         setDuration(audio.duration);
         setIsReady(true);
-      }
-    };
-
-    const handleCanPlay = () => {
-      console.log('✅ Can play evento disparado');
-      if (!isReady) {
-        setIsReady(true);
-        if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-          setDuration(audio.duration);
-        }
       }
     };
 
@@ -63,50 +48,23 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
       setCurrentTime(audio.currentTime);
     };
 
-    const handleError = (e: Event) => {
-      console.error('❌ Erro ao carregar áudio:', e);
-      setHasError(true);
-      setIsReady(false);
-      // Fallback para player nativo após 3 segundos
-      setTimeout(() => {
+    const handleError = () => {
+      if (!isStudentView) {
         setUseNativePlayer(true);
-      }, 3000);
+      }
     };
 
-    const handleLoadStart = () => {
-      console.log('🔄 Começando a carregar áudio...');
-    };
-
-    // Event listeners
-    audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('error', handleError);
 
-    // Cleanup
     return () => {
-      audio.removeEventListener('loadstart', handleLoadStart);
+      clearTimeout(timer);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('error', handleError);
     };
-  }, [audioUrl, isReady]);
-
-  // Timeout fallback - se não carregar em 5 segundos, usar player nativo (exceto para visualização do aluno)
-  useEffect(() => {
-    if (isStudentView) return; // Não usar fallback para alunos
-    
-    const timeout = setTimeout(() => {
-      if (!isReady && !hasError) {
-        console.log('⏰ Timeout atingido, usando player nativo');
-        setUseNativePlayer(true);
-      }
-    }, 5000);
-
-    return () => clearTimeout(timeout);
-  }, [isReady, hasError, isStudentView]);
+  }, [audioUrl, isStudentView]);
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds)) return "00:00";
@@ -174,18 +132,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
     );
   }
 
-  // Ainda carregando
-  if (!isReady) {
-    return (
-      <div className="flex items-center gap-3 text-gray-500 text-sm py-2">
-        <audio ref={audioRef} src={audioUrl} preload="metadata" />
-        <span>Comentário do corretor</span>
-        <span className="text-xs animate-pulse">Carregando áudio...</span>
-      </div>
-    );
-  }
-
-  // Player customizado para visualização do aluno
+  // Para alunos, sempre mostrar o player customizado sem tela de carregamento
   if (isStudentView) {
     return (
       <div className="space-y-3">
