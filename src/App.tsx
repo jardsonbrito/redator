@@ -50,64 +50,68 @@ import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 
 function App() {
   return (
-    <CorretorAuthProvider>
-      <StudentAuthProvider>
-        <AuthProvider>
-          <Router>
-            <div className="min-h-screen bg-background">
-              <Toaster />
-              <Routes>
-                {/* Rotas Públicas */}
-                <Route path="/" element={<Welcome />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/aluno-login" element={<AlunoLogin />} />
-                <Route path="/visitante-login" element={<VisitanteLogin />} />
-                <Route path="/cadastro-aluno" element={<CadastroAluno />} />
-                <Route path="/atualizar-email" element={<AtualizarEmail />} />
+    <ProfessorAuthProvider>
+      <CorretorAuthProvider>
+        <StudentAuthProvider>
+          <AuthProvider>
+            <Router>
+              <div className="min-h-screen bg-background">
+                <Toaster />
+                <Routes>
+                  {/* Rotas Públicas */}
+                  <Route path="/" element={<Welcome />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/aluno-login" element={<AlunoLogin />} />
+                  <Route path="/visitante-login" element={<VisitanteLogin />} />
+                  <Route path="/cadastro-aluno" element={<CadastroAluno />} />
+                  <Route path="/atualizar-email" element={<AtualizarEmail />} />
 
-                <Route path="/app" element={<Index />} />
-                <Route path="/temas" element={<Temas />} />
-                <Route path="/temas/:id" element={<TemaDetalhes />} />
-                <Route path="/simulados" element={<Simulados />} />
-                {/* Corrigindo as rotas do simulado - ambas devem funcionar */}
-                <Route path="/simulado/:id" element={<SimuladoParticipacao />} />
-                <Route path="/simulados/:id" element={<SimuladoParticipacao />} />
-                <Route path="/exercicios" element={<Exercicios />} />
-                <Route path="/envie-redacao" element={<EnvieRedacao />} />
-                <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
-                <Route path="/aulas" element={<Aulas />} />
-                <Route path="/videoteca" element={<Videoteca />} />
-                <Route path="/biblioteca" element={<Biblioteca />} />
-                <Route path="/redacoes" element={<RedacoesExemplar />} />
-                <Route path="/top5" element={<Top5 />} />
-                <Route path="/ajuda-rapida" element={<AjudaRapida />} />
+                  <Route path="/app" element={<Index />} />
+                  <Route path="/temas" element={<Temas />} />
+                  <Route path="/temas/:id" element={<TemaDetalhes />} />
+                  <Route path="/simulados" element={<Simulados />} />
+                  {/* Corrigindo as rotas do simulado - ambas devem funcionar */}
+                  <Route path="/simulado/:id" element={<SimuladoParticipacao />} />
+                  <Route path="/simulados/:id" element={<SimuladoParticipacao />} />
+                  <Route path="/exercicios" element={<Exercicios />} />
+                  <Route path="/envie-redacao" element={<EnvieRedacao />} />
+                  <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
+                  <Route path="/aulas" element={<Aulas />} />
+                  <Route path="/videoteca" element={<Videoteca />} />
+                  <Route path="/biblioteca" element={<Biblioteca />} />
+                  <Route path="/redacoes" element={<RedacoesExemplar />} />
+                  <Route path="/top5" element={<Top5 />} />
+                  <Route path="/ajuda-rapida" element={<AjudaRapida />} />
 
-                {/* Rotas do Admin */}
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/admin/dashboard" element={<Dashboard />} />
-                <Route path="/admin/avisos" element={<Avisos />} />
-                <Route path="/admin/redacoes" element={<Redacoes />} />
-                <Route path="/admin/simulados" element={<SimuladosAdmin />} />
-                <Route path="/admin/exercicios" element={<ExerciciosAdmin />} />
-                <Route path="/admin/corretores" element={<CorretoresAdmin />} />
-                <Route path="/admin/exportacao" element={<Exportacao />} />
-                <Route path="/admin/ajuda-rapida" element={<AjudaRapidaAdmin />} />
-                
-                {/* Rotas do Corretor */}
-                <Route path="/corretor/login" element={<CorretorLogin />} />
-                <Route path="/corretor" element={<CorretorHome />} />
-                <Route path="/corretor/redacoes-corretor" element={<CorretorRedacoes />} />
-                <Route path="/corretor/temas" element={<CorretorTemas />} />
-                <Route path="/corretor/simulados" element={<CorretorSimulados />} />
-                <Route path="/corretor/aulas" element={<CorretorAulas />} />
-                <Route path="/corretor/videoteca" element={<CorretorVideoteca />} />
-                <Route path="/corretor/biblioteca" element={<CorretorBiblioteca />} />
-                <Route path="/corretor/redacoes" element={<CorretorRedacoesExemplar />} />
-                <Route path="/corretor/top5" element={<CorretorTop5 />} />
-                <Route path="/corretor/ajuda-rapida" element={<CorretorAjudaRapida />} />
-              </Routes>
-            </div>
-          </Router>
+                  {/* Rotas do Admin */}
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/admin/dashboard" element={<Dashboard />} />
+                  <Route path="/admin/avisos" element={<Avisos />} />
+                  <Route path="/admin/redacoes" element={<Redacoes />} />
+                  <Route path="/admin/simulados" element={<SimuladosAdmin />} />
+                  <Route path="/admin/exercicios" element={<ExerciciosAdmin />} />
+                  <Route path="/admin/corretores" element={<CorretoresAdmin />} />
+                  <Route path="/admin/exportacao" element={<Exportacao />} />
+                  <Route path="/admin/ajuda-rapida" element={<AjudaRapidaAdmin />} />
+                  
+                  {/* Rotas do Corretor */}
+                  <Route path="/corretor/login" element={<CorretorLogin />} />
+                  <Route path="/corretor" element={<CorretorHome />} />
+                  <Route path="/corretor/redacoes-corretor" element={<CorretorRedacoes />} />
+                  <Route path="/corretor/temas" element={<CorretorTemas />} />
+                  <Route path="/corretor/simulados" element={<CorretorSimulados />} />
+                  <Route path="/corretor/aulas" element={<CorretorAulas />} />
+                  <Route path="/corretor/videoteca" element={<CorretorVideoteca />} />
+                  <Route path="/corretor/biblioteca" element={<CorretorBiblioteca />} />
+                  <Route path="/corretor/redacoes" element={<CorretorRedacoesExemplar />} />
+                  <Route path="/corretor/top5" element={<CorretorTop5 />} />
+                  <Route path="/corretor/ajuda-rapida" element={<CorretorAjudaRapida />} />
+                  
+                  {/* Rotas do Professor */}
+                  <Route path="/professor/login" element={<ProfessorLogin />} />
+                </Routes>
+              </div>
+            </Router>
           </AuthProvider>
         </StudentAuthProvider>
       </CorretorAuthProvider>
