@@ -31,19 +31,19 @@ export const ProfessorDashboard = () => {
   }
 
   const professorMenuItems = [
-    // Cards individualizados (vazios por padrão)
+    // Cards individualizados (vazios por padrão) - ordem reorganizada
     { id: "turmas", label: "Turmas", icon: Users, path: "/professor/turmas", shared: false },
     { id: "alunos", label: "Alunos", icon: GraduationCap, path: "/professor/alunos", shared: false },
     { id: "aulas", label: "Aulas", icon: BookOpen, path: "/professor/aulas", shared: false },
+    { id: "salas-virtuais", label: "Salas Virtuais", icon: Video, path: "/professor/salas-virtuais", shared: false },
     { id: "exercicios", label: "Exercícios", icon: NotebookPen, path: "/professor/exercicios", shared: false },
     { id: "simulados", label: "Simulados", icon: ClipboardCheck, path: "/professor/simulados", shared: false },
-    { id: "salas-virtuais", label: "Salas Virtuais", icon: Video, path: "/professor/salas-virtuais", shared: false },
     { id: "avisos", label: "Mural de Avisos", icon: MessageSquare, path: "/professor/avisos", shared: false },
     // Cards com conteúdo compartilhado
     { id: "temas", label: "Temas", icon: Lightbulb, path: "/professor/temas", shared: true },
     { id: "redacoes", label: "Redações Exemplares", icon: FileText, path: "/professor/redacoes", shared: true },
-    { id: "biblioteca", label: "Biblioteca", icon: Library, path: "/professor/biblioteca", shared: true },
     { id: "videoteca", label: "Videoteca", icon: Video, path: "/professor/videoteca", shared: true },
+    { id: "biblioteca", label: "Biblioteca", icon: Library, path: "/professor/biblioteca", shared: true },
   ];
 
   const adminMenuItems = [

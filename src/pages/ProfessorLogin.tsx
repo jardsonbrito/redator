@@ -59,9 +59,9 @@ export const ProfessorLogin = () => {
               <GraduationCap className="w-8 h-8 text-primary" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-primary">Login de Professor</h1>
+          <h1 className="text-2xl font-bold text-primary">Professor</h1>
           <p className="text-muted-foreground">
-            Acesse o painel de professores
+            App do Redator
           </p>
         </div>
 
