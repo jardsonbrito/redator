@@ -27,32 +27,53 @@ const Welcome = () => {
     setLoading(true);
     try {
       if (profileType === "professor") {
-        const { error } = await loginAsProfessor(data.email, data.senha);
-        if (error) {
-          toast({
-            title: "Erro no login",
-            description: error,
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Login realizado com sucesso!",
-            description: "Redirecionando para o painel do professor..."
-          });
-          
-          // Verificar o estado do professor e redirecionar adequadamente
-          setTimeout(async () => {
-            // Verificar se precisa trocar senha ou redirecionar para dashboard
-            const professorData = JSON.parse(localStorage.getItem('professor_session') || '{}');
-            
-            if (professorData.primeiro_login) {
-              navigate('/professor/trocar-senha', { replace: true });
-            } else if (professorData.role === 'admin') {
+        // Para jardsonbrito@gmail.com, usar o sistema administrativo original
+        if (data.email === "jardsonbrito@gmail.com") {
+          const { error } = await signIn(data.email, data.senha);
+          if (error) {
+            toast({
+              title: "Erro no login",
+              description: error.message || "Credenciais inválidas. Verifique email e senha.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Login realizado com sucesso!",
+              description: "Redirecionando para o painel administrativo..."
+            });
+            setTimeout(() => {
               navigate('/admin', { replace: true });
-            } else {
-              navigate('/professor/dashboard', { replace: true });
-            }
-          }, 1000);
+            }, 1000);
+          }
+        } else {
+          // Para outros professores, usar o sistema de professores
+          const { error } = await loginAsProfessor(data.email, data.senha);
+          if (error) {
+            toast({
+              title: "Erro no login",
+              description: error,
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Login realizado com sucesso!",
+              description: "Redirecionando para o painel do professor..."
+            });
+            
+            // Verificar o estado do professor e redirecionar adequadamente
+            setTimeout(async () => {
+              // Verificar se precisa trocar senha ou redirecionar para dashboard
+              const professorData = JSON.parse(localStorage.getItem('professor_session') || '{}');
+              
+              if (professorData.primeiro_login) {
+                navigate('/professor/trocar-senha', { replace: true });
+              } else if (professorData.role === 'admin') {
+                navigate('/admin', { replace: true });
+              } else {
+                navigate('/professor/dashboard', { replace: true });
+              }
+            }, 1000);
+          }
         }
       } else if (profileType === "aluno") {
         console.log('✅ WELCOME - Login bem-sucedido para aluno:', data.nome, 'Turma:', data.turma);
