@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { ProfileSelector } from "@/components/ProfileSelector";
 import { LoginForm } from "@/components/LoginForm";
@@ -18,35 +19,39 @@ const Welcome = () => {
     loginAsStudent,
     loginAsVisitante
   } = useStudentAuth();
-  const {
-    signIn
-  } = useAuth();
-  const {
-    loginAsCorretor
-  } = useCorretorAuth();
+  const { signIn } = useAuth();
+  const { loginAsProfessor } = useProfessorAuth();
+  const { loginAsCorretor } = useCorretorAuth();
   const handleLogin = async (profileType: "professor" | "aluno" | "visitante" | "corretor", data: any) => {
     console.log('🔄 WELCOME - Login iniciado:', profileType, data);
     setLoading(true);
     try {
       if (profileType === "professor") {
-        const {
-          error
-        } = await signIn(data.email, data.senha);
+        const { error } = await loginAsProfessor(data.email, data.senha);
         if (error) {
           toast({
             title: "Erro no login",
-            description: error.message || "Credenciais inválidas. Verifique email e senha.",
+            description: error,
             variant: "destructive"
           });
         } else {
           toast({
             title: "Login realizado com sucesso!",
-            description: "Redirecionando para o painel administrativo..."
+            description: "Redirecionando para o painel do professor..."
           });
-          setTimeout(() => {
-            navigate('/admin', {
-              replace: true
-            });
+          
+          // Verificar o estado do professor e redirecionar adequadamente
+          setTimeout(async () => {
+            // Verificar se precisa trocar senha ou redirecionar para dashboard
+            const professorData = JSON.parse(localStorage.getItem('professor_session') || '{}');
+            
+            if (professorData.primeiro_login) {
+              navigate('/professor/trocar-senha', { replace: true });
+            } else if (professorData.role === 'admin') {
+              navigate('/admin', { replace: true });
+            } else {
+              navigate('/professor/dashboard', { replace: true });
+            }
           }, 1000);
         }
       } else if (profileType === "aluno") {
