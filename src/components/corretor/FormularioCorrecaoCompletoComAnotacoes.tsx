@@ -89,7 +89,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         
         setRelatorioPedagogico(data[`elogios_pontos_atencao_${prefixo}`] || "");
         setManuscritaUrl(data.redacao_manuscrita_url || null);
-        setAudioUrl(data.audio_url || null);
+        // Carregar áudio específico do corretor
+        setAudioUrl(data[`audio_url_${prefixo}`] || null);
         
         if (data[`status_${prefixo}`] === 'incompleta' || data[`status_${prefixo}`] === 'corrigida') {
           setModoEdicao(true);
@@ -300,6 +301,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 existingAudioUrl={audioUrl}
                 onAudioSaved={(url) => setAudioUrl(url)}
                 onAudioDeleted={() => setAudioUrl(null)}
+                ehCorretor1={redacao.eh_corretor_1}
               />
               
               {/* Botões de ação */}

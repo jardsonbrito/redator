@@ -41,6 +41,8 @@ interface RedacaoTurma {
   original_id?: string;
   observacoes_coordenacao?: string;
   audio_url?: string | null;
+  audio_url_corretor_1?: string | null;
+  audio_url_corretor_2?: string | null;
   // Campos pedagógicos
   comentario_c1_corretor_1?: string | null;
   comentario_c2_corretor_1?: string | null;
@@ -205,8 +207,8 @@ const MinhasRedacoesList = () => {
                 comentario_c5_corretor_1: item.comentario_c5_corretor_1,
                 elogios_pontos_atencao_corretor_1: item.elogios_pontos_atencao_corretor_1,
                 correcao_arquivo_url_corretor_1: item.correcao_arquivo_url_corretor_1,
-                // Audio só se for do corretor 1
-                audio_url: item.audio_url // Será filtrado no componente
+                // Audio específico do corretor 1
+                audio_url: item.audio_url_corretor_1
               } as RedacaoTurma);
             }
 
@@ -246,8 +248,8 @@ const MinhasRedacoesList = () => {
                 comentario_c5_corretor_2: item.comentario_c5_corretor_2,
                 elogios_pontos_atencao_corretor_2: item.elogios_pontos_atencao_corretor_2,
                 correcao_arquivo_url_corretor_2: item.correcao_arquivo_url_corretor_2,
-                // Audio só se for do corretor 2
-                audio_url: item.audio_url // Será filtrado no componente
+                // Audio específico do corretor 2
+                audio_url: item.audio_url_corretor_2
               } as RedacaoTurma);
             }
 

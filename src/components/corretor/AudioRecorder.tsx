@@ -14,6 +14,7 @@ interface AudioRecorderProps {
   onAudioSaved?: (audioUrl: string) => void;
   onAudioDeleted?: () => void;
   existingAudioUrl?: string | null;
+  ehCorretor1?: boolean; // Nova prop para identificar o corretor
 }
 
 export const AudioRecorder = ({
@@ -22,7 +23,8 @@ export const AudioRecorder = ({
   disabled = false,
   onAudioSaved,
   onAudioDeleted,
-  existingAudioUrl
+  existingAudioUrl,
+  ehCorretor1 = false
 }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -180,29 +182,33 @@ export const AudioRecorder = ({
       console.log('🎵 AUDIO DEBUG - Tentando atualizar banco:', {
         tabela,
         redacaoId,
-        publicUrl
+        publicUrl,
+        ehCorretor1
       });
+      
+      // Determinar qual campo de áudio usar baseado no corretor
+      const audioField = ehCorretor1 ? 'audio_url_corretor_1' : 'audio_url_corretor_2';
       
       let dbError;
       if (tabela === 'redacoes_enviadas') {
-        console.log('🎵 AUDIO DEBUG - Atualizando redacoes_enviadas...');
+        console.log(`🎵 AUDIO DEBUG - Atualizando redacoes_enviadas campo ${audioField}...`);
         const { error } = await supabase
           .from('redacoes_enviadas')
-          .update({ audio_url: publicUrl })
+          .update({ [audioField]: publicUrl })
           .eq('id', redacaoId);
         dbError = error;
       } else if (tabela === 'redacoes_simulado') {
-        console.log('🎵 AUDIO DEBUG - Atualizando redacoes_simulado...');
+        console.log(`🎵 AUDIO DEBUG - Atualizando redacoes_simulado campo ${audioField}...`);
         const { error } = await supabase
           .from('redacoes_simulado')
-          .update({ audio_url: publicUrl })
+          .update({ [audioField]: publicUrl })
           .eq('id', redacaoId);
         dbError = error;
       } else if (tabela === 'redacoes_exercicio') {
-        console.log('🎵 AUDIO DEBUG - Atualizando redacoes_exercicio...');
+        console.log(`🎵 AUDIO DEBUG - Atualizando redacoes_exercicio campo ${audioField}...`);
         const { error } = await supabase
           .from('redacoes_exercicio')
-          .update({ audio_url: publicUrl })
+          .update({ [audioField]: publicUrl })
           .eq('id', redacaoId);
         dbError = error;
       }
@@ -253,23 +259,26 @@ export const AudioRecorder = ({
       }
 
       // Update database based on table type
+      // Determinar qual campo de áudio usar baseado no corretor
+      const audioField = ehCorretor1 ? 'audio_url_corretor_1' : 'audio_url_corretor_2';
+      
       let dbError;
       if (tabela === 'redacoes_enviadas') {
         const { error } = await supabase
           .from('redacoes_enviadas')
-          .update({ audio_url: null })
+          .update({ [audioField]: null })
           .eq('id', redacaoId);
         dbError = error;
       } else if (tabela === 'redacoes_simulado') {
         const { error } = await supabase
           .from('redacoes_simulado')
-          .update({ audio_url: null })
+          .update({ [audioField]: null })
           .eq('id', redacaoId);
         dbError = error;
       } else if (tabela === 'redacoes_exercicio') {
         const { error } = await supabase
           .from('redacoes_exercicio')
-          .update({ audio_url: null })
+          .update({ [audioField]: null })
           .eq('id', redacaoId);
         dbError = error;
       }

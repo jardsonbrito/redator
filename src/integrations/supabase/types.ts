@@ -987,6 +987,8 @@ export type Database = {
       redacoes_enviadas: {
         Row: {
           audio_url: string | null
+          audio_url_corretor_1: string | null
+          audio_url_corretor_2: string | null
           c1_corretor_1: number | null
           c1_corretor_2: number | null
           c2_corretor_1: number | null
@@ -1041,6 +1043,8 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          audio_url_corretor_1?: string | null
+          audio_url_corretor_2?: string | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
           c2_corretor_1?: number | null
@@ -1095,6 +1099,8 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          audio_url_corretor_1?: string | null
+          audio_url_corretor_2?: string | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
           c2_corretor_1?: number | null
@@ -1167,6 +1173,8 @@ export type Database = {
       redacoes_exercicio: {
         Row: {
           audio_url: string | null
+          audio_url_corretor_1: string | null
+          audio_url_corretor_2: string | null
           c1_corretor_1: number | null
           c1_corretor_2: number | null
           c2_corretor_1: number | null
@@ -1218,6 +1226,8 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          audio_url_corretor_1?: string | null
+          audio_url_corretor_2?: string | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
           c2_corretor_1?: number | null
@@ -1269,6 +1279,8 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          audio_url_corretor_1?: string | null
+          audio_url_corretor_2?: string | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
           c2_corretor_1?: number | null
@@ -1338,6 +1350,8 @@ export type Database = {
       redacoes_simulado: {
         Row: {
           audio_url: string | null
+          audio_url_corretor_1: string | null
+          audio_url_corretor_2: string | null
           c1_corretor_1: number | null
           c1_corretor_2: number | null
           c2_corretor_1: number | null
@@ -1390,6 +1404,8 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          audio_url_corretor_1?: string | null
+          audio_url_corretor_2?: string | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
           c2_corretor_1?: number | null
@@ -1442,6 +1458,8 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          audio_url_corretor_1?: string | null
+          audio_url_corretor_2?: string | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
           c2_corretor_1?: number | null

@@ -47,6 +47,8 @@ interface RedacaoEnviadaCardProps {
     correcao_arquivo_url_corretor_1?: string | null;
     correcao_arquivo_url_corretor_2?: string | null;
     audio_url?: string | null;
+    audio_url_corretor_1?: string | null;
+    audio_url_corretor_2?: string | null;
   };
 }
 
@@ -232,15 +234,27 @@ export const RedacaoEnviadaCard = ({
 
             {/* Player de áudio do corretor - logo após as notas */}
             {/* Lógica: só exibe áudio se este card corresponder ao corretor que gravou */}
-            {redacao.audio_url && (
-              <div className="pt-4 border-t border-primary/20">
-                <AudioPlayerAluno 
-                  audioUrl={redacao.audio_url} 
-                  corretorNome={redacao.corretor_numero === 1 ? "Corretor 1" : redacao.corretor_numero === 2 ? "Corretor 2" : "Corretor"}
-                  isStudentView={true}
-                />
-              </div>
-            )}
+            {(() => {
+              // Determinar qual campo de áudio usar baseado no corretor
+              const audioUrl = redacao.corretor_numero === 1 
+                ? redacao.audio_url_corretor_1 
+                : redacao.corretor_numero === 2 
+                  ? redacao.audio_url_corretor_2 
+                  : redacao.audio_url; // Fallback para compatibilidade
+
+              if (audioUrl) {
+                return (
+                  <div className="pt-4 border-t border-primary/20">
+                    <AudioPlayerAluno 
+                      audioUrl={audioUrl} 
+                      corretorNome={redacao.corretor_numero === 1 ? "Corretor 1" : redacao.corretor_numero === 2 ? "Corretor 2" : "Corretor"}
+                      isStudentView={true}
+                    />
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </CardContent>
         </Card>
       )}
