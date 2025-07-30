@@ -30,6 +30,7 @@ interface RedacaoEnviadaCardProps {
     tipo_envio: string;
     status: string;
     turma: string;
+    corretor_numero?: number;
     // Novos campos de comentários pedagógicos
     comentario_c1_corretor_1?: string | null;
     comentario_c2_corretor_1?: string | null;
@@ -230,11 +231,12 @@ export const RedacaoEnviadaCard = ({
             </div>
 
             {/* Player de áudio do corretor - logo após as notas */}
+            {/* Lógica: só exibe áudio se este card corresponder ao corretor que gravou */}
             {redacao.audio_url && (
               <div className="pt-4 border-t border-primary/20">
                 <AudioPlayerAluno 
                   audioUrl={redacao.audio_url} 
-                  corretorNome="Corretor"
+                  corretorNome={redacao.corretor_numero === 1 ? "Corretor 1" : redacao.corretor_numero === 2 ? "Corretor 2" : "Corretor"}
                   isStudentView={true}
                 />
               </div>

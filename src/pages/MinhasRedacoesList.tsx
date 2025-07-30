@@ -40,6 +40,7 @@ interface RedacaoTurma {
   corretor_numero?: number;
   original_id?: string;
   observacoes_coordenacao?: string;
+  audio_url?: string | null;
   // Campos pedagógicos
   comentario_c1_corretor_1?: string | null;
   comentario_c2_corretor_1?: string | null;
@@ -168,8 +169,11 @@ const MinhasRedacoesList = () => {
           }
 
           redacoesSimulado.forEach((item: any) => {
-            // Se há corretor 1, adicionar uma entrada
+            // Se há corretor 1, adicionar entrada (sempre que há corretor atribuído)
             if (item.corretor_id_1) {
+              const statusCorretor1 = item.status_corretor_1 || 'pendente';
+              const hasNotas1 = item.c1_corretor_1 || item.c2_corretor_1 || item.c3_corretor_1 || item.c4_corretor_1 || item.c5_corretor_1;
+              
               todasRedacoes.push({
                 ...item,
                 id: `${item.id}-corretor1`, // ID único para cada entrada
@@ -177,19 +181,40 @@ const MinhasRedacoesList = () => {
                 frase_tematica: item.simulados?.frase_tematica || 'Simulado',
                 redacao_texto: item.texto || '',
                 tipo_envio: 'simulado',
-                status: item.corrigida ? 'corrigida' : 'aguardando',
-                corrigida: !!item.corrigida,
+                status: statusCorretor1 === 'corrigida' ? 'corrigida' : hasNotas1 ? 'em_andamento' : 'aguardando',
+                corrigida: statusCorretor1 === 'corrigida',
                 nome_aluno: item.nome_aluno || '',
                 email_aluno: item.email_aluno || '',
                 turma: item.turma || '',
                 data_envio: item.data_envio,
+                data_correcao: item.data_correcao,
                 corretor: nomes_corretores[item.corretor_id_1] || 'Corretor 1',
-                corretor_numero: 1
+                corretor_numero: 1,
+                // Notas específicas do corretor 1
+                nota_c1: item.c1_corretor_1,
+                nota_c2: item.c2_corretor_1,
+                nota_c3: item.c3_corretor_1,
+                nota_c4: item.c4_corretor_1,
+                nota_c5: item.c5_corretor_1,
+                nota_total: item.nota_final_corretor_1,
+                // Comentários do corretor 1
+                comentario_c1_corretor_1: item.comentario_c1_corretor_1,
+                comentario_c2_corretor_1: item.comentario_c2_corretor_1,
+                comentario_c3_corretor_1: item.comentario_c3_corretor_1,
+                comentario_c4_corretor_1: item.comentario_c4_corretor_1,
+                comentario_c5_corretor_1: item.comentario_c5_corretor_1,
+                elogios_pontos_atencao_corretor_1: item.elogios_pontos_atencao_corretor_1,
+                correcao_arquivo_url_corretor_1: item.correcao_arquivo_url_corretor_1,
+                // Audio só se for do corretor 1
+                audio_url: item.audio_url // Será filtrado no componente
               } as RedacaoTurma);
             }
 
-            // Se há corretor 2, adicionar segunda entrada
+            // Se há corretor 2, adicionar entrada (sempre que há corretor atribuído)
             if (item.corretor_id_2) {
+              const statusCorretor2 = item.status_corretor_2 || 'pendente';
+              const hasNotas2 = item.c1_corretor_2 || item.c2_corretor_2 || item.c3_corretor_2 || item.c4_corretor_2 || item.c5_corretor_2;
+              
               todasRedacoes.push({
                 ...item,
                 id: `${item.id}-corretor2`, // ID único para cada entrada
@@ -197,14 +222,32 @@ const MinhasRedacoesList = () => {
                 frase_tematica: item.simulados?.frase_tematica || 'Simulado',
                 redacao_texto: item.texto || '',
                 tipo_envio: 'simulado',
-                status: item.corrigida ? 'corrigida' : 'aguardando',
-                corrigida: !!item.corrigida,
+                status: statusCorretor2 === 'corrigida' ? 'corrigida' : hasNotas2 ? 'em_andamento' : 'aguardando',
+                corrigida: statusCorretor2 === 'corrigida',
                 nome_aluno: item.nome_aluno || '',
                 email_aluno: item.email_aluno || '',
                 turma: item.turma || '',
                 data_envio: item.data_envio,
+                data_correcao: item.data_correcao,
                 corretor: nomes_corretores[item.corretor_id_2] || 'Corretor 2',
-                corretor_numero: 2
+                corretor_numero: 2,
+                // Notas específicas do corretor 2
+                nota_c1: item.c1_corretor_2,
+                nota_c2: item.c2_corretor_2,
+                nota_c3: item.c3_corretor_2,
+                nota_c4: item.c4_corretor_2,
+                nota_c5: item.c5_corretor_2,
+                nota_total: item.nota_final_corretor_2,
+                // Comentários do corretor 2
+                comentario_c1_corretor_2: item.comentario_c1_corretor_2,
+                comentario_c2_corretor_2: item.comentario_c2_corretor_2,
+                comentario_c3_corretor_2: item.comentario_c3_corretor_2,
+                comentario_c4_corretor_2: item.comentario_c4_corretor_2,
+                comentario_c5_corretor_2: item.comentario_c5_corretor_2,
+                elogios_pontos_atencao_corretor_2: item.elogios_pontos_atencao_corretor_2,
+                correcao_arquivo_url_corretor_2: item.correcao_arquivo_url_corretor_2,
+                // Audio só se for do corretor 2
+                audio_url: item.audio_url // Será filtrado no componente
               } as RedacaoTurma);
             }
 
@@ -559,9 +602,14 @@ const MinhasRedacoesList = () => {
                         >
                           {getTipoEnvioLabel(redacao.tipo_envio)}
                         </Badge>
-                        {redacao.corrigida && (
+                        {redacao.status === 'corrigida' && (
                           <Badge variant="default">
                             Corrigida
+                          </Badge>
+                        )}
+                        {redacao.status === 'em_andamento' && (
+                          <Badge variant="secondary">
+                            Em andamento
                           </Badge>
                         )}
                       </div>
