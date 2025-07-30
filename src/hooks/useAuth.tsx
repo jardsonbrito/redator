@@ -26,7 +26,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return false;
     }
     
-    const adminStatus = userEmail === 'jardsonbrito@gmail.com';
+    // Aceitar múltiplos emails como admin
+    const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
+    const adminStatus = adminEmails.includes(userEmail.toLowerCase());
     console.log('🔐 Admin check - Email:', userEmail, 'Admin status:', adminStatus);
     setIsAdmin(adminStatus);
     return adminStatus;
@@ -48,7 +50,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           checkAdminStatus(session.user.email);
           
           // Salvar sessão admin persistente se for admin
-          if (session.user.email === 'jardsonbrito@gmail.com') {
+          const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
+          if (adminEmails.includes(session.user.email?.toLowerCase() || '')) {
             localStorage.setItem('admin_session', JSON.stringify({
               email: session.user.email,
               timestamp: new Date().toISOString()
