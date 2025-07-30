@@ -42,6 +42,8 @@ import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 import { ProfessorAuthProvider } from "./hooks/useProfessorAuth";
 import { ProfessorLogin } from "./pages/ProfessorLogin";
+import { ProfessorDashboard } from "./pages/ProfessorDashboard";
+import { TrocarSenhaProfessor } from "./pages/TrocarSenhaProfessor";
 import CadastroAluno from "./pages/CadastroAluno";
 import AtualizarEmail from "./pages/AtualizarEmail";
 import AjudaRapida from "./pages/AjudaRapida";
@@ -109,6 +111,8 @@ function App() {
                   
                   {/* Rotas do Professor */}
                   <Route path="/professor/login" element={<ProfessorLogin />} />
+                  <Route path="/professor/dashboard" element={<ProfessorDashboard />} />
+                  <Route path="/professor/trocar-senha" element={<TrocarSenhaProfessor />} />
                 </Routes>
               </div>
             </Router>
