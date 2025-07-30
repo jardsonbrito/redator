@@ -677,6 +677,86 @@ export type Database = {
           },
         ]
       }
+      professor_access_logs: {
+        Row: {
+          acao: string
+          data_acesso: string
+          id: string
+          ip_address: unknown | null
+          professor_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          acao?: string
+          data_acesso?: string
+          id?: string
+          ip_address?: unknown | null
+          professor_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          acao?: string
+          data_acesso?: string
+          id?: string
+          ip_address?: unknown | null
+          professor_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professor_access_logs_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professores: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          criado_em: string
+          email: string
+          id: string
+          nome_completo: string
+          primeiro_login: boolean
+          role: string
+          senha_hash: string
+          ultimo_browser: string | null
+          ultimo_ip: unknown | null
+          ultimo_login: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          email: string
+          id?: string
+          nome_completo: string
+          primeiro_login?: boolean
+          role?: string
+          senha_hash: string
+          ultimo_browser?: string | null
+          ultimo_ip?: unknown | null
+          ultimo_login?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          email?: string
+          id?: string
+          nome_completo?: string
+          primeiro_login?: boolean
+          role?: string
+          senha_hash?: string
+          ultimo_browser?: string | null
+          ultimo_ip?: unknown | null
+          ultimo_login?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           aprovado_por: string | null
@@ -1855,8 +1935,16 @@ export type Database = {
         Args: { user_email: string }
         Returns: undefined
       }
+      trocar_senha_professor: {
+        Args: { professor_id: string; nova_senha: string }
+        Returns: Json
+      }
       update_student_email: {
         Args: { current_email: string; new_email: string }
+        Returns: Json
+      }
+      validate_professor_login: {
+        Args: { p_email: string; p_senha: string }
         Returns: Json
       }
     }

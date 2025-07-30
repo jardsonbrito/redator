@@ -71,6 +71,10 @@ import { AlunoList } from "@/components/admin/AlunoList";
 import { CorretorForm } from "@/components/admin/CorretorForm";
 import { CorretorList } from "@/components/admin/CorretorList";
 
+// Import professor components
+import { ProfessorForm } from "@/components/admin/ProfessorForm";
+import { ProfessorList } from "@/components/admin/ProfessorList";
+
 // Import componentes de aprovação de alunos
 import { AlunosAprovacaoPopup } from "@/components/admin/AlunosAprovacaoPopup";
 import { useAlunosPendentes } from "@/hooks/useAlunosPendentes";
@@ -86,6 +90,8 @@ const Admin = () => {
   const [alunoEditando, setAlunoEditando] = useState(null);
   const [refreshCorretores, setRefreshCorretores] = useState(false);
   const [corretorEditando, setCorretorEditando] = useState(null);
+  const [refreshProfessores, setRefreshProfessores] = useState(false);
+  const [professorEditando, setProfessorEditando] = useState(null);
   
   // Hook para gerenciar alunos pendentes
   const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
@@ -123,8 +129,9 @@ const Admin = () => {
     { id: "biblioteca", label: "Biblioteca", icon: File },
     { id: "radar", label: "Radar", icon: Radar },
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: MessageSquare },
-    { id: "cadastro-alunos", label: "Cadastro de Alunos", icon: Users },
+    { id: "alunos", label: "Alunos", icon: Users },
     { id: "corretores", label: "Corretores", icon: UserCheck },
+    { id: "professores", label: "Professores", icon: GraduationCap },
     { id: "exportacao", label: "Exportação", icon: Download },
   ];
 
@@ -380,7 +387,7 @@ const Admin = () => {
           </Tabs>
         );
 
-      case "cadastro-alunos":
+      case "alunos":
         const handleAlunoSuccess = () => {
           console.log("Admin - handleAlunoSuccess chamado");
           setRefreshAlunos(!refreshAlunos);
@@ -413,6 +420,34 @@ const Admin = () => {
             <AlunoList 
               refresh={refreshAlunos}
               onEdit={handleEditAluno}
+            />
+          </div>
+        );
+
+      case "professores":
+        const handleProfessorSuccess = () => {
+          setRefreshProfessores(!refreshProfessores);
+          setProfessorEditando(null);
+        };
+
+        const handleEditProfessor = (professor: any) => {
+          setProfessorEditando(professor);
+        };
+
+        const handleCancelProfessorEdit = () => {
+          setProfessorEditando(null);
+        };
+
+        return (
+          <div className="space-y-6">
+            <ProfessorForm 
+              onSuccess={handleProfessorSuccess}
+              professorEditando={professorEditando}
+              onCancelEdit={handleCancelProfessorEdit}
+            />
+            <ProfessorList 
+              refresh={refreshProfessores}
+              onEdit={handleEditProfessor}
             />
           </div>
         );

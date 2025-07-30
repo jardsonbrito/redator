@@ -40,6 +40,8 @@ import CorretorBiblioteca from "./pages/corretor/CorretorBiblioteca";
 import CorretorRedacoesExemplar from "./pages/corretor/CorretorRedacoesExemplar";
 import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
+import { ProfessorAuthProvider } from "./hooks/useProfessorAuth";
+import { ProfessorLogin } from "./pages/ProfessorLogin";
 import CadastroAluno from "./pages/CadastroAluno";
 import AtualizarEmail from "./pages/AtualizarEmail";
 import AjudaRapida from "./pages/AjudaRapida";
@@ -106,9 +108,10 @@ function App() {
               </Routes>
             </div>
           </Router>
-        </AuthProvider>
-      </StudentAuthProvider>
-    </CorretorAuthProvider>
+          </AuthProvider>
+        </StudentAuthProvider>
+      </CorretorAuthProvider>
+    </ProfessorAuthProvider>
   );
 }
 
