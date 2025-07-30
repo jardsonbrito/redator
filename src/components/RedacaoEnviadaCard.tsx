@@ -31,6 +31,7 @@ interface RedacaoEnviadaCardProps {
     status: string;
     turma: string;
     corretor_numero?: number;
+    corretor?: string;
     // Novos campos de comentários pedagógicos
     comentario_c1_corretor_1?: string | null;
     comentario_c2_corretor_1?: string | null;
@@ -112,14 +113,19 @@ export const RedacaoEnviadaCard = ({
     return comentarios;
   };
 
-  // Função para obter elogios e pontos de atenção
+  // Função para obter elogios e pontos de atenção do corretor específico
   const getElogiosEPontosAtencao = () => {
+    // Baseado no corretor_numero, retornar apenas o relatório daquele corretor
+    if (redacao.corretor_numero === 1) {
+      return redacao.elogios_pontos_atencao_corretor_1?.trim() || null;
+    } else if (redacao.corretor_numero === 2) {
+      return redacao.elogios_pontos_atencao_corretor_2?.trim() || null;
+    }
+    
+    // Para compatibilidade com redações sem corretor_numero específico
     const elogios1 = redacao.elogios_pontos_atencao_corretor_1?.trim();
     const elogios2 = redacao.elogios_pontos_atencao_corretor_2?.trim();
-    return {
-      elogios1,
-      elogios2
-    };
+    return elogios1 || elogios2 || null;
   };
 
   // Função para verificar se há correção externa disponível
@@ -133,10 +139,7 @@ export const RedacaoEnviadaCard = ({
   };
 
   const comentariosPedagogicos = getComentariosPedagogicos();
-  const {
-    elogios1,
-    elogios2
-  } = getElogiosEPontosAtencao();
+  const relatorioPedagogico = getElogiosEPontosAtencao();
   const {
     correcao1,
     correcao2
@@ -145,8 +148,9 @@ export const RedacaoEnviadaCard = ({
   console.log('🔍 DEBUG RedacaoEnviadaCard - RESULTADO FINAL:', {
     comentariosPedagogicos,
     totalComentarios: comentariosPedagogicos.length,
-    elogios1: !!elogios1,
-    elogios2: !!elogios2,
+    relatorioPedagogico: !!relatorioPedagogico,
+    corretor_numero: redacao.corretor_numero,
+    corretor_nome: redacao.corretor,
     temCorrecaoExterna: !!(correcao1 || correcao2)
   });
 
@@ -419,17 +423,20 @@ export const RedacaoEnviadaCard = ({
       </Card>
 
       {/* Relatório pedagógico - só exibir se correção foi FINALIZADA */}
-      {redacao.corrigida && (elogios1 || elogios2 || (redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim())) && (
+      {redacao.corrigida && (relatorioPedagogico || (redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim())) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-primary">
               <MessageSquare className="w-5 h-5" />
-              Relatório pedagógico de correção
+              {redacao.corretor ? 
+                `Relatório pedagógico de correção – ${redacao.corretor}` : 
+                'Relatório pedagógico de correção'
+              }
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Comentário administrativo */}
-            {redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && (
+            {/* Comentário administrativo - apenas se não há corretor específico */}
+            {!redacao.corretor_numero && redacao.comentario_admin && typeof redacao.comentario_admin === 'string' && redacao.comentario_admin.trim() && (
               <div className="bg-white border border-primary/20 rounded-lg p-4">
                 <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
                   {redacao.comentario_admin}
@@ -437,26 +444,14 @@ export const RedacaoEnviadaCard = ({
               </div>
             )}
             
-            {/* Elogios e pontos de atenção do corretor 1 */}
-            {elogios1 && (
+            {/* Relatório pedagógico do corretor específico */}
+            {relatorioPedagogico && (
               <div className="bg-white border border-primary/20 rounded-lg p-4">
-                <h4 className="font-semibold text-primary mb-3">Relatório Pedagógico</h4>
                 <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
-                  {elogios1}
+                  {relatorioPedagogico}
                 </p>
               </div>
             )}
-            
-            {/* Elogios e pontos de atenção do corretor 2 */}
-            {elogios2 && (
-              <div className="bg-white border border-primary/20 rounded-lg p-4">
-                <h4 className="font-semibold text-primary mb-3">Relatório Pedagógico - Corretor 2</h4>
-                <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
-                  {elogios2}
-                </p>
-              </div>
-            )}
-            
             
             {/* Botão de download da correção - SEMPRE MOSTRAR quando há correção */}
             <div className="flex justify-center pt-4">
