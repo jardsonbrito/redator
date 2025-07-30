@@ -1655,6 +1655,15 @@ export type Database = {
         Args: { aluno_id: string; admin_id: string }
         Returns: boolean
       }
+      atualizar_professor: {
+        Args: {
+          professor_id: string
+          p_nome_completo: string
+          p_email: string
+          p_role: string
+        }
+        Returns: Json
+      }
       auto_merge_student_accounts: {
         Args: { student_email: string }
         Returns: Json
@@ -1695,6 +1704,10 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      criar_professor: {
+        Args: { p_nome_completo: string; p_email: string; p_role?: string }
+        Returns: Json
       }
       detect_duplicate_students: {
         Args: { student_email: string }

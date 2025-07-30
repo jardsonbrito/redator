@@ -49,16 +49,24 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
     try {
       if (professorEditando) {
         // Atualizar professor existente
-        const { error } = await supabase
-          .from('professores')
-          .update({
-            nome_completo: nomeCompleto.trim(),
-            email: email.toLowerCase().trim(),
-            role,
-          })
-          .eq('id', professorEditando.id);
+        const { data, error } = await supabase.rpc('atualizar_professor', {
+          professor_id: professorEditando.id,
+          p_nome_completo: nomeCompleto.trim(),
+          p_email: email.toLowerCase().trim(),
+          p_role: role
+        });
 
         if (error) throw error;
+
+        const result = data as any;
+        if (!result.success) {
+          toast({
+            title: "Erro",
+            description: result.message,
+            variant: "destructive"
+          });
+          return;
+        }
 
         toast({
           title: "Professor atualizado",
@@ -66,26 +74,22 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
         });
       } else {
         // Criar novo professor
-        const { error } = await supabase
-          .from('professores')
-          .insert({
-            nome_completo: nomeCompleto.trim(),
-            email: email.toLowerCase().trim(),
-            role,
-            senha_hash: "123456", // Senha padrão
-            primeiro_login: true
-          });
+        const { data, error } = await supabase.rpc('criar_professor', {
+          p_nome_completo: nomeCompleto.trim(),
+          p_email: email.toLowerCase().trim(),
+          p_role: role
+        });
 
-        if (error) {
-          if (error.code === '23505') { // Unique constraint violation
-            toast({
-              title: "E-mail já existe",
-              description: "Este e-mail já está sendo usado por outro professor.",
-              variant: "destructive"
-            });
-            return;
-          }
-          throw error;
+        if (error) throw error;
+
+        const result = data as any;
+        if (!result.success) {
+          toast({
+            title: "Erro",
+            description: result.message,
+            variant: "destructive"
+          });
+          return;
         }
 
         toast({
