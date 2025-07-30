@@ -41,9 +41,21 @@ import CorretorRedacoesExemplar from "./pages/corretor/CorretorRedacoesExemplar"
 import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 import { ProfessorAuthProvider } from "./hooks/useProfessorAuth";
+import { ProfessorProtectedRoute } from "./components/ProfessorProtectedRoute";
 import { ProfessorLogin } from "./pages/ProfessorLogin";
 import { ProfessorDashboard } from "./pages/ProfessorDashboard";
 import { TrocarSenhaProfessor } from "./pages/TrocarSenhaProfessor";
+import { ProfessorTemas } from "./pages/professor/ProfessorTemas";
+import { ProfessorRedacoes } from "./pages/professor/ProfessorRedacoes";
+import { ProfessorBiblioteca } from "./pages/professor/ProfessorBiblioteca";
+import { ProfessorVideoteca } from "./pages/professor/ProfessorVideoteca";
+import { ProfessorTurmas } from "./pages/professor/ProfessorTurmas";
+import { ProfessorAlunos } from "./pages/professor/ProfessorAlunos";
+import { ProfessorAulas } from "./pages/professor/ProfessorAulas";
+import { ProfessorExercicios } from "./pages/professor/ProfessorExercicios";
+import { ProfessorSimulados } from "./pages/professor/ProfessorSimulados";
+import { ProfessorSalasVirtuais } from "./pages/professor/ProfessorSalasVirtuais";
+import { ProfessorAvisos } from "./pages/professor/ProfessorAvisos";
 import CadastroAluno from "./pages/CadastroAluno";
 import AtualizarEmail from "./pages/AtualizarEmail";
 import AjudaRapida from "./pages/AjudaRapida";
@@ -111,8 +123,67 @@ function App() {
                   
                   {/* Rotas do Professor */}
                   <Route path="/professor/login" element={<ProfessorLogin />} />
-                  <Route path="/professor/dashboard" element={<ProfessorDashboard />} />
+                  <Route path="/professor/dashboard" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorDashboard />
+                    </ProfessorProtectedRoute>
+                  } />
                   <Route path="/professor/trocar-senha" element={<TrocarSenhaProfessor />} />
+                  <Route path="/professor/turmas" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorTurmas />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/alunos" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorAlunos />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/aulas" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorAulas />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/exercicios" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorExercicios />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/simulados" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorSimulados />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/salas-virtuais" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorSalasVirtuais />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/avisos" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorAvisos />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/temas" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorTemas />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/redacoes" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorRedacoes />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/biblioteca" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorBiblioteca />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/videoteca" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorVideoteca />
+                    </ProfessorProtectedRoute>
+                  } />
                 </Routes>
               </div>
             </Router>

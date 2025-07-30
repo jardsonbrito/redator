@@ -10,11 +10,12 @@ import {
   NotebookPen,
   MessageSquare,
   GraduationCap,
-  File,
+  Library,
   LogOut,
   Shield,
   ShieldCheck,
-  Users
+  Users,
+  Lightbulb
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -30,21 +31,26 @@ export const ProfessorDashboard = () => {
   }
 
   const professorMenuItems = [
-    { id: "temas", label: "Temas", icon: BookOpen, path: "/temas" },
-    { id: "redacoes", label: "Redações Exemplares", icon: FileText, path: "/redacoes" },
-    { id: "simulados", label: "Simulados", icon: ClipboardCheck, path: "/simulados" },
-    { id: "exercicios", label: "Exercícios", icon: NotebookPen, path: "/exercicios" },
-    { id: "salas-virtuais", label: "Salas Virtuais", icon: Video, path: "/aulas" },
-    { id: "aulas", label: "Aulas", icon: GraduationCap, path: "/aulas" },
-    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare, path: "/avisos" },
-    { id: "biblioteca", label: "Videobiblioteca", icon: File, path: "/biblioteca" },
+    // Cards individualizados (vazios por padrão)
+    { id: "turmas", label: "Turmas", icon: Users, path: "/professor/turmas", shared: false },
+    { id: "alunos", label: "Alunos", icon: GraduationCap, path: "/professor/alunos", shared: false },
+    { id: "aulas", label: "Aulas", icon: BookOpen, path: "/professor/aulas", shared: false },
+    { id: "exercicios", label: "Exercícios", icon: NotebookPen, path: "/professor/exercicios", shared: false },
+    { id: "simulados", label: "Simulados", icon: ClipboardCheck, path: "/professor/simulados", shared: false },
+    { id: "salas-virtuais", label: "Salas Virtuais", icon: Video, path: "/professor/salas-virtuais", shared: false },
+    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare, path: "/professor/avisos", shared: false },
+    // Cards com conteúdo compartilhado
+    { id: "temas", label: "Temas", icon: Lightbulb, path: "/professor/temas", shared: true },
+    { id: "redacoes", label: "Redações Exemplares", icon: FileText, path: "/professor/redacoes", shared: true },
+    { id: "biblioteca", label: "Biblioteca", icon: Library, path: "/professor/biblioteca", shared: true },
+    { id: "videoteca", label: "Videoteca", icon: Video, path: "/professor/videoteca", shared: true },
   ];
 
   const adminMenuItems = [
     ...professorMenuItems,
-    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: FileText, path: "/admin" },
-    { id: "alunos", label: "Alunos", icon: Users, path: "/admin" },
-    { id: "dashboard", label: "Painel Completo", icon: Shield, path: "/admin" },
+    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: FileText, path: "/admin", shared: false },
+    { id: "professores", label: "Professores", icon: Shield, path: "/admin", shared: false },
+    { id: "dashboard", label: "Painel Completo", icon: ShieldCheck, path: "/admin", shared: false },
   ];
 
   const menuItems = isAdmin ? adminMenuItems : professorMenuItems;
@@ -101,7 +107,7 @@ export const ProfessorDashboard = () => {
             <p className="text-muted-foreground max-w-2xl mx-auto">
               {isAdmin 
                 ? "Como administrador, você tem acesso completo a todas as funcionalidades da plataforma."
-                : "Aqui você pode acessar todas as ferramentas disponíveis para professores."
+                : "Gerencie suas turmas, alunos e conteúdos. Os cards destacados em azul mostram conteúdo compartilhado pelo administrador."
               }
             </p>
           </div>
@@ -110,15 +116,36 @@ export const ProfessorDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {menuItems.map((item) => (
               <Link key={item.id} to={item.path}>
-                <Card className="group cursor-pointer bg-white/80 backdrop-blur-sm hover:bg-white hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 border border-primary/10 hover:border-primary/20 rounded-2xl overflow-hidden h-full">
+                <Card className={`group cursor-pointer backdrop-blur-sm hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden h-full ${
+                  item.shared 
+                    ? "bg-blue-50/80 border border-blue-200 hover:bg-blue-100/80 hover:shadow-blue-200/50" 
+                    : "bg-white/80 border border-primary/10 hover:bg-white hover:shadow-primary/10 hover:border-primary/20"
+                }`}>
                   <CardHeader className="p-6 text-center">
                     <div className="flex flex-col items-center gap-4">
-                      <div className="p-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl group-hover:from-primary/20 group-hover:to-accent/20 transition-all duration-300">
-                        <item.icon className="w-8 h-8 text-primary group-hover:text-accent transition-colors duration-300" />
+                      <div className={`p-4 rounded-xl transition-all duration-300 ${
+                        item.shared 
+                          ? "bg-gradient-to-br from-blue-100 to-blue-200 group-hover:from-blue-200 group-hover:to-blue-300"
+                          : "bg-gradient-to-br from-primary/10 to-accent/10 group-hover:from-primary/20 group-hover:to-accent/20"
+                      }`}>
+                        <item.icon className={`w-8 h-8 transition-colors duration-300 ${
+                          item.shared 
+                            ? "text-blue-600 group-hover:text-blue-700"
+                            : "text-primary group-hover:text-accent"
+                        }`} />
                       </div>
-                      <CardTitle className="text-lg font-semibold text-primary group-hover:text-accent transition-colors duration-300">
+                      <CardTitle className={`text-lg font-semibold transition-colors duration-300 ${
+                        item.shared 
+                          ? "text-blue-600 group-hover:text-blue-700"
+                          : "text-primary group-hover:text-accent"
+                      }`}>
                         {item.label}
                       </CardTitle>
+                      {item.shared && !isAdmin && (
+                        <div className="text-xs text-blue-500 font-medium px-2 py-1 bg-blue-100 rounded-full">
+                          Conteúdo Compartilhado
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                 </Card>
