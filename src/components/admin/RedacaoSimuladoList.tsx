@@ -302,7 +302,7 @@ const RedacaoSimuladoList = () => {
     const matchStatus = filtroStatus === "todas" || 
       (filtroStatus === "corrigidas" && redacao.status_atual === 'corrigida') ||
       (filtroStatus === "pendentes" && redacao.status_atual === 'pendente') ||
-      (filtroStatus === "em_correcao" && redacao.status_atual === 'em_correcao');
+      (filtroStatus === "incompleta" && redacao.status_atual === 'incompleta');
     const matchSimulado = filtroSimulado === "todos" || redacao.id_simulado === filtroSimulado;
     const matchCorretor = filtroCorretor === "todos" || redacao.corretor_id_atual === filtroCorretor;
     const matchNome = buscaNome === "" || 
@@ -318,8 +318,8 @@ const RedacaoSimuladoList = () => {
     switch (status) {
       case 'corrigida':
         return <Badge className="bg-green-500 text-white">Corrigida</Badge>;
-      case 'em_correcao':
-        return <Badge className="bg-blue-500 text-white">Em correção</Badge>;
+      case 'incompleta':
+        return <Badge className="bg-orange-500 text-white">Incompleta</Badge>;
       case 'pendente':
         return <Badge className="bg-yellow-500 text-white">Pendente</Badge>;
       default:
@@ -382,7 +382,7 @@ const RedacaoSimuladoList = () => {
                 <SelectContent>
                   <SelectItem value="todas">Todas</SelectItem>
                   <SelectItem value="pendentes">Pendentes</SelectItem>
-                  <SelectItem value="em_correcao">Em correção</SelectItem>
+                  <SelectItem value="incompleta">Incompletas</SelectItem>
                   <SelectItem value="corrigidas">Corrigidas</SelectItem>
                 </SelectContent>
               </Select>
