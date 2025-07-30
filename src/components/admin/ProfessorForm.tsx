@@ -74,6 +74,12 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
         });
       } else {
         // Criar novo professor com usuário Auth
+        console.log('🔄 Chamando Edge Function criar-professor-auth com:', {
+          nome_completo: nomeCompleto.trim(),
+          email: email.toLowerCase().trim(),
+          role: role
+        });
+
         const { data, error } = await supabase.functions.invoke('criar-professor-auth', {
           body: {
             nome_completo: nomeCompleto.trim(),
@@ -82,10 +88,16 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
           }
         });
 
-        if (error) throw error;
+        console.log('📥 Resposta do Edge Function:', { data, error });
+
+        if (error) {
+          console.error('❌ Erro no Edge Function:', error);
+          throw error;
+        }
 
         const result = data as any;
         if (!result.success) {
+          console.error('❌ Edge Function retornou erro:', result);
           toast({
             title: "Erro",
             description: result.message,
@@ -94,6 +106,7 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
           return;
         }
 
+        console.log('✅ Professor criado com sucesso via Edge Function');
         toast({
           title: "Professor criado",
           description: "Novo professor criado com sucesso. Senha padrão: 123456"
