@@ -564,12 +564,6 @@ const MinhasRedacoesList = () => {
                             Corrigida
                           </Badge>
                         )}
-                        {/* Só mostrar nota se a correção foi FINALIZADA */}
-                        {redacao.corrigida && redacao.nota_total && (
-                          <Badge variant="outline">
-                            Nota: {redacao.nota_total}
-                          </Badge>
-                        )}
                       </div>
                       
                        <h3 className="font-semibold text-foreground mb-1 line-clamp-2">
@@ -581,6 +575,15 @@ const MinhasRedacoesList = () => {
                            Corretor: {redacao.corretor}
                          </p>
                        )}
+
+                      {/* Exibir notas por competência se a correção foi finalizada */}
+                      {redacao.corrigida && (redacao.nota_c1 || redacao.nota_c2 || redacao.nota_c3 || redacao.nota_c4 || redacao.nota_c5) && (
+                        <div className="text-sm text-muted-foreground mt-2 mb-1">
+                          <span className="font-medium">
+                            C1: {redacao.nota_c1 || '-'} | C2: {redacao.nota_c2 || '-'} | C3: {redacao.nota_c3 || '-'} | C4: {redacao.nota_c4 || '-'} | C5: {redacao.nota_c5 || '-'} | Nota: {redacao.nota_total || '-'}
+                          </span>
+                        </div>
+                      )}
                       
                       <p className="text-sm text-muted-foreground">
                         Enviado em: {formatDate(redacao.data_envio)}
