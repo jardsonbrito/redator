@@ -637,7 +637,7 @@ const MinhasRedacoesList = () => {
                       
                       <p className="text-sm text-muted-foreground">
                         Enviado em: {formatDate(redacao.data_envio)}
-                        {redacao.data_correcao && (
+                        {redacao.corrigida && redacao.data_correcao && (
                           <span> • Corrigido em: {formatDate(redacao.data_correcao)}</span>
                         )}
                       </p>
