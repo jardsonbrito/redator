@@ -1709,6 +1709,10 @@ export type Database = {
         Args: { p_nome_completo: string; p_email: string; p_role?: string }
         Returns: Json
       }
+      criar_professor_com_auth: {
+        Args: { p_nome_completo: string; p_email: string; p_role?: string }
+        Returns: Json
+      }
       detect_duplicate_students: {
         Args: { student_email: string }
         Returns: {

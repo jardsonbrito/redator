@@ -73,11 +73,13 @@ export const ProfessorForm = ({ onSuccess, professorEditando, onCancelEdit }: Pr
           description: "Os dados do professor foram atualizados com sucesso."
         });
       } else {
-        // Criar novo professor
-        const { data, error } = await supabase.rpc('criar_professor', {
-          p_nome_completo: nomeCompleto.trim(),
-          p_email: email.toLowerCase().trim(),
-          p_role: role
+        // Criar novo professor com usuário Auth
+        const { data, error } = await supabase.functions.invoke('criar-professor-auth', {
+          body: {
+            nome_completo: nomeCompleto.trim(),
+            email: email.toLowerCase().trim(),
+            role: role
+          }
         });
 
         if (error) throw error;
