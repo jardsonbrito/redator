@@ -1,15 +1,22 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Download, Home, LogOut } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Exportacao() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    signOut();
+  };
 
   const formatDate = () => {
     const now = new Date();
@@ -316,20 +323,64 @@ export default function Exportacao() {
   ];
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/admin')}
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar
-          </Button>
-          <h1 className="text-3xl font-bold text-primary">Exportação de Dados</h1>
+    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
+      {/* Header */}
+      <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <Link to="/app" className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 px-3 py-2 rounded-lg transition-all duration-300 text-primary hover:text-primary font-medium">
+                <Home className="w-5 h-5" />
+                <span>Voltar ao App</span>
+              </Link>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  Painel Administrativo
+                </h1>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="bg-secondary/20 px-3 py-1 rounded-full">
+                <span className="text-sm font-medium text-primary">Olá, {user?.email}</span>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleLogout}
+                className="border-primary/20 hover:bg-primary hover:text-white transition-all duration-300"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </Button>
+            </div>
+          </div>
         </div>
+      </header>
 
+      {/* Navigation */}
+      <nav className="bg-white/80 backdrop-blur-sm border-b border-primary/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 py-3">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/admin')}
+              className="hover:bg-primary/10 text-primary"
+            >
+              Dashboard
+            </Button>
+            <span className="text-primary/40">/</span>
+            <span className="text-primary font-semibold">
+              Exportação de Dados
+            </span>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {exportCards.map((card) => (
             <Card
@@ -345,7 +396,7 @@ export default function Exportacao() {
                     }`} 
                   />
                 </div>
-                <span className="text-sm text-center text-purple-700 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className="text-sm text-center text-purple-700 font-medium transition-opacity duration-300">
                   {card.label}
                 </span>
                 {isLoading === card.id && (
@@ -357,7 +408,7 @@ export default function Exportacao() {
             </Card>
           ))}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
