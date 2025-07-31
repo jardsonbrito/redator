@@ -145,33 +145,13 @@ const RedacoesExemplar = () => {
                     <CardHeader>
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                         <div className="flex-1">
-                          <CardTitle className="text-lg font-bold text-primary mb-2">
+                          <CardTitle className="text-lg font-bold text-primary mb-4">
                             {redacao.frase_tematica}
                           </CardTitle>
                           
-                          <div className="flex flex-wrap items-center gap-2 mb-3">
-                            <Badge className={getTipoColor(redacao.tipo_fonte)}>
-                              {getTipoLabel(redacao.tipo_fonte)}
-                            </Badge>
-                            
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              <Star className="w-3 h-3 mr-1" />
-                              {redacao.nota_total}/1000
-                            </Badge>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <User className="w-4 h-4" />
-                              <span>{redacao.nome_aluno}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              <span>
-                                {format(new Date(redacao.data_envio), "dd/MM/yyyy", { locale: ptBR })}
-                              </span>
-                            </div>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <User className="w-4 h-4" />
+                            <span>Jardson Brito</span>
                           </div>
                         </div>
 
