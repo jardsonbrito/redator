@@ -71,31 +71,32 @@ const Top5 = () => {
   const { data: ranking } = useQuery({
     queryKey: ['ranking', selectedType, selectedSimulado],
     queryFn: async () => {
-      let query;
+      let processedData = [];
       
       if (selectedType === "simulado") {
-        // Para simulados, só incluir redações com ambas correções finalizadas
-        query = supabase
-          .from('redacoes_simulado')
-          .select(`
-            nome_aluno,
-            nota_final_corretor_1,
-            nota_final_corretor_2,
-            status_corretor_1,
-            status_corretor_2,
-            simulados!inner(titulo)
-          `)
-          .eq('status_corretor_1', 'corrigida')
-          .eq('status_corretor_2', 'corrigida')
-          .not('nota_final_corretor_1', 'is', null)
-          .not('nota_final_corretor_2', 'is', null);
-          
-        if (selectedSimulado) {
-          query = query.eq('id_simulado', selectedSimulado);
+        // Para simulados, usar função otimizada que garante dupla correção
+        const { data: simuladoData, error: simuladoError } = await supabase.rpc('reprocessar_ranking_simulados');
+        
+        if (simuladoError) throw simuladoError;
+        
+        // Filtrar por simulado específico se selecionado
+        let filteredData = simuladoData || [];
+        if (selectedSimulado && simulados) {
+          const simuladoSelecionado = simulados.find(s => s.id === selectedSimulado);
+          if (simuladoSelecionado) {
+            filteredData = filteredData.filter(item => item.simulado_titulo === simuladoSelecionado.titulo);
+          }
         }
+        
+        // Transformar dados para formato esperado
+        processedData = filteredData.map(item => ({
+          nome_aluno: item.nome_aluno,
+          nota_total: Number(item.nota_media),
+          simulados: { titulo: item.simulado_titulo }
+        }));
       } else {
         // Para regular e avulsa, usar redacoes_enviadas
-        query = supabase
+        let query = supabase
           .from('redacoes_enviadas')
           .select('nome_aluno, nota_total, tipo_envio')
           .not('nota_total', 'is', null)
@@ -106,25 +107,12 @@ const Top5 = () => {
         } else if (selectedType === "avulsa") {
           query = query.eq('tipo_envio', 'avulsa');
         }
-      }
-      
-      let data, error;
-      
-      if (selectedType === "simulado") {
-        ({ data, error } = await query);
-      } else {
-        ({ data, error } = await query.order('nota_total', { ascending: false }));
-      }
-      
-      if (error) throw error;
-      
-      // Processar dados dos simulados (calcular média)
-      let processedData = data || [];
-      if (selectedType === "simulado") {
-        processedData = (data || []).map(item => ({
-          ...item,
-          nota_total: Math.round((Number(item.nota_final_corretor_1) + Number(item.nota_final_corretor_2)) / 2)
-        })).sort((a, b) => b.nota_total - a.nota_total);
+        
+        const { data, error } = await query.order('nota_total', { ascending: false });
+        
+        if (error) throw error;
+        
+        processedData = data || [];
       }
       
       // Processar ranking com lógica de empates justos

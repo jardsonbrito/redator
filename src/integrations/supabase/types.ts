@@ -1945,6 +1945,15 @@ export type Database = {
         Args: { aluno_id: string; admin_id: string }
         Returns: boolean
       }
+      reprocessar_ranking_simulados: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          nome_aluno: string
+          nota_media: number
+          status_correcao: string
+          simulado_titulo: string
+        }[]
+      }
       salvar_correcao_corretor: {
         Args: {
           redacao_id: string
@@ -1977,6 +1986,14 @@ export type Database = {
       update_student_email: {
         Args: { current_email: string; new_email: string }
         Returns: Json
+      }
+      validar_integridade_simulados: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          tipo_problema: string
+          nome_aluno: string
+          detalhes: string
+        }[]
       }
       validate_professor_login: {
         Args: { p_email: string; p_senha: string }
