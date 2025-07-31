@@ -124,9 +124,6 @@ const RedacoesExemplar = () => {
               <h2 className="text-xl font-semibold text-primary mb-2">
                 🌟 Redações Modelo
               </h2>
-              <p className="text-muted-foreground">
-                Redações exemplares cadastradas pelo administrador com nota 1000
-              </p>
             </div>
 
             {!redacoesExemplares || redacoesExemplares.length === 0 ? (
