@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,19 +31,51 @@ interface AvisoFormProps {
 
 export const AvisoForm = ({ onSuccess, avisoEditando, onCancelEdit }: AvisoFormProps) => {
   const [formData, setFormData] = useState({
-    titulo: avisoEditando?.titulo || "",
-    descricao: avisoEditando?.descricao || "",
-    prioridade: avisoEditando?.prioridade || "media",
-    status: avisoEditando?.status || "rascunho",
-    turmasAutorizadas: avisoEditando?.turmas_autorizadas || [],
-    corretoresDestinatarios: avisoEditando?.corretores_destinatarios || [],
-    linkExterno: avisoEditando?.link_externo || "",
-    dataAgendamento: avisoEditando?.data_agendamento ? new Date(avisoEditando.data_agendamento).toISOString().slice(0, 16) : "",
-    permiteVisitante: avisoEditando?.permite_visitante || false,
+    titulo: "",
+    descricao: "",
+    prioridade: "media",
+    status: "rascunho",
+    turmasAutorizadas: [],
+    corretoresDestinatarios: [],
+    linkExterno: "",
+    dataAgendamento: "",
+    permiteVisitante: false,
   });
   const [loading, setLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(avisoEditando?.imagem_url || null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // useEffect para atualizar o formulário quando avisoEditando mudar
+  useEffect(() => {
+    if (avisoEditando) {
+      setFormData({
+        titulo: avisoEditando.titulo || "",
+        descricao: avisoEditando.descricao || "",
+        prioridade: avisoEditando.prioridade || "media",
+        status: avisoEditando.status || "rascunho",
+        turmasAutorizadas: avisoEditando.turmas_autorizadas || [],
+        corretoresDestinatarios: avisoEditando.corretores_destinatarios || [],
+        linkExterno: avisoEditando.link_externo || "",
+        dataAgendamento: avisoEditando.data_agendamento ? new Date(avisoEditando.data_agendamento).toISOString().slice(0, 16) : "",
+        permiteVisitante: avisoEditando.permite_visitante || false,
+      });
+      setImageUrl(avisoEditando.imagem_url || null);
+    } else {
+      // Reset form when not editing
+      setFormData({
+        titulo: "",
+        descricao: "",
+        prioridade: "media",
+        status: "rascunho",
+        turmasAutorizadas: [],
+        corretoresDestinatarios: [],
+        linkExterno: "",
+        dataAgendamento: "",
+        permiteVisitante: false,
+      });
+      setImageUrl(null);
+    }
+  }, [avisoEditando]);
 
   // Mapeamento correto entre labels do frontend e valores do banco
   const prioridades = [
