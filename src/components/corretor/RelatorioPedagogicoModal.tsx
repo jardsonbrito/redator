@@ -38,18 +38,10 @@ export const RelatorioPedagogicoModal = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl w-full h-[80vh] flex flex-col">
-        <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
             Relatório Pedagógico de Correção - {alunoNome}
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
         
         <div className="flex-1 flex flex-col space-y-4">
