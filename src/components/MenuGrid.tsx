@@ -5,6 +5,7 @@ import { LucideIcon, Lock } from "lucide-react";
 import { useState } from "react";
 import { UnlockModal } from "./UnlockModal";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
+import { useNewContentTags } from "@/hooks/useNewContentTags";
 
 interface MenuItem {
   title: string;
@@ -25,6 +26,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [selectedResource, setSelectedResource] = useState('');
   const { isBlockedResource } = useTurmaERestrictions();
+  const { shouldShowNewTag, handleCardClick } = useNewContentTags();
 
   // Filtra os itens do menu baseado na disponibilidade de conteúdo
   const visibleMenuItems = menuItems.filter(item => {
@@ -89,6 +91,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                 ) : (
                   <Link 
                     to={item.path} 
+                    onClick={() => handleCardClick(item.title)}
                     className={`group relative flex flex-col items-center justify-center p-6 ${cardColor.bg} rounded-2xl shadow-lg ${cardColor.hover} transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px]`}
                   >
                     {/* Ícone com estilo flat */}
@@ -100,6 +103,13 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                     <h3 className={`text-sm font-bold ${cardColor.icon} text-center leading-tight`}>
                       {item.title}
                     </h3>
+
+                    {/* Tag NOVO */}
+                    {shouldShowNewTag(item.title) && (
+                      <span className="absolute top-2 right-2 bg-[#F97316] text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
+                        NOVO
+                      </span>
+                    )}
                   </Link>
                 )}
               </TooltipTrigger>
