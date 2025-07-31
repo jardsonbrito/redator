@@ -11,8 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 
-import { ArrowLeft, Save, CheckCircle, Copy } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle, Copy, Maximize2 } from "lucide-react";
 import { AudioRecorder } from "./AudioRecorder";
+import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -48,6 +49,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
   const [modoEdicao, setModoEdicao] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Use useRef instead of state to avoid re-renders
   const anotacaoVisualRef = useRef<RedacaoAnotacaoVisualRef | null>(null);
@@ -125,6 +127,24 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       });
       return false;
     }
+  };
+
+  const copiarRelatorio = () => {
+    if (!relatorioPedagogico.trim()) {
+      toast({
+        title: "Nada para copiar",
+        description: "O relatório pedagógico está vazio.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const conteudo = `Aluno: ${redacao.nome_aluno}\nTema: ${redacao.frase_tematica}\n\n${relatorioPedagogico}`;
+    navigator.clipboard.writeText(conteudo);
+    toast({
+      title: "Copiado com sucesso!",
+      description: "Relatório pedagógico foi copiado para a área de transferência.",
+    });
   };
 
   const salvarCorrecao = async (status: 'incompleta' | 'corrigida') => {
@@ -367,7 +387,27 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       {/* Relatório pedagógico de correção - Menor espaçamento */}
       <Card className="bg-white">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Relatório pedagógico de correção</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-base">Relatório pedagógico de correção</CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copiarRelatorio}
+                title="Copiar relatório com dados do aluno"
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsModalOpen(true)}
+                title="Expandir em modal"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Textarea
@@ -379,6 +419,16 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           />
         </CardContent>
       </Card>
+
+      {/* Modal de expansão do relatório */}
+      <RelatorioPedagogicoModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        value={relatorioPedagogico}
+        onChange={setRelatorioPedagogico}
+        alunoNome={redacao.nome_aluno}
+        fraseTematica={redacao.frase_tematica}
+      />
     </div>
   );
 };
