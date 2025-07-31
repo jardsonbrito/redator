@@ -2,16 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { MessageSquare, ExternalLink, AlertTriangle, CheckCircle } from "lucide-react";
+import { MessageSquare, ExternalLink, AlertTriangle, CheckCircle, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Aviso {
@@ -31,12 +24,8 @@ interface AvisoLeitura {
   aviso_id: string;
   nome_aluno: string;
   sobrenome_aluno: string;
+  email_aluno: string;
 }
-
-const formSchema = z.object({
-  nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  sobrenome: z.string().min(2, "Sobrenome deve ter pelo menos 2 caracteres")
-});
 
 interface MuralAvisosProps {
   turmaCode: string;
@@ -48,15 +37,7 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [leituras, setLeituras] = useState<AvisoLeitura[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [openModal, setOpenModal] = useState<string | null>(null);
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nome: "",
-      sobrenome: ""
-    }
-  });
+  const [confirmingReading, setConfirmingReading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAvisos();
@@ -122,16 +103,33 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
     }
   };
 
-  const handleConfirmarLeitura = async (values: z.infer<typeof formSchema>, avisoId: string) => {
+  const handleConfirmarLeitura = async (avisoId: string) => {
+    if (!studentData.nomeUsuario || !studentData.turma) {
+      toast({
+        title: "Erro",
+        description: "Dados do aluno não encontrados. Faça login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setConfirmingReading(avisoId);
+
     try {
+      // Extrair nome e sobrenome do nome completo do studentData
+      const nomeCompleto = studentData.nomeUsuario.trim();
+      const partesNome = nomeCompleto.split(' ');
+      const nome = partesNome[0] || '';
+      const sobrenome = partesNome.slice(1).join(' ') || '';
+
       const { error } = await supabase
         .from("avisos_leitura")
         .insert([{
           aviso_id: avisoId,
-          nome_aluno: values.nome,
-          sobrenome_aluno: values.sobrenome,
-          turma: turmaCode,
-          email_aluno: studentData.nomeUsuario || null
+          nome_aluno: nome,
+          sobrenome_aluno: sobrenome,
+          turma: studentData.turma,
+          email_aluno: studentData.email || studentData.nomeUsuario
         }]);
 
       if (error) {
@@ -149,12 +147,10 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
       }
 
       toast({
-        title: "Leitura confirmada!",
-        description: "Sua confirmação de leitura foi registrada com sucesso."
+        title: "✅ Leitura registrada com sucesso!",
+        description: "Sua confirmação de leitura foi registrada."
       });
 
-      form.reset();
-      setOpenModal(null);
       fetchLeituras();
     } catch (error) {
       console.error("Erro ao confirmar leitura:", error);
@@ -163,15 +159,19 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
         description: "Não foi possível confirmar a leitura. Tente novamente.",
         variant: "destructive"
       });
+    } finally {
+      setConfirmingReading(null);
     }
   };
 
   const jaLeu = (avisoId: string) => {
-    return leituras.some(leitura => 
-      leitura.aviso_id === avisoId && 
-      leitura.nome_aluno.toLowerCase() === form.watch("nome")?.toLowerCase() && 
-      leitura.sobrenome_aluno.toLowerCase() === form.watch("sobrenome")?.toLowerCase()
-    );
+    if (!studentData.nomeUsuario) return false;
+    
+    return leituras.some(leitura => {
+      const emailMatch = leitura.email_aluno === studentData.email || 
+                        leitura.email_aluno === studentData.nomeUsuario;
+      return leitura.aviso_id === avisoId && emailMatch;
+    });
   };
 
   if (isLoading) {
@@ -270,65 +270,28 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
                   </Button>
                 )}
                 
-                <Dialog 
-                  open={openModal === aviso.id} 
-                  onOpenChange={(open) => setOpenModal(open ? aviso.id : null)}
-                >
-                  <DialogTrigger asChild>
-                    <Button variant="default" size="sm" className="w-full sm:w-auto">
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Confirmar Leitura
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit((values) => handleConfirmarLeitura(values, aviso.id))}>
-                        <DialogHeader>
-                          <DialogTitle>Confirmar Leitura</DialogTitle>
-                          <DialogDescription>
-                            Para confirmar que você leu este aviso, informe seu nome completo:
-                          </DialogDescription>
-                        </DialogHeader>
-                        
-                        <div className="grid gap-4 py-4">
-                          <FormField
-                            control={form.control}
-                            name="nome"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Nome</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Seu nome" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="sobrenome"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Sobrenome</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Seu sobrenome" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <DialogFooter>
-                          <Button type="submit">
-                            Confirmar Leitura
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
+                {jaLeu(aviso.id) ? (
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="w-full sm:w-auto bg-green-600 hover:bg-green-600 cursor-default"
+                    disabled
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Leitura confirmada
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="w-full sm:w-auto bg-purple-700 hover:bg-purple-800"
+                    onClick={() => handleConfirmarLeitura(aviso.id)}
+                    disabled={confirmingReading === aviso.id}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {confirmingReading === aviso.id ? "Confirmando..." : "Confirmar Leitura"}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
