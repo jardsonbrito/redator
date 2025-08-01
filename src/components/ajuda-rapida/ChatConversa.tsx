@@ -241,36 +241,65 @@ export const ChatConversa = ({
                           </div>
                         )}
 
-                        {/* Modo de edição */}
+                        {/* Modo de edição inline - substitui completamente a bolha */}
                         {isEditing ? (
-                          <div className="space-y-2">
-                            <Input
+                          <div className="w-full">
+                            <Textarea
                               value={textoEdicao}
-                              onChange={(e) => setTextoEdicao(e.target.value)}
+                              onChange={(e) => {
+                                setTextoEdicao(e.target.value);
+                                // Auto-resize o textarea conforme o conteúdo
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                              }}
                               onKeyDown={handleKeyPressEdicao}
-                              className="text-sm bg-background text-foreground"
+                              className={cn(
+                                "min-h-[40px] w-full resize-none border-0 bg-transparent p-0 text-sm focus:ring-0 focus:outline-none overflow-hidden",
+                                isOwnMessage
+                                  ? "text-primary-foreground placeholder:text-primary-foreground/50"
+                                  : "text-secondary-foreground placeholder:text-secondary-foreground/50"
+                              )}
+                              style={{
+                                fontSize: 'inherit',
+                                lineHeight: 'inherit',
+                                fontFamily: 'inherit',
+                                height: 'auto'
+                              }}
                               autoFocus
+                              placeholder="Digite sua mensagem..."
                             />
-                            <div className="flex gap-2 justify-end">
+                            <div className="flex justify-end gap-1 mt-2 pt-2 border-t border-current/20">
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={handleCancelarEdicao}
-                                className="h-6 px-2 text-xs"
+                                className={cn(
+                                  "h-6 px-2 text-xs hover:bg-current/10",
+                                  isOwnMessage 
+                                    ? "text-primary-foreground/80 hover:text-primary-foreground" 
+                                    : "text-secondary-foreground/80 hover:text-secondary-foreground"
+                                )}
                               >
                                 Cancelar
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={handleSalvarEdicao}
-                                className="h-6 px-2 text-xs"
+                                disabled={!textoEdicao.trim()}
+                                className={cn(
+                                  "h-6 px-2 text-xs",
+                                  isOwnMessage
+                                    ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
+                                    : "bg-secondary-foreground/20 text-secondary-foreground hover:bg-secondary-foreground/30"
+                                )}
                               >
                                 Salvar
                               </Button>
                             </div>
                           </div>
                         ) : (
-                          <>
+                          /* Modo de leitura normal */
+                          <div>
                             <p className="text-sm whitespace-pre-wrap">
                               {mensagem.mensagem}
                             </p>
@@ -289,7 +318,7 @@ export const ChatConversa = ({
                             >
                               {format(new Date(mensagem.criado_em), 'dd/MM HH:mm', { locale: ptBR })}
                             </p>
-                          </>
+                          </div>
                         )}
                       </div>
                     </div>
