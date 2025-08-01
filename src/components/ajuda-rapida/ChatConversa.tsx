@@ -43,6 +43,7 @@ export const ChatConversa = ({
   const [novaMensagem, setNovaMensagem] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { logoutStudent, studentData } = useStudentAuth();
   const navigate = useNavigate();
@@ -273,14 +274,14 @@ export const ChatConversa = ({
               <div className="border-t p-4">
                 {/* Indicador de modo de edição */}
                 {editingMessageId && (
-                  <div className="mb-2 px-3 py-2 bg-yellow-50 border-l-4 border-yellow-400 rounded text-sm text-yellow-800">
+                  <div className="mb-2 px-3 py-2 bg-gray-100 border-l-4 border-gray-500 rounded text-sm text-gray-800">
                     <div className="flex items-center justify-between">
                       <span>✏️ Editando mensagem</span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleCancelarEdicao}
-                        className="h-6 w-6 p-0 text-yellow-600 hover:text-yellow-800"
+                        className="h-6 w-6 p-0 text-gray-600 hover:text-gray-800"
                       >
                         ✕
                       </Button>
@@ -288,18 +289,37 @@ export const ChatConversa = ({
                   </div>
                 )}
                 
-                <div className="flex space-x-2">
-                  <Textarea
-                    value={novaMensagem}
-                    onChange={(e) => setNovaMensagem(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder={editingMessageId ? "Edite sua mensagem..." : "Digite sua mensagem..."}
-                    rows={2}
-                    className={cn(
-                      "resize-none flex-1",
-                      editingMessageId && "bg-yellow-50 border-yellow-300"
-                    )}
-                  />
+                <div className="flex space-x-2 relative">
+                  <div className="flex-1 relative">
+                    <Textarea
+                      value={novaMensagem}
+                      onChange={(e) => setNovaMensagem(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder={editingMessageId ? "Edite sua mensagem..." : "Digite sua mensagem..."}
+                      rows={isExpanded ? 12 : 2}
+                      className={cn(
+                        "resize-none w-full transition-all duration-300",
+                        editingMessageId && "bg-gray-50 border-gray-300"
+                      )}
+                    />
+                    {/* Botão de expansão */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      className="absolute bottom-2 right-14 h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                    >
+                      {isExpanded ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="m18 15-6-6-6 6"/>
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                      )}
+                    </Button>
+                  </div>
                   <Button
                     onClick={handleEnviar}
                     disabled={enviando || !novaMensagem.trim()}
