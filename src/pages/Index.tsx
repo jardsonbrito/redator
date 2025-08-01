@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy } from "lucide-react";
-import { AjudaRapidaCard } from "@/components/ajuda-rapida/AjudaRapidaCard";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare } from "lucide-react";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -108,6 +108,13 @@ const Index = () => {
       showAlways: true
     },
     {
+      title: "Ajuda Rápida",
+      path: "/ajuda-rapida",
+      icon: MessageSquare,
+      tooltip: "Converse com seus corretores.",
+      showAlways: true
+    },
+    {
       title: "Minhas Redações",
       path: "/minhas-redacoes",
       icon: FileText,
@@ -147,11 +154,6 @@ const Index = () => {
 
             {/* Mural de Avisos */}
             <MuralAvisos turmaCode={turmaCode} />
-
-            {/* Card Ajuda Rápida */}
-            <div className="mb-8">
-              <AjudaRapidaCard />
-            </div>
 
             {/* Menu Principal Horizontal */}
             <MenuGrid 
