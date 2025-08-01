@@ -352,10 +352,10 @@ const Admin = () => {
               </p>
             </div>
             <Tabs defaultValue="exercicios" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="exercicios">Dados de Exercícios</TabsTrigger>
                 <TabsTrigger value="redacoes">Redações Corrigidas</TabsTrigger>
-                <TabsTrigger value="frequencia">Frequência</TabsTrigger>
+                
               </TabsList>
               <TabsContent value="exercicios" className="space-y-6">
                 <RadarUpload />
@@ -363,9 +363,6 @@ const Admin = () => {
               </TabsContent>
               <TabsContent value="redacoes">
                 <RadarRedacoes />
-              </TabsContent>
-              <TabsContent value="frequencia">
-                <FrequenciaAulas />
               </TabsContent>
             </Tabs>
           </div>
