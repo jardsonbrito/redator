@@ -12,7 +12,7 @@ import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 import { Link } from "react-router-dom";
 
-import { ArrowLeft, Save, CheckCircle, Copy, Maximize2 } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle, Copy, Maximize2, Eye } from "lucide-react";
 import { AudioRecorder } from "./AudioRecorder";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
 import { TemaModal } from "./TemaModal";
@@ -316,14 +316,21 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       </div>
 
       {/* Tema */}
-      <div className="p-3 bg-primary/5 rounded-lg">
-        <strong>Tema:</strong> 
-        <span 
-          className="text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors ml-2"
-          onClick={handleTemaClick}
-        >
-          {redacao.frase_tematica}
-        </span>
+      <div className="p-3 bg-primary/5 rounded-lg flex items-center justify-between">
+        <div>
+          <strong>Tema:</strong> 
+          <span className="ml-2 text-gray-900">{redacao.frase_tematica}</span>
+        </div>
+        {redacao.frase_tematica && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTemaClick}
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            Ver Tema
+          </Button>
+        )}
       </div>
 
       {/* Vista Pedagógica - Layout reorganizado */}

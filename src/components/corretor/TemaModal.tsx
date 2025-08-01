@@ -26,8 +26,8 @@ export const TemaModal = ({ isOpen, onClose, tema }: TemaModalProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span className="text-lg font-semibold">Detalhes do Tema</span>
+          <DialogTitle className="text-lg font-semibold text-center">
+            Detalhes do Tema
           </DialogTitle>
         </DialogHeader>
         
