@@ -122,7 +122,7 @@ const Admin = () => {
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
     { id: "simulados", label: "Simulados", icon: ClipboardCheck },
     { id: "exercicios", label: "Exercícios", icon: NotebookPen },
-    { id: "salas-virtuais", label: "Salas Virtuais", icon: Video },
+    { id: "salas-virtuais", label: "Aula ao Vivo", icon: Video },
     { id: "aulas", label: "Aulas", icon: GraduationCap },
     { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
     { id: "videos", label: "Vídeos", icon: Video },
