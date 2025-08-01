@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Home, BookOpen, Video, Library, FileText, Trophy, Menu, X } from "lucide-react";
+import { LogOut, User, Home, BookOpen, Video, Library, FileText, Trophy, Menu, X, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -18,6 +18,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
 
   const menuItems = [
     { icon: Home, label: "Home", path: "/corretor" },
+    { icon: MessageCircle, label: "Recado dos Alunos", path: "/corretor/ajuda-rapida" },
     { icon: FileText, label: "Redações", path: "/corretor/redacoes-corretor" },
     { icon: BookOpen, label: "Temas", path: "/corretor/temas" },
     { icon: FileText, label: "Simulados", path: "/corretor/simulados" },

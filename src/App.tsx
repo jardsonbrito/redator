@@ -60,6 +60,7 @@ import CadastroAluno from "./pages/CadastroAluno";
 import AtualizarEmail from "./pages/AtualizarEmail";
 import AjudaRapida from "./pages/AjudaRapida";
 import CorretorAjudaRapida from "./pages/corretor/CorretorAjudaRapida";
+import CorretorTemaDetalhes from "./pages/corretor/CorretorTemaDetalhes";
 import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
@@ -117,6 +118,7 @@ function App() {
                   <Route path="/corretor" element={<CorretorHome />} />
                   <Route path="/corretor/redacoes-corretor" element={<CorretorRedacoes />} />
                   <Route path="/corretor/temas" element={<CorretorTemas />} />
+                  <Route path="/corretor/temas/:id" element={<CorretorTemaDetalhes />} />
                   <Route path="/corretor/simulados" element={<CorretorSimulados />} />
                   <Route path="/corretor/aulas" element={<CorretorAulas />} />
                   <Route path="/corretor/videoteca" element={<CorretorVideoteca />} />
