@@ -66,18 +66,16 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
         }
 
         // Se não há turmas especificadas E não permite visitante, mostrar para todos os alunos
-        if (turmasAutorizadas.length === 0 && !aviso.permite_visitante) return true;
+        if (turmasAutorizadas.length === 0 && !aviso.permite_visitante) {
+          return true;
+        }
 
         // Se há turmas especificadas, verificar se a turma do usuário está autorizada
         if (turmasAutorizadas.length > 0) {
-          const isTurmaAutorizada = turmasAutorizadas.some(turma => 
+          return turmasAutorizadas.some(turma => 
             turma.toUpperCase() === turmaCode.toUpperCase()
           );
-          if (isTurmaAutorizada) return true;
         }
-
-        // Se permite visitante e o usuário não é visitante, mostrar também
-        if (aviso.permite_visitante && !isVisitante) return true;
 
         return false;
       });
