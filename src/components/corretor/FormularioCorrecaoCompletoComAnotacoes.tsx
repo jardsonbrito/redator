@@ -15,6 +15,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Save, CheckCircle, Copy, Maximize2 } from "lucide-react";
 import { AudioRecorder } from "./AudioRecorder";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
+import { TemaModal } from "./TemaModal";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -51,65 +52,42 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [modoEdicao, setModoEdicao] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTemaAberto, setModalTemaAberto] = useState(false);
+  const [temaDetalhes, setTemaDetalhes] = useState<any>(null);
   
   // Use useRef instead of state to avoid re-renders
   const anotacaoVisualRef = useRef<RedacaoAnotacaoVisualRef | null>(null);
   const { toast } = useToast();
   const { corretor } = useCorretorAuth();
 
-  // Componente para link do tema
-  const TemaLink = ({ redacao }: { redacao: RedacaoCorretor }) => {
-    const [temaId, setTemaId] = useState<string | null>(null);
+  const buscarTemaDetalhes = async () => {
+    if (!redacao.frase_tematica) return;
 
-    useEffect(() => {
-      const buscarTemaId = async () => {
-        try {
-          let query;
-          if (redacao.tipo_redacao === 'regular') {
-            query = supabase
-              .from('redacoes_enviadas')
-              .select('tema_id')
-              .eq('id', redacao.id)
-              .single();
-          } else if (redacao.tipo_redacao === 'simulado') {
-            query = supabase
-              .from('redacoes_simulado')
-              .select('simulados(tema_id)')
-              .eq('id', redacao.id)
-              .single();
-          } else {
-            // Para exercícios, não há tema específico
-            return;
-          }
+    try {
+      const { data, error } = await supabase
+        .from('temas')
+        .select('*')
+        .eq('frase_tematica', redacao.frase_tematica)
+        .single();
 
-          const { data, error } = await query;
-          if (error) throw error;
+      if (error) {
+        console.log('Tema não encontrado no banco:', error);
+        return;
+      }
 
-          if (redacao.tipo_redacao === 'regular') {
-            setTemaId(data?.tema_id);
-          } else if (redacao.tipo_redacao === 'simulado') {
-            setTemaId(data?.simulados?.tema_id);
-          }
-        } catch (error) {
-          console.error("Erro ao buscar tema ID:", error);
-        }
-      };
-
-      buscarTemaId();
-    }, [redacao.id, redacao.tipo_redacao]);
-
-    if (temaId) {
-      return (
-        <Link
-          to={`/corretor/temas/${temaId}`}
-          className="text-primary hover:text-primary/80 hover:underline transition-colors"
-        >
-          {redacao.frase_tematica}
-        </Link>
-      );
+      setTemaDetalhes(data);
+    } catch (error) {
+      console.error('Erro ao buscar tema:', error);
     }
+  };
 
-    return <span>{redacao.frase_tematica}</span>;
+  const handleTemaClick = async () => {
+    if (!temaDetalhes) {
+      await buscarTemaDetalhes();
+    }
+    if (temaDetalhes || redacao.frase_tematica) {
+      setModalTemaAberto(true);
+    }
   };
 
   useEffect(() => {
@@ -308,7 +286,13 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
       {/* Tema */}
       <div className="p-3 bg-primary/5 rounded-lg">
-        <strong>Tema:</strong> <TemaLink redacao={redacao} />
+        <strong>Tema:</strong> 
+        <span 
+          className="text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors ml-2"
+          onClick={handleTemaClick}
+        >
+          {redacao.frase_tematica}
+        </span>
       </div>
 
       {/* Vista Pedagógica - Layout reorganizado */}
@@ -484,6 +468,13 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         onChange={setRelatorioPedagogico}
         alunoNome={redacao.nome_aluno}
         fraseTematica={redacao.frase_tematica}
+      />
+
+      {/* Modal do tema */}
+      <TemaModal
+        isOpen={modalTemaAberto}
+        onClose={() => setModalTemaAberto(false)}
+        tema={temaDetalhes}
       />
     </div>
   );

@@ -4,7 +4,7 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { AjudaRapidaAlunoCard } from "@/components/ajuda-rapida/AjudaRapidaAlunoCard";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare } from "lucide-react";
 
 const Student = () => {
   const menuItems = [
@@ -17,15 +17,7 @@ const Student = () => {
       showAlways: true,
       resourceType: "temas"
     },
-    // Linha 1, Coluna 2: Enviar Redação - Tema Livre
-    {
-      title: "Enviar Redação",
-      path: "/envie-redacao",
-      icon: Send,
-      tooltip: "Submeta seu texto para correção detalhada.",
-      showAlways: true
-    },
-    // Linha 2, Coluna 2: Redações Exemplares
+    // Linha 1, Coluna 2: Redações Exemplares
     {
       title: "Redações Exemplares",
       path: "/redacoes",
@@ -33,23 +25,7 @@ const Student = () => {
       tooltip: "Veja textos nota 1000 e aprenda estratégias eficazes.",
       showAlways: true
     },
-    // Linha 3, Coluna 1: Videoteca
-    {
-      title: "Videoteca",
-      path: "/videoteca",
-      icon: Video,
-      tooltip: "Acesse vídeos para enriquecer seu repertório sociocultural.",
-      showAlways: true
-    },
-    // Linha 3, Coluna 2: Aulas
-    {
-      title: "Aulas",
-      path: "/aulas",
-      icon: GraduationCap,
-      tooltip: "Acesse aulas organizadas por competência.",
-      showAlways: true
-    },
-    // Linha 4, Coluna 1: Exercícios
+    // Linha 2, Coluna 1: Exercícios
     {
       title: "Exercícios",
       path: "/exercicios", 
@@ -57,7 +33,15 @@ const Student = () => {
       tooltip: "Pratique com exercícios direcionados.",
       showAlways: true
     },
-    // Linha 4, Coluna 2: Biblioteca
+    // Linha 2, Coluna 2: Enviar Redação - Tema Livre
+    {
+      title: "Enviar Redação",
+      path: "/envie-redacao",
+      icon: Send,
+      tooltip: "Submeta seu texto para correção detalhada.",
+      showAlways: true
+    },
+    // Linha 3, Coluna 1: Biblioteca
     {
       title: "Biblioteca",
       path: "/biblioteca",
@@ -65,20 +49,60 @@ const Student = () => {
       tooltip: "Acesse materiais em PDF organizados por competência.",
       showAlways: true
     },
-    // Linha 5, Coluna 1: Simulados
+    // Linha 3, Coluna 2: Videoteca
     {
-      title: "Simulados",
-      path: "/simulados",
-      icon: ClipboardCheck,
-      tooltip: "Participe de simulados com horário controlado e correção detalhada.",
+      title: "Videoteca",
+      path: "/videoteca",
+      icon: Video,
+      tooltip: "Acesse vídeos para enriquecer seu repertório sociocultural.",
       showAlways: true
     },
-    // Linha 5, Coluna 2: Top 5
+    // Linha 4, Coluna 1: Aulas Gravadas
+    {
+      title: "Aulas",
+      path: "/aulas",
+      icon: GraduationCap,
+      tooltip: "Acesse aulas organizadas por competência.",
+      showAlways: true
+    },
+    // Linha 4, Coluna 2: Aulas ao Vivo
+    {
+      title: "Aulas ao Vivo",
+      path: "/aulas-ao-vivo",
+      icon: Video,
+      tooltip: "Participe das aulas ao vivo e registre sua frequência.",
+      showAlways: true
+    },
+    // Linha 5, Coluna 1: Ajuda Rápida
+    {
+      title: "Ajuda Rápida",
+      path: "/ajuda-rapida",
+      icon: MessageSquare,
+      tooltip: "Converse com seus corretores.",
+      showAlways: true
+    },
+    // Linha 5, Coluna 2: Minhas Redações
+    {
+      title: "Minhas Redações",
+      path: "/minhas-redacoes",
+      icon: FileText,
+      tooltip: "Visualize suas redações enviadas e corrigidas.",
+      showAlways: true
+    },
+    // Linha 6, Coluna 1: Top 5
     {
       title: "Top 5",
       path: "/top5",
       icon: Trophy,
       tooltip: "Veja o ranking dos melhores desempenhos em redações.",
+      showAlways: true
+    },
+    // Linha 6, Coluna 2: Simulados
+    {
+      title: "Simulados",
+      path: "/simulados",
+      icon: ClipboardCheck,
+      tooltip: "Participe de simulados com horário controlado e correção detalhada.",
       showAlways: true
     }
   ];
@@ -96,7 +120,7 @@ const Student = () => {
             </div>
             
             {/* Grid de menus na ordem correta */}
-            <MenuGrid menuItems={menuItems} showMinhasRedacoes={false} />
+            <MenuGrid menuItems={menuItems} showMinhasRedacoes={true} />
           </div>
         </main>
       </div>

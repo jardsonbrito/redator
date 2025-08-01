@@ -175,8 +175,44 @@ const AulasAoVivo = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+      <div className="bg-white border-b border-gray-200 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex" aria-label="Breadcrumb">
+            <ol className="flex items-center space-x-4">
+              <li>
+                <div>
+                  <a href="/" className="text-gray-400 hover:text-gray-500">
+                    VoltaraWeb
+                  </a>
+                </div>
+              </li>
+              <li>
+                <div className="flex items-center">
+                  <svg className="flex-shrink-0 h-5 w-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
+                  </svg>
+                  <a href="/student" className="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    Painel do Aluno
+                  </a>
+                </div>
+              </li>
+              <li>
+                <div className="flex items-center">
+                  <svg className="flex-shrink-0 h-5 w-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
+                  </svg>
+                  <span className="ml-4 text-sm font-medium text-gray-900" aria-current="page">
+                    Aulas ao Vivo
+                  </span>
+                </div>
+              </li>
+            </ol>
+          </nav>
+        </div>
+      </div>
+      
+      <div className="max-w-4xl mx-auto space-y-6 p-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-primary mb-2">Aulas ao Vivo</h1>
           <p className="text-muted-foreground">
