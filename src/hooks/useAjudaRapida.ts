@@ -462,6 +462,20 @@ export const useAjudaRapida = () => {
 
       if (error) throw error;
       
+      // Atualizar o estado local das mensagens
+      setMensagens(mensagensAtuais => 
+        mensagensAtuais.map(msg => 
+          msg.id === mensagemId 
+            ? { 
+                ...msg, 
+                mensagem: novoTexto, 
+                editada: true, 
+                editada_em: new Date().toISOString() 
+              }
+            : msg
+        )
+      );
+      
       console.log('✅ Mensagem editada com sucesso');
     } catch (error) {
       console.error('❌ Erro ao editar mensagem:', error);
