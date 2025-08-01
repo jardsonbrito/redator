@@ -42,8 +42,7 @@ export const ChatConversa = ({
   } = useAjudaRapida();
   const [novaMensagem, setNovaMensagem] = useState('');
   const [enviando, setEnviando] = useState(false);
-  const [editandoMensagem, setEditandoMensagem] = useState<string | null>(null);
-  const [textoEdicao, setTextoEdicao] = useState('');
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { logoutStudent, studentData } = useStudentAuth();
   const navigate = useNavigate();
@@ -79,10 +78,24 @@ export const ChatConversa = ({
 
     try {
       setEnviando(true);
-      await enviarMensagem(alunoId, corretorId, novaMensagem.trim(), tipoUsuario as 'aluno' | 'corretor');
+      
+      if (editingMessageId) {
+        // Atualizar mensagem existente
+        await editarMensagem(editingMessageId, novaMensagem.trim());
+        await buscarMensagensConversa(alunoId, corretorId);
+        setEditingMessageId(null);
+        toast({
+          title: "Sucesso",
+          description: "Mensagem editada com sucesso",
+        });
+      } else {
+        // Enviar nova mensagem
+        await enviarMensagem(alunoId, corretorId, novaMensagem.trim(), tipoUsuario as 'aluno' | 'corretor');
+      }
+      
       setNovaMensagem('');
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      console.error('Erro ao enviar/editar mensagem:', error);
     } finally {
       setEnviando(false);
     }
@@ -95,16 +108,20 @@ export const ChatConversa = ({
     }
   };
 
-  const handleKeyPressEdicao = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSalvarEdicao();
-    }
-  };
-
   const handleEditarMensagem = (mensagem: any) => {
-    setEditandoMensagem(mensagem.id);
-    setTextoEdicao(mensagem.mensagem);
+    // Copia o texto da mensagem para o campo de digitação original
+    setNovaMensagem(mensagem.mensagem);
+    setEditingMessageId(mensagem.id);
+    
+    // Foca no campo de digitação
+    setTimeout(() => {
+      const textarea = document.querySelector('textarea[placeholder="Digite sua mensagem..."]') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.focus();
+        // Posiciona o cursor no final
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      }
+    }, 100);
   };
 
   const handleApagarMensagem = async (mensagemId: string) => {
@@ -120,26 +137,9 @@ export const ChatConversa = ({
     }
   };
 
-  const handleSalvarEdicao = async () => {
-    if (!textoEdicao.trim() || !editandoMensagem) return;
-
-    try {
-      await editarMensagem(editandoMensagem, textoEdicao.trim());
-      await buscarMensagensConversa(alunoId, corretorId);
-      setEditandoMensagem(null);
-      setTextoEdicao('');
-      toast({
-        title: "Sucesso",
-        description: "Mensagem editada com sucesso",
-      });
-    } catch (error) {
-      console.error('Erro ao editar mensagem:', error);
-    }
-  };
-
   const handleCancelarEdicao = () => {
-    setEditandoMensagem(null);
-    setTextoEdicao('');
+    setEditingMessageId(null);
+    setNovaMensagem('');
   };
 
   const nomeExibicao = tipoUsuario === 'aluno' ? corretorNome : alunoNome;
@@ -213,7 +213,6 @@ export const ChatConversa = ({
               ) : (
                 mensagens.map((mensagem) => {
                   const isOwnMessage = tipoUsuario !== 'admin' && mensagem.autor === tipoUsuario;
-                  const isEditing = editandoMensagem === mensagem.id;
                   
                   return (
                     <div
@@ -226,15 +225,13 @@ export const ChatConversa = ({
                       <div
                         className={cn(
                           "max-w-xs lg:max-w-md xl:max-w-lg px-4 py-2 rounded-lg relative",
-                          isEditing
-                            ? "bg-gray-100"
-                            : isOwnMessage
+                          isOwnMessage
                             ? "bg-primary text-primary-foreground"
                             : "bg-secondary text-secondary-foreground"
                         )}
                       >
-                        {/* Ícone de ações apenas para mensagens próprias */}
-                        {isOwnMessage && !isEditing && (
+                        {/* Botão de ações sempre visível para mensagens próprias */}
+                        {isOwnMessage && (
                           <div className="absolute -top-1 -right-1">
                             <MensagemAcoes
                               onEditar={() => handleEditarMensagem(mensagem)}
@@ -243,88 +240,26 @@ export const ChatConversa = ({
                           </div>
                         )}
 
-                        {/* Modo de edição inline no estilo WhatsApp */}
-                        {isEditing ? (
-                          <div className="w-full relative">
-                            <Textarea
-                              value={textoEdicao}
-                              onChange={(e) => {
-                                setTextoEdicao(e.target.value);
-                                // Auto-resize o textarea conforme o conteúdo
-                                e.target.style.height = 'auto';
-                                e.target.style.height = e.target.scrollHeight + 'px';
-                              }}
-                              onKeyDown={handleKeyPressEdicao}
-                              className="min-h-[40px] w-full resize-none border-0 bg-transparent p-0 text-sm focus:ring-0 focus:outline-none overflow-hidden pb-10 text-gray-800 placeholder:text-gray-500"
-                              style={{
-                                fontSize: 'inherit',
-                                lineHeight: 'inherit',
-                                fontFamily: 'inherit',
-                                height: 'auto'
-                              }}
-                              autoFocus
-                              placeholder="Digite sua mensagem..."
-                              ref={(textarea) => {
-                                if (textarea) {
-                                  // Auto-expansão imediata quando o campo é criado
-                                  setTimeout(() => {
-                                    textarea.style.height = 'auto';
-                                    textarea.style.height = textarea.scrollHeight + 'px';
-                                  }, 0);
-                                }
-                              }}
-                            />
-                            
-                            {/* Botões de ação - X vermelho e ✓ verde */}
-                            <div className="absolute bottom-0 right-0 flex items-center gap-2 pt-1">
-                              {/* Botão X vermelho */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={handleCancelarEdicao}
-                                className="h-6 w-6 p-0 rounded-full hover:bg-red-100 text-red-600 hover:text-red-700 text-base"
-                              >
-                                ❌
-                              </Button>
-                              
-                              {/* Botão ✓ verde */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={handleSalvarEdicao}
-                                disabled={!textoEdicao.trim()}
-                                className={cn(
-                                  "h-6 w-6 p-0 rounded-full hover:bg-green-100 text-green-600 hover:text-green-700 text-base",
-                                  !textoEdicao.trim() && "opacity-50"
-                                )}
-                              >
-                                ✅
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          /* Modo de leitura normal */
-                          <div>
-                            <p className="text-sm whitespace-pre-wrap">
-                              {mensagem.mensagem}
+                        <div>
+                          <p className="text-sm whitespace-pre-wrap">
+                            {mensagem.mensagem}
+                          </p>
+                          {mensagem.editada && (
+                            <p className="text-xs opacity-70 italic mt-1">
+                              editada
                             </p>
-                            {mensagem.editada && (
-                              <p className="text-xs opacity-70 italic mt-1">
-                                editada
-                              </p>
+                          )}
+                          <p
+                            className={cn(
+                              "text-xs mt-1",
+                              isOwnMessage
+                                ? "text-primary-foreground/70"
+                                : "text-muted-foreground"
                             )}
-                            <p
-                              className={cn(
-                                "text-xs mt-1",
-                                isOwnMessage
-                                  ? "text-primary-foreground/70"
-                                  : "text-muted-foreground"
-                              )}
-                            >
-                              {format(new Date(mensagem.criado_em), 'dd/MM HH:mm', { locale: ptBR })}
-                            </p>
-                          </div>
-                        )}
+                          >
+                            {format(new Date(mensagem.criado_em), 'dd/MM HH:mm', { locale: ptBR })}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   );
@@ -336,14 +271,34 @@ export const ChatConversa = ({
             {/* Input area - ocultar para admin */}
             {tipoUsuario !== 'admin' && (
               <div className="border-t p-4">
+                {/* Indicador de modo de edição */}
+                {editingMessageId && (
+                  <div className="mb-2 px-3 py-2 bg-yellow-50 border-l-4 border-yellow-400 rounded text-sm text-yellow-800">
+                    <div className="flex items-center justify-between">
+                      <span>✏️ Editando mensagem</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelarEdicao}
+                        className="h-6 w-6 p-0 text-yellow-600 hover:text-yellow-800"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex space-x-2">
                   <Textarea
                     value={novaMensagem}
                     onChange={(e) => setNovaMensagem(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Digite sua mensagem..."
+                    placeholder={editingMessageId ? "Edite sua mensagem..." : "Digite sua mensagem..."}
                     rows={2}
-                    className="resize-none flex-1"
+                    className={cn(
+                      "resize-none flex-1",
+                      editingMessageId && "bg-yellow-50 border-yellow-300"
+                    )}
                   />
                   <Button
                     onClick={handleEnviar}
