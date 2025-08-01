@@ -2,7 +2,6 @@
 import { StudentHeader } from "@/components/StudentHeader";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
-import { AjudaRapidaAlunoCard } from "@/components/ajuda-rapida/AjudaRapidaAlunoCard";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare } from "lucide-react";
 
@@ -116,7 +115,6 @@ const Student = () => {
             {/* Cards do painel fixos */}
             <div className="max-w-5xl mx-auto space-y-4">
               <MinhasRedacoes />
-              <AjudaRapidaAlunoCard />
             </div>
             
             {/* Grid de menus na ordem correta */}
