@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, Users } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy } from "lucide-react";
 import { AjudaRapidaCard } from "@/components/ajuda-rapida/AjudaRapidaCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -91,13 +91,6 @@ const Index = () => {
       path: "/aulas-ao-vivo",
       icon: Video,
       tooltip: "Participe de aulas ao vivo com registro de frequência.",
-      showAlways: true
-    },
-    {
-      title: "Salas Virtuais",
-      path: "/salas-virtuais",
-      icon: Users,
-      tooltip: "Acesse suas salas virtuais vinculadas à turma.",
       showAlways: true
     },
     {
