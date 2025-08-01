@@ -61,33 +61,64 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const { corretor } = useCorretorAuth();
 
   const buscarTemaDetalhes = async () => {
-    if (!redacao.frase_tematica) return;
+    if (!redacao.frase_tematica) return null;
 
     try {
-      const { data, error } = await supabase
+      // Buscar por frase temática exata
+      let { data, error } = await supabase
         .from('temas')
         .select('*')
         .eq('frase_tematica', redacao.frase_tematica)
         .single();
 
-      if (error) {
-        console.log('Tema não encontrado no banco:', error);
-        return;
+      // Se não encontrar exato, tentar busca parcial
+      if (error && error.code === 'PGRST116') {
+        const { data: resultados, error: searchError } = await supabase
+          .from('temas')
+          .select('*')
+          .ilike('frase_tematica', `%${redacao.frase_tematica}%`)
+          .limit(1);
+
+        if (!searchError && resultados && resultados.length > 0) {
+          data = resultados[0];
+          error = null;
+        }
       }
 
-      setTemaDetalhes(data);
+      if (!error && data) {
+        setTemaDetalhes(data);
+        return data;
+      }
     } catch (error) {
       console.error('Erro ao buscar tema:', error);
     }
+
+    return null;
   };
 
   const handleTemaClick = async () => {
-    if (!temaDetalhes) {
-      await buscarTemaDetalhes();
+    // Sempre tentar buscar detalhes do tema primeiro
+    let tema = temaDetalhes;
+    if (!tema) {
+      tema = await buscarTemaDetalhes();
     }
-    if (temaDetalhes || redacao.frase_tematica) {
-      setModalTemaAberto(true);
+
+    // Se não encontrar o tema no banco, criar um objeto básico com a frase temática
+    if (!tema) {
+      tema = {
+        id: null,
+        frase_tematica: redacao.frase_tematica,
+        eixo_tematico: null,
+        imagem_texto_4_url: null,
+        texto_motivador_1: null,
+        texto_motivador_2: null,
+        texto_motivador_3: null
+      };
+      setTemaDetalhes(tema);
     }
+
+    // Sempre abrir o modal
+    setModalTemaAberto(true);
   };
 
   useEffect(() => {
