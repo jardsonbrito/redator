@@ -104,6 +104,14 @@ const Student = () => {
       icon: ClipboardCheck,
       tooltip: "Participe de simulados com horário controlado e correção detalhada.",
       showAlways: true
+    },
+    // Linha 7, Coluna 1: Salas Virtuais
+    {
+      title: "Salas Virtuais",
+      path: "/salas-virtuais",
+      icon: Video,
+      tooltip: "Acesse as salas virtuais para aulas e atividades.",
+      showAlways: true
     }
   ];
 
