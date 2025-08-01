@@ -95,6 +95,7 @@ export const ChatConversa = ({
       }
       
       setNovaMensagem('');
+      setIsExpanded(false);
     } catch (error) {
       console.error('Erro ao enviar/editar mensagem:', error);
     } finally {
@@ -141,6 +142,7 @@ export const ChatConversa = ({
   const handleCancelarEdicao = () => {
     setEditingMessageId(null);
     setNovaMensagem('');
+    setIsExpanded(false);
   };
 
   const nomeExibicao = tipoUsuario === 'aluno' ? corretorNome : alunoNome;
@@ -289,6 +291,29 @@ export const ChatConversa = ({
                   </div>
                 )}
                 
+                {/* Botões de ação para edição */}
+                {editingMessageId && (
+                  <div className="mb-2 flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCancelarEdicao}
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      ❌
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleEnviar}
+                      disabled={enviando || !novaMensagem.trim()}
+                      className="h-8 w-8 p-0 text-green-500 hover:text-green-700 hover:bg-green-50"
+                    >
+                      ✅
+                    </Button>
+                  </div>
+                )}
+                
                 <div className="flex space-x-2 relative">
                   <div className="flex-1 relative">
                     <Textarea
@@ -320,13 +345,16 @@ export const ChatConversa = ({
                       )}
                     </Button>
                   </div>
-                  <Button
-                    onClick={handleEnviar}
-                    disabled={enviando || !novaMensagem.trim()}
-                    className="rounded-full w-12 h-12 p-0 self-end"
-                  >
-                    <Send className="w-5 h-5" />
-                  </Button>
+                  {/* Botão de envio - só aparece quando não está editando */}
+                  {!editingMessageId && (
+                    <Button
+                      onClick={handleEnviar}
+                      disabled={enviando || !novaMensagem.trim()}
+                      className="rounded-full w-12 h-12 p-0 self-end"
+                    >
+                      <Send className="w-5 h-5" />
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
