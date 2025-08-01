@@ -255,7 +255,7 @@ export const ChatConversa = ({
                                 e.target.style.height = e.target.scrollHeight + 'px';
                               }}
                               onKeyDown={handleKeyPressEdicao}
-                              className="min-h-[40px] w-full resize-none border-0 bg-transparent p-0 text-sm focus:ring-0 focus:outline-none overflow-hidden pb-8 text-gray-800 placeholder:text-gray-500"
+                              className="min-h-[40px] w-full resize-none border-0 bg-transparent p-0 text-sm focus:ring-0 focus:outline-none overflow-hidden pb-10 text-gray-800 placeholder:text-gray-500"
                               style={{
                                 fontSize: 'inherit',
                                 lineHeight: 'inherit',
@@ -264,32 +264,41 @@ export const ChatConversa = ({
                               }}
                               autoFocus
                               placeholder="Digite sua mensagem..."
+                              ref={(textarea) => {
+                                if (textarea) {
+                                  // Auto-expansão imediata quando o campo é criado
+                                  setTimeout(() => {
+                                    textarea.style.height = 'auto';
+                                    textarea.style.height = textarea.scrollHeight + 'px';
+                                  }, 0);
+                                }
+                              }}
                             />
                             
-                            {/* Ícones de ação no estilo WhatsApp - canto inferior */}
-                            <div className="absolute bottom-0 left-0 right-0 flex justify-between items-center pt-1">
-                              {/* Ícone de cancelar (❌) - canto esquerdo */}
+                            {/* Botões de ação - X vermelho e ✓ verde */}
+                            <div className="absolute bottom-0 right-0 flex items-center gap-2 pt-1">
+                              {/* Botão X vermelho */}
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={handleCancelarEdicao}
-                                className="h-6 w-6 p-0 rounded-full hover:bg-gray-200 text-gray-600 hover:text-gray-800"
+                                className="h-6 w-6 p-0 rounded-full hover:bg-red-100 text-red-600 hover:text-red-700 text-base"
                               >
-                                <X className="h-3 w-3" />
+                                ❌
                               </Button>
                               
-                              {/* Ícone de confirmar (✅) - canto direito */}
+                              {/* Botão ✓ verde */}
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={handleSalvarEdicao}
                                 disabled={!textoEdicao.trim()}
                                 className={cn(
-                                  "h-6 w-6 p-0 rounded-full hover:bg-gray-200 text-gray-600 hover:text-gray-800",
+                                  "h-6 w-6 p-0 rounded-full hover:bg-green-100 text-green-600 hover:text-green-700 text-base",
                                   !textoEdicao.trim() && "opacity-50"
                                 )}
                               >
-                                <Check className="h-3 w-3" />
+                                ✅
                               </Button>
                             </div>
                           </div>
