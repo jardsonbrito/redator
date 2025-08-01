@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, LogOut, Home } from "lucide-react";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { format } from 'date-fns';
@@ -9,6 +10,8 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useNavigate } from "react-router-dom";
+import { MensagemAcoes } from './MensagemAcoes';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatConversaProps {
   alunoId: string;
@@ -27,12 +30,24 @@ export const ChatConversa = ({
   onVoltar, 
   tipoUsuario 
 }: ChatConversaProps) => {
-  const { mensagens, loading, buscarMensagensConversa, enviarMensagem, marcarComoLida, marcarComoLidaAluno } = useAjudaRapida();
+  const { 
+    mensagens, 
+    loading, 
+    buscarMensagensConversa, 
+    enviarMensagem, 
+    editarMensagem, 
+    apagarMensagem, 
+    marcarComoLida, 
+    marcarComoLidaAluno 
+  } = useAjudaRapida();
   const [novaMensagem, setNovaMensagem] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [editandoMensagem, setEditandoMensagem] = useState<string | null>(null);
+  const [textoEdicao, setTextoEdicao] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { logoutStudent, studentData } = useStudentAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     buscarMensagensConversa(alunoId, corretorId);
@@ -78,6 +93,53 @@ export const ChatConversa = ({
       e.preventDefault();
       handleEnviar();
     }
+  };
+
+  const handleKeyPressEdicao = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSalvarEdicao();
+    }
+  };
+
+  const handleEditarMensagem = (mensagem: any) => {
+    setEditandoMensagem(mensagem.id);
+    setTextoEdicao(mensagem.mensagem);
+  };
+
+  const handleApagarMensagem = async (mensagemId: string) => {
+    try {
+      await apagarMensagem(mensagemId);
+      await buscarMensagensConversa(alunoId, corretorId);
+      toast({
+        title: "Sucesso",
+        description: "Mensagem apagada com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao apagar mensagem:', error);
+    }
+  };
+
+  const handleSalvarEdicao = async () => {
+    if (!textoEdicao.trim() || !editandoMensagem) return;
+
+    try {
+      await editarMensagem(editandoMensagem, textoEdicao.trim());
+      await buscarMensagensConversa(alunoId, corretorId);
+      setEditandoMensagem(null);
+      setTextoEdicao('');
+      toast({
+        title: "Sucesso",
+        description: "Mensagem editada com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao editar mensagem:', error);
+    }
+  };
+
+  const handleCancelarEdicao = () => {
+    setEditandoMensagem(null);
+    setTextoEdicao('');
   };
 
   const nomeExibicao = tipoUsuario === 'aluno' ? corretorNome : alunoNome;
@@ -151,36 +213,84 @@ export const ChatConversa = ({
               ) : (
                 mensagens.map((mensagem) => {
                   const isOwnMessage = tipoUsuario !== 'admin' && mensagem.autor === tipoUsuario;
+                  const isEditing = editandoMensagem === mensagem.id;
                   
                   return (
                     <div
                       key={mensagem.id}
                       className={cn(
-                        "flex",
+                        "flex group",
                         isOwnMessage ? "justify-end" : "justify-start"
                       )}
                     >
                       <div
                         className={cn(
-                          "max-w-xs lg:max-w-md xl:max-w-lg px-4 py-2 rounded-lg",
+                          "max-w-xs lg:max-w-md xl:max-w-lg px-4 py-2 rounded-lg relative",
                           isOwnMessage
                             ? "bg-primary text-primary-foreground"
                             : "bg-secondary text-secondary-foreground"
                         )}
                       >
-                        <p className="text-sm whitespace-pre-wrap">
-                          {mensagem.mensagem}
-                        </p>
-                        <p
-                          className={cn(
-                            "text-xs mt-1",
-                            isOwnMessage
-                              ? "text-primary-foreground/70"
-                              : "text-muted-foreground"
-                          )}
-                        >
-                          {format(new Date(mensagem.criado_em), 'dd/MM HH:mm', { locale: ptBR })}
-                        </p>
+                        {/* Ícone de ações apenas para mensagens próprias */}
+                        {isOwnMessage && !isEditing && (
+                          <div className="absolute -top-1 -right-1">
+                            <MensagemAcoes
+                              onEditar={() => handleEditarMensagem(mensagem)}
+                              onApagar={() => handleApagarMensagem(mensagem.id)}
+                            />
+                          </div>
+                        )}
+
+                        {/* Modo de edição */}
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={textoEdicao}
+                              onChange={(e) => setTextoEdicao(e.target.value)}
+                              onKeyDown={handleKeyPressEdicao}
+                              className="text-sm bg-background text-foreground"
+                              autoFocus
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancelarEdicao}
+                                className="h-6 px-2 text-xs"
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={handleSalvarEdicao}
+                                className="h-6 px-2 text-xs"
+                              >
+                                Salvar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm whitespace-pre-wrap">
+                              {mensagem.mensagem}
+                            </p>
+                            {mensagem.editada && (
+                              <p className="text-xs opacity-70 italic mt-1">
+                                editada
+                              </p>
+                            )}
+                            <p
+                              className={cn(
+                                "text-xs mt-1",
+                                isOwnMessage
+                                  ? "text-primary-foreground/70"
+                                  : "text-muted-foreground"
+                              )}
+                            >
+                              {format(new Date(mensagem.criado_em), 'dd/MM HH:mm', { locale: ptBR })}
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

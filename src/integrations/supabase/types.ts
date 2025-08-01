@@ -80,6 +80,8 @@ export type Database = {
           autor: Database["public"]["Enums"]["autor_mensagem"]
           corretor_id: string
           criado_em: string
+          editada: boolean | null
+          editada_em: string | null
           id: string
           lida: boolean
           mensagem: string
@@ -89,6 +91,8 @@ export type Database = {
           autor: Database["public"]["Enums"]["autor_mensagem"]
           corretor_id: string
           criado_em?: string
+          editada?: boolean | null
+          editada_em?: string | null
           id?: string
           lida?: boolean
           mensagem: string
@@ -98,6 +102,8 @@ export type Database = {
           autor?: Database["public"]["Enums"]["autor_mensagem"]
           corretor_id?: string
           criado_em?: string
+          editada?: boolean | null
+          editada_em?: string | null
           id?: string
           lida?: boolean
           mensagem?: string

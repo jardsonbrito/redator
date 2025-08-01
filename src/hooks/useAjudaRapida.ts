@@ -10,6 +10,8 @@ export interface Mensagem {
   autor: 'aluno' | 'corretor';
   criado_em: string;
   lida: boolean;
+  editada: boolean;
+  editada_em: string | null;
 }
 
 export interface Conversa {
@@ -446,6 +448,54 @@ export const useAjudaRapida = () => {
     }
   };
 
+  // Editar mensagem
+  const editarMensagem = async (mensagemId: string, novoTexto: string) => {
+    try {
+      const { error } = await supabase
+        .from('ajuda_rapida_mensagens')
+        .update({
+          mensagem: novoTexto,
+          editada: true,
+          editada_em: new Date().toISOString()
+        })
+        .eq('id', mensagemId);
+
+      if (error) throw error;
+      
+      console.log('✅ Mensagem editada com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao editar mensagem:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível editar a mensagem",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  // Apagar mensagem
+  const apagarMensagem = async (mensagemId: string) => {
+    try {
+      const { error } = await supabase
+        .from('ajuda_rapida_mensagens')
+        .delete()
+        .eq('id', mensagemId);
+
+      if (error) throw error;
+      
+      console.log('✅ Mensagem apagada com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao apagar mensagem:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível apagar a mensagem",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   // Deletar conversa (hard delete)
   const deletarConversa = async (alunoId: string, corretorId: string) => {
     try {
@@ -470,6 +520,8 @@ export const useAjudaRapida = () => {
     buscarConversasCorretor,
     buscarMensagensConversa,
     enviarMensagem,
+    editarMensagem,
+    apagarMensagem,
     marcarComoLida,
     marcarComoLidaAluno,
     buscarMensagensNaoLidas,
