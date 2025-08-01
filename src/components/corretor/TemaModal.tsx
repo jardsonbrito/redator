@@ -57,9 +57,9 @@ export const TemaModal = ({ isOpen, onClose, tema }: TemaModalProps) => {
             </div>
           )}
 
-          {/* Instrução Padrão */}
+          {/* Instrução Completa */}
           <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 leading-relaxed">
               A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua 
               formação, redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o 
               tema <strong>"{tema.frase_tematica}"</strong>, apresentando proposta de intervenção que respeite os direitos humanos.
@@ -69,27 +69,27 @@ export const TemaModal = ({ isOpen, onClose, tema }: TemaModalProps) => {
           {/* Textos Motivadores */}
           <div className="space-y-4">
             {tema.texto_motivador_1 && (
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">Texto Motivador I</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-line">
+              <div className="border rounded-lg p-4 bg-white">
+                <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador I</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
                   {tema.texto_motivador_1}
                 </p>
               </div>
             )}
 
             {tema.texto_motivador_2 && (
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">Texto Motivador II</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-line">
+              <div className="border rounded-lg p-4 bg-white">
+                <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador II</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
                   {tema.texto_motivador_2}
                 </p>
               </div>
             )}
 
             {tema.texto_motivador_3 && (
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">Texto Motivador III</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-line">
+              <div className="border rounded-lg p-4 bg-white">
+                <h3 className="font-semibold text-gray-900 mb-3">Texto Motivador III</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
                   {tema.texto_motivador_3}
                 </p>
               </div>
