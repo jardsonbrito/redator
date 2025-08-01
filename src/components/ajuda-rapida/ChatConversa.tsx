@@ -226,7 +226,9 @@ export const ChatConversa = ({
                       <div
                         className={cn(
                           "max-w-xs lg:max-w-md xl:max-w-lg px-4 py-2 rounded-lg relative",
-                          isOwnMessage
+                          isEditing
+                            ? "bg-gray-100"
+                            : isOwnMessage
                             ? "bg-primary text-primary-foreground"
                             : "bg-secondary text-secondary-foreground"
                         )}
@@ -253,12 +255,7 @@ export const ChatConversa = ({
                                 e.target.style.height = e.target.scrollHeight + 'px';
                               }}
                               onKeyDown={handleKeyPressEdicao}
-                              className={cn(
-                                "min-h-[40px] w-full resize-none border-0 bg-transparent p-0 text-sm focus:ring-0 focus:outline-none overflow-hidden pb-8",
-                                isOwnMessage
-                                  ? "text-primary-foreground placeholder:text-primary-foreground/50"
-                                  : "text-secondary-foreground placeholder:text-secondary-foreground/50"
-                              )}
+                              className="min-h-[40px] w-full resize-none border-0 bg-transparent p-0 text-sm focus:ring-0 focus:outline-none overflow-hidden pb-8 text-gray-800 placeholder:text-gray-500"
                               style={{
                                 fontSize: 'inherit',
                                 lineHeight: 'inherit',
@@ -276,12 +273,7 @@ export const ChatConversa = ({
                                 size="sm"
                                 variant="ghost"
                                 onClick={handleCancelarEdicao}
-                                className={cn(
-                                  "h-6 w-6 p-0 rounded-full hover:bg-current/10",
-                                  isOwnMessage 
-                                    ? "text-primary-foreground/80 hover:text-primary-foreground" 
-                                    : "text-secondary-foreground/80 hover:text-secondary-foreground"
-                                )}
+                                className="h-6 w-6 p-0 rounded-full hover:bg-gray-200 text-gray-600 hover:text-gray-800"
                               >
                                 <X className="h-3 w-3" />
                               </Button>
@@ -293,10 +285,7 @@ export const ChatConversa = ({
                                 onClick={handleSalvarEdicao}
                                 disabled={!textoEdicao.trim()}
                                 className={cn(
-                                  "h-6 w-6 p-0 rounded-full hover:bg-current/10",
-                                  isOwnMessage
-                                    ? "text-primary-foreground/80 hover:text-primary-foreground"
-                                    : "text-secondary-foreground/80 hover:text-secondary-foreground",
+                                  "h-6 w-6 p-0 rounded-full hover:bg-gray-200 text-gray-600 hover:text-gray-800",
                                   !textoEdicao.trim() && "opacity-50"
                                 )}
                               >
