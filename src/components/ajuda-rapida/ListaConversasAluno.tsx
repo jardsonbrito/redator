@@ -10,7 +10,11 @@ import { ChatConversa } from "./ChatConversa";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export const ListaConversasAluno = () => {
+interface ListaConversasAlunoProps {
+  onConversaChange?: (conversa: { corretorId: string; corretorNome: string } | null) => void;
+}
+
+export const ListaConversasAluno = ({ onConversaChange }: ListaConversasAlunoProps) => {
   const { conversas, loading, buscarConversasAluno } = useAjudaRapida();
   const { studentData } = useStudentAuth();
   const [showNovaConversa, setShowNovaConversa] = useState(false);
@@ -26,6 +30,10 @@ export const ListaConversasAluno = () => {
       buscarConversasAluno(studentData.email);
     }
   }, [studentData.email]);
+
+  useEffect(() => {
+    onConversaChange?.(conversaAtiva);
+  }, [conversaAtiva, onConversaChange]);
 
   if (conversaAtiva) {
     return (
