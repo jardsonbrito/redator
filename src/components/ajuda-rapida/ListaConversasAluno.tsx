@@ -53,11 +53,11 @@ export const ListaConversasAluno = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 p-4">
+    <div className="p-4">
       <div className="max-w-4xl mx-auto">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-2xl font-bold">Ajuda Rápida</CardTitle>
+            <CardTitle className="text-xl font-semibold">Conversas</CardTitle>
             <Button
               onClick={() => setShowNovaConversa(true)}
               size="sm"
