@@ -12,6 +12,7 @@ import { Search, Download, Calendar, Clock, Users } from "lucide-react";
 interface FrequenciaData {
   id: string;
   nome_completo: string;
+  email_aluno: string;
   turma: string;
   aula_titulo: string;
   data_aula: string;
@@ -60,7 +61,7 @@ export const FrequenciaAulas = () => {
           .order('data_aula', { ascending: false }),
         supabase
           .from('presenca_aulas')
-          .select('*')
+          .select('aula_id, nome_aluno, sobrenome_aluno, email_aluno, turma, tipo_registro, data_registro')
       ]);
 
       if (aulasResponse.error) {
@@ -87,12 +88,13 @@ export const FrequenciaAulas = () => {
       const frequenciaMap = new Map<string, any>();
 
       presencaData.forEach((registro) => {
-        const key = `${registro.aula_id}-${registro.nome_aluno}-${registro.sobrenome_aluno}-${registro.turma}`;
+        const key = `${registro.aula_id}-${registro.email_aluno}-${registro.turma}`;
         
         if (!frequenciaMap.has(key)) {
           frequenciaMap.set(key, {
             aula_id: registro.aula_id,
-            nome_completo: `${registro.nome_aluno} ${registro.sobrenome_aluno}`,
+            nome_completo: `${registro.nome_aluno} ${registro.sobrenome_aluno || ''}`.trim(),
+            email_aluno: registro.email_aluno,
             turma: registro.turma,
             entrada: null,
             saida: null
@@ -123,8 +125,9 @@ export const FrequenciaAulas = () => {
         }
 
         return {
-          id: `${item.aula_id}-${item.nome_completo}`,
+          id: `${item.aula_id}-${item.email_aluno}`,
           nome_completo: item.nome_completo,
+          email_aluno: item.email_aluno,
           turma: item.turma,
           aula_titulo: aula?.titulo || 'Aula não encontrada',
           data_aula: aula?.data_aula || '',
@@ -151,9 +154,9 @@ export const FrequenciaAulas = () => {
   const exportToCSV = () => {
     try {
       const csvContent = [
-        'Nome Completo,Turma,Aula,Data,Entrada,Saída,Tempo Total (min),Situação',
+        'Nome Completo,Email,Turma,Aula,Data,Entrada,Saída,Tempo Total (min),Situação',
         ...filteredData.map(item => 
-          `"${item.nome_completo}","${item.turma}","${item.aula_titulo}","${new Date(item.data_aula).toLocaleDateString('pt-BR')}","${item.horario_entrada || ''}","${item.horario_saida || ''}","${item.tempo_total || ''}","${item.situacao}"`
+          `"${item.nome_completo}","${item.email_aluno}","${item.turma}","${item.aula_titulo}","${new Date(item.data_aula).toLocaleDateString('pt-BR')}","${item.horario_entrada || ''}","${item.horario_saida || ''}","${item.tempo_total || ''}","${item.situacao}"`
         )
       ].join('\n');
 
@@ -342,6 +345,7 @@ export const FrequenciaAulas = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome Completo</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Turma</TableHead>
                   <TableHead>Aula</TableHead>
                   <TableHead>Data</TableHead>
@@ -355,6 +359,7 @@ export const FrequenciaAulas = () => {
                 {filteredData.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.nome_completo}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{item.email_aluno}</TableCell>
                     <TableCell>
                       <Badge variant={item.turma === 'visitante' ? 'secondary' : 'outline'}>
                         {item.turma === 'visitante' ? '👤 Visitante' : item.turma}

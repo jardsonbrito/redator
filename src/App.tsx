@@ -61,6 +61,8 @@ import AtualizarEmail from "./pages/AtualizarEmail";
 import AjudaRapida from "./pages/AjudaRapida";
 import CorretorAjudaRapida from "./pages/corretor/CorretorAjudaRapida";
 import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
+import AulasAoVivo from "./pages/AulasAoVivo";
+import SalasVirtuais from "./pages/SalasVirtuais";
 
 function App() {
   return (
@@ -91,6 +93,8 @@ function App() {
                   <Route path="/envie-redacao" element={<EnvieRedacao />} />
                   <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
                   <Route path="/aulas" element={<Aulas />} />
+                  <Route path="/aulas-ao-vivo" element={<AulasAoVivo />} />
+                  <Route path="/salas-virtuais" element={<SalasVirtuais />} />
                   <Route path="/videoteca" element={<Videoteca />} />
                   <Route path="/biblioteca" element={<Biblioteca />} />
                   <Route path="/redacoes" element={<RedacoesExemplar />} />
