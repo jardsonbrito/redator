@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, LogOut, Home } from "lucide-react";
+import { ArrowLeft, Send, LogOut, Home, Check, X } from "lucide-react";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -241,9 +241,9 @@ export const ChatConversa = ({
                           </div>
                         )}
 
-                        {/* Modo de edição inline - substitui completamente a bolha */}
+                        {/* Modo de edição inline no estilo WhatsApp */}
                         {isEditing ? (
-                          <div className="w-full">
+                          <div className="w-full relative">
                             <Textarea
                               value={textoEdicao}
                               onChange={(e) => {
@@ -254,7 +254,7 @@ export const ChatConversa = ({
                               }}
                               onKeyDown={handleKeyPressEdicao}
                               className={cn(
-                                "min-h-[40px] w-full resize-none border-0 bg-transparent p-0 text-sm focus:ring-0 focus:outline-none overflow-hidden",
+                                "min-h-[40px] w-full resize-none border-0 bg-transparent p-0 text-sm focus:ring-0 focus:outline-none overflow-hidden pb-8",
                                 isOwnMessage
                                   ? "text-primary-foreground placeholder:text-primary-foreground/50"
                                   : "text-secondary-foreground placeholder:text-secondary-foreground/50"
@@ -268,32 +268,39 @@ export const ChatConversa = ({
                               autoFocus
                               placeholder="Digite sua mensagem..."
                             />
-                            <div className="flex justify-end gap-1 mt-2 pt-2 border-t border-current/20">
+                            
+                            {/* Ícones de ação no estilo WhatsApp - canto inferior */}
+                            <div className="absolute bottom-0 left-0 right-0 flex justify-between items-center pt-1">
+                              {/* Ícone de cancelar (❌) - canto esquerdo */}
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={handleCancelarEdicao}
                                 className={cn(
-                                  "h-6 px-2 text-xs hover:bg-current/10",
+                                  "h-6 w-6 p-0 rounded-full hover:bg-current/10",
                                   isOwnMessage 
                                     ? "text-primary-foreground/80 hover:text-primary-foreground" 
                                     : "text-secondary-foreground/80 hover:text-secondary-foreground"
                                 )}
                               >
-                                Cancelar
+                                <X className="h-3 w-3" />
                               </Button>
+                              
+                              {/* Ícone de confirmar (✅) - canto direito */}
                               <Button
                                 size="sm"
+                                variant="ghost"
                                 onClick={handleSalvarEdicao}
                                 disabled={!textoEdicao.trim()}
                                 className={cn(
-                                  "h-6 px-2 text-xs",
+                                  "h-6 w-6 p-0 rounded-full hover:bg-current/10",
                                   isOwnMessage
-                                    ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
-                                    : "bg-secondary-foreground/20 text-secondary-foreground hover:bg-secondary-foreground/30"
+                                    ? "text-primary-foreground/80 hover:text-primary-foreground"
+                                    : "text-secondary-foreground/80 hover:text-secondary-foreground",
+                                  !textoEdicao.trim() && "opacity-50"
                                 )}
                               >
-                                Salvar
+                                <Check className="h-3 w-3" />
                               </Button>
                             </div>
                           </div>
