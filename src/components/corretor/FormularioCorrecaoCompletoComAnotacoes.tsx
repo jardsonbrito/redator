@@ -110,9 +110,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         frase_tematica: redacao.frase_tematica,
         eixo_tematico: null,
         imagem_texto_4_url: null,
-        texto_motivador_1: null,
-        texto_motivador_2: null,
-        texto_motivador_3: null
+        texto_1: null,
+        texto_2: null,
+        texto_3: null
       };
       setTemaDetalhes(tema);
     }
