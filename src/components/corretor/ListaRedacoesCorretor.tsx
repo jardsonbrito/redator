@@ -26,23 +26,10 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   const [filtroStatus, setFiltroStatus] = useState("todas");
   const [filtroMes, setFiltroMes] = useState("todos");
 
-  // Extrair turmas únicas das redações do corretor
+  // Lista fixa de todas as turmas do sistema
   const turmasDisponiveis = useMemo(() => {
-    const turmas = Array.from(new Set(
-      redacoes
-        .map(r => {
-          // Buscar primeiro em dados de turma das redações vindas do banco
-          // Se não tiver turma específica, categorizar como visitante baseado no email
-          if (!r.turma && (r.email_aluno.includes('@gmail') || r.email_aluno.includes('@hotmail') || r.email_aluno.includes('@yahoo'))) {
-            return 'Visitante';
-          }
-          // Retornar a turma real da redação ou fallback para 'Sem turma'
-          return r.turma || 'Sem turma';
-        })
-        .filter(Boolean) // Remove valores vazios
-    ));
-    return turmas.sort();
-  }, [redacoes]);
+    return ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E', 'Visitantes'];
+  }, []);
 
   // Extrair meses/anos únicos das redações
   const mesesDisponiveis = useMemo(() => {
@@ -73,11 +60,10 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
       const matchTurma = filtroTurma === "todas" || (() => {
         // Se não tem turma específica e email é de domínio público, considerar visitante
         if (!redacao.turma && (redacao.email_aluno.includes('@gmail') || redacao.email_aluno.includes('@hotmail') || redacao.email_aluno.includes('@yahoo'))) {
-          return filtroTurma === 'Visitante';
+          return filtroTurma === 'Visitantes';
         }
         // Comparar com a turma real da redação
-        const turmaRedacao = redacao.turma || 'Sem turma';
-        return filtroTurma === turmaRedacao;
+        return filtroTurma === redacao.turma;
       })();
 
       // Filtro por status
