@@ -251,21 +251,21 @@ const Top5 = () => {
                 <Button
                   variant={selectedType === "simulado" ? "default" : "outline"}
                   onClick={() => setSelectedType("simulado")}
-                  className="bg-primary/10 border-primary/30"
+                  className={selectedType === "simulado" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-primary/10 border-primary/30 hover:bg-primary/20"}
                 >
                   Simulado
                 </Button>
                 <Button
                   variant={selectedType === "regular" ? "default" : "outline"}
                   onClick={() => setSelectedType("regular")}
-                  className="bg-primary/10 border-primary/30"
+                  className={selectedType === "regular" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-primary/10 border-primary/30 hover:bg-primary/20"}
                 >
                   Regular
                 </Button>
                 <Button
                   variant={selectedType === "avulsa" ? "default" : "outline"}
                   onClick={() => setSelectedType("avulsa")}
-                  className="bg-primary/10 border-primary/30"
+                  className={selectedType === "avulsa" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-primary/10 border-primary/30 hover:bg-primary/20"}
                 >
                   Visitante
                 </Button>
