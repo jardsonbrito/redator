@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const Top5 = () => {
   const [selectedType, setSelectedType] = useState<"simulado" | "regular" | "avulsa">("simulado");
   const [selectedSimulado, setSelectedSimulado] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
 
   // Buscar maior nota de todas
   const { data: maiorNota } = useQuery({
@@ -67,9 +68,38 @@ const Top5 = () => {
     }
   });
 
+  // Buscar meses disponíveis para redações regulares
+  const { data: mesesDisponiveis } = useQuery({
+    queryKey: ['meses-regulares'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('data_envio')
+        .eq('tipo_envio', 'regular')
+        .eq('corrigida', true)
+        .not('nota_total', 'is', null);
+      
+      if (error) throw error;
+      
+      // Extrair meses únicos
+      const meses = new Set<string>();
+      (data || []).forEach(redacao => {
+        const dataRedacao = new Date(redacao.data_envio);
+        const mes = dataRedacao.toLocaleDateString('pt-BR', { 
+          month: 'long', 
+          year: 'numeric' 
+        });
+        const mesCapitalizado = mes.charAt(0).toUpperCase() + mes.slice(1);
+        meses.add(mesCapitalizado);
+      });
+      
+      return Array.from(meses).sort() as string[];
+    }
+  });
+
   // Buscar ranking baseado no tipo selecionado
   const { data: ranking } = useQuery({
-    queryKey: ['ranking', selectedType, selectedSimulado],
+    queryKey: ['ranking', selectedType, selectedSimulado, selectedMonth],
     queryFn: async () => {
       let processedData = [];
       
@@ -98,7 +128,7 @@ const Top5 = () => {
         // Para regular e avulsa, usar redacoes_enviadas
         let query = supabase
           .from('redacoes_enviadas')
-          .select('nome_aluno, nota_total, tipo_envio')
+          .select('nome_aluno, nota_total, tipo_envio, data_envio')
           .not('nota_total', 'is', null)
           .eq('corrigida', true);
           
@@ -112,7 +142,22 @@ const Top5 = () => {
         
         if (error) throw error;
         
-        processedData = data || [];
+        let filteredData = data || [];
+        
+        // Filtrar por mês se for tipo "regular" e um mês estiver selecionado
+        if (selectedType === "regular" && selectedMonth) {
+          filteredData = filteredData.filter(redacao => {
+            const dataRedacao = new Date(redacao.data_envio);
+            const mesRedacao = dataRedacao.toLocaleDateString('pt-BR', { 
+              month: 'long', 
+              year: 'numeric' 
+            });
+            const mesCapitalizado = mesRedacao.charAt(0).toUpperCase() + mesRedacao.slice(1);
+            return mesCapitalizado === selectedMonth;
+          });
+        }
+        
+        processedData = filteredData;
       }
       
       // Processar ranking com lógica de empates justos
@@ -250,6 +295,36 @@ const Top5 = () => {
                         className="bg-secondary/10 border-secondary/30"
                       >
                         {simulado.titulo}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Filtro adicional para aba Regular */}
+              {selectedType === "regular" && mesesDisponiveis && mesesDisponiveis.length > 0 && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Filtrar por mês:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={selectedMonth === "" ? "default" : "outline"}
+                      onClick={() => setSelectedMonth("")}
+                      size="sm"
+                      className="bg-secondary/10 border-secondary/30"
+                    >
+                      Todos
+                    </Button>
+                    {mesesDisponiveis.map(mes => (
+                      <Button
+                        key={mes}
+                        variant={selectedMonth === mes ? "default" : "outline"}
+                        onClick={() => setSelectedMonth(mes)}
+                        size="sm"
+                        className="bg-secondary/10 border-secondary/30"
+                      >
+                        {mes}
                       </Button>
                     ))}
                   </div>
