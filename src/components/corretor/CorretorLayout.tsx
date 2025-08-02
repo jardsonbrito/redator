@@ -1,7 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { LogOut, User, Home, BookOpen, Video, Library, FileText, Trophy, Menu, X, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,9 +14,26 @@ interface CorretorLayoutProps {
 
 export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
   const { corretor, logout } = useCorretorAuth();
+  const { buscarMensagensNaoLidas } = useAjudaRapida();
   const location = useLocation();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
+
+  useEffect(() => {
+    if (corretor?.email) {
+      const fetchMensagensNaoLidas = async () => {
+        const count = await buscarMensagensNaoLidas(corretor.email);
+        setMensagensNaoLidas(count);
+      };
+      
+      fetchMensagensNaoLidas();
+      
+      // Atualizar a cada 30 segundos
+      const interval = setInterval(fetchMensagensNaoLidas, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [corretor?.email, buscarMensagensNaoLidas]);
 
   const menuItems = [
     { icon: Home, label: "Home", path: "/corretor" },
@@ -113,6 +132,11 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
                     >
                       <Icon className="w-4 h-4 shrink-0" />
                       <span className="truncate">{item.label}</span>
+                      {item.label === "Recado dos Alunos" && mensagensNaoLidas > 0 && (
+                        <Badge variant="destructive" className="ml-auto rounded-full text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+                          {mensagensNaoLidas}
+                        </Badge>
+                      )}
                     </Link>
                   </li>
                 );
