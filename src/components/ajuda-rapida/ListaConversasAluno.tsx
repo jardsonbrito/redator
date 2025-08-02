@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -34,6 +35,21 @@ export const ListaConversasAluno = ({ onConversaChange }: ListaConversasAlunoPro
   useEffect(() => {
     onConversaChange?.(conversaAtiva);
   }, [conversaAtiva, onConversaChange]);
+
+  // Escutar evento para recarregar conversas quando mensagens forem lidas
+  useEffect(() => {
+    const handleMensagensLidas = () => {
+      if (studentData.email) {
+        buscarConversasAluno(studentData.email);
+      }
+    };
+    
+    window.addEventListener('mensagensLidas', handleMensagensLidas);
+    
+    return () => {
+      window.removeEventListener('mensagensLidas', handleMensagensLidas);
+    };
+  }, [studentData.email, buscarConversasAluno]);
 
   if (conversaAtiva) {
     return (
@@ -96,23 +112,30 @@ export const ListaConversasAluno = ({ onConversaChange }: ListaConversasAlunoPro
                       corretorNome: conversa.corretor_nome
                     })}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-foreground">
-                            {conversa.corretor_nome}
-                          </h3>
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {conversa.ultima_mensagem}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(conversa.ultima_data), 'dd/MM HH:mm', { locale: ptBR })}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
+                     <CardContent className="p-4 relative">
+                       <div className="flex justify-between items-start">
+                         <div className="flex-1">
+                           <div className="flex items-center gap-2">
+                             <h3 className="font-semibold text-foreground">
+                               {conversa.corretor_nome}
+                             </h3>
+                             {conversa.mensagens_nao_lidas > 0 && (
+                               <Badge variant="destructive" className="rounded-full text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+                                 {conversa.mensagens_nao_lidas}
+                               </Badge>
+                             )}
+                           </div>
+                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                             {conversa.ultima_mensagem}
+                           </p>
+                         </div>
+                         <div className="text-right">
+                           <p className="text-xs text-muted-foreground">
+                             {format(new Date(conversa.ultima_data), 'dd/MM HH:mm', { locale: ptBR })}
+                           </p>
+                         </div>
+                       </div>
+                     </CardContent>
                   </Card>
                 ))}
               </div>

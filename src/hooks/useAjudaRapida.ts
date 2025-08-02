@@ -71,6 +71,8 @@ export const useAjudaRapida = () => {
           corretor_id,
           mensagem,
           criado_em,
+          autor,
+          lida,
           corretores(nome_completo)
         `)
         .eq('aluno_id', perfilAluno.id)
@@ -93,9 +95,20 @@ export const useAjudaRapida = () => {
             corretor_nome: msg.corretores?.nome_completo || 'Corretor',
             ultima_mensagem: msg.mensagem,
             ultima_data: msg.criado_em,
-            mensagens_nao_lidas: 0,
+            mensagens_nao_lidas: msg.autor === 'corretor' && !msg.lida ? 1 : 0,
             eh_respondida: false
           });
+        } else {
+          const conversa = conversasMap.get(key);
+          // Contar mensagens não lidas do corretor
+          if (msg.autor === 'corretor' && !msg.lida) {
+            conversa.mensagens_nao_lidas++;
+          }
+          // Manter a mensagem mais recente como última
+          if (new Date(msg.criado_em) > new Date(conversa.ultima_data)) {
+            conversa.ultima_mensagem = msg.mensagem;
+            conversa.ultima_data = msg.criado_em;
+          }
         }
       });
 
