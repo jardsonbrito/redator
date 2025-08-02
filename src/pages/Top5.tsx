@@ -282,7 +282,7 @@ const Top5 = () => {
                       variant={selectedSimulado === "" ? "default" : "outline"}
                       onClick={() => setSelectedSimulado("")}
                       size="sm"
-                      className="bg-secondary/10 border-secondary/30"
+                      className={selectedSimulado === "" ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-secondary/10 border-secondary/30 hover:bg-secondary/20"}
                     >
                       Todos
                     </Button>
@@ -292,7 +292,7 @@ const Top5 = () => {
                         variant={selectedSimulado === simulado.id ? "default" : "outline"}
                         onClick={() => setSelectedSimulado(simulado.id)}
                         size="sm"
-                        className="bg-secondary/10 border-secondary/30"
+                        className={selectedSimulado === simulado.id ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-secondary/10 border-secondary/30 hover:bg-secondary/20"}
                       >
                         {simulado.titulo}
                       </Button>
@@ -312,7 +312,7 @@ const Top5 = () => {
                       variant={selectedMonth === "" ? "default" : "outline"}
                       onClick={() => setSelectedMonth("")}
                       size="sm"
-                      className="bg-secondary/10 border-secondary/30"
+                      className={selectedMonth === "" ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-secondary/10 border-secondary/30 hover:bg-secondary/20"}
                     >
                       Todos
                     </Button>
@@ -322,7 +322,7 @@ const Top5 = () => {
                         variant={selectedMonth === mes ? "default" : "outline"}
                         onClick={() => setSelectedMonth(mes)}
                         size="sm"
-                        className="bg-secondary/10 border-secondary/30"
+                        className={selectedMonth === mes ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-secondary/10 border-secondary/30 hover:bg-secondary/20"}
                       >
                         {mes}
                       </Button>
