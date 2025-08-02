@@ -1829,6 +1829,7 @@ export type Database = {
           eh_corretor_1: boolean
           eh_corretor_2: boolean
           redacao_manuscrita_url: string
+          turma: string
         }[]
       }
       get_simulados_por_corretor: {
