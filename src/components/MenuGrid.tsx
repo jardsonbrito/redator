@@ -1,11 +1,14 @@
 
 import { Link } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { LucideIcon, Lock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UnlockModal } from "./UnlockModal";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
 import { useNewContentTags } from "@/hooks/useNewContentTags";
+import { useAjudaRapida } from "@/hooks/useAjudaRapida";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 interface MenuItem {
   title: string;
@@ -25,8 +28,37 @@ interface MenuGridProps {
 export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [selectedResource, setSelectedResource] = useState('');
+  const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
   const { isBlockedResource } = useTurmaERestrictions();
   const { shouldShowNewTag, handleCardClick } = useNewContentTags();
+  const { buscarMensagensNaoLidasAluno } = useAjudaRapida();
+  const { studentData } = useStudentAuth();
+
+  useEffect(() => {
+    if (studentData.email) {
+      const fetchMensagensNaoLidas = async () => {
+        const count = await buscarMensagensNaoLidasAluno(studentData.email);
+        setMensagensNaoLidas(count);
+      };
+      
+      fetchMensagensNaoLidas();
+      
+      // Atualizar a cada 30 segundos
+      const interval = setInterval(fetchMensagensNaoLidas, 30000);
+      
+      // Escutar evento customizado para atualizar badge quando mensagens forem lidas
+      const handleMensagensLidas = () => {
+        fetchMensagensNaoLidas();
+      };
+      
+      window.addEventListener('mensagensLidas', handleMensagensLidas);
+      
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('mensagensLidas', handleMensagensLidas);
+      };
+    }
+  }, [studentData.email, buscarMensagensNaoLidasAluno]);
 
   // Filtra os itens do menu baseado na disponibilidade de conteúdo
   const visibleMenuItems = menuItems.filter(item => {
@@ -109,6 +141,13 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                       <span className="absolute top-2 right-2 bg-[#F97316] text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
                         NOVO
                       </span>
+                    )}
+
+                    {/* Badge de notificação para Ajuda Rápida */}
+                    {item.title === "Ajuda Rápida" && mensagensNaoLidas > 0 && (
+                      <Badge variant="destructive" className="absolute top-2 left-2 rounded-full text-xs min-w-[1.25rem] h-5 flex items-center justify-center">
+                        {mensagensNaoLidas}
+                      </Badge>
                     )}
                   </Link>
                 )}
