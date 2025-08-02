@@ -24,7 +24,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
     );
   }
 
-  const { pendentes, emCorrecao, incompletas, corrigidas } = getRedacoesPorStatus();
+  const { pendentes, incompletas, corrigidas } = getRedacoesPorStatus();
 
   const RedacaoItem = ({ redacao, index }: { redacao: RedacaoCorretor; index: number }) => (
     <div className="border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors">
@@ -84,20 +84,13 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
     <Card>
       <CardContent>
         <Tabs defaultValue="pendentes" className="w-full">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 gap-1 h-auto' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 gap-1 h-auto' : 'grid-cols-3'}`}>
             <TabsTrigger 
               value="pendentes" 
               className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isMobile ? 'justify-start' : 'justify-center'}`}
             >
               <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
               Pendentes ({pendentes.length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="emCorrecao" 
-              className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isMobile ? 'justify-start' : 'justify-center'}`}
-            >
-              <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500" />
-              Em Correção ({emCorrecao.length})
             </TabsTrigger>
             <TabsTrigger 
               value="incompletas" 
@@ -129,19 +122,6 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
             )}
           </TabsContent>
           
-          <TabsContent value="emCorrecao" className="mt-4">
-            {emCorrecao.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8 text-sm">
-                Nenhuma redação em correção no momento.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {emCorrecao.map((redacao, index) => (
-                  <RedacaoItem key={redacao.id} redacao={redacao} index={index} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
           
           <TabsContent value="incompletas" className="mt-4">
             {incompletas.length === 0 ? (
