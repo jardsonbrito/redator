@@ -167,6 +167,27 @@ export const MinhasRedacoes = () => {
   const handleViewRedacao = async (redacao: RedacaoTurma) => {
     console.log('🔐 Iniciando fluxo SEGURO para visualização de redação');
     
+    // Para visitantes, usar email da sessão automaticamente
+    if (userType === "visitante" && visitanteEmail) {
+      console.log('👤 Fluxo direto para visitante autenticado');
+      
+      // Validar se a redação pertence ao visitante logado
+      const isValid = await validarEmailRigoroso(redacao.email_aluno, visitanteEmail);
+      
+      if (!isValid) {
+        toast({
+          title: "🚫 Acesso negado",
+          description: "Esta redação não pertence ao seu usuário.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Processar redação diretamente para visitante
+      await processarRedacaoAutenticada(redacao.id, visitanteEmail, redacao);
+      return;
+    }
+    
     // Verificar se é redação manuscrita - se for, fazer download direto
     try {
       // Buscar dados completos da redação para verificar se tem imagem
@@ -212,7 +233,7 @@ export const MinhasRedacoes = () => {
       console.error('❌ Erro ao verificar tipo de redação:', error);
     }
 
-    // Para redações de texto, seguir fluxo normal com pop-up
+    // Para redações de texto de alunos, seguir fluxo normal com pop-up
     setAuthenticatedRedacao(null);
     setShowRedacaoDialog(false);
     setSelectedRedacaoId(redacao.id);
@@ -256,6 +277,148 @@ export const MinhasRedacoes = () => {
 
     console.log('✅ MINHAS REDAÇÕES: VALIDAÇÃO RIGOROSA APROVADA');
     return true;
+  };
+
+  const processarRedacaoAutenticada = async (redacaoId: string, emailUsuario: string, redacaoBasica: RedacaoTurma) => {
+    try {
+      console.log('📝 Processando redação autenticada para visitante');
+      
+      let redacaoCompleta;
+      
+      if (redacaoBasica.tipo_envio === 'simulado') {
+        const { data, error } = await supabase
+          .from('redacoes_simulado')
+          .select('*, simulados!inner(frase_tematica)')
+          .eq('id', redacaoId)
+          .single();
+          
+        if (error) {
+          console.error('❌ Erro ao carregar redação de simulado:', error);
+          throw new Error('Erro ao carregar redação de simulado');
+        }
+        
+        redacaoCompleta = {
+          ...data,
+          redacao_texto: data.texto,
+          frase_tematica: (data.simulados as any)?.frase_tematica || 'Simulado'
+        };
+      } else {
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('id', redacaoId)
+          .single();
+
+        if (error) {
+          console.error('❌ Erro ao carregar redação regular:', error);
+          throw new Error('Erro ao carregar redação regular');
+        }
+        
+        redacaoCompleta = data;
+      }
+
+      // Verificar se é redação manuscrita
+      if (redacaoCompleta?.redacao_manuscrita_url) {
+        console.log('📄 Redação manuscrita detectada - iniciando download direto');
+        
+        // Preparar dados para download
+        const dadosDownload = {
+          id: redacaoCompleta.id,
+          nome_aluno: redacaoCompleta.nome_aluno,
+          email_aluno: redacaoCompleta.email_aluno,
+          frase_tematica: redacaoCompleta.frase_tematica,
+          redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "Redação manuscrita - veja imagem anexa",
+          data_envio: redacaoCompleta.data_envio,
+          nota_total: redacaoCompleta.nota_total,
+          nota_c1: redacaoCompleta.nota_c1,
+          nota_c2: redacaoCompleta.nota_c2,
+          nota_c3: redacaoCompleta.nota_c3,
+          nota_c4: redacaoCompleta.nota_c4,
+          nota_c5: redacaoCompleta.nota_c5,
+          comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
+          comentario_c1_corretor_1: redacaoCompleta.comentario_c1_corretor_1,
+          comentario_c2_corretor_1: redacaoCompleta.comentario_c2_corretor_1,
+          comentario_c3_corretor_1: redacaoCompleta.comentario_c3_corretor_1,
+          comentario_c4_corretor_1: redacaoCompleta.comentario_c4_corretor_1,
+          comentario_c5_corretor_1: redacaoCompleta.comentario_c5_corretor_1,
+          elogios_pontos_atencao_corretor_1: redacaoCompleta.elogios_pontos_atencao_corretor_1,
+          comentario_c1_corretor_2: redacaoCompleta.comentario_c1_corretor_2,
+          comentario_c2_corretor_2: redacaoCompleta.comentario_c2_corretor_2,
+          comentario_c3_corretor_2: redacaoCompleta.comentario_c3_corretor_2,
+          comentario_c4_corretor_2: redacaoCompleta.comentario_c4_corretor_2,
+          comentario_c5_corretor_2: redacaoCompleta.comentario_c5_corretor_2,
+          elogios_pontos_atencao_corretor_2: redacaoCompleta.elogios_pontos_atencao_corretor_2,
+          data_correcao: redacaoCompleta.data_correcao,
+          turma: redacaoCompleta.turma || "visitante",
+          tipo_envio: redacaoBasica.tipo_envio
+        };
+
+        // Executar download
+        downloadRedacaoCorrigida(dadosDownload);
+        
+        toast({
+          title: "📥 Download iniciado!",
+          description: "A correção completa será baixada em breve.",
+        });
+        return;
+      }
+
+      // Para redações de texto, exibir no modal
+      const redacaoAutenticada: AuthenticatedRedacao = {
+        id: redacaoCompleta.id,
+        frase_tematica: redacaoCompleta.frase_tematica,
+        nome_aluno: redacaoCompleta.nome_aluno,
+        email_aluno: redacaoCompleta.email_aluno,
+        tipo_envio: redacaoBasica.tipo_envio,
+        data_envio: redacaoCompleta.data_envio,
+        status: redacaoCompleta.status || (redacaoCompleta.corrigida ? 'corrigido' : 'aguardando'),
+        corrigida: redacaoCompleta.corrigida,
+        nota_total: redacaoCompleta.nota_total,
+        comentario_admin: redacaoCompleta.comentario_admin || redacaoCompleta.comentario_pedagogico,
+        data_correcao: redacaoCompleta.data_correcao,
+        redacao_texto: redacaoCompleta.redacao_texto || redacaoCompleta.texto || "",
+        redacao_manuscrita_url: redacaoCompleta.redacao_manuscrita_url,
+        nota_c1: redacaoCompleta.nota_c1,
+        nota_c2: redacaoCompleta.nota_c2,
+        nota_c3: redacaoCompleta.nota_c3,
+        nota_c4: redacaoCompleta.nota_c4,
+        nota_c5: redacaoCompleta.nota_c5,
+        // Incluindo comentários pedagógicos dos corretores
+        comentario_c1_corretor_1: redacaoCompleta.comentario_c1_corretor_1,
+        comentario_c2_corretor_1: redacaoCompleta.comentario_c2_corretor_1,
+        comentario_c3_corretor_1: redacaoCompleta.comentario_c3_corretor_1,
+        comentario_c4_corretor_1: redacaoCompleta.comentario_c4_corretor_1,
+        comentario_c5_corretor_1: redacaoCompleta.comentario_c5_corretor_1,
+        elogios_pontos_atencao_corretor_1: redacaoCompleta.elogios_pontos_atencao_corretor_1,
+        comentario_c1_corretor_2: redacaoCompleta.comentario_c1_corretor_2,
+        comentario_c2_corretor_2: redacaoCompleta.comentario_c2_corretor_2,
+        comentario_c3_corretor_2: redacaoCompleta.comentario_c3_corretor_2,
+        comentario_c4_corretor_2: redacaoCompleta.comentario_c4_corretor_2,
+        comentario_c5_corretor_2: redacaoCompleta.comentario_c5_corretor_2,
+        elogios_pontos_atencao_corretor_2: redacaoCompleta.elogios_pontos_atencao_corretor_2,
+        // URLs de correções externas
+        correcao_arquivo_url_corretor_1: redacaoCompleta.correcao_arquivo_url_corretor_1,
+        correcao_arquivo_url_corretor_2: redacaoCompleta.correcao_arquivo_url_corretor_2,
+        turma: redacaoCompleta.turma || "visitante",
+      };
+
+      setAuthenticatedRedacao(redacaoAutenticada);
+      setShowRedacaoDialog(true);
+      
+      console.log('🎉 Redação liberada automaticamente para visitante');
+      toast({
+        title: "✅ Redação liberada!",
+        description: "Acesso automático concedido para visitante.",
+      });
+
+    } catch (error) {
+      console.error('💥 Erro ao processar redação autenticada:', error);
+      toast({
+        title: "❌ Erro ao carregar redação",
+        description: error instanceof Error ? error.message : "Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEmailAuth = async () => {
@@ -554,10 +717,16 @@ export const MinhasRedacoes = () => {
         <CardContent className="text-center py-8">
           <FileText className="w-16 h-16 text-redator-accent/50 mx-auto mb-4" />
           <p className="text-redator-accent mb-4 text-lg font-medium">
-            🔔 Você ainda não enviou nenhuma redação.
+            {userType === "visitante" ? 
+              "🔔 Você ainda não enviou nenhuma redação como visitante." :
+              "🔔 Você ainda não enviou nenhuma redação."
+            }
           </p>
           <p className="text-sm text-redator-accent/70">
-            Suas redações corrigidas aparecerão aqui quando disponíveis!
+            {userType === "visitante" ? 
+              "Envie uma redação para que ela apareça aqui!" :
+              "Suas redações corrigidas aparecerão aqui quando disponíveis!"
+            }
           </p>
           <Button onClick={() => refetch()} className="mt-4">
             Verificar novamente
