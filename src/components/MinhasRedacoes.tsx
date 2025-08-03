@@ -160,7 +160,7 @@ export const MinhasRedacoes = () => {
       
       return [];
     },
-    enabled: !!(alunoEmail || (userType === "visitante")),
+    enabled: !!(alunoEmail || userType === "visitante"),
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
   });
