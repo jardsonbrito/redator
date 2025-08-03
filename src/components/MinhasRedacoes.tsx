@@ -66,6 +66,7 @@ export const MinhasRedacoes = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("todos");
   const { toast } = useToast();
 
   // Recupera dados do usuário com validação aprimorada
@@ -125,21 +126,10 @@ export const MinhasRedacoes = () => {
         console.log('✅ Redações encontradas para aluno:', data?.length || 0);
         return data || [];
         
-      } else if (userType === "visitante" && visitanteEmail) {
-        // Para visitantes, buscar todas as redações com o email, independente do tipo_envio
-        console.log('👤 INVESTIGAÇÃO DETALHADA - Buscando redações do visitante:', visitanteEmail);
-        console.log('👤 Email normalizado para busca:', visitanteEmail.toLowerCase().trim());
+      } else if (userType === "visitante") {
+        // Para visitantes, buscar TODAS as redações de visitantes (visualização pública)
+        console.log('👤 Buscando TODAS as redações de visitantes (visualização pública)');
         
-        // Primeiro, fazer uma busca ampla para debug
-        const { data: debugData, error: debugError } = await supabase
-          .from('redacoes_enviadas')
-          .select('id, email_aluno, nome_aluno, tipo_envio, frase_tematica, data_envio')
-          .ilike('email_aluno', `%${visitanteEmail.toLowerCase().trim()}%`);
-        
-        console.log('🔍 BUSCA DEBUG - Total encontrado com ILIKE:', debugData?.length || 0);
-        console.log('🔍 BUSCA DEBUG - Dados:', debugData);
-        
-        // Agora a busca exata
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -153,74 +143,37 @@ export const MinhasRedacoes = () => {
             corrigida,
             nota_total,
             comentario_admin,
-            data_correcao
+            data_correcao,
+            turma
           `)
-          .eq('email_aluno', visitanteEmail.toLowerCase().trim())
+          .eq('turma', 'visitante')
           .order('data_envio', { ascending: false });
         
         if (error) {
-          console.error('❌ Erro ao buscar redações do visitante:', error);
+          console.error('❌ Erro ao buscar redações de visitantes:', error);
           throw error;
         }
         
-        console.log('✅ BUSCA EXATA - Redações do visitante encontradas:', data?.length || 0);
-        console.log('📋 BUSCA EXATA - Dados encontrados:', data);
-        
-        // Tentar também buscar com diferentes variações do email
-        if (!data || data.length === 0) {
-          console.log('🔄 Tentando busca com variações do email...');
-          
-          const emailVariacoes = [
-            visitanteEmail,
-            visitanteEmail.toLowerCase(),
-            visitanteEmail.toUpperCase(),
-            visitanteEmail.trim(),
-            visitanteEmail.toLowerCase().trim()
-          ];
-          
-          for (const emailVar of emailVariacoes) {
-            const { data: varData } = await supabase
-              .from('redacoes_enviadas')
-              .select('id, email_aluno, nome_aluno')
-              .eq('email_aluno', emailVar);
-            
-            if (varData && varData.length > 0) {
-              console.log(`✅ Encontrado com variação "${emailVar}":`, varData);
-            }
-          }
-        }
-        
+        console.log('✅ Redações de visitantes encontradas:', data?.length || 0);
         return data as RedacaoTurma[] || [];
       }
       
       return [];
     },
-    enabled: !!(alunoEmail || visitanteEmail),
+    enabled: !!(alunoEmail || (userType === "visitante")),
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
   });
 
   const handleViewRedacao = async (redacao: RedacaoTurma) => {
-    console.log('🔐 Iniciando fluxo SEGURO para visualização de redação');
+    console.log('🔐 Iniciando fluxo PÚBLICO para visitantes - visualização de redação');
     
-    // Para visitantes, usar email da sessão automaticamente
-    if (userType === "visitante" && visitanteEmail) {
-      console.log('👤 Fluxo direto para visitante autenticado');
+    // Para visitantes, acesso direto a todas as redações de visitantes (visualização pública)
+    if (userType === "visitante") {
+      console.log('👤 Fluxo direto para visitante - acesso público às redações de visitantes');
       
-      // Validar se a redação pertence ao visitante logado
-      const isValid = await validarEmailRigoroso(redacao.email_aluno, visitanteEmail);
-      
-      if (!isValid) {
-        toast({
-          title: "🚫 Acesso negado",
-          description: "Esta redação não pertence ao seu usuário.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Processar redação diretamente para visitante
-      await processarRedacaoAutenticada(redacao.id, visitanteEmail, redacao);
+      // Processar redação diretamente para visitante (sem validação de email)
+      await processarRedacaoAutenticada(redacao.id, redacao.email_aluno, redacao);
       return;
     }
     
@@ -747,20 +700,20 @@ export const MinhasRedacoes = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-redator-primary">
             <FileText className="w-5 h-5" />
-            📝 Minhas Redações
+            📝 {userType === "visitante" ? "Redações de Visitantes" : "Minhas Redações"}
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-8">
           <FileText className="w-16 h-16 text-redator-accent/50 mx-auto mb-4" />
           <p className="text-redator-accent mb-4 text-lg font-medium">
             {userType === "visitante" ? 
-              "🔔 Você ainda não enviou nenhuma redação como visitante." :
+              "📋 Nenhuma redação de visitante foi enviada até o momento." :
               "🔔 Você ainda não enviou nenhuma redação."
             }
           </p>
           <p className="text-sm text-redator-accent/70">
             {userType === "visitante" ? 
-              "Envie uma redação para que ela apareça aqui!" :
+              "As redações de visitantes aparecerão aqui quando disponíveis!" :
               "Suas redações corrigidas aparecerão aqui quando disponíveis!"
             }
           </p>
@@ -772,15 +725,23 @@ export const MinhasRedacoes = () => {
     );
   }
 
+  // Filtrar redações por status
+  const redacoesFiltradas = redacoesTurma.filter(redacao => {
+    if (statusFilter === "todos") return true;
+    if (statusFilter === "corrigida") return redacao.corrigida;
+    if (statusFilter === "aguardando") return !redacao.corrigida;
+    return true;
+  });
+
   return (
     <>
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-5 h-5 text-redator-primary" />
+          <FileText className="w-5 h-5 text-redator-primary" />
           <h2 className="text-xl font-bold text-redator-primary">
-            {userType === "aluno" ? 
-              `🔐 Minhas Redações - ${alunoTurma} (${redacoesTurma.length})` : 
-              `🔐 Minhas Redações (${redacoesTurma.length})`
+            {userType === "visitante" ? 
+              `📋 Redações de Visitantes (${redacoesTurma.length})` : 
+              `🔐 Minhas Redações - ${alunoTurma} (${redacoesTurma.length})`
             }
           </h2>
           <Button onClick={() => refetch()} variant="outline" size="sm">
@@ -788,8 +749,35 @@ export const MinhasRedacoes = () => {
           </Button>
         </div>
         
+        {/* Filtros por status para visitantes */}
+        {userType === "visitante" && (
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant={statusFilter === "todos" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("todos")}
+            >
+              Todos ({redacoesTurma.length})
+            </Button>
+            <Button
+              variant={statusFilter === "corrigida" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("corrigida")}
+            >
+              Corrigidas ({redacoesTurma.filter(r => r.corrigida).length})
+            </Button>
+            <Button
+              variant={statusFilter === "aguardando" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("aguardando")}
+            >
+              Aguardando ({redacoesTurma.filter(r => !r.corrigida).length})
+            </Button>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {redacoesTurma.map((redacao) => (
+          {redacoesFiltradas.map((redacao) => (
             <Card key={redacao.id} className="border-redator-accent/20 hover:shadow-md transition-shadow">
               <CardContent className="p-3">
                 <div className="space-y-2">
