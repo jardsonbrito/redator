@@ -73,14 +73,57 @@ const MinhasRedacoesList = () => {
   // Obter dados do usuário do localStorage
   const studentDataStr = localStorage.getItem('alunoData');
   const studentData = studentDataStr ? JSON.parse(studentDataStr) : null;
-
+  
+  // Obter dados de visitante do localStorage
+  const visitanteDataStr = localStorage.getItem('visitanteData');
+  const visitanteData = visitanteDataStr ? JSON.parse(visitanteDataStr) : null;
+  
   // Verificar se o usuário está logado
-  const isStudentLoggedIn = localStorage.getItem('userType') === 'aluno';
+  const userType = localStorage.getItem('userType');
+  const isStudentLoggedIn = userType === 'aluno';
+  const isVisitanteLoggedIn = userType === 'visitante';
+
+  console.log('🐛 DEBUG MinhasRedacoesList:', {
+    userType,
+    isStudentLoggedIn,
+    isVisitanteLoggedIn,
+    studentData,
+    visitanteData
+  });
 
   const { data: redacoes = [], isLoading, error } = useQuery({
-    queryKey: ['minhas-redacoes', studentData?.email, isStudentLoggedIn],
+    queryKey: ['minhas-redacoes', studentData?.email, userType],
     queryFn: async () => {
-      console.log('🔍 Iniciando busca de redações para usuário logado');
+      console.log('🔍 Iniciando busca de redações - userType:', userType);
+      
+      if (userType === 'visitante') {
+        console.log('👤 Buscando TODAS as redações de visitantes (visualização pública)');
+        
+        const { data: redacoesVisitantes, error: errorVisitantes } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('turma', 'visitante')
+          .order('data_envio', { ascending: false });
+          
+        if (errorVisitantes) {
+          console.error('❌ Erro ao buscar redações de visitantes:', errorVisitantes);
+          throw errorVisitantes;
+        }
+        
+        console.log('✅ Redações de visitantes encontradas:', redacoesVisitantes?.length || 0);
+        console.log('📋 Dados das redações:', redacoesVisitantes);
+        
+        // Processar redações de visitantes
+        const redacoesFormatadas = redacoesVisitantes?.map(item => ({
+          ...item,
+          redacao_texto: item.redacao_texto || '',
+          tipo_envio: item.tipo_envio || 'avulsa',
+          corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
+          status: item.status || 'aguardando'
+        } as RedacaoTurma)) || [];
+        
+        return redacoesFormatadas;
+      }
       
       if (!studentData?.email) {
         console.log('❌ Email não encontrado nos dados do estudante:', studentData);
@@ -306,7 +349,7 @@ const MinhasRedacoesList = () => {
         throw error;
       }
     },
-    enabled: !!studentData?.email && isStudentLoggedIn,
+    enabled: (!!studentData?.email && isStudentLoggedIn) || isVisitanteLoggedIn,
     refetchOnWindowFocus: true
   });
 
