@@ -104,15 +104,24 @@ export const MinhasRedacoes = () => {
     }
   }
 
-  // Query usando função atualizada que busca por user_id primeiro
+  // Debug completo dos dados de usuário
+  console.log('🐛 DEBUG COMPLETO - MinhasRedacoes:', {
+    userType,
+    alunoTurma,
+    alunoEmail,
+    visitanteEmail,
+    visitanteData,
+    hasVisitanteData: !!visitanteData
+  });
+
+  // Query corrigida para visitantes
   const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
-    queryKey: ['redacoes-turma-funcionando', alunoEmail, visitanteEmail],
+    queryKey: ['redacoes-minhas', userType, alunoEmail || 'visitante'],
     queryFn: async () => {
-      console.log('🔍 Buscando redações usando função atualizada');
+      console.log('🔍 INICIANDO BUSCA DE REDAÇÕES - userType:', userType);
       
       if (userType === "aluno" && alunoEmail) {
-        // Para alunos, usar a função atualizada que busca por user_id primeiro
-        console.log('👨‍🎓 Buscando redações de aluno usando função get_student_redacoes:', alunoEmail);
+        console.log('👨‍🎓 Buscando redações de aluno:', alunoEmail);
         
         const { data, error } = await supabase.rpc('get_student_redacoes_com_status_finalizado', {
           student_email: alunoEmail.toLowerCase().trim()
@@ -127,7 +136,6 @@ export const MinhasRedacoes = () => {
         return data || [];
         
       } else if (userType === "visitante") {
-        // Para visitantes, buscar TODAS as redações de visitantes (visualização pública)
         console.log('👤 Buscando TODAS as redações de visitantes (visualização pública)');
         
         const { data, error } = await supabase
@@ -149,20 +157,31 @@ export const MinhasRedacoes = () => {
           .eq('turma', 'visitante')
           .order('data_envio', { ascending: false });
         
+        console.log('🔍 Query executada para visitantes - resultado:', { data, error });
+        
         if (error) {
           console.error('❌ Erro ao buscar redações de visitantes:', error);
           throw error;
         }
         
         console.log('✅ Redações de visitantes encontradas:', data?.length || 0);
+        console.log('📋 Dados completos:', data);
         return data as RedacaoTurma[] || [];
       }
       
+      console.log('⚠️ Nenhuma condição atendida - retornando array vazio');
       return [];
     },
-    enabled: !!(alunoEmail || userType === "visitante"),
+    enabled: (userType === "aluno" && !!alunoEmail) || userType === "visitante",
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
+  });
+
+  console.log('🔍 Estado da query:', {
+    isLoading,
+    error: error?.message,
+    dataLength: redacoesTurma?.length,
+    data: redacoesTurma
   });
 
   const handleViewRedacao = async (redacao: RedacaoTurma) => {
