@@ -127,8 +127,19 @@ export const MinhasRedacoes = () => {
         
       } else if (userType === "visitante" && visitanteEmail) {
         // Para visitantes, buscar todas as redações com o email, independente do tipo_envio
-        console.log('👤 Buscando redações do visitante:', visitanteEmail);
+        console.log('👤 INVESTIGAÇÃO DETALHADA - Buscando redações do visitante:', visitanteEmail);
+        console.log('👤 Email normalizado para busca:', visitanteEmail.toLowerCase().trim());
         
+        // Primeiro, fazer uma busca ampla para debug
+        const { data: debugData, error: debugError } = await supabase
+          .from('redacoes_enviadas')
+          .select('id, email_aluno, nome_aluno, tipo_envio, frase_tematica, data_envio')
+          .ilike('email_aluno', `%${visitanteEmail.toLowerCase().trim()}%`);
+        
+        console.log('🔍 BUSCA DEBUG - Total encontrado com ILIKE:', debugData?.length || 0);
+        console.log('🔍 BUSCA DEBUG - Dados:', debugData);
+        
+        // Agora a busca exata
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
@@ -152,8 +163,33 @@ export const MinhasRedacoes = () => {
           throw error;
         }
         
-        console.log('✅ Redações do visitante encontradas:', data?.length || 0);
-        console.log('📋 Dados encontrados:', data);
+        console.log('✅ BUSCA EXATA - Redações do visitante encontradas:', data?.length || 0);
+        console.log('📋 BUSCA EXATA - Dados encontrados:', data);
+        
+        // Tentar também buscar com diferentes variações do email
+        if (!data || data.length === 0) {
+          console.log('🔄 Tentando busca com variações do email...');
+          
+          const emailVariacoes = [
+            visitanteEmail,
+            visitanteEmail.toLowerCase(),
+            visitanteEmail.toUpperCase(),
+            visitanteEmail.trim(),
+            visitanteEmail.toLowerCase().trim()
+          ];
+          
+          for (const emailVar of emailVariacoes) {
+            const { data: varData } = await supabase
+              .from('redacoes_enviadas')
+              .select('id, email_aluno, nome_aluno')
+              .eq('email_aluno', emailVar);
+            
+            if (varData && varData.length > 0) {
+              console.log(`✅ Encontrado com variação "${emailVar}":`, varData);
+            }
+          }
+        }
+        
         return data as RedacaoTurma[] || [];
       }
       
