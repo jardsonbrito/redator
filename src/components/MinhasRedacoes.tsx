@@ -172,9 +172,9 @@ export const MinhasRedacoes = () => {
       console.log('⚠️ Nenhuma condição atendida - retornando array vazio');
       return [];
     },
-    enabled: (userType === "aluno" && !!alunoEmail) || userType === "visitante",
+    enabled: true, // SEMPRE HABILITADO PARA TESTAR
     staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
+    refetchInterval: false, // Desabilitando o refetch automático por enquanto
   });
 
   console.log('🔍 Estado da query:', {
