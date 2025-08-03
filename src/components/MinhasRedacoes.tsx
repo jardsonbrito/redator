@@ -126,7 +126,7 @@ export const MinhasRedacoes = () => {
         return data || [];
         
       } else if (userType === "visitante" && visitanteEmail) {
-        // Para visitantes, ainda usar busca direta pois não estão na tabela profiles
+        // Para visitantes, buscar todas as redações com o email, independente do tipo_envio
         console.log('👤 Buscando redações do visitante:', visitanteEmail);
         
         const { data, error } = await supabase
@@ -145,7 +145,6 @@ export const MinhasRedacoes = () => {
             data_correcao
           `)
           .eq('email_aluno', visitanteEmail.toLowerCase().trim())
-          .eq('tipo_envio', 'visitante')
           .order('data_envio', { ascending: false });
         
         if (error) {
@@ -154,6 +153,7 @@ export const MinhasRedacoes = () => {
         }
         
         console.log('✅ Redações do visitante encontradas:', data?.length || 0);
+        console.log('📋 Dados encontrados:', data);
         return data as RedacaoTurma[] || [];
       }
       
