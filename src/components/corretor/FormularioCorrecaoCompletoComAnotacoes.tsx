@@ -80,19 +80,36 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   }, [redacao.id]);
 
   const carregarCorrecaoExistente = async () => {
-    let tabela = '';
-    if (redacao.tipo_redacao === 'regular') tabela = 'redacoes_enviadas';
-    else if (redacao.tipo_redacao === 'simulado') tabela = 'redacoes_simulado';
-    else if (redacao.tipo_redacao === 'exercicio') tabela = 'redacoes_exercicio';
-
-    if (!tabela) return;
-
     try {
-      const { data, error } = await supabase
-        .from(tabela)
-        .select('*')
-        .eq('id', redacao.id)
-        .single();
+      let data, error;
+      
+      if (redacao.tipo_redacao === 'regular') {
+        const result = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('id', redacao.id)
+          .single();
+        data = result.data;
+        error = result.error;
+      } else if (redacao.tipo_redacao === 'simulado') {
+        const result = await supabase
+          .from('redacoes_simulado')
+          .select('*')
+          .eq('id', redacao.id)
+          .single();
+        data = result.data;
+        error = result.error;
+      } else if (redacao.tipo_redacao === 'exercicio') {
+        const result = await supabase
+          .from('redacoes_exercicio')
+          .select('*')
+          .eq('id', redacao.id)
+          .single();
+        data = result.data;
+        error = result.error;
+      } else {
+        return;
+      }
 
       if (error) throw error;
 
@@ -285,9 +302,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               <div className="flex gap-2">
                 <AudioRecorder 
                   redacaoId={redacao.id} 
-                  tipoRedacao={redacao.tipo_redacao}
+                  tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                         redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
                   ehCorretor1={redacao.eh_corretor_1}
-                  audioUrl={audioUrl}
+                  existingAudioUrl={audioUrl}
                   onAudioSaved={setAudioUrl}
                 />
                 <Button
@@ -306,12 +324,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
         <div className="lg:col-span-3">
           <RedacaoAnotacaoVisual
-            redacao={redacao}
-            notas={notas}
-            comentarios={comentarios}
-            onComentarioChange={atualizarComentario}
-            onSalvarCorrecao={() => salvarCorrecao('corrigida')}
-            loading={loading}
+            imagemUrl={redacao.redacao_manuscrita_url || ''}
+            redacaoId={redacao.id}
+            corretorId="temp-corretor-id"
+            readonly={false}
           />
         </div>
       </div>
@@ -320,14 +336,19 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       <RelatorioPedagogicoModal
         isOpen={showRelatorioModal}
         onClose={() => setShowRelatorioModal(false)}
-        comentarios={comentarios}
-        onComentarioChange={atualizarComentario}
+        value={comentarios.elogios}
+        onChange={(value) => atualizarComentario('elogios', value)}
+        alunoNome={redacao.nome_aluno}
+        fraseTematica={redacao.frase_tematica}
       />
 
       <TemaModal
         isOpen={showTemaModal}
         onClose={() => setShowTemaModal(false)}
-        tema={redacao.frase_tematica}
+        tema={{
+          id: 'temp-id',
+          frase_tematica: redacao.frase_tematica
+        }}
       />
     </div>
   );

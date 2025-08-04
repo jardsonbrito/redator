@@ -89,19 +89,36 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   const buscarNotasRedacao = async (redacao: RedacaoCorretor) => {
     if (notasRedacoes[redacao.id]) return; // Já buscou
 
-    let tabela = '';
-    if (redacao.tipo_redacao === 'regular') tabela = 'redacoes_enviadas';
-    else if (redacao.tipo_redacao === 'simulado') tabela = 'redacoes_simulado';
-    else if (redacao.tipo_redacao === 'exercicio') tabela = 'redacoes_exercicio';
-
-    if (!tabela) return;
-
     try {
-      const { data, error } = await supabase
-        .from(tabela)
-        .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, nota_total, c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2')
-        .eq('id', redacao.id)
-        .single();
+      let data, error;
+      
+      if (redacao.tipo_redacao === 'regular') {
+        const result = await supabase
+          .from('redacoes_enviadas')
+          .select('c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2')
+          .eq('id', redacao.id)
+          .single();
+        data = result.data;
+        error = result.error;
+      } else if (redacao.tipo_redacao === 'simulado') {
+        const result = await supabase
+          .from('redacoes_simulado')
+          .select('c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2')
+          .eq('id', redacao.id)
+          .single();
+        data = result.data;
+        error = result.error;
+      } else if (redacao.tipo_redacao === 'exercicio') {
+        const result = await supabase
+          .from('redacoes_exercicio')
+          .select('c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2')
+          .eq('id', redacao.id)
+          .single();
+        data = result.data;
+        error = result.error;
+      } else {
+        return;
+      }
 
       if (error) throw error;
 
