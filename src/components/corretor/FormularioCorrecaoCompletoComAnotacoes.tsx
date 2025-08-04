@@ -1,370 +1,268 @@
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { useCorretorAuth } from "@/hooks/useCorretorAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft, Eye } from "lucide-react";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
-import { Link } from "react-router-dom";
-
-import { ArrowLeft, Save, CheckCircle, Copy, Maximize2, Eye } from "lucide-react";
-import { AudioRecorder } from "./AudioRecorder";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
 import { TemaModal } from "./TemaModal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { AudioRecorder } from "./AudioRecorder";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
   corretorEmail: string;
   onVoltar: () => void;
   onSucesso: () => void;
-  onRefreshList?: () => void;
+  onRefreshList: () => void;
 }
 
-interface RedacaoAnotacaoVisualRef {
-  salvarTodasAnotacoes: () => Promise<void>;
-  gerarImagemComAnotacoes: () => Promise<string>;
+interface NotasCorrecao {
+  c1: number;
+  c2: number;
+  c3: number;
+  c4: number;
+  c5: number;
+  total: number;
 }
 
-export const FormularioCorrecaoCompletoComAnotacoes = ({ 
-  redacao, 
-  corretorEmail, 
-  onVoltar, 
+interface ComentariosCorrecao {
+  c1: string;
+  c2: string;
+  c3: string;
+  c4: string;
+  c5: string;
+  elogios: string;
+}
+
+const opcoesNota = [0, 40, 80, 120, 160, 200];
+
+export const FormularioCorrecaoCompletoComAnotacoes = ({
+  redacao,
+  corretorEmail,
+  onVoltar,
   onSucesso,
-  onRefreshList 
+  onRefreshList
 }: FormularioCorrecaoCompletoComAnotacoesProps) => {
-  const [notas, setNotas] = useState({
-    c1: 200,
-    c2: 200,
-    c3: 200,
-    c4: 200,
-    c5: 200,
+  const [notas, setNotas] = useState<NotasCorrecao>({
+    c1: 0,
+    c2: 0,
+    c3: 0,
+    c4: 0,
+    c5: 0,
+    total: 0
   });
-  
-  const [relatorioPedagogico, setRelatorioPedagogico] = useState("");
+
+  const [comentarios, setComentarios] = useState<ComentariosCorrecao>({
+    c1: "",
+    c2: "",
+    c3: "",
+    c4: "",
+    c5: "",
+    elogios: ""
+  });
+
+  const [showRelatorioModal, setShowRelatorioModal] = useState(false);
+  const [showTemaModal, setShowTemaModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingCorrecao, setLoadingCorrecao] = useState(true);
-  const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
-  const [modoEdicao, setModoEdicao] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalTemaAberto, setModalTemaAberto] = useState(false);
-  const [temaDetalhes, setTemaDetalhes] = useState<any>(null);
-  
-  // Use useRef instead of state to avoid re-renders
-  const anotacaoVisualRef = useRef<RedacaoAnotacaoVisualRef | null>(null);
   const { toast } = useToast();
-  const { corretor } = useCorretorAuth();
-
-  const buscarTemaDetalhes = async () => {
-    if (!redacao.frase_tematica) return null;
-
-    try {
-      // Buscar por frase temática exata
-      let { data, error } = await supabase
-        .from('temas')
-        .select('*')
-        .eq('frase_tematica', redacao.frase_tematica)
-        .single();
-
-      // Se não encontrar exato, tentar busca parcial
-      if (error && error.code === 'PGRST116') {
-        const { data: resultados, error: searchError } = await supabase
-          .from('temas')
-          .select('*')
-          .ilike('frase_tematica', `%${redacao.frase_tematica}%`)
-          .limit(1);
-
-        if (!searchError && resultados && resultados.length > 0) {
-          data = resultados[0];
-          error = null;
-        }
-      }
-
-      if (!error && data) {
-        setTemaDetalhes(data);
-        return data;
-      }
-    } catch (error) {
-      console.error('Erro ao buscar tema:', error);
-    }
-
-    return null;
-  };
-
-  const handleTemaClick = async () => {
-    // Sempre tentar buscar detalhes do tema primeiro
-    let tema = temaDetalhes;
-    if (!tema) {
-      tema = await buscarTemaDetalhes();
-    }
-
-    // Se não encontrar o tema no banco, criar um objeto básico com a frase temática
-    if (!tema) {
-      tema = {
-        id: null,
-        frase_tematica: redacao.frase_tematica,
-        eixo_tematico: null,
-        imagem_texto_4_url: null,
-        texto_1: null,
-        texto_2: null,
-        texto_3: null
-      };
-      setTemaDetalhes(tema);
-    }
-
-    // Sempre abrir o modal
-    setModalTemaAberto(true);
-  };
 
   useEffect(() => {
-    setManuscritaUrl(redacao.redacao_manuscrita_url || null);
+    const total = notas.c1 + notas.c2 + notas.c3 + notas.c4 + notas.c5;
+    setNotas(prev => ({ ...prev, total }));
+  }, [notas.c1, notas.c2, notas.c3, notas.c4, notas.c5]);
+
+  useEffect(() => {
     carregarCorrecaoExistente();
-  }, [redacao.id, corretorEmail, redacao.redacao_manuscrita_url]);
+  }, [redacao.id]);
 
   const carregarCorrecaoExistente = async () => {
+    let tabela = '';
+    if (redacao.tipo_redacao === 'regular') tabela = 'redacoes_enviadas';
+    else if (redacao.tipo_redacao === 'simulado') tabela = 'redacoes_simulado';
+    else if (redacao.tipo_redacao === 'exercicio') tabela = 'redacoes_exercicio';
+
+    if (!tabela) return;
+
     try {
-      const tabela = `redacoes_${redacao.tipo_redacao === 'regular' ? 'enviadas' : redacao.tipo_redacao}`;
-      const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
-
-      let query;
-      
-      if (tabela === 'redacoes_enviadas') {
-        query = supabase.from('redacoes_enviadas').select('*').eq('id', redacao.id).maybeSingle();
-      } else if (tabela === 'redacoes_simulado') {
-        query = supabase.from('redacoes_simulado').select('*').eq('id', redacao.id).maybeSingle();
-      } else {
-        query = supabase.from('redacoes_exercicio').select('*').eq('id', redacao.id).maybeSingle();
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from(tabela)
+        .select('*')
+        .eq('id', redacao.id)
+        .single();
 
       if (error) throw error;
 
-      if (data) {
-        setNotas({
-          c1: data[`c1_${prefixo}`] || 200,
-          c2: data[`c2_${prefixo}`] || 200,
-          c3: data[`c3_${prefixo}`] || 200,
-          c4: data[`c4_${prefixo}`] || 200,
-          c5: data[`c5_${prefixo}`] || 200,
-        });
-        
-        setRelatorioPedagogico(data[`elogios_pontos_atencao_${prefixo}`] || "");
-        setManuscritaUrl(data.redacao_manuscrita_url || null);
-        // Carregar áudio específico do corretor
-        setAudioUrl(data[`audio_url_${prefixo}`] || null);
-        
-        if (data[`status_${prefixo}`] === 'incompleta' || data[`status_${prefixo}`] === 'corrigida') {
-          setModoEdicao(true);
-        }
-      }
-    } catch (error: any) {
-      console.error("Erro ao carregar correção:", error);
-    } finally {
-      setLoadingCorrecao(false);
-    }
-  };
+      const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
 
-  const calcularNotaTotal = () => {
-    return notas.c1 + notas.c2 + notas.c3 + notas.c4 + notas.c5;
-  };
+      setNotas({
+        c1: data[`c1_${prefixo}`] || 0,
+        c2: data[`c2_${prefixo}`] || 0,
+        c3: data[`c3_${prefixo}`] || 0,
+        c4: data[`c4_${prefixo}`] || 0,
+        c5: data[`c5_${prefixo}`] || 0,
+        total: data[`nota_final_${prefixo}`] || 0
+      });
 
-  const salvarAnotacoesVisuais = async () => {
-    if (!anotacaoVisualRef.current?.salvarTodasAnotacoes) {
-      console.log('Referência de anotação visual não disponível');
-      return true; // Não bloquear se não há anotações visuais
-    }
+      setComentarios({
+        c1: data[`comentario_c1_${prefixo}`] || "",
+        c2: data[`comentario_c2_${prefixo}`] || "",
+        c3: data[`comentario_c3_${prefixo}`] || "",
+        c4: data[`comentario_c4_${prefixo}`] || "",
+        c5: data[`comentario_c5_${prefixo}`] || "",
+        elogios: data[`elogios_pontos_atencao_${prefixo}`] || ""
+      });
 
-    try {
-      await anotacaoVisualRef.current.salvarTodasAnotacoes();
-      return true;
+      setAudioUrl(data[`audio_url_${prefixo}`] || null);
+
     } catch (error) {
-      console.error('Erro ao salvar anotações visuais:', error);
-      toast({
-        title: "Erro ao salvar anotações visuais",
-        description: "As anotações visuais não puderam ser salvas.",
-        variant: "destructive"
-      });
-      return false;
+      console.error('Erro ao carregar correção:', error);
     }
   };
 
-  const copiarRelatorio = () => {
-    if (!relatorioPedagogico.trim()) {
-      toast({
-        title: "Nada para copiar",
-        description: "O relatório pedagógico está vazio.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const conteudo = `Aluno: ${redacao.nome_aluno}\nTema: ${redacao.frase_tematica}\n\n${relatorioPedagogico}`;
-    navigator.clipboard.writeText(conteudo);
-    toast({
-      title: "Copiado com sucesso!",
-      description: "Relatório pedagógico foi copiado para a área de transferência.",
-    });
-  };
-
-  const salvarCorrecao = async (status: 'incompleta' | 'corrigida') => {
+  const salvarCorrecao = useCallback(async (status: 'incompleta' | 'corrigida') => {
     setLoading(true);
-    
     try {
-      // Se for a primeira vez salvando (mudando de pendente), iniciar correção
-      if (redacao.status_minha_correcao === 'pendente') {
-        await supabase.rpc('iniciar_correcao_redacao', {
-          redacao_id: redacao.id,
-          tabela_nome: redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
-                       redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio',
-          corretor_email: corretorEmail
-        });
-      }
-
-      // Primeiro salvar as anotações visuais se existirem
-      if (status === 'corrigida') {
-        const anotacoesSalvas = await salvarAnotacoesVisuais();
-        if (!anotacoesSalvas) {
-          setLoading(false);
-          return;
-        }
-      }
-
-      const tabela = redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
-                    redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio';
-      const notaTotal = calcularNotaTotal();
-
-      const { data, error } = await supabase.rpc('salvar_correcao_corretor', {
+      const { error } = await supabase.rpc('salvar_correcao_corretor', {
         redacao_id: redacao.id,
-        tabela_nome: tabela,
+        tabela_nome: redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' :
+                     redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 
+                     'redacoes_exercicio',
         eh_corretor_1: redacao.eh_corretor_1,
         c1_nota: notas.c1,
         c2_nota: notas.c2,
         c3_nota: notas.c3,
         c4_nota: notas.c4,
         c5_nota: notas.c5,
-        nota_final: notaTotal,
+        nota_final: notas.total,
         status_correcao: status,
-        comentario_c1: "",
-        comentario_c2: "",
-        comentario_c3: "",
-        comentario_c4: "",
-        comentario_c5: "",
-        elogios_pontos: relatorioPedagogico.trim()
+        comentario_c1: comentarios.c1,
+        comentario_c2: comentarios.c2,
+        comentario_c3: comentarios.c3,
+        comentario_c4: comentarios.c4,
+        comentario_c5: comentarios.c5,
+        elogios_pontos: comentarios.elogios
       });
 
       if (error) throw error;
 
       toast({
         title: status === 'corrigida' ? "Correção finalizada!" : "Correção salva!",
-        description: status === 'corrigida' 
-          ? `Redação de ${redacao.nome_aluno} foi corrigida com nota ${notaTotal}/1000.`
-          : "Você pode continuar a correção mais tarde.",
+        description: status === 'corrigida' ? 
+          "A correção foi finalizada e está disponível para o aluno." :
+          "Você pode continuar a correção depois."
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      if (onRefreshList) {
-        await onRefreshList();
+      onRefreshList();
+      
+      if (status === 'corrigida') {
+        onSucesso();
       }
 
-      onSucesso();
     } catch (error: any) {
-      console.error("Erro ao salvar correção:", error);
+      console.error('Erro ao salvar correção:', error);
       toast({
-        title: "Erro ao salvar correção",
-        description: error.message || "Ocorreu um erro inesperado.",
+        title: "Erro ao salvar",
+        description: error.message || "Não foi possível salvar a correção.",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
+  }, [redacao, notas, comentarios, toast, onSucesso, onRefreshList]);
+
+  const atualizarNota = (competencia: keyof Omit<NotasCorrecao, 'total'>, valor: number) => {
+    setNotas(prev => ({
+      ...prev,
+      [competencia]: valor
+    }));
   };
 
-  const opcoesNota = [0, 40, 80, 120, 160, 200];
-
-  if (loadingCorrecao) {
-    return <div>Carregando correção...</div>;
-  }
+  const atualizarComentario = (competencia: keyof ComentariosCorrecao, valor: string) => {
+    setComentarios(prev => ({
+      ...prev,
+      [competencia]: valor
+    }));
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={onVoltar}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={onVoltar} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
-          <h1 className="text-xl font-bold">Correção Visual Avançada</h1>
+          <h1 className="text-2xl font-bold">Painel de Correção</h1>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => setShowTemaModal(true)}
+          className="flex items-center gap-2"
+        >
+          <Eye className="w-4 h-4" />
+          Ver Tema
+        </Button>
       </div>
 
-      {/* Informações da redação */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg text-sm">
-        <div className="grid grid-cols-2 gap-4">
-          <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
-          <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
-          <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
-          <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
-        </div>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-1 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Informações</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
+              <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
+              <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
+              <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
+            </CardContent>
+          </Card>
 
-      {/* Tema */}
-      <div className="p-3 bg-primary/5 rounded-lg flex items-center justify-between">
-        <div>
-          <strong>Tema:</strong> 
-          <span className="ml-2 text-gray-900">{redacao.frase_tematica}</span>
-        </div>
-        {redacao.frase_tematica && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTemaClick}
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            Ver Tema
-          </Button>
-        )}
-      </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Tema:</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground line-clamp-3">
+                {redacao.frase_tematica}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTemaModal(true)}
+                className="mt-2 w-full"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Ver Tema
+              </Button>
+            </CardContent>
+          </Card>
 
-      {/* Vista Pedagógica - Layout reorganizado */}
-      <Card className="bg-white">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Vista Pedagógica</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between w-full">
-            {/* Competências C1 a C5 - Layout expandido */}
-            <div className="flex gap-8">
-              {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
-                const cores = ['#E53935', '#43A047', '#1E88E5', '#8E24AA', '#FB8C00'];
-                const corCompetencia = cores[index];
-                
-                return (
-                  <div key={competencia} className="flex flex-col items-center space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: corCompetencia }}
-                      />
-                      <Label className="text-base font-medium">C{index + 1}</Label>
-                    </div>
+          {/* Vista Pedagógica */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Vista Pedagógica</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-5 gap-2">
+                {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
+                  <div key={competencia} className="text-center">
+                    <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${
+                      competencia === 'c1' ? 'bg-red-500' :
+                      competencia === 'c2' ? 'bg-green-500' :
+                      competencia === 'c3' ? 'bg-blue-500' :
+                      competencia === 'c4' ? 'bg-purple-500' : 'bg-orange-500'
+                    }`} />
+                    <span className="text-xs font-medium">C{index + 1}</span>
                     <Select
-                      value={notas[competencia as keyof typeof notas].toString()}
-                      onValueChange={(value) => 
-                        setNotas(prev => ({
-                          ...prev,
-                          [competencia]: parseInt(value)
-                        }))
-                      }
+                      value={notas[competencia].toString()}
+                      onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
                     >
-                      <SelectTrigger className="w-24 h-10 text-sm">
+                      <SelectTrigger className="h-8 text-xs mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -376,143 +274,60 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                       </SelectContent>
                     </Select>
                   </div>
-                );
-              })}
-            </div>
-            
-            {/* Nota Total - Centralizada */}
-            <div className="flex flex-col items-center mx-8">
-              <Label className="text-base font-medium mb-3">Nota Total</Label>
-              <div className="text-2xl font-bold text-primary bg-primary/10 px-6 py-3 rounded-lg">
-                {calcularNotaTotal()}
+                ))}
               </div>
-            </div>
-            
-            {/* Gravação de áudio e botões de ação */}
-            <div className="flex items-center gap-4">
-              {/* Componente de gravação de áudio */}
-              <AudioRecorder
-                redacaoId={redacao.id}
-                tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
-                        redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                disabled={redacao.status_minha_correcao === 'corrigida'}
-                existingAudioUrl={audioUrl}
-                onAudioSaved={(url) => setAudioUrl(url)}
-                onAudioDeleted={() => setAudioUrl(null)}
-                ehCorretor1={redacao.eh_corretor_1}
-              />
-              
-              {/* Botões de ação */}
-              <div className="flex gap-4">
-                <Button variant="outline" onClick={() => salvarCorrecao('incompleta')} disabled={loading} className="px-6">
-                  <Save className="w-4 h-4 mr-2" />
+
+              <div className="text-center p-3 bg-purple-100 rounded">
+                <div className="text-sm text-muted-foreground">Nota Total</div>
+                <div className="text-2xl font-bold text-purple-700">{notas.total}</div>
+              </div>
+
+              <div className="flex gap-2">
+                <AudioRecorder 
+                  redacaoId={redacao.id} 
+                  tipoRedacao={redacao.tipo_redacao}
+                  ehCorretor1={redacao.eh_corretor_1}
+                  audioUrl={audioUrl}
+                  onAudioSaved={setAudioUrl}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => salvarCorrecao('incompleta')}
+                  disabled={loading}
+                  className="flex-1"
+                >
                   Salvar Incompleta
                 </Button>
-                <Button onClick={() => salvarCorrecao('corrigida')} disabled={loading} className="px-6">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Finalizar Correção
-                </Button>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Redação com Sistema de Anotações Visuais - Agora ocupa toda a largura */}
-      <div className="w-full">
-        {manuscritaUrl && corretor?.id ? (
+        <div className="lg:col-span-3">
           <RedacaoAnotacaoVisual
-            imagemUrl={manuscritaUrl}
-            redacaoId={redacao.id}
-            corretorId={corretor.id}
-            readonly={false}
-            ref={(ref) => {
-              anotacaoVisualRef.current = ref;
-            }}
+            redacao={redacao}
+            notas={notas}
+            comentarios={comentarios}
+            onComentarioChange={atualizarComentario}
+            onSalvarCorrecao={() => salvarCorrecao('corrigida')}
+            loading={loading}
           />
-        ) : manuscritaUrl ? (
-          <div className="bg-white rounded-lg p-6 border">
-            <p className="text-center text-gray-600">Carregando sistema de correção visual...</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg p-6 border">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-semibold">Redação Digitada</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const conteudo = `Nome do aluno: ${redacao.nome_aluno}\nFrase temática: ${redacao.frase_tematica}\nRedação:\n${redacao.texto}`;
-                  navigator.clipboard.writeText(conteudo);
-                  toast({
-                    title: "Copiado com sucesso!",
-                    description: "Conteúdo da redação foi copiado para a área de transferência.",
-                  });
-                }}
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="prose prose-base max-w-none">
-              <p className="text-base leading-relaxed whitespace-pre-wrap text-gray-800">
-                {redacao.texto}
-              </p>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* Relatório pedagógico de correção - Menor espaçamento */}
-      <Card className="bg-white">
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-base">Relatório pedagógico de correção</CardTitle>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copiarRelatorio}
-                title="Copiar relatório com dados do aluno"
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsModalOpen(true)}
-                title="Expandir em modal"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={relatorioPedagogico}
-            onChange={(e) => setRelatorioPedagogico(e.target.value)}
-            placeholder="Digite aqui seu relatório pedagógico completo para o aluno..."
-            rows={6}
-            className="w-full resize-none"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Modal de expansão do relatório */}
+      {/* Modals */}
       <RelatorioPedagogicoModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        value={relatorioPedagogico}
-        onChange={setRelatorioPedagogico}
-        alunoNome={redacao.nome_aluno}
-        fraseTematica={redacao.frase_tematica}
+        isOpen={showRelatorioModal}
+        onClose={() => setShowRelatorioModal(false)}
+        comentarios={comentarios}
+        onComentarioChange={atualizarComentario}
       />
 
-      {/* Modal do tema */}
       <TemaModal
-        isOpen={modalTemaAberto}
-        onClose={() => setModalTemaAberto(false)}
-        tema={temaDetalhes}
+        isOpen={showTemaModal}
+        onClose={() => setShowTemaModal(false)}
+        tema={redacao.frase_tematica}
       />
     </div>
   );

@@ -10,15 +10,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCorretorRedacoes, RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { Clock, FileText, CheckCircle, User, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ListaRedacoesCorretorProps {
   corretorEmail: string;
   onCorrigir: (redacao: RedacaoCorretor) => void;
 }
 
+interface NotasRedacao {
+  c1: number | null;
+  c2: number | null;
+  c3: number | null;
+  c4: number | null;
+  c5: number | null;
+  total: number | null;
+}
+
 export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedacoesCorretorProps) => {
   const { loading, redacoes, getRedacoesPorStatus } = useCorretorRedacoes(corretorEmail);
   const isMobile = useIsMobile();
+  const [notasRedacoes, setNotasRedacoes] = useState<Record<string, NotasRedacao>>({});
   
   // Estados dos filtros
   const [buscaNome, setBuscaNome] = useState("");
@@ -31,7 +42,6 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
     return ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E', 'Visitantes'];
   }, []);
 
-  // Extrair meses/anos únicos das redações
   const mesesDisponiveis = useMemo(() => {
     const meses = Array.from(new Set(redacoes.map(r => {
       const data = new Date(r.data_envio);
@@ -51,25 +61,19 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   // Filtrar redações baseado nos filtros ativos
   const redacoesFiltradas = useMemo(() => {
     return redacoes.filter(redacao => {
-      // Filtro por nome/email
       const matchNome = buscaNome === "" || 
         redacao.nome_aluno.toLowerCase().includes(buscaNome.toLowerCase()) ||
         redacao.email_aluno.toLowerCase().includes(buscaNome.toLowerCase());
 
-      // Filtro por turma
       const matchTurma = filtroTurma === "todas" || (() => {
-        // Se não tem turma específica e email é de domínio público, considerar visitante
         if (!redacao.turma && (redacao.email_aluno.includes('@gmail') || redacao.email_aluno.includes('@hotmail') || redacao.email_aluno.includes('@yahoo'))) {
           return filtroTurma === 'Visitantes';
         }
-        // Comparar com a turma real da redação
         return filtroTurma === redacao.turma;
       })();
 
-      // Filtro por status
       const matchStatus = filtroStatus === "todas" || redacao.status_minha_correcao === filtroStatus;
 
-      // Filtro por mês
       const matchMes = filtroMes === "todos" || (() => {
         const data = new Date(redacao.data_envio);
         const mes = data.toLocaleDateString('pt-BR', { month: 'long' });
@@ -81,11 +85,68 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
     });
   }, [redacoes, buscaNome, filtroTurma, filtroStatus, filtroMes]);
 
+  // Função para buscar as notas de uma redação corrigida
+  const buscarNotasRedacao = async (redacao: RedacaoCorretor) => {
+    if (notasRedacoes[redacao.id]) return; // Já buscou
+
+    let tabela = '';
+    if (redacao.tipo_redacao === 'regular') tabela = 'redacoes_enviadas';
+    else if (redacao.tipo_redacao === 'simulado') tabela = 'redacoes_simulado';
+    else if (redacao.tipo_redacao === 'exercicio') tabela = 'redacoes_exercicio';
+
+    if (!tabela) return;
+
+    try {
+      const { data, error } = await supabase
+        .from(tabela)
+        .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, nota_total, c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1, c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2')
+        .eq('id', redacao.id)
+        .single();
+
+      if (error) throw error;
+
+      let notas: NotasRedacao;
+
+      if (redacao.eh_corretor_1) {
+        notas = {
+          c1: data.c1_corretor_1,
+          c2: data.c2_corretor_1,
+          c3: data.c3_corretor_1,
+          c4: data.c4_corretor_1,
+          c5: data.c5_corretor_1,
+          total: data.nota_final_corretor_1
+        };
+      } else {
+        notas = {
+          c1: data.c1_corretor_2,
+          c2: data.c2_corretor_2,
+          c3: data.c3_corretor_2,
+          c4: data.c4_corretor_2,
+          c5: data.c5_corretor_2,
+          total: data.nota_final_corretor_2
+        };
+      }
+
+      setNotasRedacoes(prev => ({
+        ...prev,
+        [redacao.id]: notas
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar notas:', error);
+    }
+  };
+
   // Função para obter redações por status com base nas redações filtradas
   const getRedacoesFiltradas = () => {
     const pendentes = redacoesFiltradas.filter(r => r.status_minha_correcao === 'pendente');
     const incompletas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'incompleta');
     const corrigidas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'corrigida');
+    
+    // Buscar notas para redações corrigidas
+    corrigidas.forEach(redacao => {
+      buscarNotasRedacao(redacao);
+    });
+
     return { pendentes, incompletas, corrigidas };
   };
 
@@ -123,6 +184,30 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
           <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2 break-words">
             {redacao.frase_tematica}
           </p>
+
+          {/* Exibir notas para redações corrigidas */}
+          {redacao.status_minha_correcao === 'corrigida' && (
+            <div className="mb-2">
+              {notasRedacoes[redacao.id] ? (
+                <div className="text-xs sm:text-sm">
+                  <div className="flex flex-wrap gap-1 sm:gap-2 mb-1">
+                    <span className="text-red-600">C1: {notasRedacoes[redacao.id].c1 ?? 0}</span>
+                    <span className="text-green-600">C2: {notasRedacoes[redacao.id].c2 ?? 0}</span>
+                    <span className="text-blue-600">C3: {notasRedacoes[redacao.id].c3 ?? 0}</span>
+                    <span className="text-purple-600">C4: {notasRedacoes[redacao.id].c4 ?? 0}</span>
+                    <span className="text-orange-600">C5: {notasRedacoes[redacao.id].c5 ?? 0}</span>
+                  </div>
+                  <div className="font-semibold text-purple-700 bg-purple-100 inline-block px-2 py-1 rounded text-xs sm:text-sm">
+                    Total: {notasRedacoes[redacao.id].total ?? 0}/1000
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs sm:text-sm text-muted-foreground italic">
+                  Notas ainda não atribuídas
+                </div>
+              )}
+            </div>
+          )}
           
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="w-3 h-3 shrink-0" />
@@ -146,7 +231,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
             {redacao.status_minha_correcao === 'pendente' && 'Corrigir'}
             {redacao.status_minha_correcao === 'em_correcao' && 'Continuar'}
             {redacao.status_minha_correcao === 'incompleta' && 'Continuar'}
-            {redacao.status_minha_correcao === 'corrigida' && 'Ver correção'}
+            {redacao.status_minha_correcao === 'corrigida' && 'Editar correção'}
           </Button>
         </div>
       </div>
