@@ -14,10 +14,40 @@ interface DesempenhoData {
 
 export const MeuDesempenho = () => {
   const { studentData } = useStudentAuth();
+  
+  // Verificar se é visitante
+  const userType = localStorage.getItem('userType');
+  const isVisitante = userType === 'visitante';
 
   const { data: desempenho, isLoading } = useQuery({
-    queryKey: ['student-performance', studentData.nomeUsuario, studentData.email],
+    queryKey: ['student-performance', studentData.nomeUsuario, studentData.email, userType],
     queryFn: async (): Promise<DesempenhoData> => {
+      // Lógica para visitantes
+      if (isVisitante) {
+        console.log('📊 Buscando desempenho para VISITANTES (todas as redações de visitante)');
+        
+        const { data: redacoesVisitantes, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('nota_total')
+          .eq('turma', 'visitante');
+          
+        if (error) {
+          console.error('Erro ao buscar redações de visitantes:', error);
+          return { totalEnviadas: 0, maiorNota: null, menorNota: null };
+        }
+        
+        const todasNotas = redacoesVisitantes?.map(r => r.nota_total).filter(nota => nota !== null && nota !== undefined) || [];
+        
+        console.log(`📊 Encontradas ${redacoesVisitantes?.length || 0} redações de visitantes:`, todasNotas);
+        
+        return {
+          totalEnviadas: redacoesVisitantes?.length || 0,
+          maiorNota: todasNotas.length > 0 ? Math.max(...todasNotas) : null,
+          menorNota: todasNotas.length > 0 ? Math.min(...todasNotas) : null
+        };
+      }
+      
+      // Lógica original para alunos
       if (!studentData.email) {
         return { totalEnviadas: 0, maiorNota: null, menorNota: null };
       }
@@ -67,7 +97,7 @@ export const MeuDesempenho = () => {
         menorNota: todasNotas.length > 0 ? Math.min(...todasNotas) : null
       };
     },
-    enabled: !!studentData.email,
+    enabled: !!studentData.email || isVisitante,
     refetchOnWindowFocus: true,
     staleTime: 30000, // 30 segundos
   });

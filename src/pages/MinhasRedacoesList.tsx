@@ -92,7 +92,7 @@ const MinhasRedacoesList = () => {
   });
 
   const { data: redacoes = [], isLoading, error } = useQuery({
-    queryKey: ['minhas-redacoes', studentData?.email, userType],
+    queryKey: ['minhas-redacoes', studentData?.email, userType, 'visitor-essays'],
     queryFn: async () => {
       console.log('🔍 Iniciando busca de redações - userType:', userType);
       
@@ -113,15 +113,16 @@ const MinhasRedacoesList = () => {
         console.log('✅ Redações de visitantes encontradas:', redacoesVisitantes?.length || 0);
         console.log('📋 Dados das redações:', redacoesVisitantes);
         
-        // Processar redações de visitantes
+        // Processar redações de visitantes com tipo correto
         const redacoesFormatadas = redacoesVisitantes?.map(item => ({
           ...item,
           redacao_texto: item.redacao_texto || '',
-          tipo_envio: item.tipo_envio || 'avulsa',
+          tipo_envio: 'avulsa', // Forçar tipo avulsa para visitantes
           corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
           status: item.status || 'aguardando'
         } as RedacaoTurma)) || [];
         
+        console.log('✅ Redações formatadas para visitantes:', redacoesFormatadas);
         return redacoesFormatadas;
       }
       
@@ -349,7 +350,7 @@ const MinhasRedacoesList = () => {
         throw error;
       }
     },
-    enabled: (!!studentData?.email && isStudentLoggedIn) || isVisitanteLoggedIn,
+    enabled: (!!studentData?.email && isStudentLoggedIn) || (isVisitanteLoggedIn),
     refetchOnWindowFocus: true
   });
 
@@ -384,26 +385,35 @@ const MinhasRedacoesList = () => {
   };
 
   const handleEmailAuth = async () => {
-    if (!selectedRedacao || !studentData?.email) return;
+    if (!selectedRedacao) return;
     
-    console.log('🔐 Iniciando autenticação automática para redação:', selectedRedacao.id);
+    console.log('🔐 Iniciando validação de email para redação:', selectedRedacao.id);
+    
+    if (!emailInput || emailInput.trim() === '') {
+      toast({
+        title: "Erro",
+        description: "Por favor, digite o email para verificação.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsAuthenticating(true);
     
     try {
-      // Validação automática - compara email do usuário logado com email da redação
+      // Validação de email digitado vs email da redação
       const normalizeEmail = (email: string) => email?.trim().toLowerCase() || '';
-      const emailUsuario = normalizeEmail(studentData.email);
+      const emailDigitado = normalizeEmail(emailInput);
       const emailRedacao = normalizeEmail(selectedRedacao.email_aluno);
       
-      console.log('🔍 Comparando emails:', {
-        emailUsuario,
+      console.log('🔍 Validando email:', {
+        emailDigitado,
         emailRedacao,
-        match: emailUsuario === emailRedacao
+        match: emailDigitado === emailRedacao
       });
       
-      if (emailUsuario === emailRedacao) {
-        console.log('✅ Email validado automaticamente');
+      if (emailDigitado === emailRedacao) {
+        console.log('✅ Email validado com sucesso');
         setShowAuthDialog(false);
         
         // Buscar redação completa de acordo com o tipo
@@ -558,6 +568,7 @@ const MinhasRedacoesList = () => {
       case 'exercicio': return 'Exercício';
       case 'manuscrita': return 'Regular';
       case 'regular': return 'Regular';
+      case 'avulsa': return 'Avulsa';
       default: return 'Regular';
     }
   };
@@ -569,6 +580,7 @@ const MinhasRedacoesList = () => {
       case 'exercicio': return 'bg-green-100 text-green-800';
       case 'manuscrita': return 'bg-blue-100 text-blue-800';
       case 'regular': return 'bg-blue-100 text-blue-800';
+      case 'avulsa': return 'bg-orange-100 text-orange-800';
       default: return 'bg-blue-100 text-blue-800';
     }
   };
