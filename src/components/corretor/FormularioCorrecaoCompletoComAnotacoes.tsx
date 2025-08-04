@@ -225,80 +225,69 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Informações</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
-              <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
-              <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
-              <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
-            </CardContent>
-          </Card>
+      {/* Informações do aluno em formato horizontal */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+        <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
+        <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
+        <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
+        <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
+      </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Tema:</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-3">
-                {redacao.frase_tematica}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowTemaModal(true)}
-                className="mt-2 w-full"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Ver Tema
-              </Button>
-            </CardContent>
-          </Card>
+      {/* Tema */}
+      <div className="flex items-center gap-4">
+        <span><strong>Tema:</strong> {redacao.frase_tematica}</span>
+        <Button
+          variant="outline"
+          onClick={() => setShowTemaModal(true)}
+          className="flex items-center gap-2"
+        >
+          <Eye className="w-4 h-4" />
+          Ver Tema
+        </Button>
+      </div>
 
-          {/* Vista Pedagógica */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Vista Pedagógica</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-5 gap-2">
-                {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
-                  <div key={competencia} className="text-center">
-                    <div className={`w-3 h-3 rounded-full mx-auto mb-1 ${
-                      competencia === 'c1' ? 'bg-red-500' :
-                      competencia === 'c2' ? 'bg-green-500' :
-                      competencia === 'c3' ? 'bg-blue-500' :
-                      competencia === 'c4' ? 'bg-purple-500' : 'bg-orange-500'
-                    }`} />
-                    <span className="text-xs font-medium">C{index + 1}</span>
-                    <Select
-                      value={notas[competencia].toString()}
-                      onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
-                    >
-                      <SelectTrigger className="h-8 text-xs mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {opcoesNota.map(nota => (
-                          <SelectItem key={nota} value={nota.toString()}>
-                            {nota}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-              </div>
-
+      {/* Vista Pedagógica em formato horizontal */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Vista Pedagógica</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-6">
+              {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
+                <div key={competencia} className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full ${
+                    competencia === 'c1' ? 'bg-red-500' :
+                    competencia === 'c2' ? 'bg-green-500' :
+                    competencia === 'c3' ? 'bg-blue-500' :
+                    competencia === 'c4' ? 'bg-purple-500' : 'bg-orange-500'
+                  }`} />
+                  <span className="text-sm font-medium">C{index + 1}</span>
+                  <Select
+                    value={notas[competencia].toString()}
+                    onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
+                  >
+                    <SelectTrigger className="w-20 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {opcoesNota.map(nota => (
+                        <SelectItem key={nota} value={nota.toString()}>
+                          {nota}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex items-center gap-4">
               <div className="text-center p-3 bg-purple-100 rounded">
                 <div className="text-sm text-muted-foreground">Nota Total</div>
                 <div className="text-2xl font-bold text-purple-700">{notas.total}</div>
               </div>
-
+              
               <div className="flex gap-2">
                 <AudioRecorder 
                   redacaoId={redacao.id} 
@@ -310,27 +299,47 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 />
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => salvarCorrecao('incompleta')}
                   disabled={loading}
-                  className="flex-1"
                 >
                   Salvar Incompleta
                 </Button>
+                <Button
+                  onClick={() => salvarCorrecao('corrigida')}
+                  disabled={loading}
+                >
+                  Finalizar Correção
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="lg:col-span-3">
-          <RedacaoAnotacaoVisual
-            imagemUrl={redacao.redacao_manuscrita_url || ''}
-            redacaoId={redacao.id}
-            corretorId="temp-corretor-id"
-            readonly={false}
+      {/* Redação Digitada */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Redação Digitada</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm">{redacao.texto || 'Texto da redação não disponível'}</p>
+        </CardContent>
+      </Card>
+
+      {/* Relatório pedagógico de correção */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Relatório pedagógico de correção</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <textarea
+            placeholder="Digite aqui seu relatório pedagógico completo para o aluno..."
+            value={comentarios.elogios}
+            onChange={(e) => atualizarComentario('elogios', e.target.value)}
+            className="w-full min-h-[100px] p-3 border rounded resize-none"
           />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Modals */}
       <RelatorioPedagogicoModal
