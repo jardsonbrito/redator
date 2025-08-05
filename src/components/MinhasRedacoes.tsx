@@ -439,7 +439,7 @@ export const MinhasRedacoes = () => {
 
   const handleRedacaoDevolvida = async (redacao: RedacaoTurma) => {
     try {
-      // Buscar informações da devolução
+      // Buscar informações da devolução e corretor
       let devolutionData;
       
       if (redacao.tipo_envio === 'simulado') {

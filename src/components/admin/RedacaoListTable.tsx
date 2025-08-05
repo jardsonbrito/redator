@@ -164,23 +164,11 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                   </div>
                 </TableCell>
                 <TableCell className="w-[8%]">
-                  <div className="flex flex-col gap-1">
-                    <Badge className={`${getStatusColor(redacao.status, redacao.corrigida)} text-xs px-1 py-0.5`}>
-                      {redacao.status === 'devolvida' ? "Devolvida" :
-                       redacao.status === 'incompleta' ? "Incompleta" :
-                       redacao.corrigida ? "Corrigida" : "Aguardando"}
-                    </Badge>
-                    {redacao.status === 'devolvida' && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs px-1 py-0.5 border-orange-300 text-orange-700"
-                      >
-                        {redacao.tipo_envio === 'simulado' ? 'Simulado' :
-                         redacao.tipo_envio === 'regular' ? 'Regular' :
-                         redacao.tipo_envio === 'exercicio' ? 'Exercício' : 'Outro'}
-                      </Badge>
-                    )}
-                  </div>
+                  <Badge className={`${getStatusColor(redacao.status, redacao.corrigida)} text-xs px-1 py-0.5`}>
+                    {redacao.status === 'devolvida' ? "Devolvida" :
+                     redacao.status_corretor_1 === 'incompleta' || redacao.status_corretor_2 === 'incompleta' ? "Incompleta" :
+                     redacao.corrigida ? "Corrigida" : "Aguardando"}
+                  </Badge>
                 </TableCell>
                 <TableCell className="w-[8%]">
                   <div className="flex gap-1 justify-center flex-wrap">
