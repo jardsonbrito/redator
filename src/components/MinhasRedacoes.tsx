@@ -441,51 +441,96 @@ export const MinhasRedacoes = () => {
     try {
       // Buscar informações da devolução e corretor
       let devolutionData;
+      let justificativa = 'Motivo não especificado';
       
       if (redacao.tipo_envio === 'simulado') {
         const { data, error } = await supabase
           .from('redacoes_simulado')
           .select(`
             justificativa_devolucao,
+            elogios_pontos_atencao_corretor_1,
+            elogios_pontos_atencao_corretor_2,
             data_envio,
             devolvida_por,
+            corretor_id_1,
             corretores!devolvida_por(nome_completo)
           `)
           .eq('id', redacao.id)
           .single();
-        devolutionData = data;
+        
+        if (data) {
+          devolutionData = data;
+          // A justificativa pode estar em diferentes campos dependendo de como foi implementada
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        }
       } else if (redacao.tipo_envio === 'exercicio') {
         const { data, error } = await supabase
           .from('redacoes_exercicio')
           .select(`
             justificativa_devolucao,
+            elogios_pontos_atencao_corretor_1,
+            elogios_pontos_atencao_corretor_2,
             data_envio,
             devolvida_por,
+            corretor_id_1,
             corretores!devolvida_por(nome_completo)
           `)
           .eq('id', redacao.id)
           .single();
-        devolutionData = data;
+        
+        if (data) {
+          devolutionData = data;
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        }
       } else {
         const { data, error } = await supabase
           .from('redacoes_enviadas')
           .select(`
             justificativa_devolucao,
+            elogios_pontos_atencao_corretor_1,
+            elogios_pontos_atencao_corretor_2,
             data_envio,
             devolvida_por,
+            corretor_id_1,
             corretores!devolvida_por(nome_completo)
           `)
           .eq('id', redacao.id)
           .single();
-        devolutionData = data;
+        
+        if (data) {
+          devolutionData = data;
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        }
       }
 
       if (devolutionData) {
-        const corretor = (devolutionData.corretores as any)?.nome_completo || 'Corretor';
+        // Buscar nome do corretor que devolveu
+        let nomeCorretor = 'Corretor';
+        
+        if (devolutionData.devolvida_por) {
+          nomeCorretor = (devolutionData.corretores as any)?.nome_completo || 'Corretor';
+        } else if (devolutionData.corretor_id_1) {
+          // Se não tem devolvida_por mas tem corretor_id_1, buscar nome do corretor 1
+          const { data: corretorData } = await supabase
+            .from('corretores')
+            .select('nome_completo')
+            .eq('id', devolutionData.corretor_id_1)
+            .single();
+          nomeCorretor = corretorData?.nome_completo || 'Corretor';
+        }
         
         setDevolutionInfo({
-          corretor,
-          justificativa: devolutionData.justificativa_devolucao || 'Motivo não especificado',
+          corretor: nomeCorretor,
+          justificativa: justificativa.replace('Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n', ''),
           tema: redacao.frase_tematica,
           dataEnvio: new Date(devolutionData.data_envio).toLocaleString('pt-BR')
         });
