@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   const { loading, redacoes, getRedacoesPorStatus } = useCorretorRedacoes(corretorEmail);
   const isMobile = useIsMobile();
   const [notasRedacoes, setNotasRedacoes] = useState<Record<string, NotasRedacao>>({});
+  const [visualizacoes, setVisualizacoes] = useState<Record<string, boolean>>({});
   
   // Estados dos filtros
   const [buscaNome, setBuscaNome] = useState("");
@@ -153,13 +154,51 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
     }
   };
 
+  // Função para verificar se o aluno visualizou a devolução
+  const verificarSeAlunoVisualizou = (redacao: RedacaoCorretor): boolean => {
+    return visualizacoes[redacao.id] || false;
+  };
+
+  // Buscar visualizações das redações devolvidas
+  useEffect(() => {
+    const buscarVisualizacoes = async () => {
+      const redacoesDevolvidas = redacoes.filter(r => r.status_minha_correcao === 'devolvida');
+      
+      for (const redacao of redacoesDevolvidas) {
+        try {
+          const tabela = redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' :
+                        redacao.tipo_redacao === 'exercicio' ? 'redacoes_exercicio' : 'redacoes_enviadas';
+          
+          const { data } = await supabase.rpc('verificar_redacao_devolvida_visualizada', {
+            redacao_id_param: redacao.id,
+            tabela_origem_param: tabela
+          });
+          
+          if (data) {
+            setVisualizacoes(prev => ({
+              ...prev,
+              [redacao.id]: true
+            }));
+          }
+        } catch (error) {
+          console.error('Erro ao verificar visualização:', error);
+        }
+      }
+    };
+
+    if (redacoes.length > 0) {
+      buscarVisualizacoes();
+    }
+  }, [redacoes]);
+
   // Função para obter redações por status com base nas redações filtradas
   const getRedacoesFiltradas = useMemo(() => {
     const pendentes = redacoesFiltradas.filter(r => r.status_minha_correcao === 'pendente');
     const incompletas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'incompleta');
     const corrigidas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'corrigida');
+    const devolvidas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'devolvida');
     
-    return { pendentes, incompletas, corrigidas };
+    return { pendentes, incompletas, corrigidas, devolvidas };
   }, [redacoesFiltradas]);
 
   // Buscar notas para redações corrigidas de forma isolada
@@ -177,7 +216,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
     );
   }
 
-  const { pendentes, incompletas, corrigidas } = getRedacoesFiltradas;
+  const { pendentes, incompletas, corrigidas, devolvidas } = getRedacoesFiltradas;
 
   const RedacaoItem = ({ redacao, index }: { redacao: RedacaoCorretor; index: number }) => (
     <div className="border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors">
@@ -241,22 +280,39 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
         </div>
         
         <div className="shrink-0 w-full sm:w-auto">
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onCorrigir(redacao);
-            }}
-            variant={redacao.status_minha_correcao === 'corrigida' ? 'outline' : 'default'}
-            size="sm"
-            className="w-full sm:w-auto text-xs sm:text-sm"
-            disabled={false}
-          >
-            {redacao.status_minha_correcao === 'pendente' && 'Corrigir'}
-            {redacao.status_minha_correcao === 'em_correcao' && 'Continuar'}
-            {redacao.status_minha_correcao === 'incompleta' && 'Continuar'}
-            {redacao.status_minha_correcao === 'corrigida' && 'Editar correção'}
-          </Button>
+          {redacao.status_minha_correcao === 'devolvida' ? (
+            <div className="text-center">
+              <div className="text-xs text-muted-foreground mb-1">
+                Status do aluno
+              </div>
+              <Badge
+                variant={verificarSeAlunoVisualizou(redacao) ? "default" : "secondary"}
+                className={`text-xs ${verificarSeAlunoVisualizou(redacao) 
+                  ? "bg-green-100 text-green-700 border-green-300" 
+                  : "bg-gray-100 text-gray-600 border-gray-300"
+                }`}
+              >
+                {verificarSeAlunoVisualizou(redacao) ? "Ciente" : "Não visualizada"}
+              </Badge>
+            </div>
+          ) : (
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onCorrigir(redacao);
+              }}
+              variant={redacao.status_minha_correcao === 'corrigida' ? 'outline' : 'default'}
+              size="sm"
+              className="w-full sm:w-auto text-xs sm:text-sm"
+              disabled={false}
+            >
+              {redacao.status_minha_correcao === 'pendente' && 'Corrigir'}
+              {redacao.status_minha_correcao === 'em_correcao' && 'Continuar'}
+              {redacao.status_minha_correcao === 'incompleta' && 'Continuar'}
+              {redacao.status_minha_correcao === 'corrigida' && 'Editar correção'}
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -312,6 +368,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
                   <SelectItem value="pendente">Pendentes</SelectItem>
                   <SelectItem value="incompleta">Incompletas</SelectItem>
                   <SelectItem value="corrigida">Corrigidas</SelectItem>
+                  <SelectItem value="devolvida">Devolvidas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -355,7 +412,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
       <Card>
         <CardContent>
           <Tabs defaultValue="pendentes" className="w-full">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 gap-1 h-auto' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 gap-1 h-auto' : 'grid-cols-4'}`}>
             <TabsTrigger 
               value="pendentes" 
               className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isMobile ? 'justify-start' : 'justify-center'}`}
@@ -376,6 +433,13 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
             >
               <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
               Corrigidas ({corrigidas.length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="devolvidas" 
+              className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isMobile ? 'justify-start' : 'justify-center'}`}
+            >
+              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+              Devolvidas ({devolvidas.length})
             </TabsTrigger>
           </TabsList>
           
@@ -416,6 +480,20 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
             ) : (
               <div className="space-y-3">
                 {corrigidas.map((redacao, index) => (
+                  <RedacaoItem key={redacao.id} redacao={redacao} index={index} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="devolvidas" className="mt-4">
+            {devolvidas.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">
+                Nenhuma redação devolvida.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {devolvidas.map((redacao, index) => (
                   <RedacaoItem key={redacao.id} redacao={redacao} index={index} />
                 ))}
               </div>

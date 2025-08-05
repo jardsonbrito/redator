@@ -894,6 +894,33 @@ export type Database = {
           },
         ]
       }
+      redacao_devolucao_visualizacoes: {
+        Row: {
+          created_at: string | null
+          email_aluno: string
+          id: string
+          redacao_id: string
+          tabela_origem: string
+          visualizado_em: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_aluno: string
+          id?: string
+          redacao_id: string
+          tabela_origem: string
+          visualizado_em?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_aluno?: string
+          id?: string
+          redacao_id?: string
+          tabela_origem?: string
+          visualizado_em?: string | null
+        }
+        Relationships: []
+      }
       redacoes: {
         Row: {
           aluno_id: string | null
@@ -1023,12 +1050,15 @@ export type Database = {
           corrigida: boolean | null
           created_by_ip: unknown | null
           data_correcao: string | null
+          data_devolucao: string | null
           data_envio: string
+          devolvida_por: string | null
           elogios_pontos_atencao_corretor_1: string | null
           elogios_pontos_atencao_corretor_2: string | null
           email_aluno: string | null
           frase_tematica: string
           id: string
+          justificativa_devolucao: string | null
           nome_aluno: string | null
           nota_c1: number | null
           nota_c2: number | null
@@ -1079,12 +1109,15 @@ export type Database = {
           corrigida?: boolean | null
           created_by_ip?: unknown | null
           data_correcao?: string | null
+          data_devolucao?: string | null
           data_envio?: string
+          devolvida_por?: string | null
           elogios_pontos_atencao_corretor_1?: string | null
           elogios_pontos_atencao_corretor_2?: string | null
           email_aluno?: string | null
           frase_tematica: string
           id?: string
+          justificativa_devolucao?: string | null
           nome_aluno?: string | null
           nota_c1?: number | null
           nota_c2?: number | null
@@ -1135,12 +1168,15 @@ export type Database = {
           corrigida?: boolean | null
           created_by_ip?: unknown | null
           data_correcao?: string | null
+          data_devolucao?: string | null
           data_envio?: string
+          devolvida_por?: string | null
           elogios_pontos_atencao_corretor_1?: string | null
           elogios_pontos_atencao_corretor_2?: string | null
           email_aluno?: string | null
           frase_tematica?: string
           id?: string
+          justificativa_devolucao?: string | null
           nome_aluno?: string | null
           nota_c1?: number | null
           nota_c2?: number | null
@@ -1170,6 +1206,13 @@ export type Database = {
           {
             foreignKeyName: "redacoes_enviadas_corretor_id_2_fkey"
             columns: ["corretor_id_2"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redacoes_enviadas_devolvida_por_fkey"
+            columns: ["devolvida_por"]
             isOneToOne: false
             referencedRelation: "corretores"
             referencedColumns: ["id"]
@@ -1208,12 +1251,15 @@ export type Database = {
           corretor_id_2: string | null
           corrigida: boolean | null
           data_correcao: string | null
+          data_devolucao: string | null
           data_envio: string | null
+          devolvida_por: string | null
           elogios_pontos_atencao_corretor_1: string | null
           elogios_pontos_atencao_corretor_2: string | null
           email_aluno: string
           exercicio_id: string
           id: string
+          justificativa_devolucao: string | null
           nome_aluno: string
           nota_c1: number | null
           nota_c2: number | null
@@ -1261,12 +1307,15 @@ export type Database = {
           corretor_id_2?: string | null
           corrigida?: boolean | null
           data_correcao?: string | null
+          data_devolucao?: string | null
           data_envio?: string | null
+          devolvida_por?: string | null
           elogios_pontos_atencao_corretor_1?: string | null
           elogios_pontos_atencao_corretor_2?: string | null
           email_aluno: string
           exercicio_id: string
           id?: string
+          justificativa_devolucao?: string | null
           nome_aluno: string
           nota_c1?: number | null
           nota_c2?: number | null
@@ -1314,12 +1363,15 @@ export type Database = {
           corretor_id_2?: string | null
           corrigida?: boolean | null
           data_correcao?: string | null
+          data_devolucao?: string | null
           data_envio?: string | null
+          devolvida_por?: string | null
           elogios_pontos_atencao_corretor_1?: string | null
           elogios_pontos_atencao_corretor_2?: string | null
           email_aluno?: string
           exercicio_id?: string
           id?: string
+          justificativa_devolucao?: string | null
           nome_aluno?: string
           nota_c1?: number | null
           nota_c2?: number | null
@@ -1347,6 +1399,13 @@ export type Database = {
           {
             foreignKeyName: "redacoes_exercicio_corretor_id_2_fkey"
             columns: ["corretor_id_2"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redacoes_exercicio_devolvida_por_fkey"
+            columns: ["devolvida_por"]
             isOneToOne: false
             referencedRelation: "corretores"
             referencedColumns: ["id"]
@@ -1386,12 +1445,15 @@ export type Database = {
           corrigida: boolean | null
           dados_visitante: Json | null
           data_correcao: string | null
+          data_devolucao: string | null
           data_envio: string
+          devolvida_por: string | null
           elogios_pontos_atencao_corretor_1: string | null
           elogios_pontos_atencao_corretor_2: string | null
           email_aluno: string
           id: string
           id_simulado: string
+          justificativa_devolucao: string | null
           nome_aluno: string
           nota_c1: number | null
           nota_c2: number | null
@@ -1440,12 +1502,15 @@ export type Database = {
           corrigida?: boolean | null
           dados_visitante?: Json | null
           data_correcao?: string | null
+          data_devolucao?: string | null
           data_envio?: string
+          devolvida_por?: string | null
           elogios_pontos_atencao_corretor_1?: string | null
           elogios_pontos_atencao_corretor_2?: string | null
           email_aluno: string
           id?: string
           id_simulado: string
+          justificativa_devolucao?: string | null
           nome_aluno: string
           nota_c1?: number | null
           nota_c2?: number | null
@@ -1494,12 +1559,15 @@ export type Database = {
           corrigida?: boolean | null
           dados_visitante?: Json | null
           data_correcao?: string | null
+          data_devolucao?: string | null
           data_envio?: string
+          devolvida_por?: string | null
           elogios_pontos_atencao_corretor_1?: string | null
           elogios_pontos_atencao_corretor_2?: string | null
           email_aluno?: string
           id?: string
           id_simulado?: string
+          justificativa_devolucao?: string | null
           nome_aluno?: string
           nota_c1?: number | null
           nota_c2?: number | null
@@ -1527,6 +1595,13 @@ export type Database = {
           {
             foreignKeyName: "redacoes_simulado_corretor_id_2_fkey"
             columns: ["corretor_id_2"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redacoes_simulado_devolvida_por_fkey"
+            columns: ["devolvida_por"]
             isOneToOne: false
             referencedRelation: "corretores"
             referencedColumns: ["id"]
@@ -1944,6 +2019,14 @@ export type Database = {
         Args: { p_aluno_id: string; p_corretor_id: string }
         Returns: undefined
       }
+      marcar_redacao_devolvida_como_visualizada: {
+        Args: {
+          redacao_id_param: string
+          tabela_origem_param: string
+          email_aluno_param: string
+        }
+        Returns: boolean
+      }
       merge_student_redacoes: {
         Args: { target_student_id: string; source_student_id: string }
         Returns: Json
@@ -2005,6 +2088,10 @@ export type Database = {
       validate_professor_login: {
         Args: { p_email: string; p_senha: string }
         Returns: Json
+      }
+      verificar_redacao_devolvida_visualizada: {
+        Args: { redacao_id_param: string; tabela_origem_param: string }
+        Returns: boolean
       }
     }
     Enums: {

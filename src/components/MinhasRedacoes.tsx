@@ -67,6 +67,8 @@ export const MinhasRedacoes = () => {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [showRedacaoDialog, setShowRedacaoDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [showDevolutionDialog, setShowDevolutionDialog] = useState(false);
+  const [devolutionInfo, setDevolutionInfo] = useState<{ corretor: string; justificativa: string; tema: string; dataEnvio: string } | null>(null);
   const { toast } = useToast();
 
   // Recupera dados do usuário com validação aprimorada
@@ -186,6 +188,12 @@ export const MinhasRedacoes = () => {
 
   const handleViewRedacao = async (redacao: RedacaoTurma) => {
     console.log('🔐 Iniciando fluxo PÚBLICO para visitantes - visualização de redação');
+    
+    // Verificar se é redação devolvida primeiro
+    if (redacao.status === 'devolvida') {
+      await handleRedacaoDevolvida(redacao);
+      return;
+    }
     
     // Para visitantes, acesso direto a todas as redações de visitantes (visualização pública)
     if (userType === "visitante") {
@@ -427,6 +435,88 @@ export const MinhasRedacoes = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleRedacaoDevolvida = async (redacao: RedacaoTurma) => {
+    try {
+      // Buscar informações da devolução
+      let devolutionData;
+      
+      if (redacao.tipo_envio === 'simulado') {
+        const { data, error } = await supabase
+          .from('redacoes_simulado')
+          .select(`
+            justificativa_devolucao,
+            data_envio,
+            devolvida_por,
+            corretores!devolvida_por(nome_completo)
+          `)
+          .eq('id', redacao.id)
+          .single();
+        devolutionData = data;
+      } else if (redacao.tipo_envio === 'exercicio') {
+        const { data, error } = await supabase
+          .from('redacoes_exercicio')
+          .select(`
+            justificativa_devolucao,
+            data_envio,
+            devolvida_por,
+            corretores!devolvida_por(nome_completo)
+          `)
+          .eq('id', redacao.id)
+          .single();
+        devolutionData = data;
+      } else {
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select(`
+            justificativa_devolucao,
+            data_envio,
+            devolvida_por,
+            corretores!devolvida_por(nome_completo)
+          `)
+          .eq('id', redacao.id)
+          .single();
+        devolutionData = data;
+      }
+
+      if (devolutionData) {
+        const corretor = (devolutionData.corretores as any)?.nome_completo || 'Corretor';
+        
+        setDevolutionInfo({
+          corretor,
+          justificativa: devolutionData.justificativa_devolucao || 'Motivo não especificado',
+          tema: redacao.frase_tematica,
+          dataEnvio: new Date(devolutionData.data_envio).toLocaleString('pt-BR')
+        });
+        
+        setSelectedRedacaoId(redacao.id);
+        setShowDevolutionDialog(true);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar informações da devolução:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as informações da devolução.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEntendidoDevolucao = async () => {
+    if (selectedRedacaoId) {
+      // Marcar como visualizada
+      await supabase.rpc('marcar_redacao_devolvida_como_visualizada', {
+        redacao_id_param: selectedRedacaoId,
+        tabela_origem_param: devolutionInfo?.tema.includes('Simulado') ? 'redacoes_simulado' : 
+                            devolutionInfo?.tema.includes('Exercício') ? 'redacoes_exercicio' : 'redacoes_enviadas',
+        email_aluno_param: alunoEmail || visitanteEmail
+      });
+    }
+    
+    setShowDevolutionDialog(false);
+    setDevolutionInfo(null);
+    setSelectedRedacaoId(null);
   };
 
   const handleEmailAuth = async () => {
@@ -824,6 +914,16 @@ export const MinhasRedacoes = () => {
                       <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
                         {getTipoEnvioLabel(redacao.tipo_envio)}
                       </Badge>
+                      
+                      {/* Tag adicional para redações devolvidas */}
+                      {redacao.status === 'devolvida' && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                        >
+                          Devolvida
+                        </Badge>
+                      )}
                     </div>
                     
                   </div>
@@ -980,6 +1080,33 @@ export const MinhasRedacoes = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Dialog para redações devolvidas */}
+      <Dialog open={showDevolutionDialog} onOpenChange={setShowDevolutionDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{devolutionInfo?.tema}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {devolutionInfo?.dataEnvio}
+            </p>
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <p className="text-sm">
+                Segundo {devolutionInfo?.corretor?.toLowerCase().endsWith('a') ? 'a corretora' : 'o corretor'} <strong>{devolutionInfo?.corretor}</strong>, sua redação foi devolvida com base na seguinte justificativa:
+              </p>
+              <blockquote className="mt-3 pl-4 border-l-4 border-yellow-300 italic">
+                "{devolutionInfo?.justificativa}"
+              </blockquote>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleEntendidoDevolucao}>
+                Entendi
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

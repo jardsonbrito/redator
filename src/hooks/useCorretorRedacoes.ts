@@ -11,7 +11,7 @@ export interface RedacaoCorretor {
   frase_tematica: string;
   data_envio: string;
   texto: string;
-  status_minha_correcao: 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida';
+  status_minha_correcao: 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida' | 'devolvida';
   eh_corretor_1: boolean;
   eh_corretor_2: boolean;
   redacao_manuscrita_url?: string | null;
