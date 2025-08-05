@@ -154,18 +154,20 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   };
 
   // Função para obter redações por status com base nas redações filtradas
-  const getRedacoesFiltradas = () => {
+  const getRedacoesFiltradas = useMemo(() => {
     const pendentes = redacoesFiltradas.filter(r => r.status_minha_correcao === 'pendente');
     const incompletas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'incompleta');
     const corrigidas = redacoesFiltradas.filter(r => r.status_minha_correcao === 'corrigida');
     
-    // Buscar notas para redações corrigidas
-    corrigidas.forEach(redacao => {
+    return { pendentes, incompletas, corrigidas };
+  }, [redacoesFiltradas]);
+
+  // Buscar notas para redações corrigidas de forma isolada
+  useMemo(() => {
+    getRedacoesFiltradas.corrigidas.forEach(redacao => {
       buscarNotasRedacao(redacao);
     });
-
-    return { pendentes, incompletas, corrigidas };
-  };
+  }, [getRedacoesFiltradas.corrigidas]);
 
   if (loading) {
     return (
@@ -175,7 +177,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
     );
   }
 
-  const { pendentes, incompletas, corrigidas } = getRedacoesFiltradas();
+  const { pendentes, incompletas, corrigidas } = getRedacoesFiltradas;
 
   const RedacaoItem = ({ redacao, index }: { redacao: RedacaoCorretor; index: number }) => (
     <div className="border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors">
@@ -240,10 +242,15 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
         
         <div className="shrink-0 w-full sm:w-auto">
           <Button
-            onClick={() => onCorrigir(redacao)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onCorrigir(redacao);
+            }}
             variant={redacao.status_minha_correcao === 'corrigida' ? 'outline' : 'default'}
             size="sm"
             className="w-full sm:w-auto text-xs sm:text-sm"
+            disabled={false}
           >
             {redacao.status_minha_correcao === 'pendente' && 'Corrigir'}
             {redacao.status_minha_correcao === 'em_correcao' && 'Continuar'}
