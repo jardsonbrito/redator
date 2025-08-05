@@ -213,7 +213,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
-          <h1 className="text-2xl font-bold">Painel de Correção</h1>
+          
         </div>
         <Button
           variant="outline"
