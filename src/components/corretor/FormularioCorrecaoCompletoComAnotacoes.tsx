@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Eye, X } from "lucide-react";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
 import { TemaModal } from "./TemaModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
@@ -66,6 +68,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
   const [showRelatorioModal, setShowRelatorioModal] = useState(false);
   const [showTemaModal, setShowTemaModal] = useState(false);
+  const [showDevolverModal, setShowDevolverModal] = useState(false);
+  const [motivoDevolucao, setMotivoDevolucao] = useState("");
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [temaCompleto, setTemaCompleto] = useState<any>(null);
@@ -234,6 +238,64 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     }));
   };
 
+  const devolverRedacao = useCallback(async () => {
+    if (!motivoDevolucao.trim()) {
+      toast({
+        title: "Motivo obrigatório",
+        description: "Por favor, explique o motivo da devolução.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const tabelaNome = redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' :
+                        redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 
+                        'redacoes_exercicio';
+      
+      const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
+      
+      const updateData: any = {
+        [`status_${prefixo}`]: 'devolvida'
+      };
+
+      if (redacao.tipo_redacao === 'regular') {
+        updateData.status = 'devolvida';
+      }
+
+      // Preencher relatório pedagógico com mensagem de devolução
+      updateData[`elogios_pontos_atencao_${prefixo}`] = `Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n${motivoDevolucao}`;
+
+      const { error } = await supabase
+        .from(tabelaNome)
+        .update(updateData)
+        .eq('id', redacao.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Redação devolvida",
+        description: "A redação foi devolvida ao aluno."
+      });
+
+      setShowDevolverModal(false);
+      setMotivoDevolucao("");
+      onRefreshList();
+      onSucesso();
+
+    } catch (error: any) {
+      console.error('Erro ao devolver redação:', error);
+      toast({
+        title: "Erro ao devolver",
+        description: error.message || "Não foi possível devolver a redação.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [redacao, motivoDevolucao, toast, onRefreshList, onSucesso]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-start">
@@ -319,12 +381,23 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                   variant="outline"
                   onClick={() => salvarCorrecao('incompleta')}
                   disabled={loading}
+                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm"
                 >
                   Salvar Incompleta
                 </Button>
                 <Button
+                  variant="outline"
+                  onClick={() => setShowDevolverModal(true)}
+                  disabled={loading}
+                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm"
+                >
+                  Devolver Redação
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => salvarCorrecao('corrigida')}
                   disabled={loading}
+                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm"
                 >
                   Finalizar Correção
                 </Button>
@@ -374,6 +447,56 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         onClose={() => setShowTemaModal(false)}
         tema={temaCompleto}
       />
+
+      {/* Modal de Devolução */}
+      <Dialog open={showDevolverModal} onOpenChange={setShowDevolverModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">
+              Deseja devolver essa redação?
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              Essa redação será devolvida ao aluno para que ele possa enviá-la novamente.
+            </p>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Motivo
+              </label>
+              <Textarea
+                placeholder="Explique o motivo da devolução"
+                value={motivoDevolucao}
+                onChange={(e) => setMotivoDevolucao(e.target.value)}
+                className="min-h-[100px] resize-none"
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDevolverModal(false);
+                  setMotivoDevolucao("");
+                }}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={devolverRedacao}
+                disabled={loading || !motivoDevolucao.trim()}
+                className="bg-[#E53935] hover:bg-[#D32F2F] text-white"
+              >
+                {loading ? "Devolvendo..." : "DEVOLVER"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
