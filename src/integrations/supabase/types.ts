@@ -1791,6 +1791,10 @@ export type Database = {
         Args: { corretor_email: string }
         Returns: number
       }
+      count_student_submitted_redacoes: {
+        Args: { student_email: string }
+        Returns: number
+      }
       create_simple_profile: {
         Args: { p_nome: string; p_email: string; p_turma: string }
         Returns: {

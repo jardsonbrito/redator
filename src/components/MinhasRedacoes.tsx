@@ -498,26 +498,41 @@ export const MinhasRedacoes = () => {
       toast({
         title: "Erro",
         description: "Não foi possível carregar as informações da devolução.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
-  const handleEntendidoDevolucao = async () => {
-    if (selectedRedacaoId) {
+  const handleEntendi = async () => {
+    if (!selectedRedacaoId) return;
+    
+    try {
+      // Determinar tabela origem baseada no tipo de redação
+      const redacao = redacoesTurma?.find(r => r.id === selectedRedacaoId);
+      const tabelaOrigemMap = {
+        'simulado': 'redacoes_simulado',
+        'exercicio': 'redacoes_exercicio',
+        'regular': 'redacoes_enviadas'
+      };
+      
+      const tabelaOrigem = tabelaOrigemMap[redacao?.tipo_envio as keyof typeof tabelaOrigemMap] || 'redacoes_enviadas';
+      
       // Marcar como visualizada
       await supabase.rpc('marcar_redacao_devolvida_como_visualizada', {
         redacao_id_param: selectedRedacaoId,
-        tabela_origem_param: devolutionInfo?.tema.includes('Simulado') ? 'redacoes_simulado' : 
-                            devolutionInfo?.tema.includes('Exercício') ? 'redacoes_exercicio' : 'redacoes_enviadas',
-        email_aluno_param: alunoEmail || visitanteEmail
+        tabela_origem_param: tabelaOrigem,
+        email_aluno_param: (alunoEmail || visitanteEmail).toLowerCase().trim()
       });
+      
+      setShowDevolutionDialog(false);
+      setSelectedRedacaoId(null);
+      setDevolutionInfo(null);
+      
+    } catch (error) {
+      console.error('Erro ao marcar como visualizada:', error);
     }
-    
-    setShowDevolutionDialog(false);
-    setDevolutionInfo(null);
-    setSelectedRedacaoId(null);
   };
+
 
   const handleEmailAuth = async () => {
     if (!selectedRedacaoId || !emailInput.trim()) {
@@ -1100,7 +1115,7 @@ export const MinhasRedacoes = () => {
               </blockquote>
             </div>
             <div className="flex justify-end">
-              <Button onClick={handleEntendidoDevolucao}>
+              <Button onClick={handleEntendi}>
                 Entendi
               </Button>
             </div>

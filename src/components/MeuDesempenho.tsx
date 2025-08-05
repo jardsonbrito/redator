@@ -55,7 +55,16 @@ export const MeuDesempenho = () => {
       const emailBusca = studentData.email?.toLowerCase().trim();
       console.log('📊 Buscando desempenho para email:', emailBusca);
 
-      // Buscar todas as redações (regular, simulado, exercício) para o contador total
+      // Usar a nova função para contar redações (excluindo devolvidas)
+      const { data: contadorRedacoes, error: errorContador } = await supabase.rpc('count_student_submitted_redacoes', {
+        student_email: emailBusca
+      });
+
+      if (errorContador) {
+        console.error('Erro ao contar redações:', errorContador);
+      }
+
+      // Buscar todas as redações para calcular notas (incluindo devolvidas para estatísticas)
       const [redacoesRegulares, redacoesSimulado, redacoesExercicio] = await Promise.all([
         supabase.from('redacoes_enviadas').select('nota_total').ilike('email_aluno', emailBusca),
         supabase.from('redacoes_simulado').select('nota_total').ilike('email_aluno', emailBusca),
@@ -79,20 +88,10 @@ export const MeuDesempenho = () => {
         ...(redacoesExercicio.data || [])
       ].map(r => r.nota_total).filter(nota => nota !== null && nota !== undefined);
 
-      // Contar total de redações enviadas
-      const totalEnviadas = 
-        (redacoesRegulares.data?.length || 0) + 
-        (redacoesSimulado.data?.length || 0) + 
-        (redacoesExercicio.data?.length || 0);
-
-      console.log(`📊 Encontradas ${totalEnviadas} redações total para ${emailBusca}:`, {
-        regulares: redacoesRegulares.data?.length || 0,
-        simulados: redacoesSimulado.data?.length || 0,
-        exercicios: redacoesExercicio.data?.length || 0
-      });
+      console.log(`📊 Contador de redações enviadas (excluindo devolvidas): ${contadorRedacoes || 0} para ${emailBusca}`);
 
       return {
-        totalEnviadas: totalEnviadas,
+        totalEnviadas: contadorRedacoes || 0,
         maiorNota: todasNotas.length > 0 ? Math.max(...todasNotas) : null,
         menorNota: todasNotas.length > 0 ? Math.min(...todasNotas) : null
       };
