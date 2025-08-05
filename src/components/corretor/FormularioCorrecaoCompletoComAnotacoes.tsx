@@ -68,6 +68,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [showTemaModal, setShowTemaModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [temaCompleto, setTemaCompleto] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,7 +78,35 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
   useEffect(() => {
     carregarCorrecaoExistente();
+    buscarTemaCompleto();
   }, [redacao.id]);
+
+  const buscarTemaCompleto = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('temas')
+        .select('*')
+        .eq('frase_tematica', redacao.frase_tematica)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar tema:', error);
+        return;
+      }
+
+      if (data) {
+        setTemaCompleto(data);
+      } else {
+        // Se não encontrou tema oficial, é um tema livre
+        setTemaCompleto({
+          id: null,
+          frase_tematica: redacao.frase_tematica
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar tema completo:', error);
+    }
+  };
 
   const carregarCorrecaoExistente = async () => {
     try {
@@ -207,21 +236,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={onVoltar} className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Voltar
-          </Button>
-          
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => setShowTemaModal(true)}
-          className="flex items-center gap-2"
-        >
-          <Eye className="w-4 h-4" />
-          Ver Tema
+      <div className="flex items-start">
+        <Button variant="outline" onClick={onVoltar} className="flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Voltar
         </Button>
       </div>
 
@@ -354,10 +372,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       <TemaModal
         isOpen={showTemaModal}
         onClose={() => setShowTemaModal(false)}
-        tema={{
-          id: 'temp-id',
-          frase_tematica: redacao.frase_tematica
-        }}
+        tema={temaCompleto}
       />
     </div>
   );
