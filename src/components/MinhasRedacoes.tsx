@@ -438,6 +438,8 @@ export const MinhasRedacoes = () => {
   };
 
   const handleRedacaoDevolvida = async (redacao: RedacaoTurma) => {
+    console.log('🔄 Processando redação devolvida:', redacao);
+    
     try {
       // Buscar informações da devolução e corretor
       let devolutionData;
@@ -458,9 +460,11 @@ export const MinhasRedacoes = () => {
           .eq('id', redacao.id)
           .single();
         
-        if (data) {
+        if (error) {
+          console.error('Erro ao buscar dados do simulado:', error);
+        } else {
           devolutionData = data;
-          // A justificativa pode estar em diferentes campos dependendo de como foi implementada
+          // Priorizar justificativa_devolucao, depois elogios_pontos_atencao
           justificativa = data.justificativa_devolucao || 
                           data.elogios_pontos_atencao_corretor_1 || 
                           data.elogios_pontos_atencao_corretor_2 || 
@@ -481,7 +485,9 @@ export const MinhasRedacoes = () => {
           .eq('id', redacao.id)
           .single();
         
-        if (data) {
+        if (error) {
+          console.error('Erro ao buscar dados do exercício:', error);
+        } else {
           devolutionData = data;
           justificativa = data.justificativa_devolucao || 
                           data.elogios_pontos_atencao_corretor_1 || 
@@ -503,7 +509,9 @@ export const MinhasRedacoes = () => {
           .eq('id', redacao.id)
           .single();
         
-        if (data) {
+        if (error) {
+          console.error('Erro ao buscar dados da redação regular:', error);
+        } else {
           devolutionData = data;
           justificativa = data.justificativa_devolucao || 
                           data.elogios_pontos_atencao_corretor_1 || 
@@ -513,10 +521,12 @@ export const MinhasRedacoes = () => {
       }
 
       if (devolutionData) {
+        console.log('📋 Dados da devolução encontrados:', devolutionData);
+        
         // Buscar nome do corretor que devolveu
         let nomeCorretor = 'Corretor';
         
-        if (devolutionData.devolvida_por) {
+        if (devolutionData.devolvida_por && devolutionData.corretores) {
           nomeCorretor = (devolutionData.corretores as any)?.nome_completo || 'Corretor';
         } else if (devolutionData.corretor_id_1) {
           // Se não tem devolvida_por mas tem corretor_id_1, buscar nome do corretor 1
@@ -528,18 +538,40 @@ export const MinhasRedacoes = () => {
           nomeCorretor = corretorData?.nome_completo || 'Corretor';
         }
         
+        // Limpar formatação desnecessária da justificativa
+        const justificativaLimpa = justificativa
+          .replace('Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n', '')
+          .replace(/^\s*"?\s*/, '') // Remove aspas iniciais e espaços
+          .replace(/\s*"?\s*$/, '') // Remove aspas finais e espaços
+          .trim();
+        
+        console.log('💬 Justificativa processada:', justificativaLimpa);
+        
         setDevolutionInfo({
           corretor: nomeCorretor,
-          justificativa: justificativa.replace('Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n', ''),
+          justificativa: justificativaLimpa,
           tema: redacao.frase_tematica,
-          dataEnvio: new Date(devolutionData.data_envio).toLocaleString('pt-BR')
+          dataEnvio: new Date(devolutionData.data_envio).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric'
+          })
         });
         
         setSelectedRedacaoId(redacao.id);
         setShowDevolutionDialog(true);
+        
+        console.log('✅ Modal de devolução configurado e exibido');
+      } else {
+        console.error('❌ Nenhum dado de devolução encontrado');
+        toast({
+          title: "Erro",
+          description: "Não foi possível encontrar os dados da devolução.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      console.error('Erro ao buscar informações da devolução:', error);
+      console.error('💥 Erro ao buscar informações da devolução:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar as informações da devolução.",
