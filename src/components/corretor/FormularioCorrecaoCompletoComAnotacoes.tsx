@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, X } from "lucide-react";
+import { ArrowLeft, Eye, X, Copy, Maximize2 } from "lucide-react";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
@@ -69,6 +69,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [showRelatorioModal, setShowRelatorioModal] = useState(false);
   const [showTemaModal, setShowTemaModal] = useState(false);
   const [showDevolverModal, setShowDevolverModal] = useState(false);
+  const [showRedacaoExpandida, setShowRedacaoExpandida] = useState(false);
   const [motivoDevolucao, setMotivoDevolucao] = useState("");
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -296,6 +297,51 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     }
   }, [redacao, motivoDevolucao, toast, onRefreshList, onSucesso]);
 
+  // Função para copiar redação digitada
+  const copiarRedacaoDigitada = () => {
+    const textoFormatado = `Nome do Aluno: ${redacao.nome_aluno}\n\nFrase Temática: ${redacao.frase_tematica}\n\nTexto da Redação:\n${redacao.texto || 'Texto não disponível'}`;
+    
+    navigator.clipboard.writeText(textoFormatado).then(() => {
+      toast({
+        title: "Copiado!",
+        description: "Redação digitada copiada para a área de transferência."
+      });
+    }).catch(() => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o texto.",
+        variant: "destructive"
+      });
+    });
+  };
+
+  // Função para copiar relatório pedagógico
+  const copiarRelatorioPedagogico = () => {
+    const relatorioCompleto = `Nome do Aluno: ${redacao.nome_aluno}\n\nFrase Temática: ${redacao.frase_tematica}\n\nRelatório Pedagógico:\n${comentarios.elogios || 'Nenhum relatório escrito ainda.'}`;
+    
+    navigator.clipboard.writeText(relatorioCompleto).then(() => {
+      toast({
+        title: "Copiado!",
+        description: "Relatório pedagógico copiado para a área de transferência."
+      });
+    }).catch(() => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar o relatório.",
+        variant: "destructive"
+      });
+    });
+  };
+
+  // Função para formatar texto com quebras de linha
+  const formatarTextoComParagrafos = (texto: string) => {
+    return texto.split('\n').map((paragrafo, index) => (
+      <p key={index} className="mb-2 last:mb-0">
+        {paragrafo || '\u00A0'}
+      </p>
+    ));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start">
@@ -409,18 +455,49 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
       {/* Redação Digitada */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Redação Digitada</CardTitle>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copiarRedacaoDigitada}
+              className="flex items-center gap-2"
+            >
+              <Copy className="w-4 h-4" />
+              Copiar Redação Digitada
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowRedacaoExpandida(true)}
+              className="flex items-center gap-2"
+            >
+              <Maximize2 className="w-4 h-4" />
+              Expandir
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm">{redacao.texto || 'Texto da redação não disponível'}</p>
+          <div className="text-sm max-h-[200px] overflow-y-auto pr-2">
+            {redacao.texto ? formatarTextoComParagrafos(redacao.texto) : 'Texto da redação não disponível'}
+          </div>
         </CardContent>
       </Card>
 
       {/* Relatório pedagógico de correção */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Relatório pedagógico de correção</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={copiarRelatorioPedagogico}
+            className="flex items-center gap-2"
+          >
+            <Copy className="w-4 h-4" />
+            Copiar Relatório Pedagógico
+          </Button>
         </CardHeader>
         <CardContent>
           <textarea
@@ -492,6 +569,53 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 className="bg-[#E53935] hover:bg-[#D32F2F] text-white"
               >
                 {loading ? "Devolvendo..." : "DEVOLVER"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Redação Expandida */}
+      <Dialog open={showRedacaoExpandida} onOpenChange={setShowRedacaoExpandida}>
+        <DialogContent className="sm:max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Redação Digitada - {redacao.nome_aluno}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowRedacaoExpandida(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              <strong>Tema:</strong> {redacao.frase_tematica}
+            </div>
+            
+            <div className="max-h-[60vh] overflow-y-auto p-4 border rounded-lg bg-background">
+              <div className="text-sm leading-relaxed">
+                {redacao.texto ? formatarTextoComParagrafos(redacao.texto) : 'Texto da redação não disponível'}
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={copiarRedacaoDigitada}
+                className="flex items-center gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                Copiar Redação
+              </Button>
+              <Button
+                onClick={() => setShowRedacaoExpandida(false)}
+              >
+                Fechar
               </Button>
             </div>
           </div>
