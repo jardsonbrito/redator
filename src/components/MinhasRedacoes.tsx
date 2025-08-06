@@ -187,10 +187,12 @@ export const MinhasRedacoes = () => {
   });
 
   const handleViewRedacao = async (redacao: RedacaoTurma) => {
-    console.log('🔐 Iniciando fluxo PÚBLICO para visitantes - visualização de redação');
+    console.log('🔐 Iniciando fluxo para visualização de redação');
+    console.log('📊 Status da redação:', redacao.status, '| Tipo:', redacao.tipo_envio);
     
     // Verificar se é redação devolvida primeiro
     if (redacao.status === 'devolvida') {
+      console.log('🔔 Redação devolvida detectada - abrindo modal de devolução');
       await handleRedacaoDevolvida(redacao);
       return;
     }
