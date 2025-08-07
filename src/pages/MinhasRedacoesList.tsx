@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useToast } from "@/hooks/use-toast";
@@ -67,6 +67,16 @@ const MinhasRedacoesList = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Estados para o modal de devolução
+  const [showDevolutionDialog, setShowDevolutionDialog] = useState(false);
+  const [devolutionInfo, setDevolutionInfo] = useState<{ 
+    corretor: string; 
+    justificativa: string; 
+    tema: string; 
+    dataEnvio: string 
+  } | null>(null);
+  
   const itemsPerPage = 10;
   const { toast } = useToast();
 
@@ -354,8 +364,15 @@ const MinhasRedacoesList = () => {
     refetchOnWindowFocus: true
   });
 
-  const handleViewRedacao = (redacao: RedacaoTurma) => {
-    console.log('🔍 Iniciando visualização da redação:', redacao.id);
+  const handleViewRedacao = async (redacao: RedacaoTurma) => {
+    console.log('🔍 Iniciando visualização da redação:', redacao.id, 'Status:', redacao.status);
+    
+    // VERIFICAR SE É REDAÇÃO DEVOLVIDA PRIMEIRO
+    if (redacao.status === 'devolvida') {
+      console.log('🔔 Redação devolvida detectada - abrindo modal de devolução');
+      await handleRedacaoDevolvida(redacao);
+      return;
+    }
     
     // Verificar se é redação manuscrita
     if (redacao.tipo_envio === 'manuscrita') {
@@ -486,6 +503,180 @@ const MinhasRedacoesList = () => {
       });
     } finally {
       setIsAuthenticating(false);
+    }
+  };
+
+  // FUNÇÃO PARA TRATAR REDAÇÃO DEVOLVIDA
+  const handleRedacaoDevolvida = async (redacao: RedacaoTurma) => {
+    console.log('🔄 Processando redação devolvida:', redacao);
+    
+    try {
+      // Buscar informações da devolução e corretor
+      let devolutionData;
+      let justificativa = 'Motivo não especificado';
+      
+      if (redacao.tipo_envio === 'simulado') {
+        const searchId = redacao.original_id || redacao.id;
+        const { data, error } = await supabase
+          .from('redacoes_simulado')
+          .select(`
+            justificativa_devolucao,
+            elogios_pontos_atencao_corretor_1,
+            elogios_pontos_atencao_corretor_2,
+            data_envio,
+            devolvida_por,
+            corretor_id_1,
+            corretores!devolvida_por(nome_completo)
+          `)
+          .eq('id', searchId)
+          .single();
+        
+        if (error) {
+          console.error('Erro ao buscar dados do simulado:', error);
+        } else {
+          devolutionData = data;
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        }
+      } else if (redacao.tipo_envio === 'exercicio') {
+        const { data, error } = await supabase
+          .from('redacoes_exercicio')
+          .select(`
+            justificativa_devolucao,
+            elogios_pontos_atencao_corretor_1,
+            elogios_pontos_atencao_corretor_2,
+            data_envio,
+            devolvida_por,
+            corretor_id_1,
+            corretores!devolvida_por(nome_completo)
+          `)
+          .eq('id', redacao.id)
+          .single();
+        
+        if (error) {
+          console.error('Erro ao buscar dados do exercício:', error);
+        } else {
+          devolutionData = data;
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        }
+      } else {
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select(`
+            justificativa_devolucao,
+            elogios_pontos_atencao_corretor_1,
+            elogios_pontos_atencao_corretor_2,
+            data_envio,
+            devolvida_por,
+            corretor_id_1,
+            corretores!devolvida_por(nome_completo)
+          `)
+          .eq('id', redacao.id)
+          .single();
+        
+        if (error) {
+          console.error('Erro ao buscar dados da redação regular:', error);
+        } else {
+          devolutionData = data;
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        }
+      }
+
+      if (devolutionData) {
+        console.log('📋 Dados da devolução encontrados:', devolutionData);
+        
+        // Buscar nome do corretor que devolveu
+        let nomeCorretor = 'Corretor';
+        
+        if (devolutionData.devolvida_por && devolutionData.corretores) {
+          nomeCorretor = (devolutionData.corretores as any)?.nome_completo || 'Corretor';
+        } else if (devolutionData.corretor_id_1) {
+          // Se não tem devolvida_por mas tem corretor_id_1, buscar nome do corretor 1
+          const { data: corretorData } = await supabase
+            .from('corretores')
+            .select('nome_completo')
+            .eq('id', devolutionData.corretor_id_1)
+            .single();
+          nomeCorretor = corretorData?.nome_completo || 'Corretor';
+        }
+        
+        // Limpar formatação desnecessária da justificativa
+        const justificativaLimpa = justificativa
+          .replace('Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n', '')
+          .replace(/^\s*"?\s*/, '') // Remove aspas iniciais e espaços
+          .replace(/\s*"?\s*$/, '') // Remove aspas finais e espaços
+          .trim();
+        
+        console.log('💬 Justificativa processada:', justificativaLimpa);
+        
+        setDevolutionInfo({
+          corretor: nomeCorretor,
+          justificativa: justificativaLimpa,
+          tema: redacao.frase_tematica,
+          dataEnvio: new Date(devolutionData.data_envio).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric'
+          })
+        });
+        
+        setShowDevolutionDialog(true);
+        
+        console.log('✅ Modal de devolução configurado e exibido');
+      } else {
+        console.error('❌ Nenhum dado de devolução encontrado');
+        toast({
+          title: "Erro",
+          description: "Não foi possível encontrar os dados da devolução.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('💥 Erro ao buscar informações da devolução:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as informações da devolução.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // FUNÇÃO PARA MARCAR DEVOLUÇÃO COMO VISUALIZADA
+  const handleEntendi = async () => {
+    if (!selectedRedacao) return;
+    
+    try {
+      // Determinar tabela origem baseada no tipo de redação
+      const tabelaOrigemMap = {
+        'simulado': 'redacoes_simulado',
+        'exercicio': 'redacoes_exercicio',
+        'regular': 'redacoes_enviadas'
+      };
+      
+      const tabelaOrigem = tabelaOrigemMap[selectedRedacao?.tipo_envio as keyof typeof tabelaOrigemMap] || 'redacoes_enviadas';
+      const redacaoId = selectedRedacao.original_id || selectedRedacao.id;
+      
+      // Marcar como visualizada
+      await supabase.rpc('marcar_redacao_devolvida_como_visualizada', {
+        redacao_id_param: redacaoId,
+        tabela_origem_param: tabelaOrigem,
+        email_aluno_param: (studentData?.email || '').toLowerCase().trim()
+      });
+      
+      setShowDevolutionDialog(false);
+      setSelectedRedacao(null);
+      setDevolutionInfo(null);
+      
+    } catch (error) {
+      console.error('Erro ao marcar como visualizada:', error);
     }
   };
 
@@ -652,13 +843,21 @@ const MinhasRedacoesList = () => {
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex-1">
-                       <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         <Badge 
                           variant="outline" 
                           className={getTipoEnvioColor(redacao.tipo_envio)}
                         >
                           {getTipoEnvioLabel(redacao.tipo_envio)}
                         </Badge>
+                        
+                        {/* TAG DEVOLVIDA - SEMPRE EXIBIR SE STATUS FOR DEVOLVIDA */}
+                        {redacao.status === 'devolvida' && (
+                          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                            Devolvida
+                          </Badge>
+                        )}
+                        
                         {redacao.status === 'corrigida' && (
                           <Badge variant="default">
                             Corrigida
@@ -796,8 +995,52 @@ const MinhasRedacoesList = () => {
           </DialogContent>
         </Dialog>
 
+        {/* MODAL EXCLUSIVO PARA REDAÇÕES DEVOLVIDAS */}
+        <Dialog open={showDevolutionDialog} onOpenChange={setShowDevolutionDialog}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-xl font-semibold text-center">
+                {devolutionInfo?.tema}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground text-center">
+                Enviado em: {devolutionInfo?.dataEnvio}
+              </p>
+            </DialogHeader>
+            
+            <div className="space-y-6 py-4">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      Segundo {devolutionInfo?.corretor?.toLowerCase().endsWith('a') ? 'a corretora' : 'o corretor'}{' '}
+                      <span className="font-semibold">{devolutionInfo?.corretor}</span>, sua redação foi devolvida 
+                      com base na seguinte justificativa:
+                    </p>
+                    
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded border-l-4 border-yellow-400">
+                      <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
+                        "{devolutionInfo?.justificativa}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-center pt-2">
+                <Button 
+                  onClick={handleEntendi}
+                  className="px-8 py-2 bg-primary hover:bg-primary/90"
+                >
+                  Entendi
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Dialog para exibir redação autenticada */}
-        {selectedRedacao && !showAuthDialog && (
+        {selectedRedacao && !showAuthDialog && !showDevolutionDialog && (
           <Dialog open={true} onOpenChange={resetAuthenticationState}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <RedacaoEnviadaCard redacao={selectedRedacao} />
