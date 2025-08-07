@@ -988,9 +988,23 @@ export const MinhasRedacoes = () => {
                     <h3 className="font-medium text-redator-primary text-sm line-clamp-2 flex-1">
                       {redacao.frase_tematica}
                     </h3>
-                    <Badge className={`${getStatusColor(redacao.status, redacao.corrigida)} shrink-0 text-xs`}>
-                      {getStatusLabel(redacao.status, redacao.corrigida)}
-                    </Badge>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      {/* Tag do tipo de envio */}
+                      <Badge variant="outline" className="text-xs">
+                        {redacao.tipo_envio === 'simulado' ? 'Simulado' : 
+                         redacao.tipo_envio === 'exercicio' ? 'Exercício' : 'Regular'}
+                      </Badge>
+                      {/* Tag do status - SEMPRE exibir se devolvida */}
+                      {redacao.status === 'devolvida' ? (
+                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">
+                          Devolvida
+                        </Badge>
+                      ) : (
+                        <Badge className={`${getStatusColor(redacao.status, redacao.corrigida)} text-xs`}>
+                          {getStatusLabel(redacao.status, redacao.corrigida)}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="space-y-1 text-xs text-redator-accent">
@@ -999,26 +1013,18 @@ export const MinhasRedacoes = () => {
                       <span className="truncate">{redacao.nome_aluno}</span>
                     </div>
                     
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{formatDate(redacao.data_envio)}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>{formatDate(redacao.data_envio)}</span>
+                        </div>
+                        
+                        {redacao.corrigida && redacao.nota_total && (
+                          <Badge className="bg-green-100 text-green-800 text-xs">
+                            Nota: {redacao.nota_total}
+                          </Badge>
+                        )}
                       </div>
-                      
-                      <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
-                        {getTipoEnvioLabel(redacao.tipo_envio)}
-                      </Badge>
-                      
-                      {/* Tag adicional para redações devolvidas */}
-                      {redacao.status === 'devolvida' && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs border-orange-300 text-orange-700 bg-orange-50"
-                        >
-                          Devolvida
-                        </Badge>
-                      )}
-                    </div>
                     
                   </div>
 
@@ -1175,26 +1181,43 @@ export const MinhasRedacoes = () => {
         </Dialog>
       )}
 
-      {/* Dialog para redações devolvidas */}
+      {/* Modal EXCLUSIVO para redações devolvidas */}
       <Dialog open={showDevolutionDialog} onOpenChange={setShowDevolutionDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{devolutionInfo?.tema}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {devolutionInfo?.dataEnvio}
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold text-center">
+              {devolutionInfo?.tema}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground text-center">
+              Enviado em: {devolutionInfo?.dataEnvio}
             </p>
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <p className="text-sm">
-                Segundo {devolutionInfo?.corretor?.toLowerCase().endsWith('a') ? 'a corretora' : 'o corretor'} <strong>{devolutionInfo?.corretor}</strong>, sua redação foi devolvida com base na seguinte justificativa:
-              </p>
-              <blockquote className="mt-3 pl-4 border-l-4 border-yellow-300 italic">
-                "{devolutionInfo?.justificativa}"
-              </blockquote>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Segundo {devolutionInfo?.corretor?.toLowerCase().endsWith('a') ? 'a corretora' : 'o corretor'}{' '}
+                    <span className="font-semibold">{devolutionInfo?.corretor}</span>, sua redação foi devolvida 
+                    com base na seguinte justificativa:
+                  </p>
+                  
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded border-l-4 border-yellow-400">
+                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
+                      "{devolutionInfo?.justificativa}"
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end">
-              <Button onClick={handleEntendi}>
+            
+            <div className="flex justify-center pt-2">
+              <Button 
+                onClick={handleEntendi}
+                className="px-8 py-2 bg-primary hover:bg-primary/90"
+              >
                 Entendi
               </Button>
             </div>
