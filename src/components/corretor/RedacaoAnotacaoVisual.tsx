@@ -54,60 +54,6 @@ const customStyles = `
     stroke-width: 2px !important;
   }
   
-  /* Numeração das anotações - Forçar exibição */
-  .r6o-annotation {
-    position: relative !important;
-  }
-  
-  /* Numeração via CSS como backup */
-  .r6o-annotation::before {
-    content: attr(data-numero) !important;
-    position: absolute !important;
-    top: -12px !important;
-    left: -12px !important;
-    background: #000000 !important;
-    color: #ffffff !important;
-    border-radius: 50% !important;
-    width: 24px !important;
-    height: 24px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 12px !important;
-    font-weight: bold !important;
-    font-family: Arial, sans-serif !important;
-    z-index: 10001 !important;
-    border: 3px solid #ffffff !important;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
-    pointer-events: none !important;
-    line-height: 1 !important;
-    text-align: center !important;
-  }
-  
-  /* Garantir que números DOM tenham prioridade */
-  .numero-anotacao {
-    position: absolute !important;
-    top: -12px !important;
-    left: -12px !important;
-    background: #000000 !important;
-    color: #ffffff !important;
-    border-radius: 50% !important;
-    width: 24px !important;
-    height: 24px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 12px !important;
-    font-weight: bold !important;
-    font-family: Arial, sans-serif !important;
-    z-index: 10002 !important;
-    border: 3px solid #ffffff !important;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
-    pointer-events: none !important;
-    line-height: 1 !important;
-    text-align: center !important;
-  }
-  
   /* Garantir que a imagem não se mova */
   .container-imagem-redacao img {
     transition: none !important;
@@ -142,6 +88,29 @@ const customStyles = `
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     padding: 16px !important;
     border: 1px solid #e5e7eb !important;
+  }
+
+  /* Efeito de destaque para comentários */
+  .comentario-destacado {
+    animation: pulseGlow 2s ease-in-out !important;
+    border: 3px solid #FFD700 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6) !important;
+  }
+
+  @keyframes pulseGlow {
+    0% {
+      box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+      border-color: rgba(255, 215, 0, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+      border-color: #FFD700;
+    }
+    100% {
+      box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+      border-color: rgba(255, 215, 0, 0.5);
+    }
   }
 `;
 
@@ -214,7 +183,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [contadorSequencial, setContadorSequencial] = useState(1);
-  const mutationObserverRef = useRef<MutationObserver | null>(null);
 
   // Expor métodos via ref
   useImperativeHandle(ref, () => ({
@@ -228,6 +196,25 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       const { naturalWidth, naturalHeight } = imageRef.current;
       setImageDimensions({ width: naturalWidth, height: naturalHeight });
       console.log('Dimensões da imagem carregadas:', { width: naturalWidth, height: naturalHeight });
+    }
+  };
+
+  // Função para destacar comentário
+  const destacarComentario = (annotationId: string) => {
+    const comentarioElement = document.querySelector(`[data-comentario-id="${annotationId}"]`);
+    if (comentarioElement) {
+      comentarioElement.classList.add('comentario-destacado');
+      
+      // Remover destaque após 2 segundos
+      setTimeout(() => {
+        comentarioElement.classList.remove('comentario-destacado');
+      }, 2000);
+      
+      // Scroll para o comentário se necessário
+      comentarioElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
     }
   };
 
@@ -248,10 +235,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
       console.log('Anotações carregadas:', data);
       
-      // Usar numeração original salva no banco (respeita ordem real de criação)
+      // Carregar anotações sem numeração
       setAnotacoes(data || []);
       
-      // Definir próximo número sequencial baseado no maior número existente
+      // Definir próximo número sequencial para novas anotações
       const maiorNumero = Math.max(0, ...(data?.map(a => a.numero_sequencial || 0) || []));
       const proximoNumero = maiorNumero + 1;
       setContadorSequencial(proximoNumero);
@@ -292,8 +279,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         console.log(`📍 Anotação ${index + 1}:`, {
           original: { x: anotacao.x_start, y: anotacao.y_start, w: anotacao.x_end - anotacao.x_start, h: anotacao.y_end - anotacao.y_start },
           converted: { x, y, w, h },
-          competencia: anotacao.competencia,
-          numero: anotacao.numero_sequencial
+          competencia: anotacao.competencia
         });
 
         return {
@@ -312,9 +298,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             purpose: anotacao.competencia, // Usar a competência da anotação salva
             value: anotacao.comentario
           }],
-          // Dados customizados para a competência e numeração
-          competencia: anotacao.competencia,
-          numero: anotacao.numero_sequencial || 1
+          // Dados customizados para a competência
+          competencia: anotacao.competencia
         };
       });
 
@@ -329,14 +314,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         const appliedAnnotations = annotoriousRef.current.getAnnotations();
         console.log('🔍 Anotações atualmente no Annotorious:', appliedAnnotations.length);
 
-        // Adicionar numeração com múltiplas tentativas
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 100);
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 300);
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 600);
-        
-        // Iniciar observador de mutações
-        iniciarObservadorDeMutacoes();
-
       } catch (error) {
         console.error('❌ Erro ao aplicar anotações:', error);
         
@@ -349,11 +326,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             console.error(`❌ Erro na anotação ${index + 1}:`, err);
           }
         });
-
-        // Adicionar numeração com múltiplas tentativas
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 200);
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 500);
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 1000);
       }
 
     } catch (error) {
@@ -361,292 +333,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
-  // Função para adicionar número numa anotação específica
-  const adicionarNumeroNaAnotacao = (annotationId: string, numero: string | number) => {
-    if (!containerRef.current || !annotationId || !numero) return;
-
-    try {
-      // Buscar o elemento específico da anotação pelo ID
-      const annotationElement = containerRef.current.querySelector(`[data-id="${annotationId}"]`) ||
-                                 containerRef.current.querySelector(`g[data-id="${annotationId}"]`) ||
-                                 containerRef.current.querySelector(`.annotation-${annotationId}`);
-
-      if (!annotationElement) {
-        console.log(`⚠️ Elemento da anotação ${annotationId} não encontrado`);
-        return;
-      }
-
-      // Verificar se já tem número
-      const existingNumber = annotationElement.querySelector('.numero-anotacao');
-      if (existingNumber) {
-        console.log(`🔢 Número já existe para anotação ${annotationId}`);
-        return;
-      }
-
-      console.log(`🔢 Adicionando número ${numero} para anotação ${annotationId}`);
-
-      // Criar elemento do número
-      const numberContainer = document.createElement('div');
-      numberContainer.className = 'numero-anotacao';
-      numberContainer.textContent = numero.toString();
-      
-      // Estilos inline muito específicos
-      numberContainer.style.cssText = `
-        position: absolute !important;
-        top: -15px !important;
-        left: -15px !important;
-        background: #000000 !important;
-        color: #ffffff !important;
-        border-radius: 50% !important;
-        width: 30px !important;
-        height: 30px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 14px !important;
-        font-weight: bold !important;
-        font-family: Arial, sans-serif !important;
-        z-index: 10000 !important;
-        border: 3px solid #ffffff !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important;
-        pointer-events: none !important;
-        line-height: 1 !important;
-        text-align: center !important;
-      `;
-
-      // Garantir posicionamento relativo no pai
-      (annotationElement as HTMLElement).style.position = 'relative';
-      (annotationElement as HTMLElement).style.zIndex = '1000';
-      
-      // Adicionar o número
-      annotationElement.appendChild(numberContainer);
-      
-      console.log(`✅ Número ${numero} aplicado na anotação ${annotationId}`);
-
-    } catch (error) {
-      console.error(`❌ Erro ao adicionar número na anotação ${annotationId}:`, error);
-    }
-  };
-
-  // Iniciar observador de mutações para detectar quando Annotorious adiciona elementos
-  const iniciarObservadorDeMutacoes = () => {
-    if (!containerRef.current) return;
-    
-    // Parar observador existente
-    if (mutationObserverRef.current) {
-      mutationObserverRef.current.disconnect();
-    }
-
-    // Criar novo observador
-    mutationObserverRef.current = new MutationObserver((mutations) => {
-      let hasNewAnnotations = false;
-      
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const element = node as Element;
-              
-              // Verificar se é uma anotação ou contém anotações
-              if (element.classList.contains('r6o-annotation') || 
-                  element.querySelector('.r6o-annotation') ||
-                  element.tagName === 'g') {
-                hasNewAnnotations = true;
-              }
-            }
-          });
-        }
-      });
-
-      if (hasNewAnnotations) {
-        console.log('🔍 Mutation Observer detectou novas anotações - adicionando numeração');
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 50);
-      }
-    });
-
-    // Observar mudanças no container
-    mutationObserverRef.current.observe(containerRef.current, {
-      childList: true,
-      subtree: true,
-      attributes: false
-    });
-    
-    console.log('👀 Observer de mutações iniciado');
-  };
-
-  // Adicionar numeração diretamente no SVG usando elementos SVG nativos
-  const adicionarNumeracaoAnotacoes = () => {
-    if (!containerRef.current) return;
-
-    try {
-      console.log('🔢 Iniciando numeração SVG das anotações...');
-      
-      // Buscar o SVG principal do Annotorious
-      const svgElement = containerRef.current.querySelector('svg.a9s-annotationlayer') || 
-                        containerRef.current.querySelector('svg') ||
-                        containerRef.current.querySelector('.r6o-svg-canvas svg');
-      
-      if (!svgElement) {
-        console.log('⚠️ SVG não encontrado, tentando novamente...');
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 500);
-        return;
-      }
-
-      // Buscar retângulos únicos (evitar duplicação)
-      const rectangles = svgElement.querySelectorAll('rect[data-id], rect:not(.numero-svg-bg)');
-      const uniqueRects = Array.from(rectangles).filter((rect, index, array) => {
-        const x = rect.getAttribute('x');
-        const y = rect.getAttribute('y');
-        const w = rect.getAttribute('width');
-        const h = rect.getAttribute('height');
-        
-        // Verificar se já existe um retângulo com as mesmas coordenadas
-        return array.findIndex(r => 
-          r.getAttribute('x') === x && 
-          r.getAttribute('y') === y &&
-          r.getAttribute('width') === w &&
-          r.getAttribute('height') === h
-        ) === index;
-      });
-      
-      if (uniqueRects.length === 0) {
-        console.log('⚠️ Nenhum retângulo único encontrado no SVG');
-        setTimeout(() => adicionarNumeracaoAnotacoes(), 1000);
-        return;
-      }
-
-      console.log(`🔢 Processando ${uniqueRects.length} retângulos únicos no SVG`);
-
-      // ✅ CORREÇÃO DEFINITIVA: Organizar anotações por ordem cronológica de criação
-      const anotacoesOrdenadas = [...anotacoes].sort((a, b) => {
-        // Primeiro critério: data de criação (cronológica)
-        if (a.criado_em && b.criado_em) {
-          return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime();
-        }
-        // Segundo critério: número sequencial (fallback)
-        return (a.numero_sequencial || 0) - (b.numero_sequencial || 0);
-      });
-
-      console.log('🔢 Anotações ordenadas cronologicamente:', anotacoesOrdenadas.map(a => `${a.numero_sequencial} (${a.criado_em})`));
-
-      // Remover numerações existentes primeiro
-      svgElement.querySelectorAll('.numero-svg, .numero-svg-bg').forEach(el => el.remove());
-
-      // ✅ CORREÇÃO FINAL: Numeração cronológica pura - sem mapeamento de posição
-      uniqueRects.forEach((rect, index) => {
-        try {
-          // Usar diretamente a ordem cronológica das anotações
-          const numero = index + 1;
-          
-          console.log(`📍 Retângulo ${index + 1} recebe número ${numero} (ordem cronológica pura)`);
-
-          const x = parseFloat(rect.getAttribute('x') || '0');
-          const y = parseFloat(rect.getAttribute('y') || '0');
-
-          // Criar círculo de fundo maior para o número
-          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          circle.setAttribute('cx', (x + 35).toString());
-          circle.setAttribute('cy', (y + 35).toString());
-          circle.setAttribute('r', '30'); // Dobrado de 22 para 30
-          circle.setAttribute('fill', '#000000');
-          circle.setAttribute('stroke', '#ffffff');
-          circle.setAttribute('stroke-width', '4'); // Aumentado para 4
-          circle.classList.add('numero-svg-bg');
-
-          // Criar texto do número muito maior
-          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', (x + 35).toString());
-          text.setAttribute('y', (y + 45).toString()); // Ajustado para centralizar no círculo maior
-          text.setAttribute('text-anchor', 'middle');
-          text.setAttribute('fill', '#ffffff');
-          text.setAttribute('font-family', 'Arial Black, Arial, sans-serif');
-          text.setAttribute('font-size', '28'); // Dobrado de 20 para 28
-          text.setAttribute('font-weight', 'bold');
-          text.textContent = numero.toString();
-          text.classList.add('numero-svg');
-
-          // Adicionar ao SVG
-          svgElement.appendChild(circle);
-          svgElement.appendChild(text);
-
-          console.log(`✅ Número ${numero} adicionado no SVG na posição (${x + 20}, ${y + 20})`);
-
-        } catch (err) {
-          console.error(`❌ Erro ao adicionar número SVG ${index}:`, err);
-        }
-      });
-
-      console.log(`✅ Numeração SVG concluída para ${uniqueRects.length} elementos únicos`);
-
-    } catch (error) {
-      console.error('❌ Erro geral na numeração SVG:', error);
-    }
-  };
-
-  // Função de verificação e numeração adicional
-  const verificarENumerarAnotacoes = () => {
-    if (!containerRef.current) return;
-
-    try {
-      const annotationElements = containerRef.current.querySelectorAll('.r6o-annotation');
-      console.log('🔍 Verificando numeração para', annotationElements.length, 'anotações');
-
-      annotationElements.forEach((element, index) => {
-        // Verificar se já tem número visível
-        const hasVisibleNumber = element.querySelector('.numero-anotacao') || 
-                                 element.getAttribute('data-numero');
-
-        if (!hasVisibleNumber) {
-          console.log(`⚠️ Anotação ${index + 1} sem numeração - corrigindo...`);
-          
-          const anotacoesOrdenadas = [...anotacoes].sort((a, b) => (a.numero_sequencial || 0) - (b.numero_sequencial || 0));
-          const anotacao = anotacoesOrdenadas[index];
-          const numero = anotacao?.numero_sequencial || (index + 1);
-
-          // Adicionar data-numero para CSS
-          element.setAttribute('data-numero', numero.toString());
-
-          // Criar elemento DOM também
-          const numberContainer = document.createElement('div');
-          numberContainer.className = 'numero-anotacao';
-          numberContainer.textContent = numero.toString();
-          
-          numberContainer.style.cssText = `
-            position: absolute !important;
-            top: -12px !important;
-            left: -12px !important;
-            background: #000000 !important;
-            color: #ffffff !important;
-            border-radius: 50% !important;
-            width: 24px !important;
-            height: 24px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 12px !important;
-            font-weight: bold !important;
-            font-family: Arial, sans-serif !important;
-            z-index: 10002 !important;
-            border: 3px solid #ffffff !important;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
-            pointer-events: none !important;
-            line-height: 1 !important;
-            text-align: center !important;
-          `;
-
-          (element as HTMLElement).style.position = 'relative';
-          element.appendChild(numberContainer);
-          
-          console.log(`✅ Numeração ${numero} corrigida para elemento ${index + 1}`);
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Erro na verificação de numeração:', error);
-    }
-  };
-
-  // Inicializar Annotorious (SEM dependência de competenciaSelecionada para evitar piscada)
+  // Inicializar Annotorious
   useEffect(() => {
     let cleanupFunctions: (() => void)[] = [];
 
@@ -676,12 +363,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               // Primeiro tentar pegar a competência do body, depois do objeto de anotação, senão usar a selecionada
               const competencia = annotation.body?.[0]?.purpose || annotation.competencia || competenciaSelecionada;
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
-              const numero = annotation.numero || '';
               
               console.log('🎨 Formatando anotação:', { 
                 competencia, 
                 corCompetencia: corCompetencia?.cor,
-                numero,
                 annotation: annotation
               });
               
@@ -690,15 +375,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 const g = parseInt(corCompetencia.cor.slice(3, 5), 16);
                 const b = parseInt(corCompetencia.cor.slice(5, 7), 16);
                 
-                // Agendar adição do número após renderização
-                setTimeout(() => {
-                  adicionarNumeroNaAnotacao(annotation.id, numero);
-                }, 50);
-                
                 return {
                   className: `competencia-${competencia}`,
-                  style: `fill: rgba(${r}, ${g}, ${b}, 0.15); stroke: ${corCompetencia.cor}; stroke-width: 2px; cursor: pointer;`,
-                  'data-numero': numero
+                  style: `fill: rgba(${r}, ${g}, ${b}, 0.15); stroke: ${corCompetencia.cor}; stroke-width: 2px; cursor: pointer;`
                 };
               }
               return {
@@ -783,6 +462,14 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
           const onClickAnnotation = (annotation: any) => {
             try {
+              console.log('🎯 Clique na anotação:', annotation.id);
+              
+              // Destacar o comentário correspondente
+              if (annotation.id) {
+                destacarComentario(annotation.id);
+              }
+
+              // Para modo de edição, ainda oferecer opção de remover
               const comment = annotation.body?.[0]?.value || '';
               const competencia = annotation.body?.[0]?.purpose || 1;
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
@@ -818,9 +505,17 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             }
           });
         } else {
-          // Modo de leitura
+          // Modo de leitura - apenas destacar comentário
           const onClickAnnotation = (annotation: any) => {
             try {
+              console.log('🎯 Clique na anotação (modo leitura):', annotation.id);
+              
+              // Destacar o comentário correspondente
+              if (annotation.id) {
+                destacarComentario(annotation.id);
+              }
+
+              // Também mostrar toast como antes
               const comment = annotation.body?.[0]?.value || '';
               const competencia = annotation.body?.[0]?.purpose || 1;
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
@@ -869,12 +564,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     return () => {
       cleanupFunctions.forEach(fn => fn());
       
-      // Parar observador de mutações
-      if (mutationObserverRef.current) {
-        mutationObserverRef.current.disconnect();
-        mutationObserverRef.current = null;
-      }
-      
       if (annotoriousRef.current) {
         try {
           annotoriousRef.current.destroy();
@@ -884,7 +573,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         annotoriousRef.current = null;
       }
     };
-  }, [imageDimensions, readonly]); // Remover competenciaSelecionada das dependências
+  }, [imageDimensions, readonly]);
 
   // Carregar anotações quando o componente monta
   useEffect(() => {
@@ -1075,22 +764,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       
       if (error) throw error;
 
-      // Limpar números fantasma primeiro
-      if (containerRef.current) {
-        const numerosFantasma = containerRef.current.querySelectorAll('.numero-svg, .numero-svg-bg, .numero-anotacao');
-        numerosFantasma.forEach(el => el.remove());
-        console.log(`🧹 Removidos ${numerosFantasma.length} números fantasma`);
-      }
-
       // Limpar do Annotorious
       if (annotoriousRef.current) {
         annotoriousRef.current.clearAnnotations();
-      }
-
-      // Parar observador de mutações para evitar duplicação
-      if (mutationObserverRef.current) {
-        mutationObserverRef.current.disconnect();
-        mutationObserverRef.current = null;
       }
 
       // Resetar estados
@@ -1275,12 +951,16 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           <h4 className="text-lg font-semibold mb-3">Comentários ({anotacoes.length})</h4>
           <div className="space-y-2">
             {anotacoes.map((anotacao) => (
-              <div key={anotacao.id} className="flex items-start gap-3 p-3 bg-white rounded border">
+              <div 
+                key={anotacao.id} 
+                className="flex items-start gap-3 p-3 bg-white rounded border transition-all duration-300"
+                data-comentario-id={anotacao.id}
+              >
                 <div 
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                   style={{ backgroundColor: anotacao.cor_marcacao }}
                 >
-                  {anotacao.numero_sequencial || 1}
+                  C{anotacao.competencia}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -1295,7 +975,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                     variant="ghost"
                     size="sm"
                     onClick={() => removerAnotacao(anotacao.id!)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 flex-shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -1315,7 +995,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
                 style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada]?.cor }}
               >
-                {contadorSequencial}
+                C{competenciaSelecionada}
               </div>
               {CORES_COMPETENCIAS[competenciaSelecionada]?.label}
             </DialogTitle>
