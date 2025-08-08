@@ -453,6 +453,22 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </CardContent>
       </Card>
 
+      {/* Redação Manuscrita - Exibe quando há URL de imagem */}
+      {redacao.redacao_manuscrita_url && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Redação Manuscrita</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RedacaoAnotacaoVisual
+              imagemUrl={redacao.redacao_manuscrita_url}
+              redacaoId={redacao.id}
+              corretorId={redacao.eh_corretor_1 ? '1' : '2'}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Redação Digitada */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
