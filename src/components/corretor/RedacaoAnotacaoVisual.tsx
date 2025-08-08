@@ -238,7 +238,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         .from('marcacoes_visuais')
         .select('*')
         .eq('redacao_id', redacaoId)
-        .eq('tabela_origem', 'redacoes_enviadas')
+        .eq('tabela_origem', 'redacoes_enviadas') // TODO: make this dynamic based on redacao type
         .order('criado_em', { ascending: true }); // Ordenar pela data real de criação
 
       if (error) {
@@ -926,6 +926,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       if (!bounds || bounds.x === undefined || bounds.y === undefined) {
         console.error('Bounds inválido:', bounds);
         throw new Error('Coordenadas da anotação não encontradas');
+      }
+
+      // Verificar se corretorId é um UUID válido
+      if (!corretorId || corretorId === '1' || corretorId === '2' || corretorId.length < 10) {
+        console.error('corretorId inválido recebido:', corretorId);
+        throw new Error('ID do corretor deve ser um UUID válido. Recebido: ' + corretorId);
       }
 
       const novaAnotacao = {

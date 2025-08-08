@@ -74,7 +74,38 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [temaCompleto, setTemaCompleto] = useState<any>(null);
+  const [corretorId, setCorretorId] = useState<string>('');
   const { toast } = useToast();
+
+  // Buscar ID do corretor ao carregar
+  useEffect(() => {
+    const buscarCorretorId = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('corretores')
+          .select('id')
+          .eq('email', corretorEmail)
+          .eq('ativo', true)
+          .single();
+
+        if (error) {
+          console.error('Erro ao buscar corretor:', error);
+          return;
+        }
+
+        if (data?.id) {
+          setCorretorId(data.id);
+          console.log('ID do corretor encontrado:', data.id);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar ID do corretor:', error);
+      }
+    };
+
+    if (corretorEmail) {
+      buscarCorretorId();
+    }
+  }, [corretorEmail]);
 
   useEffect(() => {
     const total = notas.c1 + notas.c2 + notas.c3 + notas.c4 + notas.c5;
@@ -463,7 +494,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             <RedacaoAnotacaoVisual
               imagemUrl={redacao.redacao_manuscrita_url}
               redacaoId={redacao.id}
-              corretorId={redacao.eh_corretor_1 ? '1' : '2'}
+              corretorId={corretorId}
             />
           </CardContent>
         </Card>
