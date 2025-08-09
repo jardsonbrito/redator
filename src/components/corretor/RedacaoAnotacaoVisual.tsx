@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Trash2, Maximize2, Minimize2 } from "lucide-react";
+import { Save, Trash2, Maximize2, Minimize2, Eye } from "lucide-react";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -98,6 +98,11 @@ const customStyles = `
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.6) !important;
   }
 
+  /* Efeito de destaque para retângulos */
+  .retangulo-destacado {
+    animation: pulseRetangulo 2s ease-in-out !important;
+  }
+
   @keyframes pulseGlow {
     0% {
       box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
@@ -110,6 +115,24 @@ const customStyles = `
     100% {
       box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
       border-color: rgba(255, 215, 0, 0.5);
+    }
+  }
+
+  @keyframes pulseRetangulo {
+    0% {
+      stroke: currentColor;
+      stroke-width: 2px;
+      filter: none;
+    }
+    50% {
+      stroke: #FFD700 !important;
+      stroke-width: 4px !important;
+      filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+    }
+    100% {
+      stroke: currentColor;
+      stroke-width: 2px;
+      filter: none;
     }
   }
 `;
@@ -153,6 +176,7 @@ interface RedacaoAnotacaoVisualProps {
 interface RedacaoAnotacaoVisualRef {
   salvarTodasAnotacoes: () => Promise<void>;
   gerarImagemComAnotacoes: () => Promise<string>;
+  destacarRetangulo: (annotationId: string) => void;
 }
 
 const CORES_COMPETENCIAS = {
@@ -187,8 +211,76 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   // Expor métodos via ref
   useImperativeHandle(ref, () => ({
     salvarTodasAnotacoes,
-    gerarImagemComAnotacoes
+    gerarImagemComAnotacoes,
+    destacarRetangulo
   }));
+
+  // Função para destacar retângulo específico
+  const destacarRetangulo = (annotationId: string) => {
+    try {
+      if (!annotoriousRef.current) {
+        console.warn('Annotorious não inicializado');
+        return;
+      }
+
+      // Encontrar a anotação correspondente
+      const annotations = annotoriousRef.current.getAnnotations();
+      const targetAnnotation = annotations.find((ann: any) => ann.id === annotationId);
+      
+      if (!targetAnnotation) {
+        console.warn('Anotação não encontrada:', annotationId);
+        return;
+      }
+
+      // Encontrar o elemento SVG da anotação
+      const annotationElement = document.querySelector(`[data-id="${annotationId}"] .r6o-shape, .r6o-annotation[data-id="${annotationId}"] .r6o-shape`);
+      
+      if (annotationElement) {
+        // Adicionar classe de destaque
+        annotationElement.classList.add('retangulo-destacado');
+        
+        // Remover destaque após 2 segundos
+        setTimeout(() => {
+          annotationElement.classList.remove('retangulo-destacado');
+        }, 2000);
+
+        // Scroll suave para o retângulo (aproximação baseada na posição)
+        const containerElement = containerRef.current;
+        if (containerElement && targetAnnotation.target?.selector?.value) {
+          // Parse da posição do retângulo
+          const selectorValue = targetAnnotation.target.selector.value;
+          const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+          
+          if (match) {
+            const [, xPercent, yPercent] = match.map(parseFloat);
+            
+            // Scroll para a área aproximada da anotação
+            const containerRect = containerElement.getBoundingClientRect();
+            const imageElement = imageRef.current;
+            
+            if (imageElement) {
+              const imageRect = imageElement.getBoundingClientRect();
+              const targetX = (xPercent / 100) * imageRect.width;
+              const targetY = (yPercent / 100) * imageRect.height;
+              
+              // Scroll suave para a área
+              containerElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'center'
+              });
+            }
+          }
+        }
+
+        console.log('Retângulo destacado:', annotationId);
+      } else {
+        console.warn('Elemento de anotação não encontrado no DOM:', annotationId);
+      }
+    } catch (error) {
+      console.error('Erro ao destacar retângulo:', error);
+    }
+  };
 
   // Função para carregar dimensões da imagem
   const handleImageLoad = () => {
@@ -967,6 +1059,23 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                     <Badge variant="outline" style={{ color: anotacao.cor_marcacao, borderColor: anotacao.cor_marcacao }}>
                       {CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.label}
                     </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => destacarRetangulo(anotacao.id!)}
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                      title="Mostrar marcação"
+                      aria-label="Mostrar marcação deste comentário"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          destacarRetangulo(anotacao.id!);
+                        }
+                      }}
+                    >
+                      <Eye className="w-3 h-3" />
+                    </Button>
                   </div>
                   <p className="text-sm text-gray-700">{anotacao.comentario}</p>
                 </div>
