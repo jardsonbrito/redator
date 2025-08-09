@@ -168,6 +168,23 @@ export default function RedacaoManuscrita() {
                 </div>
               </div>
             </div>
+
+            {/* Player de áudio no mesmo slot da digitada (abaixo das notas) */}
+            {(() => {
+              if (!redacao) return null;
+              const preferred = redacao.corretor_numero === 1
+                ? redacao.audio_url_corretor_1
+                : redacao.corretor_numero === 2
+                  ? redacao.audio_url_corretor_2
+                  : null;
+              const audioUrl = preferred || redacao.audio_url_corretor_1 || redacao.audio_url_corretor_2 || redacao.audio_url;
+              if (!audioUrl) return null;
+              return (
+                <div className="pt-4 mt-4 border-t border-primary/20">
+                  <AudioPlayerAluno audioUrl={audioUrl} corretorNome="Corretor" isStudentView />
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
@@ -192,43 +209,27 @@ export default function RedacaoManuscrita() {
           </CardContent>
         </Card>
 
-        {/* Bloco 4 – Áudio/Devolutiva simples (opcional, mínimo viável) */}
-        {redacao && (
-          <Card className="border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-lg text-primary">Comentário do corretor</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const preferred = redacao.corretor_numero === 1
-                  ? redacao.audio_url_corretor_1
-                  : redacao.corretor_numero === 2
-                    ? redacao.audio_url_corretor_2
-                    : null;
-                const audioUrl = preferred || redacao.audio_url_corretor_1 || redacao.audio_url_corretor_2 || redacao.audio_url;
-                const relatorio = (redacao.elogios_pontos_atencao_corretor_1?.trim() || redacao.elogios_pontos_atencao_corretor_2?.trim() || redacao.comentario_admin?.trim() || "");
-                return (
-                  <div className="space-y-4">
-                    {relatorio && (
-                      <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
-                        <div className="space-y-2 text-sm leading-relaxed text-primary/90">
-                          {relatorio.split('\n').map((p, i) => (
-                            <p key={i}>{p}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {audioUrl ? (
-                      <AudioPlayerAluno audioUrl={audioUrl} corretorNome="Corretor" isStudentView />
-                    ) : (!relatorio ? (
-                      <p className="text-sm text-muted-foreground">Sem áudio disponível.</p>
-                    ) : null)}
-                  </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
-        )}
+        {/* Bloco 4 – Relatório pedagógico (apenas texto, como na digitada) */}
+        {redacao && (() => {
+          const relatorio = (redacao.elogios_pontos_atencao_corretor_1?.trim() || redacao.elogios_pontos_atencao_corretor_2?.trim() || redacao.comentario_admin?.trim() || "");
+          if (!relatorio) return null;
+          return (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg text-primary">
+                  Relatório pedagógico de correção
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-white border border-primary/20 rounded-lg p-4">
+                  <p className="text-sm sm:text-base leading-relaxed text-gray-800 whitespace-pre-wrap">
+                    {relatorio}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Sticky footer para mobile */}
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-background/95 border-t md:hidden">
