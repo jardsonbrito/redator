@@ -80,6 +80,7 @@ const MinhasRedacoesList = () => {
   
   const itemsPerPage = 10;
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Obter dados do usuário do localStorage
   const studentDataStr = localStorage.getItem('alunoData');
@@ -375,10 +376,10 @@ const MinhasRedacoesList = () => {
       return;
     }
     
-    // Verificar se é redação manuscrita
-    if (redacao.tipo_envio === 'manuscrita') {
-      console.log('📝 Redação manuscrita detectada - iniciando download direto');
-      iniciarDownloadCorrecaoCompleta(redacao);
+    // Verificar se é redação manuscrita (pela presença de imagem)
+    if (redacao.redacao_manuscrita_url) {
+      console.log('📝 Redação manuscrita detectada - abrindo página dedicada');
+      navigate(`/redacoes/manuscrita/${redacao.id}?origem=listagem`);
       return;
     }
 

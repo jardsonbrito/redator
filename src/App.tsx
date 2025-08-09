@@ -94,6 +94,7 @@ function App() {
                   <Route path="/exercicios" element={<Exercicios />} />
                   <Route path="/envie-redacao" element={<EnvieRedacao />} />
                   <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
+                  <Route path="/redacoes/manuscrita/:id" element={<RedacaoManuscrita />} />
                   <Route path="/aulas" element={<Aulas />} />
                   <Route path="/aulas-ao-vivo" element={<AulasAoVivo />} />
                   <Route path="/salas-virtuais" element={<SalasVirtuais />} />
