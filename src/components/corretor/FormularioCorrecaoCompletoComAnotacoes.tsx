@@ -500,37 +500,39 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </Card>
       )}
 
-      {/* Redação Digitada */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Redação Digitada</CardTitle>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={copiarRedacaoDigitada}
-              className="flex items-center gap-2"
-            >
-              <Copy className="w-4 h-4" />
-              Copiar Redação Digitada
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowRedacaoExpandida(true)}
-              className="flex items-center gap-2"
-            >
-              <Maximize2 className="w-4 h-4" />
-              Expandir
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm max-h-[200px] overflow-y-auto pr-2">
-            {redacao.texto ? formatarTextoComParagrafos(redacao.texto) : 'Texto da redação não disponível'}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Redação Digitada (não exibir quando há manuscrita) */}
+      {!redacao.redacao_manuscrita_url && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle>Redação Digitada</CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copiarRedacaoDigitada}
+                className="flex items-center gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                Copiar Redação Digitada
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRedacaoExpandida(true)}
+                className="flex items-center gap-2"
+              >
+                <Maximize2 className="w-4 h-4" />
+                Expandir
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm max-h-[200px] overflow-y-auto pr-2">
+              {redacao.texto ? formatarTextoComParagrafos(redacao.texto) : 'Texto da redação não disponível'}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Relatório pedagógico de correção */}
       <Card>

@@ -46,6 +46,9 @@
     --sidebar-accent-foreground: 258 100% 20%;
     --sidebar-border: 267 30% 85%;
     --sidebar-ring: 258 100% 20%;
+
+    /* Annotation highlight (gold) */
+    --annotation-highlight: 51 100% 50%;
   }
 
   .dark {
@@ -85,6 +88,9 @@
     --sidebar-accent-foreground: 270 20% 70%;
     --sidebar-border: 258 50% 15%;
     --sidebar-ring: 274 82% 73%;
+
+    /* Annotation highlight (gold) */
+    --annotation-highlight: 51 100% 50%;
   }
 }
 

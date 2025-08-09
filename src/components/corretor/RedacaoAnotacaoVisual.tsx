@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Trash2, Maximize2, Minimize2, Eye } from "lucide-react";
+import { Save, Trash2, Eye } from "lucide-react";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -60,42 +60,14 @@ const customStyles = `
     transform: none !important;
   }
   
-  /* Estilo para contêiner em tela cheia */
-  .fullscreen-container {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 9999 !important;
-    background: white !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding-top: 80px !important;
-  }
-  
-  /* Barra flutuante centralizada em tela cheia */
-  .fullscreen-competency-bar {
-    position: fixed !important;
-    top: 20px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    z-index: 10000 !important;
-    background: white !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    padding: 16px !important;
-    border: 1px solid #e5e7eb !important;
-  }
+  /* Removido modo de tela cheia */
 
   /* Efeito de destaque para comentários */
   .comentario-destacado {
     animation: pulseGlow 2s ease-in-out !important;
-    border: 3px solid #FFD700 !important;
+    border: 3px solid hsl(var(--annotation-highlight)) !important;
     border-radius: 8px !important;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6) !important;
+    box-shadow: 0 0 20px hsl(var(--annotation-highlight) / 0.6) !important;
   }
 
   /* Efeito de destaque para retângulos */
@@ -105,16 +77,16 @@ const customStyles = `
 
   @keyframes pulseGlow {
     0% {
-      box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
-      border-color: rgba(255, 215, 0, 0.5);
+      box-shadow: 0 0 5px hsl(var(--annotation-highlight) / 0.3);
+      border-color: hsl(var(--annotation-highlight) / 0.5);
     }
     50% {
-      box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
-      border-color: #FFD700;
+      box-shadow: 0 0 25px hsl(var(--annotation-highlight) / 0.8);
+      border-color: hsl(var(--annotation-highlight));
     }
     100% {
-      box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
-      border-color: rgba(255, 215, 0, 0.5);
+      box-shadow: 0 0 5px hsl(var(--annotation-highlight) / 0.3);
+      border-color: hsl(var(--annotation-highlight) / 0.5);
     }
   }
 
@@ -125,19 +97,19 @@ const customStyles = `
       filter: none !important;
     }
     25% {
-      stroke: #FFD700 !important;
+      stroke: hsl(var(--annotation-highlight)) !important;
       stroke-width: 5px !important;
-      filter: drop-shadow(0 0 12px rgba(255, 215, 0, 1)) !important;
+      filter: drop-shadow(0 0 12px hsl(var(--annotation-highlight) / 1)) !important;
     }
     50% {
-      stroke: #FFD700 !important;
+      stroke: hsl(var(--annotation-highlight)) !important;
       stroke-width: 6px !important;
-      filter: drop-shadow(0 0 15px rgba(255, 215, 0, 1)) drop-shadow(0 0 25px rgba(255, 215, 0, 0.8)) !important;
+      filter: drop-shadow(0 0 15px hsl(var(--annotation-highlight) / 1)) drop-shadow(0 0 25px hsl(var(--annotation-highlight) / 0.8)) !important;
     }
     75% {
-      stroke: #FFD700 !important;
+      stroke: hsl(var(--annotation-highlight)) !important;
       stroke-width: 5px !important;
-      filter: drop-shadow(0 0 12px rgba(255, 215, 0, 1)) !important;
+      filter: drop-shadow(0 0 12px hsl(var(--annotation-highlight) / 1)) !important;
     }
     100% {
       stroke: currentColor !important;
@@ -215,7 +187,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const [currentAnnotation, setCurrentAnnotation] = useState<any>(null);
   const [comentarioTemp, setComentarioTemp] = useState("");
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  
   const [contadorSequencial, setContadorSequencial] = useState(1);
 
   // Expor métodos via ref
@@ -970,32 +942,16 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
-  // Toggle fullscreen
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
 
-  // Estilo dinâmico para a imagem
+  // Estilo estático para a imagem (sem modo de tela cheia)
   const getImageStyle = () => {
-    const baseStyle = {
+    return {
       userSelect: 'none' as const,
       cursor: 'default' as const,
       maxWidth: '100%',
       maxHeight: '100%',
       objectFit: 'contain' as const,
       transition: 'none', // Remover transição para evitar movimento
-    };
-
-    if (isFullscreen) {
-      return {
-        ...baseStyle,
-        width: '90vw',
-        height: '90vh',
-      };
-    }
-
-    return {
-      ...baseStyle,
       width: '100%',
       height: 'auto',
       minHeight: '80vh',
@@ -1005,18 +961,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   return (
     <div className="space-y-4">
       {/* Painel de competências */}
-      <div className="mb-4 painel-correcao">
-        <div className="flex items-center justify-between mb-3">
+      <div className="mb-4 painel-correcao sticky top-4 z-20 bg-background/95 backdrop-blur-sm">
+        <div className="flex items-center mb-3">
           <h3 className="text-lg font-semibold">Selecione a Competência</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleFullscreen}
-            className="flex items-center gap-2"
-            title="Visualizar em tela cheia"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </Button>
         </div>
         <div className="flex gap-4 items-center">
           {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
@@ -1053,46 +1000,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         </div>
       </div>
 
-      {/* Barra flutuante centralizada para tela cheia */}
-      {isFullscreen && (
-        <div className="fullscreen-competency-bar">
-          <div className="flex gap-3 items-center">
-            <span className="text-sm font-medium">Competência:</span>
-            {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
-              <button
-                key={num}
-                onClick={() => setCompetenciaSelecionada(parseInt(num))}
-                className={`w-7 h-7 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
-                  competenciaSelecionada === parseInt(num) 
-                    ? 'border-gray-800 shadow-lg scale-110' 
-                    : 'border-gray-300 hover:border-gray-500'
-                }`}
-                style={{ 
-                  backgroundColor: info.cor,
-                  boxShadow: competenciaSelecionada === parseInt(num) 
-                    ? `0 0 0 3px ${info.cor}33` 
-                    : 'none'
-                }}
-                title={info.label}
-              />
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleFullscreen}
-              className="ml-3"
-              title="Sair da tela cheia"
-            >
-              <Minimize2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Container da Imagem da Redação */}
-      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao ${
-        isFullscreen ? 'fullscreen-container' : ''
-      }`}>
+      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao`}>
         
         <div ref={containerRef} className="flex justify-center items-center w-full h-full p-2">
           <img 
@@ -1131,6 +1041,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                     <Button
                       variant="ghost"
                       size="sm"
+                      data-annotation-id={anotacao.id}
                       onClick={() => destacarRetangulo(anotacao.id!)}
                       className="h-6 w-6 p-0 text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
                       title="Mostrar marcação"
