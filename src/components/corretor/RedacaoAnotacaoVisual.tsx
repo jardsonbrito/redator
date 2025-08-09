@@ -99,7 +99,7 @@ const customStyles = `
   }
 
   /* Efeito de destaque para retângulos */
-  .retangulo-destacado {
+  .pulse-highlight {
     animation: pulseRetangulo 2s ease-in-out !important;
   }
 
@@ -120,19 +120,29 @@ const customStyles = `
 
   @keyframes pulseRetangulo {
     0% {
-      stroke: currentColor;
-      stroke-width: 2px;
-      filter: none;
+      stroke: currentColor !important;
+      stroke-width: 2px !important;
+      filter: none !important;
+    }
+    25% {
+      stroke: #FFD700 !important;
+      stroke-width: 5px !important;
+      filter: drop-shadow(0 0 12px rgba(255, 215, 0, 1)) !important;
     }
     50% {
       stroke: #FFD700 !important;
-      stroke-width: 4px !important;
-      filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+      stroke-width: 6px !important;
+      filter: drop-shadow(0 0 15px rgba(255, 215, 0, 1)) drop-shadow(0 0 25px rgba(255, 215, 0, 0.8)) !important;
+    }
+    75% {
+      stroke: #FFD700 !important;
+      stroke-width: 5px !important;
+      filter: drop-shadow(0 0 12px rgba(255, 215, 0, 1)) !important;
     }
     100% {
-      stroke: currentColor;
-      stroke-width: 2px;
-      filter: none;
+      stroke: currentColor !important;
+      stroke-width: 2px !important;
+      filter: none !important;
     }
   }
 `;
@@ -217,9 +227,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
   // Função para destacar retângulo específico
   const destacarRetangulo = (annotationId: string) => {
+    console.log('olho_click:' + annotationId);
+    
     try {
       if (!annotoriousRef.current) {
-        console.warn('Annotorious não inicializado');
+        console.error('retangulo_nao_encontrado:' + annotationId, 'Annotorious não inicializado');
         return;
       }
 
@@ -228,57 +240,113 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       const targetAnnotation = annotations.find((ann: any) => ann.id === annotationId);
       
       if (!targetAnnotation) {
-        console.warn('Anotação não encontrada:', annotationId);
+        console.error('retangulo_nao_encontrado:' + annotationId, 'Anotação não encontrada');
         return;
       }
 
-      // Encontrar o elemento SVG da anotação
-      const annotationElement = document.querySelector(`[data-id="${annotationId}"] .r6o-shape, .r6o-annotation[data-id="${annotationId}"] .r6o-shape`);
+      // Buscar o elemento SVG da anotação com múltiplos seletores
+      const possibleSelectors = [
+        `[data-annotation-id="${annotationId}"]`,
+        `[data-id="${annotationId}"] .r6o-shape`,
+        `.r6o-annotation[data-id="${annotationId}"] .r6o-shape`,
+        `g[data-id="${annotationId}"] .r6o-shape`,
+        `.r6o-shape[data-annotation-id="${annotationId}"]`
+      ];
+
+      let annotationElement = null;
+      for (const selector of possibleSelectors) {
+        annotationElement = document.querySelector(selector);
+        if (annotationElement) {
+          console.log('Elemento encontrado com seletor:', selector);
+          break;
+        }
+      }
+
+      // Se não encontrou pelo seletor específico, tentar buscar por todos os elementos .r6o-shape
+      if (!annotationElement) {
+        console.log('Tentando buscar entre todos os elementos .r6o-shape...');
+        const allShapes = document.querySelectorAll('.r6o-shape');
+        console.log('Total de shapes encontrados:', allShapes.length);
+        
+        // Para debug, listar todos os elementos encontrados
+        allShapes.forEach((shape, index) => {
+          console.log(`Shape ${index}:`, shape.parentElement?.getAttribute('data-id'), shape.getAttribute('data-annotation-id'));
+        });
+
+        // Tentar encontrar pelo índice da anotação (fallback)
+        const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
+        if (annotationIndex >= 0 && allShapes[annotationIndex]) {
+          annotationElement = allShapes[annotationIndex];
+          console.log('Elemento encontrado pelo índice:', annotationIndex);
+        }
+      }
       
       if (annotationElement) {
-        // Adicionar classe de destaque
-        annotationElement.classList.add('retangulo-destacado');
+        console.log('retangulo_ok:' + annotationId);
+        
+        // Remover destaque anterior se existir (reiniciar animação)
+        annotationElement.classList.remove('pulse-highlight');
+        
+        // Forçar reflow para garantir que a classe foi removida
+        annotationElement.offsetHeight;
+        
+        // Adicionar classe de destaque com data-annotation-id para identificação
+        annotationElement.setAttribute('data-annotation-id', annotationId);
+        annotationElement.classList.add('pulse-highlight');
+        
+        console.log('pulse_start:' + annotationId);
         
         // Remover destaque após 2 segundos
         setTimeout(() => {
-          annotationElement.classList.remove('retangulo-destacado');
+          annotationElement.classList.remove('pulse-highlight');
+          console.log('pulse_end:' + annotationId);
         }, 2000);
 
-        // Scroll suave para o retângulo (aproximação baseada na posição)
+        // Scroll suave para o retângulo
+        const imageElement = imageRef.current;
         const containerElement = containerRef.current;
-        if (containerElement && targetAnnotation.target?.selector?.value) {
+        
+        if (imageElement && containerElement && targetAnnotation.target?.selector?.value) {
           // Parse da posição do retângulo
           const selectorValue = targetAnnotation.target.selector.value;
           const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
           
           if (match) {
-            const [, xPercent, yPercent] = match.map(parseFloat);
+            const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
             
-            // Scroll para a área aproximada da anotação
-            const containerRect = containerElement.getBoundingClientRect();
-            const imageElement = imageRef.current;
+            // Calcular posição absoluta na imagem
+            const imageRect = imageElement.getBoundingClientRect();
+            const targetX = imageRect.left + (xPercent / 100) * imageRect.width;
+            const targetY = imageRect.top + (yPercent / 100) * imageRect.height;
             
-            if (imageElement) {
-              const imageRect = imageElement.getBoundingClientRect();
-              const targetX = (xPercent / 100) * imageRect.width;
-              const targetY = (yPercent / 100) * imageRect.height;
-              
-              // Scroll suave para a área
-              containerElement.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center',
-                inline: 'center'
-              });
-            }
+            // Calcular posição do centro do retângulo
+            const centerX = targetX + ((wPercent / 100) * imageRect.width) / 2;
+            const centerY = targetY + ((hPercent / 100) * imageRect.height) / 2;
+            
+            // Scroll suave para centralizar o retângulo na viewport
+            const viewportCenterX = window.innerWidth / 2;
+            const viewportCenterY = window.innerHeight / 2;
+            
+            const scrollX = window.scrollX + (centerX - viewportCenterX);
+            const scrollY = window.scrollY + (centerY - viewportCenterY);
+            
+            window.scrollTo({
+              left: Math.max(0, scrollX),
+              top: Math.max(0, scrollY),
+              behavior: 'smooth'
+            });
           }
         }
 
-        console.log('Retângulo destacado:', annotationId);
       } else {
-        console.warn('Elemento de anotação não encontrado no DOM:', annotationId);
+        console.error('retangulo_nao_encontrado:' + annotationId, 'Elemento SVG não encontrado no DOM');
+        
+        // Debug adicional
+        console.log('Debug - Anotações disponíveis:', annotations.map((ann: any) => ann.id));
+        console.log('Debug - Total de elementos .r6o-shape:', document.querySelectorAll('.r6o-shape').length);
       }
     } catch (error) {
-      console.error('Erro ao destacar retângulo:', error);
+      console.error('retangulo_nao_encontrado:' + annotationId, 'Erro ao destacar retângulo:', error);
     }
   };
 
