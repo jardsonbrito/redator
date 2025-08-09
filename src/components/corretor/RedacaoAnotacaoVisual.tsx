@@ -622,22 +622,23 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
           const onClickAnnotation = (annotation: any) => {
             try {
-              console.log('🎯 Clique na anotação:', annotation.id);
+              console.log('🎯 Clique na anotação (modo edição):', annotation.id);
               
-              // Destacar o comentário correspondente
+              // Destacar o comentário correspondente (sem popup)
               if (annotation.id) {
                 destacarComentario(annotation.id);
               }
 
-              // Para modo de edição, ainda oferecer opção de remover
+              // Mostrar toast informativo sem popup de remoção
               const comment = annotation.body?.[0]?.value || '';
               const competencia = annotation.body?.[0]?.purpose || 1;
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
               
-              const shouldDelete = confirm(`Remover esta anotação?\n\n${corCompetencia?.label}: ${comment}`);
-              if (shouldDelete && annotation.id) {
-                removerAnotacao(annotation.id);
-              }
+              toast({
+                title: `${corCompetencia?.label || 'Anotação'}`,
+                description: comment,
+                duration: 3000,
+              });
             } catch (error) {
               console.error('Erro ao processar clique na anotação:', error);
             }
