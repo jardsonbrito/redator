@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, CalendarDays, ArrowLeft, Download, FileText } from "lucide-react";
 import { RedacaoAnotacaoVisual } from "@/components/corretor/RedacaoAnotacaoVisual";
 import { AudioPlayerAluno } from "@/components/AudioPlayerAluno";
+import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
 import { useToast } from "@/hooks/use-toast";
 import { downloadRedacaoManuscritaCorrigida } from "@/utils/redacaoDownload";
 
@@ -27,6 +28,8 @@ interface Redacao {
   nota_c4?: number | null;
   nota_c5?: number | null;
   nota_total?: number | null;
+  justificativa_devolucao?: string | null;
+  email_aluno?: string | null;
   // Relatórios/áudios
   corretor_numero?: number;
   audio_url?: string | null;
@@ -39,6 +42,7 @@ export default function RedacaoManuscrita() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const { toast } = useToast();
+  const [showModalDevolucao, setShowModalDevolucao] = useState(false);
 
   const { data: redacao, isLoading } = useQuery({
     queryKey: ["redacao-manuscrita", id],
@@ -54,11 +58,20 @@ export default function RedacaoManuscrita() {
     },
   });
 
+  // Obter dados do aluno do localStorage
+  const studentDataStr = localStorage.getItem('alunoData');
+  const studentData = studentDataStr ? JSON.parse(studentDataStr) : null;
+
   useEffect(() => {
     if (redacao?.frase_tematica) {
       document.title = `${redacao.frase_tematica} | Correção Manuscrita`;
     }
-  }, [redacao?.frase_tematica]);
+    
+    // Verificar se é redação devolvida e mostrar modal
+    if (redacao?.status === 'devolvida' && redacao?.justificativa_devolucao) {
+      setShowModalDevolucao(true);
+    }
+  }, [redacao?.frase_tematica, redacao?.status]);
 
   const goBack = () => {
     if (window.history.length > 1) {
@@ -209,6 +222,23 @@ export default function RedacaoManuscrita() {
             </Button>
           </div>
         </div>
+
+        {/* Modal de devolução */}
+        {redacao && showModalDevolucao && studentData?.email && (
+          <ModalDevolucaoRedacao
+            isOpen={showModalDevolucao}
+            onClose={() => setShowModalDevolucao(false)}
+            redacao={{
+              id: redacao.id,
+              frase_tematica: redacao.frase_tematica,
+              tabela_origem: 'redacoes_enviadas',
+              justificativa_devolucao: redacao.justificativa_devolucao || 'Motivo não especificado',
+              data_envio: redacao.data_envio
+            }}
+            emailAluno={studentData.email}
+            corretorNome="Corretor"
+          />
+        )}
       </main>
     </div>
   );

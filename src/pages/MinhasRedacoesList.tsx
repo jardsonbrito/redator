@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
 import { useToast } from "@/hooks/use-toast";
 // Email validation será importada dinamicamente
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,6 +78,10 @@ const MinhasRedacoesList = () => {
     tema: string; 
     dataEnvio: string 
   } | null>(null);
+  
+  // Estados para modal de devolução novo
+  const [showModalDevolucao, setShowModalDevolucao] = useState(false);
+  const [redacaoDevolvida, setRedacaoDevolvida] = useState<RedacaoTurma | null>(null);
   
   const itemsPerPage = 10;
   const { toast } = useToast();
@@ -372,6 +377,15 @@ const MinhasRedacoesList = () => {
     // VERIFICAR SE É REDAÇÃO DEVOLVIDA PRIMEIRO
     if (redacao.status === 'devolvida') {
       console.log('🔔 Redação devolvida detectada - abrindo modal de devolução');
+      
+      // Para redações manuscritas devolvidas, usar modal novo
+      if (redacao.redacao_manuscrita_url) {
+        setRedacaoDevolvida(redacao);
+        setShowModalDevolucao(true);
+        return;
+      }
+      
+      // Para redações digitadas devolvidas, usar o modal antigo
       await handleRedacaoDevolvida(redacao);
       return;
     }
@@ -1048,6 +1062,26 @@ const MinhasRedacoesList = () => {
               <RedacaoEnviadaCard redacao={selectedRedacao} />
             </DialogContent>
           </Dialog>
+        )}
+
+        {/* Modal de devolução novo para manuscritas */}
+        {redacaoDevolvida && showModalDevolucao && studentData?.email && (
+          <ModalDevolucaoRedacao
+            isOpen={showModalDevolucao}
+            onClose={() => {
+              setShowModalDevolucao(false);
+              setRedacaoDevolvida(null);
+            }}
+            redacao={{
+              id: redacaoDevolvida.id,
+              frase_tematica: redacaoDevolvida.frase_tematica,
+              tabela_origem: 'redacoes_enviadas',
+              justificativa_devolucao: (redacaoDevolvida as any).justificativa_devolucao || 'Motivo não especificado',
+              data_envio: redacaoDevolvida.data_envio
+            }}
+            emailAluno={studentData.email}
+            corretorNome="Corretor"
+          />
         )}
       </main>
     </div>

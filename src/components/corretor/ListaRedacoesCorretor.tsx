@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCorretorRedacoes, RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { Clock, FileText, CheckCircle, User, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ListaRedacoesCorretorProps {
@@ -30,7 +31,9 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   const { loading, redacoes, getRedacoesPorStatus } = useCorretorRedacoes(corretorEmail);
   const isMobile = useIsMobile();
   const [notasRedacoes, setNotasRedacoes] = useState<Record<string, NotasRedacao>>({});
-  const [visualizacoes, setVisualizacoes] = useState<Record<string, boolean>>({});
+  
+  // Hook para visualizações em tempo real
+  const { isRedacaoVisualizada } = useVisualizacoesRealtime();
   
   // Estados dos filtros
   const [buscaNome, setBuscaNome] = useState("");
@@ -156,40 +159,8 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
 
   // Função para verificar se o aluno visualizou a devolução
   const verificarSeAlunoVisualizou = (redacao: RedacaoCorretor): boolean => {
-    return visualizacoes[redacao.id] || false;
+    return isRedacaoVisualizada(redacao.id, redacao.email_aluno);
   };
-
-  // Buscar visualizações das redações devolvidas
-  useEffect(() => {
-    const buscarVisualizacoes = async () => {
-      const redacoesDevolvidas = redacoes.filter(r => r.status_minha_correcao === 'devolvida');
-      
-      for (const redacao of redacoesDevolvidas) {
-        try {
-          const tabela = redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' :
-                        redacao.tipo_redacao === 'exercicio' ? 'redacoes_exercicio' : 'redacoes_enviadas';
-          
-          const { data } = await supabase.rpc('verificar_redacao_devolvida_visualizada', {
-            redacao_id_param: redacao.id,
-            tabela_origem_param: tabela
-          });
-          
-          if (data) {
-            setVisualizacoes(prev => ({
-              ...prev,
-              [redacao.id]: true
-            }));
-          }
-        } catch (error) {
-          console.error('Erro ao verificar visualização:', error);
-        }
-      }
-    };
-
-    if (redacoes.length > 0) {
-      buscarVisualizacoes();
-    }
-  }, [redacoes]);
 
   // Função para obter redações por status com base nas redações filtradas
   const getRedacoesFiltradas = useMemo(() => {
