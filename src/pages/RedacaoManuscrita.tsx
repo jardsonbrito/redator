@@ -231,7 +231,9 @@ export default function RedacaoManuscrita() {
             redacao={{
               id: redacao.id,
               frase_tematica: redacao.frase_tematica,
-              tabela_origem: 'redacoes_enviadas',
+              tabela_origem: redacao.tipo_envio === 'simulado' ? 'redacoes_simulado' : 
+                           redacao.tipo_envio === 'exercicio' ? 'redacoes_exercicio' : 
+                           'redacoes_enviadas',
               justificativa_devolucao: redacao.justificativa_devolucao || 'Motivo não especificado',
               data_envio: redacao.data_envio
             }}

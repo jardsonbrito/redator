@@ -33,7 +33,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   const [notasRedacoes, setNotasRedacoes] = useState<Record<string, NotasRedacao>>({});
   
   // Hook para visualizações em tempo real
-  const { isRedacaoVisualizada } = useVisualizacoesRealtime();
+  const { isRedacaoVisualizada, getVisualizacao } = useVisualizacoesRealtime();
   
   // Estados dos filtros
   const [buscaNome, setBuscaNome] = useState("");

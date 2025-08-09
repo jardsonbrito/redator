@@ -17,6 +17,7 @@ export function useVisualizacaoRedacao() {
     
     try {
       console.log('🔄 Registrando visualização:', dados);
+      console.log('📧 Email aluno normalizado:', dados.email_aluno.toLowerCase().trim());
       
       // Verificar se já existe registro (evitar duplicatas)
       const { data: existente } = await supabase
@@ -41,6 +42,8 @@ export function useVisualizacaoRedacao() {
         tabela_origem_param: dados.tabela_origem,
         email_aluno_param: dados.email_aluno.toLowerCase().trim()
       });
+
+      console.log('📝 Resposta da RPC:', { data, error });
 
       if (error) {
         console.error('❌ Erro ao registrar visualização:', error);

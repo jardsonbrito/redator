@@ -33,7 +33,7 @@ export function useVisualizacoesRealtime() {
             });
           });
           setVisualizacoes(map);
-          console.log('📋 Carregadas', data.length, 'visualizações');
+          console.log('📋 Carregadas', data.length, 'visualizações:', [...map.keys()]);
         }
       } catch (error) {
         console.error('Erro ao carregar visualizações:', error);
@@ -54,15 +54,19 @@ export function useVisualizacoesRealtime() {
         },
         (payload) => {
           console.log('📡 Nova visualização via realtime:', payload.new);
+          const key = `${payload.new.redacao_id}-${payload.new.email_aluno}`;
+          console.log('🔑 Chave da visualização:', key);
           
-          setVisualizacoes(prev => new Map(prev).set(
-            `${payload.new.redacao_id}-${payload.new.email_aluno}`,
-            {
+          setVisualizacoes(prev => {
+            const newMap = new Map(prev);
+            newMap.set(key, {
               redacao_id: payload.new.redacao_id,
               email_aluno: payload.new.email_aluno,
               visualizado_em: payload.new.visualizado_em
-            }
-          ));
+            });
+            console.log('📋 Total de visualizações após update:', newMap.size);
+            return newMap;
+          });
         }
       )
       .subscribe();
