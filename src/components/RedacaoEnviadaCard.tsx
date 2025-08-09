@@ -300,26 +300,16 @@ export const RedacaoEnviadaCard = ({
                 );
               }
 
-              // Se redação foi manuscrita, mostrar apenas botão de download do PDF
+              // Se redação foi manuscrita e corrigida, exibir visualizador interativo (aluno)
               if (redacaoFoiManuscrita && redacao.corrigida) {
                 return (
-                  <div className="flex flex-col items-center justify-center p-8 bg-gray-50 rounded-md min-h-[400px]">
-                    <div className="text-center space-y-4">
-                      <div className="text-6xl mb-4">📄</div>
-                      <h3 className="text-xl font-semibold text-gray-800">Correção Manuscrita Disponível</h3>
-                      <p className="text-gray-600 max-w-md">
-                        Sua redação manuscrita foi corrigida com marcações visuais numeradas. 
-                        Clique no botão abaixo para baixar o PDF completo com todas as correções e comentários.
-                      </p>
-                      <Button 
-                        onClick={() => downloadRedacaoManuscritaCorrigida(redacao)}
-                        className="bg-primary text-white hover:bg-primary/90 px-6 py-3 text-lg"
-                        size="lg"
-                      >
-                        <Download className="w-5 h-5 mr-2" />
-                        📥 Baixar correção (PDF)
-                      </Button>
-                    </div>
+                  <div className="space-y-4">
+                    <RedacaoAnotacaoVisual
+                      imagemUrl={redacao.redacao_manuscrita_url as string}
+                      redacaoId={redacao.id}
+                      corretorId="aluno-readonly"
+                      readonly
+                    />
                   </div>
                 );
               }

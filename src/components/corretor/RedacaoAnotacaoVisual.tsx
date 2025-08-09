@@ -638,17 +638,19 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             }
           });
         } else {
-          // Modo de leitura - apenas destacar comentário
+          // Modo de leitura (aluno) - scroll + piscar + destacar comentário
           const onClickAnnotation = (annotation: any) => {
             try {
-              console.log('🎯 Clique na anotação (modo leitura):', annotation.id);
+              const id = annotation.id;
+              console.log('🎯 Clique na anotação (modo leitura):', id);
               
-              // Destacar o comentário correspondente
-              if (annotation.id) {
-                destacarComentario(annotation.id);
+              if (id) {
+                // Mesmo comportamento do clique no ícone de olho
+                destacarRetangulo(id);
+                destacarComentario(id);
               }
 
-              // Também mostrar toast como antes
+              // Mostrar breve toast informativo
               const comment = annotation.body?.[0]?.value || '';
               const competencia = annotation.body?.[0]?.purpose || 1;
               const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
@@ -656,10 +658,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               toast({
                 title: `${corCompetencia?.label || 'Anotação'}`,
                 description: comment,
-                duration: 4000,
+                duration: 3000,
               });
             } catch (error) {
-              console.error('Erro ao mostrar anotação:', error);
+              console.error('Erro ao mostrar anotação (aluno):', error);
             }
           };
 
@@ -1042,7 +1044,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                       variant="ghost"
                       size="sm"
                       data-annotation-id={anotacao.id}
-                      onClick={() => destacarRetangulo(anotacao.id!)}
+                      onClick={() => { destacarRetangulo(anotacao.id!); destacarComentario(anotacao.id!); }}
                       className="h-6 w-6 p-0 text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
                       title="Mostrar marcação"
                       aria-label="Mostrar marcação deste comentário"
@@ -1051,6 +1053,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
                           destacarRetangulo(anotacao.id!);
+                          destacarComentario(anotacao.id!);
                         }
                       }}
                     >
