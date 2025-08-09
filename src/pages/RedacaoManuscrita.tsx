@@ -35,6 +35,10 @@ interface Redacao {
   audio_url?: string | null;
   audio_url_corretor_1?: string | null;
   audio_url_corretor_2?: string | null;
+  // Relatório pedagógico (texto)
+  elogios_pontos_atencao_corretor_1?: string | null;
+  elogios_pontos_atencao_corretor_2?: string | null;
+  comentario_admin?: string | null;
 }
 
 export default function RedacaoManuscrita() {
@@ -196,15 +200,30 @@ export default function RedacaoManuscrita() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const audioUrl = redacao.corretor_numero === 1
+                const preferred = redacao.corretor_numero === 1
                   ? redacao.audio_url_corretor_1
                   : redacao.corretor_numero === 2
                     ? redacao.audio_url_corretor_2
-                    : redacao.audio_url;
-                return audioUrl ? (
-                  <AudioPlayerAluno audioUrl={audioUrl} corretorNome="Corretor" isStudentView />
-                ) : (
-                  <p className="text-sm text-muted-foreground">Sem áudio disponível.</p>
+                    : null;
+                const audioUrl = preferred || redacao.audio_url_corretor_1 || redacao.audio_url_corretor_2 || redacao.audio_url;
+                const relatorio = (redacao.elogios_pontos_atencao_corretor_1?.trim() || redacao.elogios_pontos_atencao_corretor_2?.trim() || redacao.comentario_admin?.trim() || "");
+                return (
+                  <div className="space-y-4">
+                    {relatorio && (
+                      <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
+                        <div className="space-y-2 text-sm leading-relaxed text-primary/90">
+                          {relatorio.split('\n').map((p, i) => (
+                            <p key={i}>{p}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {audioUrl ? (
+                      <AudioPlayerAluno audioUrl={audioUrl} corretorNome="Corretor" isStudentView />
+                    ) : (!relatorio ? (
+                      <p className="text-sm text-muted-foreground">Sem áudio disponível.</p>
+                    ) : null)}
+                  </div>
                 );
               })()}
             </CardContent>
