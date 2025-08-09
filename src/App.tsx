@@ -64,6 +64,7 @@ import CorretorTemaDetalhes from "./pages/corretor/CorretorTemaDetalhes";
 import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
+import RedacaoManuscrita from "./pages/RedacaoManuscrita";
 
 function App() {
   return (

@@ -963,44 +963,46 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   return (
     <div className="space-y-4">
       {/* Painel de competências */}
-      <div className="mb-4 painel-correcao sticky top-4 z-20 bg-background/95 backdrop-blur-sm">
-        <div className="flex items-center mb-3">
-          <h3 className="text-lg font-semibold">Selecione a Competência</h3>
+      {!readonly && (
+        <div className="mb-4 painel-correcao sticky top-4 z-20 bg-background/95 backdrop-blur-sm">
+          <div className="flex items-center mb-3">
+            <h3 className="text-lg font-semibold">Selecione a Competência</h3>
+          </div>
+          <div className="flex gap-4 items-center">
+            {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
+              <button
+                key={num}
+                onClick={() => setCompetenciaSelecionada(parseInt(num))}
+                className={`w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                  competenciaSelecionada === parseInt(num) 
+                    ? 'border-gray-800 shadow-lg scale-110' 
+                    : 'border-gray-300 hover:border-gray-500'
+                }`}
+                style={{ 
+                  backgroundColor: info.cor,
+                  boxShadow: competenciaSelecionada === parseInt(num) 
+                    ? `0 0 0 3px ${info.cor}33` 
+                    : 'none'
+                }}
+                title={info.label}
+              />
+            ))}
+            
+            {/* Botão para limpar todas as anotações */}
+            {!readonly && anotacoes.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={limparTodasAnotacoes}
+                className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50"
+                title="Limpar todas as anotações"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex gap-4 items-center">
-          {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
-            <button
-              key={num}
-              onClick={() => setCompetenciaSelecionada(parseInt(num))}
-              className={`w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
-                competenciaSelecionada === parseInt(num) 
-                  ? 'border-gray-800 shadow-lg scale-110' 
-                  : 'border-gray-300 hover:border-gray-500'
-              }`}
-              style={{ 
-                backgroundColor: info.cor,
-                boxShadow: competenciaSelecionada === parseInt(num) 
-                  ? `0 0 0 3px ${info.cor}33` 
-                  : 'none'
-              }}
-              title={info.label}
-            />
-          ))}
-          
-          {/* Botão para limpar todas as anotações */}
-          {!readonly && anotacoes.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={limparTodasAnotacoes}
-              className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50"
-              title="Limpar todas as anotações"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      </div>
+      )}
 
 
       {/* Container da Imagem da Redação */}
@@ -1013,6 +1015,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             alt="Redação para correção" 
             className="img-redacao"
             onLoad={handleImageLoad}
+            loading="lazy"
             style={getImageStyle()}
           />
         </div>
