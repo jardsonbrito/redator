@@ -2,6 +2,7 @@ import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 import { 
   BookOpen, 
   FileText, 
@@ -55,10 +56,41 @@ export const ProfessorDashboard = () => {
 
   const menuItems = isAdmin ? adminMenuItems : professorMenuItems;
 
+  // Dynamic text adjustments for mobile
+  useEffect(() => {
+    // Ajusta título para "Administrativo"
+    const title = document.querySelector(".header__title");
+    if (title) title.textContent = "Administrativo";
+
+    // Ajusta botão voltar para "App"
+    const backLabel = document.querySelector(".btn-back .label");
+    if (backLabel) backLabel.textContent = "App";
+
+    // Saudação: apenas primeiro nome
+    const greet = document.querySelector(".header__greet");
+    if (greet) {
+      let text = greet.textContent?.trim() || "";
+      // Remove "Olá," e email - extrair apenas primeiro nome
+      if (text.toLowerCase().startsWith("olá")) {
+        const parts = text.replace(/,/g, "").split(/\s+/);
+        if (parts.length > 1) {
+          // Se for um email, pegar a parte antes do @
+          const nameOrEmail = parts[1];
+          if (nameOrEmail.includes("@")) {
+            const emailPart = nameOrEmail.split("@")[0];
+            greet.textContent = `Olá, ${emailPart}`;
+          } else {
+            greet.textContent = `Olá, ${nameOrEmail}`;
+          }
+        }
+      }
+    }
+  }, [professor]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
       {/* Header */}
-      <header className="header bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
+      <header id="admin-header" className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="header__inner">
             <div className="header__left">
@@ -80,7 +112,7 @@ export const ProfessorDashboard = () => {
 
             <div className="header__right">
               <div className="header__greet">
-                Olá, {professor.email}
+                Olá, {professor.nome_completo || professor.email}
               </div>
               <Button
                 onClick={logout}

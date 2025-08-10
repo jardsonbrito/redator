@@ -284,92 +284,103 @@
     }
   }
 
-  /* Header styling for professor dashboard */
-  .header__inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    flex-wrap: wrap;
+  /* ===== Cabeçalho Administrativo - Versão Compacta ===== */
+  
+  /* Container principal */
+  header#admin-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    padding: 10px 16px !important;
+    flex-wrap: wrap !important;
+    border-bottom: 1px solid rgba(0,0,0,0.08) !important;
   }
 
-  .header__left,
-  .header__center,
-  .header__right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  /* Grupos */
+  .header__left, .header__center, .header__right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
   }
 
-  .header__center {
-    flex: 1 1 auto;
-    min-width: 0;
+  .header__center { 
+    flex: 1 1 auto !important; 
+    min-width: 0 !important; 
   }
 
+  /* Título curto */
   .header__title {
-    font-weight: 800;
-    font-size: clamp(20px, 4.8vw, 28px);
-    line-height: 1.15;
-    color: hsl(var(--primary));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 800 !important;
+    font-size: clamp(20px, 4.8vw, 28px) !important;
+    line-height: 1.15 !important;
+    color: hsl(var(--primary)) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
+  /* Saudação (pílula) */
   .header__greet {
-    max-width: 46vw;
-    background: hsl(var(--secondary) / 0.3);
-    padding: 8px 12px;
-    border-radius: 24px;
-    font-size: clamp(12px, 3.6vw, 14px);
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: hsl(var(--secondary-foreground));
+    max-width: 46vw !important;
+    background: hsl(var(--secondary) / 0.3) !important;
+    padding: 8px 12px !important;
+    border-radius: 24px !important;
+    font-size: clamp(12px, 3.6vw, 14px) !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    color: hsl(var(--secondary-foreground)) !important;
   }
 
-  .btn-ghost,
-  .btn-exit {
-    height: 36px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border-radius: 10px;
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--background));
-    font-size: 14px;
-    padding: 0 12px;
-    transition: all 0.2s ease;
-  }
-
-  .btn-ghost .icon,
-  .btn-exit .icon {
-    font-size: 18px;
+  /* Botões */
+  .btn-ghost, .btn-exit, .btn-back {
+    height: 36px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    border-radius: 10px !important;
+    border: 1px solid hsl(var(--border)) !important;
+    background: hsl(var(--background)) !important;
+    padding: 0 12px !important;
+    font-size: 14px !important;
   }
 
   .btn-exit {
-    background: hsl(var(--destructive) / 0.1);
-    border-color: hsl(var(--destructive) / 0.3);
-    color: hsl(var(--destructive));
-    font-weight: 600;
+    background: hsl(var(--destructive) / 0.1) !important;
+    border-color: hsl(var(--destructive) / 0.3) !important;
+    color: hsl(var(--destructive)) !important;
+    font-weight: 600 !important;
   }
 
   .btn-exit:hover {
-    background: hsl(var(--destructive) / 0.2);
+    background: hsl(var(--destructive) / 0.2) !important;
   }
 
-  @media (max-width: 414px) and (orientation: portrait) {
-    .header__inner { 
-      row-gap: 8px; 
-      padding: 8px 0; 
+  .btn-ghost .icon, .btn-exit .icon, .btn-back .icon {
+    font-size: 18px !important;
+  }
+
+  /* Modo portrait ≤480px */
+  @media (max-width: 480px) {
+    header#admin-header { 
+      row-gap: 8px !important; 
+      padding: 8px 12px !important; 
+    }
+    
+    /* Ordem das linhas */
+    .header__left { order: 1 !important; }
+    .header__center { order: 2 !important; }
+    .header__right { 
+      order: 3 !important; 
+      width: 100% !important; 
+      justify-content: space-between !important; 
     }
 
-    .header__left   { order: 1; }
-    .header__center { order: 2; }
-    .header__right  { order: 3; width: 100%; justify-content: space-between; }
-
-    .btn-back .label { display: none; }
-    .btn-back { width: 36px; justify-content: center; padding: 0; }
+    /* Botão voltar só com ícone + texto curto */
+    .btn-back .label { 
+      font-size: 13px !important; 
+    }
   }
 }
