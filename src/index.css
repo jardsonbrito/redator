@@ -155,25 +155,132 @@
     background-color: hsl(258, 70%, 50%);
   }
   
-  /* Responsividade do painel do corretor */
+  /* Global overflow prevention */
+  html, body {
+    overflow-x: hidden;
+  }
+
+  /* Container for corretor panel */
+  .container-corretor {
+    padding-inline: 16px;
+    max-width: 100%;
+  }
+
+  /* Card base styles */
+  .card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 16px;
+    margin-block: 16px;
+  }
+
+  .card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  /* Vista Pedagógica styles */
+  .select-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .select-competencia {
+    width: 100%;
+    height: 48px;
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 12px;
+  }
+
+  .nota-pill {
+    margin: 16px auto;
+    width: 210px;
+    padding: 12px 0;
+    border-radius: 24px;
+    background: #efeaff;
+    color: #6a5acd;
+    text-align: center;
+  }
+
+  .audio {
+    position: relative;
+    margin: 16px 0;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .actions .btn {
+    width: 100%;
+    height: 48px;
+    border: 1px solid #6a5acd;
+    color: #6a5acd;
+    background: #fff;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+
+  /* Redação & Relatório styles */
+  .textarea {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 12px;
+    width: 100%;
+    font-size: 14px;
+  }
+
+  /* Mobile breakpoints */
   @media (max-width: 768px) {
-    .painel-botoes {
-      flex-wrap: wrap;
-      justify-content: center;
+    .container-corretor {
+      padding-inline: 16px;
     }
-    .painel-botoes button {
-      flex: 1 1 auto;
-      min-width: 140px;
+    
+    .card {
+      padding: 12px;
+      margin-block: 12px;
+    }
+    
+    .actions .btn {
+      height: 48px;
       font-size: 14px;
-      padding: 8px 12px;
+      padding: 12px;
+    }
+    
+    .icon-btn {
+      width: 44px;
+      height: 44px;
     }
   }
-  
-  @media (max-width: 480px) {
-    .painel-botoes button {
-      min-width: 100%;
-      font-size: 13px;
-      padding: 8px 10px;
+
+  @media (max-width: 360px) {
+    .select-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .nota-pill {
+      width: 100%;
+      max-width: 280px;
     }
   }
 }

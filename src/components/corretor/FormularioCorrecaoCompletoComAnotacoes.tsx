@@ -374,7 +374,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container-corretor space-y-4">
       <div className="flex items-start">
         <Button variant="outline" onClick={onVoltar} className="flex items-center gap-2">
           <ArrowLeft className="w-4 h-4" />
@@ -382,7 +382,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </Button>
       </div>
 
-      {/* Informações do aluno em formato horizontal */}
+      {/* Informações do aluno */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
         <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
         <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
@@ -403,83 +403,86 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </Button>
       </div>
 
-      {/* Vista Pedagógica em formato horizontal */}
-      <Card>
+      {/* Vista Pedagógica */}
+      <Card className="card">
         <CardHeader>
           <CardTitle>Vista Pedagógica</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-4 sm:gap-6">
-              {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
-                <div key={competencia} className="flex items-center gap-2 min-w-[100px]">
-                  <div className={`w-4 h-4 rounded-full shrink-0 ${
-                    competencia === 'c1' ? 'bg-red-500' :
-                    competencia === 'c2' ? 'bg-green-500' :
-                    competencia === 'c3' ? 'bg-blue-500' :
-                    competencia === 'c4' ? 'bg-purple-500' : 'bg-orange-500'
-                  }`} />
-                  <span className="text-sm font-medium shrink-0">C{index + 1}</span>
-                  <Select
-                    value={notas[competencia].toString()}
-                    onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
-                  >
-                    <SelectTrigger className="w-16 sm:w-20 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {opcoesNota.map(nota => (
-                        <SelectItem key={nota} value={nota.toString()}>
-                          {nota}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex flex-col lg:flex-row items-center gap-4">
-              <div className="text-center p-3 bg-purple-100 rounded shrink-0">
-                <div className="text-sm text-muted-foreground">Nota Total</div>
-                <div className="text-2xl font-bold text-purple-700">{notas.total}</div>
+          {/* Grid de selects C1-C5 */}
+          <div className="select-grid">
+            {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
+              <div key={competencia} className="flex items-center gap-2">
+                <div className={`w-4 h-4 rounded-full shrink-0 ${
+                  competencia === 'c1' ? 'bg-red-500' :
+                  competencia === 'c2' ? 'bg-green-500' :
+                  competencia === 'c3' ? 'bg-blue-500' :
+                  competencia === 'c4' ? 'bg-purple-500' : 'bg-orange-500'
+                }`} />
+                <span className="text-sm font-medium">C{index + 1}</span>
+                <Select
+                  value={notas[competencia].toString()}
+                  onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
+                >
+                  <SelectTrigger className="select-competencia">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    {opcoesNota.map(nota => (
+                      <SelectItem key={nota} value={nota.toString()}>
+                        {nota}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              
-              <div className="painel-botoes flex flex-wrap gap-2 justify-center lg:justify-start w-full lg:w-auto">
-                <AudioRecorder 
-                  redacaoId={redacao.id} 
-                  tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
-                         redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                  ehCorretor1={redacao.eh_corretor_1}
-                  existingAudioUrl={audioUrl}
-                  onAudioSaved={setAudioUrl}
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => salvarCorrecao('incompleta')}
-                  disabled={loading}
-                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm flex-1 sm:flex-none min-w-[140px]"
-                >
-                  Salvar Incompleta
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDevolverModal(true)}
-                  disabled={loading}
-                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm flex-1 sm:flex-none min-w-[140px]"
-                >
-                  Devolver Redação
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => salvarCorrecao('corrigida')}
-                  disabled={loading}
-                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm flex-1 sm:flex-none min-w-[140px]"
-                >
-                  Finalizar Correção
-                </Button>
-              </div>
-            </div>
+            ))}
+          </div>
+          
+          {/* Nota Total */}
+          <div className="nota-pill">
+            <div className="text-sm text-muted-foreground">Nota Total</div>
+            <div className="text-2xl font-bold">{notas.total}</div>
+          </div>
+          
+          {/* Audio Player */}
+          <div className="audio">
+            <AudioRecorder 
+              redacaoId={redacao.id} 
+              tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                     redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+              ehCorretor1={redacao.eh_corretor_1}
+              existingAudioUrl={audioUrl}
+              onAudioSaved={setAudioUrl}
+            />
+          </div>
+          
+          {/* Botões de Ação */}
+          <div className="actions">
+            <Button
+              variant="outline"
+              onClick={() => salvarCorrecao('incompleta')}
+              disabled={loading}
+              className="btn"
+            >
+              Salvar Incompleta
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowDevolverModal(true)}
+              disabled={loading}
+              className="btn"
+            >
+              Devolver Redação
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => salvarCorrecao('corrigida')}
+              disabled={loading}
+              className="btn"
+            >
+              Finalizar Correção
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -502,59 +505,55 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
       {/* Redação Digitada (não exibir quando há manuscrita) */}
       {!redacao.redacao_manuscrita_url && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="card">
+          <CardHeader className="card__header">
             <CardTitle>Redação Digitada</CardTitle>
-            <div className="flex flex-wrap gap-2 justify-end">
+            <div className="flex gap-2">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={copiarRedacaoDigitada}
-                className="flex items-center gap-2 min-w-[140px]"
+                className="icon-btn"
+                aria-label="Copiar redação"
               >
                 <Copy className="w-4 h-4" />
-                <span className="hidden sm:inline">Copiar Redação Digitada</span>
-                <span className="sm:hidden">Copiar</span>
               </Button>
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => setShowRedacaoExpandida(true)}
-                className="flex items-center gap-2 min-w-[100px]"
+                className="icon-btn"
+                aria-label="Expandir redação"
               >
                 <Maximize2 className="w-4 h-4" />
-                Expandir
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-sm max-h-[200px] overflow-y-auto pr-2">
+            <div className="textarea max-h-[200px] overflow-y-auto">
               {redacao.texto ? formatarTextoComParagrafos(redacao.texto) : 'Texto da redação não disponível'}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Relatório pedagógico de correção */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Relatório pedagógico de correção</CardTitle>
+      {/* Relatório Pedagógico de Correção */}
+      <Card className="card">
+        <CardHeader className="card__header">
+          <CardTitle>Relatório Pedagógico de Correção</CardTitle>
           <Button
             variant="outline"
-            size="sm"
             onClick={copiarRelatorioPedagogico}
-            className="flex items-center gap-2"
+            className="icon-btn"
+            aria-label="Copiar relatório"
           >
             <Copy className="w-4 h-4" />
-            Copiar Relatório Pedagógico
           </Button>
         </CardHeader>
         <CardContent>
           <textarea
-            placeholder="Digite aqui seu relatório pedagógico completo para o aluno..."
+            placeholder="Escreva aqui o relatório pedagógico de correção…"
             value={comentarios.elogios}
             onChange={(e) => atualizarComentario('elogios', e.target.value)}
-            className="w-full min-h-[100px] p-3 border rounded resize-none"
+            className="textarea min-h-[240px] resize-none"
           />
         </CardContent>
       </Card>
