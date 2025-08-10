@@ -227,16 +227,23 @@ export const RedacaoEnviadaForm = () => {
             >
               Todos os meses
             </Button>
-            {mesesDisponiveis.map(mes => (
-              <Button
-                key={mes}
-                variant={filtroMes === mes ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFiltroMes(mes)}
-              >
-                {format(new Date(`${mes}-01`), 'LLLL', { locale: ptBR })}
-              </Button>
-            ))}
+            {mesesDisponiveis.map(mes => {
+              // Criar data no primeiro dia do mês para evitar problemas de timezone
+              const [ano, mes_num] = mes.split('-');
+              const dataDoMes = new Date(parseInt(ano), parseInt(mes_num) - 1, 1);
+              const nomeDoMes = format(dataDoMes, 'LLLL yyyy', { locale: ptBR });
+              
+              return (
+                <Button
+                  key={mes}
+                  variant={filtroMes === mes ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFiltroMes(mes)}
+                >
+                  {nomeDoMes}
+                </Button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
