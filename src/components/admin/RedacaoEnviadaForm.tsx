@@ -51,11 +51,20 @@ export const RedacaoEnviadaForm = () => {
 
   // Calcular meses disponíveis baseado nas redações
   const mesesDisponiveis = useMemo(() => {
-    const meses = Array.from(new Set(redacoes.map(r => {
-      const data = new Date(r.data_envio);
-      return format(data, 'yyyy-MM');
-    })));
+    if (!redacoes.length) return [];
     
+    const meses = Array.from(new Set(
+      redacoes.map(r => {
+        // Garantir que a data seja interpretada corretamente
+        const data = new Date(r.data_envio);
+        // Usar UTC para evitar problemas de timezone
+        const year = data.getUTCFullYear();
+        const month = String(data.getUTCMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
+      })
+    ));
+    
+    console.log('Meses encontrados nas redações:', meses);
     return meses.sort((a, b) => a.localeCompare(b)); // ordem crescente (mais antigo → mais recente)
   }, [redacoes]);
 
@@ -94,7 +103,11 @@ export const RedacaoEnviadaForm = () => {
 
     const matchMes = filtroMes === "todos" || (() => {
       const redacaoData = new Date(redacao.data_envio);
-      const redacaoMes = format(redacaoData, 'yyyy-MM');
+      // Usar UTC para consistência com o cálculo dos meses disponíveis
+      const year = redacaoData.getUTCFullYear();
+      const month = String(redacaoData.getUTCMonth() + 1).padStart(2, '0');
+      const redacaoMes = `${year}-${month}`;
+      console.log(`Comparando redação ${redacao.id}: ${redacaoMes} === ${filtroMes}?`, redacaoMes === filtroMes);
       return redacaoMes === filtroMes;
     })();
     
