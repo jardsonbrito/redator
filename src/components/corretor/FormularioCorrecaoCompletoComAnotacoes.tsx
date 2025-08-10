@@ -409,22 +409,22 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           <CardTitle>Vista Pedagógica</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex gap-6">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-4 sm:gap-6">
               {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
-                <div key={competencia} className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded-full ${
+                <div key={competencia} className="flex items-center gap-2 min-w-[100px]">
+                  <div className={`w-4 h-4 rounded-full shrink-0 ${
                     competencia === 'c1' ? 'bg-red-500' :
                     competencia === 'c2' ? 'bg-green-500' :
                     competencia === 'c3' ? 'bg-blue-500' :
                     competencia === 'c4' ? 'bg-purple-500' : 'bg-orange-500'
                   }`} />
-                  <span className="text-sm font-medium">C{index + 1}</span>
+                  <span className="text-sm font-medium shrink-0">C{index + 1}</span>
                   <Select
                     value={notas[competencia].toString()}
                     onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
                   >
-                    <SelectTrigger className="w-20 h-8">
+                    <SelectTrigger className="w-16 sm:w-20 h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -439,13 +439,13 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               ))}
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="text-center p-3 bg-purple-100 rounded">
+            <div className="flex flex-col lg:flex-row items-center gap-4">
+              <div className="text-center p-3 bg-purple-100 rounded shrink-0">
                 <div className="text-sm text-muted-foreground">Nota Total</div>
                 <div className="text-2xl font-bold text-purple-700">{notas.total}</div>
               </div>
               
-              <div className="flex gap-2">
+              <div className="painel-botoes flex flex-wrap gap-2 justify-center lg:justify-start w-full lg:w-auto">
                 <AudioRecorder 
                   redacaoId={redacao.id} 
                   tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
@@ -458,7 +458,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                   variant="outline"
                   onClick={() => salvarCorrecao('incompleta')}
                   disabled={loading}
-                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm"
+                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm flex-1 sm:flex-none min-w-[140px]"
                 >
                   Salvar Incompleta
                 </Button>
@@ -466,7 +466,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                   variant="outline"
                   onClick={() => setShowDevolverModal(true)}
                   disabled={loading}
-                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm"
+                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm flex-1 sm:flex-none min-w-[140px]"
                 >
                   Devolver Redação
                 </Button>
@@ -474,7 +474,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                   variant="outline"
                   onClick={() => salvarCorrecao('corrigida')}
                   disabled={loading}
-                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm"
+                  className="bg-white border-[#6C27DB] text-foreground hover:bg-[#b181f3] hover:text-white shadow-sm flex-1 sm:flex-none min-w-[140px]"
                 >
                   Finalizar Correção
                 </Button>
@@ -505,21 +505,22 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle>Redação Digitada</CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={copiarRedacaoDigitada}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 min-w-[140px]"
               >
                 <Copy className="w-4 h-4" />
-                Copiar Redação Digitada
+                <span className="hidden sm:inline">Copiar Redação Digitada</span>
+                <span className="sm:hidden">Copiar</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowRedacaoExpandida(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 min-w-[100px]"
               >
                 <Maximize2 className="w-4 h-4" />
                 Expandir
@@ -601,7 +602,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               />
             </div>
             
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex flex-wrap justify-end gap-3 pt-4">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -609,13 +610,14 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                   setMotivoDevolucao("");
                 }}
                 disabled={loading}
+                className="min-w-[100px]"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={devolverRedacao}
                 disabled={loading || !motivoDevolucao.trim()}
-                className="bg-[#E53935] hover:bg-[#D32F2F] text-white"
+                className="bg-[#E53935] hover:bg-[#D32F2F] text-white min-w-[120px]"
               >
                 {loading ? "Devolvendo..." : "DEVOLVER"}
               </Button>
@@ -652,17 +654,18 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               </div>
             </div>
             
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={copiarRedacaoDigitada}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 min-w-[120px]"
               >
                 <Copy className="w-4 h-4" />
                 Copiar Redação
               </Button>
               <Button
                 onClick={() => setShowRedacaoExpandida(false)}
+                className="min-w-[80px]"
               >
                 Fechar
               </Button>

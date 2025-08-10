@@ -154,4 +154,26 @@
   .hover\:bg-redator-accent:hover {
     background-color: hsl(258, 70%, 50%);
   }
+  
+  /* Responsividade do painel do corretor */
+  @media (max-width: 768px) {
+    .painel-botoes {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .painel-botoes button {
+      flex: 1 1 auto;
+      min-width: 140px;
+      font-size: 14px;
+      padding: 8px 12px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .painel-botoes button {
+      min-width: 100%;
+      font-size: 13px;
+      padding: 8px 10px;
+    }
+  }
 }
