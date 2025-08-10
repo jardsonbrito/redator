@@ -58,38 +58,37 @@ export const ProfessorDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
+      <header className="header bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  {isAdmin ? (
-                    <ShieldCheck className="w-8 h-8 text-primary" />
-                  ) : (
-                    <GraduationCap className="w-8 h-8 text-primary" />
-                  )}
-                </div>
-                Painel do {isAdmin ? 'Administrador' : 'Professor'}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Bem-vindo, <strong>{professor.nome_completo}</strong>
-              </p>
+          <div className="header__inner">
+            <div className="header__left">
+              <Link 
+                to="/"
+                className="btn-ghost btn-back"
+                aria-label="Voltar à Web"
+              >
+                <GraduationCap className="icon w-5 h-5" />
+                <span className="label">Voltar à Web</span>
+              </Link>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-primary">{professor.email}</p>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {professor.role === 'admin' ? 'Administrador' : 'Professor'}
-                </p>
+
+            <div className="header__center">
+              <h1 className="header__title">
+                Painel Administrativo
+              </h1>
+            </div>
+
+            <div className="header__right">
+              <div className="header__greet">
+                Olá, {professor.email}
               </div>
               <Button
-                variant="outline"
                 onClick={logout}
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="btn-exit"
+                aria-label="Sair"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
+                <LogOut className="icon w-4 h-4" />
+                <span className="label">Sair</span>
               </Button>
             </div>
           </div>
