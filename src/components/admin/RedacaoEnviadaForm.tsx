@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import { Search } from "lucide-react";
 import { useRedacoesEnviadas, RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { RedacaoViewForm } from "./RedacaoViewForm";
 import { RedacaoListTable } from "./RedacaoListTable";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const RedacaoEnviadaForm = () => {
   const {
@@ -29,6 +31,7 @@ export const RedacaoEnviadaForm = () => {
   const [filtroTurma, setFiltroTurma] = useState<string>("todas");
   const [filtroStatus, setFiltroStatus] = useState<string>("todas");
   const [filtroCorretor, setFiltroCorretor] = useState<string>("todos");
+  const [filtroMes, setFiltroMes] = useState<string>(""); // vazio significa "mês atual"
   const [buscaNome, setBuscaNome] = useState("");
 
   // Consulta para buscar corretores ativos
@@ -45,6 +48,27 @@ export const RedacaoEnviadaForm = () => {
       return data;
     }
   });
+
+  // Calcular meses disponíveis baseado nas redações
+  const mesesDisponiveis = useMemo(() => {
+    const meses = Array.from(new Set(redacoes.map(r => {
+      const data = new Date(r.data_envio);
+      return format(data, 'yyyy-MM');
+    })));
+    
+    return meses.sort((a, b) => b.localeCompare(a)); // ordem decrescente
+  }, [redacoes]);
+
+  // Determinar mês padrão (atual ou mais recente disponível)
+  const mesAtual = format(new Date(), 'yyyy-MM');
+  const mesDefault = mesesDisponiveis.includes(mesAtual) ? mesAtual : (mesesDisponiveis[0] || mesAtual);
+
+  // Inicializar filtro de mês se ainda não foi definido
+  useEffect(() => {
+    if (filtroMes === "" && mesesDisponiveis.length > 0) {
+      setFiltroMes(mesDefault);
+    }
+  }, [filtroMes, mesesDisponiveis, mesDefault]);
 
   // Filtrar redações baseado nos filtros ativos
   const redacoesFiltradas = redacoes.filter(redacao => {
@@ -67,8 +91,14 @@ export const RedacaoEnviadaForm = () => {
     const matchCorretor = filtroCorretor === "todos" || 
       redacao.corretor_id_1 === filtroCorretor || 
       redacao.corretor_id_2 === filtroCorretor;
+
+    const matchMes = filtroMes === "todos" || (() => {
+      const redacaoData = new Date(redacao.data_envio);
+      const redacaoMes = format(redacaoData, 'yyyy-MM');
+      return redacaoMes === filtroMes;
+    })();
     
-    return matchNome && matchTurma && matchStatus && matchCorretor;
+    return matchNome && matchTurma && matchStatus && matchCorretor && matchMes;
   });
 
   const turmasDisponiveis = ["LRA2025", "LRB2025", "LRC2025", "LRD2025", "LRE2025", "Visitantes"];
@@ -169,34 +199,25 @@ export const RedacaoEnviadaForm = () => {
             </div>
           </div>
 
-          {/* Botões inteligentes para seleção rápida */}
+          {/* Chips mensais para seleção rápida */}
           <div className="flex flex-wrap gap-2 mt-4">
             <Button
-              variant={filtroStatus === "todas" && filtroTurma === "todas" && filtroCorretor === "todos" && buscaNome === "" ? "default" : "outline"}
+              variant={filtroMes === "todos" ? "default" : "outline"}
               size="sm"
-              onClick={() => {
-                setFiltroStatus("todas");
-                setFiltroTurma("todas");
-                setFiltroCorretor("todos");
-                setBuscaNome("");
-              }}
+              onClick={() => setFiltroMes("todos")}
             >
-              Todos
+              Todos os meses
             </Button>
-            <Button
-              variant={filtroStatus === "pendentes" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFiltroStatus("pendentes")}
-            >
-              Pendentes
-            </Button>
-            <Button
-              variant={filtroStatus === "corrigidas" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFiltroStatus("corrigidas")}
-            >
-              Corrigidas
-            </Button>
+            {mesesDisponiveis.map(mes => (
+              <Button
+                key={mes}
+                variant={filtroMes === mes ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFiltroMes(mes)}
+              >
+                {format(new Date(`${mes}-01`), 'LLLL', { locale: ptBR })}
+              </Button>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -215,7 +236,7 @@ export const RedacaoEnviadaForm = () => {
             <div className="text-center py-8">Carregando redações...</div>
           ) : redacoesFiltradas.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {buscaNome || filtroTurma !== "todas" || filtroStatus !== "todas" || filtroCorretor !== "todos" ? 
+              {buscaNome || filtroTurma !== "todas" || filtroStatus !== "todas" || filtroCorretor !== "todos" || (filtroMes !== "todos" && filtroMes !== "") ? 
                 "Nenhuma redação encontrada com os critérios de busca." : 
                 "Nenhuma redação enviada ainda."}
             </div>
