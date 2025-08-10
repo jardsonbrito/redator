@@ -56,12 +56,12 @@ export const RedacaoEnviadaForm = () => {
       return format(data, 'yyyy-MM');
     })));
     
-    return meses.sort((a, b) => b.localeCompare(a)); // ordem decrescente
+    return meses.sort((a, b) => a.localeCompare(b)); // ordem crescente (mais antigo → mais recente)
   }, [redacoes]);
 
   // Determinar mês padrão (atual ou mais recente disponível)
   const mesAtual = format(new Date(), 'yyyy-MM');
-  const mesDefault = mesesDisponiveis.includes(mesAtual) ? mesAtual : (mesesDisponiveis[0] || mesAtual);
+  const mesDefault = mesesDisponiveis.includes(mesAtual) ? mesAtual : (mesesDisponiveis[mesesDisponiveis.length - 1] || mesAtual);
 
   // Inicializar filtro de mês se ainda não foi definido
   useEffect(() => {
@@ -227,7 +227,6 @@ export const RedacaoEnviadaForm = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Visualização Gerencial
-            <Badge variant="secondary">{redacoesFiltradas.length} redação(ões)</Badge>
           </CardTitle>
         </CardHeader>
         
