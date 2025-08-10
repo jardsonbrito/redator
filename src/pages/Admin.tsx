@@ -372,7 +372,7 @@ const Admin = () => {
         return (
           <Tabs defaultValue="avulsas" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="avulsas">Redações Avulsas</TabsTrigger>
+              <TabsTrigger value="avulsas">Redações</TabsTrigger>
               <TabsTrigger value="simulados">Simulados</TabsTrigger>
             </TabsList>
             <TabsContent value="avulsas">
