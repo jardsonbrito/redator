@@ -49,28 +49,20 @@ export const RedacaoEnviadaForm = () => {
     }
   });
 
-  // Calcular meses disponíveis baseado nas redações reais
+  // Calcular meses disponíveis baseado apenas nas redações que existem
   const mesesDisponiveis = useMemo(() => {
     if (!redacoes.length) return [];
     
-    // Debug: verificar os dados das redações
-    console.log('Redações para cálculo de meses:', redacoes.map(r => ({ 
-      id: r.id, 
-      data_envio: r.data_envio,
-      parsed: new Date(r.data_envio)
-    })));
-    
-    const meses = Array.from(new Set(
+    const mesesComDados = Array.from(new Set(
       redacoes
         .filter(r => r.data_envio) // Garantir que existe data_envio
         .map(r => {
           const data = new Date(r.data_envio);
           // Verificar se a data é válida
           if (isNaN(data.getTime())) {
-            console.warn('Data inválida encontrada:', r.data_envio, 'para redação:', r.id);
             return null;
           }
-          // Usar local time para ser consistente com a exibição
+          // Usar formato ano-mês consistente
           const year = data.getFullYear();
           const month = String(data.getMonth() + 1).padStart(2, '0');
           return `${year}-${month}`;
@@ -78,8 +70,7 @@ export const RedacaoEnviadaForm = () => {
         .filter(Boolean) // Remove valores nulos/undefined
     ));
     
-    console.log('Meses únicos calculados:', meses);
-    return meses.sort((a, b) => a.localeCompare(b)); // ordem crescente (mais antigo → mais recente)
+    return mesesComDados.sort((a, b) => a.localeCompare(b)); // ordem crescente
   }, [redacoes]);
 
   // Determinar mês padrão (atual ou mais recente disponível)
@@ -119,11 +110,10 @@ export const RedacaoEnviadaForm = () => {
       const redacaoData = new Date(redacao.data_envio);
       if (isNaN(redacaoData.getTime())) return false; // Se data inválida, não incluir
       
-      // Usar local time para ser consistente com o cálculo dos meses disponíveis
+      // Usar formato consistente com o cálculo dos meses disponíveis
       const year = redacaoData.getFullYear();
       const month = String(redacaoData.getMonth() + 1).padStart(2, '0');
       const redacaoMes = `${year}-${month}`;
-      console.log(`Comparando redação ${redacao.id}: ${redacaoMes} === ${filtroMes}?`, redacaoMes === filtroMes);
       return redacaoMes === filtroMes;
     })();
     
