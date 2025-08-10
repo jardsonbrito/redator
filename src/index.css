@@ -286,31 +286,42 @@
 
   /* ===== Cabeçalho Administrativo - Versão Compacta ===== */
   
+  /* Anti-overflow global */
+  html, body { 
+    overflow-x: hidden !important; 
+  }
+
   /* Container principal */
-  header#admin-header {
+  #admin-header,
+  #admin-header .header__inner {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
     gap: 8px !important;
-    padding: 10px 16px !important;
     flex-wrap: wrap !important;
+  }
+
+  #admin-header {
+    padding: 10px 16px !important;
     border-bottom: 1px solid rgba(0,0,0,0.08) !important;
   }
 
   /* Grupos */
-  .header__left, .header__center, .header__right {
+  #admin-header .header__left, 
+  #admin-header .header__center, 
+  #admin-header .header__right {
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
   }
 
-  .header__center { 
+  #admin-header .header__center { 
     flex: 1 1 auto !important; 
     min-width: 0 !important; 
   }
 
   /* Título curto */
-  .header__title {
+  #admin-header .header__title {
     font-weight: 800 !important;
     font-size: clamp(20px, 4.8vw, 28px) !important;
     line-height: 1.15 !important;
@@ -321,7 +332,7 @@
   }
 
   /* Saudação (pílula) */
-  .header__greet {
+  #admin-header .header__greet {
     max-width: 46vw !important;
     background: hsl(var(--secondary) / 0.3) !important;
     padding: 8px 12px !important;
@@ -335,7 +346,9 @@
   }
 
   /* Botões */
-  .btn-ghost, .btn-exit, .btn-back {
+  #admin-header .btn-ghost, 
+  #admin-header .btn-exit, 
+  #admin-header .btn-back {
     height: 36px !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -345,41 +358,48 @@
     background: hsl(var(--background)) !important;
     padding: 0 12px !important;
     font-size: 14px !important;
+    transition: all 0.2s ease !important;
   }
 
-  .btn-exit {
+  #admin-header .btn-exit {
     background: hsl(var(--destructive) / 0.1) !important;
     border-color: hsl(var(--destructive) / 0.3) !important;
     color: hsl(var(--destructive)) !important;
     font-weight: 600 !important;
   }
 
-  .btn-exit:hover {
+  #admin-header .btn-exit:hover {
     background: hsl(var(--destructive) / 0.2) !important;
   }
 
-  .btn-ghost .icon, .btn-exit .icon, .btn-back .icon {
+  #admin-header .btn-ghost .icon, 
+  #admin-header .btn-exit .icon, 
+  #admin-header .btn-back .icon {
     font-size: 18px !important;
   }
 
   /* Modo portrait ≤480px */
   @media (max-width: 480px) {
-    header#admin-header { 
+    #admin-header { 
       row-gap: 8px !important; 
       padding: 8px 12px !important; 
     }
     
+    #admin-header .header__inner {
+      row-gap: 8px !important;
+    }
+    
     /* Ordem das linhas */
-    .header__left { order: 1 !important; }
-    .header__center { order: 2 !important; }
-    .header__right { 
+    #admin-header .header__left { order: 1 !important; }
+    #admin-header .header__center { order: 2 !important; }
+    #admin-header .header__right { 
       order: 3 !important; 
       width: 100% !important; 
       justify-content: space-between !important; 
     }
 
-    /* Botão voltar só com ícone + texto curto */
-    .btn-back .label { 
+    /* Botão voltar com texto reduzido */
+    #admin-header .btn-back .label { 
       font-size: 13px !important; 
     }
   }

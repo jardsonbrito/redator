@@ -58,33 +58,42 @@ export const ProfessorDashboard = () => {
 
   // Dynamic text adjustments for mobile
   useEffect(() => {
-    // Ajusta título para "Administrativo"
-    const title = document.querySelector(".header__title");
-    if (title) title.textContent = "Administrativo";
+    const timer = setTimeout(() => {
+      // Ajusta título para "Administrativo"
+      const title = document.querySelector(".header__title");
+      if (title && title.textContent?.includes("Painel")) {
+        title.textContent = "Administrativo";
+      }
 
-    // Ajusta botão voltar para "App"
-    const backLabel = document.querySelector(".btn-back .label");
-    if (backLabel) backLabel.textContent = "App";
+      // Ajusta botão voltar para "App"
+      const backLabel = document.querySelector(".btn-back .label");
+      if (backLabel && backLabel.textContent?.includes("Voltar")) {
+        backLabel.textContent = "App";
+      }
 
-    // Saudação: apenas primeiro nome
-    const greet = document.querySelector(".header__greet");
-    if (greet) {
-      let text = greet.textContent?.trim() || "";
-      // Remove "Olá," e email - extrair apenas primeiro nome
-      if (text.toLowerCase().startsWith("olá")) {
-        const parts = text.replace(/,/g, "").split(/\s+/);
-        if (parts.length > 1) {
-          // Se for um email, pegar a parte antes do @
-          const nameOrEmail = parts[1];
-          if (nameOrEmail.includes("@")) {
-            const emailPart = nameOrEmail.split("@")[0];
-            greet.textContent = `Olá, ${emailPart}`;
+      // Saudação: apenas primeiro nome
+      const greet = document.querySelector(".header__greet");
+      if (greet && greet.textContent) {
+        let text = greet.textContent.trim();
+        if (text.toLowerCase().startsWith("olá")) {
+          // Se contém email, extrair parte antes do @
+          if (text.includes("@")) {
+            const emailMatch = text.match(/([^@\s]+)@/);
+            if (emailMatch) {
+              greet.textContent = `Olá, ${emailMatch[1]}`;
+            }
           } else {
-            greet.textContent = `Olá, ${nameOrEmail}`;
+            // Se não é email, pegar o primeiro nome
+            const parts = text.replace(/,/g, "").split(/\s+/);
+            if (parts.length > 1) {
+              greet.textContent = `Olá, ${parts[1]}`;
+            }
           }
         }
       }
-    }
+    }, 100); // Small delay to ensure DOM is ready
+
+    return () => clearTimeout(timer);
   }, [professor]);
 
   return (
