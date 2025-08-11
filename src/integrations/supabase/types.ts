@@ -1830,6 +1830,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      compute_needs_media_update: {
+        Args: {
+          p_cover_source: string
+          p_cover_url: string
+          p_cover_file_path: string
+          p_motivator4_source: string
+          p_motivator4_url: string
+          p_motivator4_file_path: string
+        }
+        Returns: boolean
+      }
       consume_credit_safe: {
         Args: { target_user_id: string }
         Returns: number

@@ -319,8 +319,7 @@ export const TemaImportWizard = () => {
                 processed['cover_url'] = value;
               } else {
                 processed['cover_source'] = 'url';
-                processed['cover_url'] = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
-                processed['needs_media_update'] = true;
+                processed['cover_url'] = 'https://kgmxntpmvlnbftjqtyxx.supabase.co/storage/v1/object/public/placeholders/tema-cover.png';
               }
               break;
             case 'motivador4_url':
@@ -329,8 +328,7 @@ export const TemaImportWizard = () => {
                 processed['motivator4_url'] = value;
               } else {
                 processed['motivator4_source'] = 'url';
-                processed['motivator4_url'] = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
-                processed['needs_media_update'] = true;
+                processed['motivator4_url'] = 'https://kgmxntpmvlnbftjqtyxx.supabase.co/storage/v1/object/public/placeholders/motivador4.png';
               }
               break;
           }
