@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Professor {
@@ -22,7 +22,7 @@ interface ProfessorAuthContextType {
 const ProfessorAuthContext = createContext<ProfessorAuthContextType | undefined>(undefined);
 
 export const useProfessorAuth = () => {
-  const context = useContext(ProfessorAuthContext);
+  const context = React.useContext(ProfessorAuthContext);
   if (context === undefined) {
     throw new Error('useProfessorAuth must be used within a ProfessorAuthProvider');
   }
@@ -33,12 +33,12 @@ interface ProfessorAuthProviderProps {
   children: ReactNode;
 }
 
-export const ProfessorAuthProvider = ({ children }: ProfessorAuthProviderProps) => {
-  const [professor, setProfessor] = useState<Professor | null>(null);
-  const [loading, setLoading] = useState(true);
+export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ children }) => {
+  const [professor, setProfessor] = React.useState<Professor | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   // Verificar se há sessão salva
-  useEffect(() => {
+  React.useEffect(() => {
     const savedProfessorSession = localStorage.getItem('professor_session');
     if (savedProfessorSession) {
       try {

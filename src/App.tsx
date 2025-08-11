@@ -68,10 +68,10 @@ import RedacaoManuscrita from "./pages/RedacaoManuscrita";
 
 function App() {
   return (
-    <ProfessorAuthProvider>
-      <CorretorAuthProvider>
-        <StudentAuthProvider>
-          <AuthProvider>
+    <AuthProvider>
+      <ProfessorAuthProvider>
+        <CorretorAuthProvider>
+          <StudentAuthProvider>
             <Router>
               <div className="min-h-screen bg-background">
                 <Toaster />
@@ -195,10 +195,10 @@ function App() {
                 </Routes>
               </div>
             </Router>
-          </AuthProvider>
-        </StudentAuthProvider>
-      </CorretorAuthProvider>
-    </ProfessorAuthProvider>
+          </StudentAuthProvider>
+        </CorretorAuthProvider>
+      </ProfessorAuthProvider>
+    </AuthProvider>
   );
 }
 
