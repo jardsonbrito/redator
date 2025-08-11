@@ -36,7 +36,7 @@ export function getTemaCoverUrl(tema: TemaWithCover): string {
   }
 
   // 4. Final fallback - placeholder
-  return '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
+  return '/src/assets/tema-cover-placeholder.png';
 }
 
 /**

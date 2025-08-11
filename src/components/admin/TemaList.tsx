@@ -214,6 +214,11 @@ export const TemaList = () => {
                           >
                             {tema.status === 'publicado' ? 'Publicado' : 'Rascunho'}
                           </Badge>
+                          {tema.needs_media_update && (
+                            <Badge variant="destructive" className="text-xs">
+                              Pendente de mídia
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>

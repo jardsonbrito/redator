@@ -1688,6 +1688,7 @@ export type Database = {
           motivator4_file_size: number | null
           motivator4_source: string | null
           motivator4_url: string | null
+          needs_media_update: boolean | null
           publicado_em: string | null
           status: string | null
           texto_1: string | null
@@ -1710,6 +1711,7 @@ export type Database = {
           motivator4_file_size?: number | null
           motivator4_source?: string | null
           motivator4_url?: string | null
+          needs_media_update?: boolean | null
           publicado_em?: string | null
           status?: string | null
           texto_1?: string | null
@@ -1732,6 +1734,7 @@ export type Database = {
           motivator4_file_size?: number | null
           motivator4_source?: string | null
           motivator4_url?: string | null
+          needs_media_update?: boolean | null
           publicado_em?: string | null
           status?: string | null
           texto_1?: string | null

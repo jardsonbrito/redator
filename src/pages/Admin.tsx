@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Import existing admin components with correct named imports
 import { TemaForm } from "@/components/admin/TemaForm";
 import { TemaList } from "@/components/admin/TemaList";
+import { TemaCSVImport } from "@/components/admin/TemaCSVImport";
 import { RedacaoForm } from "@/components/admin/RedacaoForm";
 import { RedacaoList } from "@/components/admin/RedacaoList";
 import { VideoForm } from "@/components/admin/VideoForm";
@@ -168,15 +169,19 @@ const Admin = () => {
       case "temas":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="list">Listar Temas</TabsTrigger>
               <TabsTrigger value="create">Criar Tema</TabsTrigger>
+              <TabsTrigger value="import">Importar CSV</TabsTrigger>
             </TabsList>
             <TabsContent value="list">
               <TemaList />
             </TabsContent>
             <TabsContent value="create">
               <TemaForm />
+            </TabsContent>
+            <TabsContent value="import">
+              <TemaCSVImport />
             </TabsContent>
           </Tabs>
         );
