@@ -2240,6 +2240,10 @@ export type Database = {
         Args: { user_email: string }
         Returns: undefined
       }
+      test_admin_login: {
+        Args: { p_email: string; p_password: string }
+        Returns: Json
+      }
       toggle_admin_status: {
         Args: { p_admin_id: string; p_new_status: boolean }
         Returns: Json
