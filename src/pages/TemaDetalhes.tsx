@@ -8,8 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getTemaCoverUrl, getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 
-// Type extension para incluir o campo imagem_texto_4_url
+// Type extension para incluir os campos novos e legado
 type TemaWithImage = {
   id: string;
   frase_tematica: string;
@@ -17,6 +18,15 @@ type TemaWithImage = {
   texto_1: string | null;
   texto_2: string | null;
   texto_3: string | null;
+  // New cover fields
+  cover_source?: string | null;
+  cover_url?: string | null;
+  cover_file_path?: string | null;
+  // New motivator IV fields
+  motivator4_source?: string | null;
+  motivator4_url?: string | null;
+  motivator4_file_path?: string | null;
+  // Legacy field
   imagem_texto_4_url: string | null;
   publicado_em: string | null;
 };
@@ -117,16 +127,18 @@ const TemaDetalhes = () => {
             </h1>
 
             <div className="space-y-6">
-              {/* 2. Imagem ampliada (sem rótulo técnico) */}
-              {tema.imagem_texto_4_url && (
-                <div className="rounded-lg overflow-hidden mb-6">
-                  <img 
-                    src={tema.imagem_texto_4_url} 
-                    alt="Imagem do tema"
-                    className="w-full h-auto"
-                  />
-                </div>
-              )}
+              {/* 2. Cover Image */}
+              <div className="rounded-lg overflow-hidden mb-6">
+                <img 
+                  src={getTemaCoverUrl(tema)} 
+                  alt={`Capa do tema: ${tema.frase_tematica}`}
+                  className="w-full h-auto"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
+                  }}
+                />
+              </div>
 
               {/* 3. Cabeçalho padrão */}
               <div className="bg-redator-primary/5 rounded-lg p-6 border-l-4 border-redator-primary">
@@ -165,6 +177,24 @@ const TemaDetalhes = () => {
                   <p className="text-redator-accent leading-relaxed">
                     {tema.texto_3}
                   </p>
+                </div>
+              )}
+
+              {/* 7. Texto Motivador IV (Image) */}
+              {getTemaMotivatorIVUrl(tema) && (
+                <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
+                  <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador IV</h3>
+                  <div className="rounded-lg overflow-hidden">
+                    <img 
+                      src={getTemaMotivatorIVUrl(tema)!}
+                      alt="Charge/Infográfico — Texto Motivador IV"
+                      className="w-full h-auto"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
                 </div>
               )}
               

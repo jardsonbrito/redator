@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 
 export default function Temas() {
   const { data: temas, isLoading, error } = useQuery({
@@ -89,15 +90,17 @@ export default function Temas() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {tema.imagem_texto_4_url && (
-                      <div className="aspect-video overflow-hidden rounded-md">
-                        <img 
-                          src={tema.imagem_texto_4_url} 
-                          alt="Imagem do tema" 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
+                    <div className="aspect-video overflow-hidden rounded-md">
+                      <img 
+                        src={getTemaCoverUrl(tema)} 
+                        alt={`Capa do tema: ${tema.frase_tematica}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
+                        }}
+                      />
+                    </div>
                     
                     <div className="pt-2">
                       <Link to={`/temas/${tema.id}`}>
