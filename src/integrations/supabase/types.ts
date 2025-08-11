@@ -128,6 +128,9 @@ export type Database = {
       aulas: {
         Row: {
           ativo: boolean | null
+          cover_file_path: string | null
+          cover_source: string | null
+          cover_url: string | null
           criado_em: string | null
           descricao: string | null
           id: string
@@ -141,6 +144,9 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean | null
+          cover_file_path?: string | null
+          cover_source?: string | null
+          cover_url?: string | null
           criado_em?: string | null
           descricao?: string | null
           id?: string
@@ -154,6 +160,9 @@ export type Database = {
         }
         Update: {
           ativo?: boolean | null
+          cover_file_path?: string | null
+          cover_source?: string | null
+          cover_url?: string | null
           criado_em?: string | null
           descricao?: string | null
           id?: string

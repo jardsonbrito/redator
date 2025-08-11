@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Edit, Trash2, ExternalLink, FileText, Search } from "lucide-react";
-
+import { AdminCard, AdminCardSkeleton, type BadgeTone } from "@/components/admin/AdminCard";
+import { resolveCover } from "@/utils/coverUtils";
 interface Aula {
   id: string;
   titulo: string;
@@ -121,8 +121,14 @@ export const AulaList = () => {
     }
   };
 
-  if (isLoading) {
-    return <div className="text-center py-8">Carregando aulas...</div>;
+if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <AdminCardSkeleton />
+        <AdminCardSkeleton />
+        <AdminCardSkeleton />
+      </div>
+    );
   }
 
   return (
@@ -163,7 +169,7 @@ export const AulaList = () => {
         </CardContent>
       </Card>
 
-      {/* Lista de Aulas */}
+{/* Lista de Aulas */}
       <div className="grid gap-4">
         {filteredAulas.length === 0 ? (
           <Card>
@@ -172,91 +178,39 @@ export const AulaList = () => {
             </CardContent>
           </Card>
         ) : (
-          filteredAulas.map((aula) => (
-            <Card key={aula.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {aula.titulo}
-                      <Badge variant={aula.ativo ? "default" : "secondary"}>
-                        {aula.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </CardTitle>
-                    <Badge variant="outline" className="mt-2">
-                      {aula.modulo}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(aula.link_conteudo, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                    {aula.pdf_url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(aula.pdf_url, '_blank')}
-                      >
-                        <FileText className="w-4 h-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleAtivo(aula.id, aula.ativo)}
-                    >
-                      {aula.ativo ? "Desativar" : "Ativar"}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(aula.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">{aula.descricao}</p>
-                
-                 <div className="space-y-2">
-                   {aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0 && (
-                     <div>
-                       <strong>Turmas Autorizadas:</strong>
-                       <div className="flex flex-wrap gap-1 mt-1">
-                         {aula.turmas_autorizadas.map((turma) => (
-                           <Badge key={turma} variant="secondary" className="text-xs">
-                             {turma}
-                           </Badge>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-                  
-                  {aula.permite_visitante && (
-                    <div>
-                      <Badge variant="outline">Permite Visitante</Badge>
-                    </div>
-                  )}
-                  
-                  {aula.pdf_nome && (
-                    <div>
-                      <strong>PDF:</strong> {aula.pdf_nome}
-                    </div>
-                  )}
-                  
-                  <div className="text-sm text-gray-500">
-                    Criado em: {new Date(aula.criado_em).toLocaleString('pt-BR')}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          filteredAulas.map((aula) => {
+            const coverUrl = resolveCover((aula as any).cover_file_path, (aula as any).cover_url);
+            const badges: { label: string; tone?: BadgeTone }[] = [];
+            if (aula.modulo) badges.push({ label: aula.modulo, tone: 'primary' });
+            badges.push({ label: aula.ativo ? 'Ativo' : 'Inativo', tone: aula.ativo ? 'success' : 'neutral' });
+
+            const meta = [
+              { icon: ExternalLink, text: `Criado em: ${new Date(aula.criado_em).toLocaleString('pt-BR')}` },
+            ];
+
+            const actions = [
+              { icon: ExternalLink, label: 'Abrir', onClick: () => window.open(aula.link_conteudo, '_blank') },
+              ...(aula.pdf_url ? [{ icon: FileText, label: 'PDF', onClick: () => window.open(aula.pdf_url!, '_blank') }] : []),
+              { icon: Edit, label: aula.ativo ? 'Desativar' : 'Ativar', onClick: () => toggleAtivo(aula.id, aula.ativo) },
+              { icon: Trash2, label: 'Excluir', onClick: () => handleDelete(aula.id), tone: 'danger' as const },
+            ];
+
+            return (
+              <AdminCard
+                key={aula.id}
+                item={{
+                  id: aula.id,
+                  module: 'aulas',
+                  coverUrl,
+                  title: aula.titulo,
+                  subtitle: aula.descricao,
+                  badges,
+                  meta,
+                  actions,
+                }}
+              />
+            );
+          })
         )}
       </div>
     </div>

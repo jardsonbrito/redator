@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, FileText } from "lucide-react";
-
+import { ImageSelector } from "@/components/admin/ImageSelector";
 interface AulaEditando {
   id: string;
   titulo: string;
@@ -22,6 +22,9 @@ interface AulaEditando {
   turmas_autorizadas?: string[];
   permite_visitante?: boolean;
   ativo?: boolean;
+  cover_source?: 'upload' | 'url' | null;
+  cover_file_path?: string | null;
+  cover_url?: string | null;
 }
 
 interface AulaFormProps {
@@ -42,7 +45,8 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
   const [ativo, setAtivo] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
+const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
+  const [cover, setCover] = useState<any>(null);
 
   // Preencher formulário ao editar
   useEffect(() => {
@@ -56,6 +60,13 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
       setTurmasAutorizadas(aulaEditando.turmas_autorizadas || []);
       setPermiteVisitante(aulaEditando.permite_visitante || false);
       setAtivo(aulaEditando.ativo !== false);
+      setCover(
+        aulaEditando.cover_source === 'upload' && aulaEditando.cover_file_path
+          ? { source: 'upload', file_path: aulaEditando.cover_file_path }
+          : aulaEditando.cover_url
+          ? { source: 'url', url: aulaEditando.cover_url }
+          : null
+      );
     }
   }, [aulaEditando]);
 
@@ -259,6 +270,19 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
               placeholder="https://..."
               type="url"
               required
+            />
+          </div>
+
+          {/* Capa da Aula (opcional) */}
+          <div className="space-y-2">
+            <Label className="text-base font-semibold">Imagem de Capa da Aula (opcional)</Label>
+            <ImageSelector
+              title="Capinha (16:9)"
+              description="Recomendado 1280x720px. Você pode enviar arquivo ou usar uma URL pública."
+              value={cover}
+              onChange={setCover}
+              minDimensions={{ width: 640, height: 360 }}
+              bucket="aulas"
             />
           </div>
 
