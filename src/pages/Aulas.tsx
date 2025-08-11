@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StudentHeader } from "@/components/StudentHeader";
@@ -9,8 +8,9 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, FileText, Search, Home } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Search } from "lucide-react";
+import { AlunoCard, AlunoCardSkeleton, type BadgeTone } from "@/components/aluno/AlunoCard";
+import { resolveCover } from "@/utils/coverUtils";
 
 interface Aula {
   id: string;
@@ -129,8 +129,10 @@ const Aulas = () => {
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Aulas" />
-          <div className="max-w-6xl mx-auto px-4 py-8">
-            <div className="text-center py-8">Carregando aulas...</div>
+          <div className="max-w-6xl mx-auto px-4 py-8 space-y-4">
+            <AlunoCardSkeleton />
+            <AlunoCardSkeleton />
+            <AlunoCardSkeleton />
           </div>
           </div>
         </TooltipProvider>
@@ -202,60 +204,23 @@ const Aulas = () => {
                 </CardContent>
               </Card>
             ) : (
-              filteredAulas.map((aula) => (
-                <Card key={aula.id} className={`hover:shadow-lg transition-shadow ${
-                  aula.modulo === 'Aula ao vivo' ? 'border-l-4 border-l-red-500 bg-red-50' : ''
-                }`}>
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg sm:text-xl mb-2 leading-tight">{aula.titulo}</CardTitle>
-                        <Badge 
-                          variant="outline" 
-                          className={`mb-2 text-xs sm:text-sm ${
-                            aula.modulo === 'Aula ao vivo' 
-                              ? 'bg-red-100 text-red-800 border-red-300' 
-                              : ''
-                          }`}
-                        >
-                          {aula.modulo}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => window.open(aula.link_conteudo, '_blank')}
-                          className="w-full sm:w-auto text-xs sm:text-sm"
-                        >
-                          <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                          Acessar Aula
-                        </Button>
-                        {aula.pdf_url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(aula.pdf_url, '_blank')}
-                            className="w-full sm:w-auto text-xs sm:text-sm"
-                          >
-                            <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                            Material PDF
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base leading-relaxed">{aula.descricao}</p>
-                    
-                    {aula.pdf_nome && (
-                      <div className="text-xs sm:text-sm text-gray-600 p-2 sm:p-3 bg-gray-50 rounded-md">
-                        <strong>Material complementar:</strong> {aula.pdf_nome}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
+filteredAulas.map((aula) => {
+                const coverUrl = resolveCover((aula as any).cover_file_path, (aula as any).cover_url || (aula as any).imagem_capa_url);
+                const tone: BadgeTone = aula.modulo === 'Aula ao vivo' ? 'warning' : 'primary';
+                const badges = aula.modulo ? [{ label: aula.modulo, tone }] : [];
+                return (
+                  <AlunoCard
+                    key={aula.id}
+                    item={{
+                      coverUrl,
+                      title: aula.titulo,
+                      subtitle: aula.descricao,
+                      badges,
+                      cta: { label: 'Acessar Aula', onClick: () => window.open(aula.link_conteudo, '_blank') },
+                    }}
+                  />
+                );
+              })
             )}
           </div>
         </main>
