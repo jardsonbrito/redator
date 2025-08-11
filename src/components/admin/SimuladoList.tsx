@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SimuladoForm } from "./SimuladoForm";
+import { AdminCard, AdminCardSkeleton } from "@/components/admin/AdminCard";
+import { resolveCover } from "@/utils/coverUtils";
 
 const SimuladoList = () => {
   const { toast } = useToast();
@@ -20,13 +22,23 @@ const SimuladoList = () => {
   const { data: simulados, isLoading } = useQuery({
     queryKey: ['admin-simulados'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: sims, error } = await supabase
         .from('simulados')
         .select('*')
         .order('criado_em', { ascending: false });
-      
       if (error) throw error;
-      return data;
+
+      const temaIds = Array.from(new Set((sims || []).map((s) => s.tema_id).filter(Boolean)));
+      let temasMap: Record<string, any> = {};
+      if (temaIds.length > 0) {
+        const { data: temas } = await supabase
+          .from('temas')
+          .select('id, frase_tematica, eixo_tematico, cover_file_path, cover_url, cover_source')
+          .in('id', temaIds as string[]);
+        temasMap = (temas || []).reduce((acc: any, t: any) => { acc[t.id] = t; return acc; }, {});
+      }
+
+      return (sims || []).map((s) => ({ ...s, tema: s.tema_id ? temasMap[s.tema_id] || null : null }));
     }
   });
 
@@ -86,7 +98,13 @@ const SimuladoList = () => {
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Carregando simulados...</div>;
+    return (
+      <div className="space-y-4">
+        <AdminCardSkeleton />
+        <AdminCardSkeleton />
+        <AdminCardSkeleton />
+      </div>
+    );
   }
 
   if (showForm) {
