@@ -35,15 +35,13 @@ export function AlunoCard({ item }: { item: CardAlunoItem }) {
     <article className="w-full" aria-label={item.ariaLabel || item.title}>
       <Card className="overflow-hidden">
         <CardContent className="p-4">
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             {/* Thumb */}
-            <div className="shrink-0" style={{ width: 240 }}>
-              <div className="relative rounded-md overflow-hidden bg-muted" style={{ width: 240, height: 135 }}>
+            <div className="shrink-0 w-full sm:w-60">
+              <div className="relative rounded-md overflow-hidden bg-muted w-full h-40 sm:w-60 sm:h-[135px]">
                 <img
                   src={imgSrc}
                   alt={`Capa de ${item.title}`}
-                  width={240}
-                  height={135}
                   loading="lazy"
                   className="h-full w-full object-cover"
                   onError={() => setBroken(true)}
@@ -53,17 +51,17 @@ export function AlunoCard({ item }: { item: CardAlunoItem }) {
 
             {/* Info */}
             <div className="flex-1 min-w-0 flex flex-col gap-2">
-              <h3 className="text-xl font-semibold text-foreground line-clamp-2">{item.title}</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-foreground line-clamp-2">{item.title}</h3>
 
               {item.subtitle && (
-                <p className="text-sm text-muted-foreground line-clamp-2">{item.subtitle}</p>
+                <p className="text-sm text-muted-foreground line-clamp-3 sm:line-clamp-2">{item.subtitle}</p>
               )}
 
               {/* Badges */}
               {item.badges && item.badges.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-1" aria-label="marcadores">
                   {item.badges.map((b, i) => (
-                    <Badge key={`${b.label}-${i}`} {...toneToVariant[b.tone || "neutral"]} className={cn(toneToVariant[b.tone || "neutral"].className)}>
+                    <Badge key={`${b.label}-${i}`} {...toneToVariant[b.tone || "neutral"]} className={cn("text-xs", toneToVariant[b.tone || "neutral"].className)}>
                       {b.label}
                     </Badge>
                   ))}
@@ -84,12 +82,13 @@ export function AlunoCard({ item }: { item: CardAlunoItem }) {
 
               {/* CTA */}
               {item.cta && (
-                <div className="mt-3">
+                <div className="mt-3 flex justify-end sm:justify-start">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={item.cta.onClick}
                     aria-label={item.cta.ariaLabel || item.cta.label}
+                    className="w-full sm:w-auto"
                   >
                     {item.cta.label}
                   </Button>
@@ -107,8 +106,8 @@ export function AlunoCardSkeleton() {
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="flex gap-4">
-          <Skeleton className="rounded-md" style={{ width: 240, height: 135 }} />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Skeleton className="rounded-md w-full h-40 sm:w-60 sm:h-[135px]" />
           <div className="flex-1 space-y-3">
             <Skeleton className="h-6 w-2/3" />
             <Skeleton className="h-4 w-5/6" />
@@ -116,7 +115,7 @@ export function AlunoCardSkeleton() {
               <Skeleton className="h-6 w-20" />
               <Skeleton className="h-6 w-24" />
             </div>
-            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-9 w-full sm:w-28" />
           </div>
         </div>
       </CardContent>
