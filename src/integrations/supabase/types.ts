@@ -1950,6 +1950,15 @@ export type Database = {
         Args: { p_nome_completo: string; p_email: string; p_password: string }
         Returns: Json
       }
+      create_auth_user_direct: {
+        Args: {
+          p_user_id: string
+          p_email: string
+          p_password: string
+          p_nome_completo: string
+        }
+        Returns: boolean
+      }
       create_simple_profile: {
         Args: { p_nome: string; p_email: string; p_turma: string }
         Returns: {
@@ -2241,6 +2250,10 @@ export type Database = {
         Returns: undefined
       }
       test_admin_login: {
+        Args: { p_email: string; p_password: string }
+        Returns: Json
+      }
+      test_admin_login_simple: {
         Args: { p_email: string; p_password: string }
         Returns: Json
       }

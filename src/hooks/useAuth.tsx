@@ -167,6 +167,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     console.log('🔐 Tentando login para:', email);
+    console.log('📊 Status inicial - Loading:', loading, 'User:', user?.email, 'IsAdmin:', isAdmin);
     setLoading(true);
     
     try {
@@ -177,13 +178,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password,
       });
       
+      console.log('🔍 Resposta Supabase Auth:', {
+        user: authData?.user?.email,
+        session: !!authData?.session,
+        error: authError?.message,
+        errorCode: authError?.name
+      });
+      
       if (!authError && authData.user) {
         console.log('✅ Supabase Auth successful para:', authData.user.email);
+        console.log('👤 User ID:', authData.user.id);
+        console.log('🎫 Session expires at:', new Date(authData.session?.expires_at! * 1000));
         // A sessão será definida pelo listener onAuthStateChange automaticamente
         return { error: null };
       }
 
       console.log('⚠️ Supabase Auth falhou:', authError?.message);
+      console.log('🔍 Detalhes do erro Auth:', {
+        name: authError?.name,
+        message: authError?.message,
+        status: (authError as any)?.status
+      });
       console.log('🔄 Etapa 2: Tentando validação direta de admin...');
       
       // Segundo: Tentar validação direta para admins
@@ -192,13 +207,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         p_password: password
       });
       
-      console.log('🔍 Resposta da validação direta:', { adminResponse, adminError });
+      console.log('🔍 Resposta da validação direta:', { 
+        adminResponse, 
+        adminError,
+        adminErrorDetails: adminError?.message
+      });
       
       const validationResult = adminResponse as unknown as AdminValidationResponse;
       
       if (!adminError && validationResult?.success && validationResult.admin) {
         console.log('✅ Validação direta de admin successful para:', email);
         console.log('👤 Admin info:', validationResult.admin);
+        console.log('🔑 Admin ID:', validationResult.admin.id);
+        
+        // Teste adicional de função is_main_admin
+        try {
+          const { data: isMainAdminTest } = await supabase.rpc('is_main_admin');
+          console.log('🔍 Teste is_main_admin():', isMainAdminTest);
+        } catch (testError) {
+          console.log('⚠️ Erro no teste is_main_admin():', testError);
+        }
         
         // Criar sessão administrativa personalizada
         const adminUser = {
@@ -227,29 +255,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } as any;
         
         console.log('🎯 Criando sessão admin customizada');
+        console.log('📝 Session details:', {
+          userEmail: adminUser.email,
+          userId: adminUser.id,
+          expiresAt: new Date(adminSession.expires_at * 1000)
+        });
         
         setSession(adminSession);
         setUser(adminUser);
         setIsAdmin(true);
         
         // Salvar sessão localmente
-        localStorage.setItem('admin_session', JSON.stringify({
+        const sessionData = {
           email: adminUser.email,
           id: adminUser.id,
           nome_completo: validationResult.admin.nome_completo,
           timestamp: new Date().toISOString(),
           login_method: 'direct_validation'
-        }));
+        };
+        
+        localStorage.setItem('admin_session', JSON.stringify(sessionData));
+        console.log('💾 Sessão salva no localStorage:', sessionData);
         
         console.log('✅ Login direct admin completed successfully!');
         setLoading(false);
         return { error: null };
       }
       
-      // Ambos os métodos falharam
+      // Ambos os métodos falharam - logs detalhados
       console.error('❌ Ambos os métodos falharam:');
-      console.error('   - Supabase Auth:', authError?.message);
-      console.error('   - Validação direta:', adminError?.message || 'validation failed');
+      console.error('   📧 Supabase Auth:');
+      console.error('      - Error:', authError?.message);
+      console.error('      - Name:', authError?.name);
+      console.error('      - Status:', (authError as any)?.status);
+      console.error('   🔍 Validação direta:');
+      console.error('      - Error:', adminError?.message);
+      console.error('      - Response:', adminResponse);
+      console.error('      - Validation success:', validationResult?.success);
       
       setLoading(false);
       return { 
@@ -258,6 +300,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
     } catch (error) {
       console.error('❌ Exceção durante login:', error);
+      console.error('❌ Stack trace:', (error as Error).stack);
       setLoading(false);
       return { error };
     }
