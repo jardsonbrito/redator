@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -203,41 +204,32 @@ export const TemaList = () => {
               </CardHeader>
               <CardContent className="pt-2">
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <IconAction
+                    icon={ACTION_ICON.editar}
+                    label="Editar"
+                    intent="neutral"
                     onClick={() => setEditingId(tema.id)}
-                    className="flex items-center gap-2 flex-1 sm:flex-none"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Editar
-                  </Button>
+                    className="flex-1 sm:flex-none justify-center sm:justify-start"
+                  />
 
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <IconAction
+                    icon={tema.status === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
+                    label={tema.status === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
+                    intent={tema.status === 'publicado' ? 'neutral' : 'positive'}
                     onClick={() => toggleStatus(tema.id, tema.status || 'publicado')}
-                    className="flex items-center gap-2 flex-1 sm:flex-none"
-                  >
-                    {tema.status === 'publicado' ? (
-                      <>
-                        <EyeOff className="w-4 h-4" />
-                        Tornar Rascunho
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-4 h-4" />
-                        Publicar
-                      </>
-                    )}
-                  </Button>
+                    className="flex-1 sm:flex-none justify-center sm:justify-start"
+                    asSwitch
+                    checked={tema.status === 'publicado'}
+                  />
                   
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" className="flex items-center gap-2 flex-1 sm:flex-none">
-                        <Trash2 className="w-4 h-4" />
-                        Deletar
-                      </Button>
+                      <IconAction
+                        icon={ACTION_ICON.excluir}
+                        label="Excluir"
+                        intent="danger"
+                        className="flex-1 sm:flex-none justify-center sm:justify-start"
+                      />
                     </AlertDialogTrigger>
                     <AlertDialogContent className="max-w-md mx-4">
                       <AlertDialogHeader>

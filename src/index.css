@@ -7,6 +7,18 @@
 
 @layer base {
   :root {
+    /* Action Icon System - Design Tokens */
+    --color-brand: hsl(248 59% 60%);
+    --color-neutral: hsl(211 7% 42%);
+    --color-positive: hsl(142 76% 36%);
+    --color-attention: hsl(43 89% 38%);
+    --color-danger: hsl(0 84% 60%);
+    --color-blue: hsl(217 91% 60%);
+
+    --focus-ring: hsl(248 59% 60%);
+    --disabled-opacity: 0.4;
+    --space-2: 8px;
+    
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
@@ -52,6 +64,10 @@
   }
 
   .dark {
+    /* Action Icon System - Dark Mode Adjustments */
+    --color-neutral: hsl(215 10% 64%);
+    --focus-ring: hsl(248 59% 70%);
+    
     --background: 258 100% 4%;
     --foreground: 0 0% 98%;
 
