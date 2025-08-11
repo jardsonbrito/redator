@@ -74,6 +74,77 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_config_logs: {
+        Row: {
+          acao: string
+          admin_id: string
+          criado_em: string
+          detalhes: Json | null
+          id: string
+          ip_address: unknown | null
+        }
+        Insert: {
+          acao: string
+          admin_id: string
+          criado_em?: string
+          detalhes?: Json | null
+          id?: string
+          ip_address?: unknown | null
+        }
+        Update: {
+          acao?: string
+          admin_id?: string
+          criado_em?: string
+          detalhes?: Json | null
+          id?: string
+          ip_address?: unknown | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_config_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_users: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          criado_em: string
+          criado_por: string | null
+          email: string
+          id: string
+          nome_completo: string
+          password_hash: string
+          ultimo_login: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          criado_por?: string | null
+          email: string
+          id?: string
+          nome_completo: string
+          password_hash: string
+          ultimo_login?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          criado_por?: string | null
+          email?: string
+          id?: string
+          nome_completo?: string
+          password_hash?: string
+          ultimo_login?: string | null
+        }
+        Relationships: []
+      }
       ajuda_rapida_mensagens: {
         Row: {
           aluno_id: string
@@ -2157,6 +2228,22 @@ export type Database = {
         Args: { professor_id: string; nova_senha: string }
         Returns: Json
       }
+      update_admin_email: {
+        Args: {
+          p_admin_id: string
+          p_new_email: string
+          p_current_password: string
+        }
+        Returns: Json
+      }
+      update_admin_password: {
+        Args: {
+          p_admin_id: string
+          p_current_password: string
+          p_new_password: string
+        }
+        Returns: Json
+      }
       update_student_email: {
         Args: { current_email: string; new_email: string }
         Returns: Json
@@ -2168,6 +2255,10 @@ export type Database = {
           nome_aluno: string
           detalhes: string
         }[]
+      }
+      validate_admin_credentials: {
+        Args: { p_email: string; p_password: string }
+        Returns: Json
       }
       validate_professor_login: {
         Args: { p_email: string; p_senha: string }

@@ -20,7 +20,8 @@ import {
   Users,
   UserCheck,
   AlertTriangle,
-  Download
+  Download,
+  Settings
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -80,6 +81,9 @@ import { ProfessorList } from "@/components/admin/ProfessorList";
 import { AlunosAprovacaoPopup } from "@/components/admin/AlunosAprovacaoPopup";
 import { useAlunosPendentes } from "@/hooks/useAlunosPendentes";
 
+// Import configurações admin
+import { AdminConfigForm } from "@/components/admin/AdminConfigForm";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
@@ -134,6 +138,7 @@ const Admin = () => {
     { id: "corretores", label: "Corretores", icon: UserCheck },
     { id: "professores", label: "Professores", icon: GraduationCap },
     { id: "exportacao", label: "Exportação", icon: Download },
+    { id: "configuracoes", label: "Configurações", icon: Settings },
   ];
 
   const renderContent = () => {
@@ -461,6 +466,19 @@ const Admin = () => {
       case "exportacao":
         navigate('/admin/exportacao');
         return null;
+
+      case "configuracoes":
+        return (
+          <div className="space-y-6">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Configurações do Administrador</h3>
+              <p className="text-sm text-muted-foreground">
+                Gerencie suas credenciais de acesso e configurações de segurança.
+              </p>
+            </div>
+            <AdminConfigForm />
+          </div>
+        );
       
       default:
         return (
