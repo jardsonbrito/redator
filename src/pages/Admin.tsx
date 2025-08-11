@@ -21,7 +21,8 @@ import {
   UserCheck,
   AlertTriangle,
   Download,
-  Settings
+  Settings,
+  Shield
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,6 +84,8 @@ import { useAlunosPendentes } from "@/hooks/useAlunosPendentes";
 
 // Import configurações admin
 import { AdminConfigForm } from "@/components/admin/AdminConfigForm";
+import { AdminForm } from "@/components/admin/AdminForm";
+import { AdminList } from "@/components/admin/AdminList";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -139,6 +142,7 @@ const Admin = () => {
     { id: "professores", label: "Professores", icon: GraduationCap },
     { id: "exportacao", label: "Exportação", icon: Download },
     { id: "configuracoes", label: "Configurações", icon: Settings },
+    { id: "administradores", label: "Administradores", icon: Shield },
   ];
 
   const renderContent = () => {
@@ -478,6 +482,22 @@ const Admin = () => {
             </div>
             <AdminConfigForm />
           </div>
+        );
+        
+      case "administradores":
+        return (
+          <Tabs defaultValue="list" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="list">Listar Administradores</TabsTrigger>
+              <TabsTrigger value="create">Cadastrar Administrador</TabsTrigger>
+            </TabsList>
+            <TabsContent value="list" className="space-y-4">
+              <AdminList />
+            </TabsContent>
+            <TabsContent value="create" className="space-y-4">
+              <AdminForm />
+            </TabsContent>
+          </Tabs>
         );
       
       default:

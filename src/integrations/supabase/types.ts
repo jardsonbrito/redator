@@ -1946,6 +1946,10 @@ export type Database = {
         Args: { student_email: string }
         Returns: number
       }
+      create_admin_user: {
+        Args: { p_nome_completo: string; p_email: string; p_password: string }
+        Returns: Json
+      }
       create_simple_profile: {
         Args: { p_nome: string; p_email: string; p_turma: string }
         Returns: {
@@ -2162,6 +2166,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      list_admin_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          nome_completo: string
+          email: string
+          ativo: boolean
+          criado_em: string
+          ultimo_login: string
+          criado_por_nome: string
+        }[]
+      }
       log_denied_access: {
         Args: {
           attempted_email: string
@@ -2223,6 +2239,10 @@ export type Database = {
       set_current_user_email: {
         Args: { user_email: string }
         Returns: undefined
+      }
+      toggle_admin_status: {
+        Args: { p_admin_id: string; p_new_status: boolean }
+        Returns: Json
       }
       trocar_senha_professor: {
         Args: { professor_id: string; nova_senha: string }
