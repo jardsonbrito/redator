@@ -10,8 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { format, isAfter, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SimuladoForm } from "./SimuladoForm";
-import { AdminCard, AdminCardSkeleton } from "@/components/admin/AdminCard";
+import { AdminCard, AdminCardSkeleton, type BadgeTone } from "@/components/admin/AdminCard";
 import { resolveCover } from "@/utils/coverUtils";
+import { trackAdminEvent } from "@/utils/telemetry";
 
 const SimuladoList = () => {
   const { toast } = useToast();
@@ -41,6 +42,12 @@ const SimuladoList = () => {
       return (sims || []).map((s) => ({ ...s, tema: s.tema_id ? temasMap[s.tema_id] || null : null }));
     }
   });
+
+  useEffect(() => {
+    if (simulados) {
+      trackAdminEvent('admin_card_render', { module: 'simulados', count: simulados.length });
+    }
+  }, [simulados]);
 
   const deletarSimulado = useMutation({
     mutationFn: async (id: string) => {
@@ -138,81 +145,40 @@ const SimuladoList = () => {
         <div className="grid gap-4">
           {simulados.map((simulado) => {
             const statusInfo = getStatusSimulado(simulado);
-            
+            const tema = simulado.tema as any | null;
+            const coverUrl = tema ? resolveCover(tema.cover_file_path, tema.cover_url) : resolveCover(undefined, undefined);
+            const subtitle = (tema?.frase_tematica as string) || simulado.frase_tematica;
+            const tone: BadgeTone = statusInfo.status === 'Ativo' ? 'success' : 'neutral';
+            const badges = [
+              {
+                label: statusInfo.status,
+                tone,
+              },
+              ...(simulado.turmas_autorizadas?.length
+                ? [{ label: `${simulado.turmas_autorizadas.length} turma(s)`, tone: 'neutral' as const }]
+                : []),
+            ];
+
             return (
-              <Card key={simulado.id} className="border-l-4 border-l-redator-primary">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg mb-2">{simulado.titulo}</CardTitle>
-                      <p className="text-sm text-gray-600 mb-3">{simulado.frase_tematica}</p>
-                      
-                      <div className="flex flex-wrap gap-2">
-                        <Badge className={`${statusInfo.color} text-white`}>
-                          {statusInfo.status}
-                        </Badge>
-                        
-                        {simulado.turmas_autorizadas && simulado.turmas_autorizadas.length > 0 && (
-                          <Badge variant="outline" className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {simulado.turmas_autorizadas.length} turma(s)
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(simulado)}
-                        title="Editar"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => deletarSimulado.mutate(simulado.id)}
-                        disabled={deletarSimulado.isPending}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-redator-primary" />
-                      <span>
-                        Início: {format(new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-redator-primary" />
-                      <span>
-                        Fim: {format(new Date(`${simulado.data_fim}T${simulado.hora_fim}`), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {simulado.turmas_autorizadas && simulado.turmas_autorizadas.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Turmas autorizadas:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {simulado.turmas_autorizadas.map((turma: string) => (
-                          <Badge key={turma} variant="secondary" className="text-xs">
-                            {turma === "visitante" ? "Visitantes" : turma}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <AdminCard
+                key={simulado.id}
+                item={{
+                  id: simulado.id,
+                  module: 'simulados',
+                  coverUrl,
+                  title: simulado.titulo,
+                  subtitle,
+                  badges,
+                  meta: [
+                    { icon: Calendar, text: `Início: ${format(new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}` },
+                    { icon: Clock, text: `Fim: ${format(new Date(`${simulado.data_fim}T${simulado.hora_fim}`), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}` },
+                  ],
+                  actions: [
+                    { icon: Edit, label: 'Editar', onClick: () => handleEdit(simulado) },
+                    { icon: Trash2, label: 'Excluir', onClick: () => deletarSimulado.mutate(simulado.id), tone: 'danger' },
+                  ],
+                }}
+              />
             );
           })}
         </div>

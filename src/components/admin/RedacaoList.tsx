@@ -1,12 +1,15 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Edit, Trash2 } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
 import { useToast } from '@/hooks/use-toast';
+import { AdminCard, AdminCardSkeleton } from '@/components/admin/AdminCard';
+import { resolveCover } from '@/utils/coverUtils';
+import { trackAdminEvent } from '@/utils/telemetry';
 import {
   AlertDialog,
   AlertDialogAction,
