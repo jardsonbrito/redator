@@ -166,34 +166,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('🔐 Attempting sign in with:', email);
+    console.log('🔐 Tentando login para:', email);
     setLoading(true);
     
     try {
-      // Tentar login via Supabase Auth primeiro
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Primeiro: Tentar login via Supabase Auth
+      console.log('📧 Etapa 1: Tentando Supabase Auth...');
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (!error && data.user) {
-        console.log('✅ Supabase Auth sign in successful for:', data.user.email);
-        // A sessão será definida pelo listener onAuthStateChange
+      if (!authError && authData.user) {
+        console.log('✅ Supabase Auth successful para:', authData.user.email);
+        // A sessão será definida pelo listener onAuthStateChange automaticamente
         return { error: null };
       }
 
-      // Se falhou no Supabase Auth, tentar login direto para admins
-      console.log('🔄 Trying direct admin validation for:', email);
+      console.log('⚠️ Supabase Auth falhou:', authError?.message);
+      console.log('🔄 Etapa 2: Tentando validação direta de admin...');
       
-      const { data: adminData, error: adminError } = await supabase.rpc('validate_admin_credentials', {
+      // Segundo: Tentar validação direta para admins
+      const { data: adminResponse, error: adminError } = await supabase.rpc('validate_admin_credentials', {
         p_email: email,
         p_password: password
       });
       
-      const validationResult = adminData as unknown as AdminValidationResponse;
+      console.log('🔍 Resposta da validação direta:', { adminResponse, adminError });
+      
+      const validationResult = adminResponse as unknown as AdminValidationResponse;
       
       if (!adminError && validationResult?.success && validationResult.admin) {
-        console.log('✅ Direct admin login successful for:', email);
+        console.log('✅ Validação direta de admin successful para:', email);
+        console.log('👤 Admin info:', validationResult.admin);
         
         // Criar sessão administrativa personalizada
         const adminUser = {
@@ -201,9 +206,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           email: validationResult.admin.email,
           aud: 'authenticated',
           role: 'authenticated',
+          email_confirmed_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
           user_metadata: {
             nome_completo: validationResult.admin.nome_completo
+          },
+          app_metadata: {
+            provider: 'admin_direct',
+            providers: ['admin_direct']
           }
         } as any;
         
@@ -213,29 +223,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           token_type: 'bearer',
           expires_in: 3600,
           expires_at: Math.floor(Date.now() / 1000) + 3600,
-          refresh_token: `refresh_${Date.now()}`
+          refresh_token: `admin_refresh_${Date.now()}`
         } as any;
+        
+        console.log('🎯 Criando sessão admin customizada');
         
         setSession(adminSession);
         setUser(adminUser);
         setIsAdmin(true);
         
+        // Salvar sessão localmente
         localStorage.setItem('admin_session', JSON.stringify({
           email: adminUser.email,
-          timestamp: new Date().toISOString()
+          id: adminUser.id,
+          nome_completo: validationResult.admin.nome_completo,
+          timestamp: new Date().toISOString(),
+          login_method: 'direct_validation'
         }));
         
+        console.log('✅ Login direct admin completed successfully!');
         setLoading(false);
         return { error: null };
       }
       
-      // Se ambos falharam
-      console.error('❌ Both auth methods failed:', { supabaseError: error, adminError });
+      // Ambos os métodos falharam
+      console.error('❌ Ambos os métodos falharam:');
+      console.error('   - Supabase Auth:', authError?.message);
+      console.error('   - Validação direta:', adminError?.message || 'validation failed');
+      
       setLoading(false);
-      return { error: error || new Error('Credenciais inválidas') };
+      return { 
+        error: authError || adminError || new Error('Credenciais inválidas') 
+      };
       
     } catch (error) {
-      console.error('❌ Sign in exception:', error);
+      console.error('❌ Exceção durante login:', error);
       setLoading(false);
       return { error };
     }
