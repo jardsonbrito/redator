@@ -3,6 +3,17 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface AdminValidationResponse {
+  success: boolean;
+  admin?: {
+    id: string;
+    email: string;
+    nome_completo: string;
+  };
+  error?: string;
+  message?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -20,18 +31,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const checkAdminStatus = (userEmail: string | undefined) => {
+  const checkAdminStatus = async (userEmail: string | undefined) => {
     if (!userEmail) {
       setIsAdmin(false);
       return false;
     }
     
-    // Aceitar múltiplos emails como admin
-    const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
-    const adminStatus = adminEmails.includes(userEmail.toLowerCase());
-    console.log('🔐 Admin check - Email:', userEmail, 'Admin status:', adminStatus);
-    setIsAdmin(adminStatus);
-    return adminStatus;
+    try {
+      // Consultar tabela admin_users primeiro
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('ativo')
+        .eq('email', userEmail.toLowerCase())
+        .eq('ativo', true)
+        .single();
+      
+      if (!error && data) {
+        console.log('🔐 Admin check (database) - Email:', userEmail, 'Status: active');
+        setIsAdmin(true);
+        return true;
+      }
+      
+      // Fallback para emails hardcoded (compatibilidade)
+      const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
+      const adminStatus = adminEmails.includes(userEmail.toLowerCase());
+      console.log('🔐 Admin check (fallback) - Email:', userEmail, 'Status:', adminStatus);
+      setIsAdmin(adminStatus);
+      return adminStatus;
+      
+    } catch (error) {
+      console.error('❌ Error checking admin status:', error);
+      // Fallback para emails hardcoded em caso de erro
+      const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
+      const adminStatus = adminEmails.includes(userEmail.toLowerCase());
+      setIsAdmin(adminStatus);
+      return adminStatus;
+    }
   };
 
   useEffect(() => {
@@ -47,16 +82,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           setSession(session);
           setUser(session.user);
-          checkAdminStatus(session.user.email);
           
-          // Salvar sessão admin persistente se for admin
-          const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
-          if (adminEmails.includes(session.user.email?.toLowerCase() || '')) {
-            localStorage.setItem('admin_session', JSON.stringify({
-              email: session.user.email,
-              timestamp: new Date().toISOString()
-            }));
-          }
+          // Verificar status admin de forma assíncrona
+          setTimeout(async () => {
+            const isAdminUser = await checkAdminStatus(session.user.email);
+            if (isAdminUser) {
+              localStorage.setItem('admin_session', JSON.stringify({
+                email: session.user.email,
+                timestamp: new Date().toISOString()
+              }));
+            }
+          }, 0);
         } else {
           setSession(null);
           setUser(null);
@@ -97,7 +133,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           setSession(session);
           setUser(session.user);
-          checkAdminStatus(session.user.email);
+          
+          // Verificar status admin de forma assíncrona  
+          setTimeout(async () => {
+            await checkAdminStatus(session.user.email);
+          }, 0);
         } else {
           // Verificar sessão local salva
           const adminSession = localStorage.getItem('admin_session');
@@ -130,25 +170,70 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
     
     try {
+      // Tentar login via Supabase Auth primeiro
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) {
-        console.error('❌ Sign in error:', error);
-        setLoading(false);
-        return { error };
-      }
-
-      if (data.user) {
-        console.log('✅ Sign in successful for:', data.user.email);
+      if (!error && data.user) {
+        console.log('✅ Supabase Auth sign in successful for:', data.user.email);
         // A sessão será definida pelo listener onAuthStateChange
         return { error: null };
       }
+
+      // Se falhou no Supabase Auth, tentar login direto para admins
+      console.log('🔄 Trying direct admin validation for:', email);
       
+      const { data: adminData, error: adminError } = await supabase.rpc('validate_admin_credentials', {
+        p_email: email,
+        p_password: password
+      });
+      
+      const validationResult = adminData as unknown as AdminValidationResponse;
+      
+      if (!adminError && validationResult?.success && validationResult.admin) {
+        console.log('✅ Direct admin login successful for:', email);
+        
+        // Criar sessão administrativa personalizada
+        const adminUser = {
+          id: validationResult.admin.id,
+          email: validationResult.admin.email,
+          aud: 'authenticated',
+          role: 'authenticated',
+          created_at: new Date().toISOString(),
+          user_metadata: {
+            nome_completo: validationResult.admin.nome_completo
+          }
+        } as any;
+        
+        const adminSession = {
+          user: adminUser,
+          access_token: `admin_session_${Date.now()}`,
+          token_type: 'bearer',
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          refresh_token: `refresh_${Date.now()}`
+        } as any;
+        
+        setSession(adminSession);
+        setUser(adminUser);
+        setIsAdmin(true);
+        
+        localStorage.setItem('admin_session', JSON.stringify({
+          email: adminUser.email,
+          timestamp: new Date().toISOString()
+        }));
+        
+        setLoading(false);
+        return { error: null };
+      }
+      
+      // Se ambos falharam
+      console.error('❌ Both auth methods failed:', { supabaseError: error, adminError });
       setLoading(false);
-      return { error: new Error('Login failed - no user returned') };
+      return { error: error || new Error('Credenciais inválidas') };
+      
     } catch (error) {
       console.error('❌ Sign in exception:', error);
       setLoading(false);
