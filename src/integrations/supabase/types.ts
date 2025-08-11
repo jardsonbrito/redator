@@ -1674,10 +1674,20 @@ export type Database = {
       temas: {
         Row: {
           cabecalho_enem: string | null
+          cover_dimensions: Json | null
+          cover_file_path: string | null
+          cover_file_size: number | null
+          cover_source: string
+          cover_url: string | null
           eixo_tematico: string
           frase_tematica: string
           id: string
           imagem_texto_4_url: string | null
+          motivator4_dimensions: Json | null
+          motivator4_file_path: string | null
+          motivator4_file_size: number | null
+          motivator4_source: string | null
+          motivator4_url: string | null
           publicado_em: string | null
           status: string | null
           texto_1: string | null
@@ -1686,10 +1696,20 @@ export type Database = {
         }
         Insert: {
           cabecalho_enem?: string | null
+          cover_dimensions?: Json | null
+          cover_file_path?: string | null
+          cover_file_size?: number | null
+          cover_source?: string
+          cover_url?: string | null
           eixo_tematico: string
           frase_tematica: string
           id?: string
           imagem_texto_4_url?: string | null
+          motivator4_dimensions?: Json | null
+          motivator4_file_path?: string | null
+          motivator4_file_size?: number | null
+          motivator4_source?: string | null
+          motivator4_url?: string | null
           publicado_em?: string | null
           status?: string | null
           texto_1?: string | null
@@ -1698,10 +1718,20 @@ export type Database = {
         }
         Update: {
           cabecalho_enem?: string | null
+          cover_dimensions?: Json | null
+          cover_file_path?: string | null
+          cover_file_size?: number | null
+          cover_source?: string
+          cover_url?: string | null
           eixo_tematico?: string
           frase_tematica?: string
           id?: string
           imagem_texto_4_url?: string | null
+          motivator4_dimensions?: Json | null
+          motivator4_file_path?: string | null
+          motivator4_file_size?: number | null
+          motivator4_source?: string | null
+          motivator4_url?: string | null
           publicado_em?: string | null
           status?: string | null
           texto_1?: string | null
