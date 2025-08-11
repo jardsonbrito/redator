@@ -27,6 +27,7 @@ export const RedacaoList = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: redacoes, isLoading, refetch } = useQuery({
     queryKey: ['admin-redacoes'],
@@ -40,6 +41,12 @@ export const RedacaoList = () => {
       return data || [];
     },
   });
+
+  useEffect(() => {
+    if (redacoes) {
+      trackAdminEvent('admin_card_render', { module: 'exemplares', count: redacoes.length });
+    }
+  }, [redacoes]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -134,7 +141,13 @@ export const RedacaoList = () => {
   };
 
   if (isLoading) {
-    return <div className="text-center py-4">Carregando redações...</div>;
+    return (
+      <div className="space-y-4">
+        <AdminCardSkeleton />
+        <AdminCardSkeleton />
+        <AdminCardSkeleton />
+      </div>
+    );
   }
 
   if (editingId) {
@@ -152,64 +165,51 @@ export const RedacaoList = () => {
       <h3 className="text-lg font-semibold text-redator-primary">Redações Cadastradas</h3>
       
       {redacoes && redacoes.length > 0 ? (
-        <div className="grid gap-4">
-          {redacoes.map((redacao) => (
-            <Card key={redacao.id} className="border-redator-accent/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base text-redator-primary line-clamp-2">
-                  {redacao.frase_tematica || 'Redação Exemplar'}
-                </CardTitle>
-                {redacao.eixo_tematico && (
-                  <span className="text-xs bg-redator-primary text-white px-2 py-1 rounded w-fit">
-                    {redacao.eixo_tematico}
-                  </span>
-                )}
-              </CardHeader>
-              <CardContent className="pt-2">
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
-                  <IconAction
-                    icon={ACTION_ICON.editar}
-                    label="Editar"
-                    intent="neutral"
-                    onClick={() => setEditingId(redacao.id)}
-                    className="flex-1 sm:flex-none justify-center sm:justify-start"
-                  />
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <IconAction
-                        icon={ACTION_ICON.excluir}
-                        label="Excluir"
-                        intent="danger"
-                        className="flex-1 sm:flex-none justify-center sm:justify-start"
-                      />
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-md mx-4">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                          <AlertTriangle className="w-5 h-5 text-red-500" />
-                          Confirmar Exclusão Permanente
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          <strong>ATENÇÃO:</strong> Esta ação é irreversível! A redação será removida permanentemente do banco de dados e não poderá ser recuperada.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                        <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => handleDelete(redacao.id)}
-                          className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
-                        >
-                          Excluir Permanentemente
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4">
+            {redacoes.map((redacao) => (
+              <AdminCard
+                key={redacao.id}
+                item={{
+                  id: redacao.id,
+                  module: 'exemplares',
+                  coverUrl: resolveCover(undefined, redacao.pdf_url as string | null),
+                  title: redacao.frase_tematica || 'Redação Exemplar',
+                  badges: redacao.eixo_tematico
+                    ? [{ label: redacao.eixo_tematico as string, tone: 'primary' }]
+                    : [],
+                  actions: [
+                    { icon: Edit, label: 'Editar', onClick: () => setEditingId(redacao.id) },
+                    { icon: Trash2, label: 'Excluir', tone: 'danger', onClick: () => setDeleteId(redacao.id) },
+                  ],
+                }}
+              />
+            ))}
+          </div>
+
+          <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+            <AlertDialogContent className="max-w-md mx-4">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  Confirmar Exclusão Permanente
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  <strong>ATENÇÃO:</strong> Esta ação é irreversível! A redação será removida permanentemente do banco de dados e não poderá ser recuperada.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => { if (deleteId) { handleDelete(deleteId); setDeleteId(null); } }}
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                >
+                  Excluir Permanentemente
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
       ) : (
         <p className="text-redator-accent text-center py-8">Nenhuma redação cadastrada ainda.</p>
       )}

@@ -149,15 +149,12 @@ const SimuladoList = () => {
             const coverUrl = tema ? resolveCover(tema.cover_file_path, tema.cover_url) : resolveCover(undefined, undefined);
             const subtitle = (tema?.frase_tematica as string) || simulado.frase_tematica;
             const tone: BadgeTone = statusInfo.status === 'Ativo' ? 'success' : 'neutral';
-            const badges = [
-              {
-                label: statusInfo.status,
-                tone,
-              },
-              ...(simulado.turmas_autorizadas?.length
-                ? [{ label: `${simulado.turmas_autorizadas.length} turma(s)`, tone: 'neutral' as const }]
-                : []),
-            ];
+            const badges: { label: string; tone?: BadgeTone }[] = [];
+            if (tema?.eixo_tematico) badges.push({ label: tema.eixo_tematico as string, tone: 'primary' });
+            badges.push({ label: statusInfo.status, tone });
+            if (Array.isArray(simulado.turmas_autorizadas) && simulado.turmas_autorizadas.length > 0) {
+              simulado.turmas_autorizadas.forEach((t: string) => badges.push({ label: t === 'visitante' ? 'Visitantes' : t, tone: 'neutral' }));
+            }
 
             return (
               <AdminCard
