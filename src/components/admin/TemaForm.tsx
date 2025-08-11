@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { ImageSelector } from './ImageSelector';
+import { ArrowLeft } from 'lucide-react';
 
 type ImageValue = {
   source: 'upload' | 'url';
@@ -31,8 +32,16 @@ interface FormData {
   motivator4: ImageValue;
 }
 
-export const TemaForm = () => {
+interface TemaFormProps {
+  mode?: 'create' | 'edit';
+  temaId?: string;
+  onCancel?: () => void;
+  onSuccess?: () => void;
+}
+
+export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaFormProps) => {
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(mode === 'edit');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -48,11 +57,81 @@ export const TemaForm = () => {
     motivator4: null
   });
 
+  // Load existing theme data when in edit mode
+  useEffect(() => {
+    if (mode === 'edit' && temaId) {
+      const loadTheme = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('temas')
+            .select('*')
+            .eq('id', temaId)
+            .single();
+
+          if (error) throw error;
+
+          // Pre-populate cover image
+          let coverValue: ImageValue = null;
+          if (data.cover_file_path) {
+            coverValue = { 
+              source: 'upload', 
+              file_path: data.cover_file_path,
+              file_size: data.cover_file_size,
+              dimensions: data.cover_dimensions as { width: number; height: number } | undefined
+            };
+          } else if (data.cover_url) {
+            coverValue = { source: 'url', url: data.cover_url };
+          } else if (data.imagem_texto_4_url) {
+            // Legacy fallback
+            coverValue = { source: 'url', url: data.imagem_texto_4_url };
+          }
+
+          // Pre-populate motivator IV
+          let motivator4Value: ImageValue = null;
+          if (data.motivator4_source !== 'none' && data.motivator4_source) {
+            if (data.motivator4_file_path) {
+              motivator4Value = { 
+                source: 'upload', 
+                file_path: data.motivator4_file_path,
+                file_size: data.motivator4_file_size,
+                dimensions: data.motivator4_dimensions as { width: number; height: number } | undefined
+              };
+            } else if (data.motivator4_url) {
+              motivator4Value = { source: 'url', url: data.motivator4_url };
+            }
+          }
+
+          setFormData({
+            frase_tematica: data.frase_tematica || '',
+            eixo_tematico: data.eixo_tematico || '',
+            status: data.status || 'publicado',
+            cabecalho_enem: data.cabecalho_enem || 'Com base na leitura dos textos motivadores e nos conhecimentos construídos ao longo de sua formação, redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema apresentado, apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.',
+            texto_1: data.texto_1 || '',
+            texto_2: data.texto_2 || '',
+            texto_3: data.texto_3 || '',
+            cover: coverValue,
+            motivator4: motivator4Value
+          });
+        } catch (error: any) {
+          toast({
+            title: "❌ Erro",
+            description: "Erro ao carregar tema: " + error.message,
+            variant: "destructive",
+          });
+        } finally {
+          setLoadingData(false);
+        }
+      };
+
+      loadTheme();
+    }
+  }, [mode, temaId, toast]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate cover image is required
-    if (!formData.cover) {
+    // Validate cover image is required only for create mode
+    if (mode === 'create' && !formData.cover) {
       toast({
         title: "❌ Campo obrigatório",
         description: "Selecione um arquivo de imagem ou informe uma URL para a capinha.",
@@ -80,7 +159,7 @@ export const TemaForm = () => {
       }
 
       // Preparar dados com nova estrutura
-      const dataToInsert = {
+      const dataToSave: any = {
         frase_tematica: String(formData.frase_tematica || '').trim(),
         eixo_tematico: String(formData.eixo_tematico || '').trim(),
         status: formData.status,
@@ -89,28 +168,29 @@ export const TemaForm = () => {
         texto_2: formData.texto_2 ? String(formData.texto_2).trim() : null,
         texto_3: formData.texto_3 ? String(formData.texto_3).trim() : null,
         // Cover image fields
-        cover_source: formData.cover.source,
-        cover_url: formData.cover.url || null,
-        cover_file_path: formData.cover.file_path || null,
-        cover_file_size: formData.cover.file_size || null,
-        cover_dimensions: formData.cover.dimensions || null,
+        cover_source: formData.cover?.source || 'url',
+        cover_url: formData.cover?.url || null,
+        cover_file_path: formData.cover?.file_path || null,
+        cover_file_size: formData.cover?.file_size || null,
+        cover_dimensions: formData.cover?.dimensions || null,
         // Motivator 4 fields
         motivator4_source: formData.motivator4?.source || 'none',
         motivator4_url: formData.motivator4?.url || null,
         motivator4_file_path: formData.motivator4?.file_path || null,
         motivator4_file_size: formData.motivator4?.file_size || null,
         motivator4_dimensions: formData.motivator4?.dimensions || null,
-        publicado_em: new Date().toISOString()
       };
 
-      console.log('Dados preparados para inserção:', dataToInsert);
+      if (mode === 'create') {
+        dataToSave.publicado_em = new Date().toISOString();
+      }
 
-      // Inserir no Supabase
-      const { data, error } = await supabase
-        .from('temas')
-        .insert([dataToInsert])
-        .select('*')
-        .single();
+      console.log('Dados preparados para salvar:', dataToSave);
+
+      // Salvar no Supabase (create ou update)
+      const { data, error } = mode === 'create' 
+        ? await supabase.from('temas').insert([dataToSave]).select('*').single()
+        : await supabase.from('temas').update(dataToSave).eq('id', temaId).select('*').single();
 
       if (error) {
         console.error('Erro detalhado do Supabase:', error);
@@ -127,25 +207,33 @@ export const TemaForm = () => {
         queryClient.invalidateQueries({ queryKey: ['temas'] }),
         queryClient.invalidateQueries({ queryKey: ['admin-temas'] }),
         queryClient.refetchQueries({ queryKey: ['temas'] }),
+        ...(temaId ? [queryClient.invalidateQueries({ queryKey: ['tema', temaId] })] : [])
       ]);
 
       toast({
         title: "✅ Sucesso!",
-        description: `Tema cadastrado como ${formData.status === 'rascunho' ? 'rascunho' : 'publicado'} no banco de dados.`,
+        description: mode === 'create' 
+          ? `Tema cadastrado como ${formData.status === 'rascunho' ? 'rascunho' : 'publicado'} no banco de dados.`
+          : 'Tema atualizado com sucesso.',
       });
 
-      // Limpar formulário
-      setFormData({
-        frase_tematica: '',
-        eixo_tematico: '',
-        status: 'publicado',
-        cabecalho_enem: 'Com base na leitura dos textos motivadores e nos conhecimentos construídos ao longo de sua formação, redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema apresentado, apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.',
-        texto_1: '',
-        texto_2: '',
-        texto_3: '',
-        cover: null,
-        motivator4: null
-      });
+      if (mode === 'create') {
+        // Limpar formulário apenas no modo create
+        setFormData({
+          frase_tematica: '',
+          eixo_tematico: '',
+          status: 'publicado',
+          cabecalho_enem: 'Com base na leitura dos textos motivadores e nos conhecimentos construídos ao longo de sua formação, redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema apresentado, apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.',
+          texto_1: '',
+          texto_2: '',
+          texto_3: '',
+          cover: null,
+          motivator4: null
+        });
+      } else {
+        // No modo edit, chamar onSuccess callback
+        onSuccess?.();
+      }
 
     } catch (error: any) {
       console.error('Erro completo ao salvar tema:', error);
@@ -170,8 +258,23 @@ export const TemaForm = () => {
     }
   };
 
+  if (loadingData) {
+    return <div className="text-center py-4">Carregando dados do tema...</div>;
+  }
+
   return (
     <div className="space-y-8">
+      {/* Header with back button for edit mode */}
+      {mode === 'edit' && (
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={onCancel} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+          <h3 className="text-lg font-semibold text-redactor-primary">Editar Tema</h3>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 1. Cover Image (Required) */}
         <Card>
@@ -297,9 +400,16 @@ export const TemaForm = () => {
           </CardContent>
         </Card>
 
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? 'Salvando tema...' : 'Salvar Tema'}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button type="submit" disabled={loading} className="flex-1">
+            {loading ? (mode === 'edit' ? 'Salvando alterações...' : 'Salvando tema...') : (mode === 'edit' ? 'Salvar Alterações' : 'Salvar Tema')}
+          </Button>
+          {mode === 'edit' && (
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+              Cancelar
+            </Button>
+          )}
+        </div>
         
         {loading && (
           <div className="text-center space-y-2">

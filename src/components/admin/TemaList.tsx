@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { TemaEditForm } from './TemaEditForm';
+import { TemaForm } from './TemaForm';
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 
 export const TemaList = () => {
@@ -166,7 +166,8 @@ export const TemaList = () => {
 
   if (editingId) {
     return (
-      <TemaEditForm
+      <TemaForm
+        mode="edit"
         temaId={editingId}
         onCancel={() => setEditingId(null)}
         onSuccess={() => setEditingId(null)}
