@@ -45,26 +45,15 @@ export const VideoList = () => {
     try {
       console.log('🗑️ Iniciando exclusão do vídeo com ID:', id);
       
-      // Verificar autenticação do usuário
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Usuário não autenticado');
-      }
-      console.log('✅ Usuário autenticado:', user.email);
-
-      // Verificar se é admin com query corrigida
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error('❌ Erro ao verificar perfil:', profileError);
+      // Verificar se é admin usando função do banco
+      const { data: isAdmin, error: adminError } = await supabase.rpc('is_main_admin');
+      
+      if (adminError) {
+        console.error('❌ Erro ao verificar permissões:', adminError);
         throw new Error('Erro ao verificar permissões do usuário');
       }
 
-      if (!profile || profile.user_type !== 'admin') {
+      if (!isAdmin) {
         throw new Error('Usuário não tem permissões de administrador');
       }
       console.log('✅ Usuário confirmado como admin');
