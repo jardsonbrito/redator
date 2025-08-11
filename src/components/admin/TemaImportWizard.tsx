@@ -603,24 +603,32 @@ export const TemaImportWizard = () => {
                     </div>
                   </div>
                   <div className="w-64">
-                    <Select
-                      value={columnMappings[target] || ''}
-                      onValueChange={(value) => {
-                        setColumnMappings(prev => ({ ...prev, [target]: value }));
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecionar coluna..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">-- Não mapear --</SelectItem>
-                        {csvHeaders.map(header => (
-                          <SelectItem key={header} value={header}>
-                            {header}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                     <Select
+                       value={columnMappings[target] || 'none'}
+                       onValueChange={(value) => {
+                         if (value === 'none') {
+                           setColumnMappings(prev => {
+                             const updated = { ...prev };
+                             delete updated[target];
+                             return updated;
+                           });
+                         } else {
+                           setColumnMappings(prev => ({ ...prev, [target]: value }));
+                         }
+                       }}
+                     >
+                       <SelectTrigger>
+                         <SelectValue placeholder="Selecionar coluna..." />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="none">-- Não mapear --</SelectItem>
+                         {csvHeaders.filter(header => header && header.trim()).map(header => (
+                           <SelectItem key={header} value={header}>
+                             {header}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
                   </div>
                 </div>
               ))}
