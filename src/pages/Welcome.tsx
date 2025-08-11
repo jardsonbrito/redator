@@ -7,7 +7,7 @@ import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { ProfileSelector } from "@/components/ProfileSelector";
 import { LoginForm } from "@/components/LoginForm";
-import { LoginTestTool } from "@/components/LoginTestTool";
+
 const Welcome = () => {
   const [selectedProfile, setSelectedProfile] = useState<"professor" | "aluno" | "visitante" | "corretor">("aluno");
   const [loading, setLoading] = useState(false);
@@ -145,8 +145,6 @@ const Welcome = () => {
 
           <LoginForm selectedProfile={selectedProfile} onLogin={handleLogin} loading={loading} />
 
-          {/* Ferramenta de teste - visível apenas em desenvolvimento */}
-          {process.env.NODE_ENV === 'development' && <LoginTestTool />}
         </div>
       </div>
     </div>;
