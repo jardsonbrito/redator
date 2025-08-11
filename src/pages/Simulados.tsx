@@ -1,20 +1,21 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Users, ArrowRight, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { FileText } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { format, isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AlunoCard, AlunoCardSkeleton, type BadgeTone } from "@/components/aluno/AlunoCard";
+import { resolveCover } from "@/utils/coverUtils";
 
 const Simulados = () => {
   const { studentData } = useStudentAuth();
+  const navigate = useNavigate();
   
   // Determina a turma do usuário - NOMES CORRETOS DAS TURMAS (sem anos)
   let turmaCode = "Visitante";
@@ -22,57 +23,69 @@ const Simulados = () => {
     turmaCode = studentData.turma; // Usar o nome real da turma
   }
 
-  const { data: simulados, isLoading } = useQuery({
-    queryKey: ['simulados', turmaCode],
-    queryFn: async () => {
-      let query = supabase
-        .from('simulados')
-        .select('*')
-        .eq('ativo', true)
-        .order('data_inicio', { ascending: true });
+const { data: simulados, isLoading } = useQuery({
+  queryKey: ['simulados', turmaCode],
+  queryFn: async () => {
+    let query = supabase
+      .from('simulados')
+      .select('*')
+      .eq('ativo', true)
+      .order('data_inicio', { ascending: true });
 
-      // Filtra simulados baseado na turma do usuário
-      if (turmaCode === "Visitante") {
-        query = query.eq('permite_visitante', true);
-      } else {
-        query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const getStatusSimulado = (simulado: any) => {
-    const agora = new Date();
-    const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-    const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
-    
-    if (isBefore(agora, inicioSimulado)) {
-      return { status: "Agendado", color: "bg-blue-100 border-blue-200", canParticipate: false, timeInfo: `Inicia em ${format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}` };
-    } else if (isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado })) {
-      return { status: "Em progresso", color: "bg-green-100 border-green-200", canParticipate: true, timeInfo: `Termina em ${format(fimSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}` };
+    // Filtra simulados baseado na turma do usuário
+    if (turmaCode === "Visitante") {
+      query = query.eq('permite_visitante', true);
     } else {
-      return { status: "Encerrado", color: "bg-gray-100 border-gray-200", canParticipate: false, timeInfo: "" };
+      query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
     }
-  };
+    
+    const { data: sims, error } = await query;
+    if (error) throw error;
 
-  if (isLoading) {
+    const temaIds = Array.from(new Set((sims || []).map((s: any) => s.tema_id).filter(Boolean)));
+    let temasMap: Record<string, any> = {};
+    if (temaIds.length > 0) {
+      const { data: temas } = await supabase
+        .from('temas')
+        .select('id, frase_tematica, eixo_tematico, cover_file_path, cover_url')
+        .in('id', temaIds as string[]);
+      temasMap = (temas || []).reduce((acc: any, t: any) => { acc[t.id] = t; return acc; }, {});
+    }
+
+    return (sims || []).map((s: any) => ({ ...s, tema: s.tema_id ? temasMap[s.tema_id] || null : null }));
+  }
+});
+
+const getStatusSimulado = (simulado: any) => {
+  const agora = new Date();
+  const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+  const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+  
+  if (isBefore(agora, inicioSimulado)) {
+    return { label: "Agendado", isActive: false, timeInfo: `Inicia em ${format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}`, tone: 'neutral' as BadgeTone };
+  } else if (isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado })) {
+    return { label: "Em andamento", isActive: true, timeInfo: `Termina em ${format(fimSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}`, tone: 'success' as BadgeTone };
+  } else {
+    return { label: "Encerrado", isActive: false, timeInfo: "", tone: 'warning' as BadgeTone };
+  }
+};
+
+if (isLoading) {
   return (
     <ProtectedRoute>
       <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Simulados" />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="text-center">Carregando simulados...</div>
+          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">
+            <AlunoCardSkeleton />
+            <AlunoCardSkeleton />
+            <AlunoCardSkeleton />
           </main>
         </div>
       </TooltipProvider>
     </ProtectedRoute>
-    );
-  }
+  );
+}
 
   return (
     <ProtectedRoute>
@@ -90,76 +103,44 @@ const Simulados = () => {
           </p>
         </div>
 
-        {!simulados || simulados.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                Nenhum simulado disponível
-              </h3>
-              <p className="text-gray-500">
-                Não há simulados disponíveis para sua turma no momento.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-6">
-            {simulados.map((simulado) => {
-              const statusInfo = getStatusSimulado(simulado);
+{!simulados || simulados.length === 0 ? (
+  <Card>
+    <CardContent className="text-center py-12">
+      <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+        Nenhum simulado disponível
+      </h3>
+      <p className="text-gray-500">
+        Não há simulados disponíveis para sua turma no momento.
+      </p>
+    </CardContent>
+  </Card>
+) : (
+  <div className="grid gap-4">
+    {simulados.map((simulado: any) => {
+      const info = getStatusSimulado(simulado);
+      const tema = simulado.tema as any | null;
+      const coverUrl = tema ? resolveCover(tema.cover_file_path, tema.cover_url) : resolveCover(undefined, undefined);
+      const subtitle = (tema?.frase_tematica as string) || undefined;
+      const badges: { label: string; tone?: BadgeTone }[] = [];
+      if (tema?.eixo_tematico) badges.push({ label: tema.eixo_tematico as string, tone: 'primary' });
+      badges.push({ label: info.label, tone: info.tone });
 
-              return (
-                <Card key={simulado.id} className={`border transition-shadow ${statusInfo.status === "Agendado" ? "bg-blue-50 border-blue-200" : statusInfo.status === "Em progresso" ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
-                  <CardContent className="p-6">
-                    {statusInfo.status === "Agendado" && (
-                      <div className="space-y-3">
-                        <h3 className="text-xl font-semibold text-gray-900">
-                          {simulado.titulo}
-                        </h3>
-                        <Badge className="bg-blue-500 text-white font-medium">
-                          Agendado
-                        </Badge>
-                        <p className="text-gray-700 text-sm">
-                          {statusInfo.timeInfo}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {statusInfo.status === "Em progresso" && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 space-y-2">
-                          <h3 className="text-xl font-semibold text-gray-900">
-                            {simulado.titulo}
-                          </h3>
-                          <p className="text-gray-700 text-sm">
-                            {statusInfo.timeInfo}
-                          </p>
-                        </div>
-                        <div className="ml-6">
-                          <Link to={`/simulados/${simulado.id}`}>
-                            <Button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2">
-                              Participar do Simulado
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {statusInfo.status === "Encerrado" && (
-                      <div className="space-y-3">
-                        <h3 className="text-xl font-semibold text-gray-900">
-                          {simulado.titulo}
-                        </h3>
-                        <Badge className="bg-gray-500 text-white font-medium">
-                          Encerrado
-                        </Badge>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+      return (
+        <AlunoCard
+          key={simulado.id}
+          item={{
+            coverUrl,
+            title: simulado.titulo,
+            subtitle,
+            badges,
+            cta: info.isActive ? { label: 'Abrir', onClick: () => navigate(`/simulados/${simulado.id}`) } : undefined,
+          }}
+        />
+      );
+    })}
+  </div>
+)}
       </main>
         </div>
       </TooltipProvider>

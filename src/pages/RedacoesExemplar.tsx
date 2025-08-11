@@ -1,15 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { BookOpen, Star, Calendar, User, FileText } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { BookOpen, User } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
+import { AlunoCard, AlunoCardSkeleton } from "@/components/aluno/AlunoCard";
+import { resolveCover } from "@/utils/coverUtils";
+
 const RedacoesExemplar = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<any>(null);
 
