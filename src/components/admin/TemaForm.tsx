@@ -6,11 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { ImageSelector } from './ImageSelector';
-import { ArrowLeft } from 'lucide-react';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { ArrowLeft, Calendar, Clock } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 type ImageValue = {
   source: 'upload' | 'url';
@@ -30,6 +34,9 @@ interface FormData {
   texto_3: string;
   cover: ImageValue;
   motivator4: ImageValue;
+  // Scheduling fields
+  enableScheduling: boolean;
+  scheduledPublishAt?: Date;
 }
 
 interface TemaFormProps {
@@ -54,7 +61,9 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
     texto_2: '',
     texto_3: '',
     cover: null,
-    motivator4: null
+    motivator4: null,
+    enableScheduling: false,
+    scheduledPublishAt: undefined
   });
 
   // Load existing theme data when in edit mode
@@ -110,7 +119,9 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
             texto_2: data.texto_2 || '',
             texto_3: data.texto_3 || '',
             cover: coverValue,
-            motivator4: motivator4Value
+            motivator4: motivator4Value,
+            enableScheduling: !!data.scheduled_publish_at,
+            scheduledPublishAt: data.scheduled_publish_at ? new Date(data.scheduled_publish_at) : undefined
           });
         } catch (error: any) {
           toast({
@@ -138,6 +149,27 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
         variant: "destructive",
       });
       return;
+    }
+
+    // Validate scheduling date if enabled
+    if (formData.enableScheduling) {
+      if (!formData.scheduledPublishAt) {
+        toast({
+          title: "❌ Data obrigatória",
+          description: "Selecione data e horário para publicação agendada.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (formData.scheduledPublishAt <= new Date()) {
+        toast({
+          title: "❌ Data inválida",
+          description: "A data de publicação deve ser no futuro.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -179,6 +211,13 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
         motivator4_file_path: formData.motivator4?.file_path || null,
         motivator4_file_size: formData.motivator4?.file_size || null,
         motivator4_dimensions: formData.motivator4?.dimensions || null,
+        // Scheduling fields
+        scheduled_publish_at: formData.enableScheduling && formData.scheduledPublishAt 
+          ? formData.scheduledPublishAt.toISOString() 
+          : null,
+        scheduled_by: formData.enableScheduling && formData.scheduledPublishAt 
+          ? session.user.id 
+          : null,
       };
 
       if (mode === 'create') {
@@ -228,7 +267,9 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
           texto_2: '',
           texto_3: '',
           cover: null,
-          motivator4: null
+          motivator4: null,
+          enableScheduling: false,
+          scheduledPublishAt: undefined
         });
       } else {
         // No modo edit, chamar onSuccess callback
@@ -399,6 +440,53 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
             />
           </CardContent>
         </Card>
+
+        {/* 10. Publishing Schedule - Only for draft themes */}
+        {formData.status === 'rascunho' && (
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Agendar Publicação
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Publique automaticamente este tema em uma data específica
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.enableScheduling}
+                  onCheckedChange={(checked) => 
+                    setFormData({
+                      ...formData, 
+                      enableScheduling: checked,
+                      scheduledPublishAt: checked ? formData.scheduledPublishAt : undefined
+                    })
+                  }
+                />
+              </div>
+
+              {formData.enableScheduling && (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm">Data e Horário da Publicação</Label>
+                    <DateTimePicker
+                      value={formData.scheduledPublishAt}
+                      onChange={(date) => setFormData({...formData, scheduledPublishAt: date})}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ⏰ Horário será salvo em UTC. Atualmente: {formData.scheduledPublishAt ? 
+                        format(formData.scheduledPublishAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 
+                        'não definido'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Button type="submit" disabled={loading} className="flex-1">

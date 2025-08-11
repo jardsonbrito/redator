@@ -4,9 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, CheckCircle } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,30 +41,133 @@ export const TemaList = () => {
     },
   });
 
+  const getThemeStatus = (tema: any) => {
+    const now = new Date();
+    const scheduledDate = tema.scheduled_publish_at ? new Date(tema.scheduled_publish_at) : null;
+    
+    if (tema.status === 'publicado') {
+      return { 
+        type: 'published', 
+        label: 'Publicado', 
+        variant: 'default' as const,
+        publishedAt: tema.published_at ? new Date(tema.published_at) : null
+      };
+    }
+    
+    if (scheduledDate && scheduledDate > now) {
+      return { 
+        type: 'scheduled', 
+        label: `Agendado para ${format(scheduledDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 
+        variant: 'secondary' as const,
+        scheduledDate
+      };
+    }
+    
+    if (scheduledDate && scheduledDate <= now) {
+      return { 
+        type: 'overdue', 
+        label: 'Publicação pendente', 
+        variant: 'destructive' as const,
+        scheduledDate
+      };
+    }
+    
+    return { 
+      type: 'draft', 
+      label: 'Rascunho', 
+      variant: 'secondary' as const
+    };
+  };
+
+  const publishNow = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('temas')
+        .update({
+          status: 'publicado',
+          published_at: new Date().toISOString(),
+          scheduled_publish_at: null,
+          scheduled_by: null
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
+
+      toast({
+        title: "✅ Tema publicado",
+        description: "O tema foi publicado imediatamente.",
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "❌ Erro",
+        description: error.message || "Erro ao publicar tema.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelScheduling = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('temas')
+        .update({
+          scheduled_publish_at: null,
+          scheduled_by: null
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
+
+      toast({
+        title: "✅ Agendamento cancelado",
+        description: "O agendamento de publicação foi removido.",
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "❌ Erro",
+        description: error.message || "Erro ao cancelar agendamento.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const toggleStatus = async (id: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'publicado' ? 'rascunho' : 'publicado';
       
       const { error } = await supabase
         .from('temas')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          // Clear scheduling if making it published manually
+          ...(newStatus === 'publicado' && {
+            published_at: new Date().toISOString(),
+            scheduled_publish_at: null,
+            scheduled_by: null
+          })
+        })
         .eq('id', id);
 
       if (error) throw error;
 
+      // Invalidar queries para recarregar os dados
+      await queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
+
       toast({
         title: "✅ Status alterado",
-        description: `Tema agora está ${newStatus === 'publicado' ? 'publicado' : 'como rascunho'}.`,
+        description: `Tema alterado para ${newStatus}.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
-      queryClient.invalidateQueries({ queryKey: ['temas'] }); // Para atualizar área pública
-      
     } catch (error: any) {
-      console.error('Erro ao alterar status:', error);
       toast({
-        title: "❌ Erro ao alterar status",
-        description: error.message || "Não foi possível alterar o status do tema.",
+        title: "❌ Erro",
+        description: error.message || "Erro ao alterar status do tema.",
         variant: "destructive",
       });
     }
@@ -204,16 +309,23 @@ export const TemaList = () => {
                         <CardTitle className="text-base text-redator-primary line-clamp-2 mb-2">
                           {tema.frase_tematica}
                         </CardTitle>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {tema.eixo_tematico}
                           </Badge>
-                          <Badge 
-                            variant={tema.status === 'publicado' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {tema.status === 'publicado' ? 'Publicado' : 'Rascunho'}
-                          </Badge>
+                          
+                          {(() => {
+                            const status = getThemeStatus(tema);
+                            return (
+                              <Badge variant={status.variant} className="text-xs flex items-center gap-1">
+                                {status.type === 'published' && <CheckCircle className="w-3 h-3" />}
+                                {status.type === 'scheduled' && <Clock className="w-3 h-3" />}
+                                {status.type === 'overdue' && <AlertTriangle className="w-3 h-3" />}
+                                {status.label}
+                              </Badge>
+                            );
+                          })()}
+                          
                           {tema.needs_media_update && (
                             <Badge variant="destructive" className="text-xs">
                               Pendente de mídia
@@ -234,15 +346,56 @@ export const TemaList = () => {
                         className="flex-1 sm:flex-none justify-center sm:justify-start"
                       />
 
-                      <IconAction
-                        icon={tema.status === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
-                        label={tema.status === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
-                        intent={tema.status === 'publicado' ? 'neutral' : 'positive'}
-                        onClick={() => toggleStatus(tema.id, tema.status || 'publicado')}
-                        className="flex-1 sm:flex-none justify-center sm:justify-start"
-                        asSwitch
-                        checked={tema.status === 'publicado'}
-                      />
+                      {(() => {
+                        const status = getThemeStatus(tema);
+                        
+                        if (status.type === 'scheduled') {
+                          return (
+                            <>
+                              <IconAction
+                                icon={ACTION_ICON.publicar}
+                                label="Publicar Agora"
+                                intent="positive"
+                                onClick={() => publishNow(tema.id)}
+                                className="flex-1 sm:flex-none justify-center sm:justify-start"
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => cancelScheduling(tema.id)}
+                                className="flex-1 sm:flex-none"
+                              >
+                                <Calendar className="w-4 h-4 mr-2" />
+                                Cancelar Agendamento
+                              </Button>
+                            </>
+                          );
+                        }
+                        
+                        if (status.type === 'overdue') {
+                          return (
+                            <IconAction
+                              icon={ACTION_ICON.publicar}
+                              label="Publicar Agora (Atrasado)"
+                              intent="positive"
+                              onClick={() => publishNow(tema.id)}
+                              className="flex-1 sm:flex-none justify-center sm:justify-start"
+                            />
+                          );
+                        }
+                        
+                        return (
+                          <IconAction
+                            icon={tema.status === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
+                            label={tema.status === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
+                            intent={tema.status === 'publicado' ? 'neutral' : 'positive'}
+                            onClick={() => toggleStatus(tema.id, tema.status || 'publicado')}
+                            className="flex-1 sm:flex-none justify-center sm:justify-start"
+                            asSwitch
+                            checked={tema.status === 'publicado'}
+                          />
+                        );
+                      })()}
                       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

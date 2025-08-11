@@ -56,6 +56,9 @@ security_manual_linking_enabled = false
 [functions.criar-professor-auth]
 verify_jwt = false
 
+[functions.schedule-tema-publisher]
+verify_jwt = false
+
 [edge-runtime]
 enabled = true
 port = 54330
