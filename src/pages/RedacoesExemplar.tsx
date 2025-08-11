@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { BookOpen, User } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -123,31 +124,26 @@ const RedacoesExemplar = () => {
                     As redações exemplares aparecerão aqui quando cadastradas pelo administrador.
                   </p>
                 </CardContent>
-              </Card> : <div className="grid gap-6">
-                {redacoesExemplares.map(redacao => <Card key={redacao.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg font-bold text-primary mb-4">
-                            {redacao.frase_tematica}
-                          </CardTitle>
-                          
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <User className="w-4 h-4" />
-                            <span>Jardson Brito</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setSelectedRedacao(redacao)} className="border-primary/30 hover:bg-primary/10">
-                            <FileText className="w-4 h-4 mr-2" />
-                            Ver Redação
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>)}
-              </div>}
+</Card> : (
+              <div className="grid gap-4">
+                {redacoesExemplares.map((redacao) => {
+                  const coverUrl = resolveCover((redacao as any).cover_file_path, (redacao as any).cover_url);
+                  return (
+                    <AlunoCard
+                      key={redacao.id}
+                      item={{
+                        coverUrl,
+                        title: redacao.frase_tematica,
+                        badges: redacao.eixo_tematico ? [{ label: redacao.eixo_tematico, tone: 'primary' }] : undefined,
+                        meta: [{ icon: User, text: 'Jardson Brito' }],
+                        cta: { label: 'Ver Redação', onClick: () => setSelectedRedacao(redacao) },
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )
+            }
 
             {/* Modal para visualizar redação */}
             {selectedRedacao && <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
