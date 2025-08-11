@@ -1744,25 +1744,43 @@ export type Database = {
         Row: {
           categoria: string | null
           created_at: string | null
+          eixo_tematico: string | null
+          embed_url: string | null
           id: string
+          platform: string | null
+          status_publicacao: string | null
           thumbnail_url: string | null
           titulo: string
+          video_id: string | null
+          video_url_original: string | null
           youtube_url: string
         }
         Insert: {
           categoria?: string | null
           created_at?: string | null
+          eixo_tematico?: string | null
+          embed_url?: string | null
           id?: string
+          platform?: string | null
+          status_publicacao?: string | null
           thumbnail_url?: string | null
           titulo: string
+          video_id?: string | null
+          video_url_original?: string | null
           youtube_url: string
         }
         Update: {
           categoria?: string | null
           created_at?: string | null
+          eixo_tematico?: string | null
+          embed_url?: string | null
           id?: string
+          platform?: string | null
+          status_publicacao?: string | null
           thumbnail_url?: string | null
           titulo?: string
+          video_id?: string | null
+          video_url_original?: string | null
           youtube_url?: string
         }
         Relationships: []

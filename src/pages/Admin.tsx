@@ -208,7 +208,7 @@ const Admin = () => {
               <VideoList />
             </TabsContent>
             <TabsContent value="create">
-              <VideoForm />
+              <VideoForm mode="create" />
             </TabsContent>
           </Tabs>
         );

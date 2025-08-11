@@ -1,129 +1,191 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft } from 'lucide-react';
 
-export const VideoForm = () => {
+interface VideoFormProps {
+  mode: 'create' | 'edit';
+  initialValues?: any;
+  onCancel?: () => void;
+  onSuccess?: () => void;
+}
+
+export const VideoForm = ({ mode, initialValues, onCancel, onSuccess }: VideoFormProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
     titulo: '',
-    youtube_url: '',
-    categoria: ''
+    eixo_tematico: '',
+    status_publicacao: 'publicado' as 'publicado' | 'rascunho',
+    video_url_original: '',
   });
 
-  const extractYouTubeID = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+  const [preview, setPreview] = useState({
+    platform: '',
+    video_id: '',
+    embed_url: '',
+    thumbnail_url: '',
+  });
+
+  // Detectar plataforma e extrair informações do vídeo
+  const detectPlatformAndExtract = (url: string) => {
+    if (!url) return null;
+    
+    // YouTube
+    const youtubeMatch = url.match(/(youtu\.be\/([A-Za-z0-9_-]{11})|v=([A-Za-z0-9_-]{11})|shorts\/([A-Za-z0-9_-]{11})|embed\/([A-Za-z0-9_-]{11}))/);
+    if (youtubeMatch) {
+      const videoId = youtubeMatch[2] || youtubeMatch[3] || youtubeMatch[4] || youtubeMatch[5];
+      return {
+        platform: 'youtube',
+        video_id: videoId,
+        embed_url: `https://www.youtube.com/embed/${videoId}`,
+        thumbnail_url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      };
+    }
+    
+    // Instagram
+    const instagramMatch = url.match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/);
+    if (instagramMatch) {
+      const videoId = instagramMatch[1];
+      return {
+        platform: 'instagram',
+        video_id: videoId,
+        embed_url: `https://www.instagram.com/p/${videoId}/embed`,
+        thumbnail_url: '', // Instagram não permite thumbnail direto
+      };
+    }
+    
+    return null;
   };
 
-  const generateThumbnailUrl = (url: string) => {
-    const videoId = extractYouTubeID(url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '';
-  };
+  // Pré-preencher dados no modo edit
+  useEffect(() => {
+    if (mode === 'edit' && initialValues) {
+      setFormData({
+        titulo: initialValues.titulo || '',
+        eixo_tematico: initialValues.eixo_tematico || initialValues.categoria || '',
+        status_publicacao: initialValues.status_publicacao || 'publicado',
+        video_url_original: initialValues.video_url_original || initialValues.youtube_url || '',
+      });
 
-  const validateYouTubeUrl = (url: string) => {
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
-    return youtubeRegex.test(url);
-  };
+      // Gerar preview se houver URL
+      const url = initialValues.video_url_original || initialValues.youtube_url;
+      if (url) {
+        const detected = detectPlatformAndExtract(url);
+        if (detected) {
+          setPreview(detected);
+        }
+      }
+    }
+  }, [mode, initialValues]);
+
+  // Atualizar preview quando URL mudar
+  useEffect(() => {
+    const detected = detectPlatformAndExtract(formData.video_url_original);
+    if (detected) {
+      setPreview(detected);
+    } else {
+      setPreview({ platform: '', video_id: '', embed_url: '', thumbnail_url: '' });
+    }
+  }, [formData.video_url_original]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      console.log('Tentando salvar vídeo no Supabase:', formData);
-
-      // Verificar se o usuário está autenticado
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Sessão atual:', session);
+      if (!formData.titulo.trim()) {
+        throw new Error('Título é obrigatório');
+      }
       
-      if (sessionError) {
-        console.error('Erro ao verificar sessão:', sessionError);
-        throw new Error('Erro de autenticação: ' + sessionError.message);
+      if (!formData.eixo_tematico.trim()) {
+        throw new Error('Eixo Temático é obrigatório');
       }
-
-      if (!session) {
-        throw new Error('Usuário não está autenticado. Faça login novamente.');
-      }
-
-      // Validar URL do YouTube
-      if (!validateYouTubeUrl(formData.youtube_url)) {
-        throw new Error('URL do YouTube inválida. Use um link válido do YouTube.');
-      }
-
-      // Gerar thumbnail automaticamente
-      const thumbnailUrl = generateThumbnailUrl(formData.youtube_url);
       
-      // Preparar dados garantindo que são strings
-      const dataToInsert = {
-        titulo: String(formData.titulo || '').trim(),
-        youtube_url: String(formData.youtube_url || '').trim(),
-        categoria: String(formData.categoria || '').trim(),
-        thumbnail_url: thumbnailUrl || null,
-        created_at: new Date().toISOString()
+      if (!formData.video_url_original.trim()) {
+        throw new Error('Link do vídeo é obrigatório');
+      }
+
+      if (!preview.platform) {
+        throw new Error('URL de vídeo inválida. Use um link válido do YouTube ou Instagram.');
+      }
+
+      // Preparar dados para salvar
+      const dataToSave = {
+        titulo: formData.titulo.trim(),
+        eixo_tematico: formData.eixo_tematico.trim(),
+        status_publicacao: formData.status_publicacao,
+        video_url_original: formData.video_url_original.trim(),
+        platform: preview.platform,
+        video_id: preview.video_id,
+        embed_url: preview.embed_url,
+        thumbnail_url: preview.thumbnail_url || null,
+        // Manter campos antigos para compatibilidade
+        categoria: formData.eixo_tematico.trim(),
+        youtube_url: formData.video_url_original.trim(),
       };
 
-      console.log('Dados preparados para inserção:', dataToInsert);
-
-      // Inserir no Supabase
-      const { data, error } = await supabase
-        .from('videos')
-        .insert([dataToInsert])
-        .select('*')
-        .single();
-
-      if (error) {
-        console.error('Erro detalhado do Supabase:', error);
-        console.error('Código do erro:', error.code);
-        console.error('Detalhes do erro:', error.details);
-        console.error('Dica do erro:', error.hint);
-        throw error;
+      let result;
+      if (mode === 'create') {
+        const { data, error } = await supabase
+          .from('videos')
+          .insert([dataToSave])
+          .select('*')
+          .single();
+        result = { data, error };
+      } else {
+        const { data, error } = await supabase
+          .from('videos')
+          .update(dataToSave)
+          .eq('id', initialValues?.id)
+          .select('*')
+          .single();
+        result = { data, error };
       }
 
-      console.log('Vídeo salvo com sucesso no Supabase:', data);
+      if (result.error) {
+        console.error('Erro do Supabase:', result.error);
+        throw result.error;
+      }
 
-      // Invalidar e recarregar queries
+      // Invalidar queries
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['videos'] }),
-        queryClient.refetchQueries({ queryKey: ['videos'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-videos'] }),
       ]);
 
       toast({
         title: "✅ Sucesso!",
-        description: "Vídeo adicionado com sucesso à videoteca.",
+        description: mode === 'create' ? "Vídeo criado com sucesso!" : "Vídeo atualizado com sucesso!",
       });
 
-      // Limpar formulário
-      setFormData({
-        titulo: '',
-        youtube_url: '',
-        categoria: ''
-      });
-
-    } catch (error: any) {
-      console.error('Erro completo ao salvar vídeo:', error);
-      
-      let errorMessage = 'Erro desconhecido ao salvar vídeo.';
-      
-      if (error.message?.includes('row-level security')) {
-        errorMessage = 'Erro de permissão: Verifique se você está logado como administrador.';
-      } else if (error.message?.includes('not-null violation')) {
-        errorMessage = 'Erro: Todos os campos obrigatórios devem ser preenchidos.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (mode === 'create') {
+        // Limpar formulário
+        setFormData({
+          titulo: '',
+          eixo_tematico: '',
+          status_publicacao: 'publicado',
+          video_url_original: '',
+        });
+        setPreview({ platform: '', video_id: '', embed_url: '', thumbnail_url: '' });
+      } else if (onSuccess) {
+        onSuccess();
       }
 
+    } catch (error: any) {
+      console.error('Erro ao salvar vídeo:', error);
       toast({
-        title: "❌ Erro ao salvar",
-        description: errorMessage,
+        title: "❌ Erro",
+        description: error.message || "Erro ao salvar vídeo",
         variant: "destructive",
       });
     } finally {
@@ -132,53 +194,118 @@ export const VideoForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <Label htmlFor="titulo">Título do Vídeo *</Label>
-        <Input
-          id="titulo"
-          value={formData.titulo}
-          onChange={(e) => setFormData({...formData, titulo: e.target.value})}
-          placeholder="Ex: Como escrever uma boa introdução"
-          required
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="categoria">Categoria *</Label>
-        <Input
-          id="categoria"
-          value={formData.categoria}
-          onChange={(e) => setFormData({...formData, categoria: e.target.value})}
-          placeholder="Ex: Técnicas de Redação, Repertório, Estrutura"
-          required
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="youtube_url">Link do YouTube *</Label>
-        <Input
-          id="youtube_url"
-          type="url"
-          value={formData.youtube_url}
-          onChange={(e) => setFormData({...formData, youtube_url: e.target.value})}
-          placeholder="https://www.youtube.com/watch?v=..."
-          required
-        />
-        <p className="text-sm text-gray-600 mt-1">
-          Cole o link completo do vídeo do YouTube. O thumbnail será gerado automaticamente.
-        </p>
-      </div>
-
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Salvando vídeo...' : 'Salvar Vídeo na Videoteca'}
-      </Button>
-      
-      {loading && (
-        <p className="text-sm text-blue-600 text-center">
-          Conectando com Supabase e salvando dados...
-        </p>
+    <div className="space-y-6">
+      {mode === 'edit' && onCancel && (
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={onCancel} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+          <h3 className="text-lg font-semibold text-redator-primary">
+            Editar Vídeo
+          </h3>
+        </div>
       )}
-    </form>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <Label htmlFor="titulo">Título do Vídeo *</Label>
+          <Input
+            id="titulo"
+            value={formData.titulo}
+            onChange={(e) => setFormData({...formData, titulo: e.target.value})}
+            placeholder="Ex: Como escrever uma boa introdução"
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="eixo_tematico">Eixo Temático *</Label>
+          <Input
+            id="eixo_tematico"
+            value={formData.eixo_tematico}
+            onChange={(e) => setFormData({...formData, eixo_tematico: e.target.value})}
+            placeholder="Ex: social e tecnologia, educação e cultura"
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="status_publicacao">Status *</Label>
+          <Select 
+            value={formData.status_publicacao} 
+            onValueChange={(value: 'publicado' | 'rascunho') => 
+              setFormData({...formData, status_publicacao: value})
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="publicado">Publicado</SelectItem>
+              <SelectItem value="rascunho">Rascunho</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="video_url_original">Link YouTube/Instagram *</Label>
+          <Input
+            id="video_url_original"
+            type="url"
+            value={formData.video_url_original}
+            onChange={(e) => setFormData({...formData, video_url_original: e.target.value})}
+            placeholder="https://www.youtube.com/watch?v=... ou https://www.instagram.com/reel/..."
+            required
+          />
+          <p className="text-sm text-muted-foreground mt-1">
+            Cole o link do YouTube ou Instagram. O preview será gerado automaticamente.
+          </p>
+        </div>
+
+        {/* Preview */}
+        {preview.platform && (
+          <div className="border rounded-lg p-4 bg-muted/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge variant={preview.platform === 'youtube' ? 'destructive' : 'default'}>
+                {preview.platform === 'youtube' ? 'YouTube' : 'Instagram'}
+              </Badge>
+              <span className="text-sm text-muted-foreground">Preview detectado</span>
+            </div>
+            
+            {preview.thumbnail_url ? (
+              <img 
+                src={preview.thumbnail_url} 
+                alt="Preview do vídeo"
+                className="w-full max-w-sm h-32 object-cover rounded"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full max-w-sm h-32 bg-muted rounded flex items-center justify-center">
+                <span className="text-sm text-muted-foreground">
+                  {preview.platform === 'instagram' ? 'Preview Instagram' : 'Sem preview'}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button type="submit" disabled={loading} className="flex-1">
+            {loading 
+              ? (mode === 'create' ? 'Criando...' : 'Salvando...')
+              : (mode === 'create' ? 'Criar Vídeo' : 'Salvar Alterações')
+            }
+          </Button>
+          {mode === 'edit' && onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+              Cancelar
+            </Button>
+          )}
+        </div>
+      </form>
+    </div>
   );
 };

@@ -83,38 +83,32 @@ const Videoteca = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {videos && videos.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {videos.map((video) => {
-              console.log('Renderizando vídeo:', {
-                id: video.id,
-                titulo: video.titulo,
-                categoria: video.categoria,
-                thumbnail: video.thumbnail_url,
-                youtube_url: video.youtube_url
-              });
-              
-              // Usar thumbnail customizado ou extrair do YouTube
+            {videos.filter(video => video.status_publicacao === 'publicado').map((video) => {
+              // Usar thumbnail dos novos campos ou fallback para campos antigos
               let imageUrl = video.thumbnail_url;
-              if (!imageUrl && video.youtube_url) {
+              if (!imageUrl && video.video_id && video.platform === 'youtube') {
+                imageUrl = `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`;
+              } else if (!imageUrl && video.youtube_url) {
                 imageUrl = getYouTubeThumbnail(video.youtube_url);
               }
               
-              // Fallback com URL única baseada no ID
+              // Fallback final
               const defaultImageUrl = `https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop&auto=format&q=80&sig=${video.id}`;
               const finalImageUrl = imageUrl || defaultImageUrl;
               
+              // URL para abrir o vídeo
+              const videoUrl = video.video_url_original || video.youtube_url;
+              
               return (
-                <div key={video.id} className="group cursor-pointer" onClick={() => openVideo(video.youtube_url)}>
+                <div key={video.id} className="group cursor-pointer" onClick={() => openVideo(videoUrl)}>
                   <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 border-redator-accent/20 hover:border-redator-secondary/50">
                     <div className="aspect-video overflow-hidden rounded-t-lg relative">
                       <img 
                         src={finalImageUrl}
                         alt={video.titulo || "Vídeo educativo"}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        key={`video-${video.id}-${finalImageUrl}`}
                         loading="lazy"
-                        onLoad={() => console.log('Imagem carregada para vídeo:', video.id, finalImageUrl)}
                         onError={(e) => {
-                          console.log('Erro ao carregar imagem do vídeo:', video.id, finalImageUrl);
                           const fallbackUrl = `https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop&auto=format&q=80&sig=fallback-${video.id}`;
                           if (e.currentTarget.src !== fallbackUrl) {
                             e.currentTarget.src = fallbackUrl;
@@ -124,15 +118,17 @@ const Videoteca = () => {
                       <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <Play className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
                       </div>
-                      <div className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded">
-                        YouTube
+                      <div className="absolute top-2 right-2 text-white text-xs px-2 py-1 rounded" 
+                           style={{backgroundColor: video.platform === 'youtube' ? '#ff0000' : '#E4405F'}}>
+                        {video.platform === 'youtube' ? 'YouTube' : 
+                         video.platform === 'instagram' ? 'Instagram' : 'YouTube'}
                       </div>
                     </div>
                     <CardContent className="p-3 sm:p-4">
-                      {video.categoria && (
+                      {(video.eixo_tematico || video.categoria) && (
                         <div className="mb-2">
                           <span className="text-xs font-medium text-white bg-redator-secondary px-2 py-1 rounded">
-                            {video.categoria}
+                            {video.eixo_tematico || video.categoria}
                           </span>
                         </div>
                       )}
