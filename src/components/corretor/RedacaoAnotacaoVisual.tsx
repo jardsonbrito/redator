@@ -63,7 +63,7 @@ const customStyles = `
   /* Removido modo de tela cheia */
 
   /* Efeito de destaque para comentários */
-  .comentario-destacado, .is-highlighted.comment {
+  .comentario-destacado {
     animation: pulseGlow 2s ease-in-out !important;
     border: 3px solid hsl(var(--annotation-highlight)) !important;
     border-radius: 8px !important;
@@ -71,7 +71,7 @@ const customStyles = `
   }
 
   /* Efeito de destaque para retângulos */
-  .pulse-highlight, .r6o-shape.is-highlighted {
+  .pulse-highlight {
     animation: pulseRetangulo 2s ease-in-out !important;
   }
 
@@ -178,7 +178,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const { toast } = useToast();
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const commentsListRef = useRef<HTMLDivElement>(null);
   const annotoriousRef = useRef<any>(null);
   
   // Estados
@@ -203,67 +202,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     destacarRetangulo
   }));
 
-  // Utilitários de rolagem e mapeamento
-  const getScrollableContainer = (el?: HTMLElement | null): HTMLElement | Window => {
-    let node: HTMLElement | null = el || containerRef.current || imageRef.current || null;
-    while (node) {
-      const style = window.getComputedStyle(node);
-      const overflowY = style.overflowY;
-      const canScroll = (overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight;
-      if (canScroll) return node;
-      node = node.parentElement;
-    }
-    return window;
-  };
-
-  const centerRectIn = (container: HTMLElement | Window, rectEl: Element) => {
-    const r = (rectEl as HTMLElement).getBoundingClientRect();
-
-    if (container === window) {
-      const viewportCenterX = window.innerWidth / 2;
-      const viewportCenterY = window.innerHeight / 2;
-      const scrollX = window.scrollX + (r.left + r.width / 2 - viewportCenterX);
-      const scrollY = window.scrollY + (r.top + r.height / 2 - viewportCenterY);
-      window.scrollTo({ left: Math.max(0, scrollX), top: Math.max(0, scrollY), behavior: 'smooth' });
-      return;
-    }
-
-    const c = (container as HTMLElement).getBoundingClientRect();
-    const targetLeft = (container as HTMLElement).scrollLeft + (r.left - c.left) - (c.width / 2 - r.width / 2);
-    const targetTop  = (container as HTMLElement).scrollTop  + (r.top  - c.top ) - (c.height / 2 - r.height / 2);
-    (container as HTMLElement).scrollTo({ left: Math.max(0, targetLeft), top: Math.max(0, targetTop), behavior: 'smooth' });
-  };
-
-  const scrollCommentIntoView = (el: HTMLElement, offset = 72) => {
-    const container = getScrollableContainer(el as HTMLElement);
-    if (container === window) {
-      const y = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-    } else {
-      const c = (container as HTMLElement).getBoundingClientRect();
-      const r = el.getBoundingClientRect();
-      const targetTop  = (container as HTMLElement).scrollTop + (r.top - c.top) - (c.height / 2 - r.height / 2);
-      (container as HTMLElement).scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
-    }
-    el.classList.add('is-highlighted', 'comment');
-    window.setTimeout(() => el.classList.remove('is-highlighted', 'comment'), 2000);
-  };
-
-  const tagAnnotationElements = () => {
-    // Marca os retângulos com data-marcacao-id e acessibilidade básica
-    const groups = document.querySelectorAll('.r6o-annotation, g[data-id]');
-    groups.forEach((g) => {
-      const id = (g as HTMLElement).getAttribute('data-id');
-      const shape = g.querySelector('.r6o-shape') as HTMLElement | null;
-      if (id && shape) {
-        shape.setAttribute('data-marcacao-id', id);
-        shape.setAttribute('tabindex', '0');
-        shape.setAttribute('role', 'button');
-        shape.setAttribute('aria-label', 'Abrir comentário da marcação');
-      }
-    });
-  };
-
   // Função para destacar retângulo específico
   const destacarRetangulo = (annotationId: string) => {
     console.log('olho_click:' + annotationId);
@@ -271,12 +209,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     try {
       if (!annotoriousRef.current) {
         console.error('retangulo_nao_encontrado:' + annotationId, 'Annotorious não inicializado');
-        return;
-      }
-
-      // Se imagem/contêiner ainda não carregou, tentar novamente em seguida
-      if (!imageDimensions.width || !containerRef.current) {
-        setTimeout(() => destacarRetangulo(annotationId), 150);
         return;
       }
 
@@ -295,11 +227,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         `[data-id="${annotationId}"] .r6o-shape`,
         `.r6o-annotation[data-id="${annotationId}"] .r6o-shape`,
         `g[data-id="${annotationId}"] .r6o-shape`,
-        `.r6o-shape[data-marcacao-id="${annotationId}"]`,
         `.r6o-shape[data-annotation-id="${annotationId}"]`
       ];
 
-      let annotationElement: Element | null = null;
+      let annotationElement = null;
       for (const selector of possibleSelectors) {
         annotationElement = document.querySelector(selector);
         if (annotationElement) {
@@ -314,6 +245,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         const allShapes = document.querySelectorAll('.r6o-shape');
         console.log('Total de shapes encontrados:', allShapes.length);
         
+        // Para debug, listar todos os elementos encontrados
+        allShapes.forEach((shape, index) => {
+          console.log(`Shape ${index}:`, shape.parentElement?.getAttribute('data-id'), shape.getAttribute('data-annotation-id'));
+        });
+
         // Tentar encontrar pelo índice da anotação (fallback)
         const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
         if (annotationIndex >= 0 && allShapes[annotationIndex]) {
@@ -325,24 +261,66 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       if (annotationElement) {
         console.log('retangulo_ok:' + annotationId);
         
-        // Marcar id 1:1 e destacar
-        annotationElement.setAttribute('data-marcacao-id', annotationId);
-        annotationElement.classList.remove('pulse-highlight', 'is-highlighted');
-        // Forçar reflow para reiniciar animação
-        (annotationElement as HTMLElement).offsetHeight;
-        annotationElement.classList.add('pulse-highlight', 'is-highlighted');
-
-        // Centralizar retângulo no container rolável (baseado no próprio elemento da anotação)
-        const scrollContainer = getScrollableContainer(annotationElement as HTMLElement);
-        centerRectIn(scrollContainer as any, annotationElement);
-
-        // Remover destaque após 2s
+        // Remover destaque anterior se existir (reiniciar animação)
+        annotationElement.classList.remove('pulse-highlight');
+        
+        // Forçar reflow para garantir que a classe foi removida
+        annotationElement.offsetHeight;
+        
+        // Adicionar classe de destaque com data-annotation-id para identificação
+        annotationElement.setAttribute('data-annotation-id', annotationId);
+        annotationElement.classList.add('pulse-highlight');
+        
+        console.log('pulse_start:' + annotationId);
+        
+        // Remover destaque após 2 segundos
         setTimeout(() => {
-          annotationElement?.classList.remove('pulse-highlight', 'is-highlighted');
+          annotationElement.classList.remove('pulse-highlight');
+          console.log('pulse_end:' + annotationId);
         }, 2000);
+
+        // Scroll suave para o retângulo
+        const imageElement = imageRef.current;
+        const containerElement = containerRef.current;
+        
+        if (imageElement && containerElement && targetAnnotation.target?.selector?.value) {
+          // Parse da posição do retângulo
+          const selectorValue = targetAnnotation.target.selector.value;
+          const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+          
+          if (match) {
+            const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
+            
+            // Calcular posição absoluta na imagem
+            const imageRect = imageElement.getBoundingClientRect();
+            const targetX = imageRect.left + (xPercent / 100) * imageRect.width;
+            const targetY = imageRect.top + (yPercent / 100) * imageRect.height;
+            
+            // Calcular posição do centro do retângulo
+            const centerX = targetX + ((wPercent / 100) * imageRect.width) / 2;
+            const centerY = targetY + ((hPercent / 100) * imageRect.height) / 2;
+            
+            // Scroll suave para centralizar o retângulo na viewport
+            const viewportCenterX = window.innerWidth / 2;
+            const viewportCenterY = window.innerHeight / 2;
+            
+            const scrollX = window.scrollX + (centerX - viewportCenterX);
+            const scrollY = window.scrollY + (centerY - viewportCenterY);
+            
+            window.scrollTo({
+              left: Math.max(0, scrollX),
+              top: Math.max(0, scrollY),
+              behavior: 'smooth'
+            });
+          }
+        }
 
       } else {
         console.error('retangulo_nao_encontrado:' + annotationId, 'Elemento SVG não encontrado no DOM');
+        
+        // Debug adicional
+        console.log('Debug - Anotações disponíveis:', annotations.map((ann: any) => ann.id));
+        console.log('Debug - Total de elementos .r6o-shape:', document.querySelectorAll('.r6o-shape').length);
       }
     } catch (error) {
       console.error('retangulo_nao_encontrado:' + annotationId, 'Erro ao destacar retângulo:', error);
@@ -369,8 +347,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         comentarioElement.classList.remove('comentario-destacado');
       }, 2000);
       
-      // Scroll para o comentário com offset para headers fixos
-      scrollCommentIntoView(comentarioElement as HTMLElement, 72);
+      // Scroll para o comentário se necessário
+      comentarioElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
     }
   };
 
@@ -1133,7 +1114,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                       variant="ghost"
                       size="sm"
                       data-annotation-id={anotacao.id}
-                      onClick={() => destacarRetangulo(anotacao.id!)}
+                      onClick={() => { destacarRetangulo(anotacao.id!); destacarComentario(anotacao.id!); }}
                       className="h-6 w-6 p-0 text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
                       title="Mostrar marcação"
                       aria-label="Mostrar marcação deste comentário"
@@ -1142,6 +1123,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
                           destacarRetangulo(anotacao.id!);
+                          destacarComentario(anotacao.id!);
                         }
                       }}
                     >
