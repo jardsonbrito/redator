@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Award, Calendar, Eye, Lock, AlertCircle, User, Shield, CheckCircle, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 interface MeusSimuladosCardProps {
   turmaCode: string;
@@ -48,6 +49,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [redacaoAutenticada, setRedacaoAutenticada] = useState(false);
   const { toast } = useToast();
+  const { studentData } = useStudentAuth();
 
   const { data: redacoesSimulado, isLoading } = useQuery({
     queryKey: ['meus-simulados', turmaCode],
@@ -494,7 +496,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
                 </div>
               </div>
 
-              {selectedRedacao.status_atual === 'corrigida' && (
+              {selectedRedacao.status_atual === 'corrigida' && studentData?.userType !== 'aluno' && (
                 <div className="flex justify-center">
                   <Button 
                     onClick={handleDownloadCorrecao}

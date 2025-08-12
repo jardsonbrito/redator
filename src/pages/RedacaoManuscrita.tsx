@@ -12,6 +12,7 @@ import { AudioPlayerAluno } from "@/components/AudioPlayerAluno";
 import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
 import { useToast } from "@/hooks/use-toast";
 import { downloadRedacaoManuscritaCorrigida } from "@/utils/redacaoDownload";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 interface Redacao {
   id: string;
@@ -47,6 +48,7 @@ export default function RedacaoManuscrita() {
   const [search] = useSearchParams();
   const { toast } = useToast();
   const [showModalDevolucao, setShowModalDevolucao] = useState(false);
+  const { studentData } = useStudentAuth();
 
   const { data: redacao, isLoading } = useQuery({
     queryKey: ["redacao-manuscrita", id],
@@ -62,9 +64,6 @@ export default function RedacaoManuscrita() {
     },
   });
 
-  // Obter dados do aluno do localStorage
-  const studentDataStr = localStorage.getItem('alunoData');
-  const studentData = studentDataStr ? JSON.parse(studentDataStr) : null;
 
   useEffect(() => {
     if (redacao?.frase_tematica) {
@@ -237,14 +236,16 @@ export default function RedacaoManuscrita() {
             <Button variant="outline" onClick={goBack} className="flex-1">
               <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
             </Button>
-            <Button onClick={handleDownload} className="flex-1">
-              <Download className="w-4 h-4 mr-2" /> Baixar (PDF/Imagem)
-            </Button>
+            {studentData?.userType !== 'aluno' && (
+              <Button onClick={handleDownload} className="flex-1">
+                <Download className="w-4 h-4 mr-2" /> Baixar (PDF/Imagem)
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Modal de devolução */}
-        {redacao && showModalDevolucao && studentData?.email && (
+        {redacao && showModalDevolucao && (studentData?.email || localStorage.getItem('alunoData')) && (
           <ModalDevolucaoRedacao
             isOpen={showModalDevolucao}
             onClose={() => setShowModalDevolucao(false)}
@@ -257,7 +258,7 @@ export default function RedacaoManuscrita() {
               justificativa_devolucao: redacao.justificativa_devolucao || 'Motivo não especificado',
               data_envio: redacao.data_envio
             }}
-            emailAluno={studentData.email}
+            emailAluno={studentData?.email || JSON.parse(localStorage.getItem('alunoData') || '{}').email}
             corretorNome="Corretor"
           />
         )}

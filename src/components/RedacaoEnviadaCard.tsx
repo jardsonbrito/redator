@@ -8,6 +8,7 @@ import { RedacaoAnotacaoVisual } from "./corretor/RedacaoAnotacaoVisual";
 import { AudioPlayerAluno } from "./AudioPlayerAluno";
 import { useToast } from "@/hooks/use-toast";
 import { downloadRedacaoManuscritaCorrigida } from "@/utils/redacaoDownload";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 interface RedacaoEnviadaCardProps {
   redacao: {
@@ -57,6 +58,7 @@ export const RedacaoEnviadaCard = ({
   redacao
 }: RedacaoEnviadaCardProps) => {
   const { toast } = useToast();
+  const { studentData } = useStudentAuth();
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -443,24 +445,26 @@ export const RedacaoEnviadaCard = ({
               </div>
             )}
             
-            {/* Botão de download da correção - SEMPRE MOSTRAR quando há correção */}
-            <div className="flex justify-center pt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  // Implementar download da correção completa
-                  toast({
-                    title: "Download iniciado",
-                    description: "A correção completa será baixada em breve.",
-                  });
-                }}
-                className="text-primary border-primary hover:bg-primary/10"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Baixar Correção Completa
-              </Button>
-            </div>
+            {/* Botão de download da correção - APENAS para não-alunos */}
+            {studentData?.userType !== 'aluno' && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Implementar download da correção completa
+                    toast({
+                      title: "Download iniciado",
+                      description: "A correção completa será baixada em breve.",
+                    });
+                  }}
+                  className="text-primary border-primary hover:bg-primary/10"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Baixar Correção Completa
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
