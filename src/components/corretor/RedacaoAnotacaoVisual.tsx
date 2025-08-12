@@ -1133,7 +1133,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                       variant="ghost"
                       size="sm"
                       data-annotation-id={anotacao.id}
-                      onClick={() => { destacarRetangulo(anotacao.id!); destacarComentario(anotacao.id!); }}
+                      onClick={() => destacarRetangulo(anotacao.id!)}
                       className="h-6 w-6 p-0 text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
                       title="Mostrar marcação"
                       aria-label="Mostrar marcação deste comentário"
@@ -1142,7 +1142,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
                           destacarRetangulo(anotacao.id!);
-                          destacarComentario(anotacao.id!);
                         }
                       }}
                     >
