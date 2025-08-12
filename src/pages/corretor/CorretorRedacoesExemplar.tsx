@@ -22,7 +22,7 @@ const CorretorRedacoesExemplar = () => {
         // Buscar redações exemplares da tabela 'redacoes' (cadastradas pelo administrador)
         const { data, error } = await supabase
           .from('redacoes')
-          .select('*')
+          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita')
           .order('nota_total', { ascending: false });
 
         if (error) {
@@ -104,7 +104,8 @@ const CorretorRedacoesExemplar = () => {
         ) : (
           <div className="space-y-4">
             {redacoesExemplares?.map((redacao: any) => {
-              const coverUrl = resolveExemplarCover(redacao);
+              // Redações exemplares usam placeholder padrão pois não têm capas específicas
+              const coverUrl = '/src/assets/tema-cover-placeholder.png';
               const badges: Array<{ label: string; tone: 'primary' | 'neutral' | 'success' | 'warning' }> = [
                 { label: 'Redação Modelo', tone: 'warning' }
               ];

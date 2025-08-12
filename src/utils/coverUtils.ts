@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const PLACEHOLDER_URL = '/placeholders/tema-cover.png';
+const PLACEHOLDER_URL = '/src/assets/tema-cover-placeholder.png';
 
 // Helper to get public URL from Supabase storage
 function storageURL(path?: string | null): string | null {
@@ -29,9 +29,10 @@ export function resolveSimuladoCover(simulado: any): string {
   return resolveCover(tema?.cover_file_path, tema?.cover_url);
 }
 
-// Exemplares: capa própria
+// Exemplares: como são redações modelo, usam placeholder padrão
 export function resolveExemplarCover(exemplar: any): string {
-  return resolveCover(exemplar?.cover_file_path, exemplar?.cover_url);
+  // Redações exemplares sempre usam o placeholder padrão
+  return PLACEHOLDER_URL;
 }
 
 // Helper para capitalizar primeira letra

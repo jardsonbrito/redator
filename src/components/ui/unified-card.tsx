@@ -38,7 +38,7 @@ interface UnifiedCardProps {
 
 export function UnifiedCard({ variant, item }: UnifiedCardProps) {
   const [broken, setBroken] = useState(false);
-  const imgSrc = useMemo(() => (broken ? '/placeholders/tema-cover.png' : item.coverUrl || '/placeholders/tema-cover.png'), [broken, item.coverUrl]);
+  const imgSrc = useMemo(() => (broken ? '/src/assets/tema-cover-placeholder.png' : item.coverUrl || '/src/assets/tema-cover-placeholder.png'), [broken, item.coverUrl]);
 
   const showActions = variant === "admin" && item.actions && item.actions.length > 0;
   const showCta = (variant === "corretor" || variant === "aluno") && item.cta;
