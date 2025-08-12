@@ -213,11 +213,18 @@ export const RedacaoAnotacao = ({
 
         setMarcacaoTemp(marcacao);
         setComentarioTemp("");
-        setCompetenciasExpanded(true);
-        setCompetenciaDialog(null);
         setEditandoMarcacao(null);
+        setCompetenciaDialog(null);
+        setCompetenciasExpanded(true); // TEM que iniciar expandido (5 bolinhas)
         setDialogAberto(true);
         setModoSelecao(false);
+
+        // Debug log
+        console.log('ABRINDO DIALOG CRIAÇÃO', { 
+          editandoMarcacao: null, 
+          competenciaDialog: null, 
+          competenciasExpanded: true 
+        });
 
         // Remove o retângulo temporário
         canvas.remove(rect);
@@ -442,14 +449,23 @@ export const RedacaoAnotacao = ({
     setMarcacaoTemp(marcacao);
     setComentarioTemp(marcacao.comentario);
     setCompetenciaDialog(marcacao.competencia);
-    setCompetenciasExpanded(false); // Começa colapsado mostrando a competência atual
+    setCompetenciasExpanded(false); // edição inicia colapsado
     setDialogAberto(true);
+    
+    // Debug log
+    console.log('ABRINDO DIALOG EDIÇÃO', { 
+      editandoMarcacao: marcacao, 
+      competenciaDialog: marcacao.competencia, 
+      competenciasExpanded: false 
+    });
   };
 
   // Seleção de competência no dialog
   const selecionarCompetencia = (competencia: number) => {
     setCompetenciaDialog(competencia);
     setCompetenciasExpanded(false);
+    
+    console.log('COMPETÊNCIA SELECIONADA:', competencia, 'Cor:', CORES_COMPETENCIAS[competencia].cor);
     
     // Atualizar cor da marcação temporária se necessário
     if (marcacaoTemp) {
@@ -631,24 +647,20 @@ export const RedacaoAnotacao = ({
             <div className="space-y-3">
               {competenciasExpanded ? (
                 <div className="flex gap-2 flex-wrap">
-                  {[1, 2, 3, 4, 5].map((num) => {
-                    const cores = [
-                      '#ef4444', // Vermelho - C1
-                      '#22c55e', // Verde - C2  
-                      '#3b82f6', // Azul - C3
-                      '#f97316', // Laranja - C4
-                      '#a855f7', // Roxo - C5
-                    ];
-                    return (
-                      <button
-                        key={num}
-                        onClick={() => selecionarCompetencia(num)}
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
-                        style={{ backgroundColor: cores[num - 1] }}
-                        aria-label={`Competência ${num}`}
-                      />
-                    );
-                  })}
+                   {[1, 2, 3, 4, 5].map((num) => {
+                     // Usar as cores corretas do CORES_COMPETENCIAS
+                     const corCompetencia = CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor;
+                     
+                     return (
+                       <button
+                         key={num}
+                         onClick={() => selecionarCompetencia(num)}
+                         className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
+                         style={{ backgroundColor: corCompetencia }}
+                         aria-label={`Competência ${num}`}
+                       />
+                     );
+                   })}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
