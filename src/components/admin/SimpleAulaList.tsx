@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Trash2, ExternalLink, FileText, Edit } from "lucide-react";
 import { AulaForm } from "./AulaForm";
 import { AdminCard, AdminCardSkeleton, type BadgeTone } from "@/components/admin/AdminCard";
-import { resolveCover } from "@/utils/coverUtils";
+import { resolveAulaCover } from "@/utils/aulaImageUtils";
 
 interface Aula {
   id: string;
@@ -21,6 +21,15 @@ interface Aula {
   permite_visitante: boolean | null;
   ativo: boolean | null;
   criado_em: string | null;
+  // Video metadata fields
+  video_thumbnail_url?: string | null;
+  platform?: string | null;
+  video_id?: string | null;
+  embed_url?: string | null;
+  video_url_original?: string | null;
+  cover_source?: string | null;
+  cover_file_path?: string | null;
+  cover_url?: string | null;
 }
 
 export const SimpleAulaList = () => {
@@ -166,9 +175,10 @@ if (isLoading) {
       ) : (
         <div className="grid gap-4">
           {aulas.map((aula) => {
-            const coverUrl = resolveCover((aula as any).cover_file_path, (aula as any).cover_url);
+            const coverUrl = resolveAulaCover(aula);
             const badges: { label: string; tone?: BadgeTone }[] = [];
             if (aula.modulo) badges.push({ label: aula.modulo, tone: 'primary' });
+            if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
             badges.push({ label: aula.ativo ? 'Ativo' : 'Inativo', tone: aula.ativo ? 'success' : 'neutral' });
 
             const meta = [

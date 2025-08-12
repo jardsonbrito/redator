@@ -10,7 +10,7 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Search } from "lucide-react";
 import { AlunoCard, AlunoCardSkeleton, type BadgeTone } from "@/components/aluno/AlunoCard";
-import { resolveCover } from "@/utils/coverUtils";
+import { resolveAulaCover } from "@/utils/aulaImageUtils";
 
 interface Aula {
   id: string;
@@ -24,6 +24,15 @@ interface Aula {
   permite_visitante: boolean;
   ativo: boolean;
   criado_em: string;
+  // Video metadata fields
+  video_thumbnail_url?: string | null;
+  platform?: string | null;
+  video_id?: string | null;
+  embed_url?: string | null;
+  video_url_original?: string | null;
+  cover_source?: string | null;
+  cover_file_path?: string | null;
+  cover_url?: string | null;
 }
 
 const Aulas = () => {
@@ -205,9 +214,13 @@ const Aulas = () => {
               </Card>
             ) : (
 filteredAulas.map((aula) => {
-                const coverUrl = resolveCover((aula as any).cover_file_path, (aula as any).cover_url || (aula as any).imagem_capa_url);
+                const coverUrl = resolveAulaCover(aula);
                 const tone: BadgeTone = aula.modulo === 'Aula ao vivo' ? 'warning' : 'primary';
-                const badges = aula.modulo ? [{ label: aula.modulo, tone }] : [];
+                const badges: { label: string; tone: BadgeTone }[] = [];
+                
+                if (aula.modulo) badges.push({ label: aula.modulo, tone });
+                if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
+                
                 return (
                   <AlunoCard
                     key={aula.id}

@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, FileText } from "lucide-react";
 import { ImageSelector } from "@/components/admin/ImageSelector";
+import { VideoParser, processAulaVideoMetadata, resolveAulaCover } from "@/utils/aulaImageUtils";
 interface AulaEditando {
   id: string;
   titulo: string;
@@ -22,9 +23,15 @@ interface AulaEditando {
   turmas_autorizadas?: string[];
   permite_visitante?: boolean;
   ativo?: boolean;
-  cover_source?: 'upload' | 'url' | null;
+  cover_source?: string | null;
   cover_file_path?: string | null;
   cover_url?: string | null;
+  // Video metadata fields
+  video_thumbnail_url?: string | null;
+  platform?: string | null;
+  video_id?: string | null;
+  embed_url?: string | null;
+  video_url_original?: string | null;
 }
 
 interface AulaFormProps {
@@ -45,8 +52,9 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
   const [ativo, setAtivo] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
   const [cover, setCover] = useState<any>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
   // Preencher formulário ao editar
   useEffect(() => {
@@ -67,6 +75,7 @@ const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
           ? { source: 'url', url: aulaEditando.cover_url }
           : null
       );
+      setVideoPreview(resolveAulaCover(aulaEditando));
     }
   }, [aulaEditando]);
 
@@ -125,6 +134,17 @@ const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
     return { url: publicUrl, nome: file.name };
   };
 
+  // Update video preview when link changes
+  const handleLinkChange = (newLink: string) => {
+    setLinkConteudo(newLink);
+    const metadata = VideoParser.extractVideoMetadata(newLink);
+    if (metadata && metadata.thumbnailUrl) {
+      setVideoPreview(metadata.thumbnailUrl);
+    } else {
+      setVideoPreview(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -148,6 +168,20 @@ const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
         console.log('✅ PDF enviado:', uploadResult);
       }
 
+      // Process cover data
+      const coverData: any = {};
+      if (cover) {
+        if (cover.source === 'upload' && cover.file_path) {
+          coverData.cover_source = 'upload';
+          coverData.cover_file_path = cover.file_path;
+          coverData.cover_url = null;
+        } else if (cover.source === 'url' && cover.url) {
+          coverData.cover_source = 'url';
+          coverData.cover_url = cover.url;
+          coverData.cover_file_path = null;
+        }
+      }
+
       const aulaData = {
         titulo,
         descricao,
@@ -157,9 +191,11 @@ const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
         pdf_nome: finalPdfNome || null,
         turmas_autorizadas: turmasAutorizadas,
         permite_visitante: permiteVisitante,
-        ativo
+        ativo,
+        ...coverData
       };
 
+      let aulaId: string;
       let error;
 
       if (aulaEditando) {
@@ -169,15 +205,24 @@ const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
           .update(aulaData)
           .eq("id", aulaEditando.id);
         error = result.error;
+        aulaId = aulaEditando.id;
       } else {
         // Criar nova aula
         const result = await supabase
           .from("aulas")
-          .insert(aulaData);
+          .insert(aulaData)
+          .select('id')
+          .single();
         error = result.error;
+        aulaId = result.data?.id;
       }
 
       if (error) throw error;
+
+      // Process video metadata after saving
+      if (aulaId) {
+        await processAulaVideoMetadata(aulaId, linkConteudo);
+      }
 
       toast.success(aulaEditando ? "Aula atualizada com sucesso!" : "Aula criada com sucesso!");
       
@@ -198,6 +243,8 @@ const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
         setPermiteVisitante(false);
         setAtivo(true);
         setUploadMethod('url');
+        setCover(null);
+        setVideoPreview(null);
       }
 
     } catch (error) {
@@ -266,16 +313,34 @@ const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
             <Input
               id="linkConteudo"
               value={linkConteudo}
-              onChange={(e) => setLinkConteudo(e.target.value)}
+              onChange={(e) => handleLinkChange(e.target.value)}
               placeholder="https://..."
               type="url"
               required
             />
+            {videoPreview && (
+              <div className="mt-3">
+                <Label className="text-sm text-gray-600">Preview da Capa do Vídeo:</Label>
+                <div className="mt-1 border rounded-lg overflow-hidden bg-gray-50">
+                  <img 
+                    src={videoPreview} 
+                    alt="Preview da capa do vídeo"
+                    className="w-full h-32 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Capa da Aula (opcional) */}
           <div className="space-y-2">
             <Label className="text-base font-semibold">Imagem de Capa da Aula (opcional)</Label>
+            <p className="text-sm text-gray-600">
+              Se o vídeo tiver thumbnail, ela será usada como capa automaticamente. Você pode enviar uma imagem para substituir.
+            </p>
             <ImageSelector
               title="Capinha (16:9)"
               description="Recomendado 1280x720px. Você pode enviar arquivo ou usar uma URL pública."
