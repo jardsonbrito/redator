@@ -650,34 +650,38 @@ export const RedacaoAnotacao = ({
           <div className="space-y-4">
             {/* TOPO DO DIALOG */}
             <div className="flex items-center gap-2">
-              {competenciasExpanded ? (
-                <div className="flex items-center gap-2">
-                  {[1,2,3,4,5].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => selecionarCompetencia(num)}
-                      className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
-                      style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
-                      aria-label={`Competência ${num}`}
-                      data-testid={`bolinha-c${num}`}
+              {(() => {
+                const compAtual = competenciaDialog ?? marcacaoTemp?.competencia ?? null;
+                
+                return (competenciasExpanded || !compAtual) ? (
+                  // EXPANDIDO → 5 bolinhas
+                  <div className="flex items-center gap-2">
+                    {[1,2,3,4,5].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => selecionarCompetencia(num)}
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
+                        style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
+                        aria-label={`Competência ${num}`}
+                        data-testid={`bolinha-c${num}`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  // COLAPSADO → 1 bolinha + texto
+                  <button
+                    onClick={() => setCompetenciasExpanded(true)}
+                    className="flex items-center gap-2"
+                    data-testid="bolinha-colapsada"
+                  >
+                    <span
+                      className="w-8 h-8 rounded-full border-2 border-gray-300"
+                      style={{ backgroundColor: CORES_COMPETENCIAS[compAtual].cor }}
                     />
-                  ))}
-                </div>
-              ) : (
-                <button
-                  onClick={() => setCompetenciasExpanded(true)}
-                  className="flex items-center gap-2"
-                  data-testid="bolinha-colapsada"
-                >
-                  <span
-                    className="w-8 h-8 rounded-full border-2 border-gray-300"
-                    style={{ backgroundColor: CORES_COMPETENCIAS[competenciaDialog || marcacaoTemp?.competencia || 1].cor }}
-                  />
-                  <span>
-                    Competência {competenciaDialog || marcacaoTemp?.competencia || 1}
-                  </span>
-                </button>
-              )}
+                    <span>Competência {compAtual}</span>
+                  </button>
+                );
+              })()}
             </div>
 
             <div>
