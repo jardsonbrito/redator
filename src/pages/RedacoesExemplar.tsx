@@ -7,8 +7,8 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
-import { AlunoCard, AlunoCardSkeleton } from "@/components/aluno/AlunoCard";
-import { resolveCover } from "@/utils/coverUtils";
+import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
+import { resolveExemplarCover } from "@/utils/coverUtils";
 
 const RedacoesExemplar = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<any>(null);
@@ -45,9 +45,9 @@ const RedacoesExemplar = () => {
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
             <StudentHeader pageTitle="Redações Exemplares" />
             <main className="container mx-auto px-4 py-8 space-y-4">
-              <AlunoCardSkeleton />
-              <AlunoCardSkeleton />
-              <AlunoCardSkeleton />
+              <UnifiedCardSkeleton />
+              <UnifiedCardSkeleton />
+              <UnifiedCardSkeleton />
             </main>
           </div>
         </TooltipProvider>
@@ -96,10 +96,11 @@ const RedacoesExemplar = () => {
             ) : (
               <div className="grid gap-4">
                 {redacoesExemplares.map((redacao: any) => {
-                  const coverUrl = resolveCover((redacao as any).cover_file_path, (redacao as any).cover_url);
+                  const coverUrl = resolveExemplarCover(redacao);
                   return (
-                    <AlunoCard
+                    <UnifiedCard
                       key={redacao.id}
+                      variant="aluno"
                       item={{
                         coverUrl,
                         title: redacao.frase_tematica,
@@ -107,7 +108,12 @@ const RedacoesExemplar = () => {
                           ? [{ label: redacao.eixo_tematico, tone: "primary" }]
                           : undefined,
                         meta: [{ icon: User, text: "Jardson Brito" }],
-                        cta: { label: "Ver Redação", onClick: () => setSelectedRedacao(redacao) },
+                        cta: { 
+                          label: "Ver Redação", 
+                          onClick: () => setSelectedRedacao(redacao),
+                          ariaLabel: `Ver redação exemplar: ${redacao.frase_tematica}`
+                        },
+                        ariaLabel: `Redação exemplar: ${redacao.frase_tematica}`
                       }}
                     />
                   );

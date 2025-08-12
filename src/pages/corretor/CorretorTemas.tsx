@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BookOpen, Eye, X } from "lucide-react";
+import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
+import { BookOpen } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState } from "react";
+import { resolveCover } from "@/utils/coverUtils";
 
 const CorretorTemas = () => {
   const [selectedTema, setSelectedTema] = useState<any>(null);
@@ -28,8 +29,16 @@ const CorretorTemas = () => {
   if (isLoading) {
     return (
       <CorretorLayout>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
+            <p className="text-gray-600">Visualização dos temas disponíveis</p>
+          </div>
+          <div className="space-y-4">
+            <UnifiedCardSkeleton />
+            <UnifiedCardSkeleton />
+            <UnifiedCardSkeleton />
+          </div>
         </div>
       </CorretorLayout>
     );
@@ -53,29 +62,29 @@ const CorretorTemas = () => {
           <p className="text-gray-600">Visualização dos temas disponíveis</p>
         </div>
 
-        <div className="grid gap-4">
-          {temas?.map((tema) => (
-            <Card key={tema.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">{tema.frase_tematica}</CardTitle>
-                    {tema.eixo_tematico && (
-                      <Badge variant="secondary">{tema.eixo_tematico}</Badge>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedTema(tema)}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Ver Completo
-                  </Button>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+        <div className="space-y-4">
+          {temas?.map((tema) => {
+            const coverUrl = resolveCover(tema.cover_file_path, tema.cover_url);
+            const badges = tema.eixo_tematico ? [{ label: tema.eixo_tematico, tone: 'primary' as const }] : [];
+            
+            return (
+              <UnifiedCard
+                key={tema.id}
+                variant="corretor"
+                item={{
+                  coverUrl,
+                  title: tema.frase_tematica,
+                  badges,
+                  cta: {
+                    label: 'Ver Completo',
+                    onClick: () => setSelectedTema(tema),
+                    ariaLabel: `Ver tema completo: ${tema.frase_tematica}`
+                  },
+                  ariaLabel: `Tema: ${tema.frase_tematica}`
+                }}
+              />
+            );
+          })}
 
           {(!temas || temas.length === 0) && (
             <Card>

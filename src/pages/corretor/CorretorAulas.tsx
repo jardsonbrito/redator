@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
 import { GraduationCap, Play, FileText } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
+import { resolveAulaCover } from "@/utils/coverUtils";
 
 const CorretorAulas = () => {
   const { data: aulas, isLoading, error } = useQuery({
@@ -24,8 +24,16 @@ const CorretorAulas = () => {
   if (isLoading) {
     return (
       <CorretorLayout>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Aulas</h1>
+            <p className="text-gray-600">Aulas disponíveis para consulta</p>
+          </div>
+          <div className="space-y-4">
+            <UnifiedCardSkeleton />
+            <UnifiedCardSkeleton />
+            <UnifiedCardSkeleton />
+          </div>
         </div>
       </CorretorLayout>
     );
@@ -79,51 +87,30 @@ const CorretorAulas = () => {
                   {modulo}
                 </h2>
                 
-                <div className="grid gap-4">
-                  {aulasGrupo.map((aula) => (
-                    <Card key={aula.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-lg mb-2 flex items-center gap-2">
-                              <GraduationCap className="w-5 h-5 text-gray-600" />
-                              {aula.titulo}
-                            </CardTitle>
-                            
-                            {aula.descricao && (
-                              <p className="text-gray-600 mb-3">{aula.descricao}</p>
-                            )}
-                            
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">{aula.modulo}</Badge>
-                            </div>
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => window.open(aula.link_conteudo, '_blank')}
-                            >
-                              <Play className="w-4 h-4 mr-2" />
-                              Assistir
-                            </Button>
-                            
-                            {aula.pdf_url && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(aula.pdf_url, '_blank')}
-                              >
-                                <FileText className="w-4 h-4 mr-2" />
-                                PDF
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  ))}
+                <div className="space-y-4">
+                  {aulasGrupo.map((aula) => {
+                    const coverUrl = resolveAulaCover(aula);
+                    const badges = [{ label: aula.modulo, tone: 'primary' as const }];
+                    
+                    return (
+                      <UnifiedCard
+                        key={aula.id}
+                        variant="corretor"
+                        item={{
+                          coverUrl,
+                          title: aula.titulo,
+                          subtitle: aula.descricao,
+                          badges,
+                          cta: {
+                            label: 'Assistir',
+                            onClick: () => window.open(aula.link_conteudo, '_blank'),
+                            ariaLabel: `Assistir ${aula.titulo}`
+                          },
+                          ariaLabel: `Aula: ${aula.titulo}`
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}

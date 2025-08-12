@@ -9,8 +9,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Search } from "lucide-react";
-import { AlunoCard, AlunoCardSkeleton, type BadgeTone } from "@/components/aluno/AlunoCard";
-import { resolveAulaCover } from "@/utils/aulaImageUtils";
+import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
+import { resolveAulaCover } from "@/utils/coverUtils";
 
 interface Aula {
   id: string;
@@ -139,9 +139,9 @@ const Aulas = () => {
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Aulas" />
           <div className="max-w-6xl mx-auto px-4 py-8 space-y-4">
-            <AlunoCardSkeleton />
-            <AlunoCardSkeleton />
-            <AlunoCardSkeleton />
+            <UnifiedCardSkeleton />
+            <UnifiedCardSkeleton />
+            <UnifiedCardSkeleton />
           </div>
           </div>
         </TooltipProvider>
@@ -222,14 +222,20 @@ filteredAulas.map((aula) => {
                 if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
                 
                 return (
-                  <AlunoCard
+                  <UnifiedCard
                     key={aula.id}
+                    variant="aluno"
                     item={{
                       coverUrl,
                       title: aula.titulo,
                       subtitle: aula.descricao,
                       badges,
-                      cta: { label: 'Acessar Aula', onClick: () => window.open(aula.link_conteudo, '_blank') },
+                      cta: {
+                        label: "Assistir",
+                        onClick: () => window.open(aula.link_conteudo, '_blank'),
+                        ariaLabel: `Assistir ${aula.titulo}`
+                      },
+                      ariaLabel: `Aula: ${aula.titulo}`
                     }}
                   />
                 );

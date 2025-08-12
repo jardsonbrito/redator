@@ -10,8 +10,8 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AlunoCard, AlunoCardSkeleton, type BadgeTone } from "@/components/aluno/AlunoCard";
-import { resolveCover } from "@/utils/coverUtils";
+import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
+import { resolveSimuladoCover } from "@/utils/coverUtils";
 
 const Simulados = () => {
   const { studentData } = useStudentAuth();
@@ -77,9 +77,9 @@ if (isLoading) {
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Simulados" />
           <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">
-            <AlunoCardSkeleton />
-            <AlunoCardSkeleton />
-            <AlunoCardSkeleton />
+            <UnifiedCardSkeleton />
+            <UnifiedCardSkeleton />
+            <UnifiedCardSkeleton />
           </main>
         </div>
       </TooltipProvider>
@@ -120,21 +120,27 @@ if (isLoading) {
     {simulados.map((simulado: any) => {
       const info = getStatusSimulado(simulado);
       const tema = simulado.tema as any | null;
-      const coverUrl = tema ? resolveCover(tema.cover_file_path, tema.cover_url) : resolveCover(undefined, undefined);
+      const coverUrl = resolveSimuladoCover(simulado);
       const subtitle = (tema?.frase_tematica as string) || undefined;
       const badges: { label: string; tone?: BadgeTone }[] = [];
       if (tema?.eixo_tematico) badges.push({ label: tema.eixo_tematico as string, tone: 'primary' });
       badges.push({ label: info.label, tone: info.tone });
 
       return (
-        <AlunoCard
+        <UnifiedCard
           key={simulado.id}
+          variant="aluno"
           item={{
             coverUrl,
             title: simulado.titulo,
             subtitle,
             badges,
-            cta: info.isActive ? { label: 'Abrir', onClick: () => navigate(`/simulados/${simulado.id}`) } : undefined,
+            cta: info.isActive ? { 
+              label: 'Abrir', 
+              onClick: () => navigate(`/simulados/${simulado.id}`),
+              ariaLabel: `Abrir simulado ${simulado.titulo}`
+            } : undefined,
+            ariaLabel: `Simulado: ${simulado.titulo}`
           }}
         />
       );

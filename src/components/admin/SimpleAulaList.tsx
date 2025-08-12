@@ -6,8 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Trash2, ExternalLink, FileText, Edit } from "lucide-react";
 import { AulaForm } from "./AulaForm";
-import { AdminCard, AdminCardSkeleton, type BadgeTone } from "@/components/admin/AdminCard";
-import { resolveAulaCover } from "@/utils/aulaImageUtils";
+import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
+import { resolveAulaCover } from "@/utils/coverUtils";
 
 interface Aula {
   id: string;
@@ -120,9 +120,9 @@ export const SimpleAulaList = () => {
 if (isLoading) {
     return (
       <div className="space-y-4">
-        <AdminCardSkeleton />
-        <AdminCardSkeleton />
-        <AdminCardSkeleton />
+        <UnifiedCardSkeleton />
+        <UnifiedCardSkeleton />
+        <UnifiedCardSkeleton />
       </div>
     );
   }
@@ -197,8 +197,9 @@ if (isLoading) {
             ];
 
             return (
-              <AdminCard
+              <UnifiedCard
                 key={aula.id}
+                variant="admin"
                 item={{
                   id: aula.id,
                   module: 'aulas',
