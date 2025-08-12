@@ -40,10 +40,10 @@ export function AdminCard({ item }: { item: CardItem }) {
     <article className="w-full" aria-label={item.ariaLabel || item.title}>
       <Card className="overflow-hidden">
         <CardContent className="p-4">
-          <div className="flex gap-4">
-            {/* Thumb */}
-            <div className="shrink-0" style={{ width: 240 }}>
-              <div className="relative rounded-md overflow-hidden bg-muted" style={{ width: 240, height: 135 }}>
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Thumb - 16:9 aspect ratio */}
+            <div className="shrink-0 w-full sm:w-60">
+              <div className="relative rounded-md overflow-hidden bg-muted w-full h-40 sm:w-60 sm:h-[135px]">
                 <img
                   src={imgSrc}
                   alt={`Capa de ${item.title}`}
@@ -65,14 +65,14 @@ export function AdminCard({ item }: { item: CardItem }) {
             <div className="flex-1 min-w-0 flex flex-col gap-2">
               {item.hrefTitle ? (
                 <a href={item.hrefTitle} className="focus:outline-none focus:ring-2 focus:ring-ring rounded-sm">
-                  <h3 className="text-xl font-semibold text-foreground line-clamp-2">{item.title}</h3>
+                  <h3 className="text-lg sm:text-xl font-semibold text-foreground line-clamp-2">{item.title}</h3>
                 </a>
               ) : (
-                <h3 className="text-xl font-semibold text-foreground line-clamp-2">{item.title}</h3>
+                <h3 className="text-lg sm:text-xl font-semibold text-foreground line-clamp-2">{item.title}</h3>
               )}
 
               {item.subtitle && (
-                <p className="text-sm text-muted-foreground line-clamp-2">{item.subtitle}</p>
+                <p className="text-sm text-muted-foreground line-clamp-3 sm:line-clamp-2">{item.subtitle}</p>
               )}
 
               {/* Badges */}
@@ -134,8 +134,8 @@ export function AdminCardSkeleton() {
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="flex gap-4">
-          <Skeleton className="rounded-md" style={{ width: 240, height: 135 }} />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Skeleton className="rounded-md w-full h-40 sm:w-60 sm:h-[135px]" />
           <div className="flex-1 space-y-3">
             <Skeleton className="h-6 w-2/3" />
             <Skeleton className="h-4 w-5/6" />
@@ -143,7 +143,7 @@ export function AdminCardSkeleton() {
               <Skeleton className="h-6 w-20" />
               <Skeleton className="h-6 w-24" />
             </div>
-            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-9 w-full sm:w-28" />
           </div>
         </div>
       </CardContent>
