@@ -59,6 +59,9 @@ export const RedacaoAnotacao = ({
   const [dimensoesImagem, setDimensoesImagem] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [marcacoesObjects, setMarcacoesObjects] = useState<Set<any>>(new Set());
   const [proximaOrdem, setProximaOrdem] = useState<number>(1);
+  const [competenciaDialog, setCompetenciaDialog] = useState<number | null>(null);
+  const [competenciasExpanded, setCompetenciasExpanded] = useState<boolean>(true);
+  const [editandoMarcacao, setEditandoMarcacao] = useState<MarcacaoVisual | null>(null);
   const { toast } = useToast();
 
   // Carregar marcações existentes
@@ -210,6 +213,9 @@ export const RedacaoAnotacao = ({
 
         setMarcacaoTemp(marcacao);
         setComentarioTemp("");
+        setCompetenciasExpanded(true);
+        setCompetenciaDialog(null);
+        setEditandoMarcacao(null);
         setDialogAberto(true);
         setModoSelecao(false);
 
@@ -325,37 +331,71 @@ export const RedacaoAnotacao = ({
   // Salvar marcação
   const salvarMarcacao = async () => {
     if (!marcacaoTemp || !comentarioTemp.trim()) return;
+    
+    const competenciaFinal = competenciaDialog || marcacaoTemp.competencia;
+    
+    if (!competenciaFinal) {
+      toast({
+        title: "Atenção",
+        description: "Selecione a competência",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      const { error } = await supabase
-        .from('marcacoes_visuais')
-        .insert({
-          redacao_id: redacaoId,
-          tabela_origem: tabelaOrigem,
-          corretor_id: corretorId,
-          x_start: marcacaoTemp.x_start,
-          y_start: marcacaoTemp.y_start,
-          x_end: marcacaoTemp.x_end,
-          y_end: marcacaoTemp.y_end,
-          competencia: marcacaoTemp.competencia,
-          cor_marcacao: marcacaoTemp.cor_marcacao,
-          comentario: comentarioTemp.trim(),
-          imagem_largura: marcacaoTemp.imagem_largura,
-          imagem_altura: marcacaoTemp.imagem_altura,
-          ordem_criacao: marcacaoTemp.ordem_criacao || proximaOrdem,
+      if (editandoMarcacao?.id) {
+        // Editando marcação existente
+        const { error } = await supabase
+          .from('marcacoes_visuais')
+          .update({
+            competencia: competenciaFinal,
+            cor_marcacao: CORES_COMPETENCIAS[competenciaFinal].cor,
+            comentario: comentarioTemp.trim(),
+          })
+          .eq('id', editandoMarcacao.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Marcação atualizada!",
+          description: "Comentário editado com sucesso.",
         });
+      } else {
+        // Criando nova marcação
+        const { error } = await supabase
+          .from('marcacoes_visuais')
+          .insert({
+            redacao_id: redacaoId,
+            tabela_origem: tabelaOrigem,
+            corretor_id: corretorId,
+            x_start: marcacaoTemp.x_start,
+            y_start: marcacaoTemp.y_start,
+            x_end: marcacaoTemp.x_end,
+            y_end: marcacaoTemp.y_end,
+            competencia: competenciaFinal,
+            cor_marcacao: CORES_COMPETENCIAS[competenciaFinal].cor,
+            comentario: comentarioTemp.trim(),
+            imagem_largura: marcacaoTemp.imagem_largura,
+            imagem_altura: marcacaoTemp.imagem_altura,
+            ordem_criacao: marcacaoTemp.ordem_criacao || proximaOrdem,
+          });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Marcação salva!",
-        description: "Comentário adicionado com sucesso.",
-      });
+        toast({
+          title: "Marcação salva!",
+          description: "Comentário adicionado com sucesso.",
+        });
+        
+        setProximaOrdem(prev => prev + 1);
+      }
 
       setDialogAberto(false);
       setMarcacaoTemp(null);
       setComentarioTemp("");
-      setProximaOrdem(prev => prev + 1);
+      setCompetenciaDialog(null);
+      setEditandoMarcacao(null);
       await carregarMarcacoes();
 
     } catch (error) {
@@ -364,6 +404,59 @@ export const RedacaoAnotacao = ({
         title: "Erro ao salvar",
         description: "Não foi possível salvar a marcação.",
         variant: "destructive",
+      });
+    }
+  };
+
+  // Excluir marcação
+  const excluirMarcacao = async (marcacao: MarcacaoVisual) => {
+    if (!marcacao.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('marcacoes_visuais')
+        .delete()
+        .eq('id', marcacao.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Marcação excluída!",
+        description: "Comentário removido com sucesso.",
+      });
+
+      await carregarMarcacoes();
+    } catch (error) {
+      console.error('Erro ao excluir marcação:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a marcação.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Editar marcação
+  const editarMarcacao = (marcacao: MarcacaoVisual) => {
+    setEditandoMarcacao(marcacao);
+    setMarcacaoTemp(marcacao);
+    setComentarioTemp(marcacao.comentario);
+    setCompetenciaDialog(marcacao.competencia);
+    setCompetenciasExpanded(false); // Começa colapsado mostrando a competência atual
+    setDialogAberto(true);
+  };
+
+  // Seleção de competência no dialog
+  const selecionarCompetencia = (competencia: number) => {
+    setCompetenciaDialog(competencia);
+    setCompetenciasExpanded(false);
+    
+    // Atualizar cor da marcação temporária se necessário
+    if (marcacaoTemp) {
+      setMarcacaoTemp({
+        ...marcacaoTemp,
+        competencia,
+        cor_marcacao: CORES_COMPETENCIAS[competencia].cor
       });
     }
   };
@@ -492,76 +585,113 @@ export const RedacaoAnotacao = ({
                   {CORES_COMPETENCIAS[marcacao.competencia].label} - Marcação {marcacao.ordem_criacao || 0}
                 </Badge>
                 {marcacao.id && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={async () => {
-                      try {
-                        await supabase
-                          .from('marcacoes_visuais')
-                          .delete()
-                          .eq('id', marcacao.id);
-                        
-                        await carregarMarcacoes();
-                        toast({
-                          title: "Marcação removida",
-                          description: "A marcação foi excluída com sucesso.",
-                        });
-                      } catch (error) {
-                        console.error('Erro ao remover marcação:', error);
-                      }
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => editarMarcacao(marcacao)}
+                      className="p-1 h-7 w-7"
+                      aria-label="Editar comentário"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (window.confirm("Deseja excluir este comentário?")) {
+                          excluirMarcacao(marcacao);
+                        }
+                      }}
+                      className="p-1 h-7 w-7 hover:bg-destructive hover:text-destructive-foreground"
+                      aria-label="Excluir comentário"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 )}
               </div>
-              <p className="text-sm">{marcacao.comentario}</p>
+              <p className="text-sm leading-relaxed">{marcacao.comentario}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* Dialog para comentário */}
+      {/* Dialog para adicionar comentário */}
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>
-              Adicionar Comentário - {CORES_COMPETENCIAS[competenciaSelecionada].label} - Marcação {marcacaoTemp?.ordem_criacao || proximaOrdem}
+              {editandoMarcacao ? "Editar Comentário" : "Redação Manuscrita"}
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-4 h-4 rounded-full" 
-                style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada].cor }}
+            {/* Seleção de competência inline */}
+            <div className="space-y-3">
+              {competenciasExpanded ? (
+                <div className="flex gap-2 flex-wrap">
+                  {[1, 2, 3, 4, 5].map((num) => {
+                    const cores = [
+                      '#ef4444', // Vermelho - C1
+                      '#22c55e', // Verde - C2  
+                      '#3b82f6', // Azul - C3
+                      '#f97316', // Laranja - C4
+                      '#a855f7', // Roxo - C5
+                    ];
+                    return (
+                      <button
+                        key={num}
+                        onClick={() => selecionarCompetencia(num)}
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
+                        style={{ backgroundColor: cores[num - 1] }}
+                        aria-label={`Competência ${num}`}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCompetenciasExpanded(true)}
+                    className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
+                    style={{ backgroundColor: CORES_COMPETENCIAS[competenciaDialog || marcacaoTemp?.competencia || 1].cor }}
+                  />
+                  <span className="text-sm font-medium">
+                    Competência {competenciaDialog || marcacaoTemp?.competencia || 1}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Digite seu comentário sobre esta marcação...
+              </label>
+              <Textarea
+                value={comentarioTemp}
+                onChange={(e) => setComentarioTemp(e.target.value)}
+                placeholder="Digite seu comentário sobre esta marcação..."
+                className="min-h-[120px]"
+                maxLength={500}
               />
-              <span className="font-medium">
-                {CORES_COMPETENCIAS[competenciaSelecionada].label}
-              </span>
+              <div className="text-xs text-muted-foreground mt-1">
+                {comentarioTemp.length}/500 caracteres
+              </div>
             </div>
-            
-            <Textarea
-              placeholder="Digite seu comentário pedagógico sobre esta área..."
-              value={comentarioTemp}
-              onChange={(e) => setComentarioTemp(e.target.value)}
-              rows={4}
-            />
-            
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setDialogAberto(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={salvarMarcacao}
-                disabled={!comentarioTemp.trim()}
-                className="flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Salvar Comentário
-              </Button>
-            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDialogAberto(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={salvarMarcacao}
+              disabled={!comentarioTemp.trim()}
+            >
+              <Save className="w-4 h-4 mr-1" />
+              Salvar Comentário
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
