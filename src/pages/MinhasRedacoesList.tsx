@@ -159,10 +159,8 @@ const MinhasRedacoesList = () => {
           .from('redacoes_enviadas')
           .select(`
             *,
-            corretor1:corretores!corretor_id_1(id, nome_completo),
-            corretor2:corretores!corretor_id_2(id, nome_completo),
-            perfil_corretor1:profiles!corretor_id_1(gender),
-            perfil_corretor2:profiles!corretor_id_2(gender)
+            corretor1:corretores!corretor_id_1(id, nome_completo, email),
+            corretor2:corretores!corretor_id_2(id, nome_completo, email)
           `)
           .ilike('email_aluno', emailBusca);
 
@@ -177,10 +175,8 @@ const MinhasRedacoesList = () => {
           .select(`
             *,
             simulados(frase_tematica),
-            corretor1:corretores!corretor_id_1(id, nome_completo),
-            corretor2:corretores!corretor_id_2(id, nome_completo),
-            perfil_corretor1:profiles!corretor_id_1(gender),
-            perfil_corretor2:profiles!corretor_id_2(gender)
+            corretor1:corretores!corretor_id_1(id, nome_completo, email),
+            corretor2:corretores!corretor_id_2(id, nome_completo, email)
           `)
           .ilike('email_aluno', emailBusca);
 
@@ -194,15 +190,49 @@ const MinhasRedacoesList = () => {
           .select(`
             *,
             exercicios(titulo),
-            corretor1:corretores!corretor_id_1(id, nome_completo),
-            corretor2:corretores!corretor_id_2(id, nome_completo),
-            perfil_corretor1:profiles!corretor_id_1(gender),
-            perfil_corretor2:profiles!corretor_id_2(gender)
+            corretor1:corretores!corretor_id_1(id, nome_completo, email),
+            corretor2:corretores!corretor_id_2(id, nome_completo, email)
           `)
           .ilike('email_aluno', emailBusca);
 
         if (errorExercicio) {
           console.error('❌ Erro ao buscar redações de exercício:', errorExercicio);
+        }
+
+        // Coletar todos os emails de corretores para buscar o gênero
+        const emailsCorretores = new Set<string>();
+        
+        // Coletar emails das redações regulares
+        redacoesRegulares?.forEach((item: any) => {
+          if (item.corretor1?.email) emailsCorretores.add(item.corretor1.email);
+          if (item.corretor2?.email) emailsCorretores.add(item.corretor2.email);
+        });
+        
+        // Coletar emails das redações de simulado
+        redacoesSimulado?.forEach((item: any) => {
+          if (item.corretor1?.email) emailsCorretores.add(item.corretor1.email);
+          if (item.corretor2?.email) emailsCorretores.add(item.corretor2.email);
+        });
+        
+        // Coletar emails das redações de exercício
+        redacoesExercicio?.forEach((item: any) => {
+          if (item.corretor1?.email) emailsCorretores.add(item.corretor1.email);
+          if (item.corretor2?.email) emailsCorretores.add(item.corretor2.email);
+        });
+
+        // Buscar gêneros dos corretores
+        let generoCorretores: Record<string, string> = {};
+        if (emailsCorretores.size > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('email, gender')
+            .in('email', Array.from(emailsCorretores));
+          
+          if (profiles) {
+            profiles.forEach((profile: any) => {
+              generoCorretores[profile.email] = profile.gender;
+            });
+          }
         }
 
         // Processar e combinar resultados
@@ -217,10 +247,10 @@ const MinhasRedacoesList = () => {
             let genderCorretor = null;
             if (item.corretor_id_1 && item.corretor1) {
               nomeCorretor = item.corretor1.nome_completo;
-              genderCorretor = item.perfil_corretor1?.gender;
+              genderCorretor = generoCorretores[item.corretor1.email] || null;
             } else if (item.corretor_id_2 && item.corretor2) {
               nomeCorretor = item.corretor2.nome_completo;
-              genderCorretor = item.perfil_corretor2?.gender;
+              genderCorretor = generoCorretores[item.corretor2.email] || null;
             }
 
             todasRedacoes.push({
@@ -281,7 +311,7 @@ const MinhasRedacoesList = () => {
                 data_envio: item.data_envio,
                 data_correcao: item.data_correcao,
                 corretor: item.corretor1?.nome_completo || nomes_corretores[item.corretor_id_1] || 'Corretor 1',
-                corretor_gender: item.perfil_corretor1?.gender,
+                corretor_gender: generoCorretores[item.corretor1?.email] || null,
                 corretor_numero: 1,
                 // Notas específicas do corretor 1
                 nota_c1: item.c1_corretor_1,
@@ -323,7 +353,7 @@ const MinhasRedacoesList = () => {
                 data_envio: item.data_envio,
                 data_correcao: item.data_correcao,
                 corretor: item.corretor2?.nome_completo || nomes_corretores[item.corretor_id_2] || 'Corretor 2',
-                corretor_gender: item.perfil_corretor2?.gender,
+                corretor_gender: generoCorretores[item.corretor2?.email] || null,
                 corretor_numero: 2,
                 // Notas específicas do corretor 2
                 nota_c1: item.c1_corretor_2,
@@ -373,10 +403,10 @@ const MinhasRedacoesList = () => {
             let genderCorretor = null;
             if (item.corretor_id_1 && item.corretor1) {
               nomeCorretor = item.corretor1.nome_completo;
-              genderCorretor = item.perfil_corretor1?.gender;
+              genderCorretor = generoCorretores[item.corretor1.email] || null;
             } else if (item.corretor_id_2 && item.corretor2) {
               nomeCorretor = item.corretor2.nome_completo;
-              genderCorretor = item.perfil_corretor2?.gender;
+              genderCorretor = generoCorretores[item.corretor2.email] || null;
             }
 
             todasRedacoes.push({
