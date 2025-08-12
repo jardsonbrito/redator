@@ -114,18 +114,18 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   };
 
   if (loading) {
-    return <div>Carregando corretores(as)...</div>;
+    return <div>Carregando corretores...</div>;
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Lista de Corretores(as) ({corretores.length})</CardTitle>
+        <CardTitle>Lista de Corretores ({corretores.length})</CardTitle>
       </CardHeader>
       <CardContent>
         {corretores.length === 0 ? (
           <p className="text-muted-foreground text-center py-4">
-            Nenhum(a) corretor(a) cadastrado(a) ainda.
+            Nenhum corretor cadastrado ainda.
           </p>
         ) : (
           <div className="space-y-4">
@@ -174,7 +174,7 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Tem certeza que deseja excluir o(a) corretor(a) "{corretor.nome_completo}"? 
+                          Tem certeza que deseja excluir o corretor "{corretor.nome_completo}"? 
                           Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                       </AlertDialogHeader>

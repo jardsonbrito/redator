@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Award, Calendar, Eye, Lock, AlertCircle, User, Shield, CheckCircle, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { correctorNoun, type Gender } from "@/utils/correctorGender";
 
 interface MeusSimuladosCardProps {
   turmaCode: string;
@@ -37,8 +36,6 @@ type RedacaoSimulado = {
   status_corretor_2: string | null;
   corretor_1: { nome_completo: string } | null;
   corretor_2: { nome_completo: string } | null;
-  corretor_1_gender?: string | null;
-  corretor_2_gender?: string | null;
   simulados: {
     titulo: string;
     frase_tematica: string;
@@ -78,7 +75,6 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
       entradas.push({
         ...redacao,
         corretor_atual: redacao.corretor_1_nome,
-        corretor_gender: null, // Will be implemented when RPC function is updated
         status_atual: redacao.status_corretor_1 || 'pendente',
         tipo_corretor: 'corretor_1',
         display_id: `${redacao.id}-c1`,
@@ -94,7 +90,6 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
       entradas.push({
         ...redacao,
         corretor_atual: redacao.corretor_2_nome,
-        corretor_gender: null, // Will be implemented when RPC function is updated
         status_atual: redacao.status_corretor_2 || 'pendente',
         tipo_corretor: 'corretor_2',
         display_id: `${redacao.id}-c2`,
@@ -301,7 +296,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
                       </div>
 
                       <div className="text-xs text-gray-600 mb-2">
-                        {correctorNoun(redacao.corretor_gender as Gender)}: {redacao.corretor_atual}
+                        Corretor: {redacao.corretor_atual}
                       </div>
                       
                       <div className="flex items-center gap-2">
@@ -359,7 +354,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
               <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
                 <p><span className="font-medium">Simulado:</span> {selectedRedacao.simulados.titulo}</p>
                 <p><span className="font-medium">Autor:</span> {selectedRedacao.nome_aluno}</p>
-                <p><span className="font-medium">{correctorNoun(selectedRedacao.corretor_gender as Gender)}:</span> {selectedRedacao.corretor_atual}</p>
+                <p><span className="font-medium">Corretor:</span> {selectedRedacao.corretor_atual}</p>
               </div>
             )}
 
@@ -439,7 +434,7 @@ export const MeusSimuladosCard = ({ turmaCode }: MeusSimuladosCardProps) => {
                   </Badge>
                 </div>
                 <div className="text-sm text-gray-600">
-                  {correctorNoun(selectedRedacao.corretor_gender as Gender)}: {selectedRedacao.corretor_atual}
+                  Corretor: {selectedRedacao.corretor_atual}
                 </div>
               </div>
 

@@ -9,7 +9,6 @@ import { AudioPlayerAluno } from "./AudioPlayerAluno";
 import { useToast } from "@/hooks/use-toast";
 import { downloadRedacaoManuscritaCorrigida } from "@/utils/redacaoDownload";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { correctorNoun, type Gender } from "@/utils/correctorGender";
 
 interface RedacaoEnviadaCardProps {
   redacao: {
@@ -34,7 +33,6 @@ interface RedacaoEnviadaCardProps {
     turma: string;
     corretor_numero?: number;
     corretor?: string;
-    corretor_gender?: Gender;
     // Novos campos de comentários pedagógicos
     comentario_c1_corretor_1?: string | null;
     comentario_c2_corretor_1?: string | null;
@@ -194,7 +192,7 @@ export const RedacaoEnviadaCard = ({
             {redacao.corretor && (
               <div className="flex items-center gap-2 text-sm">
                 <User className="w-4 h-4 text-primary shrink-0" />
-                <span className="font-medium">{correctorNoun(redacao.corretor_gender as Gender)}:</span>
+                <span className="font-medium">Corretor:</span>
                 <span className="text-xs sm:text-sm">{redacao.corretor}</span>
               </div>
             )}
@@ -267,7 +265,6 @@ export const RedacaoEnviadaCard = ({
                     <AudioPlayerAluno 
                       audioUrl={audioUrl} 
                       corretorNome={redacao.corretor_numero === 1 ? "Corretor 1" : redacao.corretor_numero === 2 ? "Corretor 2" : "Corretor"}
-                      corretorGender={redacao.corretor_gender}
                       isStudentView={true}
                     />
                   </div>

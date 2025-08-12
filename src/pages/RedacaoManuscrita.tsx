@@ -180,7 +180,7 @@ export default function RedacaoManuscrita() {
               if (!audioUrl) return null;
               return (
                 <div className="pt-4 mt-4 border-t border-primary/20">
-                  <AudioPlayerAluno audioUrl={audioUrl} corretorNome="Corretor" corretorGender={null} isStudentView />
+                  <AudioPlayerAluno audioUrl={audioUrl} corretorNome="Corretor" isStudentView />
                 </div>
               );
             })()}

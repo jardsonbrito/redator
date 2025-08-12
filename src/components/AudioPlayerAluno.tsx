@@ -1,17 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { correctorNoun } from "@/utils/correctorGender";
 
 interface AudioPlayerAlunoProps {
   audioUrl: string;
   corretorNome?: string;
   corretorAvatar?: string;
-  corretorGender?: 'M' | 'F' | 'NB' | 'U' | null;
   isStudentView?: boolean; // Nova prop para distinguir visualização do aluno
 }
 
-export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, corretorGender, isStudentView = false }: AudioPlayerAlunoProps) => {
+export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStudentView = false }: AudioPlayerAlunoProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -119,7 +117,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, corre
     return (
       <div className="flex items-center gap-3 py-2">
         <Volume2 className="w-4 h-4 text-gray-600" />
-        <span className="text-sm font-medium text-gray-700">Comentário {corretorGender === 'F' ? 'da' : 'do'} {correctorNoun(corretorGender)}</span>
+        <span className="text-sm font-medium text-gray-700">Comentário do corretor</span>
         <audio 
           controls 
           preload="metadata"
@@ -140,7 +138,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, corre
       <div className="space-y-3">
         {/* Texto "Comentário do corretor" acima do player */}
         <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-          <span>Comentário {corretorGender === 'F' ? 'da' : 'do'} {correctorNoun(corretorGender)}</span>
+          <span>Comentário do corretor</span>
         </div>
         
         {/* Player de áudio */}
@@ -217,7 +215,7 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, corre
       
       <div className="flex items-center gap-3">
         <Volume2 className="w-[18px] h-[18px] text-gray-600" />
-        <span className="text-sm font-medium text-gray-700">Comentário {corretorGender === 'F' ? 'da' : 'do'} {correctorNoun(corretorGender)}</span>
+        <span className="text-sm font-medium text-gray-700">Comentário do corretor</span>
         
         <Button
           onClick={togglePlay}

@@ -101,7 +101,7 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
     <Card>
       <CardHeader>
         <CardTitle>
-          {corretorEditando ? "Editar Corretor(a)" : "Adicionar Novo(a) Corretor(a)"}
+          {corretorEditando ? "Editar Corretor" : "Adicionar Novo Corretor"}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -112,7 +112,7 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
               id="nome_completo"
               value={formData.nome_completo}
               onChange={(e) => setFormData(prev => ({ ...prev, nome_completo: e.target.value }))}
-              placeholder="Digite o nome completo do(a) corretor(a)"
+              placeholder="Digite o nome completo do corretor"
               required
             />
           </div>
@@ -124,7 +124,7 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
               type="email"
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              placeholder="Digite o e-mail do(a) corretor(a)"
+              placeholder="Digite o e-mail do corretor"
               required
             />
           </div>

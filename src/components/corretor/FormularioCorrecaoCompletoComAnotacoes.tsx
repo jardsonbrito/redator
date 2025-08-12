@@ -297,19 +297,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       }
 
       // Preencher relatório pedagógico com mensagem de devolução
-      // Buscar gênero do corretor para concordância
-      let genderCorretor = null;
-      if (corretorId) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('gender')
-          .eq('id', corretorId)
-          .single();
-        genderCorretor = profileData?.gender;
-      }
-      
-      const correctorTerm = genderCorretor === 'F' ? 'pela corretora' : 'pelo corretor';
-      updateData[`elogios_pontos_atencao_${prefixo}`] = `Sua redação foi devolvida ${correctorTerm} com a seguinte justificativa:\n\n${motivoDevolucao}`;
+      updateData[`elogios_pontos_atencao_${prefixo}`] = `Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n${motivoDevolucao}`;
 
       const { error } = await supabase
         .from(tabelaNome)

@@ -73,7 +73,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
             
             <div className="min-w-0 flex-1">
               <h1 className="text-base sm:text-xl font-bold text-redator-primary truncate">
-                {isMobile ? "Corretor(a)" : "Painel do(a) Corretor(a)"}
+                {isMobile ? "Corretor" : "Painel do Corretor"}
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground truncate">
                 {isMobile ? corretor?.nome_completo?.split(' ')[0] : `Bem-vindo(a), ${corretor?.nome_completo}`}

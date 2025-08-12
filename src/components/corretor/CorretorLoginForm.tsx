@@ -44,9 +44,9 @@ export const CorretorLoginForm = () => {
         
         <Card className="border-redator-accent/20">
           <CardHeader>
-            <CardTitle className="text-center text-redator-primary">Acesso do(a) Corretor(a)</CardTitle>
+            <CardTitle className="text-center text-redator-primary">Acesso do Corretor</CardTitle>
             <p className="text-center text-sm text-redator-accent">
-              Entre com suas credenciais de corretor(a)
+              Entre com suas credenciais de corretor
             </p>
           </CardHeader>
           <CardContent>

@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { correctorNoun, type Gender } from "@/utils/correctorGender";
 
 // Tipo para representar uma redação com informações básicas compatível com RedacaoEnviadaCard
 interface RedacaoTurma {
@@ -40,7 +39,6 @@ interface RedacaoTurma {
   turma: string;
   created_at?: string;
   corretor?: string;
-  corretor_gender?: 'M' | 'F' | 'NB' | 'U' | null;
   corretor_numero?: number;
   original_id?: string;
   observacoes_coordenacao?: string;
@@ -159,8 +157,8 @@ const MinhasRedacoesList = () => {
           .from('redacoes_enviadas')
           .select(`
             *,
-            corretor1:corretores!corretor_id_1(id, nome_completo, email),
-            corretor2:corretores!corretor_id_2(id, nome_completo, email)
+            corretor1:corretores!corretor_id_1(id, nome_completo),
+            corretor2:corretores!corretor_id_2(id, nome_completo)
           `)
           .ilike('email_aluno', emailBusca);
 
@@ -174,9 +172,7 @@ const MinhasRedacoesList = () => {
           .from('redacoes_simulado')
           .select(`
             *,
-            simulados(frase_tematica),
-            corretor1:corretores!corretor_id_1(id, nome_completo, email),
-            corretor2:corretores!corretor_id_2(id, nome_completo, email)
+            simulados(frase_tematica)
           `)
           .ilike('email_aluno', emailBusca);
 
@@ -189,50 +185,12 @@ const MinhasRedacoesList = () => {
           .from('redacoes_exercicio')
           .select(`
             *,
-            exercicios(titulo),
-            corretor1:corretores!corretor_id_1(id, nome_completo, email),
-            corretor2:corretores!corretor_id_2(id, nome_completo, email)
+            exercicios(titulo)
           `)
           .ilike('email_aluno', emailBusca);
 
         if (errorExercicio) {
           console.error('❌ Erro ao buscar redações de exercício:', errorExercicio);
-        }
-
-        // Coletar todos os emails de corretores para buscar o gênero
-        const emailsCorretores = new Set<string>();
-        
-        // Coletar emails das redações regulares
-        redacoesRegulares?.forEach((item: any) => {
-          if (item.corretor1?.email) emailsCorretores.add(item.corretor1.email);
-          if (item.corretor2?.email) emailsCorretores.add(item.corretor2.email);
-        });
-        
-        // Coletar emails das redações de simulado
-        redacoesSimulado?.forEach((item: any) => {
-          if (item.corretor1?.email) emailsCorretores.add(item.corretor1.email);
-          if (item.corretor2?.email) emailsCorretores.add(item.corretor2.email);
-        });
-        
-        // Coletar emails das redações de exercício
-        redacoesExercicio?.forEach((item: any) => {
-          if (item.corretor1?.email) emailsCorretores.add(item.corretor1.email);
-          if (item.corretor2?.email) emailsCorretores.add(item.corretor2.email);
-        });
-
-        // Buscar gêneros dos corretores
-        let generoCorretores: Record<string, string> = {};
-        if (emailsCorretores.size > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('email, gender')
-            .in('email', Array.from(emailsCorretores));
-          
-          if (profiles) {
-            profiles.forEach((profile: any) => {
-              generoCorretores[profile.email] = profile.gender;
-            });
-          }
         }
 
         // Processar e combinar resultados
@@ -242,15 +200,12 @@ const MinhasRedacoesList = () => {
         if (redacoesRegulares && redacoesRegulares.length > 0) {
           console.log('✅ Processando', redacoesRegulares.length, 'redações regulares');
           redacoesRegulares.forEach((item: any) => {
-            // Determinar nome e gênero do corretor baseado no que está atribuído
+            // Determinar nome do corretor baseado no que está atribuído
             let nomeCorretor = null;
-            let genderCorretor = null;
             if (item.corretor_id_1 && item.corretor1) {
               nomeCorretor = item.corretor1.nome_completo;
-              genderCorretor = generoCorretores[item.corretor1.email] || null;
             } else if (item.corretor_id_2 && item.corretor2) {
               nomeCorretor = item.corretor2.nome_completo;
-              genderCorretor = generoCorretores[item.corretor2.email] || null;
             }
 
             todasRedacoes.push({
@@ -258,8 +213,7 @@ const MinhasRedacoesList = () => {
               tipo_envio: item.tipo_envio || 'tema_livre',
               corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
               status: item.status || 'aguardando',
-              corretor: nomeCorretor,
-              corretor_gender: genderCorretor
+              corretor: nomeCorretor
             } as RedacaoTurma);
           });
         }
@@ -310,8 +264,7 @@ const MinhasRedacoesList = () => {
                 turma: item.turma || '',
                 data_envio: item.data_envio,
                 data_correcao: item.data_correcao,
-                corretor: item.corretor1?.nome_completo || nomes_corretores[item.corretor_id_1] || 'Corretor 1',
-                corretor_gender: generoCorretores[item.corretor1?.email] || null,
+                corretor: nomes_corretores[item.corretor_id_1] || 'Corretor 1',
                 corretor_numero: 1,
                 // Notas específicas do corretor 1
                 nota_c1: item.c1_corretor_1,
@@ -352,8 +305,7 @@ const MinhasRedacoesList = () => {
                 turma: item.turma || '',
                 data_envio: item.data_envio,
                 data_correcao: item.data_correcao,
-                corretor: item.corretor2?.nome_completo || nomes_corretores[item.corretor_id_2] || 'Corretor 2',
-                corretor_gender: generoCorretores[item.corretor2?.email] || null,
+                corretor: nomes_corretores[item.corretor_id_2] || 'Corretor 2',
                 corretor_numero: 2,
                 // Notas específicas do corretor 2
                 nota_c1: item.c1_corretor_2,
@@ -398,17 +350,6 @@ const MinhasRedacoesList = () => {
         if (redacoesExercicio && redacoesExercicio.length > 0) {
           console.log('✅ Processando', redacoesExercicio.length, 'redações de exercício');
           redacoesExercicio.forEach((item: any) => {
-            // Determinar nome e gênero do corretor baseado no que está atribuído
-            let nomeCorretor = null;
-            let genderCorretor = null;
-            if (item.corretor_id_1 && item.corretor1) {
-              nomeCorretor = item.corretor1.nome_completo;
-              genderCorretor = generoCorretores[item.corretor1.email] || null;
-            } else if (item.corretor_id_2 && item.corretor2) {
-              nomeCorretor = item.corretor2.nome_completo;
-              genderCorretor = generoCorretores[item.corretor2.email] || null;
-            }
-
             todasRedacoes.push({
               ...item,
               id: item.id,
@@ -420,9 +361,7 @@ const MinhasRedacoesList = () => {
               nome_aluno: item.nome_aluno || '',
               email_aluno: item.email_aluno || '',
               turma: item.turma || '',
-              data_envio: item.data_envio,
-              corretor: nomeCorretor,
-              corretor_gender: genderCorretor
+              data_envio: item.data_envio
             } as RedacaoTurma);
           });
         }
@@ -700,7 +639,7 @@ const MinhasRedacoesList = () => {
         
         // Limpar formatação desnecessária da justificativa
         const justificativaLimpa = justificativa
-          .replace(/Sua redação foi devolvida pel[oa] corretor[a]? com a seguinte justificativa:\n\n/, '')
+          .replace('Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n', '')
           .replace(/^\s*"?\s*/, '') // Remove aspas iniciais e espaços
           .replace(/\s*"?\s*$/, '') // Remove aspas finais e espaços
           .trim();
@@ -965,10 +904,10 @@ const MinhasRedacoesList = () => {
                        </h3>
                        
                        {redacao.corretor && (
-                          <p className="text-sm text-muted-foreground font-medium">
-                            {correctorNoun(redacao.corretor_gender as Gender)}: {redacao.corretor}
-                          </p>
-                        )}
+                         <p className="text-sm text-muted-foreground font-medium">
+                           Corretor: {redacao.corretor}
+                         </p>
+                       )}
 
                       {/* Exibir notas por competência se a correção foi finalizada */}
                       {redacao.corrigida && (redacao.nota_c1 || redacao.nota_c2 || redacao.nota_c3 || redacao.nota_c4 || redacao.nota_c5) && (
