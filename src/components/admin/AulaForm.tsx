@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Upload, FileText } from "lucide-react";
 import { ImageSelector } from "@/components/admin/ImageSelector";
 import { VideoParser, processAulaVideoMetadata, resolveAulaCover } from "@/utils/aulaImageUtils";
+import { VideoThumbnailReprocessor } from "@/components/admin/VideoThumbnailReprocessor";
 interface AulaEditando {
   id: string;
   titulo: string;
@@ -55,6 +56,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
   const [uploadMethod, setUploadMethod] = useState<'url' | 'upload'>('url');
   const [cover, setCover] = useState<any>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [currentAulaData, setCurrentAulaData] = useState<AulaEditando | null>(null);
 
   // Preencher formulário ao editar
   useEffect(() => {
@@ -76,6 +78,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
           : null
       );
       setVideoPreview(resolveAulaCover(aulaEditando));
+      setCurrentAulaData(aulaEditando);
     }
   }, [aulaEditando]);
 
@@ -135,11 +138,18 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
   };
 
   // Update video preview when link changes
-  const handleLinkChange = (newLink: string) => {
+  const handleLinkChange = async (newLink: string) => {
     setLinkConteudo(newLink);
     const metadata = VideoParser.extractVideoMetadata(newLink);
-    if (metadata && metadata.thumbnailUrl) {
-      setVideoPreview(metadata.thumbnailUrl);
+    if (metadata) {
+      if (metadata.thumbnailUrl) {
+        // YouTube has immediate thumbnail
+        setVideoPreview(metadata.thumbnailUrl);
+      } else {
+        // For other platforms, show loading state
+        setVideoPreview('/placeholders/aula-cover.png');
+        console.log(`🎬 ${metadata.platform} video detected, thumbnail will be processed on save`);
+      }
     } else {
       setVideoPreview(null);
     }
@@ -222,6 +232,17 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
       // Process video metadata after saving
       if (aulaId) {
         await processAulaVideoMetadata(aulaId, linkConteudo);
+        
+        // Update current aula data for the reprocessor
+        const { data: updatedAula } = await supabase
+          .from('aulas')
+          .select('*')
+          .eq('id', aulaId)
+          .single();
+        
+        if (updatedAula) {
+          setCurrentAulaData(updatedAula);
+        }
       }
 
       toast.success(aulaEditando ? "Aula atualizada com sucesso!" : "Aula criada com sucesso!");
@@ -245,6 +266,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
         setUploadMethod('url');
         setCover(null);
         setVideoPreview(null);
+        setCurrentAulaData(null);
       }
 
     } catch (error) {
@@ -321,7 +343,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
             {videoPreview && (
               <div className="mt-3">
                 <Label className="text-sm text-gray-600">Preview da Capa do Vídeo:</Label>
-                <div className="mt-1 border rounded-lg overflow-hidden bg-gray-50">
+                <div className="mt-1 border rounded-lg overflow-hidden bg-gray-50 relative">
                   <img 
                     src={videoPreview} 
                     alt="Preview da capa do vídeo"
@@ -330,6 +352,11 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
                       e.currentTarget.style.display = 'none';
                     }}
                   />
+                  {videoPreview === '/placeholders/aula-cover.png' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white text-sm">
+                      Thumbnail será gerada automaticamente
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -464,6 +491,20 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
               : (aulaEditando ? "Salvar Alterações" : "Criar Aula")
             }
           </Button>
+          
+          {/* Video Thumbnail Reprocessor - só aparece se estamos editando */}
+          {aulaEditando && currentAulaData && linkConteudo && (
+            <VideoThumbnailReprocessor
+              aulaId={aulaEditando.id}
+              linkConteudo={linkConteudo}
+              platform={currentAulaData.platform}
+              videoThumbnailUrl={currentAulaData.video_thumbnail_url}
+              onThumbnailUpdated={(newUrl) => {
+                setVideoPreview(newUrl);
+                setCurrentAulaData(prev => prev ? { ...prev, video_thumbnail_url: newUrl } : null);
+              }}
+            />
+          )}
         </form>
       </CardContent>
     </Card>
