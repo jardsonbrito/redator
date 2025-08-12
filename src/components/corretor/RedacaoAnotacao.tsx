@@ -203,27 +203,28 @@ export const RedacaoAnotacao = ({
           y_start: top * scaleY,
           x_end: (left + width) * scaleX,
           y_end: (top + height) * scaleY,
-          competencia: competenciaSelecionada,
-          cor_marcacao: CORES_COMPETENCIAS[competenciaSelecionada].cor,
+          competencia: undefined as any,
+          cor_marcacao: undefined as any,
           comentario: "",
           imagem_largura: dimensoesImagem.width,
           imagem_altura: dimensoesImagem.height,
           ordem_criacao: proximaOrdem,
         };
 
+        // CRIAÇÃO: abrir sempre com as 5 bolinhas visíveis
+        setEditandoMarcacao(null);
         setMarcacaoTemp(marcacao);
         setComentarioTemp("");
-        setEditandoMarcacao(null);
         setCompetenciaDialog(null);
-        setCompetenciasExpanded(true); // TEM que iniciar expandido (5 bolinhas)
+        setCompetenciasExpanded(true);
         setDialogAberto(true);
         setModoSelecao(false);
 
-        // Debug log
-        console.log('ABRINDO DIALOG CRIAÇÃO', { 
-          editandoMarcacao: null, 
-          competenciaDialog: null, 
-          competenciasExpanded: true 
+        // Debug opcional
+        console.log('CRIAÇÃO -> Dialog aberto', {
+          editandoMarcacao: null,
+          competenciaDialog: null,
+          competenciasExpanded: true
         });
 
         // Remove o retângulo temporário
@@ -337,16 +338,14 @@ export const RedacaoAnotacao = ({
 
   // Salvar marcação
   const salvarMarcacao = async () => {
-    if (!marcacaoTemp || !comentarioTemp.trim()) return;
-    
-    const competenciaFinal = competenciaDialog || marcacaoTemp.competencia;
-    
+    const competenciaFinal = competenciaDialog ?? marcacaoTemp?.competencia;
     if (!competenciaFinal) {
-      toast({
-        title: "Atenção",
-        description: "Selecione a competência",
-        variant: "destructive",
-      });
+      toast({ title: "Atenção", description: "Selecione a competência", variant: "destructive" });
+      return;
+    }
+
+    if (!comentarioTemp.trim()) {
+      toast({ title: "Atenção", description: "Digite um comentário", variant: "destructive" });
       return;
     }
 
@@ -376,16 +375,16 @@ export const RedacaoAnotacao = ({
             redacao_id: redacaoId,
             tabela_origem: tabelaOrigem,
             corretor_id: corretorId,
-            x_start: marcacaoTemp.x_start,
-            y_start: marcacaoTemp.y_start,
-            x_end: marcacaoTemp.x_end,
-            y_end: marcacaoTemp.y_end,
+            x_start: marcacaoTemp!.x_start,
+            y_start: marcacaoTemp!.y_start,
+            x_end: marcacaoTemp!.x_end,
+            y_end: marcacaoTemp!.y_end,
             competencia: competenciaFinal,
             cor_marcacao: CORES_COMPETENCIAS[competenciaFinal].cor,
             comentario: comentarioTemp.trim(),
-            imagem_largura: marcacaoTemp.imagem_largura,
-            imagem_altura: marcacaoTemp.imagem_altura,
-            ordem_criacao: marcacaoTemp.ordem_criacao || proximaOrdem,
+            imagem_largura: marcacaoTemp!.imagem_largura,
+            imagem_altura: marcacaoTemp!.imagem_altura,
+            ordem_criacao: marcacaoTemp!.ordem_criacao || proximaOrdem,
           });
 
         if (error) throw error;
@@ -444,19 +443,17 @@ export const RedacaoAnotacao = ({
   };
 
   // Editar marcação
-  const editarMarcacao = (marcacao: MarcacaoVisual) => {
-    setEditandoMarcacao(marcacao);
-    setMarcacaoTemp(marcacao);
-    setComentarioTemp(marcacao.comentario);
-    setCompetenciaDialog(marcacao.competencia);
-    setCompetenciasExpanded(false); // edição inicia colapsado
+  const editarMarcacao = (m: MarcacaoVisual) => {
+    setEditandoMarcacao(m);
+    setMarcacaoTemp(m);
+    setComentarioTemp(m.comentario);
+    setCompetenciaDialog(m.competencia);
+    setCompetenciasExpanded(false); // edição inicia colapsada
     setDialogAberto(true);
     
-    // Debug log
-    console.log('ABRINDO DIALOG EDIÇÃO', { 
-      editandoMarcacao: marcacao, 
-      competenciaDialog: marcacao.competencia, 
-      competenciasExpanded: false 
+    console.log('EDIÇÃO -> Dialog aberto', {
+      competenciasExpanded: false,
+      competenciaDialog: m.competencia
     });
   };
 
@@ -464,10 +461,8 @@ export const RedacaoAnotacao = ({
   const selecionarCompetencia = (competencia: number) => {
     setCompetenciaDialog(competencia);
     setCompetenciasExpanded(false);
+    console.log('COMPETÊNCIA SELECIONADA:', competencia);
     
-    console.log('COMPETÊNCIA SELECIONADA:', competencia, 'Cor:', CORES_COMPETENCIAS[competencia].cor);
-    
-    // Atualizar cor da marcação temporária se necessário
     if (marcacaoTemp) {
       setMarcacaoTemp({
         ...marcacaoTemp,
@@ -481,6 +476,16 @@ export const RedacaoAnotacao = ({
   useEffect(() => {
     carregarMarcacoes();
   }, [carregarMarcacoes]);
+
+  // Proteção contra efeitos que derrubam o header novo
+  useEffect(() => {
+    if (dialogAberto && !editandoMarcacao) {
+      // Em CRIAÇÃO, o header tem que começar expandido SEMPRE
+      setCompetenciasExpanded(true);
+      setCompetenciaDialog(null);
+      console.log('GUARDA-CHUVA: Forçando 5 bolinhas na criação');
+    }
+  }, [dialogAberto, editandoMarcacao]);
 
   if (readonly) {
     return (
@@ -643,36 +648,35 @@ export const RedacaoAnotacao = ({
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Seleção de competência inline */}
-            <div className="space-y-3">
+            {/* TOPO DO DIALOG */}
+            <div className="flex items-center gap-2">
               {competenciasExpanded ? (
-                <div className="flex gap-2 flex-wrap">
-                   {[1, 2, 3, 4, 5].map((num) => {
-                     // Usar as cores corretas do CORES_COMPETENCIAS
-                     const corCompetencia = CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor;
-                     
-                     return (
-                       <button
-                         key={num}
-                         onClick={() => selecionarCompetencia(num)}
-                         className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
-                         style={{ backgroundColor: corCompetencia }}
-                         aria-label={`Competência ${num}`}
-                       />
-                     );
-                   })}
+                <div className="flex items-center gap-2">
+                  {[1,2,3,4,5].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => selecionarCompetencia(num)}
+                      className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
+                      style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
+                      aria-label={`Competência ${num}`}
+                      data-testid={`bolinha-c${num}`}
+                    />
+                  ))}
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCompetenciasExpanded(true)}
-                    className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
+                <button
+                  onClick={() => setCompetenciasExpanded(true)}
+                  className="flex items-center gap-2"
+                  data-testid="bolinha-colapsada"
+                >
+                  <span
+                    className="w-8 h-8 rounded-full border-2 border-gray-300"
                     style={{ backgroundColor: CORES_COMPETENCIAS[competenciaDialog || marcacaoTemp?.competencia || 1].cor }}
                   />
-                  <span className="text-sm font-medium">
+                  <span>
                     Competência {competenciaDialog || marcacaoTemp?.competencia || 1}
                   </span>
-                </div>
+                </button>
               )}
             </div>
 
