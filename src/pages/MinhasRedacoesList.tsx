@@ -40,7 +40,7 @@ interface RedacaoTurma {
   turma: string;
   created_at?: string;
   corretor?: string;
-  corretor_gender?: string | null;
+  corretor_gender?: 'M' | 'F' | 'NB' | 'U' | null;
   corretor_numero?: number;
   original_id?: string;
   observacoes_coordenacao?: string;
@@ -670,7 +670,7 @@ const MinhasRedacoesList = () => {
         
         // Limpar formatação desnecessária da justificativa
         const justificativaLimpa = justificativa
-          .replace('Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n', '')
+          .replace(/Sua redação foi devolvida pel[oa] corretor[a]? com a seguinte justificativa:\n\n/, '')
           .replace(/^\s*"?\s*/, '') // Remove aspas iniciais e espaços
           .replace(/\s*"?\s*$/, '') // Remove aspas finais e espaços
           .trim();

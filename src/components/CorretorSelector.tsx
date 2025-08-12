@@ -101,11 +101,11 @@ export const CorretorSelector = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Seleção de Corretores
+            Seleção de Corretores(as)
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Carregando corretores...</p>
+          <p className="text-sm text-muted-foreground">Carregando corretores(as)...</p>
         </CardContent>
       </Card>
     );
@@ -116,7 +116,7 @@ export const CorretorSelector = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="w-5 h-5" />
-          Selecione os corretores {required && <span className="text-red-500">*</span>}
+          Selecione os(as) corretores(as) {required && <span className="text-red-500">*</span>}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -124,7 +124,7 @@ export const CorretorSelector = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Simulado:</strong> É obrigatório selecionar exatamente 2 corretores.
+              <strong>Simulado:</strong> É obrigatório selecionar exatamente 2 corretores(as).
             </AlertDescription>
           </Alert>
         )}
@@ -138,7 +138,7 @@ export const CorretorSelector = ({
                 onCheckedChange={handleSelectAll}
               />
               <Label htmlFor="select-all-corretores" className="font-medium">
-                Selecionar todos os corretores
+                Selecionar todos(as) os(as) corretores(as)
               </Label>
             </div>
           )}
@@ -169,7 +169,7 @@ export const CorretorSelector = ({
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Nenhum corretor ativo encontrado. Entre em contato com o administrador.
+                Nenhum(a) corretor(a) ativo(a) encontrado(a). Entre em contato com o administrador.
               </AlertDescription>
             </Alert>
           )}
@@ -179,7 +179,7 @@ export const CorretorSelector = ({
           <p>Corretores selecionados: {selectedCorretores.length}/{corretores.length}</p>
           {isSimulado && selectedCorretores.length !== 2 && (
             <p className="text-red-500 mt-1">
-              ⚠️ Simulados requerem exatamente 2 corretores
+              ⚠️ Simulados requerem exatamente 2 corretores(as)
             </p>
           )}
         </div>

@@ -34,7 +34,7 @@ interface RedacaoEnviadaCardProps {
     turma: string;
     corretor_numero?: number;
     corretor?: string;
-    corretor_gender?: string | null;
+    corretor_gender?: Gender;
     // Novos campos de comentários pedagógicos
     comentario_c1_corretor_1?: string | null;
     comentario_c2_corretor_1?: string | null;
@@ -267,6 +267,7 @@ export const RedacaoEnviadaCard = ({
                     <AudioPlayerAluno 
                       audioUrl={audioUrl} 
                       corretorNome={redacao.corretor_numero === 1 ? "Corretor 1" : redacao.corretor_numero === 2 ? "Corretor 2" : "Corretor"}
+                      corretorGender={redacao.corretor_gender}
                       isStudentView={true}
                     />
                   </div>
