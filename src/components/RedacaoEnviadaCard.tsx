@@ -180,11 +180,22 @@ export const RedacaoEnviadaCard = ({
         </CardHeader>
         
         <CardContent className="pt-0">
-          {/* Apenas data e horário conforme solicitado */}
-          <div className="flex items-center gap-2 text-sm">
-            <CalendarDays className="w-4 h-4 text-primary shrink-0" />
-            <span className="font-medium">Enviado:</span>
-            <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
+          <div className="space-y-2">
+            {/* Data de envio */}
+            <div className="flex items-center gap-2 text-sm">
+              <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-medium">Enviado:</span>
+              <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
+            </div>
+            
+            {/* Nome do corretor - exibir apenas se atribuído */}
+            {redacao.corretor && (
+              <div className="flex items-center gap-2 text-sm">
+                <User className="w-4 h-4 text-primary shrink-0" />
+                <span className="font-medium">Corretor:</span>
+                <span className="text-xs sm:text-sm">{redacao.corretor}</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

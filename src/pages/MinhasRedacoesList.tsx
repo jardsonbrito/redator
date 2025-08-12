@@ -152,10 +152,14 @@ const MinhasRedacoesList = () => {
       console.log('🔍 Buscando redações para email:', emailBusca);
 
       try {
-        // Buscar redações regulares
+        // Buscar redações regulares com informações do corretor
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
           .from('redacoes_enviadas')
-          .select('*')
+          .select(`
+            *,
+            corretor1:corretores!corretor_id_1(id, nome_completo),
+            corretor2:corretores!corretor_id_2(id, nome_completo)
+          `)
           .ilike('email_aluno', emailBusca);
 
         if (errorRegulares) {
@@ -194,15 +198,24 @@ const MinhasRedacoesList = () => {
 
         // Adicionar redações regulares
         if (redacoesRegulares && redacoesRegulares.length > 0) {
-        console.log('✅ Processando', redacoesRegulares.length, 'redações regulares');
-        redacoesRegulares.forEach(item => {
-          todasRedacoes.push({
-            ...item,
-            tipo_envio: item.tipo_envio || 'tema_livre',
-            corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
-            status: item.status || 'aguardando'
-          } as RedacaoTurma);
-        });
+          console.log('✅ Processando', redacoesRegulares.length, 'redações regulares');
+          redacoesRegulares.forEach((item: any) => {
+            // Determinar nome do corretor baseado no que está atribuído
+            let nomeCorretor = null;
+            if (item.corretor_id_1 && item.corretor1) {
+              nomeCorretor = item.corretor1.nome_completo;
+            } else if (item.corretor_id_2 && item.corretor2) {
+              nomeCorretor = item.corretor2.nome_completo;
+            }
+
+            todasRedacoes.push({
+              ...item,
+              tipo_envio: item.tipo_envio || 'tema_livre',
+              corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
+              status: item.status || 'aguardando',
+              corretor: nomeCorretor
+            } as RedacaoTurma);
+          });
         }
 
         // Adicionar redações de simulado (duplicar por corretor)
