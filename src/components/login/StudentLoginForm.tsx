@@ -37,14 +37,14 @@ export const StudentLoginForm = ({
     // Normalização do e-mail conforme especificação
     const emailNormalizado = normalizeEmail(email);
     try {
-      // Consulta SQL conforme especificação: SELECT * FROM profiles WHERE LOWER(TRIM(email)) = email_normalizado
-      const {
-        data: aluno,
-        error
-      } = await supabase.from("profiles").select("id, nome, email, turma, ativo").eq("user_type", "aluno").ilike("email", emailNormalizado).limit(1).maybeSingle();
+      // Use secure function for login validation instead of direct database query
+      const { data, error } = await supabase.rpc('validate_student_login' as any, {
+        p_email: emailNormalizado
+      });
+
       if (error) {
         logLoginAttempt(email, emailNormalizado, 'error');
-        console.error('🚨 ERRO na consulta:', error);
+        console.error('🚨 ERRO na validação:', error);
         toast({
           title: "Erro no sistema",
           description: "Ocorreu um erro ao verificar seus dados. Tente novamente.",
@@ -52,24 +52,19 @@ export const StudentLoginForm = ({
         });
         return;
       }
-      if (aluno) {
-        // Verificar se o aluno está ativo
-        if (!aluno.ativo) {
-          logLoginAttempt(email, emailNormalizado, 'error');
-          toast({
-            title: "Acesso não liberado",
-            description: "Seu acesso ainda não foi liberado. Aguarde o administrador.",
-            variant: "destructive"
-          });
-          return;
-        }
+
+      // Type assertion for the JSON response
+      const result = data as { success: boolean; student?: any; message?: string };
+
+      if (result?.success && result.student) {
+        const aluno = result.student;
         logLoginAttempt(email, emailNormalizado, 'success');
         console.log('✅ LOGIN SUCESSO - Aluno:', aluno.nome, 'Turma:', aluno.turma);
         console.log('🔄 StudentLoginForm - Chamando onLogin, mantendo email:', email);
         
-        // Não limpar o email aqui - manter para debug
+        // Successful login
         onLogin({
-          turma: aluno.turma,
+          turma: aluno.turma || '',
           nome: aluno.nome,
           email: aluno.email
         });
@@ -78,11 +73,11 @@ export const StudentLoginForm = ({
         return;
       }
 
-      // Nenhum resultado encontrado
+      // Login failed - student not found or inactive
       logLoginAttempt(email, emailNormalizado, 'not_found');
       toast({
-        title: "E-mail não encontrado",
-        description: "E-mail não encontrado. Verifique se você foi cadastrado corretamente pelo professor.",
+        title: "Acesso não autorizado",
+        description: result?.message || "E-mail não encontrado ou conta inativa. Verifique se você foi cadastrado corretamente pelo professor.",
         variant: "destructive"
       });
     } catch (error: any) {
