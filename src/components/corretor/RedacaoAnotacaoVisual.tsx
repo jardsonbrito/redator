@@ -1038,28 +1038,21 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     <div className="space-y-4">
       {/* Painel de competências */}
       {!readonly && (
-        <div className="mb-4 painel-correcao sticky top-4 z-20 bg-background/95 backdrop-blur-sm">
-          <div className="flex items-center mb-3">
-            <h3 className="text-lg font-semibold">Selecione a Competência</h3>
-          </div>
+        <div className="mb-4 painel-correcao">
           <div className="flex gap-4 items-center">
             {Object.entries(CORES_COMPETENCIAS).map(([num, info]) => (
-              <button
+              <div
                 key={num}
-                onClick={() => setCompetenciaSelecionada(parseInt(num))}
-                className={`w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
-                  competenciaSelecionada === parseInt(num) 
-                    ? 'border-gray-800 shadow-lg scale-110' 
-                    : 'border-gray-300 hover:border-gray-500'
-                }`}
-                style={{ 
-                  backgroundColor: info.cor,
-                  boxShadow: competenciaSelecionada === parseInt(num) 
-                    ? `0 0 0 3px ${info.cor}33` 
-                    : 'none'
-                }}
-                title={info.label}
-              />
+                className="flex flex-col items-center gap-1"
+              >
+                <div
+                  className="w-8 h-8 rounded-full border-2 border-gray-300"
+                  style={{ backgroundColor: info.cor }}
+                />
+                <span className="text-xs font-medium text-muted-foreground">
+                  C{num}
+                </span>
+              </div>
             ))}
             
             {/* Botão para limpar todas as anotações */}
