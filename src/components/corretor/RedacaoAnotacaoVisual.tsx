@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Save, Trash2, Eye } from "lucide-react";
+import { Save, Trash2, Eye, Edit3 } from "lucide-react";
 import html2canvas from 'html2canvas';
 
 // Importar Annotorious
@@ -187,6 +187,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   const [currentAnnotation, setCurrentAnnotation] = useState<any>(null);
   const [comentarioTemp, setComentarioTemp] = useState("");
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  
+  // Novos estados para o dialog de 5 bolinhas
+  const [competenciaDialog, setCompetenciaDialog] = useState<number | null>(null);
+  const [competenciasExpanded, setCompetenciasExpanded] = useState<boolean>(true);
+  const [editandoAnotacao, setEditandoAnotacao] = useState<AnotacaoVisual | null>(null);
   
   const [contadorSequencial, setContadorSequencial] = useState(1);
 
@@ -565,7 +570,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 return;
               }
 
-              // Criar dados da anotação
+              // Criar dados da anotação (SEM competência predefinida)
               const annotationData = {
                 id: `temp_${Date.now()}`,
                 target: {
@@ -575,17 +580,27 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                   }
                 },
                 body: [{
-                  type: "TextualBody",
-                  purpose: competenciaSelecionada,
+                  type: "TextualBody", 
+                  purpose: null, // SEM competência inicial
                   value: ""
                 }],
                 bounds: { x, y, width, height },
                 numero: contadorSequencial
               };
 
+              // CRIAÇÃO: abrir sempre com as 5 bolinhas visíveis
+              setEditandoAnotacao(null);
               setCurrentAnnotation(annotationData);
               setComentarioTemp("");
+              setCompetenciaDialog(null);
+              setCompetenciasExpanded(true);
               setDialogAberto(true);
+              
+              console.log('CRIAÇÃO -> Dialog aberto', {
+                editandoAnotacao: null,
+                competenciaDialog: null,
+                competenciasExpanded: true
+              });
               
             } catch (error) {
               console.error('Erro ao processar seleção:', error);
@@ -725,16 +740,63 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   }, [anotacoes, imageDimensions]);
 
+  // Proteção contra efeitos que derrubam o header novo
+  useEffect(() => {
+    if (dialogAberto && !editandoAnotacao) {
+      // Em CRIAÇÃO, o header tem que começar expandido SEMPRE
+      setCompetenciasExpanded(true);
+      setCompetenciaDialog(null);
+      console.log('GUARDA-CHUVA: Forçando 5 bolinhas na criação');
+    }
+  }, [dialogAberto, editandoAnotacao]);
+
+  // Seleção de competência no dialog
+  const selecionarCompetencia = (competencia: number) => {
+    setCompetenciaDialog(competencia);
+    setCompetenciasExpanded(false);
+    console.log('COMPETÊNCIA SELECIONADA:', competencia);
+  };
+
+  // Editar anotação
+  const editarAnotacao = (anotacao: AnotacaoVisual) => {
+    setEditandoAnotacao(anotacao);
+    setCurrentAnnotation({
+      bounds: {
+        x: anotacao.x_start,
+        y: anotacao.y_start,
+        width: anotacao.x_end - anotacao.x_start,
+        height: anotacao.y_end - anotacao.y_start
+      }
+    });
+    setComentarioTemp(anotacao.comentario);
+    setCompetenciaDialog(anotacao.competencia);
+    setCompetenciasExpanded(false); // edição inicia colapsada
+    setDialogAberto(true);
+    
+    console.log('EDIÇÃO -> Dialog aberto', {
+      competenciasExpanded: false,
+      competenciaDialog: anotacao.competencia
+    });
+  };
+
   // Salvar anotação
   const salvarAnotacao = async () => {
     console.log('=== INICIANDO SALVAMENTO ===');
     console.log('currentAnnotation:', currentAnnotation);
     console.log('comentarioTemp:', comentarioTemp);
-    console.log('competenciaSelecionada:', competenciaSelecionada);
-    console.log('redacaoId:', redacaoId);
-    console.log('corretorId:', corretorId);
+    console.log('competenciaDialog:', competenciaDialog);
     
-    if (!currentAnnotation || !comentarioTemp.trim()) {
+    const competenciaFinal = competenciaDialog;
+    if (!competenciaFinal) {
+      toast({
+        title: "Atenção",
+        description: "Selecione a competência",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!comentarioTemp.trim()) {
       toast({
         title: "Erro",
         description: "Comentário não pode estar vazio.",
@@ -758,61 +820,73 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         throw new Error('ID do corretor deve ser um UUID válido. Recebido: ' + corretorId);
       }
 
-      const novaAnotacao = {
-        redacao_id: redacaoId,
-        corretor_id: corretorId,
-        competencia: competenciaSelecionada,
-        cor_marcacao: CORES_COMPETENCIAS[competenciaSelecionada].cor,
-        comentario: comentarioTemp.trim(),
-        tabela_origem: 'redacoes_enviadas',
-        x_start: bounds.x,
-        y_start: bounds.y,
-        x_end: bounds.x + bounds.width,
-        y_end: bounds.y + bounds.height,
-        imagem_largura: imageDimensions.width,
-        imagem_altura: imageDimensions.height,
-        numero_sequencial: contadorSequencial
-      };
+      if (editandoAnotacao?.id) {
+        // Editando anotação existente
+        const { error } = await supabase
+          .from('marcacoes_visuais')
+          .update({
+            competencia: competenciaFinal,
+            cor_marcacao: CORES_COMPETENCIAS[competenciaFinal as keyof typeof CORES_COMPETENCIAS].cor,
+            comentario: comentarioTemp.trim(),
+          })
+          .eq('id', editandoAnotacao.id);
 
-      console.log('=== DADOS DA ANOTAÇÃO ===');
-      console.log('novaAnotacao:', JSON.stringify(novaAnotacao, null, 2));
+        if (error) throw error;
 
-      const { data, error } = await supabase
-        .from('marcacoes_visuais')
-        .insert(novaAnotacao)
-        .select()
-        .single();
+        toast({
+          title: "Marcação atualizada!",
+          description: "Comentário editado com sucesso.",
+        });
+      } else {
+        // Criando nova anotação
+        const novaAnotacao = {
+          redacao_id: redacaoId,
+          corretor_id: corretorId,
+          competencia: competenciaFinal,
+          cor_marcacao: CORES_COMPETENCIAS[competenciaFinal as keyof typeof CORES_COMPETENCIAS].cor,
+          comentario: comentarioTemp.trim(),
+          tabela_origem: 'redacoes_enviadas',
+          x_start: bounds.x,
+          y_start: bounds.y,
+          x_end: bounds.x + bounds.width,
+          y_end: bounds.y + bounds.height,
+          imagem_largura: imageDimensions.width,
+          imagem_altura: imageDimensions.height,
+          numero_sequencial: contadorSequencial
+        };
 
-      console.log('=== RESULTADO DO SUPABASE ===');
-      console.log('data:', data);
-      console.log('error:', error);
+        console.log('=== DADOS DA ANOTAÇÃO ===');
+        console.log('novaAnotacao:', JSON.stringify(novaAnotacao, null, 2));
 
-      if (error) {
-        console.error('=== ERRO SUPABASE DETALHADO ===');
-        console.error('message:', error.message);
-        console.error('details:', error.details);
-        console.error('hint:', error.hint);
-        console.error('code:', error.code);
-        throw error;
+        const { data, error } = await supabase
+          .from('marcacoes_visuais')
+          .insert(novaAnotacao)
+          .select()
+          .single();
+
+        console.log('=== RESULTADO DO SUPABASE ===');
+        console.log('data:', data);
+        console.log('error:', error);
+
+        if (error) throw error;
+
+        console.log('=== ANOTAÇÃO SALVA COM SUCESSO ===');
+        console.log('data salva:', data);
+
+        // Incrementar contador para próxima marcação
+        setContadorSequencial(prev => prev + 1);
+
+        toast({
+          title: "Comentário salvo!",
+          description: "Marcação adicionada com sucesso.",
+        });
       }
-
-      console.log('=== ANOTAÇÃO SALVA COM SUCESSO ===');
-      console.log('data salva:', data);
-
-      // Incrementar contador para próxima marcação
-      setContadorSequencial(prev => prev + 1);
-
-      // Atualizar lista de anotações
-      setAnotacoes(prev => [...prev, data as AnotacaoVisual]);
-
-      toast({
-        title: "Comentário salvo!",
-        description: "Marcação adicionada com sucesso.",
-      });
 
       setDialogAberto(false);
       setCurrentAnnotation(null);
       setComentarioTemp("");
+      setCompetenciaDialog(null);
+      setEditandoAnotacao(null);
       
       // Recarregar anotações para sincronizar
       await carregarAnotacoes();
@@ -1062,18 +1136,36 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                     >
                       <Eye className="w-3 h-3" />
                     </Button>
+                    {!readonly && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => editarAnotacao(anotacao)}
+                        className="h-6 w-6 p-0 text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
+                        aria-label="Editar comentário"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                   <p className="text-sm text-gray-700">{anotacao.comentario}</p>
                 </div>
                 {!readonly && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removerAnotacao(anotacao.id!)}
-                    className="text-red-500 hover:text-red-700 flex-shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (window.confirm("Deseja excluir este comentário?")) {
+                          removerAnotacao(anotacao.id!);
+                        }
+                      }}
+                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      aria-label="Excluir comentário"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 )}
               </div>
             ))}
@@ -1085,18 +1177,47 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <div 
-                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                style={{ backgroundColor: CORES_COMPETENCIAS[competenciaSelecionada]?.cor }}
-              >
-                C{competenciaSelecionada}
-              </div>
-              {CORES_COMPETENCIAS[competenciaSelecionada]?.label}
+            <DialogTitle>
+              {editandoAnotacao ? "Editar Comentário" : "Redação Manuscrita"}
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
+            {/* TOPO DO DIALOG */}
+            <div className="flex items-center gap-2">
+              {(() => {
+                const compAtual = competenciaDialog ?? null;
+                
+                return (competenciasExpanded || !compAtual) ? (
+                  // EXPANDIDO → 5 bolinhas
+                  <div className="flex items-center gap-2">
+                    {[1,2,3,4,5].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => selecionarCompetencia(num)}
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
+                        style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
+                        aria-label={`Competência ${num}`}
+                        data-testid={`bolinha-c${num}`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  // COLAPSADO → 1 bolinha + texto
+                  <button
+                    onClick={() => setCompetenciasExpanded(true)}
+                    className="flex items-center gap-2"
+                    data-testid="bolinha-colapsada"
+                  >
+                    <span
+                      className="w-8 h-8 rounded-full border-2 border-gray-300"
+                      style={{ backgroundColor: CORES_COMPETENCIAS[compAtual].cor }}
+                    />
+                    <span>Competência {compAtual}</span>
+                  </button>
+                );
+              })()}
+            </div>
             <Textarea
               placeholder="Digite seu comentário sobre esta marcação..."
               value={comentarioTemp}
