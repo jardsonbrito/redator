@@ -204,14 +204,19 @@ export type Database = {
           cover_url: string | null
           criado_em: string | null
           descricao: string | null
+          embed_url: string | null
           id: string
           link_conteudo: string
           modulo: string
           pdf_nome: string | null
           pdf_url: string | null
           permite_visitante: boolean | null
+          platform: string | null
           titulo: string
           turmas_autorizadas: string[] | null
+          video_id: string | null
+          video_thumbnail_url: string | null
+          video_url_original: string | null
         }
         Insert: {
           ativo?: boolean | null
@@ -220,14 +225,19 @@ export type Database = {
           cover_url?: string | null
           criado_em?: string | null
           descricao?: string | null
+          embed_url?: string | null
           id?: string
           link_conteudo: string
           modulo: string
           pdf_nome?: string | null
           pdf_url?: string | null
           permite_visitante?: boolean | null
+          platform?: string | null
           titulo: string
           turmas_autorizadas?: string[] | null
+          video_id?: string | null
+          video_thumbnail_url?: string | null
+          video_url_original?: string | null
         }
         Update: {
           ativo?: boolean | null
@@ -236,14 +246,19 @@ export type Database = {
           cover_url?: string | null
           criado_em?: string | null
           descricao?: string | null
+          embed_url?: string | null
           id?: string
           link_conteudo?: string
           modulo?: string
           pdf_nome?: string | null
           pdf_url?: string | null
           permite_visitante?: boolean | null
+          platform?: string | null
           titulo?: string
           turmas_autorizadas?: string[] | null
+          video_id?: string | null
+          video_thumbnail_url?: string | null
+          video_url_original?: string | null
         }
         Relationships: []
       }
@@ -719,6 +734,36 @@ export type Database = {
           },
         ]
       }
+      presenca_audit_log: {
+        Row: {
+          action: string
+          aula_id: string | null
+          id: string
+          ip_address: unknown | null
+          student_email: string | null
+          timestamp: string | null
+          user_email: string | null
+        }
+        Insert: {
+          action: string
+          aula_id?: string | null
+          id?: string
+          ip_address?: unknown | null
+          student_email?: string | null
+          timestamp?: string | null
+          user_email?: string | null
+        }
+        Update: {
+          action?: string
+          aula_id?: string | null
+          id?: string
+          ip_address?: unknown | null
+          student_email?: string | null
+          timestamp?: string | null
+          user_email?: string | null
+        }
+        Relationships: []
+      }
       presenca_aulas: {
         Row: {
           aula_id: string
@@ -853,6 +898,7 @@ export type Database = {
           data_aprovacao: string | null
           data_solicitacao: string | null
           email: string
+          gender: string | null
           id: string
           is_authenticated_student: boolean | null
           nome: string
@@ -873,6 +919,7 @@ export type Database = {
           data_aprovacao?: string | null
           data_solicitacao?: string | null
           email: string
+          gender?: string | null
           id: string
           is_authenticated_student?: boolean | null
           nome: string
@@ -893,6 +940,7 @@ export type Database = {
           data_aprovacao?: string | null
           data_solicitacao?: string | null
           email?: string
+          gender?: string | null
           id?: string
           is_authenticated_student?: boolean | null
           nome?: string
@@ -1919,6 +1967,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      check_student_exists: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
       compute_needs_media_update: {
         Args: {
           p_cover_source: string
@@ -2299,6 +2351,10 @@ export type Database = {
       }
       validate_professor_login: {
         Args: { p_email: string; p_senha: string }
+        Returns: Json
+      }
+      validate_student_login: {
+        Args: { p_email: string }
         Returns: Json
       }
       verificar_redacao_devolvida_visualizada: {

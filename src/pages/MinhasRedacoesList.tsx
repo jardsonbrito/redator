@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
+import { correctorNoun, type Gender } from "@/utils/correctorGender";
 
 // Tipo para representar uma redação com informações básicas compatível com RedacaoEnviadaCard
 interface RedacaoTurma {
@@ -39,6 +40,7 @@ interface RedacaoTurma {
   turma: string;
   created_at?: string;
   corretor?: string;
+  corretor_gender?: string | null;
   corretor_numero?: number;
   original_id?: string;
   observacoes_coordenacao?: string;
@@ -158,7 +160,9 @@ const MinhasRedacoesList = () => {
           .select(`
             *,
             corretor1:corretores!corretor_id_1(id, nome_completo),
-            corretor2:corretores!corretor_id_2(id, nome_completo)
+            corretor2:corretores!corretor_id_2(id, nome_completo),
+            perfil_corretor1:profiles!corretor_id_1(gender),
+            perfil_corretor2:profiles!corretor_id_2(gender)
           `)
           .ilike('email_aluno', emailBusca);
 
@@ -172,7 +176,11 @@ const MinhasRedacoesList = () => {
           .from('redacoes_simulado')
           .select(`
             *,
-            simulados(frase_tematica)
+            simulados(frase_tematica),
+            corretor1:corretores!corretor_id_1(id, nome_completo),
+            corretor2:corretores!corretor_id_2(id, nome_completo),
+            perfil_corretor1:profiles!corretor_id_1(gender),
+            perfil_corretor2:profiles!corretor_id_2(gender)
           `)
           .ilike('email_aluno', emailBusca);
 
@@ -185,7 +193,11 @@ const MinhasRedacoesList = () => {
           .from('redacoes_exercicio')
           .select(`
             *,
-            exercicios(titulo)
+            exercicios(titulo),
+            corretor1:corretores!corretor_id_1(id, nome_completo),
+            corretor2:corretores!corretor_id_2(id, nome_completo),
+            perfil_corretor1:profiles!corretor_id_1(gender),
+            perfil_corretor2:profiles!corretor_id_2(gender)
           `)
           .ilike('email_aluno', emailBusca);
 
@@ -200,12 +212,15 @@ const MinhasRedacoesList = () => {
         if (redacoesRegulares && redacoesRegulares.length > 0) {
           console.log('✅ Processando', redacoesRegulares.length, 'redações regulares');
           redacoesRegulares.forEach((item: any) => {
-            // Determinar nome do corretor baseado no que está atribuído
+            // Determinar nome e gênero do corretor baseado no que está atribuído
             let nomeCorretor = null;
+            let genderCorretor = null;
             if (item.corretor_id_1 && item.corretor1) {
               nomeCorretor = item.corretor1.nome_completo;
+              genderCorretor = item.perfil_corretor1?.gender;
             } else if (item.corretor_id_2 && item.corretor2) {
               nomeCorretor = item.corretor2.nome_completo;
+              genderCorretor = item.perfil_corretor2?.gender;
             }
 
             todasRedacoes.push({
@@ -213,7 +228,8 @@ const MinhasRedacoesList = () => {
               tipo_envio: item.tipo_envio || 'tema_livre',
               corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
               status: item.status || 'aguardando',
-              corretor: nomeCorretor
+              corretor: nomeCorretor,
+              corretor_gender: genderCorretor
             } as RedacaoTurma);
           });
         }
@@ -264,7 +280,8 @@ const MinhasRedacoesList = () => {
                 turma: item.turma || '',
                 data_envio: item.data_envio,
                 data_correcao: item.data_correcao,
-                corretor: nomes_corretores[item.corretor_id_1] || 'Corretor 1',
+                corretor: item.corretor1?.nome_completo || nomes_corretores[item.corretor_id_1] || 'Corretor 1',
+                corretor_gender: item.perfil_corretor1?.gender,
                 corretor_numero: 1,
                 // Notas específicas do corretor 1
                 nota_c1: item.c1_corretor_1,
@@ -305,7 +322,8 @@ const MinhasRedacoesList = () => {
                 turma: item.turma || '',
                 data_envio: item.data_envio,
                 data_correcao: item.data_correcao,
-                corretor: nomes_corretores[item.corretor_id_2] || 'Corretor 2',
+                corretor: item.corretor2?.nome_completo || nomes_corretores[item.corretor_id_2] || 'Corretor 2',
+                corretor_gender: item.perfil_corretor2?.gender,
                 corretor_numero: 2,
                 // Notas específicas do corretor 2
                 nota_c1: item.c1_corretor_2,
@@ -350,6 +368,17 @@ const MinhasRedacoesList = () => {
         if (redacoesExercicio && redacoesExercicio.length > 0) {
           console.log('✅ Processando', redacoesExercicio.length, 'redações de exercício');
           redacoesExercicio.forEach((item: any) => {
+            // Determinar nome e gênero do corretor baseado no que está atribuído
+            let nomeCorretor = null;
+            let genderCorretor = null;
+            if (item.corretor_id_1 && item.corretor1) {
+              nomeCorretor = item.corretor1.nome_completo;
+              genderCorretor = item.perfil_corretor1?.gender;
+            } else if (item.corretor_id_2 && item.corretor2) {
+              nomeCorretor = item.corretor2.nome_completo;
+              genderCorretor = item.perfil_corretor2?.gender;
+            }
+
             todasRedacoes.push({
               ...item,
               id: item.id,
@@ -361,7 +390,9 @@ const MinhasRedacoesList = () => {
               nome_aluno: item.nome_aluno || '',
               email_aluno: item.email_aluno || '',
               turma: item.turma || '',
-              data_envio: item.data_envio
+              data_envio: item.data_envio,
+              corretor: nomeCorretor,
+              corretor_gender: genderCorretor
             } as RedacaoTurma);
           });
         }
@@ -904,10 +935,10 @@ const MinhasRedacoesList = () => {
                        </h3>
                        
                        {redacao.corretor && (
-                         <p className="text-sm text-muted-foreground font-medium">
-                           Corretor: {redacao.corretor}
-                         </p>
-                       )}
+                          <p className="text-sm text-muted-foreground font-medium">
+                            {correctorNoun(redacao.corretor_gender as Gender)}: {redacao.corretor}
+                          </p>
+                        )}
 
                       {/* Exibir notas por competência se a correção foi finalizada */}
                       {redacao.corrigida && (redacao.nota_c1 || redacao.nota_c2 || redacao.nota_c3 || redacao.nota_c4 || redacao.nota_c5) && (
