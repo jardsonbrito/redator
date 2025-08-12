@@ -235,7 +235,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   };
 
   const scrollCommentIntoView = (el: HTMLElement, offset = 72) => {
-    const container = getScrollableContainer(el.closest('[data-comentarios-container]') as HTMLElement);
+    const container = getScrollableContainer(el as HTMLElement);
     if (container === window) {
       const y = el.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
@@ -332,8 +332,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         (annotationElement as HTMLElement).offsetHeight;
         annotationElement.classList.add('pulse-highlight', 'is-highlighted');
 
-        // Centralizar retângulo no container rolável
-        const scrollContainer = getScrollableContainer(containerRef.current!);
+        // Centralizar retângulo no container rolável (baseado no próprio elemento da anotação)
+        const scrollContainer = getScrollableContainer(annotationElement as HTMLElement);
         centerRectIn(scrollContainer as any, annotationElement);
 
         // Remover destaque após 2s
@@ -369,11 +369,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         comentarioElement.classList.remove('comentario-destacado');
       }, 2000);
       
-      // Scroll para o comentário se necessário
-      comentarioElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
+      // Scroll para o comentário com offset para headers fixos
+      scrollCommentIntoView(comentarioElement as HTMLElement, 72);
     }
   };
 
