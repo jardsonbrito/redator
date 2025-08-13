@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, isWithinInterval, parseISO, isBefore } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, isWithinInterval, parse, isBefore } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 
 /**
  * Upload de capa de exercício
@@ -29,45 +29,86 @@ export async function uploadExerciseCover(file: File): Promise<string | null> {
 }
 
 /**
- * Resolve a capa efetiva do exercício seguindo a precedência:
- * Upload > URL > Herança do Tema > Placeholder
+ * Função utilitária para selecionar as fontes de imagem com prioridade e cache-busting
+ * Conforme especificação técnica: cover_url > cover_upload_url > herança do tema > placeholder
  */
-export function getEffectiveCover(exercise: any): string {
-  const placeholder = '/placeholders/aula-cover.png';
-  
-  // 1. Upload tem precedência
-  if (exercise?.cover_upload_path) {
-    return exercise.cover_upload_path;
+export function pickCoverImage({ 
+  cover_url, 
+  cover_upload_url, 
+  cover_upload_path,
+  imagem_capa_url,
+  placeholder = '/placeholders/aula-cover.png', 
+  updated_at,
+  temas,
+  tipo 
+}: {
+  cover_url?: string;
+  cover_upload_url?: string;
+  cover_upload_path?: string;
+  imagem_capa_url?: string;
+  placeholder?: string;
+  updated_at?: string;
+  temas?: any;
+  tipo?: string;
+}): string[] {
+  const bust = updated_at ? `?v=${new Date(updated_at).getTime()}` : '';
+  const sources: string[] = [];
+
+  // 1. Prioridade: cover_url (URL informada manualmente)
+  if (cover_url) {
+    sources.push(cover_url + bust);
   }
-  
-  // 2. URL manual
-  if (exercise?.cover_url) {
-    return exercise.cover_url;
+
+  // 2. cover_upload_url (URL final do arquivo enviado)
+  if (cover_upload_url) {
+    sources.push(cover_upload_url + bust);
   }
-  
-  // 3. URL da imagem de capa (campo legado)
-  if (exercise?.imagem_capa_url) {
-    return exercise.imagem_capa_url;
+
+  // 3. cover_upload_path (caminho de upload - campo legado)
+  if (cover_upload_path) {
+    sources.push(cover_upload_path + bust);
   }
-  
-  // 4. Herança do tema (para redações)
-  if (exercise?.tipo === 'Redação com Frase Temática' && exercise?.temas) {
-    // Usar cover_file_path se existir (upload tem precedência)
-    if (exercise.temas.cover_file_path) {
+
+  // 4. imagem_capa_url (campo legado)
+  if (imagem_capa_url) {
+    sources.push(imagem_capa_url + bust);
+  }
+
+  // 5. Herança do tema (para redações)
+  if (tipo === 'Redação com Frase Temática' && temas) {
+    if (temas.cover_file_path) {
       const { data } = supabase.storage
         .from('themes')
-        .getPublicUrl(exercise.temas.cover_file_path);
-      return data.publicUrl;
+        .getPublicUrl(temas.cover_file_path);
+      sources.push(data.publicUrl + bust);
     }
-    
-    // Senão usar cover_url
-    if (exercise.temas.cover_url) {
-      return exercise.temas.cover_url;
+    if (temas.cover_url) {
+      sources.push(temas.cover_url + bust);
     }
   }
+
+  // 6. Placeholder (sempre como último fallback)
+  sources.push(placeholder);
+
+  return sources;
+}
+
+/**
+ * Função legada mantida para compatibilidade - usa a nova lógica internamente
+ * @deprecated Use pickCoverImage para maior controle sobre fallbacks
+ */
+export function getEffectiveCover(exercise: any): string {
+  const sources = pickCoverImage({
+    cover_url: exercise?.cover_url,
+    cover_upload_url: exercise?.cover_upload_url,
+    cover_upload_path: exercise?.cover_upload_path,
+    imagem_capa_url: exercise?.imagem_capa_url,
+    updated_at: exercise?.updated_at,
+    temas: exercise?.temas,
+    tipo: exercise?.tipo
+  });
   
-  // 5. Placeholder
-  return placeholder;
+  return sources[0] || '/placeholders/aula-cover.png';
 }
 
 /**
@@ -79,8 +120,8 @@ export function getExerciseAvailability(exercise: any) {
   }
 
   const agora = new Date();
-  const inicioExercicio = parseISO(`${exercise.data_inicio}T${exercise.hora_inicio}`);
-  const fimExercicio = parseISO(`${exercise.data_fim}T${exercise.hora_fim}`);
+  const inicioExercicio = parse(`${exercise.data_inicio}T${exercise.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  const fimExercicio = parse(`${exercise.data_fim}T${exercise.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
   if (isBefore(agora, inicioExercicio)) {
     return { 
@@ -110,8 +151,8 @@ export function formatExercisePeriod(dataInicio?: string, horaInicio?: string, d
     return 'Período não definido';
   }
 
-  const inicio = parseISO(`${dataInicio}T${horaInicio}`);
-  const fim = parseISO(`${dataFim}T${horaFim}`);
+  const inicio = parse(`${dataInicio}T${horaInicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  const fim = parse(`${dataFim}T${horaFim}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
   const inicioFormatado = format(inicio, "dd/MM 'às' HH:mm", { locale: ptBR });
   const fimFormatado = format(fim, "dd/MM 'às' HH:mm", { locale: ptBR });
@@ -127,8 +168,8 @@ export function validateExercisePeriod(dataInicio?: string, horaInicio?: string,
     return false;
   }
 
-  const inicio = parseISO(`${dataInicio}T${horaInicio}`);
-  const fim = parseISO(`${dataFim}T${horaFim}`);
+  const inicio = parse(`${dataInicio}T${horaInicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  const fim = parse(`${dataFim}T${horaFim}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
   return fim > inicio;
 }

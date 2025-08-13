@@ -2,7 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, ExternalLink, FileText, Calendar, Users } from "lucide-react";
-import { getEffectiveCover, getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
+import { pickCoverImage, getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
+import { useState } from "react";
 
 interface ExerciseCardProps {
   exercise: {
@@ -11,6 +12,7 @@ interface ExerciseCardProps {
     tipo: string;
     link_forms?: string;
     cover_url?: string;
+    cover_upload_url?: string;
     cover_upload_path?: string;
     imagem_capa_url?: string;
     turmas_autorizadas?: string[] | null;
@@ -20,9 +22,12 @@ interface ExerciseCardProps {
     hora_inicio?: string;
     data_fim?: string;
     hora_fim?: string;
+    updated_at?: string;
     temas?: {
       frase_tematica: string;
       eixo_tematico: string;
+      cover_url?: string;
+      cover_file_path?: string;
     };
   };
   onAction?: (exercise: any) => void;
@@ -44,7 +49,18 @@ export function ExerciseCard({
   onDelete,
   onToggleStatus
 }: ExerciseCardProps) {
-  const coverUrl = getEffectiveCover(exercise);
+  // Implementar sistema de múltiplas fontes de imagem com fallback automático
+  const imageSources = pickCoverImage({
+    cover_url: exercise?.cover_url,
+    cover_upload_url: exercise?.cover_upload_url,
+    cover_upload_path: exercise?.cover_upload_path,
+    imagem_capa_url: exercise?.imagem_capa_url,
+    updated_at: exercise?.updated_at,
+    temas: exercise?.temas,
+    tipo: exercise?.tipo
+  });
+  
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const availability = getExerciseAvailability(exercise);
   const periodText = formatExercisePeriod(
     exercise.data_inicio,
@@ -72,18 +88,29 @@ export function ExerciseCard({
 
   const isDisabled = !exercise.ativo || availability.status === 'encerrado' || availability.status === 'agendado';
 
+  const handleImageError = () => {
+    const nextIndex = currentImageIndex + 1;
+    if (nextIndex < imageSources.length) {
+      setCurrentImageIndex(nextIndex);
+    }
+  };
+
   return (
     <Card className={`overflow-hidden hover:shadow-lg transition-shadow ${isDisabled ? 'opacity-60' : ''}`}>
       <div className="flex flex-col sm:flex-row">
         {/* Capa */}
         <div className="w-full sm:w-64 aspect-video flex-shrink-0 bg-gray-100 rounded-l-lg overflow-hidden">
           <img
-            src={coverUrl}
-            alt={exercise.titulo}
+            src={imageSources[currentImageIndex]}
+            alt={`Capa do exercício: ${exercise.titulo}`}
             className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/placeholders/aula-cover.png';
+            style={{
+              width: '100%',
+              aspectRatio: '16/9',
+              objectFit: 'cover',
+              display: 'block'
             }}
+            onError={handleImageError}
           />
         </div>
 
