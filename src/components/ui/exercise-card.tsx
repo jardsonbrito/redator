@@ -95,6 +95,10 @@ export function ExerciseCard({
     }
   };
 
+  if (!imageSources || imageSources.length === 0) {
+    return null;
+  }
+
   return (
     <Card className={`overflow-hidden hover:shadow-lg transition-shadow ${isDisabled ? 'opacity-60' : ''}`}>
       <div className="flex flex-col sm:flex-row">

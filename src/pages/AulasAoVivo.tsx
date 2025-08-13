@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { toast } from "sonner";
-import { parseISO, isWithinInterval, subMinutes } from "date-fns";
+import { parse, isWithinInterval, subMinutes } from "date-fns";
 
 interface AulaAoVivo {
   id: string;
@@ -139,15 +139,15 @@ const AulasAoVivo = () => {
 
   const podeRegistrarSaida = (aula: AulaAoVivo) => {
     const agora = new Date();
-    const fimAula = parseISO(`${aula.data_aula}T${aula.horario_fim}`);
+    const fimAula = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
     const dezMinutesAntes = subMinutes(fimAula, 10);
     return agora >= dezMinutesAntes;
   };
 
   const getStatusAula = (aula: AulaAoVivo) => {
     const agora = new Date();
-    const inicioAula = parseISO(`${aula.data_aula}T${aula.horario_inicio}`);
-    const fimAula = parseISO(`${aula.data_aula}T${aula.horario_fim}`);
+    const inicioAula = parse(`${aula.data_aula}T${aula.horario_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fimAula = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
     if (agora < inicioAula) return 'futura';
     if (isWithinInterval(agora, { start: inicioAula, end: fimAula })) return 'andamento';

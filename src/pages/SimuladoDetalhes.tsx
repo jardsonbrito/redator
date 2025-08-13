@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Clock, Calendar, CheckCircle, AlertCircle, Home } from "lucide-react";
-import { format, isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, isWithinInterval, parse, isBefore, isAfter } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -161,8 +161,8 @@ export default function SimuladoDetalhes() {
   }
 
   const agora = new Date();
-  const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-  const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+  const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
   
   const simuladoDisponivel = isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado });
   const simuladoFuturo = isBefore(agora, inicioSimulado);

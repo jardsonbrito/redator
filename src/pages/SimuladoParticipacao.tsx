@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Send, ArrowLeft, FileText, Upload, X } from "lucide-react";
-import { format, isWithinInterval, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, isWithinInterval, parse } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { RedacaoEnemForm } from "@/components/RedacaoEnemForm";
@@ -276,8 +276,8 @@ const SimuladoParticipacao = () => {
   }
 
   const agora = new Date();
-  const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-  const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+  const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
   const simuladoDisponivel = isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado });
 
   if (!simuladoDisponivel) {

@@ -13,8 +13,8 @@ import { ExternalLink, Search, FileText, Edit, Home, Clock, Calendar } from "luc
 import { ExerciseCard } from "@/components/ui/exercise-card";
 import { getExerciseAvailability } from "@/utils/exerciseUtils";
 import { useNavigate, Link } from "react-router-dom";
-import { format, isWithinInterval, parseISO, isBefore } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, isWithinInterval, parse, isBefore } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 interface Exercicio {
   id: string;
   titulo: string;
@@ -60,8 +60,8 @@ const Exercicios = () => {
       return 'disponivel'; // Exercícios sem data são sempre disponíveis se ativos
     }
     const agora = new Date();
-    const inicioExercicio = parseISO(`${exercicio.data_inicio}T${exercicio.hora_inicio}`);
-    const fimExercicio = parseISO(`${exercicio.data_fim}T${exercicio.hora_fim}`);
+    const inicioExercicio = parse(`${exercicio.data_inicio}T${exercicio.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fimExercicio = parse(`${exercicio.data_fim}T${exercicio.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
     if (isBefore(agora, inicioExercicio)) {
       return 'agendado';
     } else if (isWithinInterval(agora, {

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, isWithinInterval, parse, isBefore, isAfter } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { useNavigate } from "react-router-dom";
 
 export const SimuladoAtivo = () => {
@@ -43,8 +43,8 @@ export const SimuladoAtivo = () => {
 
   const getSimuladoStatus = (simulado: any) => {
     const agora = new Date();
-    const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-    const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+    const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
     if (isBefore(agora, inicioSimulado)) {
       return 'agendado';
@@ -71,7 +71,7 @@ export const SimuladoAtivo = () => {
   const getActionButton = (simulado: any, status: string) => {
     switch (status) {
       case 'agendado':
-        const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+        const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
         return (
           <Button variant="outline" disabled>
             <Clock className="w-4 h-4 mr-2" />
@@ -164,8 +164,8 @@ export const SimuladoAtivo = () => {
       
       {simuladosRelevantes.map((simulado) => {
         const status = getSimuladoStatus(simulado);
-        const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-        const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+        const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+        const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
         const isExpanded = expandedCard === simulado.id;
 
         return (

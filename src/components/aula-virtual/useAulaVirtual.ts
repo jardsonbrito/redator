@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { parseISO, addHours } from "date-fns";
+import { parse, addHours } from "date-fns";
 import { AulaVirtual, RegistroPresenca } from "./types";
 
 export const useAulaVirtual = (turmaCode: string) => {
@@ -59,7 +59,7 @@ export const useAulaVirtual = (turmaCode: string) => {
           }
         } else {
           // Para aulas normais, aplicar a lógica de tempo original
-          const fimAula = parseISO(`${aula.data_aula}T${aula.horario_fim}`);
+          const fimAula = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
           const fimEstendido = addHours(fimAula, 1);
           
           if (agora > fimEstendido) {

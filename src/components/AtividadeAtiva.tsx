@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, Target, BookOpen, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isWithinInterval, parseISO, isBefore } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, isWithinInterval, parse, isBefore } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { useNavigate } from "react-router-dom";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 
@@ -97,8 +97,8 @@ export const AtividadeAtiva = () => {
 
   const getSimuladoStatus = (simulado: any) => {
     const agora = new Date();
-    const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-    const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+    const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
     if (isBefore(agora, inicioSimulado)) {
       return 'agendado';
@@ -115,8 +115,8 @@ export const AtividadeAtiva = () => {
     }
 
     const agora = new Date();
-    const inicioExercicio = parseISO(`${exercicio.data_inicio}T${exercicio.hora_inicio}`);
-    const fimExercicio = parseISO(`${exercicio.data_fim}T${exercicio.hora_fim}`);
+    const inicioExercicio = parse(`${exercicio.data_inicio}T${exercicio.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fimExercicio = parse(`${exercicio.data_fim}T${exercicio.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
     if (isBefore(agora, inicioExercicio)) {
       return 'agendado';
@@ -163,7 +163,7 @@ export const AtividadeAtiva = () => {
   const getSimuladoActionButton = (simulado: any, status: string) => {
     switch (status) {
       case 'agendado':
-        const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+        const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
         return (
           <Button variant="outline" disabled>
             <Clock className="w-4 h-4 mr-2" />
@@ -224,8 +224,8 @@ export const AtividadeAtiva = () => {
           
           {simuladosRelevantes.map((simulado) => {
             const status = getSimuladoStatus(simulado);
-            const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-            const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+            const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+            const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
             const isExpanded = expandedCard === simulado.id;
 
             return (

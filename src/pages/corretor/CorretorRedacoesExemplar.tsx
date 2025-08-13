@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
 import { BookOpen, User, Calendar } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState } from "react";
 import { resolveExemplarCover } from "@/utils/coverUtils";

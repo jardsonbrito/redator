@@ -4,8 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { format, isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, isWithinInterval, parse, isBefore, isAfter } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -58,8 +58,8 @@ const { data: simulados, isLoading } = useQuery({
 
 const getStatusSimulado = (simulado: any) => {
   const agora = new Date();
-  const inicioSimulado = parseISO(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-  const fimSimulado = parseISO(`${simulado.data_fim}T${simulado.hora_fim}`);
+  const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
   
   if (isBefore(agora, inicioSimulado)) {
     return { label: "Agendado", isActive: false, timeInfo: `Inicia em ${format(inicioSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}`, tone: 'neutral' as BadgeTone };

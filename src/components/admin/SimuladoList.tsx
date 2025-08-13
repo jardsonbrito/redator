@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Users, Calendar, Clock, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, isAfter, isBefore } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { SimuladoForm } from "./SimuladoForm";
 import { AdminCard, AdminCardSkeleton, type BadgeTone } from "@/components/admin/AdminCard";
 import { resolveCover } from "@/utils/coverUtils";

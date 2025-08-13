@@ -1,7 +1,7 @@
 import { Video, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { parseISO, isWithinInterval } from "date-fns";
+import { parse, isWithinInterval } from "date-fns";
 import { useAulaVirtual } from "./aula-virtual/useAulaVirtual";
 import { usePresenca } from "./aula-virtual/usePresenca";
 import { AulaStatusBadge } from "./aula-virtual/AulaStatusBadge";
@@ -41,8 +41,8 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
   }
 
   const agora = new Date();
-  const inicioAula = parseISO(`${aulaAtiva.data_aula}T${aulaAtiva.horario_inicio}`);
-  const fimAula = parseISO(`${aulaAtiva.data_aula}T${aulaAtiva.horario_fim}`);
+  const inicioAula = parse(`${aulaAtiva.data_aula}T${aulaAtiva.horario_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  const fimAula = parse(`${aulaAtiva.data_aula}T${aulaAtiva.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
   
   const aulaEmAndamento = isWithinInterval(agora, { start: inicioAula, end: fimAula });
   const aulaFutura = agora < inicioAula;

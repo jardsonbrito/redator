@@ -13,7 +13,7 @@ import { useRedacoesEnviadas, RedacaoEnviada } from "@/hooks/useRedacoesEnviadas
 import { RedacaoViewForm } from "./RedacaoViewForm";
 import { RedacaoListTable } from "./RedacaoListTable";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR } from "date-fns/locale/pt-BR";
 
 export const RedacaoEnviadaForm = () => {
   const {

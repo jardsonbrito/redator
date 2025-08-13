@@ -1,7 +1,7 @@
 
 import { Calendar, Clock, Users } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, parse } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { AulaVirtual } from "./types";
 
 interface AulaInfoGridProps {
@@ -12,7 +12,7 @@ interface AulaInfoGridProps {
 }
 
 export const AulaInfoGrid = ({ aulaAtiva, turmaCode, aulaEmAndamento, aulaFutura }: AulaInfoGridProps) => {
-  const inicioAula = parseISO(`${aulaAtiva.data_aula}T${aulaAtiva.horario_inicio}`);
+  const inicioAula = parse(`${aulaAtiva.data_aula}T${aulaAtiva.horario_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
   
   const getColorClasses = () => {
     if (aulaEmAndamento) return 'text-red-700 bg-red-100';
