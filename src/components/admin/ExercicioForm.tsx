@@ -15,6 +15,8 @@ interface Tema {
   id: string;
   frase_tematica: string;
   eixo_tematico: string;
+  cover_url?: string;
+  cover_file_path?: string;
 }
 
 interface ExercicioEditando {
@@ -105,11 +107,22 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
     }
   }, [exercicioEditando, temas]);
 
+  // Atualizar capa automaticamente quando selecionar tema (somente se não tiver upload ou URL)
+  useEffect(() => {
+    if (temaId && tipo === 'Redação com Frase Temática' && !coverFile && !coverUrl && !exercicioEditando) {
+      const tema = temas.find(t => t.id === temaId);
+      if (tema && (tema.cover_url || tema.cover_file_path)) {
+        // Não faz nada, a capa será herdada automaticamente pela função getEffectiveCover
+        console.log('Capa do tema será herdada automaticamente:', tema.cover_url || tema.cover_file_path);
+      }
+    }
+  }, [temaId, tipo, temas, coverFile, coverUrl, exercicioEditando]);
+
   const fetchTemas = async () => {
     try {
       const { data, error } = await supabase
         .from("temas")
-        .select("id, frase_tematica, eixo_tematico")
+        .select("id, frase_tematica, eixo_tematico, cover_url, cover_file_path")
         .eq("status", "publicado")
         .order("frase_tematica");
 
@@ -142,12 +155,14 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
     if (coverFile) {
       return URL.createObjectURL(coverFile);
     }
+    
+    const tema = temas.find(t => t.id === temaId);
     return getEffectiveCover({
       cover_upload_path: coverUploadPath,
       cover_url: coverUrl,
       imagem_capa_url: imagemCapaUrl,
       tipo,
-      temas: temas.find(t => t.id === temaId)
+      temas: tema
     });
   };
 
@@ -397,9 +412,9 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
                   onChange={handleCoverUpload}
                   accept="image/*"
                 />
-                <small className="text-muted-foreground">
-                  Formatos: JPG, PNG, WebP (máx. 2MB) • Upload tem precedência sobre URL
-                </small>
+                  <small className="text-muted-foreground">
+                    Formatos: JPG, PNG, WebP (máx. 2MB) • Upload tem precedência sobre URL • Para "Redação com Frase Temática" usa a capa do tema por padrão
+                  </small>
               </div>
               
               <div className="cover-preview">

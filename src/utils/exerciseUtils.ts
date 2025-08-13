@@ -51,8 +51,19 @@ export function getEffectiveCover(exercise: any): string {
   }
   
   // 4. Herança do tema (para redações)
-  if (exercise?.tipo === 'Redação com Frase Temática' && exercise?.temas?.cover_url) {
-    return exercise.temas.cover_url;
+  if (exercise?.tipo === 'Redação com Frase Temática' && exercise?.temas) {
+    // Usar cover_file_path se existir (upload tem precedência)
+    if (exercise.temas.cover_file_path) {
+      const { data } = supabase.storage
+        .from('themes')
+        .getPublicUrl(exercise.temas.cover_file_path);
+      return data.publicUrl;
+    }
+    
+    // Senão usar cover_url
+    if (exercise.temas.cover_url) {
+      return exercise.temas.cover_url;
+    }
   }
   
   // 5. Placeholder
