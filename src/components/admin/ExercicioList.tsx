@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Edit, Trash2, ExternalLink, Search, FileText } from "lucide-react";
+import { ExerciseCard } from "@/components/ui/exercise-card";
+import { ExercicioForm } from "./ExercicioForm";
 
 interface Exercicio {
   id: string;
@@ -16,10 +18,16 @@ interface Exercicio {
   link_forms?: string;
   tema_id?: string;
   imagem_capa_url?: string;
+  cover_url?: string;
+  cover_upload_path?: string;
   turmas_autorizadas: string[] | null;
   permite_visitante: boolean;
   ativo: boolean;
   criado_em: string;
+  data_inicio?: string;
+  hora_inicio?: string;
+  data_fim?: string;
+  hora_fim?: string;
   temas?: {
     frase_tematica: string;
     eixo_tematico: string;
@@ -32,6 +40,7 @@ export const ExercicioList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
+  const [editingExercise, setEditingExercise] = useState<Exercicio | null>(null);
 
   const tiposDisponiveis = [
     'Google Forms',
@@ -131,6 +140,18 @@ export const ExercicioList = () => {
 
   return (
     <div className="space-y-6">
+      {/* Formulário de Edição */}
+      {editingExercise && (
+        <ExercicioForm
+          exercicioEditando={editingExercise}
+          onSuccess={() => {
+            setEditingExercise(null);
+            fetchExercicios();
+          }}
+          onCancelEdit={() => setEditingExercise(null)}
+        />
+      )}
+
       {/* Filtros */}
       <Card>
         <CardHeader>
@@ -168,7 +189,7 @@ export const ExercicioList = () => {
       </Card>
 
       {/* Lista de Exercícios */}
-      <div className="grid gap-4">
+      <div className="space-y-6">
         {filteredExercicios.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
@@ -176,98 +197,18 @@ export const ExercicioList = () => {
             </CardContent>
           </Card>
         ) : (
-          filteredExercicios.map((exercicio) => (
-            <Card key={exercicio.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {exercicio.titulo}
-                      <Badge variant={exercicio.ativo ? "default" : "secondary"}>
-                        {exercicio.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </CardTitle>
-                    <div className="flex gap-2 mt-2">
-                      <Badge variant="outline">
-                        {exercicio.tipo}
-                      </Badge>
-                      {exercicio.temas && (
-                        <Badge variant="secondary">
-                          {exercicio.temas.eixo_tematico}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {exercicio.link_forms && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(exercicio.link_forms, '_blank')}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                    )}
-                    {exercicio.imagem_capa_url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(exercicio.imagem_capa_url, '_blank')}
-                      >
-                        <FileText className="w-4 h-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleAtivo(exercicio.id, exercicio.ativo)}
-                    >
-                      {exercicio.ativo ? "Desativar" : "Ativar"}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(exercicio.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {exercicio.temas && (
-                    <div>
-                      <strong>Tema:</strong> {exercicio.temas.frase_tematica}
-                    </div>
-                  )}
-                  
-                   {exercicio.turmas_autorizadas && exercicio.turmas_autorizadas.length > 0 && (
-                     <div>
-                       <strong>Turmas Autorizadas:</strong>
-                       <div className="flex flex-wrap gap-1 mt-1">
-                         {exercicio.turmas_autorizadas.map((turma) => (
-                           <Badge key={turma} variant="secondary" className="text-xs">
-                             {turma}
-                           </Badge>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-                  
-                  {exercicio.permite_visitante && (
-                    <div>
-                      <Badge variant="outline">Permite Visitante</Badge>
-                    </div>
-                  )}
-                  
-                  <div className="text-sm text-gray-500">
-                    Criado em: {new Date(exercicio.criado_em).toLocaleString('pt-BR')}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          <div className="grid gap-4">
+            {filteredExercicios.map((exercicio) => (
+              <ExerciseCard
+                key={exercicio.id}
+                exercise={exercicio}
+                isAdmin={true}
+                onEdit={setEditingExercise}
+                onDelete={handleDelete}
+                onToggleStatus={toggleAtivo}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>

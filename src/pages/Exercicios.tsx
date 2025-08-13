@@ -10,6 +10,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ExternalLink, Search, FileText, Edit, Home, Clock, Calendar } from "lucide-react";
+import { ExerciseCard } from "@/components/ui/exercise-card";
+import { getExerciseAvailability } from "@/utils/exerciseUtils";
 import { useNavigate, Link } from "react-router-dom";
 import { format, isWithinInterval, parseISO, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +22,8 @@ interface Exercicio {
   link_forms?: string;
   tema_id?: string;
   imagem_capa_url?: string;
+  cover_url?: string;
+  cover_upload_path?: string;
   turmas_autorizadas: string[] | null;
   permite_visitante: boolean;
   ativo: boolean;
@@ -69,16 +73,69 @@ const Exercicios = () => {
       return 'encerrado';
     }
   };
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'agendado':
-        return <Badge className="bg-blue-100 text-blue-800">📅 Agendado</Badge>;
-      case 'disponivel':
-        return <Badge className="bg-green-100 text-green-800">✅ Disponível</Badge>;
-      case 'encerrado':
-        return <Badge className="bg-gray-100 text-gray-800">⏰ Encerrado</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800">Indefinido</Badge>;
+  const handleExerciseAction = (exercicio: Exercicio) => {
+    const availability = getExerciseAvailability(exercicio);
+    
+    if (availability.status === 'agendado') {
+      alert('Este exercício ainda não está disponível. Aguarde a data de início.');
+      return;
+    }
+    if (availability.status === 'encerrado') {
+      alert('Este exercício está encerrado. Você pode visualizar a proposta, mas não pode mais respondê-lo.');
+      return;
+    }
+
+    if (exercicio.tipo === 'Google Forms' && exercicio.link_forms) {
+      if (exercicio.abrir_aba_externa) {
+        window.open(exercicio.link_forms, '_blank');
+      } else {
+        // Modal embutido (mantendo lógica existente)
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0,0,0,0.8);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        `;
+        modal.innerHTML = `
+          <div style="
+            width: 95%;
+            height: 95%;
+            background: white;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+          ">
+            <button style="
+              position: absolute;
+              top: 10px;
+              right: 15px;
+              background: #f44336;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              padding: 8px 12px;
+              cursor: pointer;
+              z-index: 10000;
+              font-size: 16px;
+            " onclick="this.parentElement.parentElement.remove()">✕ Fechar</button>
+            <iframe 
+              src="${exercicio.link_forms}" 
+              style="width: 100%; height: 100%; border: none;"
+              frameborder="0"
+            ></iframe>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+    } else if (exercicio.tipo === 'Redação com Frase Temática' && exercicio.tema_id) {
+      navigate(`/temas/${exercicio.tema_id}?exercicio=${exercicio.id}`);
     }
   };
   const fetchExercicios = async () => {
@@ -155,21 +212,6 @@ const Exercicios = () => {
     });
     setFilteredExercicios(filtered);
   };
-  const handleRedacaoExercicio = (exercicio: Exercicio) => {
-    const status = getExercicioStatus(exercicio);
-    if (status === 'agendado') {
-      alert('Este exercício ainda não está disponível. Aguarde a data de início.');
-      return;
-    }
-    if (status === 'encerrado') {
-      alert('Este exercício está encerrado. Você pode visualizar a proposta, mas não pode mais respondê-lo.');
-      return;
-    }
-    if (exercicio.tema_id) {
-      // Navegar para a página de redação com o tema do exercício
-      navigate(`/temas/${exercicio.tema_id}?exercicio=${exercicio.id}`);
-    }
-  };
   if (isLoading) {
     return <ProtectedRoute>
         <TooltipProvider>
@@ -223,122 +265,31 @@ const Exercicios = () => {
           </Card>
 
           {/* Lista de Exercícios */}
-          <div className="grid gap-6">
-            {filteredExercicios.length === 0 ? <Card>
+          <div className="space-y-6">
+            {filteredExercicios.length === 0 ? (
+              <Card>
                 <CardContent className="text-center py-12">
-                  <h3 className="text-xl font-semibold text-redator-primary mb-2">
+                  <h3 className="text-xl font-semibold text-primary mb-2">
                     Nenhum exercício disponível no momento.
                   </h3>
-                  <p className="text-redator-accent">
+                  <p className="text-muted-foreground">
                     Verifique novamente em breve ou entre em contato com sua coordenação.
                   </p>
                 </CardContent>
-              </Card> : filteredExercicios.map(exercicio => {
-              const status = getExercicioStatus(exercicio);
-              const isDisabled = status === 'encerrado' || status === 'agendado';
-              return <Card key={exercicio.id} className={`hover:shadow-lg transition-shadow ${isDisabled ? 'opacity-60' : ''}`}>
-                    <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-xl mb-3">{exercicio.titulo}</CardTitle>
-                            <div className="flex gap-2 mb-3">
-                              {getStatusBadge(status)}
-                              {exercicio.temas && <Badge variant="secondary">
-                                  {exercicio.temas.eixo_tematico}
-                                </Badge>}
-                            </div>
-                            {/* Mostrar período da atividade se exercício tem período definido */}
-                            {exercicio.data_inicio && exercicio.hora_inicio && exercicio.data_fim && exercicio.hora_fim && <div className="text-sm text-gray-600 mt-2">
-                                <span className="font-medium">Período da atividade:</span> {format(parseISO(exercicio.data_inicio), "dd/MM", {
-                          locale: ptBR
-                        })} às {exercicio.hora_inicio.slice(0, 5)} até {format(parseISO(exercicio.data_fim), "dd/MM", {
-                          locale: ptBR
-                        })} às {exercicio.hora_fim.slice(0, 5)}
-                              </div>}
-                        </div>
-                        <div className="flex gap-2">
-                          {exercicio.tipo === 'Google Forms' && exercicio.link_forms && (status === 'agendado' ? <Button variant="outline" size="sm" disabled>
-                                <Clock className="w-4 h-4 mr-2" />
-                                Agendado
-                              </Button> : status === 'encerrado' ? <Button variant="outline" size="sm" disabled>
-                                <Clock className="w-4 h-4 mr-2" />
-                                Encerrado
-                              </Button> : exercicio.abrir_aba_externa ? <Button variant="default" size="sm" onClick={() => window.open(exercicio.link_forms, '_blank')}>
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Abrir Formulário
-                              </Button> : <Button variant="default" size="sm" onClick={() => {
-                        // Criar modal ou iframe para exibir o formulário embutido
-                        const modal = document.createElement('div');
-                        modal.style.cssText = `
-                                    position: fixed;
-                                    top: 0;
-                                    left: 0;
-                                    width: 100vw;
-                                    height: 100vh;
-                                    background: rgba(0,0,0,0.8);
-                                    z-index: 9999;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                  `;
-                        modal.innerHTML = `
-                                    <div style="
-                                      width: 95%;
-                                      height: 95%;
-                                      background: white;
-                                      border-radius: 8px;
-                                      position: relative;
-                                      overflow: hidden;
-                                    ">
-                                      <button style="
-                                        position: absolute;
-                                        top: 10px;
-                                        right: 15px;
-                                        background: #f44336;
-                                        color: white;
-                                        border: none;
-                                        border-radius: 4px;
-                                        padding: 8px 12px;
-                                        cursor: pointer;
-                                        z-index: 10000;
-                                        font-size: 16px;
-                                      " onclick="this.parentElement.parentElement.remove()">✕ Fechar</button>
-                                      <iframe 
-                                        src="${exercicio.link_forms}" 
-                                        style="width: 100%; height: 100%; border: none;"
-                                        frameborder="0"
-                                      ></iframe>
-                                    </div>
-                                  `;
-                        document.body.appendChild(modal);
-                      }}>
-                                <FileText className="w-4 h-4 mr-2" />
-                                Abrir Formulário
-                              </Button>)}
-                          {exercicio.tipo === 'Redação com Frase Temática' && exercicio.tema_id && (status === 'agendado' ? <Button variant="outline" size="sm" disabled>
-                                <Clock className="w-4 h-4 mr-2" />
-                                Ainda não disponível
-                              </Button> : status === 'encerrado' ? <Button variant="outline" size="sm" disabled>
-                                <Clock className="w-4 h-4 mr-2" />
-                                Exercício Encerrado
-                              </Button> : <Button variant="default" size="sm" onClick={() => handleRedacaoExercicio(exercicio)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Escrever Redação
-                              </Button>)}
-                        </div>
-                      </div>
-                    </CardHeader>
-                     <CardContent>
-                       {/* Mensagem adicional para exercícios agendados ou encerrados */}
-                       {status === 'agendado' && <div className="text-sm text-blue-600 italic">
-                           Este exercício ainda não está disponível. Aguarde a data de início.
-                         </div>}
-                       {status === 'encerrado' && <div className="text-sm text-gray-600 italic">
-                           Este exercício está encerrado. Você pode visualizar a proposta, mas não pode mais respondê-lo.
-                         </div>}
-                     </CardContent>
-                  </Card>;
-            })}
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {filteredExercicios.map(exercicio => (
+                  <ExerciseCard
+                    key={exercicio.id}
+                    exercise={exercicio}
+                    onAction={handleExerciseAction}
+                    showActions={true}
+                    isAdmin={false}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>

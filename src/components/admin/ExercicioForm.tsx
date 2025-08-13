@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { uploadExerciseCover, getEffectiveCover, validateExercisePeriod } from "@/utils/exerciseUtils";
+import { ImagePlus } from "lucide-react";
 
 interface Tema {
   id: string;
@@ -22,6 +24,8 @@ interface ExercicioEditando {
   link_forms?: string;
   tema_id?: string;
   imagem_capa_url?: string;
+  cover_url?: string;
+  cover_upload_path?: string;
   turmas_autorizadas?: string[];
   permite_visitante?: boolean;
   ativo?: boolean;
@@ -44,6 +48,9 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
   const [linkForms, setLinkForms] = useState("");
   const [temaId, setTemaId] = useState("");
   const [imagemCapaUrl, setImagemCapaUrl] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
+  const [coverUploadPath, setCoverUploadPath] = useState("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>([]);
   const [permiteVisitante, setPermiteVisitante] = useState(false);
   const [ativo, setAtivo] = useState(true);
@@ -77,6 +84,8 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
       setLinkForms(exercicioEditando.link_forms || "");
       setTemaId(exercicioEditando.tema_id || "");
       setImagemCapaUrl(exercicioEditando.imagem_capa_url || "");
+      setCoverUrl(exercicioEditando.cover_url || "");
+      setCoverUploadPath(exercicioEditando.cover_upload_path || "");
       setTurmasAutorizadas(exercicioEditando.turmas_autorizadas || []);
       setPermiteVisitante(exercicioEditando.permite_visitante || false);
       setAtivo(exercicioEditando.ativo !== false);
@@ -120,6 +129,28 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
     }
   };
 
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverFile(file);
+      // Limpar URL quando fizer upload
+      setCoverUrl("");
+    }
+  };
+
+  const getPreviewCover = () => {
+    if (coverFile) {
+      return URL.createObjectURL(coverFile);
+    }
+    return getEffectiveCover({
+      cover_upload_path: coverUploadPath,
+      cover_url: coverUrl,
+      imagem_capa_url: imagemCapaUrl,
+      tipo,
+      temas: temas.find(t => t.id === temaId)
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -128,43 +159,58 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
       return;
     }
 
+    // Agendamento obrigatório para todos os tipos
+    if (!dataInicio || !horaInicio || !dataFim || !horaFim) {
+      toast.error("Período de atividade (data/hora de início e término) é obrigatório.");
+      return;
+    }
+
+    if (!validateExercisePeriod(dataInicio, horaInicio, dataFim, horaFim)) {
+      toast.error("A data/hora de término deve ser posterior ao início.");
+      return;
+    }
+
     if (tipo === 'Google Forms' && !linkForms) {
       toast.error("Link do Google Forms é obrigatório para este tipo.");
       return;
     }
 
-    if (tipo === 'Redação com Frase Temática') {
-      if (!temaId) {
-        toast.error("Tema é obrigatório para exercícios de redação.");
-        return;
-      }
-      if (!dataInicio || !horaInicio) {
-        toast.error("Data e hora de início são obrigatórias.");
-        return;
-      }
-      if (!dataFim || !horaFim) {
-        toast.error("Data e hora de término são obrigatórias.");
-        return;
-      }
+    if (tipo === 'Redação com Frase Temática' && !temaId) {
+      toast.error("Tema é obrigatório para exercícios de redação.");
+      return;
     }
 
     setIsLoading(true);
 
     try {
+      let finalCoverUploadPath = coverUploadPath;
+      
+      // Upload da nova capa se houver arquivo
+      if (coverFile) {
+        const uploadedPath = await uploadExerciseCover(coverFile);
+        if (uploadedPath) {
+          finalCoverUploadPath = uploadedPath;
+        }
+      }
+
       const exercicioData = {
         titulo,
         tipo,
         link_forms: tipo === 'Google Forms' ? linkForms : null,
         tema_id: tipo === 'Redação com Frase Temática' ? temaId : null,
+        cover_url: coverUrl || null,
+        cover_upload_path: finalCoverUploadPath || null,
+        // Manter compatibilidade com campo legado
         imagem_capa_url: tipo === 'Google Forms' ? (imagemCapaUrl || null) : null,
         turmas_autorizadas: turmasAutorizadas,
         permite_visitante: permiteVisitante,
         ativo,
         abrir_aba_externa: abrirAbaExterna,
-        data_inicio: tipo === 'Redação com Frase Temática' ? dataInicio : null,
-        hora_inicio: tipo === 'Redação com Frase Temática' ? horaInicio : null,
-        data_fim: tipo === 'Redação com Frase Temática' ? dataFim : null,
-        hora_fim: tipo === 'Redação com Frase Temática' ? horaFim : null
+        // Agendamento agora é obrigatório para todos os tipos
+        data_inicio: dataInicio,
+        hora_inicio: horaInicio,
+        data_fim: dataFim,
+        hora_fim: horaFim
       };
 
       let error;
@@ -199,6 +245,9 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
         setLinkForms("");
         setTemaId("");
         setImagemCapaUrl("");
+        setCoverUrl("");
+        setCoverUploadPath("");
+        setCoverFile(null);
         setTurmasAutorizadas([]);
         setPermiteVisitante(false);
         setAtivo(true);
@@ -258,6 +307,113 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
               </SelectContent>
             </Select>
           </div>
+
+          {/* Seção de Agendamento - Agora obrigatória para todos os tipos */}
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                📅 Período de Atividade (Obrigatório)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="dataInicio">Data de Início *</Label>
+                  <Input
+                    id="dataInicio"
+                    type="date"
+                    value={dataInicio}
+                    onChange={(e) => setDataInicio(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="horaInicio">Hora de Início *</Label>
+                  <Input
+                    id="horaInicio"
+                    type="time"
+                    value={horaInicio}
+                    onChange={(e) => setHoraInicio(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="dataFim">Data de Término *</Label>
+                  <Input
+                    id="dataFim"
+                    type="date"
+                    value={dataFim}
+                    onChange={(e) => setDataFim(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="horaFim">Hora de Término *</Label>
+                  <Input
+                    id="horaFim"
+                    type="time"
+                    value={horaFim}
+                    onChange={(e) => setHoraFim(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {!validateExercisePeriod(dataInicio, horaInicio, dataFim, horaFim) && dataInicio && horaInicio && dataFim && horaFim && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  ⚠️ O período de término deve ser posterior ao início
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Seção de Capa */}
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                🖼️ Capa do Exercício
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="coverUrl">URL da Imagem</Label>
+                <Input
+                  id="coverUrl"
+                  value={coverUrl}
+                  onChange={(e) => setCoverUrl(e.target.value)}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                  type="url"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="coverUpload">Ou fazer upload</Label>
+                <Input
+                  id="coverUpload"
+                  type="file"
+                  onChange={handleCoverUpload}
+                  accept="image/*"
+                />
+                <small className="text-muted-foreground">
+                  Formatos: JPG, PNG, WebP (máx. 2MB) • Upload tem precedência sobre URL
+                </small>
+              </div>
+              
+              <div className="cover-preview">
+                <img 
+                  src={getPreviewCover()} 
+                  alt="Preview da capa"
+                  className="w-32 h-24 object-cover rounded border"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholders/aula-cover.png';
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {tipo === 'Google Forms' && (
             <div>
@@ -324,58 +480,12 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
                   </div>
                 )}
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="dataInicio">Data de Início *</Label>
-                  <Input
-                    id="dataInicio"
-                    type="date"
-                    value={dataInicio}
-                    onChange={(e) => setDataInicio(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="horaInicio">Hora de Início *</Label>
-                  <Input
-                    id="horaInicio"
-                    type="time"
-                    value={horaInicio}
-                    onChange={(e) => setHoraInicio(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="dataFim">Data de Término *</Label>
-                  <Input
-                    id="dataFim"
-                    type="date"
-                    value={dataFim}
-                    onChange={(e) => setDataFim(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="horaFim">Hora de Término *</Label>
-                  <Input
-                    id="horaFim"
-                    type="time"
-                    value={horaFim}
-                    onChange={(e) => setHoraFim(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
             </>
           )}
 
           {tipo === 'Google Forms' && (
             <div>
-              <Label htmlFor="imagemCapaUrl">URL da Imagem de Capa (opcional)</Label>
+              <Label htmlFor="imagemCapaUrl">URL da Imagem (Campo Legado - opcional)</Label>
               <Input
                 id="imagemCapaUrl"
                 value={imagemCapaUrl}
@@ -383,6 +493,9 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
                 placeholder="https://..."
                 type="url"
               />
+              <small className="text-muted-foreground">
+                Mantenha para compatibilidade. Use a seção "Capa do Exercício" acima para novas capas.
+              </small>
             </div>
           )}
 
