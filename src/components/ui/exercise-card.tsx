@@ -76,7 +76,7 @@ export function ExerciseCard({
     <Card className={`overflow-hidden hover:shadow-lg transition-shadow ${isDisabled ? 'opacity-60' : ''}`}>
       <div className="flex flex-col sm:flex-row">
         {/* Capa */}
-        <div className="w-full sm:w-48 aspect-video flex-shrink-0 bg-gray-100 rounded-l-lg overflow-hidden">
+        <div className="w-full sm:w-64 aspect-video flex-shrink-0 bg-gray-100 rounded-l-lg overflow-hidden">
           <img
             src={coverUrl}
             alt={exercise.titulo}
