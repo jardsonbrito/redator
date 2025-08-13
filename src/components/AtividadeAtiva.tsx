@@ -9,6 +9,8 @@ import { format, isWithinInterval, parse, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { useNavigate } from "react-router-dom";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { ExerciseCard } from "@/components/ui/exercise-card";
+import { getExerciseAvailability } from "@/utils/exerciseUtils";
 
 export const AtividadeAtiva = () => {
   const navigate = useNavigate();
@@ -55,7 +57,9 @@ export const AtividadeAtiva = () => {
           *,
           temas (
             frase_tematica,
-            eixo_tematico
+            eixo_tematico,
+            cover_url,
+            cover_file_path
           )
         `)
         .eq('ativo', true)
@@ -308,24 +312,48 @@ export const AtividadeAtiva = () => {
     });
 
     if (exerciciosDisponiveis.length > 0) {
-      // Renderizar card compacto de exercício disponível
+      // Renderizar exercícios com suas capas usando o ExerciseCard
+      const handleExerciseAction = (exercicio: any) => {
+        const availability = getExerciseAvailability(exercicio);
+        
+        if (availability.status === 'agendado') {
+          alert('Este exercício ainda não está disponível. Aguarde a data de início.');
+          return;
+        }
+        if (availability.status === 'encerrado') {
+          alert('Este exercício está encerrado. Você pode visualizar a proposta, mas não pode mais respondê-lo.');
+          return;
+        }
+
+        if (exercicio.tipo === 'Google Forms' && exercicio.link_forms) {
+          if (exercicio.abrir_aba_externa) {
+            window.open(exercicio.link_forms, '_blank');
+          } else {
+            navigate('/exercicios');
+          }
+        } else if (exercicio.tipo === 'Redação com Frase Temática' && exercicio.tema_id) {
+          navigate(`/temas/${exercicio.tema_id}?exercicio=${exercicio.id}`);
+        }
+      };
+
       return (
-        <div className="flex justify-center mb-8">
-          <Card className="w-full max-w-sm border-2 border-orange-200 bg-orange-50 shadow-md rounded-lg hover:shadow-lg transition-shadow animate-pulse">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-lg">📢</span>
-                <h3 className="font-semibold text-orange-800 text-lg">Exercício Disponível</h3>
-              </div>
-              <Button 
-                onClick={() => navigate('/exercicios')}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium"
-                size="sm"
-              >
-                Iniciar
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-primary flex items-center gap-2">
+            <BookOpen className="w-5 h-5" />
+            Exercícios Disponíveis
+          </h2>
+          
+          <div className="space-y-4">
+            {exerciciosDisponiveis.map((exercicio) => (
+              <ExerciseCard
+                key={exercicio.id}
+                exercise={exercicio}
+                onAction={handleExerciseAction}
+                showActions={true}
+                isAdmin={false}
+              />
+            ))}
+          </div>
         </div>
       );
     }

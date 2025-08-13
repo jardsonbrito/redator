@@ -55,12 +55,12 @@ export function pickCoverImage({
   const sources: string[] = [];
 
   // 1. Prioridade: cover_url (URL informada manualmente)
-  if (cover_url && cover_url.trim()) {
+  if (cover_url && cover_url.trim() && cover_url.trim() !== 'null') {
     sources.push(cover_url.trim() + bust);
   }
 
   // 2. cover_upload_url (URL final do arquivo enviado)
-  if (cover_upload_url && cover_upload_url.trim()) {
+  if (cover_upload_url && cover_upload_url.trim() && cover_upload_url.trim() !== 'null') {
     sources.push(cover_upload_url.trim() + bust);
   }
 
@@ -90,7 +90,14 @@ export function pickCoverImage({
   // 6. Placeholder (sempre como último fallback)
   sources.push(placeholder);
 
-  console.log('🖼️ Fontes de imagem geradas:', sources);
+  console.log('🖼️ Fontes de imagem geradas para:', {
+    cover_url,
+    cover_upload_url,
+    cover_upload_path,
+    imagem_capa_url,
+    tipo,
+    sources
+  });
   return sources;
 }
 

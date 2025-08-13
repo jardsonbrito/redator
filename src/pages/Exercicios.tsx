@@ -23,7 +23,9 @@ interface Exercicio {
   tema_id?: string;
   imagem_capa_url?: string;
   cover_url?: string;
+  cover_upload_url?: string;
   cover_upload_path?: string;
+  updated_at?: string;
   turmas_autorizadas: string[] | null;
   permite_visitante: boolean;
   ativo: boolean;
@@ -36,6 +38,8 @@ interface Exercicio {
   temas?: {
     frase_tematica: string;
     eixo_tematico: string;
+    cover_url?: string;
+    cover_file_path?: string;
   };
 }
 const Exercicios = () => {
@@ -147,7 +151,9 @@ const Exercicios = () => {
           *,
           temas (
             frase_tematica,
-            eixo_tematico
+            eixo_tematico,
+            cover_url,
+            cover_file_path
           )
         `).eq("ativo", true).order("criado_em", {
         ascending: false
