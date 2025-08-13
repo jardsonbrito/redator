@@ -20,7 +20,7 @@ const RedacoesExemplar = () => {
       try {
         const { data, error } = await supabase
           .from("redacoes")
-          .select("*")
+          .select("id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita")
           .order("nota_total", { ascending: false });
         if (error) throw error;
 

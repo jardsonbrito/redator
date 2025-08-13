@@ -104,8 +104,8 @@ const CorretorRedacoesExemplar = () => {
         ) : (
           <div className="space-y-4">
             {redacoesExemplares?.map((redacao: any) => {
-              // Redações exemplares usam placeholder padrão pois não têm capas específicas
-              const coverUrl = '/src/assets/tema-cover-placeholder.png';
+              // Usar capa real da redação exemplar
+              const coverUrl = resolveExemplarCover(redacao);
               const badges: Array<{ label: string; tone: 'primary' | 'neutral' | 'success' | 'warning' }> = [
                 { label: 'Redação Modelo', tone: 'warning' }
               ];

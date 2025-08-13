@@ -34,7 +34,7 @@ export const RedacaoList = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes')
-        .select('*')
+        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita')
         .order('data_envio', { ascending: false });
       
       if (error) throw error;

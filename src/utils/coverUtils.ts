@@ -29,9 +29,16 @@ export function resolveSimuladoCover(simulado: any): string {
   return resolveCover(tema?.cover_file_path, tema?.cover_url);
 }
 
-// Exemplares: como são redações modelo, usam placeholder padrão
+// Exemplares: usar capa real se disponível, senão placeholder
 export function resolveExemplarCover(exemplar: any): string {
-  // Redações exemplares sempre usam o placeholder padrão
+  // Se tem pdf_url e não é placeholder, usar como capa
+  if (exemplar?.pdf_url && 
+      !exemplar.pdf_url.includes('placeholder') && 
+      exemplar.pdf_url.trim() !== '') {
+    return exemplar.pdf_url;
+  }
+  
+  // Usar placeholder apenas se realmente não houver capa válida
   return PLACEHOLDER_URL;
 }
 

@@ -79,9 +79,13 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 
               {/* Badges */}
               {item.badges && item.badges.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-1" aria-label="marcadores">
+                <div className="flex flex-wrap justify-center gap-2 mt-1" aria-label="marcadores">
                   {item.badges.map((b, i) => (
-                    <Badge key={`${b.label}-${i}`} {...toneToVariant[b.tone || "neutral"]} className={cn("text-xs", toneToVariant[b.tone || "neutral"].className)}>
+                    <Badge 
+                      key={`${b.label}-${i}`} 
+                      {...toneToVariant[b.tone || "neutral"]} 
+                      className={cn("inline-flex items-center px-2.5 py-0.5 text-xs font-medium leading-tight", toneToVariant[b.tone || "neutral"].className)}
+                    >
                       {b.label}
                     </Badge>
                   ))}

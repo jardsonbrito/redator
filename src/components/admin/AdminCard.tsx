@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,12 +32,48 @@ const toneToVariant: Record<BadgeTone, { className?: string; variant?: "secondar
     warning: { className: "bg-yellow-600 text-white" },
   };
 
+// Utility functions for badge management
+function firstWord(str: string): string { 
+  return (str || '').trim().split(/\s+/)[0] || ''; 
+}
+
+function updateTwoBadges(container: HTMLElement) {
+  const badges = Array.from(container.querySelectorAll('.tag')) as HTMLElement[];
+  if (badges.length !== 2) return;
+
+  badges.forEach(b => {
+    if (!b.dataset.full) b.dataset.full = b.textContent?.trim() || '';
+    b.dataset.short = firstWord(b.dataset.full);
+  });
+
+  // Se a segunda badge "desceu", houve wrap
+  const wrapped = badges[1].offsetTop > badges[0].offsetTop;
+  badges.forEach(b => { 
+    b.textContent = wrapped ? b.dataset.short || '' : b.dataset.full || '';
+  });
+}
+
 export function AdminCard({ item }: { item: CardItem }) {
   const [broken, setBroken] = useState(false);
   const imgSrc = useMemo(() => (broken ? placeholderImg : item.coverUrl || placeholderImg), [broken, item.coverUrl]);
 
+  // Apply badge management after render
+  useEffect(() => {
+    const applyBadges = () => {
+      const container = document.querySelector(`[data-card-id="${item.id}"] .tags`) as HTMLElement;
+      if (container) updateTwoBadges(container);
+    };
+
+    applyBadges();
+    
+    const handleResize = () => applyBadges();
+    window.addEventListener('resize', handleResize);
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, [item.badges, item.id]);
+
   return (
-    <article className="w-full" aria-label={item.ariaLabel || item.title}>
+    <article className="w-full" aria-label={item.ariaLabel || item.title} data-card-id={item.id}>
       <Card className="overflow-hidden">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -77,9 +113,13 @@ export function AdminCard({ item }: { item: CardItem }) {
 
               {/* Badges */}
               {item.badges && item.badges.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-1" aria-label="marcadores">
+                <div className="tags flex flex-wrap justify-center gap-2 mt-1" aria-label="marcadores">
                   {item.badges.map((b, i) => (
-                    <Badge key={`${b.label}-${i}`} {...toneToVariant[b.tone || "neutral"]} className={cn(toneToVariant[b.tone || "neutral"].className)}>
+                    <Badge 
+                      key={`${b.label}-${i}`} 
+                      {...toneToVariant[b.tone || "neutral"]} 
+                      className={cn("tag inline-flex items-center px-2.5 py-0.5 text-xs font-medium leading-tight", toneToVariant[b.tone || "neutral"].className)}
+                    >
                       {b.label}
                     </Badge>
                   ))}
