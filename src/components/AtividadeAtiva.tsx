@@ -96,6 +96,10 @@ export const AtividadeAtiva = () => {
   });
 
   const getSimuladoStatus = (simulado: any) => {
+    if (!simulado.data_inicio || !simulado.hora_inicio || !simulado.data_fim || !simulado.hora_fim) {
+      return 'disponivel';
+    }
+
     const agora = new Date();
     const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
     const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
@@ -163,6 +167,7 @@ export const AtividadeAtiva = () => {
   const getSimuladoActionButton = (simulado: any, status: string) => {
     switch (status) {
       case 'agendado':
+        if (!simulado.data_inicio || !simulado.hora_inicio) return null;
         const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
         return (
           <Button variant="outline" disabled>
@@ -224,6 +229,7 @@ export const AtividadeAtiva = () => {
           
           {simuladosRelevantes.map((simulado) => {
             const status = getSimuladoStatus(simulado);
+            if (!simulado.data_inicio || !simulado.hora_inicio || !simulado.data_fim || !simulado.hora_fim) return null;
             const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
             const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
             const isExpanded = expandedCard === simulado.id;
