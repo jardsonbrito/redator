@@ -9,6 +9,7 @@ import { ptBR } from "date-fns/locale";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState } from "react";
 import { resolveExemplarCover } from "@/utils/coverUtils";
+import { dicaToHTML } from "@/utils/dicaToHTML";
 
 const CorretorRedacoesExemplar = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<any>(null);

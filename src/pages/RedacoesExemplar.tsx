@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
 import { resolveExemplarCover } from "@/utils/coverUtils";
+import { dicaToHTML } from "@/utils/dicaToHTML";
 
 const RedacoesExemplar = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<any>(null);
@@ -171,9 +172,10 @@ const RedacoesExemplar = () => {
                           <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
                             <span>💡</span> Dica de Escrita
                           </h4>
-                          <p className="text-sm text-yellow-700 leading-relaxed">
-                            {selectedRedacao.dica_de_escrita}
-                          </p>
+                          <div 
+                            className="text-sm text-yellow-700 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0"
+                            dangerouslySetInnerHTML={{ __html: dicaToHTML(selectedRedacao.dica_de_escrita) }}
+                          />
                         </div>
                       )}
                     </div>
