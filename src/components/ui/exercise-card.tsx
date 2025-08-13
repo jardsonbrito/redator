@@ -76,11 +76,11 @@ export function ExerciseCard({
     <Card className={`overflow-hidden hover:shadow-lg transition-shadow ${isDisabled ? 'opacity-60' : ''}`}>
       <div className="flex flex-col sm:flex-row">
         {/* Capa */}
-        <div className="w-full sm:w-32 h-48 sm:h-24 flex-shrink-0">
+        <div className="w-full sm:w-32 h-48 sm:h-32 flex-shrink-0 bg-gray-100 rounded-l-lg overflow-hidden">
           <img
             src={coverUrl}
             alt={exercise.titulo}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             onError={(e) => {
               (e.target as HTMLImageElement).src = '/placeholders/aula-cover.png';
             }}
