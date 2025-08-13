@@ -115,61 +115,92 @@ export function getEffectiveCover(exercise: any): string {
  * Verifica se um exercício está disponível baseado no período
  */
 export function getExerciseAvailability(exercise: any) {
-  if (!exercise?.data_inicio || !exercise?.hora_inicio || !exercise?.data_fim || !exercise?.hora_fim) {
+  // Validação mais robusta: verificar se os valores não são apenas não-null, mas também não são strings vazias
+  if (!exercise?.data_inicio?.trim() || !exercise?.hora_inicio?.trim() || !exercise?.data_fim?.trim() || !exercise?.hora_fim?.trim()) {
     return { status: 'disponivel', message: '' }; // Sem período = sempre disponível se ativo
   }
 
-  const agora = new Date();
-  const inicioExercicio = parse(`${exercise.data_inicio}T${exercise.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
-  const fimExercicio = parse(`${exercise.data_fim}T${exercise.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  try {
+    const agora = new Date();
+    const inicioExercicio = parse(`${exercise.data_inicio.trim()}T${exercise.hora_inicio.trim()}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fimExercicio = parse(`${exercise.data_fim.trim()}T${exercise.hora_fim.trim()}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
-  if (isBefore(agora, inicioExercicio)) {
+    // Verificar se as datas são válidas
+    if (isNaN(inicioExercicio.getTime()) || isNaN(fimExercicio.getTime())) {
+      return { status: 'disponivel', message: '' };
+    }
+
+    if (isBefore(agora, inicioExercicio)) {
+      return { 
+        status: 'agendado', 
+        message: `Disponível a partir de ${format(inicioExercicio, "dd/MM 'às' HH:mm", { locale: ptBR })}` 
+      };
+    } 
+    
+    if (isWithinInterval(agora, { start: inicioExercicio, end: fimExercicio })) {
+      return { 
+        status: 'disponivel', 
+        message: `Disponível até ${format(fimExercicio, "dd/MM 'às' HH:mm", { locale: ptBR })}` 
+      };
+    } 
+    
     return { 
-      status: 'agendado', 
-      message: `Disponível a partir de ${format(inicioExercicio, "dd/MM 'às' HH:mm", { locale: ptBR })}` 
+      status: 'encerrado', 
+      message: `Encerrado em ${format(fimExercicio, "dd/MM 'às' HH:mm", { locale: ptBR })}` 
     };
-  } 
-  
-  if (isWithinInterval(agora, { start: inicioExercicio, end: fimExercicio })) {
-    return { 
-      status: 'disponivel', 
-      message: `Disponível até ${format(fimExercicio, "dd/MM 'às' HH:mm", { locale: ptBR })}` 
-    };
-  } 
-  
-  return { 
-    status: 'encerrado', 
-    message: `Encerrado em ${format(fimExercicio, "dd/MM 'às' HH:mm", { locale: ptBR })}` 
-  };
+  } catch (error) {
+    console.error('Erro ao processar datas do exercício:', error, exercise);
+    return { status: 'disponivel', message: '' };
+  }
 }
 
 /**
  * Formata o período de atividade do exercício
  */
 export function formatExercisePeriod(dataInicio?: string, horaInicio?: string, dataFim?: string, horaFim?: string): string {
-  if (!dataInicio || !horaInicio || !dataFim || !horaFim) {
+  if (!dataInicio?.trim() || !horaInicio?.trim() || !dataFim?.trim() || !horaFim?.trim()) {
     return 'Período não definido';
   }
 
-  const inicio = parse(`${dataInicio}T${horaInicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
-  const fim = parse(`${dataFim}T${horaFim}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  try {
+    const inicio = parse(`${dataInicio.trim()}T${horaInicio.trim()}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fim = parse(`${dataFim.trim()}T${horaFim.trim()}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
-  const inicioFormatado = format(inicio, "dd/MM 'às' HH:mm", { locale: ptBR });
-  const fimFormatado = format(fim, "dd/MM 'às' HH:mm", { locale: ptBR });
+    // Verificar se as datas são válidas
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) {
+      return 'Período inválido';
+    }
 
-  return `${inicioFormatado} até ${fimFormatado}`;
+    const inicioFormatado = format(inicio, "dd/MM 'às' HH:mm", { locale: ptBR });
+    const fimFormatado = format(fim, "dd/MM 'às' HH:mm", { locale: ptBR });
+
+    return `${inicioFormatado} até ${fimFormatado}`;
+  } catch (error) {
+    console.error('Erro ao formatar período:', error);
+    return 'Período inválido';
+  }
 }
 
 /**
  * Valida se o período do exercício é válido
  */
 export function validateExercisePeriod(dataInicio?: string, horaInicio?: string, dataFim?: string, horaFim?: string): boolean {
-  if (!dataInicio || !horaInicio || !dataFim || !horaFim) {
+  if (!dataInicio?.trim() || !horaInicio?.trim() || !dataFim?.trim() || !horaFim?.trim()) {
     return false;
   }
 
-  const inicio = parse(`${dataInicio}T${horaInicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
-  const fim = parse(`${dataFim}T${horaFim}`, "yyyy-MM-dd'T'HH:mm", new Date());
+  try {
+    const inicio = parse(`${dataInicio.trim()}T${horaInicio.trim()}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fim = parse(`${dataFim.trim()}T${horaFim.trim()}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
-  return fim > inicio;
+    // Verificar se as datas são válidas
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) {
+      return false;
+    }
+
+    return fim > inicio;
+  } catch (error) {
+    console.error('Erro na validação do período:', error);
+    return false;
+  }
 }
