@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Edit, Trash2, ExternalLink, Search, FileText } from "lucide-react";
-import { ExerciseCard } from "@/components/ui/exercise-card";
+import { Search } from "lucide-react";
+import ExerciseCard from "@/components/shared/ExerciseCard";
+import { AdminActions } from "./AdminActions";
 import { ExercicioForm } from "./ExercicioForm";
+import { convertExerciseData } from "@/utils/exerciseHelpers";
 
 interface Exercicio {
   id: string;
@@ -104,14 +106,14 @@ export const ExercicioList = () => {
     setFilteredExercicios(filtered);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (exercicio: Exercicio) => {
     if (!confirm("Tem certeza que deseja excluir este exercício?")) return;
 
     try {
       const { error } = await supabase
         .from("exercicios")
         .delete()
-        .eq("id", id);
+        .eq("id", exercicio.id);
 
       if (error) throw error;
 
@@ -123,16 +125,16 @@ export const ExercicioList = () => {
     }
   };
 
-  const toggleAtivo = async (id: string, ativo: boolean) => {
+  const handleToggleActive = async (exercicio: Exercicio) => {
     try {
       const { error } = await supabase
         .from("exercicios")
-        .update({ ativo: !ativo })
-        .eq("id", id);
+        .update({ ativo: !exercicio.ativo })
+        .eq("id", exercicio.id);
 
       if (error) throw error;
 
-      toast.success(`Exercício ${!ativo ? 'ativado' : 'desativado'} com sucesso!`);
+      toast.success(`Exercício ${!exercicio.ativo ? 'ativado' : 'desativado'} com sucesso!`);
       fetchExercicios();
     } catch (error) {
       console.error("Erro ao alterar status:", error);
@@ -204,17 +206,43 @@ export const ExercicioList = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredExercicios.map((exercicio) => (
-              <ExerciseCard
-                key={exercicio.id}
-                exercise={exercicio}
-                isAdmin={true}
-                showActions={true}
-                onEdit={setEditingExercise}
-                onDelete={handleDelete}
-                onToggleStatus={toggleAtivo}
-              />
-            ))}
+            {filteredExercicios.map((exercicio) => {
+              const cardData = convertExerciseData(exercicio);
+
+              return (
+                <ExerciseCard
+                  key={exercicio.id}
+                  coverUrl={cardData.coverUrl}
+                  title={cardData.title}
+                  status={cardData.status}
+                  kind={cardData.kind}
+                  startAt={cardData.startAt}
+                  endAt={cardData.endAt}
+                  availableFrom={cardData.availableFrom}
+                  classes={cardData.classes}
+                  tags={cardData.tags}
+                  rightActionsDesktop={
+                    <AdminActions 
+                      exercicio={exercicio}
+                      onEdit={setEditingExercise}
+                      onToggleActive={handleToggleActive}
+                      onDelete={handleDelete}
+                      variant="desktop"
+                    />
+                  }
+                  bottomActionsMobile={
+                    <AdminActions 
+                      exercicio={exercicio}
+                      onEdit={setEditingExercise}
+                      onToggleActive={handleToggleActive}
+                      onDelete={handleDelete}
+                      variant="mobile"
+                    />
+                  }
+                  showActions
+                />
+              );
+            })}
           </div>
         )}
       </div>
