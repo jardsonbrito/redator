@@ -19,7 +19,9 @@ interface Exercicio {
   tema_id?: string;
   imagem_capa_url?: string;
   cover_url?: string;
+  cover_upload_url?: string;
   cover_upload_path?: string;
+  updated_at?: string;
   turmas_autorizadas: string[] | null;
   permite_visitante: boolean;
   ativo: boolean;
@@ -31,6 +33,8 @@ interface Exercicio {
   temas?: {
     frase_tematica: string;
     eixo_tematico: string;
+    cover_url?: string;
+    cover_file_path?: string;
   };
 }
 
@@ -64,7 +68,9 @@ export const ExercicioList = () => {
           *,
           temas (
             frase_tematica,
-            eixo_tematico
+            eixo_tematico,
+            cover_url,
+            cover_file_path
           )
         `)
         .order("criado_em", { ascending: false });
@@ -197,12 +203,13 @@ export const ExercicioList = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="space-y-4">
             {filteredExercicios.map((exercicio) => (
               <ExerciseCard
                 key={exercicio.id}
                 exercise={exercicio}
                 isAdmin={true}
+                showActions={true}
                 onEdit={setEditingExercise}
                 onDelete={handleDelete}
                 onToggleStatus={toggleAtivo}
