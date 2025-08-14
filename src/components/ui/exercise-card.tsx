@@ -95,9 +95,6 @@ export function ExerciseCard({
     }
   };
 
-  if (!imageSources || imageSources.length === 0) {
-    return null;
-  }
 
   return (
     <Card className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 bg-white border border-gray-200 rounded-2xl ${isDisabled ? 'opacity-60' : ''}`}>
@@ -105,7 +102,7 @@ export function ExerciseCard({
         {/* Capa */}
         <div className="w-full lg:w-56 h-36 flex-shrink-0 bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden">
           <img
-            src={imageSources[currentImageIndex]}
+            src={imageSources && imageSources[currentImageIndex] ? imageSources[currentImageIndex] : '/placeholders/aula-cover.png'}
             alt={`Capa do exercício: ${exercise.titulo}`}
             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
             onError={handleImageError}
