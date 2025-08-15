@@ -50,7 +50,6 @@ const SalaVirtual = () => {
         .from('aulas_virtuais')
         .select('*')
         .eq('ativo', true)
-        .gte('data_aula', new Date().toISOString().split('T')[0])
         .order('data_aula', { ascending: true });
 
       if (error) throw error;
@@ -193,34 +192,57 @@ const SalaVirtual = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {aulas.map((aula) => (
-              <Card key={aula.id} className="group hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-4">
-                  {aula.imagem_capa_url && (
+            {aulas.map((aula) => {
+              const getAulaStatus = () => {
+                const now = new Date();
+                const aulaDate = new Date(aula.data_aula + 'T' + aula.horario_inicio);
+                const aulaEndDate = new Date(aula.data_aula + 'T' + aula.horario_fim);
+                
+                if (now < aulaDate) return 'agendada';
+                if (now >= aulaDate && now <= aulaEndDate) return 'ativa';
+                return 'encerrada';
+              };
+
+              const status = getAulaStatus();
+
+              return (
+                <Card key={aula.id} className="group hover:shadow-xl transition-all duration-300">
+                  <CardHeader className="pb-4">
                     <div className="w-full h-40 bg-muted rounded-lg mb-4 overflow-hidden">
                       <img 
-                        src={aula.imagem_capa_url} 
+                        src={aula.imagem_capa_url || "/placeholders/aula-cover.png"} 
                         alt={aula.titulo}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholders/aula-cover.png";
+                        }}
                       />
                     </div>
-                  )}
-                  <CardTitle className="flex items-start justify-between">
-                    <span className="text-lg">{aula.titulo}</span>
-                    <Badge variant={aula.abrir_aba_externa ? "default" : "secondary"}>
-                      {aula.abrir_aba_externa ? <ExternalLink className="w-3 h-3" /> : <Video className="w-3 h-3" />}
-                    </Badge>
-                  </CardTitle>
-                  {aula.descricao && (
-                    <p className="text-sm text-muted-foreground mt-2">{aula.descricao}</p>
-                  )}
-                </CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-lg">{aula.titulo}</CardTitle>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={
+                          status === 'ativa' ? 'destructive' :
+                          status === 'agendada' ? 'default' : 'secondary'
+                        }>
+                          {status === 'ativa' ? 'Ativa' :
+                           status === 'agendada' ? 'Agendada' : 'Encerrada'}
+                        </Badge>
+                        <Badge variant={aula.abrir_aba_externa ? "default" : "secondary"} className="text-xs">
+                          {aula.abrir_aba_externa ? <ExternalLink className="w-3 h-3" /> : <Video className="w-3 h-3" />}
+                        </Badge>
+                      </div>
+                    </div>
+                    {aula.descricao && (
+                      <p className="text-sm text-muted-foreground mt-2">{aula.descricao}</p>
+                    )}
+                  </CardHeader>
                 
                 <CardContent className="space-y-4">
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-primary" />
-                      <span>{new Date(aula.data_aula).toLocaleDateString('pt-BR')}</span>
+                      <span>{new Date(aula.data_aula + 'T00:00:00').toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-primary" />
@@ -236,23 +258,25 @@ const SalaVirtual = () => {
                     onClick={() => abrirAula(aula)}
                     className="w-full"
                     size="lg"
+                    disabled={status === 'encerrada'}
                   >
                     <Video className="w-4 h-4 mr-2" />
-                    Entrar na Aula
+                    {status === 'ativa' ? 'Entrar na Aula' :
+                     status === 'agendada' ? 'Aguardar na Sala' : 'Aula Encerrada'}
                   </Button>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2">
                     <Dialog open={openDialog?.tipo === 'entrada' && openDialog?.aulaId === aula.id} onOpenChange={(open) => !open && setOpenDialog(null)}>
                       <DialogTrigger asChild>
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={jaRegistrou(aula.id, 'entrada')}
+                          disabled={jaRegistrou(aula.id, 'entrada') || status === 'agendada'}
                           onClick={() => openPresencaDialog('entrada', aula.id)}
-                          className="w-full"
+                          className="w-full text-xs sm:text-sm"
                         >
-                          <LogIn className="w-4 h-4 mr-1" />
-                          {jaRegistrou(aula.id, 'entrada') ? 'Entrada OK' : 'Registrar Entrada'}
+                          <LogIn className="w-4 h-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{jaRegistrou(aula.id, 'entrada') ? 'Entrada OK' : 'Registrar Entrada'}</span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
@@ -291,12 +315,13 @@ const SalaVirtual = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={jaRegistrou(aula.id, 'saida')}
+                          disabled={jaRegistrou(aula.id, 'saida') || status === 'agendada'}
                           onClick={() => openPresencaDialog('saida', aula.id)}
-                          className="w-full"
+                          className="w-full text-xs sm:text-sm"
                         >
-                          <LogOut className="w-4 h-4 mr-1" />
-                          {jaRegistrou(aula.id, 'saida') ? 'Saída OK' : 'Registrar Saída'}
+                          <LogOut className="w-4 h-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{jaRegistrou(aula.id, 'saida') ? 'Saída OK' : 
+                            status === 'agendada' ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}</span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
@@ -332,7 +357,8 @@ const SalaVirtual = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

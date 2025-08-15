@@ -21,6 +21,7 @@ interface AulaAoVivo {
   permite_visitante: boolean;
   eh_aula_ao_vivo: boolean;
   ativo: boolean;
+  imagem_capa_url?: string;
 }
 
 interface RegistroPresenca {
@@ -207,7 +208,26 @@ const AulasAoVivo = () => {
               const podeSaida = podeRegistrarSaida(aula);
 
               return (
-                <Card key={aula.id} className="overflow-hidden">
+                <Card key={aula.id} className="overflow-hidden relative">
+                  {/* Capa da Aula */}
+                  <div className="w-full h-48 bg-muted overflow-hidden relative">
+                    <img 
+                      src={aula.imagem_capa_url || "/placeholders/aula-cover.png"} 
+                      alt={aula.titulo}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholders/aula-cover.png";
+                      }}
+                    />
+                    {status === 'andamento' && (
+                      <div className="absolute top-2 left-2">
+                        <Badge variant="destructive" className="animate-pulse">
+                          🔴 AO VIVO
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                  
                   <CardHeader className={`${
                     status === 'andamento' ? 'bg-red-50 border-b border-red-200' :
                     status === 'futura' ? 'bg-blue-50 border-b border-blue-200' :
@@ -218,11 +238,6 @@ const AulasAoVivo = () => {
                         <CardTitle className="text-xl flex items-center gap-2">
                           <Video className="w-5 h-5" />
                           {aula.titulo}
-                          {status === 'andamento' && (
-                            <Badge variant="destructive" className="animate-pulse">
-                              🔴 AO VIVO
-                            </Badge>
-                          )}
                         </CardTitle>
                         {aula.descricao && (
                           <p className="text-muted-foreground mt-1">{aula.descricao}</p>
@@ -242,7 +257,7 @@ const AulasAoVivo = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span>{new Date(aula.data_aula).toLocaleDateString('pt-BR')}</span>
+                        <span>{new Date(aula.data_aula + 'T00:00:00').toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-muted-foreground" />
@@ -265,26 +280,26 @@ const AulasAoVivo = () => {
 
                       {/* Botões de Presença */}
                       {(status === 'andamento' || status === 'encerrada') && (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
                           <Button
                             onClick={() => registrarPresenca(aula.id, 'entrada')}
                             variant="outline"
                             disabled={entradaRegistrada}
-                            className={entradaRegistrada ? 'bg-green-50 text-green-700' : ''}
+                            className={`${entradaRegistrada ? 'bg-green-50 text-green-700' : ''} text-xs sm:text-sm`}
                           >
-                            <LogIn className="w-4 h-4 mr-2" />
-                            {entradaRegistrada ? '✅ Entrada Registrada' : 'Registrar Entrada'}
+                            <LogIn className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span className="truncate">{entradaRegistrada ? '✅ Entrada Registrada' : 'Registrar Entrada'}</span>
                           </Button>
 
                           <Button
                             onClick={() => registrarPresenca(aula.id, 'saida')}
                             variant="outline"
                             disabled={saidaRegistrada || !podeSaida}
-                            className={saidaRegistrada ? 'bg-green-50 text-green-700' : ''}
+                            className={`${saidaRegistrada ? 'bg-green-50 text-green-700' : ''} text-xs sm:text-sm`}
                           >
-                            <LogOut className="w-4 h-4 mr-2" />
-                            {saidaRegistrada ? '✅ Saída Registrada' : 
-                             !podeSaida ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}
+                            <LogOut className="w-4 h-4 mr-2 flex-shrink-0" />
+                            <span className="truncate">{saidaRegistrada ? '✅ Saída Registrada' : 
+                             !podeSaida ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}</span>
                           </Button>
                         </div>
                       )}

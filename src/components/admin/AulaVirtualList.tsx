@@ -184,10 +184,10 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                       <TableCell>
                         <div className="flex items-center gap-1 text-sm">
                           <Calendar className="w-4 h-4" />
-                          {new Date(aula.data_aula).toLocaleDateString('pt-BR')}
+                          {new Date(aula.data_aula + 'T00:00:00').toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Clock className="w-4 h-4" />
