@@ -10,6 +10,8 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Video, Calendar, Clock, ExternalLink, LogIn, LogOut, Users } from "lucide-react";
+import { format, parse, isWithinInterval, isBefore, isAfter } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 interface AulaVirtual {
   id: string;
@@ -194,12 +196,13 @@ const SalaVirtual = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {aulas.map((aula) => {
               const getAulaStatus = () => {
-                const now = new Date();
-                const aulaDate = new Date(aula.data_aula + 'T' + aula.horario_inicio);
-                const aulaEndDate = new Date(aula.data_aula + 'T' + aula.horario_fim);
-                
-                if (now < aulaDate) return 'agendada';
-                if (now >= aulaDate && now <= aulaEndDate) return 'ativa';
+                const TZ = 'America/Sao_Paulo';
+                const agora = toZonedTime(new Date(), TZ);
+                const inicioAulaLocal = parse(`${aula.data_aula}T${aula.horario_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+                const fimAulaLocal = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
+
+                if (isBefore(agora, inicioAulaLocal)) return 'agendada';
+                if (isBefore(agora, fimAulaLocal)) return 'ativa';
                 return 'encerrada';
               };
 
@@ -208,11 +211,12 @@ const SalaVirtual = () => {
               return (
                 <Card key={aula.id} className="group hover:shadow-xl transition-all duration-300">
                   <CardHeader className="pb-4">
-                    <div className="w-full h-40 bg-muted rounded-lg mb-4 overflow-hidden">
+                    <div className="relative overflow-hidden bg-muted rounded-lg mb-4" style={{ aspectRatio: '3/2' }}>
                       <img 
                         src={aula.imagem_capa_url || "/placeholders/aula-cover.png"} 
                         alt={aula.titulo}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
                         onError={(e) => {
                           e.currentTarget.src = "/placeholders/aula-cover.png";
                         }}
@@ -234,7 +238,11 @@ const SalaVirtual = () => {
                       </div>
                     </div>
                     {aula.descricao && (
-                      <p className="text-sm text-muted-foreground mt-2">{aula.descricao}</p>
+                      <div className="text-sm text-muted-foreground mt-2 whitespace-pre-line">
+                        {aula.descricao.trim().split(/\n{2,}/).map((para, i) => (
+                          <p key={i} className={i > 0 ? 'mt-2' : ''}>{para}</p>
+                        ))}
+                      </div>
                     )}
                   </CardHeader>
                 

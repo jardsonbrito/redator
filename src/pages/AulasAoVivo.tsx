@@ -7,7 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { toast } from "sonner";
-import { parse, isWithinInterval, subMinutes } from "date-fns";
+import { parse, isWithinInterval, subMinutes, isBefore, isAfter } from "date-fns";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
 interface AulaAoVivo {
   id: string;
@@ -139,19 +140,21 @@ const AulasAoVivo = () => {
   };
 
   const podeRegistrarSaida = (aula: AulaAoVivo) => {
-    const agora = new Date();
-    const fimAula = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
-    const dezMinutesAntes = subMinutes(fimAula, 10);
+    const TZ = 'America/Sao_Paulo';
+    const agora = toZonedTime(new Date(), TZ);
+    const fimAulaLocal = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const dezMinutesAntes = subMinutes(fimAulaLocal, 10);
     return agora >= dezMinutesAntes;
   };
 
   const getStatusAula = (aula: AulaAoVivo) => {
-    const agora = new Date();
-    const inicioAula = parse(`${aula.data_aula}T${aula.horario_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
-    const fimAula = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const TZ = 'America/Sao_Paulo';
+    const agora = toZonedTime(new Date(), TZ);
+    const inicioAulaLocal = parse(`${aula.data_aula}T${aula.horario_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    const fimAulaLocal = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
 
-    if (agora < inicioAula) return 'futura';
-    if (isWithinInterval(agora, { start: inicioAula, end: fimAula })) return 'andamento';
+    if (isBefore(agora, inicioAulaLocal)) return 'futura';
+    if (isBefore(agora, fimAulaLocal)) return 'andamento';
     return 'encerrada';
   };
 
@@ -210,18 +213,19 @@ const AulasAoVivo = () => {
               return (
                 <Card key={aula.id} className="overflow-hidden relative">
                   {/* Capa da Aula */}
-                  <div className="w-full h-48 bg-muted overflow-hidden relative">
+                  <div className="relative overflow-hidden bg-muted" style={{ aspectRatio: '3/2' }}>
                     <img 
                       src={aula.imagem_capa_url || "/placeholders/aula-cover.png"} 
                       alt={aula.titulo}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-center"
+                      loading="lazy"
                       onError={(e) => {
                         e.currentTarget.src = "/placeholders/aula-cover.png";
                       }}
                     />
                     {status === 'andamento' && (
-                      <div className="absolute top-2 left-2">
-                        <Badge variant="destructive" className="animate-pulse">
+                      <div className="absolute top-3 left-3 z-10">
+                        <Badge variant="destructive" className="animate-pulse font-bold shadow-lg">
                           🔴 AO VIVO
                         </Badge>
                       </div>
@@ -240,7 +244,11 @@ const AulasAoVivo = () => {
                           {aula.titulo}
                         </CardTitle>
                         {aula.descricao && (
-                          <p className="text-muted-foreground mt-1">{aula.descricao}</p>
+                          <div className="text-muted-foreground mt-1 whitespace-pre-line">
+                            {aula.descricao.trim().split(/\n{2,}/).map((para, i) => (
+                              <p key={i} className={i > 0 ? 'mt-2' : ''}>{para}</p>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <Badge variant={
