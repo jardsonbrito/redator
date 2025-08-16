@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Video, Calendar, Clock, ExternalLink, LogIn, LogOut, Users } from "lucide-react";
 import { format, parse, isWithinInterval, isBefore, isAfter } from "date-fns";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
+import { computeStatus } from "@/utils/aulaStatus";
 
 interface AulaVirtual {
   id: string;
@@ -196,60 +197,11 @@ const SalaVirtual = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {aulas.map((aula) => {
               const getAulaStatus = () => {
-                // Validar se os dados necessários existem
-                if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
-                  console.warn('DEBUG SalaVirtual: Dados de aula incompletos', { 
-                    titulo: aula.titulo,
-                    data_aula: aula.data_aula,
-                    horario_inicio: aula.horario_inicio,
-                    horario_fim: aula.horario_fim
-                  });
-                  return 'encerrada';
-                }
-
-                const agora = new Date();
-                
-                // Criar data/hora de início e fim em formato ISO
-                const inicioISO = `${aula.data_aula}T${aula.horario_inicio}:00`;
-                const fimISO = `${aula.data_aula}T${aula.horario_fim}:00`;
-                
-                // Converter para objetos Date (assumindo horário local)
-                const inicioAula = new Date(inicioISO);
-                const fimAula = new Date(fimISO);
-                
-                // Validar se as datas são válidas
-                if (isNaN(inicioAula.getTime()) || isNaN(fimAula.getTime())) {
-                  console.warn('DEBUG SalaVirtual: Datas inválidas criadas', {
-                    titulo: aula.titulo,
-                    inicioISO,
-                    fimISO,
-                    inicioAulaValid: !isNaN(inicioAula.getTime()),
-                    fimAulaValid: !isNaN(fimAula.getTime())
-                  });
-                  return 'encerrada';
-                }
-                
-                // Log para debug - agora seguro
-                console.log('DEBUG Status SalaVirtual:', {
-                  titulo: aula.titulo,
-                  agora: agora.toISOString(),
-                  inicioAula: inicioAula.toISOString(),
-                  fimAula: fimAula.toISOString(),
-                  agoraTime: agora.getTime(),
-                  inicioTime: inicioAula.getTime(),
-                  fimTime: fimAula.getTime()
+                return computeStatus({
+                  data_aula: aula.data_aula,
+                  horario_inicio: aula.horario_inicio,
+                  horario_fim: aula.horario_fim
                 });
-
-                if (agora < inicioAula) {
-                  console.log('Status SalaVirtual: AGENDADA');
-                  return 'agendada';
-                }
-                if (agora < fimAula) {
-                  console.log('Status SalaVirtual: ATIVA');
-                  return 'ativa';
-                }
-                console.log('Status SalaVirtual: ENCERRADA');
-                return 'encerrada';
               };
 
               const status = getAulaStatus();
@@ -272,11 +224,12 @@ const SalaVirtual = () => {
                       <CardTitle className="text-lg">{aula.titulo}</CardTitle>
                       <div className="flex flex-col gap-1">
                         <Badge variant={
-                          status === 'ativa' ? 'destructive' :
+                          status === 'ao_vivo' ? 'destructive' :
                           status === 'agendada' ? 'default' : 'secondary'
                         }>
-                          {status === 'ativa' ? 'Ativa' :
-                           status === 'agendada' ? 'Agendada' : 'Encerrada'}
+                          {status === 'ao_vivo' ? 'Ao Vivo' :
+                           status === 'agendada' ? 'Agendada' : 
+                           status === 'encerrada' ? 'Encerrada' : 'Indefinido'}
                         </Badge>
                         <Badge variant={aula.abrir_aba_externa ? "default" : "secondary"} className="text-xs">
                           {aula.abrir_aba_externa ? <ExternalLink className="w-3 h-3" /> : <Video className="w-3 h-3" />}
@@ -315,7 +268,7 @@ const SalaVirtual = () => {
                     disabled={status === 'encerrada'}
                   >
                     <Video className="w-4 h-4 mr-2" />
-                    {status === 'ativa' ? 'Entrar na Aula' :
+                    {status === 'ao_vivo' ? 'Entrar na Aula' :
                      status === 'agendada' ? 'Aguardar na Sala' : 'Aula Encerrada'}
                   </Button>
 

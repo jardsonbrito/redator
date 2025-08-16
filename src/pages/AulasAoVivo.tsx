@@ -9,6 +9,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { toast } from "sonner";
 import { parse, isWithinInterval, subMinutes, isBefore, isAfter } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { computeStatus } from "@/utils/aulaStatus";
 
 interface AulaAoVivo {
   id: string;
@@ -148,60 +149,11 @@ const AulasAoVivo = () => {
   };
 
   const getStatusAula = (aula: AulaAoVivo) => {
-    // Validar se os dados necessários existem
-    if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
-      console.warn('DEBUG: Dados de aula incompletos', { 
-        titulo: aula.titulo,
-        data_aula: aula.data_aula,
-        horario_inicio: aula.horario_inicio,
-        horario_fim: aula.horario_fim
-      });
-      return 'encerrada';
-    }
-
-    const agora = new Date();
-    
-    // Criar data/hora de início e fim em formato ISO
-    const inicioISO = `${aula.data_aula}T${aula.horario_inicio}:00`;
-    const fimISO = `${aula.data_aula}T${aula.horario_fim}:00`;
-    
-    // Converter para objetos Date (assumindo horário local)
-    const inicioAula = new Date(inicioISO);
-    const fimAula = new Date(fimISO);
-    
-    // Validar se as datas são válidas
-    if (isNaN(inicioAula.getTime()) || isNaN(fimAula.getTime())) {
-      console.warn('DEBUG: Datas inválidas criadas', {
-        titulo: aula.titulo,
-        inicioISO,
-        fimISO,
-        inicioAulaValid: !isNaN(inicioAula.getTime()),
-        fimAulaValid: !isNaN(fimAula.getTime())
-      });
-      return 'encerrada';
-    }
-    
-    // Log para debug - agora seguro
-    console.log('DEBUG Status Aula:', {
-      titulo: aula.titulo,
-      agora: agora.toISOString(),
-      inicioAula: inicioAula.toISOString(),
-      fimAula: fimAula.toISOString(),
-      agoraTime: agora.getTime(),
-      inicioTime: inicioAula.getTime(),
-      fimTime: fimAula.getTime()
+    return computeStatus({
+      data_aula: aula.data_aula,
+      horario_inicio: aula.horario_inicio,
+      horario_fim: aula.horario_fim
     });
-
-    if (agora < inicioAula) {
-      console.log('Status: FUTURA');
-      return 'futura';
-    }
-    if (agora < fimAula) {
-      console.log('Status: ANDAMENTO');
-      return 'andamento';
-    }
-    console.log('Status: ENCERRADA');
-    return 'encerrada';
   };
 
   const abrirAula = (aula: AulaAoVivo) => {
@@ -269,7 +221,7 @@ const AulasAoVivo = () => {
                         e.currentTarget.src = "/placeholders/aula-cover.png";
                       }}
                     />
-                    {status === 'andamento' && (
+                    {status === 'ao_vivo' && (
                       <div className="absolute top-3 left-3 z-10">
                         <Badge variant="destructive" className="animate-pulse font-bold shadow-lg">
                           🔴 AO VIVO
@@ -279,8 +231,8 @@ const AulasAoVivo = () => {
                   </div>
                   
                   <CardHeader className={`${
-                    status === 'andamento' ? 'bg-red-50 border-b border-red-200' :
-                    status === 'futura' ? 'bg-blue-50 border-b border-blue-200' :
+                    status === 'ao_vivo' ? 'bg-red-50 border-b border-red-200' :
+                    status === 'agendada' ? 'bg-blue-50 border-b border-blue-200' :
                     'bg-gray-50 border-b border-gray-200'
                   }`}>
                     <div className="flex items-start justify-between">
@@ -298,11 +250,12 @@ const AulasAoVivo = () => {
                         )}
                       </div>
                       <Badge variant={
-                        status === 'andamento' ? 'destructive' :
-                        status === 'futura' ? 'default' : 'secondary'
+                        status === 'ao_vivo' ? 'destructive' :
+                        status === 'agendada' ? 'default' : 'secondary'
                       }>
-                        {status === 'andamento' ? 'Em andamento' :
-                         status === 'futura' ? 'Agendada' : 'Encerrada'}
+                        {status === 'ao_vivo' ? 'Ao Vivo' :
+                         status === 'agendada' ? 'Agendada' : 
+                         status === 'encerrada' ? 'Encerrada' : 'Indefinido'}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -324,16 +277,16 @@ const AulasAoVivo = () => {
                       <Button 
                         onClick={() => abrirAula(aula)}
                         className="w-full"
-                        variant={status === 'andamento' ? 'default' : 'outline'}
+                        variant={status === 'ao_vivo' ? 'default' : 'outline'}
                         disabled={status === 'encerrada'}
                       >
                         <ExternalLink className="w-4 h-4 mr-2" />
-                        {status === 'andamento' ? '🔴 Entrar na Aula' : 
-                         status === 'futura' ? 'Aguardar na Sala' : 'Aula Encerrada'}
+                        {status === 'ao_vivo' ? '🔴 Entrar na Aula' : 
+                         status === 'agendada' ? 'Aguardar na Sala' : 'Aula Encerrada'}
                       </Button>
 
                       {/* Botões de Presença */}
-                      {(status === 'andamento' || status === 'encerrada') && (
+                      {(status === 'ao_vivo' || status === 'encerrada') && (
                         <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
                           <Button
                             onClick={() => registrarPresenca(aula.id, 'entrada')}

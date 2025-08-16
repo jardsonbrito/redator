@@ -49,6 +49,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
+    "dayjs": "^1.11.13",
     "dompurify": "^3.2.6",
     "embla-carousel-react": "^8.3.0",
     "fabric": "^6.7.0",
