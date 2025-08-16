@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Video, Calendar, Clock, ExternalLink, LogIn, LogOut, Users } from "lucide-react";
 import { format, parse, isWithinInterval, isBefore, isAfter } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
 interface AulaVirtual {
   id: string;
@@ -197,12 +197,17 @@ const SalaVirtual = () => {
             {aulas.map((aula) => {
               const getAulaStatus = () => {
                 const TZ = 'America/Sao_Paulo';
-                const agora = toZonedTime(new Date(), TZ);
-                const inicioAulaLocal = parse(`${aula.data_aula}T${aula.horario_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
-                const fimAulaLocal = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
+                const agora = new Date();
+                
+                // Criar datas locais e converter para UTC para comparação
+                const inicioLocalStr = `${aula.data_aula}T${aula.horario_inicio}:00`;
+                const fimLocalStr = `${aula.data_aula}T${aula.horario_fim}:00`;
+                
+                const inicioUTC = fromZonedTime(inicioLocalStr, TZ);
+                const fimUTC = fromZonedTime(fimLocalStr, TZ);
 
-                if (isBefore(agora, inicioAulaLocal)) return 'agendada';
-                if (isBefore(agora, fimAulaLocal)) return 'ativa';
+                if (isBefore(agora, inicioUTC)) return 'agendada';
+                if (isBefore(agora, fimUTC)) return 'ativa';
                 return 'encerrada';
               };
 
