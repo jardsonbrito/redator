@@ -196,6 +196,17 @@ const SalaVirtual = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {aulas.map((aula) => {
               const getAulaStatus = () => {
+                // Validar se os dados necessários existem
+                if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
+                  console.warn('DEBUG SalaVirtual: Dados de aula incompletos', { 
+                    titulo: aula.titulo,
+                    data_aula: aula.data_aula,
+                    horario_inicio: aula.horario_inicio,
+                    horario_fim: aula.horario_fim
+                  });
+                  return 'encerrada';
+                }
+
                 const agora = new Date();
                 
                 // Criar data/hora de início e fim em formato ISO
@@ -206,7 +217,19 @@ const SalaVirtual = () => {
                 const inicioAula = new Date(inicioISO);
                 const fimAula = new Date(fimISO);
                 
-                // Log para debug - REMOVER depois
+                // Validar se as datas são válidas
+                if (isNaN(inicioAula.getTime()) || isNaN(fimAula.getTime())) {
+                  console.warn('DEBUG SalaVirtual: Datas inválidas criadas', {
+                    titulo: aula.titulo,
+                    inicioISO,
+                    fimISO,
+                    inicioAulaValid: !isNaN(inicioAula.getTime()),
+                    fimAulaValid: !isNaN(fimAula.getTime())
+                  });
+                  return 'encerrada';
+                }
+                
+                // Log para debug - agora seguro
                 console.log('DEBUG Status SalaVirtual:', {
                   titulo: aula.titulo,
                   agora: agora.toISOString(),

@@ -148,6 +148,17 @@ const AulasAoVivo = () => {
   };
 
   const getStatusAula = (aula: AulaAoVivo) => {
+    // Validar se os dados necessários existem
+    if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
+      console.warn('DEBUG: Dados de aula incompletos', { 
+        titulo: aula.titulo,
+        data_aula: aula.data_aula,
+        horario_inicio: aula.horario_inicio,
+        horario_fim: aula.horario_fim
+      });
+      return 'encerrada';
+    }
+
     const agora = new Date();
     
     // Criar data/hora de início e fim em formato ISO
@@ -158,7 +169,19 @@ const AulasAoVivo = () => {
     const inicioAula = new Date(inicioISO);
     const fimAula = new Date(fimISO);
     
-    // Log para debug - REMOVER depois
+    // Validar se as datas são válidas
+    if (isNaN(inicioAula.getTime()) || isNaN(fimAula.getTime())) {
+      console.warn('DEBUG: Datas inválidas criadas', {
+        titulo: aula.titulo,
+        inicioISO,
+        fimISO,
+        inicioAulaValid: !isNaN(inicioAula.getTime()),
+        fimAulaValid: !isNaN(fimAula.getTime())
+      });
+      return 'encerrada';
+    }
+    
+    // Log para debug - agora seguro
     console.log('DEBUG Status Aula:', {
       titulo: aula.titulo,
       agora: agora.toISOString(),
