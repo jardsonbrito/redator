@@ -196,18 +196,36 @@ const SalaVirtual = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {aulas.map((aula) => {
               const getAulaStatus = () => {
-                const TZ = 'America/Sao_Paulo';
                 const agora = new Date();
                 
-                // Criar datas locais e converter para UTC para comparação
-                const inicioLocalStr = `${aula.data_aula}T${aula.horario_inicio}:00`;
-                const fimLocalStr = `${aula.data_aula}T${aula.horario_fim}:00`;
+                // Criar data/hora de início e fim em formato ISO
+                const inicioISO = `${aula.data_aula}T${aula.horario_inicio}:00`;
+                const fimISO = `${aula.data_aula}T${aula.horario_fim}:00`;
                 
-                const inicioUTC = fromZonedTime(inicioLocalStr, TZ);
-                const fimUTC = fromZonedTime(fimLocalStr, TZ);
+                // Converter para objetos Date (assumindo horário local)
+                const inicioAula = new Date(inicioISO);
+                const fimAula = new Date(fimISO);
+                
+                // Log para debug - REMOVER depois
+                console.log('DEBUG Status SalaVirtual:', {
+                  titulo: aula.titulo,
+                  agora: agora.toISOString(),
+                  inicioAula: inicioAula.toISOString(),
+                  fimAula: fimAula.toISOString(),
+                  agoraTime: agora.getTime(),
+                  inicioTime: inicioAula.getTime(),
+                  fimTime: fimAula.getTime()
+                });
 
-                if (isBefore(agora, inicioUTC)) return 'agendada';
-                if (isBefore(agora, fimUTC)) return 'ativa';
+                if (agora < inicioAula) {
+                  console.log('Status SalaVirtual: AGENDADA');
+                  return 'agendada';
+                }
+                if (agora < fimAula) {
+                  console.log('Status SalaVirtual: ATIVA');
+                  return 'ativa';
+                }
+                console.log('Status SalaVirtual: ENCERRADA');
                 return 'encerrada';
               };
 

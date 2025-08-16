@@ -148,18 +148,36 @@ const AulasAoVivo = () => {
   };
 
   const getStatusAula = (aula: AulaAoVivo) => {
-    const TZ = 'America/Sao_Paulo';
     const agora = new Date();
     
-    // Criar datas locais e converter para UTC para comparação
-    const inicioLocalStr = `${aula.data_aula}T${aula.horario_inicio}:00`;
-    const fimLocalStr = `${aula.data_aula}T${aula.horario_fim}:00`;
+    // Criar data/hora de início e fim em formato ISO
+    const inicioISO = `${aula.data_aula}T${aula.horario_inicio}:00`;
+    const fimISO = `${aula.data_aula}T${aula.horario_fim}:00`;
     
-    const inicioUTC = fromZonedTime(inicioLocalStr, TZ);
-    const fimUTC = fromZonedTime(fimLocalStr, TZ);
+    // Converter para objetos Date (assumindo horário local)
+    const inicioAula = new Date(inicioISO);
+    const fimAula = new Date(fimISO);
+    
+    // Log para debug - REMOVER depois
+    console.log('DEBUG Status Aula:', {
+      titulo: aula.titulo,
+      agora: agora.toISOString(),
+      inicioAula: inicioAula.toISOString(),
+      fimAula: fimAula.toISOString(),
+      agoraTime: agora.getTime(),
+      inicioTime: inicioAula.getTime(),
+      fimTime: fimAula.getTime()
+    });
 
-    if (isBefore(agora, inicioUTC)) return 'futura';
-    if (isBefore(agora, fimUTC)) return 'andamento';
+    if (agora < inicioAula) {
+      console.log('Status: FUTURA');
+      return 'futura';
+    }
+    if (agora < fimAula) {
+      console.log('Status: ANDAMENTO');
+      return 'andamento';
+    }
+    console.log('Status: ENCERRADA');
     return 'encerrada';
   };
 
