@@ -50,19 +50,33 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
       const { data, error } = await supabase
         .from('presenca_aulas')
         .select('*')
-        .or(`aluno_id.eq.${alunoId},email_aluno.eq.${email}`);
+        .eq('email_aluno', email);
 
       if (error) throw error;
       
-      // Transformar dados para o formato esperado
-      const transformedData = (data || []).map((record: any) => ({
-        aula_id: record.aula_id,
-        aluno_id: record.aluno_id || alunoId,
-        entrada_at: record.entrada_at || null,
-        saida_at: record.saida_at || null
-      }));
+      // Agrupar registros por aula_id e combinar entrada/saída
+      const aulaMap = new Map<string, RegistroPresenca>();
       
-      setRegistrosPresenca(transformedData as RegistroPresenca[]);
+      (data || []).forEach((record: any) => {
+        const aulaId = record.aula_id;
+        if (!aulaMap.has(aulaId)) {
+          aulaMap.set(aulaId, {
+            aula_id: aulaId,
+            aluno_id: alunoId || record.aluno_id,
+            entrada_at: null,
+            saida_at: null
+          });
+        }
+        
+        const existing = aulaMap.get(aulaId)!;
+        if (record.tipo_registro === 'entrada') {
+          existing.entrada_at = record.data_registro;
+        } else if (record.tipo_registro === 'saida') {
+          existing.saida_at = record.data_registro;
+        }
+      });
+      
+      setRegistrosPresenca(Array.from(aulaMap.values()));
     } catch (error: any) {
       console.error('Erro ao buscar registros de presença:', error);
     }
@@ -112,25 +126,18 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
       }
 
       if (tipo === 'entrada') {
-        // Registrar entrada usando SQL direto para trabalhar com novas colunas
-        const agora = new Date().toISOString();
-        
-        // Usar SQL raw para inserir com novas colunas
-        const { error } = await supabase.rpc('sql', {
-          query: `
-            INSERT INTO presenca_aulas (
-              aula_id, aluno_id, nome_aluno, sobrenome_aluno, 
-              email_aluno, turma, entrada_at, data_registro, tipo_registro
-            ) VALUES (
-              '${aulaId}', '${alunoId}', '${formData.nome.trim()}', '${formData.sobrenome.trim()}',
-              '${email}', '${turma}', '${agora}', '${agora}', 'entrada'
-            )
-            ON CONFLICT (aula_id, aluno_id) 
-            DO UPDATE SET 
-              entrada_at = EXCLUDED.entrada_at,
-              data_registro = EXCLUDED.data_registro
-          `
-        });
+        // Registrar entrada
+        const { error } = await supabase
+          .from('presenca_aulas')
+          .insert({
+            aula_id: aulaId,
+            nome_aluno: formData.nome.trim(),
+            sobrenome_aluno: formData.sobrenome.trim(),
+            email_aluno: email,
+            turma: turma,
+            data_registro: new Date().toISOString(),
+            tipo_registro: 'entrada'
+          });
 
         if (error) {
           console.error('Erro ao registrar entrada:', error);
@@ -138,30 +145,46 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
           return;
         }
       } else {
-        // Registrar saída 
-        const agora = new Date().toISOString();
-        
-        // Primeiro verificar se existe entrada
-        const { data: existingRecords } = await supabase
+        // Verificar se existe entrada primeiro
+        const { data: existingEntrada } = await supabase
           .from('presenca_aulas')
           .select('*')
           .eq('aula_id', aulaId)
-          .eq('email_aluno', email);
+          .eq('email_aluno', email)
+          .eq('tipo_registro', 'entrada')
+          .single();
 
-        const existingRecord = existingRecords?.[0];
-        if (!existingRecord) {
+        if (!existingEntrada) {
           toast.error('Entrada não registrada. Registre a entrada primeiro.');
           return;
         }
 
-        // Usar SQL raw para atualizar com saída
-        const { error } = await supabase.rpc('sql', {
-          query: `
-            UPDATE presenca_aulas 
-            SET saida_at = '${agora}'
-            WHERE id = '${existingRecord.id}'
-          `
-        });
+        // Verificar se já tem saída
+        const { data: existingSaida } = await supabase
+          .from('presenca_aulas')
+          .select('*')
+          .eq('aula_id', aulaId)
+          .eq('email_aluno', email)
+          .eq('tipo_registro', 'saida')
+          .single();
+
+        if (existingSaida) {
+          toast.error('Saída já registrada.');
+          return;
+        }
+
+        // Registrar saída
+        const { error } = await supabase
+          .from('presenca_aulas')
+          .insert({
+            aula_id: aulaId,
+            nome_aluno: formData.nome.trim(),
+            sobrenome_aluno: formData.sobrenome.trim(),
+            email_aluno: email,
+            turma: turma,
+            data_registro: new Date().toISOString(),
+            tipo_registro: 'saida'
+          });
 
         if (error) {
           console.error('Erro ao registrar saída:', error);
