@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1941,22 +1941,22 @@ export type Database = {
     Functions: {
       add_credits_safe: {
         Args: {
-          target_user_id: string
-          credit_amount: number
           admin_user_id?: string
+          credit_amount: number
+          target_user_id: string
         }
         Returns: boolean
       }
       aprovar_aluno: {
-        Args: { aluno_id: string; admin_id: string }
+        Args: { admin_id: string; aluno_id: string }
         Returns: boolean
       }
       atualizar_professor: {
         Args: {
-          professor_id: string
-          p_nome_completo: string
           p_email: string
+          p_nome_completo: string
           p_role: string
+          professor_id: string
         }
         Returns: Json
       }
@@ -1982,12 +1982,12 @@ export type Database = {
       }
       compute_needs_media_update: {
         Args: {
+          p_cover_file_path: string
           p_cover_source: string
           p_cover_url: string
-          p_cover_file_path: string
+          p_motivator4_file_path: string
           p_motivator4_source: string
           p_motivator4_url: string
-          p_motivator4_file_path: string
         }
         Returns: boolean
       }
@@ -2008,70 +2008,70 @@ export type Database = {
         Returns: number
       }
       create_admin_user: {
-        Args: { p_nome_completo: string; p_email: string; p_password: string }
+        Args: { p_email: string; p_nome_completo: string; p_password: string }
         Returns: Json
       }
       create_auth_user_direct: {
         Args: {
-          p_user_id: string
           p_email: string
-          p_password: string
           p_nome_completo: string
+          p_password: string
+          p_user_id: string
         }
         Returns: boolean
       }
       create_simple_profile: {
-        Args: { p_nome: string; p_email: string; p_turma: string }
+        Args: { p_email: string; p_nome: string; p_turma: string }
         Returns: {
+          created_at: string
+          email: string
           id: string
           nome: string
           sobrenome: string
-          email: string
           turma: string
-          user_type: string
-          created_at: string
           updated_at: string
+          user_type: string
         }[]
       }
       criar_professor: {
-        Args: { p_nome_completo: string; p_email: string; p_role?: string }
+        Args: { p_email: string; p_nome_completo: string; p_role?: string }
         Returns: Json
       }
       criar_professor_com_auth: {
-        Args: { p_nome_completo: string; p_email: string; p_role?: string }
+        Args: { p_email: string; p_nome_completo: string; p_role?: string }
         Returns: Json
       }
       detect_duplicate_students: {
         Args: { student_email: string }
         Returns: {
-          current_student_id: string
-          duplicate_student_id: string
           current_email: string
+          current_student_id: string
           duplicate_email: string
-          student_name: string
+          duplicate_student_id: string
           redacoes_count: number
+          student_name: string
         }[]
       }
       get_alunos_pendentes: {
         Args: Record<PropertyKey, never>
         Returns: {
+          data_solicitacao: string
+          email: string
           id: string
           nome: string
-          email: string
           turma: string
-          data_solicitacao: string
         }[]
       }
       get_avisos_corretor: {
         Args: { corretor_id_param: string }
         Returns: {
-          id: string
-          titulo: string
-          descricao: string
-          prioridade: string
           criado_em: string
+          descricao: string
+          id: string
           imagem_url: string
           link_externo: string
+          prioridade: string
+          titulo: string
         }[]
       }
       get_credits_by_email: {
@@ -2081,119 +2081,119 @@ export type Database = {
       get_redacoes_by_turma: {
         Args: { p_turma: string }
         Returns: {
-          id: string
-          frase_tematica: string
-          nome_aluno: string
-          tipo_envio: string
-          data_envio: string
-          status: string
           corrigida: boolean
+          data_envio: string
+          frase_tematica: string
+          id: string
+          nome_aluno: string
+          status: string
+          tipo_envio: string
         }[]
       }
       get_redacoes_by_turma_and_email: {
-        Args: { p_turma: string; p_email: string }
+        Args: { p_email: string; p_turma: string }
         Returns: {
-          id: string
-          frase_tematica: string
-          nome_aluno: string
-          email_aluno: string
-          tipo_envio: string
-          data_envio: string
-          status: string
-          corrigida: boolean
-          nota_total: number
           comentario_admin: string
+          corrigida: boolean
           data_correcao: string
+          data_envio: string
+          email_aluno: string
+          frase_tematica: string
+          id: string
+          nome_aluno: string
+          nota_total: number
+          status: string
+          tipo_envio: string
         }[]
       }
       get_redacoes_corretor: {
         Args: { corretor_email: string }
         Returns: {
-          id: string
-          tipo_redacao: string
-          nome_aluno: string
+          corrigida: boolean
+          data_envio: string
           email_aluno: string
           frase_tematica: string
-          data_envio: string
-          corrigida: boolean
+          id: string
+          nome_aluno: string
           texto: string
+          tipo_redacao: string
         }[]
       }
       get_redacoes_corretor_detalhadas: {
         Args: { corretor_email: string }
         Returns: {
-          id: string
-          tipo_redacao: string
-          nome_aluno: string
-          email_aluno: string
-          frase_tematica: string
           data_envio: string
-          texto: string
-          status_minha_correcao: string
           eh_corretor_1: boolean
           eh_corretor_2: boolean
+          email_aluno: string
+          frase_tematica: string
+          id: string
+          nome_aluno: string
           redacao_manuscrita_url: string
+          status_minha_correcao: string
+          texto: string
+          tipo_redacao: string
           turma: string
         }[]
       }
       get_simulados_por_corretor: {
         Args: { turma_code: string }
         Returns: {
+          comentario_pedagogico: string
+          corretor_1_nome: string
+          corretor_2_nome: string
+          corrigida: boolean
+          data_correcao: string
+          data_envio: string
+          email_aluno: string
           id: string
           id_simulado: string
           nome_aluno: string
-          email_aluno: string
-          texto: string
-          turma: string
-          data_envio: string
-          corrigida: boolean
           nota_c1: number
           nota_c2: number
           nota_c3: number
           nota_c4: number
           nota_c5: number
           nota_total: number
-          comentario_pedagogico: string
-          data_correcao: string
+          simulado_frase_tematica: string
+          simulado_titulo: string
           status_corretor_1: string
           status_corretor_2: string
-          corretor_1_nome: string
-          corretor_2_nome: string
-          simulado_titulo: string
-          simulado_frase_tematica: string
+          texto: string
+          turma: string
         }[]
       }
       get_student_redacoes: {
         Args: { student_email: string }
         Returns: {
-          id: string
-          frase_tematica: string
-          nome_aluno: string
-          email_aluno: string
-          tipo_envio: string
-          data_envio: string
-          status: string
-          corrigida: boolean
-          nota_total: number
           comentario_admin: string
+          corrigida: boolean
           data_correcao: string
+          data_envio: string
+          email_aluno: string
+          frase_tematica: string
+          id: string
+          nome_aluno: string
+          nota_total: number
+          status: string
+          tipo_envio: string
         }[]
       }
       get_student_redacoes_com_status_finalizado: {
         Args: { student_email: string }
         Returns: {
-          id: string
-          frase_tematica: string
-          nome_aluno: string
-          email_aluno: string
-          tipo_envio: string
-          data_envio: string
-          status: string
-          corrigida: boolean
-          nota_total: number
           comentario_admin: string
-          data_correcao: string
           correcao_finalizada: boolean
+          corrigida: boolean
+          data_correcao: string
+          data_envio: string
+          email_aluno: string
+          frase_tematica: string
+          id: string
+          nome_aluno: string
+          nota_total: number
+          status: string
+          tipo_envio: string
         }[]
       }
       get_turma_codigo: {
@@ -2202,9 +2202,9 @@ export type Database = {
       }
       iniciar_correcao_redacao: {
         Args: {
+          corretor_email: string
           redacao_id: string
           tabela_nome: string
-          corretor_email: string
         }
         Returns: boolean
       }
@@ -2239,13 +2239,13 @@ export type Database = {
       list_admin_users: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          nome_completo: string
-          email: string
           ativo: boolean
           criado_em: string
-          ultimo_login: string
           criado_por_nome: string
+          email: string
+          id: string
+          nome_completo: string
+          ultimo_login: string
         }[]
       }
       log_denied_access: {
@@ -2262,18 +2262,18 @@ export type Database = {
       }
       marcar_redacao_devolvida_como_visualizada: {
         Args: {
+          email_aluno_param: string
           redacao_id_param: string
           tabela_origem_param: string
-          email_aluno_param: string
         }
         Returns: boolean
       }
       merge_student_redacoes: {
-        Args: { target_student_id: string; source_student_id: string }
+        Args: { source_student_id: string; target_student_id: string }
         Returns: Json
       }
       recusar_aluno: {
-        Args: { aluno_id: string; admin_id: string }
+        Args: { admin_id: string; aluno_id: string }
         Returns: boolean
       }
       reprocessar_ranking_simulados: {
@@ -2281,28 +2281,28 @@ export type Database = {
         Returns: {
           nome_aluno: string
           nota_media: number
-          status_correcao: string
           simulado_titulo: string
+          status_correcao: string
         }[]
       }
       salvar_correcao_corretor: {
         Args: {
-          redacao_id: string
-          tabela_nome: string
-          eh_corretor_1: boolean
           c1_nota: number
           c2_nota: number
           c3_nota: number
           c4_nota: number
           c5_nota: number
-          nota_final: number
-          status_correcao: string
           comentario_c1?: string
           comentario_c2?: string
           comentario_c3?: string
           comentario_c4?: string
           comentario_c5?: string
+          eh_corretor_1: boolean
           elogios_pontos?: string
+          nota_final: number
+          redacao_id: string
+          status_correcao: string
+          tabela_nome: string
         }
         Returns: boolean
       }
@@ -2323,14 +2323,14 @@ export type Database = {
         Returns: Json
       }
       trocar_senha_professor: {
-        Args: { professor_id: string; nova_senha: string }
+        Args: { nova_senha: string; professor_id: string }
         Returns: Json
       }
       update_admin_email: {
         Args: {
           p_admin_id: string
-          p_new_email: string
           p_current_password: string
+          p_new_email: string
         }
         Returns: Json
       }
@@ -2349,9 +2349,9 @@ export type Database = {
       validar_integridade_simulados: {
         Args: Record<PropertyKey, never>
         Returns: {
-          tipo_problema: string
-          nome_aluno: string
           detalhes: string
+          nome_aluno: string
+          tipo_problema: string
         }[]
       }
       validate_admin_credentials: {

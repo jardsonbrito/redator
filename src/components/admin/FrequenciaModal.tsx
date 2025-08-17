@@ -12,8 +12,9 @@ interface PresencaRecord {
   nome_aluno: string;
   email_aluno: string;
   turma: string;
-  tipo_registro: string; // Changed from 'entrada' | 'saida' to string
-  data_registro: string;
+  entrada_at: string | null;
+  saida_at: string | null;
+  aluno_id: string;
 }
 
 interface FrequenciaAluno {
@@ -22,7 +23,7 @@ interface FrequenciaAluno {
   turma: string;
   entrada?: string;
   saida?: string;
-  status: 'presente' | 'completo' | 'ausente';
+  status: 'em_aula' | 'presente' | 'ausente';
 }
 
 interface FrequenciaModalProps {
@@ -49,35 +50,30 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
       if (error) throw error;
 
-      // Agrupar registros por aluno
-      const alunosMap = new Map<string, FrequenciaAluno>();
-
-      data?.forEach((record: PresencaRecord) => {
-        const key = `${record.email_aluno}_${record.turma}`;
+      // Processar registros com nova estrutura (entrada_at/saida_at)
+      const frequenciaList: FrequenciaAluno[] = data?.map((record: any) => {
+        let status: 'em_aula' | 'presente' | 'ausente' = 'ausente';
         
-        if (!alunosMap.has(key)) {
-          alunosMap.set(key, {
-            nome: record.nome_aluno,
-            email: record.email_aluno,
-            turma: record.turma,
-            status: 'ausente'
-          });
-        }
-
-        const aluno = alunosMap.get(key)!;
-        
-        if (record.tipo_registro === 'entrada') {
-          aluno.entrada = record.data_registro;
-          aluno.status = 'presente';
-        } else if (record.tipo_registro === 'saida') {
-          aluno.saida = record.data_registro;
-          if (aluno.entrada) {
-            aluno.status = 'completo';
+        // Verificar se temos as novas colunas entrada_at/saida_at
+        if (record.entrada_at !== undefined) {
+          if (record.entrada_at && record.saida_at) {
+            status = 'presente'; // Participou integralmente
+          } else if (record.entrada_at && !record.saida_at) {
+            status = 'em_aula'; // Em aula (só entrada)
           }
         }
-      });
 
-      setFrequenciaData(Array.from(alunosMap.values()));
+        return {
+          nome: record.nome_aluno,
+          email: record.email_aluno,
+          turma: record.turma,
+          entrada: record.entrada_at || undefined,
+          saida: record.saida_at || undefined,
+          status
+        };
+      }) || [];
+
+      setFrequenciaData(frequenciaList);
     } catch (error) {
       console.error('Erro ao buscar frequência:', error);
     } finally {
@@ -102,8 +98,8 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'completo': return 'Participou integralmente';
       case 'presente': return 'Presente';
+      case 'em_aula': return 'Em aula';
       case 'ausente': return 'Ausente';
       default: return 'Ausente';
     }
@@ -111,10 +107,10 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completo':
-        return <Badge className="bg-green-100 text-green-800">✔ Participou integralmente</Badge>;
       case 'presente':
-        return <Badge className="bg-blue-100 text-blue-800">✔ Presente</Badge>;
+        return <Badge className="bg-green-100 text-green-800">✔ Presente</Badge>;
+      case 'em_aula':
+        return <Badge className="bg-blue-100 text-blue-800">⏰ Em aula</Badge>;
       case 'ausente':
         return <Badge variant="destructive">✖ Ausente</Badge>;
       default:

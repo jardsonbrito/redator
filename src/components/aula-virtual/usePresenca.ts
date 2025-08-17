@@ -22,23 +22,47 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
     try {
       // Para visitantes, usar email se disponível, senão usar um identificador temporário
       let email = 'email_nao_disponivel';
-      let turma = studentData.turma || 'visitante';
+      let alunoId = null;
       
       if (studentData.userType === 'visitante' && studentData.visitanteInfo?.email) {
         email = studentData.visitanteInfo.email;
-        turma = 'visitante';
       } else if (studentData.userType === 'aluno') {
         email = 'aluno@exemplo.com'; // Placeholder para alunos
       }
 
+      // Buscar o ID do aluno pelo email
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (profile) {
+        alunoId = profile.id;
+      }
+
+      if (!alunoId) {
+        console.warn('Aluno não encontrado para buscar registros de presença');
+        setRegistrosPresenca([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('presenca_aulas')
-        .select('aula_id, tipo_registro')
-        .eq('email_aluno', email)
-        .eq('turma', turma);
+        .select('*')
+        .or(`aluno_id.eq.${alunoId},email_aluno.eq.${email}`);
 
       if (error) throw error;
-      setRegistrosPresenca((data || []) as RegistroPresenca[]);
+      
+      // Transformar dados para o formato esperado
+      const transformedData = (data || []).map((record: any) => ({
+        aula_id: record.aula_id,
+        aluno_id: record.aluno_id || alunoId,
+        entrada_at: record.entrada_at || null,
+        saida_at: record.saida_at || null
+      }));
+      
+      setRegistrosPresenca(transformedData as RegistroPresenca[]);
     } catch (error: any) {
       console.error('Erro ao buscar registros de presença:', error);
     }
@@ -57,23 +81,93 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
       
       const turma = studentData.userType === 'visitante' ? 'visitante' : studentData.turma;
 
-      const { error } = await supabase
-        .from('presenca_aulas')
-        .insert([{
-          aula_id: aulaId,
-          nome_aluno: formData.nome.trim(),
-          sobrenome_aluno: formData.sobrenome.trim(),
-          email_aluno: email,
-          turma: turma,
-          tipo_registro: tipo
-        }]);
+      // Buscar ou criar o perfil do aluno
+      let alunoId;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
 
-      if (error) {
-        if (error.code === '23505') {
-          toast.error(`Você já registrou ${tipo} para esta aula`);
+      if (profile) {
+        alunoId = profile.id;
+      } else {
+        // Criar perfil se não existir
+        const newId = crypto.randomUUID();
+        const { data: newProfile, error: profileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: newId,
+            nome: formData.nome.trim(),
+            sobrenome: formData.sobrenome.trim(),
+            email: email,
+            turma: turma,
+            user_type: 'aluno'
+          }])
+          .select('id')
+          .single();
+        
+        if (profileError) throw profileError;
+        alunoId = newProfile.id;
+      }
+
+      if (tipo === 'entrada') {
+        // Registrar entrada usando SQL direto para trabalhar com novas colunas
+        const agora = new Date().toISOString();
+        
+        // Usar SQL raw para inserir com novas colunas
+        const { error } = await supabase.rpc('sql', {
+          query: `
+            INSERT INTO presenca_aulas (
+              aula_id, aluno_id, nome_aluno, sobrenome_aluno, 
+              email_aluno, turma, entrada_at, data_registro, tipo_registro
+            ) VALUES (
+              '${aulaId}', '${alunoId}', '${formData.nome.trim()}', '${formData.sobrenome.trim()}',
+              '${email}', '${turma}', '${agora}', '${agora}', 'entrada'
+            )
+            ON CONFLICT (aula_id, aluno_id) 
+            DO UPDATE SET 
+              entrada_at = EXCLUDED.entrada_at,
+              data_registro = EXCLUDED.data_registro
+          `
+        });
+
+        if (error) {
+          console.error('Erro ao registrar entrada:', error);
+          toast.error('Erro ao registrar entrada');
           return;
         }
-        throw error;
+      } else {
+        // Registrar saída 
+        const agora = new Date().toISOString();
+        
+        // Primeiro verificar se existe entrada
+        const { data: existingRecords } = await supabase
+          .from('presenca_aulas')
+          .select('*')
+          .eq('aula_id', aulaId)
+          .eq('email_aluno', email);
+
+        const existingRecord = existingRecords?.[0];
+        if (!existingRecord) {
+          toast.error('Entrada não registrada. Registre a entrada primeiro.');
+          return;
+        }
+
+        // Usar SQL raw para atualizar com saída
+        const { error } = await supabase.rpc('sql', {
+          query: `
+            UPDATE presenca_aulas 
+            SET saida_at = '${agora}'
+            WHERE id = '${existingRecord.id}'
+          `
+        });
+
+        if (error) {
+          console.error('Erro ao registrar saída:', error);
+          toast.error('Erro ao registrar saída');
+          return;
+        }
       }
 
       toast.success(`${tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
@@ -87,7 +181,14 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
   };
 
   const jaRegistrou = (aulaId: string, tipo: 'entrada' | 'saida') => {
-    return registrosPresenca.some(r => r.aula_id === aulaId && r.tipo_registro === tipo);
+    const registro = registrosPresenca.find(r => r.aula_id === aulaId);
+    if (!registro) return false;
+    
+    if (tipo === 'entrada') {
+      return !!registro.entrada_at;
+    } else {
+      return !!registro.saida_at;
+    }
   };
 
   const openPresencaDialog = (tipo: 'entrada' | 'saida', aulaId: string) => {

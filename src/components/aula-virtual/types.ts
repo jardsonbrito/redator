@@ -18,7 +18,9 @@ export interface AulaVirtual {
 
 export interface RegistroPresenca {
   aula_id: string;
-  tipo_registro: 'entrada' | 'saida';
+  aluno_id: string;
+  entrada_at: string | null;
+  saida_at: string | null;
 }
 
 export interface AulaVirtualAtivaProps {
