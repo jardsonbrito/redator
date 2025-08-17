@@ -19,6 +19,9 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
     setFormData,
     registrarPresenca,
     jaRegistrou,
+    podeRegistrarSaida,
+    podeRegistrarEntradaPorTempo,
+    podeRegistrarSaidaPorTempo,
     openPresencaDialog
   } = usePresenca(registrosPresenca, setRegistrosPresenca);
 
@@ -111,7 +114,7 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
                 <PresencaDialog
                   tipo="entrada"
                   aulaId={aulaAtiva.id}
-                  jaRegistrou={jaRegistrou(aulaAtiva.id, 'entrada')}
+                  jaRegistrou={jaRegistrou(aulaAtiva.id, 'entrada') || !podeRegistrarEntradaPorTempo(aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
                   openDialog={openDialog}
                   onOpenChange={(open) => !open && setOpenDialog(null)}
                   onOpenPresencaDialog={openPresencaDialog}
@@ -123,7 +126,7 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
                 <PresencaDialog
                   tipo="saida"
                   aulaId={aulaAtiva.id}
-                  jaRegistrou={jaRegistrou(aulaAtiva.id, 'saida')}
+                  jaRegistrou={jaRegistrou(aulaAtiva.id, 'saida') || !podeRegistrarSaida(aulaAtiva.id) || !podeRegistrarSaidaPorTempo(aulaAtiva.data_aula, aulaAtiva.horario_fim)}
                   openDialog={openDialog}
                   onOpenChange={(open) => !open && setOpenDialog(null)}
                   onOpenPresencaDialog={openPresencaDialog}

@@ -30,7 +30,9 @@ interface AulaVirtual {
 
 interface RegistroPresenca {
   aula_id: string;
-  tipo_registro: 'entrada' | 'saida';
+  aluno_id: string;
+  entrada_at: string | null;
+  saida_at: string | null;
 }
 
 const SalaVirtual = () => {
@@ -80,14 +82,31 @@ const SalaVirtual = () => {
         ? studentData.visitanteInfo?.email 
         : 'email_nao_disponivel'; // Para alunos sem email definido
 
-      const { data, error } = await supabase
-        .from('presenca_aulas')
-        .select('aula_id, tipo_registro')
-        .eq('email_aluno', email)
-        .eq('turma', studentData.turma);
+      // Buscar o ID do aluno pelo email
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
 
-      if (error) throw error;
-      setRegistrosPresenca((data || []) as RegistroPresenca[]);
+      if (profile) {
+        const { data, error } = await (supabase as any)
+          .from('presenca_aulas')
+          .select('*')
+          .or(`aluno_id.eq.${profile.id},email_aluno.eq.${email}`);
+
+        if (error) throw error;
+        
+        // Transformar dados para o formato esperado
+        const transformedData = (data || []).map((record: any) => ({
+          aula_id: record.aula_id,
+          aluno_id: record.aluno_id || profile.id,
+          entrada_at: record.entrada_at || null,
+          saida_at: record.saida_at || null
+        }));
+        
+        setRegistrosPresenca(transformedData as RegistroPresenca[]);
+      }
     } catch (error: any) {
       console.error('Erro ao buscar registros de presença:', error);
     }
@@ -102,25 +121,98 @@ const SalaVirtual = () => {
     try {
       const email = studentData.userType === 'visitante' 
         ? studentData.visitanteInfo?.email || 'visitante@exemplo.com'
-        : 'aluno@exemplo.com'; // Email padrão para alunos
+        : 'aluno@exemplo.com';
+      
+      const turma = studentData.userType === 'visitante' ? 'visitante' : studentData.turma;
 
-      const { error } = await supabase
-        .from('presenca_aulas')
-        .insert([{
-          aula_id: aulaId,
-          nome_aluno: formData.nome.trim(),
-          sobrenome_aluno: formData.sobrenome.trim(),
-          email_aluno: email,
-          turma: studentData.turma,
-          tipo_registro: tipo
-        }]);
+      // Buscar ou criar o perfil do aluno
+      let alunoId;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
 
-      if (error) {
-        if (error.code === '23505') { // Constraint de duplicidade
-          toast.error(`Você já registrou ${tipo} para esta aula`);
+      if (profile) {
+        alunoId = profile.id;
+      } else {
+        // Criar perfil se não existir
+        const newId = crypto.randomUUID();
+        const { data: newProfile, error: profileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: newId,
+            nome: formData.nome.trim(),
+            sobrenome: formData.sobrenome.trim(),
+            email: email,
+            turma: turma,
+            user_type: 'aluno'
+          }])
+          .select('id')
+          .single();
+        
+        if (profileError) throw profileError;
+        alunoId = newProfile.id;
+      }
+
+      if (tipo === 'entrada') {
+        // Registrar entrada usando upsert
+        const agora = new Date().toISOString();
+        
+        const { error } = await (supabase as any)
+          .from('presenca_aulas')
+          .upsert({
+            aula_id: aulaId,
+            aluno_id: alunoId,
+            nome_aluno: formData.nome.trim(),
+            sobrenome_aluno: formData.sobrenome.trim(),
+            email_aluno: email,
+            turma: turma,
+            entrada_at: agora,
+            data_registro: agora,
+            tipo_registro: 'entrada'
+          }, {
+            onConflict: 'aula_id,aluno_id'
+          });
+
+        if (error) {
+          console.error('Erro ao registrar entrada:', error);
+          toast.error('Erro ao registrar entrada');
           return;
         }
-        throw error;
+      } else {
+        // Registrar saída 
+        const agora = new Date().toISOString();
+        
+        // Primeiro verificar se existe entrada
+        const { data: existingRecords } = await (supabase as any)
+          .from('presenca_aulas')
+          .select('*')
+          .eq('aula_id', aulaId)
+          .eq('aluno_id', alunoId);
+
+        const existingRecord = existingRecords?.[0] as any;
+        if (!existingRecord || !(existingRecord as any).entrada_at) {
+          toast.error('Entrada não registrada. Registre a entrada primeiro.');
+          return;
+        }
+
+        if ((existingRecord as any).saida_at) {
+          toast.error('Saída já registrada.');
+          return;
+        }
+
+        // Atualizar com saída
+        const { error } = await (supabase as any)
+          .from('presenca_aulas')
+          .update({ saida_at: agora })
+          .eq('id', existingRecord.id);
+
+        if (error) {
+          console.error('Erro ao registrar saída:', error);
+          toast.error('Erro ao registrar saída');
+          return;
+        }
       }
 
       toast.success(`${tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
@@ -143,7 +235,40 @@ const SalaVirtual = () => {
   };
 
   const jaRegistrou = (aulaId: string, tipo: 'entrada' | 'saida') => {
-    return registrosPresenca.some(r => r.aula_id === aulaId && r.tipo_registro === tipo);
+    const registro = registrosPresenca.find(r => r.aula_id === aulaId);
+    if (!registro) return false;
+    
+    if (tipo === 'entrada') {
+      return !!registro.entrada_at;
+    } else {
+      return !!registro.saida_at;
+    }
+  };
+
+  const podeRegistrarSaida = (aulaId: string) => {
+    // Só pode registrar saída se já tiver registrado entrada
+    return jaRegistrou(aulaId, 'entrada') && !jaRegistrou(aulaId, 'saida');
+  };
+
+  const podeRegistrarEntradaPorTempo = (aulaData: string, horarioInicio: string, horarioFim: string) => {
+    const agora = new Date();
+    const inicioAula = new Date(`${aulaData}T${horarioInicio}`);
+    const fimAula = new Date(`${aulaData}T${horarioFim}`);
+    
+    // Entrada permitida até 10 minutos antes do início e durante toda a aula
+    const inicioPermitido = new Date(inicioAula.getTime() - 10 * 60 * 1000); // 10 minutos antes
+    
+    return agora >= inicioPermitido && agora <= fimAula;
+  };
+
+  const podeRegistrarSaidaPorTempo = (aulaData: string, horarioFim: string) => {
+    const agora = new Date();
+    const fimAula = new Date(`${aulaData}T${horarioFim}`);
+    
+    // Saída permitida apenas nos últimos 10 minutos da aula até o final
+    const inicioSaidaPermitida = new Date(fimAula.getTime() - 10 * 60 * 1000); // 10 minutos antes do fim
+    
+    return agora >= inicioSaidaPermitida && agora <= fimAula;
   };
 
   const openPresencaDialog = (tipo: 'entrada' | 'saida', aulaId: string) => {
@@ -278,7 +403,7 @@ const SalaVirtual = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={jaRegistrou(aula.id, 'entrada') || status === 'agendada'}
+                          disabled={jaRegistrou(aula.id, 'entrada') || !podeRegistrarEntradaPorTempo(aula.data_aula, aula.horario_inicio, aula.horario_fim)}
                           onClick={() => openPresencaDialog('entrada', aula.id)}
                           className="w-full text-xs sm:text-sm"
                         >
@@ -322,13 +447,14 @@ const SalaVirtual = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={jaRegistrou(aula.id, 'saida') || status === 'agendada'}
+                          disabled={jaRegistrou(aula.id, 'saida') || !podeRegistrarSaida(aula.id) || !podeRegistrarSaidaPorTempo(aula.data_aula, aula.horario_fim)}
                           onClick={() => openPresencaDialog('saida', aula.id)}
                           className="w-full text-xs sm:text-sm"
                         >
                           <LogOut className="w-4 h-4 mr-1 flex-shrink-0" />
                           <span className="truncate">{jaRegistrou(aula.id, 'saida') ? 'Saída OK' : 
-                            status === 'agendada' ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}</span>
+                            !jaRegistrou(aula.id, 'entrada') ? 'Registre entrada primeiro' : 
+                            !podeRegistrarSaidaPorTempo(aula.data_aula, aula.horario_fim) ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}</span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent>

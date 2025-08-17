@@ -192,6 +192,32 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
     }
   };
 
+  const podeRegistrarSaida = (aulaId: string) => {
+    // Só pode registrar saída se já tiver registrado entrada
+    return jaRegistrou(aulaId, 'entrada') && !jaRegistrou(aulaId, 'saida');
+  };
+
+  const podeRegistrarEntradaPorTempo = (aulaData: string, horarioInicio: string, horarioFim: string) => {
+    const agora = new Date();
+    const inicioAula = new Date(`${aulaData}T${horarioInicio}`);
+    const fimAula = new Date(`${aulaData}T${horarioFim}`);
+    
+    // Entrada permitida até 10 minutos antes do início e durante toda a aula
+    const inicioPermitido = new Date(inicioAula.getTime() - 10 * 60 * 1000); // 10 minutos antes
+    
+    return agora >= inicioPermitido && agora <= fimAula;
+  };
+
+  const podeRegistrarSaidaPorTempo = (aulaData: string, horarioFim: string) => {
+    const agora = new Date();
+    const fimAula = new Date(`${aulaData}T${horarioFim}`);
+    
+    // Saída permitida apenas nos últimos 10 minutos da aula até o final
+    const inicioSaidaPermitida = new Date(fimAula.getTime() - 10 * 60 * 1000); // 10 minutos antes do fim
+    
+    return agora >= inicioSaidaPermitida && agora <= fimAula;
+  };
+
   const openPresencaDialog = (tipo: 'entrada' | 'saida', aulaId: string) => {
     setFormData({
       nome: studentData.nomeUsuario.split(' ')[0] || "",
@@ -208,6 +234,9 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
     fetchRegistrosPresenca,
     registrarPresenca,
     jaRegistrou,
+    podeRegistrarSaida,
+    podeRegistrarEntradaPorTempo,
+    podeRegistrarSaidaPorTempo,
     openPresencaDialog
   };
 };
