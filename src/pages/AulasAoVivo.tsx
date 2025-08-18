@@ -143,9 +143,8 @@ const AulasAoVivo = () => {
   const podeRegistrarSaida = (aula: AulaAoVivo) => {
     const TZ = 'America/Sao_Paulo';
     const agora = toZonedTime(new Date(), TZ);
-    const fimAulaLocal = parse(`${aula.data_aula}T${aula.horario_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
-    const dezMinutesAntes = subMinutes(fimAulaLocal, 10);
-    return agora >= dezMinutesAntes;
+    const inicioAulaLocal = parse(`${aula.data_aula}T${aula.horario_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
+    return agora >= inicioAulaLocal;
   };
 
   const getStatusAula = (aula: AulaAoVivo) => {
@@ -306,7 +305,7 @@ const AulasAoVivo = () => {
                           >
                             <LogOut className="w-4 h-4 mr-2 flex-shrink-0" />
                             <span className="truncate">{saidaRegistrada ? '✅ Saída Registrada' : 
-                             !podeSaida ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}</span>
+                             !podeSaida ? 'Disponível a partir do início da aula' : 'Registrar Saída'}</span>
                           </Button>
                         </div>
                       )}
