@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { FileText, Calendar, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoStatus";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -109,12 +109,35 @@ if (isLoading) {
   <div className="grid gap-4">
     {simulados.map((simulado: any) => {
       const info = getStatusSimulado(simulado);
+      const status = computeSimuladoStatus(simulado);
+      const isAgendado = status === 'agendado';
       const tema = simulado.tema as any | null;
       const coverUrl = resolveSimuladoCover(simulado);
-      const subtitle = (tema?.frase_tematica as string) || undefined;
+      
+      // Para simulado agendado, não mostrar subtitle (frase_tematica)
+      const subtitle = isAgendado ? undefined : (tema?.frase_tematica as string) || undefined;
+      
+      // Para badges, se for agendado não incluir eixo_tematico
       const badges: { label: string; tone?: BadgeTone }[] = [];
-      if (tema?.eixo_tematico) badges.push({ label: tema.eixo_tematico as string, tone: 'primary' });
+      if (!isAgendado && tema?.eixo_tematico) {
+        badges.push({ label: tema.eixo_tematico as string, tone: 'primary' });
+      }
       badges.push({ label: info.label, tone: info.tone });
+
+      // Adicionar meta com as datas (especialmente importante para agendados)
+      const meta = [];
+      if (simulado.data_inicio && simulado.hora_inicio) {
+        meta.push({
+          icon: Calendar,
+          text: `Início: ${simulado.data_inicio} às ${simulado.hora_inicio}`
+        });
+      }
+      if (simulado.data_fim && simulado.hora_fim) {
+        meta.push({
+          icon: Clock,
+          text: `Fim: ${simulado.data_fim} às ${simulado.hora_fim}`
+        });
+      }
 
       return (
         <UnifiedCard
@@ -125,6 +148,7 @@ if (isLoading) {
             title: simulado.titulo,
             subtitle,
             badges,
+            meta: meta.length > 0 ? meta : undefined,
             cta: info.isActive ? { 
               label: 'Abrir', 
               onClick: () => navigate(`/simulados/${simulado.id}`),
