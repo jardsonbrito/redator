@@ -46,82 +46,55 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
   };
 
   const registrarPresenca = async (tipo: 'entrada' | 'saida', aulaId: string) => {
-    if (!formData.nome.trim() || !formData.sobrenome.trim()) {
-      toast.error("Preencha nome e sobrenome");
-      return;
-    }
-
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
-        toast.error('Usuário não autenticado');
+        toast.error('Faça login para registrar presença');
         return;
       }
 
-      const agora = new Date().toISOString();
-
       if (tipo === 'entrada') {
-        // Registrar entrada usando UPSERT por (aula_id, aluno_id)
-        const { error } = await supabase
-          .from('presenca_aulas')
-          .upsert([{
-            aula_id: aulaId,
-            aluno_id: user.id,
-            email_aluno: user.email,
-            nome_aluno: formData.nome.trim(),
-            sobrenome_aluno: formData.sobrenome.trim(),
-            turma: 'Aluno', // Pode ser ajustado conforme necessário
-            entrada_at: agora,
-            tipo_registro: 'entrada' // Manter compatibilidade
-          }], { 
-            onConflict: 'aula_id,aluno_id'
-          });
+        const { data, error } = await supabase.rpc('registrar_entrada_email', {
+          p_aula_id: aulaId
+        });
 
         if (error) {
           console.error('Erro ao registrar entrada:', error);
-          toast.error('Erro ao registrar entrada. Verifique suas permissões.');
+          toast.error('Erro ao registrar entrada');
           return;
+        }
+
+        if (data === 'usuario_nao_autenticado') {
+          toast.error('Faça login para registrar presença');
+        } else if (data === 'entrada_ok') {
+          toast.success('Entrada registrada!');
+        } else {
+          toast.error('Não foi possível registrar a entrada');
         }
       } else {
-        // Para saída, verificar se existe entrada e atualizar
-        const { data: row, error: selectError } = await supabase
-          .from('presenca_aulas')
-          .select('entrada_at, saida_at')
-          .eq('aula_id', aulaId)
-          .eq('aluno_id', user.id)
-          .single();
-
-        if (selectError) {
-          console.error('Erro ao buscar registro:', selectError);
-          toast.error('Erro ao buscar registro de presença');
-          return;
-        }
-
-        if (!row?.entrada_at) {
-          toast.error('Registre a entrada primeiro.');
-          return;
-        }
-        
-        if (row?.saida_at) {
-          toast.info('Saída já registrada.');
-          return;
-        }
-
-        // Atualizar com saída
-        const { error } = await supabase
-          .from('presenca_aulas')
-          .update({ saida_at: agora })
-          .eq('aula_id', aulaId)
-          .eq('aluno_id', user.id);
+        const { data, error } = await supabase.rpc('registrar_saida_email', {
+          p_aula_id: aulaId
+        });
 
         if (error) {
           console.error('Erro ao registrar saída:', error);
-          toast.error('Erro ao registrar saída. Verifique suas permissões.');
+          toast.error('Erro ao registrar saída');
           return;
+        }
+
+        if (data === 'usuario_nao_autenticado') {
+          toast.error('Faça login para registrar presença');
+        } else if (data === 'precisa_entrada') {
+          toast.error('Registre a entrada primeiro');
+        } else if (data === 'saida_ja_registrada') {
+          toast.info('Saída já registrada');
+        } else if (data === 'saida_ok') {
+          toast.success('Saída registrada!');
+        } else {
+          toast.error('Não foi possível registrar a saída');
         }
       }
 
-      toast.success(`${tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
       setOpenDialog(null);
       setFormData({ nome: "", sobrenome: "" });
       fetchRegistrosPresenca();

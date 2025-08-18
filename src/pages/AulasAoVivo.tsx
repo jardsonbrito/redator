@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { parse, isWithinInterval, subMinutes, isBefore, isAfter } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { computeStatus } from "@/utils/aulaStatus";
+import { PresenciaStatus } from "@/components/aula-virtual/PresenciaStatus";
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
@@ -116,15 +117,9 @@ const AulasAoVivo = () => {
         return;
       }
 
-      const emailAluno = user.email!;
-      const turmaAluno = studentData?.turma ?? 'visitante';
-      const nomeAluno = user.user_metadata?.full_name ?? studentData?.nomeUsuario ?? 'Aluno';
 
       const { data, error } = await supabase.rpc('registrar_entrada_email' as any, {
-        p_aula_id: aulaId,
-        p_email: emailAluno,
-        p_nome: nomeAluno,
-        p_turma: turmaAluno,
+        p_aula_id: aulaId
       });
 
       if (error) {
@@ -133,7 +128,9 @@ const AulasAoVivo = () => {
         return;
       }
 
-      if (data === 'entrada_ok') {
+      if (data === 'usuario_nao_autenticado') {
+        toast.error('Faça login para registrar presença');
+      } else if (data === 'entrada_ok') {
         toast.success('Entrada registrada!');
       } else {
         toast.error('Não foi possível registrar a entrada.');
@@ -154,11 +151,8 @@ const AulasAoVivo = () => {
         return;
       }
 
-      const emailAluno = user.email!;
-
       const { data, error } = await supabase.rpc('registrar_saida_email' as any, {
-        p_aula_id: aulaId,
-        p_email: emailAluno,
+        p_aula_id: aulaId
       });
 
       if (error) {
@@ -167,7 +161,9 @@ const AulasAoVivo = () => {
         return;
       }
 
-      if (data === 'precisa_entrada') {
+      if (data === 'usuario_nao_autenticado') {
+        toast.error('Faça login para registrar presença');
+      } else if (data === 'precisa_entrada') {
         toast.error('Registre a entrada primeiro.');
       } else if (data === 'saida_ja_registrada') {
         toast.info('Saída já registrada.');
@@ -356,16 +352,11 @@ const AulasAoVivo = () => {
                         </div>
                       )}
 
-                      {/* Status da presença */}
-                      {(entradaRegistrada || saidaRegistrada) && (
-                        <div className="bg-gray-50 p-3 rounded-md">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Status da Presença:</p>
-                          <div className="flex gap-4 text-xs">
-                            <div>Entrada: {formatTimestamp(registro?.entrada_at)}</div>
-                            <div>Saída: {formatTimestamp(registro?.saida_at)}</div>
-                          </div>
-                        </div>
-                      )}
+                       {/* Status da presença */}
+                       <PresenciaStatus 
+                         entrada={registro?.entrada_at} 
+                         saida={registro?.saida_at} 
+                       />
                     </div>
                   </CardContent>
                 </Card>

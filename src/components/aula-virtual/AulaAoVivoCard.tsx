@@ -5,12 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AulaVirtual } from "./types";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { PresenciaStatus } from "./PresenciaStatus";
 
 interface AulaAoVivoCardProps {
   aula: AulaVirtual;
@@ -24,22 +23,33 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
   const [emailAluno, setEmailAluno] = useState("");
   const [jaRegistrouEntrada, setJaRegistrouEntrada] = useState(false);
   const [jaRegistrouSaida, setJaRegistrouSaida] = useState(false);
+  const [timestampEntrada, setTimestampEntrada] = useState<string | null>(null);
+  const [timestampSaida, setTimestampSaida] = useState<string | null>(null);
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
 
   const verificarRegistrosExistentes = async () => {
-    if (!emailAluno) return;
-    
     try {
-      const { data } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) return;
+
+      const { data, error } = await supabase
         .from('presenca_aulas')
-        .select('tipo_registro')
+        .select('entrada_at, saida_at')
         .eq('aula_id', aula.id)
-        .eq('email_aluno', emailAluno);
+        .eq('email_aluno', user.email)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao verificar registros:', error);
+        return;
+      }
 
       if (data) {
-        setJaRegistrouEntrada(data.some(r => r.tipo_registro === 'entrada'));
-        setJaRegistrouSaida(data.some(r => r.tipo_registro === 'saida'));
+        setJaRegistrouEntrada(!!data.entrada_at);
+        setJaRegistrouSaida(!!data.saida_at);
+        setTimestampEntrada(data.entrada_at);
+        setTimestampSaida(data.saida_at);
       }
     } catch (error) {
       console.error('Erro ao verificar registros:', error);
@@ -47,38 +57,98 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
   };
 
   const registrarPresenca = async (tipo: 'entrada' | 'saida') => {
-    if (!nomeAluno || !turmaAluno || !emailAluno) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
-      const { error } = await supabase
-        .from('presenca_aulas')
-        .insert({
-          aula_id: aula.id,
-          nome_aluno: nomeAluno,
-          sobrenome_aluno: "", // Campo obrigatório mas pode ser vazio
-          email_aluno: emailAluno,
-          turma: turmaAluno,
-          tipo_registro: tipo
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Faça login para registrar presença.",
+          variant: "destructive"
         });
-
-      if (error) throw error;
-
-      toast({
-        title: "Presença registrada!",
-        description: `${tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso.`
-      });
+        return;
+      }
 
       if (tipo === 'entrada') {
-        setJaRegistrouEntrada(true);
+        const { data, error } = await supabase.rpc('registrar_entrada_email', {
+          p_aula_id: aula.id
+        });
+
+        if (error) {
+          console.error('Erro ao registrar entrada:', error);
+          toast({
+            title: "Erro ao registrar entrada",
+            description: error.message || "Ocorreu um erro inesperado.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (data === 'usuario_nao_autenticado') {
+          toast({
+            title: "Erro",
+            description: "Faça login para registrar presença.",
+            variant: "destructive"
+          });
+        } else if (data === 'entrada_ok') {
+          toast({
+            title: "Presença registrada!",
+            description: "Entrada registrada com sucesso."
+          });
+          setJaRegistrouEntrada(true);
+          verificarRegistrosExistentes(); // Refetch data
+        } else {
+          toast({
+            title: "Erro",
+            description: "Não foi possível registrar a entrada.",
+            variant: "destructive"
+          });
+        }
       } else {
-        setJaRegistrouSaida(true);
+        const { data, error } = await supabase.rpc('registrar_saida_email', {
+          p_aula_id: aula.id
+        });
+
+        if (error) {
+          console.error('Erro ao registrar saída:', error);
+          toast({
+            title: "Erro ao registrar saída",
+            description: error.message || "Ocorreu um erro inesperado.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (data === 'usuario_nao_autenticado') {
+          toast({
+            title: "Erro",
+            description: "Faça login para registrar presença.",
+            variant: "destructive"
+          });
+        } else if (data === 'precisa_entrada') {
+          toast({
+            title: "Erro",
+            description: "Registre a entrada primeiro.",
+            variant: "destructive"
+          });
+        } else if (data === 'saida_ja_registrada') {
+          toast({
+            title: "Informação",
+            description: "Saída já registrada."
+          });
+        } else if (data === 'saida_ok') {
+          toast({
+            title: "Presença registrada!",
+            description: "Saída registrada com sucesso."
+          });
+          setJaRegistrouSaida(true);
+          verificarRegistrosExistentes(); // Refetch data
+        } else {
+          toast({
+            title: "Erro",
+            description: "Não foi possível registrar a saída.",
+            variant: "destructive"
+          });
+        }
       }
 
       setDialogAberto(null);
@@ -93,16 +163,28 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
   };
 
   const abrirDialog = (tipo: 'entrada' | 'saida') => {
-    // Auto-preencher dados quando possível
-    if (studentData.userType === "aluno" && studentData.nomeUsuario) {
-      setNomeAluno(studentData.nomeUsuario);
-      setEmailAluno(""); // Para alunos, email não está disponível diretamente
-    } else if (studentData.userType === "visitante" && studentData.visitanteInfo) {
-      setNomeAluno(studentData.visitanteInfo.nome);
-      setEmailAluno(studentData.visitanteInfo.email);
-    }
-    setDialogAberto(tipo);
-    verificarRegistrosExistentes();
+    // Verificar se usuário está autenticado
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Faça login para registrar presença.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Auto-preencher dados quando possível
+      if (studentData.userType === "aluno" && studentData.nomeUsuario) {
+        setNomeAluno(studentData.nomeUsuario);
+        setEmailAluno(user.email || "");
+      } else if (studentData.userType === "visitante" && studentData.visitanteInfo) {
+        setNomeAluno(studentData.visitanteInfo.nome);
+        setEmailAluno(studentData.visitanteInfo.email);
+      }
+      setDialogAberto(tipo);
+      verificarRegistrosExistentes();
+    });
   };
 
   const isAgendada = aula.status_transmissao === 'agendada';
@@ -214,42 +296,17 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
                   <DialogHeader>
                     <DialogTitle>Registrar Entrada na Aula</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="nome">Nome do Aluno *</Label>
-                      <Input
-                        id="nome"
-                        value={nomeAluno}
-                        onChange={(e) => setNomeAluno(e.target.value)}
-                        placeholder="Digite seu nome completo"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">E-mail *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={emailAluno}
-                        onChange={(e) => setEmailAluno(e.target.value)}
-                        placeholder="Digite seu e-mail"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="turma">Turma *</Label>
-                      <Input
-                        id="turma"
-                        value={turmaAluno}
-                        onChange={(e) => setTurmaAluno(e.target.value)}
-                        placeholder="Digite sua turma"
-                      />
-                    </div>
-                    <Button 
-                      onClick={() => registrarPresenca('entrada')}
-                      className="w-full"
-                    >
-                      Confirmar Entrada
-                    </Button>
-                  </div>
+                   <div className="space-y-4">
+                     <p className="text-sm text-muted-foreground">
+                       Confirmar registro de entrada na aula? A presença será registrada automaticamente com base em sua conta.
+                     </p>
+                     <Button 
+                       onClick={() => registrarPresenca('entrada')}
+                       className="w-full"
+                     >
+                       Confirmar Entrada
+                     </Button>
+                   </div>
                 </DialogContent>
               </Dialog>
 
@@ -270,46 +327,24 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
                     <DialogHeader>
                       <DialogTitle>Registrar Saída da Aula</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="nome">Nome do Aluno *</Label>
-                        <Input
-                          id="nome"
-                          value={nomeAluno}
-                          onChange={(e) => setNomeAluno(e.target.value)}
-                          placeholder="Digite seu nome completo"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="email">E-mail *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={emailAluno}
-                          onChange={(e) => setEmailAluno(e.target.value)}
-                          placeholder="Digite seu e-mail"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="turma">Turma *</Label>
-                        <Input
-                          id="turma"
-                          value={turmaAluno}
-                          onChange={(e) => setTurmaAluno(e.target.value)}
-                          placeholder="Digite sua turma"
-                        />
-                      </div>
-                      <Button 
-                        onClick={() => registrarPresenca('saida')}
-                        className="w-full"
-                      >
-                        Confirmar Saída
-                      </Button>
-                    </div>
+                     <div className="space-y-4">
+                       <p className="text-sm text-muted-foreground">
+                         Confirmar registro de saída da aula? A presença será registrada automaticamente com base em sua conta.
+                       </p>
+                       <Button 
+                         onClick={() => registrarPresenca('saida')}
+                         className="w-full"
+                       >
+                         Confirmar Saída
+                       </Button>
+                     </div>
                   </DialogContent>
                 </Dialog>
               )}
             </div>
+
+            {/* Status da presença */}
+            <PresenciaStatus entrada={timestampEntrada} saida={timestampSaida} />
           </div>
         </CardContent>
       </Card>
