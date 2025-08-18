@@ -2129,6 +2129,10 @@ export type Database = {
         Args: { p_email: string; p_nome_completo: string; p_role?: string }
         Returns: Json
       }
+      current_user_email: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       detect_duplicate_students: {
         Args: { student_email: string }
         Returns: {
@@ -2369,12 +2373,15 @@ export type Database = {
         Returns: undefined
       }
       registrar_entrada_email: {
-        Args: {
-          p_aula_id: string
-          p_email: string
-          p_nome: string
-          p_turma: string
-        }
+        Args:
+          | { p_aula_id: string }
+          | {
+              p_aula_id: string
+              p_email: string
+              p_nome: string
+              p_turma: string
+            }
+          | { p_aula_id: string; p_nome?: string; p_turma?: string }
         Returns: string
       }
       registrar_saida: {
@@ -2382,7 +2389,7 @@ export type Database = {
         Returns: undefined
       }
       registrar_saida_email: {
-        Args: { p_aula_id: string; p_email: string }
+        Args: { p_aula_id: string } | { p_aula_id: string; p_email: string }
         Returns: string
       }
       reprocessar_ranking_simulados: {
