@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Send, ArrowLeft, FileText, Upload, X } from "lucide-react";
-import { format, isWithinInterval, parse } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoStatus";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { RedacaoEnemForm } from "@/components/RedacaoEnemForm";
@@ -275,10 +276,10 @@ const SimuladoParticipacao = () => {
     );
   }
 
-  const agora = new Date();
-  const inicioSimulado = parse(`${simulado.data_inicio}T${simulado.hora_inicio}`, "yyyy-MM-dd'T'HH:mm", new Date());
-  const fimSimulado = parse(`${simulado.data_fim}T${simulado.hora_fim}`, "yyyy-MM-dd'T'HH:mm", new Date());
-  const simuladoDisponivel = isWithinInterval(agora, { start: inicioSimulado, end: fimSimulado });
+  // Verificar status do simulado usando nossa utility
+  const status = computeSimuladoStatus(simulado);
+  const statusInfo = getSimuladoStatusInfo(status, simulado);
+  const simuladoDisponivel = statusInfo.isActive;
 
   if (!simuladoDisponivel) {
     return (
@@ -296,11 +297,14 @@ const SimuladoParticipacao = () => {
                   <p className="text-gray-500 mb-4">
                     Este simulado não está no período de participação.
                   </p>
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <p className="text-sm text-gray-600">
-                      <strong>Período:</strong> {format(inicioSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} até {format(fimSimulado, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </p>
-                  </div>
+                   <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                     <p className="text-sm text-gray-600">
+                       <strong>Período:</strong> {simulado.data_inicio && simulado.hora_inicio && simulado.data_fim && simulado.hora_fim 
+                         ? `${simulado.data_inicio} às ${simulado.hora_inicio} até ${simulado.data_fim} às ${simulado.hora_fim}`
+                         : 'Período não definido'
+                       }
+                     </p>
+                   </div>
                   <Button onClick={() => navigate('/app')} variant="outline">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Voltar para Home
@@ -341,12 +345,17 @@ const SimuladoParticipacao = () => {
                       EM PROGRESSO
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-green-700">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>Término: {format(fimSimulado, "dd/MM 'às' HH:mm", { locale: ptBR })}</span>
-                    </div>
-                  </div>
+                   <div className="flex items-center gap-4 text-sm text-green-700">
+                     <div className="flex items-center gap-1">
+                       <Calendar className="w-4 h-4" />
+                       <span>
+                         {statusInfo.timeInfo || (simulado.data_fim && simulado.hora_fim 
+                           ? `Término: ${simulado.data_fim} às ${simulado.hora_fim}`
+                           : 'Horário não definido'
+                         )}
+                       </span>
+                     </div>
+                   </div>
                 </CardHeader>
               </Card>
             </div>
