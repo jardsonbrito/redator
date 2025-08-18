@@ -9,8 +9,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Search } from "lucide-react";
-import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
+import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone, type UnifiedCardItem } from "@/components/ui/unified-card";
 import { resolveAulaCover } from "@/utils/coverUtils";
+import { useToast } from "@/hooks/use-toast";
 
 interface Aula {
   id: string;
@@ -42,6 +43,7 @@ const Aulas = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [moduloFilter, setModuloFilter] = useState("");
+  const { toast } = useToast();
 
   const modulosDisponiveis = [
     'Competência 1',
@@ -130,6 +132,34 @@ const Aulas = () => {
 
     console.log('📊 Resultado da filtragem:', { totalFiltradas: filtered.length });
     setFilteredAulas(filtered);
+  };
+
+  const handleDownloadPdf = async (aula: Aula) => {
+    try {
+      if (!aula.pdf_url) {
+        toast({
+          title: "Erro",
+          description: "PDF não disponível.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const a = document.createElement('a');
+      a.href = aula.pdf_url;
+      a.setAttribute('download', aula.pdf_nome || 'material.pdf');
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "PDF indisponível no momento.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (isLoading) {
@@ -221,22 +251,33 @@ filteredAulas.map((aula) => {
                 if (aula.modulo) badges.push({ label: aula.modulo, tone });
                 if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
                 
+                const cardItem: UnifiedCardItem = {
+                  coverUrl,
+                  title: aula.titulo,
+                  subtitle: aula.descricao,
+                  badges,
+                  cta: {
+                    label: "Assistir",
+                    onClick: () => window.open(aula.link_conteudo, '_blank'),
+                    ariaLabel: `Assistir ${aula.titulo}`
+                  },
+                  ariaLabel: `Aula: ${aula.titulo}`
+                };
+
+                // Adicionar botão de PDF se disponível
+                if (aula.pdf_url) {
+                  cardItem.secondaryCta = {
+                    label: aula.pdf_nome ? `Baixar PDF - ${aula.pdf_nome}` : "Baixar PDF",
+                    onClick: () => handleDownloadPdf(aula),
+                    ariaLabel: `Baixar material em PDF da aula ${aula.titulo}`
+                  };
+                }
+
                 return (
                   <UnifiedCard
                     key={aula.id}
                     variant="aluno"
-                    item={{
-                      coverUrl,
-                      title: aula.titulo,
-                      subtitle: aula.descricao,
-                      badges,
-                      cta: {
-                        label: "Assistir",
-                        onClick: () => window.open(aula.link_conteudo, '_blank'),
-                        ariaLabel: `Assistir ${aula.titulo}`
-                      },
-                      ariaLabel: `Aula: ${aula.titulo}`
-                    }}
+                    item={cardItem}
                   />
                 );
               })

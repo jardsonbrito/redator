@@ -18,6 +18,7 @@ export type UnifiedCardItem = {
   meta?: { icon: LucideIcon; text: string }[];
   actions?: { icon: LucideIcon; label: string; onClick: () => void; tone?: ActionTone }[];
   cta?: { label: string; onClick: () => void; ariaLabel?: string };
+  secondaryCta?: { label: string; onClick: () => void; ariaLabel?: string };
   hrefTitle?: string;
   ariaLabel?: string;
   module?: string;
@@ -41,7 +42,7 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
   const imgSrc = useMemo(() => (broken ? '/src/assets/tema-cover-placeholder.png' : item.coverUrl || '/src/assets/tema-cover-placeholder.png'), [broken, item.coverUrl]);
 
   const showActions = variant === "admin" && item.actions && item.actions.length > 0;
-  const showCta = (variant === "corretor" || variant === "aluno") && item.cta;
+  const showCta = (variant === "corretor" || variant === "aluno") && (item.cta || item.secondaryCta);
 
   return (
     <article className="w-full" aria-label={item.ariaLabel || item.title}>
@@ -79,7 +80,7 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 
               {/* Badges */}
               {item.badges && item.badges.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-2 mt-1" aria-label="marcadores">
+                <div className="flex flex-wrap justify-start gap-2 mt-1" aria-label="marcadores">
                   {item.badges.map((b, i) => (
                     <Badge 
                       key={`${b.label}-${i}`} 
@@ -124,16 +125,29 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 
               {/* CTA (Corretor/Aluno only) */}
               {showCta && (
-                <div className="mt-3 flex justify-end sm:justify-start">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={item.cta!.onClick}
-                    aria-label={item.cta!.ariaLabel || item.cta!.label}
-                    className="w-full sm:w-auto"
-                  >
-                    {item.cta!.label}
-                  </Button>
+                <div className="mt-3 flex flex-col sm:flex-row gap-2 justify-end sm:justify-start">
+                  {item.cta && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={item.cta.onClick}
+                      aria-label={item.cta.ariaLabel || item.cta.label}
+                      className="w-full sm:w-auto"
+                    >
+                      {item.cta.label}
+                    </Button>
+                  )}
+                  {item.secondaryCta && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={item.secondaryCta.onClick}
+                      aria-label={item.secondaryCta.ariaLabel || item.secondaryCta.label}
+                      className="w-full sm:w-auto"
+                    >
+                      {item.secondaryCta.label}
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
