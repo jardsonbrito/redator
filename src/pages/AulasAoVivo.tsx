@@ -46,9 +46,11 @@ const AulasAoVivo = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAulas = async () => {
+    console.log('🔄 FETCH AULAS - Iniciando busca de aulas ao vivo...');
     try {
       setIsLoading(true);
       
+      console.log('🔍 FETCH AULAS - Consultando tabela aulas_virtuais...');
       // Buscar aulas ao vivo ativas
       const { data: aulasData, error: aulasError } = await supabase
         .from('aulas_virtuais')
@@ -57,26 +59,50 @@ const AulasAoVivo = () => {
         .eq('eh_aula_ao_vivo', true)
         .order('data_aula', { ascending: true });
 
-      if (aulasError) throw aulasError;
+      console.log('📥 FETCH AULAS - Dados retornados:', { aulasData, aulasError });
+
+      if (aulasError) {
+        console.error('❌ FETCH AULAS - Erro na consulta:', aulasError);
+        throw aulasError;
+      }
+
+      console.log(`📊 FETCH AULAS - ${aulasData?.length || 0} aulas encontradas`);
+      console.log('👤 FETCH AULAS - Dados do estudante:', studentData);
 
       // Filtrar aulas baseado na autorização
       const aulasAutorizadas = (aulasData || []).filter(aula => {
-        if (aula.permite_visitante && studentData.userType === 'visitante') return true;
-        if (studentData.userType === 'aluno' && studentData.turma) {
-          return aula.turmas_autorizadas.includes(studentData.turma);
+        console.log(`🔍 FETCH AULAS - Verificando autorização para aula: ${aula.titulo}`);
+        console.log(`   - Permite visitante: ${aula.permite_visitante}`);
+        console.log(`   - Turmas autorizadas: ${JSON.stringify(aula.turmas_autorizadas)}`);
+        console.log(`   - Tipo usuário: ${studentData.userType}`);
+        console.log(`   - Turma usuário: ${studentData.turma}`);
+        
+        if (aula.permite_visitante && studentData.userType === 'visitante') {
+          console.log(`✅ FETCH AULAS - Aula ${aula.titulo} autorizada para visitante`);
+          return true;
         }
+        if (studentData.userType === 'aluno' && studentData.turma) {
+          const autorizada = aula.turmas_autorizadas.includes(studentData.turma);
+          console.log(`${autorizada ? '✅' : '❌'} FETCH AULAS - Aula ${aula.titulo} ${autorizada ? 'autorizada' : 'não autorizada'} para turma ${studentData.turma}`);
+          return autorizada;
+        }
+        console.log(`❌ FETCH AULAS - Aula ${aula.titulo} não autorizada`);
         return false;
       });
 
+      console.log(`📊 FETCH AULAS - ${aulasAutorizadas.length} aulas autorizadas`);
       setAulas(aulasAutorizadas);
 
       // Buscar registros de presença para cada aula autorizada
+      console.log('🔄 FETCH AULAS - Buscando registros de presença...');
       for (const aula of aulasAutorizadas) {
+        console.log(`🔍 FETCH AULAS - Buscando presença para aula: ${aula.titulo} (${aula.id})`);
         await fetchPresencaAula(aula.id);
       }
 
+      console.log('✅ FETCH AULAS - Processo concluído');
     } catch (error: any) {
-      console.error('Erro ao carregar aulas:', error);
+      console.error('💥 FETCH AULAS - Erro geral:', error);
       toast.error('Erro ao carregar aulas ao vivo');
     } finally {
       setIsLoading(false);
@@ -84,10 +110,16 @@ const AulasAoVivo = () => {
   };
 
   const fetchPresencaAula = async (aulaId: string) => {
+    console.log('🔍 FETCH PRESENÇA - Iniciando para aula:', aulaId);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) return;
+      console.log('🔍 FETCH PRESENÇA - Usuário:', user?.email);
+      if (!user?.email) {
+        console.log('❌ FETCH PRESENÇA - Usuário sem email, abortando');
+        return;
+      }
 
+      console.log('🔄 FETCH PRESENÇA - Consultando tabela presenca_aulas...');
       const { data, error } = await supabase
         .from('presenca_aulas')
         .select('aula_id, entrada_at, saida_at')
@@ -95,88 +127,142 @@ const AulasAoVivo = () => {
         .eq('email_aluno', user.email)
         .maybeSingle();
 
+      console.log('📥 FETCH PRESENÇA - Resposta da consulta:', { data, error });
+
       if (error && error.code !== 'PGRST116') {
-        console.error('Erro ao buscar presença:', error);
+        console.error('❌ FETCH PRESENÇA - Erro na consulta:', error);
         return;
       }
 
+      const registro = data || { aula_id: aulaId, entrada_at: null, saida_at: null };
+      console.log('📊 FETCH PRESENÇA - Registro final:', registro);
+
       setRegistrosPresencaMap(prev => ({
         ...prev,
-        [aulaId]: data || { aula_id: aulaId, entrada_at: null, saida_at: null }
+        [aulaId]: registro
       }));
+      
+      console.log('✅ FETCH PRESENÇA - Estado atualizado para aula:', aulaId);
     } catch (error: any) {
-      console.error('Erro ao buscar presença:', error);
+      console.error('💥 FETCH PRESENÇA - Erro geral:', error);
     }
   };
 
   const onRegistrarEntrada = async (aulaId: string) => {
+    console.log('🔄 ENTRADA - Botão clicado para aula:', aulaId);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log('🔍 ENTRADA - Buscando usuário autenticado...');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('❌ ENTRADA - Erro de autenticação:', authError);
+        toast.error('Erro de autenticação');
+        return;
+      }
+      
       if (!user) {
+        console.log('❌ ENTRADA - Usuário não autenticado');
         toast.error('Faça login para registrar presença');
         return;
       }
+
+      console.log('✅ ENTRADA - Usuário autenticado:', user.email);
+      console.log('🔄 ENTRADA - Chamando RPC registrar_entrada_email...');
 
       const { data, error } = await supabase.rpc('registrar_entrada_email', {
         p_aula_id: aulaId
       });
 
+      console.log('📥 ENTRADA - Resposta da RPC:', { data, error });
+
       if (error) {
-        console.error(error);
+        console.error('❌ ENTRADA - Erro na RPC:', error);
         toast.error('Erro ao registrar entrada.');
         return;
       }
 
+      console.log('📊 ENTRADA - Data retornada:', data);
+
       if (data === 'usuario_nao_autenticado') {
+        console.log('❌ ENTRADA - RPC retornou: usuario_nao_autenticado');
         toast.error('Faça login para registrar presença');
       } else if (data === 'entrada_ok') {
+        console.log('✅ ENTRADA - RPC retornou: entrada_ok');
         toast.success('Entrada registrada!');
       } else if (data === 'entrada_ja_registrada') {
+        console.log('ℹ️ ENTRADA - RPC retornou: entrada_ja_registrada');
         toast.info('Entrada já registrada');
       } else {
+        console.log('❌ ENTRADA - RPC retornou valor inesperado:', data);
         toast.error('Não foi possível registrar a entrada.');
       }
       
+      console.log('🔄 ENTRADA - Refazendo fetch da presença...');
       await fetchPresencaAula(aulaId);
+      console.log('✅ ENTRADA - Processo concluído');
     } catch (error: any) {
-      console.error('Erro ao registrar entrada:', error);
+      console.error('💥 ENTRADA - Erro geral:', error);
       toast.error('Erro ao registrar entrada');
     }
   };
 
   const onRegistrarSaida = async (aulaId: string) => {
+    console.log('🔄 SAÍDA - Botão clicado para aula:', aulaId);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log('🔍 SAÍDA - Buscando usuário autenticado...');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('❌ SAÍDA - Erro de autenticação:', authError);
+        toast.error('Erro de autenticação');
+        return;
+      }
+      
       if (!user) {
+        console.log('❌ SAÍDA - Usuário não autenticado');
         toast.error('Faça login para registrar presença');
         return;
       }
+
+      console.log('✅ SAÍDA - Usuário autenticado:', user.email);
+      console.log('🔄 SAÍDA - Chamando RPC registrar_saida_email...');
 
       const { data, error } = await supabase.rpc('registrar_saida_email', {
         p_aula_id: aulaId
       });
 
+      console.log('📥 SAÍDA - Resposta da RPC:', { data, error });
+
       if (error) {
-        console.error(error);
+        console.error('❌ SAÍDA - Erro na RPC:', error);
         toast.error('Erro ao registrar saída.');
         return;
       }
 
+      console.log('📊 SAÍDA - Data retornada:', data);
+
       if (data === 'usuario_nao_autenticado') {
+        console.log('❌ SAÍDA - RPC retornou: usuario_nao_autenticado');
         toast.error('Faça login para registrar presença');
       } else if (data === 'precisa_entrada') {
+        console.log('⚠️ SAÍDA - RPC retornou: precisa_entrada');
         toast.error('Registre a entrada primeiro.');
       } else if (data === 'saida_ja_registrada') {
+        console.log('ℹ️ SAÍDA - RPC retornou: saida_ja_registrada');
         toast.info('Saída já registrada.');
       } else if (data === 'saida_ok') {
+        console.log('✅ SAÍDA - RPC retornou: saida_ok');
         toast.success('Saída registrada!');
       } else {
+        console.log('❌ SAÍDA - RPC retornou valor inesperado:', data);
         toast.error('Não foi possível registrar a saída.');
       }
       
+      console.log('🔄 SAÍDA - Refazendo fetch da presença...');
       await fetchPresencaAula(aulaId);
+      console.log('✅ SAÍDA - Processo concluído');
     } catch (error: any) {
-      console.error('Erro ao registrar saída:', error);
+      console.error('💥 SAÍDA - Erro geral:', error);
       toast.error('Erro ao registrar saída');
     }
   };
