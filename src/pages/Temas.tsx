@@ -19,7 +19,9 @@ export default function Temas() {
         .from('temas')
         .select('*')
         .eq('status', 'publicado') // Apenas temas publicados
-        .order('publicado_em', { ascending: false });
+        .order('publicado_em', { ascending: false, nullsFirst: false })
+        .order('updated_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false, nullsFirst: false });
       
       if (error) throw error;
       return data;
