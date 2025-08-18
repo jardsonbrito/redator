@@ -14,7 +14,7 @@ interface PresencaRecord {
   turma: string;
   entrada_at: string | null;
   saida_at: string | null;
-  aluno_id: string;
+  aluno_id: string | null;
 }
 
 interface FrequenciaAluno {

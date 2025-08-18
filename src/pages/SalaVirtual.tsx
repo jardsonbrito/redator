@@ -10,17 +10,8 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Video, Calendar, Clock, ExternalLink, LogIn, LogOut, Users } from "lucide-react";
-import { format, parse, isWithinInterval, isBefore, isAfter } from "date-fns";
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { computeStatus } from "@/utils/aulaStatus";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-import customParseFormat from "dayjs/plugin/customParseFormat";
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(customParseFormat);
+import { usePresenca } from "@/components/aula-virtual/usePresenca";
 
 interface AulaVirtual {
   id: string;
@@ -48,11 +39,16 @@ const SalaVirtual = () => {
   const [aulas, setAulas] = useState<AulaVirtual[]>([]);
   const [registrosPresenca, setRegistrosPresenca] = useState<RegistroPresenca[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState<{tipo: 'entrada' | 'saida', aulaId: string} | null>(null);
-  const [formData, setFormData] = useState({
-    nome: "",
-    sobrenome: ""
-  });
+  
+  const {
+    openDialog,
+    setOpenDialog,
+    formData,
+    setFormData,
+    registrarPresenca,
+    jaRegistrou,
+    openPresencaDialog
+  } = usePresenca(registrosPresenca, setRegistrosPresenca);
 
   const fetchAulas = async () => {
     try {
@@ -82,190 +78,12 @@ const SalaVirtual = () => {
     }
   };
 
-  const fetchRegistrosPresenca = async () => {
-    try {
-      const email = studentData.userType === 'visitante' 
-        ? studentData.visitanteInfo?.email || 'visitante@exemplo.com'
-        : studentData.email || 'aluno@exemplo.com';
-
-      const { data, error } = await (supabase as any)
-        .from('presenca_aulas')
-        .select('aula_id, entrada_at, saida_at')
-        .eq('email_aluno', email);
-
-      if (error) throw error;
-      
-      const transformedData = (data || []).map((record: any) => ({
-        aula_id: record.aula_id,
-        aluno_id: '', // Não usado mais
-        entrada_at: record.entrada_at || null,
-        saida_at: record.saida_at || null
-      }));
-      
-      setRegistrosPresenca(transformedData as RegistroPresenca[]);
-    } catch (error: any) {
-      console.error('Erro ao buscar registros de presença:', error);
-    }
-  };
-
-  const registrarPresenca = async (tipo: 'entrada' | 'saida', aulaId: string, aulaData?: string, horarioInicio?: string, horarioFim?: string) => {
-    if (!formData.nome.trim() || !formData.sobrenome.trim()) {
-      toast.error("Preencha nome e sobrenome");
-      return;
-    }
-
-    // Validar horários se fornecidos
-    if (aulaData && horarioInicio && horarioFim) {
-      if (tipo === 'entrada' && !podeRegistrarEntradaPorTempo(aulaData, horarioInicio, horarioFim)) {
-        toast.error('A presença só pode ser registrada a partir do início da aula.');
-        return;
-      }
-      
-      if (tipo === 'saida' && !podeRegistrarSaidaPorTempo(aulaData, horarioInicio, horarioFim)) {
-        toast.error('A saída só pode ser registrada de 10 min antes até 10 min após o término.');
-        return;
-      }
-    }
-
-    try {
-      const email = studentData.userType === 'visitante' 
-        ? studentData.visitanteInfo?.email || 'visitante@exemplo.com'
-        : studentData.email || 'aluno@exemplo.com';
-      
-      const turma = studentData.userType === 'visitante' ? 'visitante' : studentData.turma;
-      const agora = new Date().toISOString();
-
-      if (tipo === 'entrada') {
-        // Registrar entrada usando upsert por (aula_id, email_aluno)
-        const { error } = await (supabase as any)
-          .from('presenca_aulas')
-          .upsert([{
-            aula_id: aulaId,
-            email_aluno: email,
-            nome_aluno: formData.nome.trim(),
-            sobrenome_aluno: formData.sobrenome.trim(),
-            turma: turma,
-            entrada_at: agora
-          }], { 
-            onConflict: 'aula_id,email_aluno',
-            ignoreDuplicates: false 
-          });
-
-        if (error) {
-          console.error('Erro ao registrar entrada:', error);
-          toast.error('Erro ao registrar entrada. Verifique suas permissões.');
-          return;
-        }
-      } else {
-        // Para saída, verificar se existe entrada e atualizar
-        const { data: row } = await (supabase as any)
-          .from('presenca_aulas')
-          .select('entrada_at, saida_at')
-          .eq('aula_id', aulaId)
-          .eq('email_aluno', email)
-          .single();
-
-        if (!(row as any)?.entrada_at) {
-          toast.error('Registre a entrada primeiro.');
-          return;
-        }
-        
-        if ((row as any)?.saida_at) {
-          toast.error('Saída já registrada.');
-          return;
-        }
-
-        // Atualizar com saída
-        const { error } = await (supabase as any)
-          .from('presenca_aulas')
-          .update({ saida_at: agora })
-          .eq('aula_id', aulaId)
-          .eq('email_aluno', email);
-
-        if (error) {
-          console.error('Erro ao registrar saída:', error);
-          toast.error('Erro ao registrar saída. Verifique suas permissões.');
-          return;
-        }
-      }
-
-      toast.success(`${tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
-      setOpenDialog(null);
-      setFormData({ nome: "", sobrenome: "" });
-      fetchRegistrosPresenca();
-    } catch (error: any) {
-      console.error('Erro ao registrar presença:', error);
-      toast.error('Erro ao registrar presença');
-    }
-  };
-
   const abrirAula = (aula: AulaVirtual) => {
-    if (aula.abrir_aba_externa) {
-      window.open(aula.link_meet, '_blank');
-    } else {
-      // Implementar iframe se necessário
-      window.open(aula.link_meet, '_blank');
-    }
-  };
-
-  const jaRegistrou = (aulaId: string, tipo: 'entrada' | 'saida') => {
-    const registro = registrosPresenca.find(r => r.aula_id === aulaId);
-    if (!registro) return false;
-    
-    if (tipo === 'entrada') {
-      return !!registro.entrada_at;
-    } else {
-      return !!registro.saida_at;
-    }
-  };
-
-  const podeRegistrarSaida = (aulaId: string) => {
-    // Só pode registrar saída se já tiver registrado entrada
-    return jaRegistrou(aulaId, 'entrada') && !jaRegistrou(aulaId, 'saida');
-  };
-
-  const podeRegistrarEntradaPorTempo = (aulaData: string, horarioInicio: string, horarioFim: string) => {
-    try {
-      const timezone = 'America/Sao_Paulo';
-      // Convert from YYYY-MM-DD to DD/MM/YYYY format for dayjs parsing
-      const dateFormatted = aulaData.split('-').reverse().join('/');
-      const start = dayjs.tz(`${dateFormatted} ${horarioInicio}`, 'DD/MM/YYYY HH:mm', timezone);
-      const end = dayjs.tz(`${dateFormatted} ${horarioFim}`, 'DD/MM/YYYY HH:mm', timezone);
-      const now = dayjs().tz(timezone);
-      
-      return now.isAfter(start) && now.isBefore(end);
-    } catch (error) {
-      return false;
-    }
-  };
-
-  const podeRegistrarSaidaPorTempo = (aulaData: string, horarioInicio: string, horarioFim: string) => {
-    try {
-      const timezone = 'America/Sao_Paulo';
-      // Convert from YYYY-MM-DD to DD/MM/YYYY format for dayjs parsing
-      const dateFormatted = aulaData.split('-').reverse().join('/');
-      const end = dayjs.tz(`${dateFormatted} ${horarioFim}`, 'DD/MM/YYYY HH:mm', timezone);
-      const exitOpenAt = end.subtract(10, 'minute');
-      const exitCloseAt = end.add(10, 'minute');
-      const now = dayjs().tz(timezone);
-      
-      return now.isAfter(exitOpenAt) && now.isBefore(exitCloseAt);
-    } catch (error) {
-      return false;
-    }
-  };
-
-  const openPresencaDialog = (tipo: 'entrada' | 'saida', aulaId: string) => {
-    setFormData({
-      nome: studentData.nomeUsuario.split(' ')[0] || "",
-      sobrenome: studentData.nomeUsuario.split(' ').slice(1).join(' ') || ""
-    });
-    setOpenDialog({ tipo, aulaId });
+    window.open(aula.link_meet, '_blank');
   };
 
   useEffect(() => {
     fetchAulas();
-    fetchRegistrosPresenca();
   }, [studentData]);
 
   if (isLoading) {
@@ -387,7 +205,7 @@ const SalaVirtual = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={jaRegistrou(aula.id, 'entrada') || !podeRegistrarEntradaPorTempo(aula.data_aula, aula.horario_inicio, aula.horario_fim)}
+                          disabled={jaRegistrou(aula.id, 'entrada')}
                           onClick={() => openPresencaDialog('entrada', aula.id)}
                           className="w-full text-xs sm:text-sm"
                         >
@@ -417,7 +235,7 @@ const SalaVirtual = () => {
                             />
                           </div>
                           <Button 
-                            onClick={() => registrarPresenca('entrada', aula.id, aula.data_aula, aula.horario_inicio, aula.horario_fim)}
+                            onClick={() => registrarPresenca('entrada', aula.id)}
                             className="w-full"
                           >
                             Confirmar Entrada
@@ -431,14 +249,13 @@ const SalaVirtual = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={jaRegistrou(aula.id, 'saida') || !podeRegistrarSaida(aula.id) || !podeRegistrarSaidaPorTempo(aula.data_aula, aula.horario_inicio, aula.horario_fim)}
                           onClick={() => openPresencaDialog('saida', aula.id)}
                           className="w-full text-xs sm:text-sm"
                         >
                           <LogOut className="w-4 h-4 mr-1 flex-shrink-0" />
-                          <span className="truncate">{jaRegistrou(aula.id, 'saida') ? 'Saída OK' : 
-                            !jaRegistrou(aula.id, 'entrada') ? 'Registre entrada primeiro' : 
-                            !podeRegistrarSaidaPorTempo(aula.data_aula, aula.horario_inicio, aula.horario_fim) ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}</span>
+                          <span className="truncate">
+                            {jaRegistrou(aula.id, 'saida') ? 'Saída OK' : 'Registrar Saída'}
+                          </span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
@@ -463,7 +280,7 @@ const SalaVirtual = () => {
                             />
                           </div>
                           <Button 
-                            onClick={() => registrarPresenca('saida', aula.id, aula.data_aula, aula.horario_inicio, aula.horario_fim)}
+                            onClick={() => registrarPresenca('saida', aula.id)}
                             className="w-full"
                           >
                             Confirmar Saída
@@ -472,6 +289,25 @@ const SalaVirtual = () => {
                       </DialogContent>
                     </Dialog>
                   </div>
+
+                  {/* Status da Presença */}
+                  {(jaRegistrou(aula.id, 'entrada') || jaRegistrou(aula.id, 'saida')) && (
+                    <div className="bg-white/90 border rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-700 mb-2">Status da Presença:</h4>
+                      {jaRegistrou(aula.id, 'entrada') && (
+                        <div className="flex items-center gap-2 text-green-700 text-sm">
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          <span>✅ Entrada: {registrosPresenca.find(r => r.aula_id === aula.id)?.entrada_at && new Date(registrosPresenca.find(r => r.aula_id === aula.id)!.entrada_at!).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
+                        </div>
+                      )}
+                      {jaRegistrou(aula.id, 'saida') && (
+                        <div className="flex items-center gap-2 text-blue-700 text-sm mt-1">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          <span>🚪 Saída: {registrosPresenca.find(r => r.aula_id === aula.id)?.saida_at && new Date(registrosPresenca.find(r => r.aula_id === aula.id)!.saida_at!).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               )

@@ -775,34 +775,43 @@ export type Database = {
       }
       presenca_aulas: {
         Row: {
+          aluno_id: string | null
           aula_id: string
           criado_em: string
           data_registro: string
           email_aluno: string
+          entrada_at: string | null
           id: string
           nome_aluno: string
+          saida_at: string | null
           sobrenome_aluno: string
           tipo_registro: string
           turma: string
         }
         Insert: {
+          aluno_id?: string | null
           aula_id: string
           criado_em?: string
           data_registro?: string
           email_aluno: string
+          entrada_at?: string | null
           id?: string
           nome_aluno: string
+          saida_at?: string | null
           sobrenome_aluno: string
           tipo_registro: string
           turma: string
         }
         Update: {
+          aluno_id?: string | null
           aula_id?: string
           criado_em?: string
           data_registro?: string
           email_aluno?: string
+          entrada_at?: string | null
           id?: string
           nome_aluno?: string
+          saida_at?: string | null
           sobrenome_aluno?: string
           tipo_registro?: string
           turma?: string
@@ -816,6 +825,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      presenca_aulas_backup: {
+        Row: {
+          aula_id: string | null
+          criado_em: string | null
+          data_registro: string | null
+          email_aluno: string | null
+          id: string | null
+          nome_aluno: string | null
+          saida_at: string | null
+          sobrenome_aluno: string | null
+          tipo_registro: string | null
+          turma: string | null
+        }
+        Insert: {
+          aula_id?: string | null
+          criado_em?: string | null
+          data_registro?: string | null
+          email_aluno?: string | null
+          id?: string | null
+          nome_aluno?: string | null
+          saida_at?: string | null
+          sobrenome_aluno?: string | null
+          tipo_registro?: string | null
+          turma?: string | null
+        }
+        Update: {
+          aula_id?: string | null
+          criado_em?: string | null
+          data_registro?: string | null
+          email_aluno?: string | null
+          id?: string | null
+          nome_aluno?: string | null
+          saida_at?: string | null
+          sobrenome_aluno?: string | null
+          tipo_registro?: string | null
+          turma?: string | null
+        }
+        Relationships: []
       }
       professor_access_logs: {
         Row: {

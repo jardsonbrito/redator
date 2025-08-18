@@ -71,7 +71,8 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
             nome_aluno: formData.nome.trim(),
             sobrenome_aluno: formData.sobrenome.trim(),
             turma: 'Aluno', // Pode ser ajustado conforme necessário
-            entrada_at: agora
+            entrada_at: agora,
+            tipo_registro: 'entrada' // Manter compatibilidade
           }], { 
             onConflict: 'aula_id,aluno_id'
           });
