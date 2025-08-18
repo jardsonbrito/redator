@@ -1,32 +1,32 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText } from "lucide-react";
+import { BookOpen, FileText, X as ClearIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
+import { useTemasFilters } from '@/hooks/useTemasFilters';
+import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
+import { MultiSelectDropdown } from "@/components/filters/MultiSelectDropdown";
 
 export default function Temas() {
-  const { data: temas, isLoading, error } = useQuery({
-    queryKey: ['temas-publicos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('temas')
-        .select('*')
-        .eq('status', 'publicado') // Apenas temas publicados
-        .order('publicado_em', { ascending: false, nullsFirst: false })
-        .order('updated_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false, nullsFirst: false });
-      
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Usar o hook de filtros
+  const {
+    temas,
+    isLoading,
+    error,
+    fraseFilter,
+    selectedEixos,
+    uniqueEixos,
+    fraseSuggestions,
+    hasActiveFilters,
+    updateFraseFilter,
+    updateSelectedEixos,
+    clearFilters,
+  } = useTemasFilters();
 
   if (isLoading) {
     return (
@@ -66,14 +66,82 @@ export default function Temas() {
           </p>
         </div>
 
-        {!temas || temas.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-redator-primary mb-2">Nenhum tema disponível</h3>
-            <p className="text-redator-accent">
-              Novos temas serão adicionados em breve. Volte mais tarde!
-            </p>
+        {/* Seção de Filtros */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="flex-1">
+              <AutocompleteInput
+                value={fraseFilter}
+                onValueChange={updateFraseFilter}
+                suggestions={fraseSuggestions}
+                placeholder="Filtrar por frase temática..."
+                className="w-full"
+              />
+            </div>
+            
+            <div className="w-full sm:w-64">
+              <MultiSelectDropdown
+                options={uniqueEixos}
+                selectedValues={selectedEixos}
+                onSelectionChange={updateSelectedEixos}
+                placeholder="Todos os eixos"
+                className="w-full"
+              />
+            </div>
           </div>
+
+          {/* Indicador de filtros ativos e botão limpar */}
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>
+                  {temas?.length || 0} tema(s) encontrado(s)
+                  {fraseFilter && ` para "${fraseFilter}"`}
+                  {selectedEixos.length > 0 && ` em ${selectedEixos.length} eixo(s)`}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="text-sm"
+              >
+                <ClearIcon className="h-4 w-4 mr-2" />
+                Limpar filtros
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {!temas || temas.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-redator-primary mb-2">
+                {hasActiveFilters 
+                  ? "Nenhum tema encontrado" 
+                  : "Nenhum tema disponível"
+                }
+              </h3>
+              <p className="text-redator-accent">
+                {hasActiveFilters 
+                  ? "Tente ajustar os filtros para encontrar temas." 
+                  : "Novos temas serão adicionados em breve. Volte mais tarde!"
+                }
+              </p>
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="mt-4"
+                >
+                  <ClearIcon className="h-4 w-4 mr-2" />
+                  Limpar filtros
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {temas.map((tema) => (

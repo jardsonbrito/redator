@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, CheckCircle, X as ClearIcon } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -20,26 +19,42 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TemaForm } from './TemaForm';
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
+import { useAdminTemasFilters } from '@/hooks/useAdminTemasFilters';
+import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
+import { supabase } from '@/integrations/supabase/client';
 
 export const TemaList = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { data: temas, isLoading, refetch } = useQuery({
-    queryKey: ['admin-temas'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('temas')
-        .select('*')
-        .order('publicado_em', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // Usar o hook de filtros admin
+  const {
+    temas,
+    isLoading,
+    error,
+    fraseFilter,
+    statusFilter,
+    statusOptions,
+    fraseSuggestions,
+    hasActiveFilters,
+    updateFraseFilter,
+    updateStatusFilter,
+    clearFilters,
+  } = useAdminTemasFilters();
+
+  const refetch = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin-temas-all'] });
+  };
 
   const getThemeStatus = (tema: any) => {
     const now = new Date();
@@ -282,7 +297,61 @@ export const TemaList = () => {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-redator-primary">Temas Cadastrados</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-redator-primary">Temas Cadastrados</h3>
+      </div>
+      
+      {/* Seção de Filtros Admin */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="flex-1">
+            <AutocompleteInput
+              value={fraseFilter}
+              onValueChange={updateFraseFilter}
+              suggestions={fraseSuggestions}
+              placeholder="Filtrar por frase temática..."
+              className="w-full"
+            />
+          </div>
+          
+          <div className="w-full sm:w-64">
+            <Select value={statusFilter} onValueChange={updateStatusFilter}>
+              <SelectTrigger className="bg-background border border-input">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border border-border z-50">
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Indicador de filtros ativos e botão limpar */}
+        {hasActiveFilters && (
+          <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                {temas?.length || 0} tema(s) encontrado(s)
+                {fraseFilter && ` para "${fraseFilter}"`}
+                {statusFilter && statusFilter !== 'todos' && ` com status "${statusOptions.find(s => s.value === statusFilter)?.label}"`}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+              className="text-sm"
+            >
+              <ClearIcon className="h-4 w-4 mr-2" />
+              Limpar filtros
+            </Button>
+          </div>
+        )}
+      </div>
       
       {temas && temas.length > 0 ? (
         <div className="grid gap-4">
@@ -435,7 +504,25 @@ export const TemaList = () => {
           ))}
         </div>
       ) : (
-        <p className="text-redator-accent text-center py-8">Nenhum tema cadastrado ainda.</p>
+        <div className="text-center py-8">
+          <p className="text-redator-accent">
+            {hasActiveFilters 
+              ? "Nenhum tema encontrado para os filtros aplicados." 
+              : "Nenhum tema cadastrado ainda."
+            }
+          </p>
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+              className="mt-4"
+            >
+              <ClearIcon className="h-4 w-4 mr-2" />
+              Limpar filtros
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
