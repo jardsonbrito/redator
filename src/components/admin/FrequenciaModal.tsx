@@ -42,37 +42,56 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
     
     setIsLoading(true);
     try {
+      console.log('Buscando frequência para aula ID:', aulaId);
+      
       const { data, error } = await supabase
         .from('presenca_aulas')
-        .select('aluno_id, nome_aluno, email_aluno, turma, entrada_at, saida_at')
+        .select('*')
         .eq('aula_id', aulaId)
         .order('nome_aluno', { ascending: true });
 
       if (error) throw error;
 
-      // Processar registros com nova estrutura (entrada_at/saida_at)
-      const frequenciaList: FrequenciaAluno[] = data?.map((record: any) => {
-        let status: 'em_aula' | 'presente' | 'ausente' = 'ausente';
+      console.log('Registros de presença encontrados:', data);
+
+      // Processar registros agrupando por aluno (email)
+      const alunosMap = new Map<string, FrequenciaAluno>();
+
+      data?.forEach((record: any) => {
+        const alunoKey = record.email_aluno;
         
-        // Determinar status baseado em entrada_at e saida_at
-        if (record.entrada_at && record.saida_at) {
-          status = 'presente'; // Entrada e saída registradas
-        } else if (record.entrada_at && !record.saida_at) {
-          status = 'em_aula'; // Apenas entrada registrada
-        } else {
-          status = 'ausente'; // Sem entrada
+        let alunoExistente = alunosMap.get(alunoKey);
+        
+        if (!alunoExistente) {
+          alunoExistente = {
+            nome: record.nome_aluno,
+            email: record.email_aluno,
+            turma: record.turma,
+            status: 'ausente'
+          };
+          alunosMap.set(alunoKey, alunoExistente);
         }
 
-        return {
-          nome: record.nome_aluno,
-          email: record.email_aluno,
-          turma: record.turma,
-          entrada: record.entrada_at || undefined,
-          saida: record.saida_at || undefined,
-          status
-        };
-      }) || [];
+        // Atualizar entrada e saída baseado nos registros
+        if (record.entrada_at) {
+          alunoExistente.entrada = record.entrada_at;
+        }
+        
+        if (record.saida_at) {
+          alunoExistente.saida = record.saida_at;
+        }
 
+        // Determinar status
+        if (alunoExistente.entrada && alunoExistente.saida) {
+          alunoExistente.status = 'presente'; // Entrada e saída registradas
+        } else if (alunoExistente.entrada && !alunoExistente.saida) {
+          alunoExistente.status = 'em_aula'; // Apenas entrada registrada
+        }
+      });
+
+      const frequenciaList = Array.from(alunosMap.values());
+      console.log('Lista de frequência processada:', frequenciaList);
+      
       setFrequenciaData(frequenciaList);
     } catch (error) {
       console.error('Erro ao buscar frequência:', error);
