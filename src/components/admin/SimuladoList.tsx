@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Users, Calendar, Clock, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format, isAfter, isBefore } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { computeSimuladoStatus, getAdminStatusInfo } from "@/utils/simuladoStatus";
 import { SimuladoForm } from "./SimuladoForm";
 import { AdminCard, AdminCardSkeleton, type BadgeTone } from "@/components/admin/AdminCard";
 import { resolveCover } from "@/utils/coverUtils";
@@ -76,17 +77,8 @@ const SimuladoList = () => {
   });
 
   const getStatusSimulado = (simulado: any) => {
-    const now = new Date();
-    const inicio = new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-    const fim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
-    
-    if (isBefore(now, inicio)) {
-      return { status: "Agendado", color: "bg-blue-500" };
-    } else if (isAfter(now, inicio) && isBefore(now, fim)) {
-      return { status: "Ativo", color: "bg-green-500" };
-    } else {
-      return { status: "Encerrado", color: "bg-gray-500" };
-    }
+    const status = computeSimuladoStatus(simulado);
+    return getAdminStatusInfo(status);
   };
 
   const handleEdit = (simulado: any) => {
@@ -142,7 +134,7 @@ const SimuladoList = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
           {simulados.map((simulado) => {
             const statusInfo = getStatusSimulado(simulado);
             const tema = simulado.tema as any | null;
