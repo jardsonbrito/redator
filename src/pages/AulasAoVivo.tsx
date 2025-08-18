@@ -10,6 +10,12 @@ import { toast } from "sonner";
 import { parse, isWithinInterval, subMinutes, isBefore, isAfter } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { computeStatus } from "@/utils/aulaStatus";
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 interface AulaAoVivo {
   id: string;
@@ -28,14 +34,14 @@ interface AulaAoVivo {
 
 interface RegistroPresenca {
   aula_id: string;
-  tipo_registro: 'entrada' | 'saida';
-  data_registro: string;
+  entrada_at: string | null;
+  saida_at: string | null;
 }
 
 const AulasAoVivo = () => {
   const { studentData } = useStudentAuth();
   const [aulas, setAulas] = useState<AulaAoVivo[]>([]);
-  const [registrosPresenca, setRegistrosPresenca] = useState<RegistroPresenca[]>([]);
+  const [registrosPresencaMap, setRegistrosPresencaMap] = useState<Record<string, RegistroPresenca>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAulas = async () => {
@@ -63,22 +69,9 @@ const AulasAoVivo = () => {
 
       setAulas(aulasAutorizadas);
 
-      // Buscar registros de presença do aluno
-      if (studentData.userType === 'aluno' || studentData.userType === 'visitante') {
-        const email = studentData.userType === 'visitante' 
-          ? studentData.visitanteInfo?.email || 'visitante@exemplo.com'
-          : 'aluno@exemplo.com';
-        
-        const turma = studentData.userType === 'visitante' ? 'visitante' : studentData.turma;
-
-        const { data: presencaData, error: presencaError } = await supabase
-          .from('presenca_aulas')
-          .select('aula_id, tipo_registro, data_registro')
-          .eq('email_aluno', email)
-          .eq('turma', turma);
-
-        if (presencaError) throw presencaError;
-        setRegistrosPresenca((presencaData || []) as RegistroPresenca[]);
+      // Buscar registros de presença para cada aula autorizada
+      for (const aula of aulasAutorizadas) {
+        await fetchPresencaAula(aula.id);
       }
 
     } catch (error: any) {
@@ -89,56 +82,110 @@ const AulasAoVivo = () => {
     }
   };
 
-  const registrarPresenca = async (aulaId: string, tipo: 'entrada' | 'saida') => {
+  const fetchPresencaAula = async (aulaId: string) => {
     try {
-      const email = studentData.userType === 'visitante' 
-        ? studentData.visitanteInfo?.email || 'visitante@exemplo.com'
-        : 'aluno@exemplo.com';
-      
-      const turma = studentData.userType === 'visitante' ? 'visitante' : studentData.turma;
-      const nomeCompleto = studentData.nomeUsuario || 'Usuário';
-      const partesNome = nomeCompleto.split(' ');
-      const nome = partesNome[0] || 'Usuário';
-      const sobrenome = partesNome.slice(1).join(' ') || '';
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) return;
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('presenca_aulas')
-        .insert([{
-          aula_id: aulaId,
-          nome_aluno: nome,
-          sobrenome_aluno: sobrenome,
-          email_aluno: email,
-          turma: turma,
-          tipo_registro: tipo
-        }]);
+        .select('aula_id, entrada_at, saida_at')
+        .eq('aula_id', aulaId)
+        .eq('email_aluno', user.email)
+        .maybeSingle();
 
-      if (error) {
-        if (error.code === '23505') {
-          toast.error(`Você já registrou ${tipo} para esta aula`);
-          return;
-        }
-        throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao buscar presença:', error);
+        return;
       }
 
-      const agora = new Date();
-      const novoRegistro = {
-        aula_id: aulaId,
-        tipo_registro: tipo,
-        data_registro: agora.toISOString()
-      };
-
-      setRegistrosPresenca(prev => [...prev, novoRegistro]);
-      
-      toast.success(`${tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada às ${agora.toLocaleTimeString('pt-BR')}`);
+      setRegistrosPresencaMap(prev => ({
+        ...prev,
+        [aulaId]: data || { aula_id: aulaId, entrada_at: null, saida_at: null }
+      }));
     } catch (error: any) {
-      console.error('Erro ao registrar presença:', error);
-      toast.error('Erro ao registrar presença');
+      console.error('Erro ao buscar presença:', error);
     }
   };
 
-  const jaRegistrou = (aulaId: string, tipo: 'entrada' | 'saida') => {
-    return registrosPresenca.some(r => r.aula_id === aulaId && r.tipo_registro === tipo);
+  const onRegistrarEntrada = async (aulaId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Faça login para registrar presença');
+        return;
+      }
+
+      const emailAluno = user.email!;
+      const turmaAluno = studentData?.turma ?? 'visitante';
+      const nomeAluno = user.user_metadata?.full_name ?? studentData?.nomeUsuario ?? 'Aluno';
+
+      const { data, error } = await supabase.rpc('registrar_entrada_email', {
+        p_aula_id: aulaId,
+        p_email: emailAluno,
+        p_nome: nomeAluno,
+        p_turma: turmaAluno,
+      });
+
+      if (error) {
+        console.error(error);
+        toast.error('Erro ao registrar entrada.');
+        return;
+      }
+
+      if (data === 'entrada_ok') {
+        toast.success('Entrada registrada!');
+      } else {
+        toast.error('Não foi possível registrar a entrada.');
+      }
+      
+      await fetchPresencaAula(aulaId);
+    } catch (error: any) {
+      console.error('Erro ao registrar entrada:', error);
+      toast.error('Erro ao registrar entrada');
+    }
   };
+
+  const onRegistrarSaida = async (aulaId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Faça login para registrar presença');
+        return;
+      }
+
+      const emailAluno = user.email!;
+
+      const { data, error } = await supabase.rpc('registrar_saida_email', {
+        p_aula_id: aulaId,
+        p_email: emailAluno,
+      });
+
+      if (error) {
+        console.error(error);
+        toast.error('Erro ao registrar saída.');
+        return;
+      }
+
+      if (data === 'precisa_entrada') {
+        toast.error('Registre a entrada primeiro.');
+      } else if (data === 'saida_ja_registrada') {
+        toast.info('Saída já registrada.');
+      } else if (data === 'saida_ok') {
+        toast.success('Saída registrada!');
+      } else {
+        toast.error('Não foi possível registrar a saída.');
+      }
+      
+      await fetchPresencaAula(aulaId);
+    } catch (error: any) {
+      console.error('Erro ao registrar saída:', error);
+      toast.error('Erro ao registrar saída');
+    }
+  };
+
+  const formatTimestamp = (iso?: string | null) =>
+    iso ? dayjs(iso).tz('America/Sao_Paulo').format('HH:mm:ss') : '—';
 
   const podeRegistrarSaida = (aula: AulaAoVivo) => {
     const TZ = 'America/Sao_Paulo';
@@ -203,9 +250,9 @@ const AulasAoVivo = () => {
           <div className="grid gap-6">
             {aulas.map((aula) => {
               const status = getStatusAula(aula);
-              const entradaRegistrada = jaRegistrou(aula.id, 'entrada');
-              const saidaRegistrada = jaRegistrou(aula.id, 'saida');
-              const podeSaida = podeRegistrarSaida(aula);
+              const registro = registrosPresencaMap[aula.id];
+              const entradaRegistrada = !!registro?.entrada_at;
+              const saidaRegistrada = !!registro?.saida_at;
 
               return (
                 <Card key={aula.id} className="overflow-hidden relative">
@@ -288,24 +335,23 @@ const AulasAoVivo = () => {
                       {(status === 'ao_vivo' || status === 'encerrada') && (
                         <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3">
                           <Button
-                            onClick={() => registrarPresenca(aula.id, 'entrada')}
+                            onClick={() => onRegistrarEntrada(aula.id)}
                             variant="outline"
                             disabled={entradaRegistrada}
                             className={`${entradaRegistrada ? 'bg-green-50 text-green-700' : ''} text-xs sm:text-sm`}
                           >
                             <LogIn className="w-4 h-4 mr-2 flex-shrink-0" />
-                            <span className="truncate">{entradaRegistrada ? '✅ Entrada Registrada' : 'Registrar Entrada'}</span>
+                            <span className="truncate">{entradaRegistrada ? 'Entrada Registrada' : 'Registrar Entrada'}</span>
                           </Button>
 
                           <Button
-                            onClick={() => registrarPresenca(aula.id, 'saida')}
+                            onClick={() => onRegistrarSaida(aula.id)}
                             variant="outline"
-                            disabled={saidaRegistrada || !podeSaida}
+                            disabled={saidaRegistrada}
                             className={`${saidaRegistrada ? 'bg-green-50 text-green-700' : ''} text-xs sm:text-sm`}
                           >
                             <LogOut className="w-4 h-4 mr-2 flex-shrink-0" />
-                            <span className="truncate">{saidaRegistrada ? '✅ Saída Registrada' : 
-                             !podeSaida ? 'Disponível a partir do início da aula' : 'Registrar Saída'}</span>
+                            <span className="truncate">{saidaRegistrada ? 'Saída Registrada' : 'Registrar Saída'}</span>
                           </Button>
                         </div>
                       )}
@@ -315,26 +361,8 @@ const AulasAoVivo = () => {
                         <div className="bg-gray-50 p-3 rounded-md">
                           <p className="text-sm font-medium text-gray-700 mb-1">Status da Presença:</p>
                           <div className="flex gap-4 text-xs">
-                            {entradaRegistrada && (
-                              <span className="text-green-600">
-                                ✅ Entrada: {registrosPresenca
-                                  .find(r => r.aula_id === aula.id && r.tipo_registro === 'entrada')
-                                  ?.data_registro && new Date(registrosPresenca
-                                    .find(r => r.aula_id === aula.id && r.tipo_registro === 'entrada')!
-                                    .data_registro).toLocaleTimeString('pt-BR')
-                                }
-                              </span>
-                            )}
-                            {saidaRegistrada && (
-                              <span className="text-green-600">
-                                ✅ Saída: {registrosPresenca
-                                  .find(r => r.aula_id === aula.id && r.tipo_registro === 'saida')
-                                  ?.data_registro && new Date(registrosPresenca
-                                    .find(r => r.aula_id === aula.id && r.tipo_registro === 'saida')!
-                                    .data_registro).toLocaleTimeString('pt-BR')
-                                }
-                              </span>
-                            )}
+                            <div>Entrada: {formatTimestamp(registro?.entrada_at)}</div>
+                            <div>Saída: {formatTimestamp(registro?.saida_at)}</div>
                           </div>
                         </div>
                       )}
