@@ -47,10 +47,10 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
   return (
     <article className="w-full" aria-label={item.ariaLabel || item.title} role="article">
       <Card className="rounded-2xl border shadow-sm bg-card transition-shadow hover:shadow-md">
-        <CardContent className="p-4 md:p-5">
-          <div className="grid md:grid-cols-[320px_minmax(0,1fr)] items-start gap-4 md:gap-5">
+        <CardContent className="p-4 lg:p-6">
+          <div className="grid lg:grid-cols-[280px_minmax(0,1fr)] items-start gap-4 lg:gap-6">
             {/* Thumb - 16:9 aspect ratio */}
-            <div className="relative w-full aspect-video overflow-hidden rounded-xl bg-muted transition-transform hover:scale-105">
+            <div className="relative w-full aspect-video overflow-hidden rounded-xl bg-muted transition-transform hover:scale-[1.02] group">
               <img
                 src={imgSrc}
                 alt={`Capa de ${item.title}`}
@@ -79,19 +79,19 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 
               {item.hrefTitle ? (
                 <a href={item.hrefTitle} className="focus:outline-none focus:ring-2 focus:ring-ring rounded-sm">
-                  <h3 className="text-lg md:text-xl font-semibold leading-tight line-clamp-2">{item.title}</h3>
+                  <h3 className="text-xl lg:text-2xl font-semibold leading-tight line-clamp-2">{item.title}</h3>
                 </a>
               ) : (
-                <h3 className="text-lg md:text-xl font-semibold leading-tight line-clamp-2">{item.title}</h3>
+                <h3 className="text-xl lg:text-2xl font-semibold leading-tight line-clamp-2">{item.title}</h3>
               )}
 
               {item.subtitle && (
-                <p className="text-muted-foreground line-clamp-2">{item.subtitle}</p>
+                <p className="text-base text-muted-foreground line-clamp-2">{item.subtitle}</p>
               )}
 
               {/* Meta */}
               {item.meta && item.meta.length > 0 && (
-                <ul className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                <ul className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
                   {item.meta.map((m, i) => (
                     <li key={`${m.text}-${i}`} className="flex items-center gap-1.5">
                       <m.icon className="h-4 w-4" aria-hidden="true" />
@@ -121,12 +121,13 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 
               {/* CTA (Corretor/Aluno only) */}
               {showCta && (
-                <div className="mt-3 flex flex-col md:flex-row gap-2 md:justify-end">
+                <div className="mt-4 flex flex-col lg:flex-row gap-3 lg:justify-end">
                   {item.cta && (
                     <Button
                       onClick={item.cta.onClick}
                       aria-label={item.cta.ariaLabel || item.cta.label}
-                      className="w-full md:w-auto"
+                      className="w-full lg:w-auto"
+                      size="lg"
                     >
                       {item.cta.label}
                     </Button>
@@ -136,7 +137,8 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
                       variant="outline"
                       onClick={item.secondaryCta.onClick}
                       aria-label={item.secondaryCta.ariaLabel || item.secondaryCta.label}
-                      className="w-full md:w-auto"
+                      className="w-full lg:w-auto"
+                      size="lg"
                     >
                       {item.secondaryCta.label}
                     </Button>
@@ -154,23 +156,23 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 export function UnifiedCardSkeleton() {
   return (
     <Card className="rounded-2xl border shadow-sm bg-card">
-      <CardContent className="p-4 md:p-5">
-        <div className="grid md:grid-cols-[320px_minmax(0,1fr)] items-start gap-4 md:gap-5">
+      <CardContent className="p-4 lg:p-6">
+        <div className="grid lg:grid-cols-[280px_minmax(0,1fr)] items-start gap-4 lg:gap-6">
           <Skeleton className="w-full aspect-video rounded-xl" />
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex gap-2">
-              <Skeleton className="h-6 w-20" />
               <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-6 w-20" />
             </div>
-            <Skeleton className="h-6 w-2/3" />
-            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-7 w-4/5" />
+            <Skeleton className="h-5 w-full" />
             <div className="flex gap-4">
-              <Skeleton className="h-4 w-16" />
               <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
             </div>
-            <div className="flex gap-2 mt-4">
-              <Skeleton className="h-9 w-24" />
-              <Skeleton className="h-9 w-28" />
+            <div className="flex gap-3 mt-4">
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-28" />
             </div>
           </div>
         </div>
