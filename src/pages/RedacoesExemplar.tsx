@@ -1,8 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, User } from "lucide-react";
+import { BookOpen, User, X as ClearIcon } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,34 +8,27 @@ import { useState } from "react";
 import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
 import { resolveExemplarCover } from "@/utils/coverUtils";
 import { dicaToHTML } from "@/utils/dicaToHTML";
+import { useRedacoesExemplarFilters } from "@/hooks/useRedacoesExemplarFilters";
+import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
+import { MultiSelectDropdown } from "@/components/filters/MultiSelectDropdown";
 
 const RedacoesExemplar = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<any>(null);
 
-  // Buscar redações exemplares
-  const { data: redacoesExemplares, isLoading, error } = useQuery({
-    queryKey: ["redacoes-exemplares"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("redacoes")
-          .select("id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita")
-          .order("nota_total", { ascending: false });
-        if (error) throw error;
-
-        // Normalização mínima mantendo funcionalidade existente
-        return (data || []).map((r) => ({
-          ...r,
-          frase_tematica: r.frase_tematica || "Redação Exemplar",
-          texto: (r as any).conteudo,
-          imagem_url: (r as any).pdf_url,
-        }));
-      } catch (e) {
-        console.error("Erro ao buscar redações exemplares:", e);
-        return [];
-      }
-    },
-  });
+  // Usar o hook de filtros
+  const {
+    redacoesExemplares,
+    isLoading,
+    error,
+    fraseFilter,
+    selectedEixos,
+    uniqueEixos,
+    fraseSuggestions,
+    hasActiveFilters,
+    updateFraseFilter,
+    updateSelectedEixos,
+    clearFilters,
+  } = useRedacoesExemplarFilters();
 
   if (isLoading) {
     return (
@@ -45,10 +36,25 @@ const RedacoesExemplar = () => {
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
             <StudentHeader pageTitle="Redações Exemplares" />
-            <main className="container mx-auto px-4 py-8 space-y-4">
-              <UnifiedCardSkeleton />
-              <UnifiedCardSkeleton />
-              <UnifiedCardSkeleton />
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              {/* Skeleton dos filtros */}
+              <div className="mb-8">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="h-10 bg-muted rounded-md animate-pulse" />
+                  </div>
+                  <div className="w-full sm:w-64">
+                    <div className="h-10 bg-muted rounded-md animate-pulse" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Skeleton dos cards */}
+              <div className="space-y-4">
+                <UnifiedCardSkeleton />
+                <UnifiedCardSkeleton />
+                <UnifiedCardSkeleton />
+              </div>
             </main>
           </div>
         </TooltipProvider>
@@ -62,7 +68,7 @@ const RedacoesExemplar = () => {
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
             <StudentHeader pageTitle="Redações Exemplares" />
-            <main className="container mx-auto px-4 py-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <div className="text-center py-8">
                 <p className="text-red-600">Erro ao carregar redações. Tente novamente.</p>
               </div>
@@ -80,18 +86,80 @@ const RedacoesExemplar = () => {
           <StudentHeader pageTitle="Redações Exemplares" />
 
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="text-center mb-8"></div>
+            {/* Seção de Filtros */}
+            <div className="mb-8">
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                <div className="flex-1">
+                  <AutocompleteInput
+                    value={fraseFilter}
+                    onValueChange={updateFraseFilter}
+                    suggestions={fraseSuggestions}
+                    placeholder="Filtrar por frase temática..."
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="w-full sm:w-64">
+                  <MultiSelectDropdown
+                    options={uniqueEixos}
+                    selectedValues={selectedEixos}
+                    onSelectionChange={updateSelectedEixos}
+                    placeholder="Todos os eixos"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Indicador de filtros ativos e botão limpar */}
+              {hasActiveFilters && (
+                <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>
+                      {redacoesExemplares?.length || 0} redação(ões) encontrada(s)
+                      {fraseFilter && ` para "${fraseFilter}"`}
+                      {selectedEixos.length > 0 && ` em ${selectedEixos.length} eixo(s)`}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="text-sm"
+                  >
+                    <ClearIcon className="h-4 w-4 mr-2" />
+                    Limpar filtros
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {!redacoesExemplares || redacoesExemplares.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-12">
                   <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                    Nenhuma redação exemplar disponível
+                    {hasActiveFilters 
+                      ? "Nenhuma redação encontrada" 
+                      : "Nenhuma redação exemplar disponível"
+                    }
                   </h3>
                   <p className="text-gray-500">
-                    As redações exemplares aparecerão aqui quando cadastradas pelo administrador.
+                    {hasActiveFilters 
+                      ? "Tente ajustar os filtros para encontrar redações." 
+                      : "As redações exemplares aparecerão aqui quando cadastradas pelo administrador."
+                    }
                   </p>
+                  {hasActiveFilters && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="mt-4"
+                    >
+                      <ClearIcon className="h-4 w-4 mr-2" />
+                      Limpar filtros
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ) : (
