@@ -93,6 +93,7 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
   };
 
   const openFrequenciaModal = (aula: AulaVirtual) => {
+    console.log('🚀 Abrindo modal de frequência para aula:', aula);
     setFrequenciaModal({
       isOpen: true,
       aulaId: aula.id,

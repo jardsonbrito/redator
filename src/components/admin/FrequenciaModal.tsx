@@ -38,28 +38,45 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchFrequencia = async () => {
-    if (!aulaId) return;
+    if (!aulaId) {
+      console.log('Sem aulaId fornecido');
+      return;
+    }
     
+    console.log('🔍 INICIANDO fetchFrequencia para aulaId:', aulaId);
     setIsLoading(true);
+    
     try {
-      console.log('Buscando frequência para aula ID:', aulaId);
-      
-      const { data, error } = await supabase
+      // Primeira consulta: verificar se há registros
+      console.log('📊 Fazendo consulta no supabase...');
+      const { data: allRecords, error: countError } = await supabase
         .from('presenca_aulas')
         .select('*')
-        .eq('aula_id', aulaId)
-        .order('nome_aluno', { ascending: true });
+        .eq('aula_id', aulaId);
 
-      if (error) throw error;
+      console.log('📋 Resultado bruto da consulta:', allRecords);
+      console.log('❌ Erro da consulta:', countError);
 
-      console.log('Registros de presença encontrados:', data);
+      if (countError) {
+        console.error('❌ ERRO na consulta:', countError);
+        throw countError;
+      }
 
-      // Processar registros agrupando por aluno (email)
+      if (!allRecords || allRecords.length === 0) {
+        console.log('⚠️ NENHUM registro encontrado para aula ID:', aulaId);
+        setFrequenciaData([]);
+        return;
+      }
+
+      console.log('✅ Encontrados', allRecords.length, 'registros');
+
+      // Processar registros agrupando por aluno
       const alunosMap = new Map<string, FrequenciaAluno>();
 
-      data?.forEach((record: any) => {
-        const alunoKey = record.email_aluno;
+      allRecords.forEach((record: any) => {
+        console.log('🔄 Processando registro:', record);
         
+        const alunoKey = record.email_aluno;
         let alunoExistente = alunosMap.get(alunoKey);
         
         if (!alunoExistente) {
@@ -83,20 +100,23 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
         // Determinar status
         if (alunoExistente.entrada && alunoExistente.saida) {
-          alunoExistente.status = 'presente'; // Entrada e saída registradas
+          alunoExistente.status = 'presente';
         } else if (alunoExistente.entrada && !alunoExistente.saida) {
-          alunoExistente.status = 'em_aula'; // Apenas entrada registrada
+          alunoExistente.status = 'em_aula';
         }
       });
 
       const frequenciaList = Array.from(alunosMap.values());
-      console.log('Lista de frequência processada:', frequenciaList);
+      console.log('🎯 Lista final processada:', frequenciaList);
       
       setFrequenciaData(frequenciaList);
+
     } catch (error) {
-      console.error('Erro ao buscar frequência:', error);
+      console.error('💥 ERRO FATAL ao buscar frequência:', error);
+      setFrequenciaData([]);
     } finally {
       setIsLoading(false);
+      console.log('🏁 fetchFrequencia finalizado');
     }
   };
 
@@ -138,8 +158,12 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   };
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered - isOpen:', isOpen, 'aulaId:', aulaId);
     if (isOpen && aulaId) {
+      console.log('✅ Condições atendidas, chamando fetchFrequencia');
       fetchFrequencia();
+    } else {
+      console.log('❌ Condições não atendidas - isOpen:', isOpen, 'aulaId:', aulaId);
     }
   }, [isOpen, aulaId]);
 
