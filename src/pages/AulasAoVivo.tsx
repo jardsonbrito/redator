@@ -120,7 +120,7 @@ const AulasAoVivo = () => {
       const turmaAluno = studentData?.turma ?? 'visitante';
       const nomeAluno = user.user_metadata?.full_name ?? studentData?.nomeUsuario ?? 'Aluno';
 
-      const { data, error } = await supabase.rpc('registrar_entrada_email', {
+      const { data, error } = await supabase.rpc('registrar_entrada_email' as any, {
         p_aula_id: aulaId,
         p_email: emailAluno,
         p_nome: nomeAluno,
@@ -156,7 +156,7 @@ const AulasAoVivo = () => {
 
       const emailAluno = user.email!;
 
-      const { data, error } = await supabase.rpc('registrar_saida_email', {
+      const { data, error } = await supabase.rpc('registrar_saida_email' as any, {
         p_aula_id: aulaId,
         p_email: emailAluno,
       });
