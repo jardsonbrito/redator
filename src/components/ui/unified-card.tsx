@@ -45,42 +45,26 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
   const showCta = (variant === "corretor" || variant === "aluno") && (item.cta || item.secondaryCta);
 
   return (
-    <article className="w-full" aria-label={item.ariaLabel || item.title}>
-      <Card className="overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+    <article className="w-full" aria-label={item.ariaLabel || item.title} role="article">
+      <Card className="rounded-2xl border shadow-sm bg-card transition-shadow hover:shadow-md">
+        <CardContent className="p-4 md:p-5">
+          <div className="grid md:grid-cols-[320px_minmax(0,1fr)] items-start gap-4 md:gap-5">
             {/* Thumb - 16:9 aspect ratio */}
-            <div className="shrink-0 w-full sm:w-60">
-              <div className="relative rounded-md overflow-hidden bg-muted w-full h-40 sm:w-60 sm:h-[135px]">
-                <img
-                  src={imgSrc}
-                  alt={`Capa de ${item.title}`}
-                  width={240}
-                  height={135}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                  onError={() => setBroken(true)}
-                />
-              </div>
+            <div className="relative w-full aspect-video overflow-hidden rounded-xl bg-muted transition-transform hover:scale-105">
+              <img
+                src={imgSrc}
+                alt={`Capa de ${item.title}`}
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover"
+                onError={() => setBroken(true)}
+              />
             </div>
 
             {/* Info */}
-            <div className="flex-1 min-w-0 flex flex-col gap-2">
-              {item.hrefTitle ? (
-                <a href={item.hrefTitle} className="focus:outline-none focus:ring-2 focus:ring-ring rounded-sm">
-                  <h3 className="text-lg sm:text-xl font-semibold text-foreground line-clamp-2">{item.title}</h3>
-                </a>
-              ) : (
-                <h3 className="text-lg sm:text-xl font-semibold text-foreground line-clamp-2">{item.title}</h3>
-              )}
-
-              {item.subtitle && (
-                <p className="text-sm text-muted-foreground line-clamp-3 sm:line-clamp-2">{item.subtitle}</p>
-              )}
-
+            <div className="flex flex-col gap-3">
               {/* Badges */}
               {item.badges && item.badges.length > 0 && (
-                <div className="flex flex-wrap justify-start gap-2 mt-1" aria-label="marcadores">
+                <div className="flex flex-wrap items-center gap-2" aria-label="marcadores">
                   {item.badges.map((b, i) => (
                     <Badge 
                       key={`${b.label}-${i}`} 
@@ -91,6 +75,18 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
                     </Badge>
                   ))}
                 </div>
+              )}
+
+              {item.hrefTitle ? (
+                <a href={item.hrefTitle} className="focus:outline-none focus:ring-2 focus:ring-ring rounded-sm">
+                  <h3 className="text-lg md:text-xl font-semibold leading-tight line-clamp-2">{item.title}</h3>
+                </a>
+              ) : (
+                <h3 className="text-lg md:text-xl font-semibold leading-tight line-clamp-2">{item.title}</h3>
+              )}
+
+              {item.subtitle && (
+                <p className="text-muted-foreground line-clamp-2">{item.subtitle}</p>
               )}
 
               {/* Meta */}
@@ -125,14 +121,12 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 
               {/* CTA (Corretor/Aluno only) */}
               {showCta && (
-                <div className="mt-3 flex flex-col sm:flex-row gap-2 justify-end sm:justify-start">
+                <div className="mt-3 flex flex-col md:flex-row gap-2 md:justify-end">
                   {item.cta && (
                     <Button
-                      variant="default"
-                      size="sm"
                       onClick={item.cta.onClick}
                       aria-label={item.cta.ariaLabel || item.cta.label}
-                      className="w-full sm:w-auto"
+                      className="w-full md:w-auto"
                     >
                       {item.cta.label}
                     </Button>
@@ -140,10 +134,9 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
                   {item.secondaryCta && (
                     <Button
                       variant="outline"
-                      size="sm"
                       onClick={item.secondaryCta.onClick}
                       aria-label={item.secondaryCta.ariaLabel || item.secondaryCta.label}
-                      className="w-full sm:w-auto"
+                      className="w-full md:w-auto"
                     >
                       {item.secondaryCta.label}
                     </Button>
@@ -160,18 +153,25 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 
 export function UnifiedCardSkeleton() {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Skeleton className="rounded-md w-full h-40 sm:w-60 sm:h-[135px]" />
-          <div className="flex-1 space-y-3">
-            <Skeleton className="h-6 w-2/3" />
-            <Skeleton className="h-4 w-5/6" />
+    <Card className="rounded-2xl border shadow-sm bg-card">
+      <CardContent className="p-4 md:p-5">
+        <div className="grid md:grid-cols-[320px_minmax(0,1fr)] items-start gap-4 md:gap-5">
+          <Skeleton className="w-full aspect-video rounded-xl" />
+          <div className="space-y-3">
             <div className="flex gap-2">
               <Skeleton className="h-6 w-20" />
               <Skeleton className="h-6 w-24" />
             </div>
-            <Skeleton className="h-9 w-full sm:w-28" />
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-4 w-5/6" />
+            <div className="flex gap-4">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-28" />
+            </div>
           </div>
         </div>
       </CardContent>

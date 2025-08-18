@@ -230,7 +230,7 @@ const Aulas = () => {
           </Card>
 
           {/* Lista de Aulas */}
-          <div className="grid gap-4 sm:gap-6 mx-1 sm:mx-0">
+          <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 mx-1 sm:mx-0">
             {filteredAulas.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8 sm:py-12">
@@ -267,7 +267,7 @@ filteredAulas.map((aula) => {
                 // Adicionar botão de PDF se disponível
                 if (aula.pdf_url) {
                   cardItem.secondaryCta = {
-                    label: aula.pdf_nome ? `Baixar PDF - ${aula.pdf_nome}` : "Baixar PDF",
+                    label: "Baixar PDF",
                     onClick: () => handleDownloadPdf(aula),
                     ariaLabel: `Baixar material em PDF da aula ${aula.titulo}`
                   };
