@@ -196,163 +196,167 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
   const isEmTransmissao = aula.status_transmissao === 'em_transmissao';
 
   return (
-    <div className="mb-8">
-      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-2xl overflow-hidden">
-        <div className={`bg-gradient-to-r p-1 ${
-          isEmTransmissao ? 'from-red-400 to-pink-500' : 'from-blue-400 to-cyan-500'
-        }`}>
-          <CardHeader className="bg-white/95 rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className={`absolute inset-0 rounded-2xl blur ${
-                    isEmTransmissao ? 'bg-red-400' : 'bg-blue-400'
-                  } opacity-30`}></div>
-                  <div className={`relative flex items-center justify-center w-16 h-16 rounded-2xl shadow-xl ${
-                    isEmTransmissao 
-                      ? 'bg-gradient-to-br from-red-500 to-pink-600' 
-                      : 'bg-gradient-to-br from-blue-500 to-cyan-600'
-                  }`}>
-                    <Video className="w-8 h-8 text-white drop-shadow-lg" />
-                  </div>
-                </div>
-                <div>
-                  <CardTitle className={`text-2xl font-extrabold ${
-                    isEmTransmissao ? 'text-red-700' : 'text-blue-700'
-                  }`}>
-                    📺 {aula.titulo}
-                  </CardTitle>
-                  <p className={`text-lg font-semibold ${
-                    isEmTransmissao ? 'text-red-600' : 'text-blue-600'
-                  }`}>
-                    {aula.descricao || "Aula ao Vivo"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <Badge className={
-                  isEmTransmissao 
-                    ? "bg-red-100 text-red-800" 
-                    : "bg-blue-100 text-blue-800"
-                }>
-                  {isEmTransmissao ? "🔴 EM TRANSMISSÃO" : "📅 AGENDADA"}
-                </Badge>
-                {isEmTransmissao && (
-                  <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                    🔴 AO VIVO
-                  </div>
-                )}
-              </div>
+    <Card className="rounded-2xl shadow-sm border bg-card p-4 md:p-5 hover:shadow-md transition-shadow duration-300 mb-8">
+      <div className="grid md:grid-cols-[320px_minmax(0,1fr)] gap-4 md:gap-5 items-start">
+        {/* Thumbnail/Capa */}
+        <div className="relative w-full aspect-video overflow-hidden rounded-xl">
+          <img
+            src={aula.imagem_capa_url || "/placeholders/aula-cover.png"}
+            alt={`Capa da aula: ${aula.titulo}`}
+            className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.currentTarget.src = "/placeholders/aula-cover.png";
+            }}
+          />
+          
+          {/* Status badge overlay */}
+          {isEmTransmissao && (
+            <div className="absolute top-3 left-3">
+              <Badge variant="destructive" className="bg-red-600 text-white animate-pulse font-bold shadow-lg">
+                🔴 AO VIVO
+              </Badge>
             </div>
-          </CardHeader>
+          )}
         </div>
-        
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium">
-                {new Date(aula.data_aula).toLocaleDateString('pt-BR')}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium">
-                {aula.horario_inicio} - {aula.horario_fim}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium">
-                {turmaCode === "Visitante" ? "Visitantes" : turmaCode}
-              </span>
-            </div>
+
+        {/* Conteúdo */}
+        <div className="flex flex-col gap-3">
+          {/* Badges e Status */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className={
+              isEmTransmissao 
+                ? "bg-red-600 text-white animate-pulse" 
+                : "bg-blue-600 text-white"
+            }>
+              {isEmTransmissao ? "🔴 AO VIVO" : "📅 AGENDADA"}
+            </Badge>
+            <Badge variant="outline" className="text-xs">Google Meet</Badge>
+            {turmaCode && turmaCode !== "Visitante" && (
+              <Badge variant="outline" className="text-xs">{turmaCode}</Badge>
+            )}
           </div>
 
-          <div className="space-y-4">
-            {/* Botão para entrar na aula */}
+          {/* Título */}
+          <h3 className="text-lg md:text-xl font-semibold leading-tight text-foreground">
+            📺 {aula.titulo}
+          </h3>
+
+          {/* Descrição */}
+          {aula.descricao && (
+            <p className="text-muted-foreground line-clamp-2 text-sm">
+              {aula.descricao}
+            </p>
+          )}
+
+          {/* Metadados */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <Calendar className="w-4 h-4" />
+              {new Date(aula.data_aula).toLocaleDateString('pt-BR')}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              {aula.horario_inicio} – {aula.horario_fim}
+            </span>
+            {turmaCode && (
+              <span className="inline-flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                {turmaCode === "Visitante" ? "Visitantes" : turmaCode}
+              </span>
+            )}
+          </div>
+
+          {/* Status de Presença */}
+          {(jaRegistrouEntrada || jaRegistrouSaida) && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="text-sm text-green-800">
+                <p className="font-medium">Status da Presença:</p>
+                <PresenciaStatus entrada={timestampEntrada} saida={timestampSaida} />
+              </div>
+            </div>
+          )}
+
+          {/* Ações */}
+          <div className="mt-1 flex flex-col gap-2">
+            {/* Botão principal - Entrar na aula */}
             <Button 
               onClick={() => window.open(aula.link_meet, '_blank')}
-              className={`w-full font-bold text-lg py-3 shadow-lg transform hover:scale-105 transition-all duration-200 ${
-                isEmTransmissao 
-                  ? 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700' 
-                  : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700'
-              } text-white`}
+              className="w-full font-medium"
+              variant={isEmTransmissao ? 'default' : 'outline'}
             >
-              <Video className="w-6 h-6 mr-3" />
+              <Video className="w-4 h-4 mr-2" />
               {isEmTransmissao ? '🔴 ENTRAR NA AULA AO VIVO' : '🎥 Entre na sala e aguarde o professor'}
             </Button>
 
             {/* Botões de presença */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid md:grid-cols-2 gap-2">
               <Dialog open={dialogAberto === 'entrada'} onOpenChange={(open) => !open && setDialogAberto(null)}>
                 <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => abrirDialog('entrada')}
                     disabled={jaRegistrouEntrada}
+                    className={jaRegistrouEntrada ? 'bg-green-50 text-green-700' : ''}
                   >
                     <User className="w-4 h-4 mr-2" />
-                    {jaRegistrouEntrada ? "Entrada Registrada" : "Registrar Entrada"}
+                    {jaRegistrouEntrada ? 'Entrada OK' : 'Registrar Entrada'}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Registrar Entrada na Aula</DialogTitle>
+                    <DialogTitle>Confirmar Entrada</DialogTitle>
                   </DialogHeader>
-                   <div className="space-y-4">
-                     <p className="text-sm text-muted-foreground">
-                       Confirmar registro de entrada na aula? A presença será registrada automaticamente com base em sua conta.
-                     </p>
-                     <Button 
-                       onClick={() => registrarPresenca('entrada')}
-                       className="w-full"
-                     >
-                       Confirmar Entrada
-                     </Button>
-                   </div>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Deseja registrar sua entrada na aula "{aula.titulo}"?
+                    </p>
+                    <Button 
+                      onClick={() => registrarPresenca('entrada')}
+                      className="w-full"
+                    >
+                      Confirmar Entrada
+                    </Button>
+                  </div>
                 </DialogContent>
               </Dialog>
 
               {jaRegistrouEntrada && (
                 <Dialog open={dialogAberto === 'saida'} onOpenChange={(open) => !open && setDialogAberto(null)}>
                   <DialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => abrirDialog('saida')}
                       disabled={jaRegistrouSaida}
+                      className={jaRegistrouSaida ? 'bg-green-50 text-green-700' : ''}
                     >
                       <User className="w-4 h-4 mr-2" />
-                      {jaRegistrouSaida ? "Saída Registrada" : "Registrar Saída"}
+                      {jaRegistrouSaida ? 'Saída OK' : 'Registrar Saída'}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Registrar Saída da Aula</DialogTitle>
+                      <DialogTitle>Confirmar Saída</DialogTitle>
                     </DialogHeader>
-                     <div className="space-y-4">
-                       <p className="text-sm text-muted-foreground">
-                         Confirmar registro de saída da aula? A presença será registrada automaticamente com base em sua conta.
-                       </p>
-                       <Button 
-                         onClick={() => registrarPresenca('saida')}
-                         className="w-full"
-                       >
-                         Confirmar Saída
-                       </Button>
-                     </div>
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Deseja registrar sua saída da aula "{aula.titulo}"?
+                      </p>
+                      <Button 
+                        onClick={() => registrarPresenca('saida')}
+                        className="w-full"
+                      >
+                        Confirmar Saída
+                      </Button>
+                    </div>
                   </DialogContent>
                 </Dialog>
               )}
             </div>
-
-            {/* Status da presença */}
-            <PresenciaStatus entrada={timestampEntrada} saida={timestampSaida} />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </div>
+    </Card>
   );
 };
