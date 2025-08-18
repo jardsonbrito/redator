@@ -38,44 +38,27 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchFrequencia = async () => {
-    if (!aulaId) {
-      console.log('Sem aulaId fornecido');
-      return;
-    }
+    if (!aulaId) return;
     
-    console.log('🔍 INICIANDO fetchFrequencia para aulaId:', aulaId);
     setIsLoading(true);
-    
     try {
-      // Primeira consulta: verificar se há registros
-      console.log('📊 Fazendo consulta no supabase...');
-      const { data: allRecords, error: countError } = await supabase
+      const { data, error } = await supabase
         .from('presenca_aulas')
         .select('*')
-        .eq('aula_id', aulaId);
+        .eq('aula_id', aulaId)
+        .order('nome_aluno', { ascending: true });
 
-      console.log('📋 Resultado bruto da consulta:', allRecords);
-      console.log('❌ Erro da consulta:', countError);
+      if (error) throw error;
 
-      if (countError) {
-        console.error('❌ ERRO na consulta:', countError);
-        throw countError;
-      }
-
-      if (!allRecords || allRecords.length === 0) {
-        console.log('⚠️ NENHUM registro encontrado para aula ID:', aulaId);
+      if (!data || data.length === 0) {
         setFrequenciaData([]);
         return;
       }
 
-      console.log('✅ Encontrados', allRecords.length, 'registros');
-
       // Processar registros agrupando por aluno
       const alunosMap = new Map<string, FrequenciaAluno>();
 
-      allRecords.forEach((record: any) => {
-        console.log('🔄 Processando registro:', record);
-        
+      data.forEach((record: any) => {
         const alunoKey = record.email_aluno;
         let alunoExistente = alunosMap.get(alunoKey);
         
@@ -107,16 +90,13 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
       });
 
       const frequenciaList = Array.from(alunosMap.values());
-      console.log('🎯 Lista final processada:', frequenciaList);
-      
       setFrequenciaData(frequenciaList);
-
+      
     } catch (error) {
-      console.error('💥 ERRO FATAL ao buscar frequência:', error);
+      console.error('Erro ao buscar frequência:', error);
       setFrequenciaData([]);
     } finally {
       setIsLoading(false);
-      console.log('🏁 fetchFrequencia finalizado');
     }
   };
 
@@ -158,12 +138,8 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   };
 
   useEffect(() => {
-    console.log('🔄 useEffect triggered - isOpen:', isOpen, 'aulaId:', aulaId);
     if (isOpen && aulaId) {
-      console.log('✅ Condições atendidas, chamando fetchFrequencia');
       fetchFrequencia();
-    } else {
-      console.log('❌ Condições não atendidas - isOpen:', isOpen, 'aulaId:', aulaId);
     }
   }, [isOpen, aulaId]);
 
