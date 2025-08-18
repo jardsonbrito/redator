@@ -112,10 +112,23 @@ const SalaVirtual = () => {
     }
   };
 
-  const registrarPresenca = async (tipo: 'entrada' | 'saida', aulaId: string) => {
+  const registrarPresenca = async (tipo: 'entrada' | 'saida', aulaId: string, aulaData?: string, horarioInicio?: string, horarioFim?: string) => {
     if (!formData.nome.trim() || !formData.sobrenome.trim()) {
       toast.error("Preencha nome e sobrenome");
       return;
+    }
+
+    // Validar horários se fornecidos
+    if (aulaData && horarioInicio && horarioFim) {
+      if (tipo === 'entrada' && !podeRegistrarEntradaPorTempo(aulaData, horarioInicio, horarioFim)) {
+        toast.error('A presença só pode ser registrada após o início da aula.');
+        return;
+      }
+      
+      if (tipo === 'saida' && !podeRegistrarSaidaPorTempo(aulaData, horarioInicio, horarioFim)) {
+        toast.error('A saída só pode ser registrada de 10 minutos antes até 10 minutos depois do término da aula.');
+        return;
+      }
     }
 
     try {
@@ -255,20 +268,19 @@ const SalaVirtual = () => {
     const inicioAula = new Date(`${aulaData}T${horarioInicio}`);
     const fimAula = new Date(`${aulaData}T${horarioFim}`);
     
-    // Entrada permitida até 10 minutos antes do início e durante toda a aula
-    const inicioPermitido = new Date(inicioAula.getTime() - 10 * 60 * 1000); // 10 minutos antes
-    
-    return agora >= inicioPermitido && agora <= fimAula;
+    // Entrada permitida apenas a partir do início da aula até o fim
+    return agora >= inicioAula && agora <= fimAula;
   };
 
-  const podeRegistrarSaidaPorTempo = (aulaData: string, horarioFim: string) => {
+  const podeRegistrarSaidaPorTempo = (aulaData: string, horarioInicio: string, horarioFim: string) => {
     const agora = new Date();
     const fimAula = new Date(`${aulaData}T${horarioFim}`);
     
-    // Saída permitida apenas nos últimos 10 minutos da aula até o final
-    const inicioSaidaPermitida = new Date(fimAula.getTime() - 10 * 60 * 1000); // 10 minutos antes do fim
+    // Saída permitida de 10 minutos antes até 10 minutos depois do fim da aula
+    const inicioSaidaPermitida = new Date(fimAula.getTime() - 10 * 60 * 1000); // 10 min antes
+    const fimSaidaPermitida = new Date(fimAula.getTime() + 10 * 60 * 1000); // 10 min depois
     
-    return agora >= inicioSaidaPermitida && agora <= fimAula;
+    return agora >= inicioSaidaPermitida && agora <= fimSaidaPermitida;
   };
 
   const openPresencaDialog = (tipo: 'entrada' | 'saida', aulaId: string) => {
@@ -433,7 +445,7 @@ const SalaVirtual = () => {
                             />
                           </div>
                           <Button 
-                            onClick={() => registrarPresenca('entrada', aula.id)}
+                            onClick={() => registrarPresenca('entrada', aula.id, aula.data_aula, aula.horario_inicio, aula.horario_fim)}
                             className="w-full"
                           >
                             Confirmar Entrada
@@ -447,14 +459,14 @@ const SalaVirtual = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={jaRegistrou(aula.id, 'saida') || !podeRegistrarSaida(aula.id) || !podeRegistrarSaidaPorTempo(aula.data_aula, aula.horario_fim)}
+                          disabled={jaRegistrou(aula.id, 'saida') || !podeRegistrarSaida(aula.id) || !podeRegistrarSaidaPorTempo(aula.data_aula, aula.horario_inicio, aula.horario_fim)}
                           onClick={() => openPresencaDialog('saida', aula.id)}
                           className="w-full text-xs sm:text-sm"
                         >
                           <LogOut className="w-4 h-4 mr-1 flex-shrink-0" />
                           <span className="truncate">{jaRegistrou(aula.id, 'saida') ? 'Saída OK' : 
                             !jaRegistrou(aula.id, 'entrada') ? 'Registre entrada primeiro' : 
-                            !podeRegistrarSaidaPorTempo(aula.data_aula, aula.horario_fim) ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}</span>
+                            !podeRegistrarSaidaPorTempo(aula.data_aula, aula.horario_inicio, aula.horario_fim) ? 'Aguarde 10min antes do fim' : 'Registrar Saída'}</span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
@@ -479,7 +491,7 @@ const SalaVirtual = () => {
                             />
                           </div>
                           <Button 
-                            onClick={() => registrarPresenca('saida', aula.id)}
+                            onClick={() => registrarPresenca('saida', aula.id, aula.data_aula, aula.horario_inicio, aula.horario_fim)}
                             className="w-full"
                           >
                             Confirmar Saída

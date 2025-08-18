@@ -54,13 +54,11 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
       const frequenciaList: FrequenciaAluno[] = data?.map((record: any) => {
         let status: 'em_aula' | 'presente' | 'ausente' = 'ausente';
         
-        // Verificar se temos as novas colunas entrada_at/saida_at
-        if (record.entrada_at !== undefined) {
-          if (record.entrada_at && record.saida_at) {
-            status = 'presente'; // Participou integralmente
-          } else if (record.entrada_at && !record.saida_at) {
-            status = 'em_aula'; // Em aula (só entrada)
-          }
+        // Determinar status baseado em entrada_at e saida_at
+        if (record.entrada_at) {
+          status = 'presente'; // Tem entrada registrada
+        } else {
+          status = 'ausente'; // Sem entrada
         }
 
         return {

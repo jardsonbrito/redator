@@ -68,10 +68,23 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
     }
   };
 
-  const registrarPresenca = async (tipo: 'entrada' | 'saida', aulaId: string) => {
+  const registrarPresenca = async (tipo: 'entrada' | 'saida', aulaId: string, aulaData?: string, horarioInicio?: string, horarioFim?: string) => {
     if (!formData.nome.trim() || !formData.sobrenome.trim()) {
       toast.error("Preencha nome e sobrenome");
       return;
+    }
+
+    // Validar horários se fornecidos
+    if (aulaData && horarioInicio && horarioFim) {
+      if (tipo === 'entrada' && !podeRegistrarEntradaPorTempo(aulaData, horarioInicio, horarioFim)) {
+        toast.error('A presença só pode ser registrada após o início da aula.');
+        return;
+      }
+      
+      if (tipo === 'saida' && !podeRegistrarSaidaPorTempo(aulaData, horarioInicio, horarioFim)) {
+        toast.error('A saída só pode ser registrada de 10 minutos antes até 10 minutos depois do término da aula.');
+        return;
+      }
     }
 
     try {
@@ -87,7 +100,7 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
         .from('profiles')
         .select('id')
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
       if (profile) {
         alunoId = profile.id;
@@ -111,10 +124,10 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
         alunoId = newProfile.id;
       }
 
+      const agora = new Date().toISOString();
+
       if (tipo === 'entrada') {
         // Registrar entrada usando upsert
-        const agora = new Date().toISOString();
-        
         const { error } = await (supabase as any)
           .from('presenca_aulas')
           .upsert({
@@ -137,23 +150,20 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
           return;
         }
       } else {
-        // Registrar saída 
-        const agora = new Date().toISOString();
-        
-        // Primeiro verificar se existe entrada
-        const { data: existingRecords } = await (supabase as any)
+        // Para saída, verificar se existe entrada
+        const { data: existingRecord } = await (supabase as any)
           .from('presenca_aulas')
-          .select('*')
+          .select('id, entrada_at, saida_at')
           .eq('aula_id', aulaId)
-          .eq('aluno_id', alunoId);
+          .eq('aluno_id', alunoId)
+          .maybeSingle();
 
-        const existingRecord = existingRecords?.[0] as any;
-        if (!existingRecord || !(existingRecord as any).entrada_at) {
+        if (!existingRecord?.entrada_at) {
           toast.error('Entrada não registrada. Registre a entrada primeiro.');
           return;
         }
 
-        if ((existingRecord as any).saida_at) {
+        if (existingRecord.saida_at) {
           toast.error('Saída já registrada.');
           return;
         }
@@ -164,11 +174,7 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
           .update({ saida_at: agora })
           .eq('id', existingRecord.id);
 
-        if (error) {
-          console.error('Erro ao registrar saída:', error);
-          toast.error('Erro ao registrar saída');
-          return;
-        }
+        if (error) throw error;
       }
 
       toast.success(`${tipo === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
@@ -202,20 +208,19 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
     const inicioAula = new Date(`${aulaData}T${horarioInicio}`);
     const fimAula = new Date(`${aulaData}T${horarioFim}`);
     
-    // Entrada permitida até 10 minutos antes do início e durante toda a aula
-    const inicioPermitido = new Date(inicioAula.getTime() - 10 * 60 * 1000); // 10 minutos antes
-    
-    return agora >= inicioPermitido && agora <= fimAula;
+    // Entrada permitida apenas a partir do início da aula até o fim
+    return agora >= inicioAula && agora <= fimAula;
   };
 
-  const podeRegistrarSaidaPorTempo = (aulaData: string, horarioFim: string) => {
+  const podeRegistrarSaidaPorTempo = (aulaData: string, horarioInicio: string, horarioFim: string) => {
     const agora = new Date();
     const fimAula = new Date(`${aulaData}T${horarioFim}`);
     
-    // Saída permitida apenas nos últimos 10 minutos da aula até o final
-    const inicioSaidaPermitida = new Date(fimAula.getTime() - 10 * 60 * 1000); // 10 minutos antes do fim
+    // Saída permitida de 10 minutos antes até 10 minutos depois do fim da aula
+    const inicioSaidaPermitida = new Date(fimAula.getTime() - 10 * 60 * 1000); // 10 min antes
+    const fimSaidaPermitida = new Date(fimAula.getTime() + 10 * 60 * 1000); // 10 min depois
     
-    return agora >= inicioSaidaPermitida && agora <= fimAula;
+    return agora >= inicioSaidaPermitida && agora <= fimSaidaPermitida;
   };
 
   const openPresencaDialog = (tipo: 'entrada' | 'saida', aulaId: string) => {
