@@ -1803,6 +1803,30 @@ export type Database = {
           },
         ]
       }
+      rpc_log: {
+        Row: {
+          aula_id: string | null
+          email: string | null
+          event_at: string | null
+          func: string
+          id: string
+        }
+        Insert: {
+          aula_id?: string | null
+          email?: string | null
+          event_at?: string | null
+          func: string
+          id?: string
+        }
+        Update: {
+          aula_id?: string | null
+          email?: string | null
+          event_at?: string | null
+          func?: string
+          id?: string
+        }
+        Relationships: []
+      }
       simulados: {
         Row: {
           ativo: boolean | null
@@ -2373,15 +2397,7 @@ export type Database = {
         Returns: undefined
       }
       registrar_entrada_email: {
-        Args:
-          | { p_aula_id: string }
-          | {
-              p_aula_id: string
-              p_email: string
-              p_nome: string
-              p_turma: string
-            }
-          | { p_aula_id: string; p_nome?: string; p_turma?: string }
+        Args: { p_aula_id: string }
         Returns: string
       }
       registrar_saida: {
@@ -2389,7 +2405,7 @@ export type Database = {
         Returns: undefined
       }
       registrar_saida_email: {
-        Args: { p_aula_id: string } | { p_aula_id: string; p_email: string }
+        Args: { p_aula_id: string }
         Returns: string
       }
       reprocessar_ranking_simulados: {
@@ -2485,6 +2501,10 @@ export type Database = {
       verificar_redacao_devolvida_visualizada: {
         Args: { redacao_id_param: string; tabela_origem_param: string }
         Returns: boolean
+      }
+      whoami_email: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
     }
     Enums: {

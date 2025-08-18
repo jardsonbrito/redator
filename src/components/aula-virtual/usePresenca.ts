@@ -68,6 +68,8 @@ export const usePresenca = (registrosPresenca: RegistroPresenca[], setRegistrosP
           toast.error('Faça login para registrar presença');
         } else if (data === 'entrada_ok') {
           toast.success('Entrada registrada!');
+        } else if (data === 'entrada_ja_registrada') {
+          toast.info('Entrada já registrada');
         } else {
           toast.error('Não foi possível registrar a entrada');
         }

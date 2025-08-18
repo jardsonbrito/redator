@@ -117,8 +117,7 @@ const AulasAoVivo = () => {
         return;
       }
 
-
-      const { data, error } = await supabase.rpc('registrar_entrada_email' as any, {
+      const { data, error } = await supabase.rpc('registrar_entrada_email', {
         p_aula_id: aulaId
       });
 
@@ -132,6 +131,8 @@ const AulasAoVivo = () => {
         toast.error('Faça login para registrar presença');
       } else if (data === 'entrada_ok') {
         toast.success('Entrada registrada!');
+      } else if (data === 'entrada_ja_registrada') {
+        toast.info('Entrada já registrada');
       } else {
         toast.error('Não foi possível registrar a entrada.');
       }
@@ -151,7 +152,7 @@ const AulasAoVivo = () => {
         return;
       }
 
-      const { data, error } = await supabase.rpc('registrar_saida_email' as any, {
+      const { data, error } = await supabase.rpc('registrar_saida_email', {
         p_aula_id: aulaId
       });
 

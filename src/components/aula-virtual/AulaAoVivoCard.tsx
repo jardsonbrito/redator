@@ -96,6 +96,11 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
           });
           setJaRegistrouEntrada(true);
           verificarRegistrosExistentes(); // Refetch data
+        } else if (data === 'entrada_ja_registrada') {
+          toast({
+            title: "Informação",
+            description: "Entrada já registrada."
+          });
         } else {
           toast({
             title: "Erro",
