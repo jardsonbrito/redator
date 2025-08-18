@@ -2372,8 +2372,8 @@ export type Database = {
         Args: {
           p_aula_id: string
           p_email: string
-          p_nome?: string
-          p_turma?: string
+          p_nome: string
+          p_turma: string
         }
         Returns: string
       }
