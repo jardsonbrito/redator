@@ -19,10 +19,6 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
     setFormData,
     registrarPresenca,
     jaRegistrou,
-    podeRegistrarSaida,
-    podeRegistrarEntradaPorTempo,
-    podeRegistrarSaidaPorTempo,
-    calculateTimeWindows,
     openPresencaDialog
   } = usePresenca(registrosPresenca, setRegistrosPresenca);
 
@@ -116,25 +112,25 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
                   <PresencaDialog
                     tipo="entrada"
                     aulaId={aulaAtiva.id}
-                    jaRegistrou={jaRegistrou(aulaAtiva.id, 'entrada') || !calculateTimeWindows(aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim, aulaAtiva.id).canEntry}
+                    jaRegistrou={jaRegistrou(aulaAtiva.id, 'entrada')}
                     openDialog={openDialog}
                     onOpenChange={(open) => !open && setOpenDialog(null)}
                     onOpenPresencaDialog={openPresencaDialog}
                     formData={formData}
                     onFormDataChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
-                    onRegistrarPresenca={(tipo, aulaId) => registrarPresenca(tipo, aulaId, aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
+                    onRegistrarPresenca={(tipo, aulaId) => registrarPresenca(tipo, aulaId)}
                   />
 
                   <PresencaDialog
                     tipo="saida"
                     aulaId={aulaAtiva.id}
-                    jaRegistrou={jaRegistrou(aulaAtiva.id, 'saida') || !calculateTimeWindows(aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim, aulaAtiva.id).canExit}
+                    jaRegistrou={false} // Botão sempre habilitado, validação no clique
                     openDialog={openDialog}
                     onOpenChange={(open) => !open && setOpenDialog(null)}
                     onOpenPresencaDialog={openPresencaDialog}
                     formData={formData}
                     onFormDataChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
-                    onRegistrarPresenca={(tipo, aulaId) => registrarPresenca(tipo, aulaId, aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
+                    onRegistrarPresenca={(tipo, aulaId) => registrarPresenca(tipo, aulaId)}
                   />
                 </div>
                 

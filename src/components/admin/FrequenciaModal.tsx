@@ -44,7 +44,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
     try {
       const { data, error } = await supabase
         .from('presenca_aulas')
-        .select('*')
+        .select('aluno_id, nome_aluno, email_aluno, turma, entrada_at, saida_at')
         .eq('aula_id', aulaId)
         .order('nome_aluno', { ascending: true });
 
