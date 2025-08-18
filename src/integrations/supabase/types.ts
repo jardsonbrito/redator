@@ -776,6 +776,7 @@ export type Database = {
       presenca_aulas: {
         Row: {
           aluno_id: string | null
+          atualizado_em: string | null
           aula_id: string
           criado_em: string
           data_registro: string
@@ -784,12 +785,13 @@ export type Database = {
           id: string
           nome_aluno: string
           saida_at: string | null
-          sobrenome_aluno: string
+          sobrenome_aluno: string | null
           tipo_registro: string
           turma: string
         }
         Insert: {
           aluno_id?: string | null
+          atualizado_em?: string | null
           aula_id: string
           criado_em?: string
           data_registro?: string
@@ -798,12 +800,13 @@ export type Database = {
           id?: string
           nome_aluno: string
           saida_at?: string | null
-          sobrenome_aluno: string
-          tipo_registro: string
-          turma: string
+          sobrenome_aluno?: string | null
+          tipo_registro?: string
+          turma?: string
         }
         Update: {
           aluno_id?: string | null
+          atualizado_em?: string | null
           aula_id?: string
           criado_em?: string
           data_registro?: string
@@ -812,7 +815,7 @@ export type Database = {
           id?: string
           nome_aluno?: string
           saida_at?: string | null
-          sobrenome_aluno?: string
+          sobrenome_aluno?: string | null
           tipo_registro?: string
           turma?: string
         }
@@ -1984,7 +1987,44 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_status_presenca: {
+        Row: {
+          aluno_id: string | null
+          aula_id: string | null
+          entrada_at: string | null
+          id: string | null
+          saida_at: string | null
+          status: string | null
+          turma: string | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          aula_id?: string | null
+          entrada_at?: string | null
+          id?: string | null
+          saida_at?: string | null
+          status?: never
+          turma?: string | null
+        }
+        Update: {
+          aluno_id?: string | null
+          aula_id?: string | null
+          entrada_at?: string | null
+          id?: string | null
+          saida_at?: string | null
+          status?: never
+          turma?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presenca_aulas_aula_id_fkey"
+            columns: ["aula_id"]
+            isOneToOne: false
+            referencedRelation: "aulas_virtuais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_credits_safe: {
@@ -2323,6 +2363,27 @@ export type Database = {
       recusar_aluno: {
         Args: { admin_id: string; aluno_id: string }
         Returns: boolean
+      }
+      registrar_entrada: {
+        Args: { p_aluno_id: string; p_aula_id: string }
+        Returns: undefined
+      }
+      registrar_entrada_email: {
+        Args: {
+          p_aula_id: string
+          p_email: string
+          p_nome?: string
+          p_turma?: string
+        }
+        Returns: string
+      }
+      registrar_saida: {
+        Args: { p_aluno_id: string; p_aula_id: string }
+        Returns: undefined
+      }
+      registrar_saida_email: {
+        Args: { p_aula_id: string; p_email: string }
+        Returns: string
       }
       reprocessar_ranking_simulados: {
         Args: Record<PropertyKey, never>
