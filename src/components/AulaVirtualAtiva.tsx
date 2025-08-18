@@ -1,7 +1,7 @@
 import { Video, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { parse, isWithinInterval } from "date-fns";
+import { parse, isWithinInterval, format } from "date-fns";
 import { useAulaVirtual } from "./aula-virtual/useAulaVirtual";
 import { usePresenca } from "./aula-virtual/usePresenca";
 import { AulaStatusBadge } from "./aula-virtual/AulaStatusBadge";
@@ -22,6 +22,7 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
     podeRegistrarSaida,
     podeRegistrarEntradaPorTempo,
     podeRegistrarSaidaPorTempo,
+    calculateTimeWindows,
     openPresencaDialog
   } = usePresenca(registrosPresenca, setRegistrosPresenca);
 
@@ -110,30 +111,51 @@ export const AulaVirtualAtiva = ({ turmaCode }: AulaVirtualAtivaProps) => {
             </Button>
 
             {(aulaEmAndamento || aulaEncerrada) && (
-              <div className="grid grid-cols-2 gap-3">
-                <PresencaDialog
-                  tipo="entrada"
-                  aulaId={aulaAtiva.id}
-                  jaRegistrou={jaRegistrou(aulaAtiva.id, 'entrada') || !podeRegistrarEntradaPorTempo(aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
-                  openDialog={openDialog}
-                  onOpenChange={(open) => !open && setOpenDialog(null)}
-                  onOpenPresencaDialog={openPresencaDialog}
-                  formData={formData}
-                  onFormDataChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
-                  onRegistrarPresenca={(tipo, aulaId) => registrarPresenca(tipo, aulaId, aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
-                />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <PresencaDialog
+                    tipo="entrada"
+                    aulaId={aulaAtiva.id}
+                    jaRegistrou={jaRegistrou(aulaAtiva.id, 'entrada') || !calculateTimeWindows(aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim, aulaAtiva.id).canEntry}
+                    openDialog={openDialog}
+                    onOpenChange={(open) => !open && setOpenDialog(null)}
+                    onOpenPresencaDialog={openPresencaDialog}
+                    formData={formData}
+                    onFormDataChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+                    onRegistrarPresenca={(tipo, aulaId) => registrarPresenca(tipo, aulaId, aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
+                  />
 
-                <PresencaDialog
-                  tipo="saida"
-                  aulaId={aulaAtiva.id}
-                  jaRegistrou={jaRegistrou(aulaAtiva.id, 'saida') || !podeRegistrarSaida(aulaAtiva.id) || !podeRegistrarSaidaPorTempo(aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
-                  openDialog={openDialog}
-                  onOpenChange={(open) => !open && setOpenDialog(null)}
-                  onOpenPresencaDialog={openPresencaDialog}
-                  formData={formData}
-                  onFormDataChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
-                  onRegistrarPresenca={(tipo, aulaId) => registrarPresenca(tipo, aulaId, aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
-                />
+                  <PresencaDialog
+                    tipo="saida"
+                    aulaId={aulaAtiva.id}
+                    jaRegistrou={jaRegistrou(aulaAtiva.id, 'saida') || !calculateTimeWindows(aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim, aulaAtiva.id).canExit}
+                    openDialog={openDialog}
+                    onOpenChange={(open) => !open && setOpenDialog(null)}
+                    onOpenPresencaDialog={openPresencaDialog}
+                    formData={formData}
+                    onFormDataChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+                    onRegistrarPresenca={(tipo, aulaId) => registrarPresenca(tipo, aulaId, aulaAtiva.data_aula, aulaAtiva.horario_inicio, aulaAtiva.horario_fim)}
+                  />
+                </div>
+                
+                {/* Status da Presença */}
+                {(jaRegistrou(aulaAtiva.id, 'entrada') || jaRegistrou(aulaAtiva.id, 'saida')) && (
+                  <div className="bg-white/90 border rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-700 mb-2">Status da Presença:</h4>
+                    {jaRegistrou(aulaAtiva.id, 'entrada') && (
+                      <div className="flex items-center gap-2 text-green-700 text-sm">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span>✅ Entrada: {registrosPresenca.find(r => r.aula_id === aulaAtiva.id)?.entrada_at && new Date(registrosPresenca.find(r => r.aula_id === aulaAtiva.id)!.entrada_at!).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
+                      </div>
+                    )}
+                    {jaRegistrou(aulaAtiva.id, 'saida') && (
+                      <div className="flex items-center gap-2 text-blue-700 text-sm mt-1">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        <span>🚪 Saída: {registrosPresenca.find(r => r.aula_id === aulaAtiva.id)?.saida_at && new Date(registrosPresenca.find(r => r.aula_id === aulaAtiva.id)!.saida_at!).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

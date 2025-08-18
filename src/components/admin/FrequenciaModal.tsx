@@ -55,8 +55,10 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         let status: 'em_aula' | 'presente' | 'ausente' = 'ausente';
         
         // Determinar status baseado em entrada_at e saida_at
-        if (record.entrada_at) {
-          status = 'presente'; // Tem entrada registrada
+        if (record.entrada_at && record.saida_at) {
+          status = 'presente'; // Entrada e saída registradas
+        } else if (record.entrada_at && !record.saida_at) {
+          status = 'em_aula'; // Apenas entrada registrada
         } else {
           status = 'ausente'; // Sem entrada
         }

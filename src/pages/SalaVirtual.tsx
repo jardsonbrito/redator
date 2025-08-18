@@ -13,6 +13,14 @@ import { Video, Calendar, Clock, ExternalLink, LogIn, LogOut, Users } from "luci
 import { format, parse, isWithinInterval, isBefore, isAfter } from "date-fns";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { computeStatus } from "@/utils/aulaStatus";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
 interface AulaVirtual {
   id: string;
@@ -76,37 +84,25 @@ const SalaVirtual = () => {
 
   const fetchRegistrosPresenca = async () => {
     try {
-      if (!studentData.visitanteInfo?.email && studentData.userType === 'visitante') return;
-      
       const email = studentData.userType === 'visitante' 
-        ? studentData.visitanteInfo?.email 
-        : 'email_nao_disponivel'; // Para alunos sem email definido
+        ? studentData.visitanteInfo?.email || 'visitante@exemplo.com'
+        : studentData.email || 'aluno@exemplo.com';
 
-      // Buscar o ID do aluno pelo email
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
+      const { data, error } = await (supabase as any)
+        .from('presenca_aulas')
+        .select('aula_id, entrada_at, saida_at')
+        .eq('email_aluno', email);
 
-      if (profile) {
-        const { data, error } = await (supabase as any)
-          .from('presenca_aulas')
-          .select('*')
-          .or(`aluno_id.eq.${profile.id},email_aluno.eq.${email}`);
-
-        if (error) throw error;
-        
-        // Transformar dados para o formato esperado
-        const transformedData = (data || []).map((record: any) => ({
-          aula_id: record.aula_id,
-          aluno_id: record.aluno_id || profile.id,
-          entrada_at: record.entrada_at || null,
-          saida_at: record.saida_at || null
-        }));
-        
-        setRegistrosPresenca(transformedData as RegistroPresenca[]);
-      }
+      if (error) throw error;
+      
+      const transformedData = (data || []).map((record: any) => ({
+        aula_id: record.aula_id,
+        aluno_id: '', // Não usado mais
+        entrada_at: record.entrada_at || null,
+        saida_at: record.saida_at || null
+      }));
+      
+      setRegistrosPresenca(transformedData as RegistroPresenca[]);
     } catch (error: any) {
       console.error('Erro ao buscar registros de presença:', error);
     }
@@ -121,12 +117,12 @@ const SalaVirtual = () => {
     // Validar horários se fornecidos
     if (aulaData && horarioInicio && horarioFim) {
       if (tipo === 'entrada' && !podeRegistrarEntradaPorTempo(aulaData, horarioInicio, horarioFim)) {
-        toast.error('A presença só pode ser registrada após o início da aula.');
+        toast.error('A presença só pode ser registrada a partir do início da aula.');
         return;
       }
       
       if (tipo === 'saida' && !podeRegistrarSaidaPorTempo(aulaData, horarioInicio, horarioFim)) {
-        toast.error('A saída só pode ser registrada de 10 minutos antes até 10 minutos depois do término da aula.');
+        toast.error('A saída só pode ser registrada de 10 min antes até 10 min após o término.');
         return;
       }
     }
@@ -134,83 +130,47 @@ const SalaVirtual = () => {
     try {
       const email = studentData.userType === 'visitante' 
         ? studentData.visitanteInfo?.email || 'visitante@exemplo.com'
-        : 'aluno@exemplo.com';
+        : studentData.email || 'aluno@exemplo.com';
       
       const turma = studentData.userType === 'visitante' ? 'visitante' : studentData.turma;
-
-      // Buscar ou criar o perfil do aluno
-      let alunoId;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (profile) {
-        alunoId = profile.id;
-      } else {
-        // Criar perfil se não existir
-        const newId = crypto.randomUUID();
-        const { data: newProfile, error: profileError } = await supabase
-          .from('profiles')
-          .insert([{
-            id: newId,
-            nome: formData.nome.trim(),
-            sobrenome: formData.sobrenome.trim(),
-            email: email,
-            turma: turma,
-            user_type: 'aluno'
-          }])
-          .select('id')
-          .single();
-        
-        if (profileError) throw profileError;
-        alunoId = newProfile.id;
-      }
+      const agora = new Date().toISOString();
 
       if (tipo === 'entrada') {
-        // Registrar entrada usando upsert
-        const agora = new Date().toISOString();
-        
+        // Registrar entrada usando upsert por (aula_id, email_aluno)
         const { error } = await (supabase as any)
           .from('presenca_aulas')
-          .upsert({
+          .upsert([{
             aula_id: aulaId,
-            aluno_id: alunoId,
+            email_aluno: email,
             nome_aluno: formData.nome.trim(),
             sobrenome_aluno: formData.sobrenome.trim(),
-            email_aluno: email,
             turma: turma,
-            entrada_at: agora,
-            data_registro: agora,
-            tipo_registro: 'entrada'
-          }, {
-            onConflict: 'aula_id,aluno_id'
+            entrada_at: agora
+          }], { 
+            onConflict: 'aula_id,email_aluno',
+            ignoreDuplicates: false 
           });
 
         if (error) {
           console.error('Erro ao registrar entrada:', error);
-          toast.error('Erro ao registrar entrada');
+          toast.error('Erro ao registrar entrada. Verifique suas permissões.');
           return;
         }
       } else {
-        // Registrar saída 
-        const agora = new Date().toISOString();
-        
-        // Primeiro verificar se existe entrada
-        const { data: existingRecords } = await (supabase as any)
+        // Para saída, verificar se existe entrada e atualizar
+        const { data: row } = await (supabase as any)
           .from('presenca_aulas')
-          .select('*')
+          .select('entrada_at, saida_at')
           .eq('aula_id', aulaId)
-          .eq('aluno_id', alunoId);
+          .eq('email_aluno', email)
+          .single();
 
-        const existingRecord = existingRecords?.[0] as any;
-        if (!existingRecord || !(existingRecord as any).entrada_at) {
-          toast.error('Entrada não registrada. Registre a entrada primeiro.');
+        if (!(row as any)?.entrada_at) {
+          toast.error('Registre a entrada primeiro.');
           return;
         }
-
-        if ((existingRecord as any).saida_at) {
+        
+        if ((row as any)?.saida_at) {
           toast.error('Saída já registrada.');
           return;
         }
@@ -219,11 +179,12 @@ const SalaVirtual = () => {
         const { error } = await (supabase as any)
           .from('presenca_aulas')
           .update({ saida_at: agora })
-          .eq('id', existingRecord.id);
+          .eq('aula_id', aulaId)
+          .eq('email_aluno', email);
 
         if (error) {
           console.error('Erro ao registrar saída:', error);
-          toast.error('Erro ao registrar saída');
+          toast.error('Erro ao registrar saída. Verifique suas permissões.');
           return;
         }
       }
@@ -264,23 +225,34 @@ const SalaVirtual = () => {
   };
 
   const podeRegistrarEntradaPorTempo = (aulaData: string, horarioInicio: string, horarioFim: string) => {
-    const agora = new Date();
-    const inicioAula = new Date(`${aulaData}T${horarioInicio}`);
-    const fimAula = new Date(`${aulaData}T${horarioFim}`);
-    
-    // Entrada permitida apenas a partir do início da aula até o fim
-    return agora >= inicioAula && agora <= fimAula;
+    try {
+      const timezone = 'America/Sao_Paulo';
+      // Convert from YYYY-MM-DD to DD/MM/YYYY format for dayjs parsing
+      const dateFormatted = aulaData.split('-').reverse().join('/');
+      const start = dayjs.tz(`${dateFormatted} ${horarioInicio}`, 'DD/MM/YYYY HH:mm', timezone);
+      const end = dayjs.tz(`${dateFormatted} ${horarioFim}`, 'DD/MM/YYYY HH:mm', timezone);
+      const now = dayjs().tz(timezone);
+      
+      return now.isAfter(start) && now.isBefore(end);
+    } catch (error) {
+      return false;
+    }
   };
 
   const podeRegistrarSaidaPorTempo = (aulaData: string, horarioInicio: string, horarioFim: string) => {
-    const agora = new Date();
-    const fimAula = new Date(`${aulaData}T${horarioFim}`);
-    
-    // Saída permitida de 10 minutos antes até 10 minutos depois do fim da aula
-    const inicioSaidaPermitida = new Date(fimAula.getTime() - 10 * 60 * 1000); // 10 min antes
-    const fimSaidaPermitida = new Date(fimAula.getTime() + 10 * 60 * 1000); // 10 min depois
-    
-    return agora >= inicioSaidaPermitida && agora <= fimSaidaPermitida;
+    try {
+      const timezone = 'America/Sao_Paulo';
+      // Convert from YYYY-MM-DD to DD/MM/YYYY format for dayjs parsing
+      const dateFormatted = aulaData.split('-').reverse().join('/');
+      const end = dayjs.tz(`${dateFormatted} ${horarioFim}`, 'DD/MM/YYYY HH:mm', timezone);
+      const exitOpenAt = end.subtract(10, 'minute');
+      const exitCloseAt = end.add(10, 'minute');
+      const now = dayjs().tz(timezone);
+      
+      return now.isAfter(exitOpenAt) && now.isBefore(exitCloseAt);
+    } catch (error) {
+      return false;
+    }
   };
 
   const openPresencaDialog = (tipo: 'entrada' | 'saida', aulaId: string) => {
