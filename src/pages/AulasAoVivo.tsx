@@ -112,10 +112,10 @@ const AulasAoVivo = () => {
   const fetchPresencaAula = async (aulaId: string) => {
     console.log('🔍 FETCH PRESENÇA - Iniciando para aula:', aulaId);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔍 FETCH PRESENÇA - Usuário:', user?.email);
-      if (!user?.email) {
-        console.log('❌ FETCH PRESENÇA - Usuário sem email, abortando');
+      console.log('🔍 FETCH PRESENÇA - Dados do estudante:', studentData.email);
+      
+      if (!studentData.email) {
+        console.log('❌ FETCH PRESENÇA - Email do estudante não encontrado, abortando');
         return;
       }
 
@@ -124,7 +124,7 @@ const AulasAoVivo = () => {
         .from('presenca_aulas')
         .select('aula_id, entrada_at, saida_at')
         .eq('aula_id', aulaId)
-        .eq('email_aluno', user.email)
+        .eq('email_aluno', studentData.email)
         .maybeSingle();
 
       console.log('📥 FETCH PRESENÇA - Resposta da consulta:', { data, error });
@@ -151,26 +151,20 @@ const AulasAoVivo = () => {
   const onRegistrarEntrada = async (aulaId: string) => {
     console.log('🔄 ENTRADA - Botão clicado para aula:', aulaId);
     try {
-      console.log('🔍 ENTRADA - Buscando usuário autenticado...');
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('🔍 ENTRADA - Verificando dados do estudante...');
       
-      if (authError) {
-        console.error('❌ ENTRADA - Erro de autenticação:', authError);
-        toast.error('Erro de autenticação');
-        return;
-      }
-      
-      if (!user) {
-        console.log('❌ ENTRADA - Usuário não autenticado');
-        toast.error('Faça login para registrar presença');
+      if (!studentData.email) {
+        console.log('❌ ENTRADA - Email do estudante não encontrado');
+        toast.error('Erro: dados do estudante não encontrados');
         return;
       }
 
-      console.log('✅ ENTRADA - Usuário autenticado:', user.email);
-      console.log('🔄 ENTRADA - Chamando RPC registrar_entrada_email...');
+      console.log('✅ ENTRADA - Email do estudante:', studentData.email);
+      console.log('🔄 ENTRADA - Chamando RPC registrar_entrada_email_param...');
 
-      const { data, error } = await supabase.rpc('registrar_entrada_email', {
-        p_aula_id: aulaId
+      const { data, error } = await supabase.rpc('registrar_entrada_email_param', {
+        p_aula_id: aulaId,
+        p_email_aluno: studentData.email
       });
 
       console.log('📥 ENTRADA - Resposta da RPC:', { data, error });
@@ -183,9 +177,9 @@ const AulasAoVivo = () => {
 
       console.log('📊 ENTRADA - Data retornada:', data);
 
-      if (data === 'usuario_nao_autenticado') {
-        console.log('❌ ENTRADA - RPC retornou: usuario_nao_autenticado');
-        toast.error('Faça login para registrar presença');
+      if (data === 'email_invalido') {
+        console.log('❌ ENTRADA - RPC retornou: email_invalido');
+        toast.error('Email inválido');
       } else if (data === 'entrada_ok') {
         console.log('✅ ENTRADA - RPC retornou: entrada_ok');
         toast.success('Entrada registrada!');
@@ -209,26 +203,20 @@ const AulasAoVivo = () => {
   const onRegistrarSaida = async (aulaId: string) => {
     console.log('🔄 SAÍDA - Botão clicado para aula:', aulaId);
     try {
-      console.log('🔍 SAÍDA - Buscando usuário autenticado...');
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('🔍 SAÍDA - Verificando dados do estudante...');
       
-      if (authError) {
-        console.error('❌ SAÍDA - Erro de autenticação:', authError);
-        toast.error('Erro de autenticação');
-        return;
-      }
-      
-      if (!user) {
-        console.log('❌ SAÍDA - Usuário não autenticado');
-        toast.error('Faça login para registrar presença');
+      if (!studentData.email) {
+        console.log('❌ SAÍDA - Email do estudante não encontrado');
+        toast.error('Erro: dados do estudante não encontrados');
         return;
       }
 
-      console.log('✅ SAÍDA - Usuário autenticado:', user.email);
-      console.log('🔄 SAÍDA - Chamando RPC registrar_saida_email...');
+      console.log('✅ SAÍDA - Email do estudante:', studentData.email);
+      console.log('🔄 SAÍDA - Chamando RPC registrar_saida_email_param...');
 
-      const { data, error } = await supabase.rpc('registrar_saida_email', {
-        p_aula_id: aulaId
+      const { data, error } = await supabase.rpc('registrar_saida_email_param', {
+        p_aula_id: aulaId,
+        p_email_aluno: studentData.email
       });
 
       console.log('📥 SAÍDA - Resposta da RPC:', { data, error });
@@ -241,9 +229,9 @@ const AulasAoVivo = () => {
 
       console.log('📊 SAÍDA - Data retornada:', data);
 
-      if (data === 'usuario_nao_autenticado') {
-        console.log('❌ SAÍDA - RPC retornou: usuario_nao_autenticado');
-        toast.error('Faça login para registrar presença');
+      if (data === 'email_invalido') {
+        console.log('❌ SAÍDA - RPC retornou: email_invalido');
+        toast.error('Email inválido');
       } else if (data === 'precisa_entrada') {
         console.log('⚠️ SAÍDA - RPC retornou: precisa_entrada');
         toast.error('Registre a entrada primeiro.');
@@ -336,6 +324,14 @@ const AulasAoVivo = () => {
               const registro = registrosPresencaMap[aula.id];
               const entradaRegistrada = !!registro?.entrada_at;
               const saidaRegistrada = !!registro?.saida_at;
+
+              console.log(`🎯 RENDER - Aula ${aula.titulo}:`, {
+                aulaId: aula.id,
+                registro,
+                entradaRegistrada,
+                saidaRegistrada,
+                registrosPresencaMapKeys: Object.keys(registrosPresencaMap)
+              });
 
               return (
                 <Card key={aula.id} className="overflow-hidden relative">

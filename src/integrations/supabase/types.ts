@@ -2400,12 +2400,20 @@ export type Database = {
         Args: { p_aula_id: string }
         Returns: string
       }
+      registrar_entrada_email_param: {
+        Args: { p_aula_id: string; p_email_aluno: string }
+        Returns: string
+      }
       registrar_saida: {
         Args: { p_aluno_id: string; p_aula_id: string }
         Returns: undefined
       }
       registrar_saida_email: {
         Args: { p_aula_id: string }
+        Returns: string
+      }
+      registrar_saida_email_param: {
+        Args: { p_aula_id: string; p_email_aluno: string }
         Returns: string
       }
       reprocessar_ranking_simulados: {
