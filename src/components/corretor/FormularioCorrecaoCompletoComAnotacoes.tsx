@@ -444,7 +444,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             <div className="grid grid-cols-3 gap-4 items-center">
               {/* C4 */}
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full shrink-0 bg-purple-500" />
+                <div className="w-3 h-3 rounded-full shrink-0 bg-orange-500" />
                 <span className="text-sm font-medium">C4</span>
                 <Select
                   value={notas.c4.toString()}
@@ -465,7 +465,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               
               {/* C5 */}
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full shrink-0 bg-orange-500" />
+                <div className="w-3 h-3 rounded-full shrink-0 bg-purple-500" />
                 <span className="text-sm font-medium">C5</span>
                 <Select
                   value={notas.c5.toString()}
@@ -519,7 +519,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               variant="outline"
               onClick={() => setShowDevolverModal(true)}
               disabled={loading}
-              className="flex items-center gap-2 h-10 px-4 text-orange-600 border-orange-200 hover:bg-orange-50"
+              className="flex items-center gap-2 h-10 px-4 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-600"
             >
               <Package className="w-4 h-4" />
               <span className="hidden sm:inline">Devolver Redação</span>
