@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, X, Copy, Maximize2 } from "lucide-react";
+import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check } from "lucide-react";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
@@ -382,20 +382,15 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </Button>
       </div>
 
-      {/* Informações do aluno */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-        <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
-        <div><strong>Tipo:</strong> {redacao.tipo_redacao}</div>
-        <div><strong>Data:</strong> {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</div>
-        <div><strong>Status:</strong> {redacao.status_minha_correcao}</div>
-      </div>
-
-      {/* Tema */}
-      <div className="flex items-center gap-4">
-        <span><strong>Tema:</strong> {redacao.frase_tematica}</span>
+      {/* Cabeçalho do painel */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-sm text-muted-foreground">
+          <span className="font-medium">{new Date(redacao.data_envio).toLocaleDateString('pt-BR')}</span>
+        </div>
         <Button
           variant="outline"
           onClick={() => setShowTemaModal(true)}
+          size="sm"
           className="flex items-center gap-2"
         >
           <Eye className="w-4 h-4" />
@@ -403,28 +398,59 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </Button>
       </div>
 
+      {/* Informações do aluno */}
+      <div className="space-y-2 text-sm">
+        <div><strong>Aluno:</strong> {redacao.nome_aluno}</div>
+        <div><strong>Tema:</strong> {redacao.frase_tematica}</div>
+      </div>
+
       {/* Vista Pedagógica */}
       <Card className="card">
         <CardHeader>
           <CardTitle>Vista Pedagógica</CardTitle>
         </CardHeader>
-        <CardContent>
-          {/* Grid de selects C1-C5 */}
-          <div className="select-grid">
-            {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
-              <div key={competencia} className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full shrink-0 ${
-                  competencia === 'c1' ? 'bg-red-500' :
-                  competencia === 'c2' ? 'bg-green-500' :
-                  competencia === 'c3' ? 'bg-blue-500' :
-                  competencia === 'c4' ? 'bg-purple-500' : 'bg-orange-500'
-                }`} />
-                <span className="text-sm font-medium">C{index + 1}</span>
+        <CardContent className="space-y-6">
+          {/* Grid de competências - Duas linhas */}
+          <div className="space-y-4">
+            {/* Primeira linha: C1, C2, C3 */}
+            <div className="grid grid-cols-3 gap-4">
+              {(['c1', 'c2', 'c3'] as const).map((competencia, index) => (
+                <div key={competencia} className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full shrink-0 ${
+                    competencia === 'c1' ? 'bg-red-500' :
+                    competencia === 'c2' ? 'bg-green-500' : 'bg-blue-500'
+                  }`} />
+                  <span className="text-sm font-medium">C{index + 1}</span>
+                  <Select
+                    value={notas[competencia].toString()}
+                    onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
+                  >
+                    <SelectTrigger className="h-8 w-16">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      {opcoesNota.map(nota => (
+                        <SelectItem key={nota} value={nota.toString()}>
+                          {nota}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+            
+            {/* Segunda linha: C4, C5 e Nota Total */}
+            <div className="grid grid-cols-3 gap-4 items-center">
+              {/* C4 */}
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full shrink-0 bg-purple-500" />
+                <span className="text-sm font-medium">C4</span>
                 <Select
-                  value={notas[competencia].toString()}
-                  onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
+                  value={notas.c4.toString()}
+                  onValueChange={(value) => atualizarNota('c4', parseInt(value))}
                 >
-                  <SelectTrigger className="select-competencia">
+                  <SelectTrigger className="h-8 w-16">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="z-50">
@@ -436,17 +462,38 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                   </SelectContent>
                 </Select>
               </div>
-            ))}
-          </div>
-          
-          {/* Nota Total */}
-          <div className="nota-pill">
-            <div className="text-sm text-muted-foreground">Nota Total</div>
-            <div className="text-2xl font-bold">{notas.total}</div>
+              
+              {/* C5 */}
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full shrink-0 bg-orange-500" />
+                <span className="text-sm font-medium">C5</span>
+                <Select
+                  value={notas.c5.toString()}
+                  onValueChange={(value) => atualizarNota('c5', parseInt(value))}
+                >
+                  <SelectTrigger className="h-8 w-16">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    {opcoesNota.map(nota => (
+                      <SelectItem key={nota} value={nota.toString()}>
+                        {nota}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Nota Total */}
+              <div className="bg-muted/50 rounded-lg p-3 text-center shadow-sm">
+                <div className="text-xs text-muted-foreground">Nota</div>
+                <div className="text-2xl font-bold">{notas.total}</div>
+              </div>
+            </div>
           </div>
           
           {/* Audio Player */}
-          <div className="audio">
+          <div className="mt-4">
             <AudioRecorder 
               redacaoId={redacao.id} 
               tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
@@ -457,31 +504,33 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             />
           </div>
           
-          {/* Botões de Ação */}
-          <div className="actions">
+          {/* Botões de Ação - Uma linha */}
+          <div className="flex flex-wrap gap-2 pt-2">
             <Button
               variant="outline"
               onClick={() => salvarCorrecao('incompleta')}
               disabled={loading}
-              className="btn"
+              className="flex items-center gap-2 h-10 px-4"
             >
-              Salvar Incompleta
+              <Pause className="w-4 h-4" />
+              <span className="hidden sm:inline">Incompleta</span>
             </Button>
             <Button
               variant="outline"
               onClick={() => setShowDevolverModal(true)}
               disabled={loading}
-              className="btn"
+              className="flex items-center gap-2 h-10 px-4 text-orange-600 border-orange-200 hover:bg-orange-50"
             >
-              Devolver Redação
+              <Package className="w-4 h-4" />
+              <span className="hidden sm:inline">Devolver Redação</span>
             </Button>
             <Button
-              variant="outline"
               onClick={() => salvarCorrecao('corrigida')}
               disabled={loading}
-              className="btn"
+              className="flex items-center gap-2 h-10 px-4 bg-green-600 hover:bg-green-700"
             >
-              Finalizar Correção
+              <Check className="w-4 h-4" />
+              <span className="hidden sm:inline">Finalizar Correção</span>
             </Button>
           </div>
         </CardContent>
