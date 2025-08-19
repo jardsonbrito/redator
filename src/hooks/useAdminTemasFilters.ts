@@ -48,8 +48,7 @@ export const useAdminTemasFilters = () => {
         const { data, error } = await supabase
           .from('temas')
           .select('*')
-          .order('publicado_em', { ascending: false, nullsFirst: false })
-          .order('criado_em', { ascending: false, nullsFirst: false });
+          .order('publicado_em', { ascending: false, nullsFirst: false });
 
         if (error) throw error;
 
