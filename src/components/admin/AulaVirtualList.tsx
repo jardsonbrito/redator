@@ -112,30 +112,46 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
   const getStatusBadge = (aula: AulaVirtual) => {
     if (!aula.eh_aula_ao_vivo) return null;
     
-    const status = computeStatus({
-      data_aula: new Date(aula.data_aula + 'T00:00:00').toLocaleDateString('pt-BR', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      }).replace(/\//g, '/'),
-      horario_inicio: aula.horario_inicio,
-      horario_fim: aula.horario_fim
-    });
+    try {
+      // Converte a data do formato YYYY-MM-DD para DD/MM/YYYY
+      const [year, month, day] = aula.data_aula.split('-');
+      const formattedDate = `${day}/${month}/${year}`;
+      
+      console.log('🔍 Data formatada para computeStatus:', {
+        original: aula.data_aula,
+        formatted: formattedDate,
+        horario_inicio: aula.horario_inicio,
+        horario_fim: aula.horario_fim
+      });
+      
+      const status = computeStatus({
+        data_aula: formattedDate,
+        horario_inicio: aula.horario_inicio,
+        horario_fim: aula.horario_fim
+      });
 
-    const statusMap = {
-      'agendada': { emoji: '📅', text: 'Agendada' },
-      'ao_vivo': { emoji: '🔴', text: 'Em Transmissão' },
-      'encerrada': { emoji: '⏹️', text: 'Encerrada' },
-      'indefinido': { emoji: '❓', text: 'Indefinido' }
-    };
+      const statusMap = {
+        'agendada': { emoji: '📅', text: 'Agendada' },
+        'ao_vivo': { emoji: '🔴', text: 'Em Transmissão' },
+        'encerrada': { emoji: '⏹️', text: 'Encerrada' },
+        'indefinido': { emoji: '❓', text: 'Indefinido' }
+      };
 
-    const currentStatus = statusMap[status] || statusMap['indefinido'];
-    
-    return (
-      <Badge variant="outline" className="text-xs mt-1">
-        {currentStatus.emoji} {currentStatus.text}
-      </Badge>
-    );
+      const currentStatus = statusMap[status] || statusMap['indefinido'];
+      
+      return (
+        <Badge variant="outline" className="text-xs mt-1">
+          {currentStatus.emoji} {currentStatus.text}
+        </Badge>
+      );
+    } catch (error) {
+      console.error('🚨 Erro ao calcular status da aula:', error, aula);
+      return (
+        <Badge variant="outline" className="text-xs mt-1">
+          ❓ Erro no Status
+        </Badge>
+      );
+    }
   };
 
   useEffect(() => {
