@@ -81,32 +81,25 @@ export default function LousaCard({ lousa, onClick }: LousaCardProps) {
     return true;
   };
 
-  const getPeriodText = () => {
+  const getDateTimeInfo = () => {
     if (!lousa.inicio_em && !lousa.fim_em) {
-      return 'Disponível agora';
+      return { hasDateTime: false, text: 'Disponível agora' };
     }
 
-    const formatDate = (date: string) => 
-      format(new Date(date), 'dd/MM/yyyy HH:mm', { locale: ptBR });
+    const formatDateTime = (date: string) => 
+      format(new Date(date), 'dd/MM HH:mm', { locale: ptBR });
 
-    if (lousa.inicio_em && lousa.fim_em) {
-      return `${formatDate(lousa.inicio_em)} - ${formatDate(lousa.fim_em)}`;
-    }
-
-    if (lousa.inicio_em) {
-      return `A partir de ${formatDate(lousa.inicio_em)}`;
-    }
-
-    if (lousa.fim_em) {
-      return `Até ${formatDate(lousa.fim_em)}`;
-    }
-
-    return 'Disponível agora';
+    return {
+      hasDateTime: true,
+      inicio: lousa.inicio_em ? formatDateTime(lousa.inicio_em) : null,
+      fim: lousa.fim_em ? formatDateTime(lousa.fim_em) : null
+    };
   };
 
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo.icon;
   const available = isAvailable();
+  const dateTimeInfo = getDateTimeInfo();
 
   return (
     <Card className={cn(
@@ -145,24 +138,28 @@ export default function LousaCard({ lousa, onClick }: LousaCardProps) {
             </div>
           )}
 
-          {/* Informações adicionais */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {getPeriodText()}
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              {lousa.turmas.length > 0 
-                ? lousa.turmas.map(t => `Turma ${t}`).join(', ')
-                : 'Geral'
-              }
-              {lousa.permite_visitante && (
-                <Badge variant="outline" className="ml-1 text-xs">Visitantes</Badge>
+          {/* Datas de início e término */}
+          {dateTimeInfo.hasDateTime ? (
+            <div className="space-y-1 text-sm text-muted-foreground">
+              {dateTimeInfo.inicio && (
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  <span>Início: {dateTimeInfo.inicio}</span>
+                </div>
+              )}
+              {dateTimeInfo.fim && (
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  <span>Término: {dateTimeInfo.fim}</span>
+                </div>
               )}
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Clock className="w-4 h-4" />
+              {dateTimeInfo.text}
+            </div>
+          )}
 
           {/* Data de envio se disponível */}
           {lousa.resposta?.submitted_at && (

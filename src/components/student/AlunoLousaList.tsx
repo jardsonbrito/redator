@@ -112,9 +112,6 @@ export default function AlunoLousaList() {
               <h2 className="text-xl font-semibold text-redator-primary mb-2">
                 Lousa Disponível
               </h2>
-              <p className="text-redator-accent">
-                Participe dos exercícios rápidos criados pelos professores.
-              </p>
             </div>
 
             {lousas.length === 0 ? (
