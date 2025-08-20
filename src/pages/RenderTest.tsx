@@ -146,34 +146,35 @@ const RenderTest = () => {
           </div>
         </div>
 
-        {/* Container da imagem - COMPLETAMENTE ISOLADO */}
+        {/* Container da imagem - COMPLETAMENTE ISOLADO - TESTE PURO */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-4 border-b bg-gray-50">
-            <h2 className="text-lg font-semibold">Rendered Essay Image (No CSS Inheritance)</h2>
+            <h2 className="text-lg font-semibold">TESTE PURO - Imagem Sem CSS do App</h2>
             <p className="text-sm text-gray-600">
-              This image should display at full size without any form constraints
+              Validação: Esta imagem deve ter largura natural ~2400px e ocupar toda largura disponível
             </p>
           </div>
           
           {essayData.render_image_url && essayData.render_status === 'ready' ? (
             <div 
-              className="w-full overflow-auto"
+              className="w-full"
               style={{
                 // ZERO CSS inheritance - completely clean
                 padding: 0,
                 margin: 0,
                 maxWidth: 'none',
                 width: '100%',
-                display: 'block'
+                display: 'block',
+                overflow: 'auto'
               }}
             >
               <img 
                 src={essayData.render_image_url}
-                alt="Rendered Essay"
+                alt="Pure Essay Render Test"
                 style={{
                   // Pure image display with no constraints
                   display: 'block',
-                  width: 'auto', // Use natural width
+                  width: '100%', // fit-to-width do container 
                   height: 'auto',
                   maxWidth: 'none',
                   maxHeight: 'none',
@@ -181,17 +182,37 @@ const RenderTest = () => {
                   transform: 'none',
                   zoom: 1,
                   border: 'none',
-                  outline: 'none'
+                  outline: 'none',
+                  background: 'white'
                 }}
                 onLoad={(e) => {
                   const img = e.currentTarget;
-                  console.log('🖼️ Image loaded:', {
+                  console.log('🖼️ TESTE PURO - Image loaded:', {
                     naturalWidth: img.naturalWidth,
                     naturalHeight: img.naturalHeight,
                     displayWidth: img.offsetWidth,
                     displayHeight: img.offsetHeight,
-                    url: img.src
+                    url: img.src,
+                    containerWidth: img.parentElement?.offsetWidth
                   });
+                  
+                  // Verificações de validação
+                  if (img.naturalWidth < 2000) {
+                    console.warn('⚠️ PROBLEMA NO BACKEND: naturalWidth muito pequena:', img.naturalWidth);
+                  }
+                  
+                  const container = img.parentElement;
+                  if (container && Math.abs(container.offsetWidth - img.offsetWidth) > 10) {
+                    console.warn('⚠️ PROBLEMA NO FRONTEND: imagem não ocupa toda largura');
+                  }
+                  
+                  if (img.naturalWidth && img.offsetWidth) {
+                    const scaleRatio = img.offsetWidth / img.naturalWidth;
+                    console.log('📐 Scale ratio:', scaleRatio.toFixed(3));
+                  }
+                }}
+                onError={(e) => {
+                  console.error('❌ Erro ao carregar imagem:', e.currentTarget.src);
                 }}
               />
             </div>
@@ -200,17 +221,23 @@ const RenderTest = () => {
               {essayData.render_status === 'pending' && (
                 <div>
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                  <p>Rendering in progress...</p>
+                  <p>Renderizando PNG...</p>
                 </div>
               )}
               {essayData.render_status === 'error' && (
                 <div>
-                  <p className="text-red-600">Render failed</p>
-                  <p className="text-sm text-gray-500">Check backend logs for details</p>
+                  <p className="text-red-600">Falha na renderização</p>
+                  <p className="text-sm text-gray-500">Verifique logs do backend</p>
+                </div>
+              )}
+              {essayData.render_status === 'rendering' && (
+                <div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p>Processando...</p>
                 </div>
               )}
               {!essayData.render_status && (
-                <p>No render status available</p>
+                <p>Nenhum status de renderização disponível</p>
               )}
             </div>
           )}

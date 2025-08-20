@@ -14,8 +14,6 @@ interface RenderRequest {
   thematicPhrase: string
   sendDate: string
   turma?: string
-  width?: number
-  height?: number
 }
 
 serve(async (req) => {
@@ -30,9 +28,9 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { essayId, tableOrigin, text, studentName, thematicPhrase, sendDate, turma, width = 2400, height = 3200 }: RenderRequest = await req.json()
+    const { essayId, tableOrigin, text, studentName, thematicPhrase, sendDate, turma }: RenderRequest = await req.json()
 
-    console.log(`🎨 Rendering essay ${essayId} from table ${tableOrigin}`)
+    console.log(`🎨 RENDERING ESSAY ${essayId} from table ${tableOrigin}`)
 
     // Update status to rendering
     await supabase
@@ -40,117 +38,7 @@ serve(async (req) => {
       .update({ render_status: 'rendering' })
       .eq('id', essayId)
 
-    // Create HTML content for the essay
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: 'Times New Roman', serif;
-            margin: 0;
-            padding: 40px;
-            background: white;
-            color: #000;
-            line-height: 1.6;
-            width: ${width}px;
-            min-height: ${height}px;
-            box-sizing: border-box;
-        }
-        .header {
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 20px;
-        }
-        .student-info {
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        .thematic-phrase {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 20px 0;
-            text-align: center;
-            padding: 15px;
-            border: 1px solid #333;
-            background: #f9f9f9;
-        }
-        .essay-content {
-            font-size: 16px;
-            text-align: justify;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            margin-top: 30px;
-        }
-        .metadata {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            font-size: 12px;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="student-info"><strong>Aluno(a):</strong> ${studentName}</div>
-        ${turma ? `<div class="student-info"><strong>Turma:</strong> ${turma}</div>` : ''}
-        <div class="student-info"><strong>Data de Envio:</strong> ${new Date(sendDate).toLocaleDateString('pt-BR')}</div>
-    </div>
-    
-    <div class="thematic-phrase">
-        ${thematicPhrase}
-    </div>
-    
-    <div class="essay-content">
-        ${text}
-    </div>
-    
-    <div class="metadata">
-        Redação ID: ${essayId}
-    </div>
-</body>
-</html>`
-
-    console.log('🖼️ Generating image using canvas rendering...')
-
-    // Simple canvas-based rendering using Deno Canvas
-    const canvasCode = `
-      const canvas = new OffscreenCanvas(${width}, ${height});
-      const ctx = canvas.getContext('2d');
-      
-      // Set white background
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, ${width}, ${height});
-      
-      // Draw text content (simplified version)
-      ctx.fillStyle = 'black';
-      ctx.font = '16px Times New Roman';
-      
-      const lines = \`${text.replace(/`/g, '\\`')}\`.split('\\n');
-      let y = 200;
-      
-      // Draw header
-      ctx.font = 'bold 18px Times New Roman';
-      ctx.fillText('${studentName}', 40, 80);
-      ctx.fillText('${thematicPhrase}', 40, 120);
-      
-      // Draw content
-      ctx.font = '16px Times New Roman';
-      lines.forEach(line => {
-        if (y < ${height} - 100) {
-          ctx.fillText(line.substring(0, 100), 40, y);
-          y += 25;
-        }
-      });
-      
-      const blob = await canvas.convertToBlob({ type: 'image/png' });
-      return await blob.arrayBuffer();
-    `
-
-    // Create SVG with proper text wrapping and dynamic height
+    // TEXT PROCESSING - Clean line wrapping
     function wrapText(text: string, maxCharsPerLine: number): string[] {
       const words = text.split(' ');
       const lines: string[] = [];
@@ -168,72 +56,42 @@ serve(async (req) => {
       return lines;
     }
 
-    // Process essay text with proper line breaks
     const paragraphs = text.split('\n').filter(p => p.trim());
     const allLines: string[] = [];
     
     paragraphs.forEach(paragraph => {
       if (paragraph.trim()) {
-        const wrappedLines = wrapText(paragraph.trim(), 75); // Optimal for 2400px width
+        const wrappedLines = wrapText(paragraph.trim(), 70); // Optimal for wide render
         allLines.push(...wrappedLines);
         allLines.push(''); // Add space between paragraphs
       }
     });
 
-    // FIXED LARGE DIMENSIONS for independent rendering
-    const renderWidth = 2400; // Fixed wide width
-    const lineHeight = 38; // Generous line height
-    const padding = 80; // Good padding
-    const contentHeight = Math.max(1200, allLines.length * lineHeight + (padding * 2));
+    // FIXED DIMENSIONS for PNG generation - COMPLETELY ISOLATED FROM FORM
+    const renderWidth = 2400; // Fixed wide width for PNG
+    const fontSize = 28; // Large readable font
+    const lineHeight = 42; // Generous line spacing
+    const padding = 100; // Extra padding for clean look
+    const contentHeight = Math.max(1600, allLines.length * lineHeight + (padding * 2));
     
-    console.log(`📐 Render dimensions: ${renderWidth}x${contentHeight} | Lines: ${allLines.length}`);
+    console.log(`🎯 RENDER CONFIG: ${renderWidth}x${contentHeight} | Font: ${fontSize}px | Lines: ${allLines.length}`);
 
-    // Create completely isolated SVG template - NO FORM DEPENDENCIES
-    const svgContent = `
-      <svg width="${renderWidth}" height="${contentHeight}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <style>
-            .essay-text {
-              font-family: 'Times New Roman', serif;
-              font-size: 26px;
-              font-weight: 400;
-              fill: #000000;
-              line-height: ${lineHeight}px;
-            }
-          </style>
-        </defs>
-        
-        <!-- White background -->
-        <rect width="100%" height="100%" fill="#ffffff"/>
-        
-        <!-- Essay content ONLY - completely independent -->
-        ${allLines.map((line, i) => {
-          const y = padding + (i * lineHeight);
-          return line.trim() ? 
-            `<text x="${padding}" y="${y}" class="essay-text">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
-            '';
-        }).join('')}
-      </svg>
-    `;
-
-    console.log('🎨 Generating clean SVG image - NO FORM INHERITANCE...');
-
-    // Convert SVG to buffer
-    const svgBuffer = new TextEncoder().encode(svgContent);
+    // PNG GENERATION using Canvas - COMPLETELY ISOLATED
+    const imageBuffer = await generateCleanPNG(allLines, renderWidth, contentHeight, fontSize, lineHeight, padding);
     
-    // Cache busting: add timestamp to ensure new image
+    // Cache busting with timestamp
     const timestamp = Date.now();
-    const fileName = `${essayId}_v${timestamp}.svg`;
+    const fileName = `${essayId}_v${timestamp}.png`;
     const filePath = `essay-renders/${fileName}`;
 
-    console.log(`📤 Uploading to: ${filePath} | Size: ${svgBuffer.length} bytes`);
+    console.log(`📤 UPLOADING PNG: ${filePath} | Size: ${imageBuffer.length} bytes`);
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('essay-renders')
-      .upload(filePath, svgBuffer, {
-        contentType: 'image/svg+xml',
+      .upload(filePath, imageBuffer, {
+        contentType: 'image/png',
         upsert: true,
-        cacheControl: 'no-cache' // Prevent caching issues
+        cacheControl: 'no-cache, max-age=0'
       });
 
     if (uploadError) {
@@ -246,18 +104,17 @@ serve(async (req) => {
       .from('essay-renders')
       .getPublicUrl(filePath);
     
-    const finalUrl = `${publicUrl}?v=${timestamp}`; // Additional cache bust
+    const finalImageUrl = `${publicUrl}?v=${timestamp}`;
 
-    console.log(`✅ Image rendered: ${finalUrl}`);
-    console.log(`📊 Final dimensions: ${renderWidth}x${contentHeight} | URL: ${finalUrl}`);
+    console.log(`✅ PNG GENERATED: ${finalImageUrl}`);
+    console.log(`📊 FINAL DIMENSIONS: ${renderWidth}x${contentHeight}px`);
 
-    // Update essay record with render URL and dimensions
+    // Update essay record with render URL and complete metadata
     const { error: updateError } = await supabase
       .from(tableOrigin as any)
       .update({ 
         render_status: 'ready',
-        render_image_url: finalUrl,
-        // Store dimensions for verification
+        render_image_url: finalImageUrl,
         render_width: renderWidth,
         render_height: contentHeight
       })
@@ -270,15 +127,17 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      imageUrl: finalUrl,
-      dimensions: { width: renderWidth, height: contentHeight },
-      message: `Essay rendered successfully at ${renderWidth}x${contentHeight}`
+      imageUrl: finalImageUrl,
+      render_width: renderWidth,
+      render_height: contentHeight,
+      timestamp: timestamp,
+      message: `PNG rendered successfully at ${renderWidth}x${contentHeight}px`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Render error:', error);
+    console.error('🚨 RENDER ERROR:', error);
     
     // Update status to error if we have the necessary data
     try {
@@ -306,3 +165,73 @@ serve(async (req) => {
     });
   }
 })
+
+// CLEAN PNG GENERATION - ISOLATED FROM ANY FORM CSS
+async function generateCleanPNG(
+  lines: string[], 
+  width: number, 
+  height: number, 
+  fontSize: number, 
+  lineHeight: number, 
+  padding: number
+): Promise<Uint8Array> {
+  
+  // Create canvas for clean PNG generation
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d')!;
+  
+  // Set white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  
+  // Set text properties for clean essay rendering
+  ctx.fillStyle = '#000000';
+  ctx.font = `${fontSize}px "Times New Roman", serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  
+  let y = padding;
+  
+  // Render each line with proper spacing
+  for (const line of lines) {
+    if (line.trim()) {
+      // Manual text wrapping for very long lines
+      const words = line.trim().split(' ');
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > width - (padding * 2) && currentLine) {
+          // Draw current line and move to next
+          ctx.fillText(currentLine, padding, y);
+          y += lineHeight;
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      
+      // Draw remaining text
+      if (currentLine) {
+        ctx.fillText(currentLine, padding, y);
+        y += lineHeight;
+      }
+    } else {
+      // Empty line - add space
+      y += lineHeight / 2;
+    }
+    
+    // Prevent overflow
+    if (y > height - padding) break;
+  }
+  
+  // Convert canvas to PNG
+  const blob = await canvas.convertToBlob({ 
+    type: 'image/png',
+    quality: 1.0
+  });
+  const arrayBuffer = await blob.arrayBuffer();
+  return new Uint8Array(arrayBuffer);
+}

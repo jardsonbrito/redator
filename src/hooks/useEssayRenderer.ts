@@ -37,7 +37,12 @@ export function useEssayRenderer() {
       }
 
       console.log('✅ Essay rendered successfully:', data.imageUrl);
-      console.log('📊 Render dimensions:', data.dimensions);
+      console.log('📊 RENDER METADATA:', {
+        width: data.render_width,
+        height: data.render_height, 
+        timestamp: data.timestamp,
+        url: data.imageUrl
+      });
       
       return data.imageUrl;
 
