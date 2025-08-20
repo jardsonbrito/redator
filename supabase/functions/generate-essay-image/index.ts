@@ -27,22 +27,69 @@ serve(async (req) => {
     // Initialize Supabase client with service role key
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Generate SVG from text
-    const svg = await generateEssaySVG(text);
+    // Generate a realistic handwritten essay image with OpenAI
+    const prompt = `Create a high-quality image of a handwritten essay on lined paper. The essay should have the following characteristics:
+- Written with blue ink pen
+- On white lined paper with horizontal blue lines
+- Font size equivalent to 14pt with 1.15 line spacing
+- Text should fill the entire width of the page with proper margins
+- Clean, legible handwriting
+- Natural paper texture
+- The text content should be: "${text.substring(0, 500)}..." (continue with similar academic Portuguese text)
+- Make it look like a real student's handwritten essay
+- Ensure the handwriting fills the entire page width effectively
+- Use proper paragraph spacing
+- High resolution, professional quality image`;
+
+    console.log('Calling OpenAI DALL-E to generate essay image...');
+
+    const openaiResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt: prompt,
+        n: 1,
+        size: '1024x1536', // Portrait format like a real essay
+        quality: 'high',
+        response_format: 'url'
+      }),
+    });
+
+    if (!openaiResponse.ok) {
+      const errorData = await openaiResponse.text();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${openaiResponse.status} ${errorData}`);
+    }
+
+    const openaiData = await openaiResponse.json();
+    const imageUrl = openaiData.data[0].url;
     
-    console.log('SVG generated, length:', svg.length);
+    console.log('OpenAI generated image URL:', imageUrl);
+
+    // Download the image from OpenAI
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error('Failed to download generated image');
+    }
     
-    // Upload to Supabase Storage as SVG (browsers handle SVG better than fake PNG)
-    const fileName = `rendered/${essayId}.svg`;
-    const svgBuffer = new TextEncoder().encode(svg);
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const uint8Array = new Uint8Array(imageBuffer);
+    
+    // Upload to Supabase Storage
+    const fileName = `rendered/${essayId}.png`;
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('essays')
-      .upload(fileName, svgBuffer, {
-        contentType: 'image/svg+xml',
+      .upload(fileName, uint8Array, {
+        contentType: 'image/png',
         upsert: true
       });
 
@@ -107,103 +154,3 @@ serve(async (req) => {
     );
   }
 });
-
-async function generateEssaySVG(text: string): Promise<string> {
-  // Split text into paragraphs
-  const paragraphs = text.split('\n').filter(p => p.trim().length > 0);
-  
-  // Configuration
-  const fontSize = 14;
-  const lineHeight = Math.round(14 * 1.15); // 16.1px (14 * 1.15)
-  const marginX = 32; // Menor margem para aproveitar mais largura
-  const marginY = 40; // Menor margem superior/inferior
-  const pageWidth = 800;
-  const maxLineWidth = pageWidth - (marginX * 2);
-  
-  // Calculate wrapped lines for each paragraph
-  const allLines: string[] = [];
-  
-  for (const paragraph of paragraphs) {
-    const words = paragraph.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-    
-    for (const word of words) {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      // Approximate character width for Times New Roman at 14px (more accurate estimate)
-      const approximateWidth = testLine.length * (fontSize * 0.55);
-      
-      if (approximateWidth <= maxLineWidth) {
-        currentLine = testLine;
-      } else {
-        if (currentLine) {
-          lines.push(currentLine);
-        }
-        currentLine = word;
-      }
-    }
-    
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-    
-    // Add paragraph lines to all lines
-    allLines.push(...lines);
-    // Add empty line between paragraphs (except for the last one)
-    if (paragraph !== paragraphs[paragraphs.length - 1]) {
-      allLines.push('');
-    }
-  }
-  
-  // Calculate total height
-  const contentHeight = allLines.length * lineHeight;
-  const totalHeight = contentHeight + (marginY * 2);
-  
-  // Generate SVG
-  let svg = `<svg width="${pageWidth}" height="${totalHeight}" viewBox="0 0 ${pageWidth} ${totalHeight}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">`;
-  svg += `<rect width="100%" height="100%" fill="white"/>`;
-  svg += `<style>
-    .essay-text {
-      font-family: 'Times New Roman', serif;
-      font-size: ${fontSize}px;
-      fill: black;
-      line-height: ${lineHeight}px;
-      font-weight: normal;
-    }
-  </style>`;
-  
-  // Add text lines
-  for (let i = 0; i < allLines.length; i++) {
-    const line = allLines[i];
-    const y = marginY + (i * lineHeight) + fontSize; // Add fontSize to account for baseline
-    
-    svg += `<text x="${marginX}" y="${y}" class="essay-text">${escapeXml(line)}</text>`;
-  }
-  
-  svg += '</svg>';
-  
-  return svg;
-}
-
-async function svgToPng(svg: string): Promise<Uint8Array> {
-  // Create a simple PNG header for an SVG-based image
-  // Since we're creating SVG content, we'll encode it as a data URL PNG
-  
-  // Convert SVG string to base64
-  const svgBase64 = btoa(svg);
-  const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
-  
-  // For now, return the SVG as bytes
-  // In production, you'd use a proper SVG to PNG converter like resvg-js
-  const encoder = new TextEncoder();
-  return encoder.encode(svg);
-}
-
-function escapeXml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

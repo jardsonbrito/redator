@@ -109,11 +109,12 @@ export const EssayRenderer = ({
         <img 
           src={imageUrl} 
           alt="Redação renderizada"
-          className="essay-rendered-image w-full h-full object-fill"
+          className="essay-rendered-image w-full h-full"
           style={{ 
             width: '100%', 
             height: '100%',
-            objectFit: 'fill'
+            objectFit: 'fill',
+            display: 'block'
           }}
         />
       </div>
