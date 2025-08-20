@@ -68,6 +68,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   });
 
   const [showRelatorioModal, setShowRelatorioModal] = useState(false);
+  const [redacaoImageUrl, setRedacaoImageUrl] = useState<string | null>(redacao.image_url || null);
   const [showTemaModal, setShowTemaModal] = useState(false);
   const [showDevolverModal, setShowDevolverModal] = useState(false);
   const [showRedacaoExpandida, setShowRedacaoExpandida] = useState(false);
@@ -578,19 +579,29 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </CardHeader>
           <CardContent>
-            {redacao.image_url ? (
-              /* Usar sistema de anotações visuais quando há imagem renderizada */
+            {redacao.redacao_manuscrita_url ? (
+              /* Redação manuscrita - usar sistema de anotações visuais */
               <div className="w-full">
                 <RedacaoAnotacaoVisual
                   redacaoId={redacao.id}
-                  imagemUrl={redacao.image_url}
+                  imagemUrl={redacao.redacao_manuscrita_url}
+                  corretorId={corretorId}
+                  readonly={false}
+                />
+              </div>
+            ) : redacaoImageUrl ? (
+              /* Redação digitada já convertida - usar sistema de anotações visuais */
+              <div className="w-full">
+                <RedacaoAnotacaoVisual
+                  redacaoId={redacao.id}
+                  imagemUrl={redacaoImageUrl}
                   corretorId={corretorId}
                   readonly={false}
                 />
               </div>
             ) : (
-              /* Fallback: gerar e mostrar imagem */
-              <div className="essay-container border rounded-lg overflow-hidden bg-white">
+              /* Redação digitada que precisa ser convertida */
+              <div className="w-full">
                 <EssayRenderer
                   essayId={redacao.id}
                   text={redacao.texto || ''}
@@ -598,6 +609,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                          redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
                   imageUrl={redacao.image_url}
                   className="w-full"
+                  onImageGenerated={(imageUrl) => {
+                    setRedacaoImageUrl(imageUrl);
+                  }}
                 />
               </div>
             )}

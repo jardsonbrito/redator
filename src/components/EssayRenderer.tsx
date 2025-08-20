@@ -7,6 +7,7 @@ interface EssayRendererProps {
   table: 'redacoes_enviadas' | 'redacoes_simulado' | 'redacoes_exercicio';
   imageUrl?: string | null;
   className?: string;
+  onImageGenerated?: (imageUrl: string) => void;
 }
 
 export const EssayRenderer = ({ 
@@ -14,17 +15,19 @@ export const EssayRenderer = ({
   text, 
   table, 
   imageUrl: initialImageUrl, 
-  className = "" 
+  className = "",
+  onImageGenerated 
 }: EssayRendererProps) => {
   const [imageUrl, setImageUrl] = useState<string | null>(initialImageUrl || null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Callback para notificar quando a imagem for gerada
-  const onImageGenerated = (url: string) => {
+  // Função interna para notificar quando a imagem for gerada
+  const notifyImageGenerated = (url: string) => {
     setImageUrl(url);
-    // Recarregar a página para atualizar o componente pai com a nova image_url
-    window.location.reload();
+    if (onImageGenerated) {
+      onImageGenerated(url);
+    }
   };
 
   useEffect(() => {
@@ -59,9 +62,8 @@ export const EssayRenderer = ({
       }
 
       if (data?.imageUrl) {
-        setImageUrl(data.imageUrl);
         console.log('Image generated successfully:', data.imageUrl);
-        onImageGenerated(data.imageUrl);
+        notifyImageGenerated(data.imageUrl);
       }
     } catch (err: any) {
       console.error('Error generating image:', err);
