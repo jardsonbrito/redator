@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Video, Calendar, Clock, Users, ExternalLink, Trash2, Power, PowerOff, Edit, Radio, BarChart3 } from "lucide-react";
+import { computeStatus } from "@/utils/aulaStatus";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { FrequenciaModal } from "./FrequenciaModal";
 
@@ -108,6 +109,35 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
     });
   };
 
+  const getStatusBadge = (aula: AulaVirtual) => {
+    if (!aula.eh_aula_ao_vivo) return null;
+    
+    const status = computeStatus({
+      data_aula: new Date(aula.data_aula + 'T00:00:00').toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      }).replace(/\//g, '/'),
+      horario_inicio: aula.horario_inicio,
+      horario_fim: aula.horario_fim
+    });
+
+    const statusMap = {
+      'agendada': { emoji: '📅', text: 'Agendada' },
+      'ao_vivo': { emoji: '🔴', text: 'Em Transmissão' },
+      'encerrada': { emoji: '⏹️', text: 'Encerrada' },
+      'indefinido': { emoji: '❓', text: 'Indefinido' }
+    };
+
+    const currentStatus = statusMap[status] || statusMap['indefinido'];
+    
+    return (
+      <Badge variant="outline" className="text-xs mt-1">
+        {currentStatus.emoji} {currentStatus.text}
+      </Badge>
+    );
+  };
+
   useEffect(() => {
     fetchAulas();
   }, [refresh]);
@@ -175,13 +205,7 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
                               {aula.descricao}
                             </p>
                           )}
-                          {aula.eh_aula_ao_vivo && aula.status_transmissao && (
-                            <Badge variant="outline" className="text-xs mt-1">
-                              {aula.status_transmissao === 'agendada' && '📅 Agendada'}
-                              {aula.status_transmissao === 'em_transmissao' && '🔴 Em Transmissão'}
-                              {aula.status_transmissao === 'encerrada' && '⏹️ Encerrada'}
-                            </Badge>
-                          )}
+                          {getStatusBadge(aula)}
                         </div>
                       </TableCell>
                        <TableCell>
