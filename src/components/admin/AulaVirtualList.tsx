@@ -113,17 +113,40 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
     if (!aula.eh_aula_ao_vivo) return null;
     
     try {
+      // Validação básica dos dados
+      if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
+        console.warn('Dados incompletos da aula:', aula);
+        return (
+          <Badge variant="outline" className="text-xs mt-1">
+            ❓ Dados Incompletos
+          </Badge>
+        );
+      }
+
       // Converte a data do formato YYYY-MM-DD para DD/MM/YYYY
-      const [year, month, day] = aula.data_aula.split('-');
+      const dateParts = aula.data_aula.split('-');
+      if (dateParts.length !== 3) {
+        console.warn('Formato de data inválido:', aula.data_aula);
+        return (
+          <Badge variant="outline" className="text-xs mt-1">
+            ❓ Data Inválida
+          </Badge>
+        );
+      }
+
+      const [year, month, day] = dateParts;
       const formattedDate = `${day}/${month}/${year}`;
       
-      console.log('🔍 Data formatada para computeStatus:', {
-        original: aula.data_aula,
-        formatted: formattedDate,
-        horario_inicio: aula.horario_inicio,
-        horario_fim: aula.horario_fim
-      });
-      
+      // Validação dos horários
+      if (!aula.horario_inicio.includes(':') || !aula.horario_fim.includes(':')) {
+        console.warn('Formato de horário inválido:', { inicio: aula.horario_inicio, fim: aula.horario_fim });
+        return (
+          <Badge variant="outline" className="text-xs mt-1">
+            ❓ Horário Inválido
+          </Badge>
+        );
+      }
+
       const status = computeStatus({
         data_aula: formattedDate,
         horario_inicio: aula.horario_inicio,
