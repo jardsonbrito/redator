@@ -53,61 +53,14 @@ const customStyles = `
     stroke: #9C27B0 !important;
     stroke-width: 2px !important;
   }
-
-  /* ISOLAMENTO COMPLETO DA TELA DE CORREÇÃO - SEM HERANÇA DO FORMULÁRIO */
-  .correction-pane {
-    width: 100% !important;
-    max-width: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-    display: block !important;
-  }
-  
-  .correction-pane .essay-image-wrapper {
-    width: 100% !important;
-    max-width: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-    display: block !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-
-  .correction-pane img.essay-image {
-    display: block !important;
-    width: 100% !important;
-    height: auto !important;
-    max-width: none !important;
-    max-height: none !important;
-    object-fit: none !important;
-    transform: none !important;
-    scale: none !important;
-    zoom: 1 !important;
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-    background: white !important;
-  }
-
-  /* ZERAR QUALQUER LIMITAÇÃO HERDADA DO FORM */
-  .correction-pane [class*="form"],
-  .correction-pane [class*="container"],
-  .correction-pane [class*="content"],
-  .correction-pane [class*="wrapper"],
-  .correction-pane [class*="card"] {
-    max-width: none !important;
-    width: 100% !important;
-    transform: none !important;
-    scale: none !important;
-  }
   
   /* Garantir que a imagem não se mova */
-  .correction-pane img {
+  .container-imagem-redacao img {
     transition: none !important;
     transform: none !important;
   }
+  
+  /* Removido modo de tela cheia */
 
   /* Efeito de destaque para comentários */
   .comentario-destacado {
@@ -374,30 +327,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
-  // Função para carregar dimensões da imagem com logging detalhado
+  // Função para carregar dimensões da imagem
   const handleImageLoad = () => {
     if (imageRef.current) {
-      const { naturalWidth, naturalHeight, offsetWidth, offsetHeight } = imageRef.current;
+      const { naturalWidth, naturalHeight } = imageRef.current;
       setImageDimensions({ width: naturalWidth, height: naturalHeight });
-      
-      console.log('🖼️ IMAGEM CARREGADA:', {
-        naturalWidth, 
-        naturalHeight, 
-        displayWidth: offsetWidth, 
-        displayHeight: offsetHeight,
-        url: imageRef.current.src
-      });
-      
-      // Validar se a imagem está ocupando a largura correta
-      const container = containerRef.current;
-      if (container) {
-        const containerWidth = container.offsetWidth;
-        console.log('📐 CONTAINER WIDTH:', containerWidth, '| IMAGE DISPLAY WIDTH:', offsetWidth);
-        
-        if (Math.abs(containerWidth - offsetWidth) > 10) {
-          console.warn('⚠️ IMAGEM NÃO ESTÁ OCUPANDO TODA LARGURA DO CONTAINER!');
-        }
-      }
+      console.log('Dimensões da imagem carregadas:', { width: naturalWidth, height: naturalHeight });
     }
   };
 
@@ -1084,18 +1019,18 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   };
 
 
-  // Estilo otimizado para renderização de redação digitada
+  // Estilo estático para a imagem (sem modo de tela cheia)
   const getImageStyle = () => {
     return {
       userSelect: 'none' as const,
       cursor: 'default' as const,
-      width: '100%', // Ocupar toda a largura do container
-      height: 'auto',
+      maxWidth: '100%',
+      maxHeight: '100%',
       objectFit: 'contain' as const,
       transition: 'none', // Remover transição para evitar movimento
-      minHeight: '70vh', // Altura mínima para boa visualização
-      display: 'block', // Garantir display block
-      border: 'none', // Remover bordas
+      width: '100%',
+      height: 'auto',
+      minHeight: '80vh',
     };
   };
 
@@ -1137,48 +1072,18 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       )}
 
 
-      {/* CONTAINER DA REDAÇÃO - COMPLETAMENTE ISOLADO DO FORMULÁRIO */}
-      <div className="correction-pane w-full bg-white border rounded-lg overflow-hidden">
+      {/* Container da Imagem da Redação */}
+      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao`}>
         
-        <div 
-          ref={containerRef} 
-          className="essay-image-wrapper w-full"
-          style={{
-            width: '100%',
-            maxWidth: 'none',
-            padding: 0,
-            margin: 0,
-            overflow: 'visible',
-            display: 'block',
-            border: 'none',
-            boxShadow: 'none'
-          }}
-        >
+        <div ref={containerRef} className="flex justify-center items-center w-full h-full p-2">
           <img 
             ref={imageRef}
             src={imagemUrl} 
             alt="Redação para correção" 
-            className="essay-image w-full h-auto block"
+            className="img-redacao"
             onLoad={handleImageLoad}
             loading="lazy"
-            style={{
-              display: 'block',
-              width: '100%',
-              height: 'auto',
-              maxWidth: 'none',
-              maxHeight: 'none',
-              objectFit: 'none', // No scaling/fitting
-              userSelect: 'none',
-              cursor: 'default',
-              transition: 'none',
-              transform: 'none',
-              scale: 'none',
-              zoom: 1,
-              border: 'none',
-              outline: 'none',
-              boxShadow: 'none',
-              background: 'white'
-            }}
+            style={getImageStyle()}
           />
         </div>
       </div>

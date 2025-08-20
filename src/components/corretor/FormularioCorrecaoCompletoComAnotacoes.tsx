@@ -1,19 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check } from "lucide-react";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
 import { TemaModal } from "./TemaModal";
-import { EssayRenderer } from "./EssayRenderer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
-import { getTableOriginFromRedacao, isManuscritaRedacao, getEssayText } from "@/utils/essayUtils";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -77,7 +75,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [temaCompleto, setTemaCompleto] = useState<any>(null);
   const [corretorId, setCorretorId] = useState<string>('');
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Buscar ID do corretor ao carregar
@@ -119,10 +116,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
     carregarCorrecaoExistente();
     buscarTemaCompleto();
   }, [redacao.id]);
-
-  const handleImageReady = (url: string) => {
-    setImageUrl(url);
-  };
 
   const buscarTemaCompleto = async () => {
     try {
@@ -543,49 +536,27 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </CardContent>
       </Card>
 
-      {/* Visualização da Redação (Unified Viewer) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {isManuscritaRedacao(redacao) ? 'Redação Manuscrita' : 'Redação Digitada'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="relative">
-            <EssayRenderer
-              redacao={{
-                id: redacao.id,
-                redacao_manuscrita_url: redacao.redacao_manuscrita_url,
-                redacao_texto: redacao.texto,
-                texto: redacao.texto,
-                render_image_url: redacao.render_image_url,
-                render_status: redacao.render_status,
-                nome_aluno: redacao.nome_aluno,
-                frase_tematica: redacao.frase_tematica,
-                data_envio: redacao.data_envio,
-                turma: redacao.turma,
-                tipo_redacao: redacao.tipo_redacao
-              }}
-              tableOrigin={getTableOriginFromRedacao(redacao)}
-              onImageReady={handleImageReady}
+      {/* Redação Manuscrita - Exibe quando há URL de imagem */}
+      {redacao.redacao_manuscrita_url && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Redação Manuscrita</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RedacaoAnotacaoVisual
+              imagemUrl={redacao.redacao_manuscrita_url}
+              redacaoId={redacao.id}
+              corretorId={corretorId}
             />
-            
-            {imageUrl && (
-              <RedacaoAnotacaoVisual
-                imagemUrl={imageUrl}
-                redacaoId={redacao.id}
-                corretorId={corretorId}
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Copy Panel - Only show when image is ready */}
-      {!isManuscritaRedacao(redacao) && imageUrl && (
+      {/* Redação Digitada (não exibir quando há manuscrita) */}
+      {!redacao.redacao_manuscrita_url && (
         <Card className="card">
           <CardHeader className="card__header">
-            <CardTitle>Texto Original (para cópia)</CardTitle>
+            <CardTitle>Redação Digitada</CardTitle>
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -606,11 +577,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground mb-2">
-              Use esta seção apenas para copiar o texto. A correção deve ser feita na imagem acima.
-            </div>
-            <div className="textarea max-h-[120px] overflow-y-auto text-xs">
-              {getEssayText(redacao) ? formatarTextoComParagrafos(getEssayText(redacao)) : 'Texto da redação não disponível'}
+            <div className="textarea max-h-[200px] overflow-y-auto">
+              {redacao.texto ? formatarTextoComParagrafos(redacao.texto) : 'Texto da redação não disponível'}
             </div>
           </CardContent>
         </Card>

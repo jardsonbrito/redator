@@ -8,7 +8,7 @@ import { Home, Send, Upload, X, Camera, Edit3 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { RedacaoTextarea } from "@/components/RedacaoTextarea";
+import { RedacaoEnemForm } from "@/components/RedacaoEnemForm";
 import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -510,13 +510,12 @@ const EnvieRedacao = () => {
 
                   {/* Campo para redação digitada - aparece apenas se selecionado */}
                   {tipoRedacao === "digitada" && (
-                    <div className="space-y-4">
-                      <RedacaoTextarea
+                    <div className="bg-purple-50 p-6 rounded-lg border" style={{ borderColor: '#662f96' }}>
+                      <RedacaoEnemForm
                         value={redacaoTexto}
                         onChange={setRedacaoTexto}
                         onValidChange={setIsRedacaoValid}
-                        placeholder="Escreva sua redação completa aqui..."
-                        className="w-full"
+                        placeholder="Escreva sua redação aqui..."
                       />
                     </div>
                   )}

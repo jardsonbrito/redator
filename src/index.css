@@ -420,29 +420,3 @@
     }
   }
 }
-
-/* Essay Rendering Styles */
-@layer components {
-  .correction-pane {
-    @apply w-full relative bg-white rounded-lg;
-    min-height: 400px;
-  }
-  
-  .essay-image-wrapper {
-    @apply w-full relative overflow-hidden bg-white rounded-lg;
-    min-height: 400px;
-  }
-  
-  .essay-image {
-    @apply block w-full h-auto object-contain object-top;
-    max-width: none !important;
-    image-rendering: auto;
-    background: white;
-  }
-  
-  .essay-text-container {
-    @apply w-full max-h-[200px] overflow-y-auto p-4 border border-border rounded-lg bg-muted/20;
-    font-size: 0.75rem;
-    line-height: 1.2;
-  }
-}
