@@ -550,8 +550,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             {isManuscritaRedacao(redacao) ? 'Redação Manuscrita' : 'Redação Digitada'}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="min-h-[600px]">
+        <CardContent className="p-4">
+          <div className="relative">
             <EssayRenderer
               redacao={{
                 id: redacao.id,
@@ -568,17 +568,14 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               }}
               tableOrigin={getTableOriginFromRedacao(redacao)}
               onImageReady={handleImageReady}
-              className="relative"
             />
             
             {imageUrl && (
-              <div className="absolute inset-0 pointer-events-none">
-                <RedacaoAnotacaoVisual
-                  imagemUrl={imageUrl}
-                  redacaoId={redacao.id}
-                  corretorId={corretorId}
-                />
-              </div>
+              <RedacaoAnotacaoVisual
+                imagemUrl={imageUrl}
+                redacaoId={redacao.id}
+                corretorId={corretorId}
+              />
             )}
           </div>
         </CardContent>

@@ -424,20 +424,20 @@
 /* Essay Rendering Styles */
 @layer components {
   .correction-pane {
-    @apply w-full min-h-[600px] relative bg-white;
+    @apply w-full relative bg-white rounded-lg;
+    min-height: 400px;
   }
   
   .essay-image-wrapper {
-    @apply w-full relative overflow-hidden bg-white;
-    min-height: 600px;
+    @apply w-full relative overflow-hidden bg-white rounded-lg;
+    min-height: 400px;
   }
   
   .essay-image {
     @apply block w-full h-auto object-contain object-top;
     max-width: none !important;
-    image-rendering: crisp-edges;
+    image-rendering: auto;
     background: white;
-    min-height: 600px;
   }
   
   .essay-text-container {

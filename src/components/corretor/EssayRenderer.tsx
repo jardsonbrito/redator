@@ -41,7 +41,8 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
       render_status: redacao.render_status,
       hasImage: !!redacao.render_image_url,
       isTyped: isTypedEssay(redacao),
-      manuscritaUrl: redacao.redacao_manuscrita_url
+      manuscritaUrl: redacao.redacao_manuscrita_url,
+      currentImageUrl: getEssayDisplayUrl(redacao)
     });
 
     const currentImageUrl = getEssayDisplayUrl(redacao);
@@ -49,14 +50,15 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
     if (currentImageUrl) {
       console.log('✅ Image already available:', currentImageUrl);
       setImageUrl(currentImageUrl);
-      setRenderStatus('ready');
+      setRenderStatus(redacao.render_status || 'ready');
       onImageReady(currentImageUrl);
       return;
     }
 
     // If it's a typed essay without image, start rendering immediately
-    if (needsRender) {
+    if (isTypedEssay(redacao) && !currentImageUrl) {
       console.log('🎨 Starting render process for typed essay');
+      setRenderStatus('pending');
       handleManualRender();
     }
   }, [redacao.render_status, redacao.render_image_url, redacao.redacao_manuscrita_url, redacao.id]);
@@ -149,7 +151,7 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
   };
 
   // If it's a handwritten essay, just return the image
-  if (!isTypedEssay(redacao) && redacao.redacao_manuscrita_url) {
+  if (redacao.redacao_manuscrita_url) {
     return (
       <div className={`correction-pane ${className}`}>
         <div className="essay-image-wrapper">
@@ -164,8 +166,29 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
     );
   }
 
-  // For typed essays, show rendering status
-  if (needsRender) {
+  // If any image URL is available (typed or handwritten), show it FIRST
+  if (imageUrl) {
+    console.log('🖼️ Displaying image:', imageUrl);
+    return (
+      <div className={`correction-pane ${className}`}>
+        <div className="essay-image-wrapper">
+          <img 
+            src={imageUrl} 
+            alt={isTypedEssay(redacao) ? "Redação renderizada" : "Redação manuscrita"}
+            className="essay-image"
+            onLoad={() => onImageReady(imageUrl)}
+            onError={(e) => {
+              console.error('❌ Image load error:', e);
+              setRenderStatus('error');
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // For typed essays, show rendering status only if no image available
+  if (isTypedEssay(redacao)) {
     return (
       <div className={`correction-pane ${className}`}>
         <div className="p-8 text-center space-y-4">
@@ -230,21 +253,17 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
     );
   }
 
-  // If any image URL is available (typed or handwritten), show it
-  if (imageUrl) {
-    return (
-      <div className={`correction-pane ${className}`}>
-        <div className="essay-image-wrapper">
-          <img 
-            src={imageUrl} 
-            alt={isTypedEssay(redacao) ? "Redação renderizada" : "Redação manuscrita"}
-            className="essay-image"
-            onLoad={() => onImageReady(imageUrl)}
-          />
-        </div>
+  // Fallback - should not reach here
+  console.warn('⚠️ EssayRenderer fallback reached', { redacao, imageUrl, renderStatus });
+  return (
+    <div className={`correction-pane ${className}`}>
+      <div className="p-8 text-center">
+        <Alert>
+          <AlertDescription>
+            Nenhum conteúdo de redação disponível para exibição.
+          </AlertDescription>
+        </Alert>
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }
