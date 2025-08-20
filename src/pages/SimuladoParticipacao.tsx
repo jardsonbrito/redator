@@ -13,7 +13,7 @@ import { ptBR } from "date-fns/locale/pt-BR";
 import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoStatus";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { RedacaoEnemForm } from "@/components/RedacaoEnemForm";
+import { RedacaoTextareaSimples } from "@/components/RedacaoTextareaSimples";
 import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -507,11 +507,11 @@ const SimuladoParticipacao = () => {
                     </p>
                   </div>
 
-                  <RedacaoEnemForm
+                  <RedacaoTextareaSimples
                     value={redacaoTexto}
                     onChange={setRedacaoTexto}
                     onValidChange={setIsRedacaoValid}
-                    placeholder="Escreva sua redação aqui..."
+                    placeholder="Escreva sua redação completa aqui..."
                   />
 
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">

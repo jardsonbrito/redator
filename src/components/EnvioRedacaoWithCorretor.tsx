@@ -403,9 +403,14 @@ export const EnvioRedacaoWithCorretor = ({
               id="redacao_texto"
               value={formData.redacao_texto}
               onChange={(e) => setFormData(prev => ({ ...prev, redacao_texto: e.target.value }))}
-              placeholder="Digite o texto da sua redação aqui..."
-              className="min-h-[180px] border-primary/20 focus:border-primary"
+              placeholder="Escreva sua redação completa aqui..."
+              className="min-h-[400px] w-full resize-y border-primary/20 focus:border-primary"
             />
+            {formData.redacao_texto.trim().length > 0 && (
+              <div className="text-xs text-muted-foreground mt-2">
+                {formData.redacao_texto.trim().split(/\s+/).filter(word => word.length > 0).length} palavras
+              </div>
+            )}
           </div>
 
           <Button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary/90">
