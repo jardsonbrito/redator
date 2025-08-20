@@ -78,6 +78,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [temaCompleto, setTemaCompleto] = useState<any>(null);
   const [corretorId, setCorretorId] = useState<string>('');
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   // Buscar ID do corretor ao carregar
@@ -580,15 +581,24 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </CardHeader>
           <CardContent>
-            {/* Usar componente de texto com anotações diretamente */}
-            <div className="w-full">
-              <RedacaoTextoAnotacao
-                redacaoId={redacao.id}
-                texto={redacao.texto || 'Texto da redação não disponível'}
-                corretorId={corretorId}
-                readonly={false}
-              />
-            </div>
+            <EssayRenderer
+              essayId={redacao.id}
+              text={redacao.texto || "Texto da redação não disponível"}
+              table={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                     redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+              onImageGenerated={(imageUrl) => {
+                setImageUrls(prev => ({ ...prev, [redacao.id]: imageUrl }));
+              }}
+            />
+            {imageUrls[redacao.id] && (
+              <div className="mt-4">
+                <RedacaoAnotacaoVisual
+                  imagemUrl={imageUrls[redacao.id]}
+                  redacaoId={redacao.id}
+                  corretorId={corretorId}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
