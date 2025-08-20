@@ -1258,8 +1258,10 @@ export type Database = {
           nota_total: number | null
           redacao_manuscrita_url: string | null
           redacao_texto: string
+          render_height: number | null
           render_image_url: string | null
           render_status: string | null
+          render_width: number | null
           status: string | null
           status_corretor_1: string | null
           status_corretor_2: string | null
@@ -1320,8 +1322,10 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto: string
+          render_height?: number | null
           render_image_url?: string | null
           render_status?: string | null
+          render_width?: number | null
           status?: string | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
@@ -1382,8 +1386,10 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto?: string
+          render_height?: number | null
           render_image_url?: string | null
           render_status?: string | null
+          render_width?: number | null
           status?: string | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
@@ -1468,8 +1474,10 @@ export type Database = {
           nota_total: number | null
           redacao_manuscrita_url: string | null
           redacao_texto: string
+          render_height: number | null
           render_image_url: string | null
           render_status: string | null
+          render_width: number | null
           status_corretor_1: string | null
           status_corretor_2: string | null
           thumb_url: string | null
@@ -1527,8 +1535,10 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto: string
+          render_height?: number | null
           render_image_url?: string | null
           render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           thumb_url?: string | null
@@ -1586,8 +1596,10 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto?: string
+          render_height?: number | null
           render_image_url?: string | null
           render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           thumb_url?: string | null
@@ -1670,8 +1682,10 @@ export type Database = {
           nota_final_corretor_2: number | null
           nota_total: number | null
           redacao_manuscrita_url: string | null
+          render_height: number | null
           render_image_url: string | null
           render_status: string | null
+          render_width: number | null
           status_corretor_1: string | null
           status_corretor_2: string | null
           texto: string
@@ -1730,8 +1744,10 @@ export type Database = {
           nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
+          render_height?: number | null
           render_image_url?: string | null
           render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           texto: string
@@ -1790,8 +1806,10 @@ export type Database = {
           nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
+          render_height?: number | null
           render_image_url?: string | null
           render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           texto?: string
