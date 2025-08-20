@@ -22,6 +22,7 @@ interface AulaAoVivo {
   eh_aula_ao_vivo: boolean;
   ativo: boolean;
   imagem_capa_url?: string;
+  status_transmissao?: string;
 }
 
 interface RegistroPresenca {
@@ -358,7 +359,18 @@ const AulasAoVivo = () => {
                 const registro = registrosPresencaMap[aula.id];
 
                 // Normalizar status para garantir compatibilidade de tipos
-                const normalizedStatus = status === 'indefinido' ? 'encerrada' : status;
+                let normalizedStatus = status === 'indefinido' ? 'encerrada' : status;
+                
+                // Se tem status_transmissao, usar ele para determinar se está ao vivo
+                if (aula.status_transmissao === 'em_transmissao') {
+                  normalizedStatus = 'ao_vivo';
+                } else if (aula.status_transmissao === 'agendada') {
+                  normalizedStatus = 'agendada';
+                } else if (aula.status_transmissao === 'encerrada') {
+                  normalizedStatus = 'encerrada';
+                }
+
+                console.log(`Aula ${aula.id} - Status: ${normalizedStatus}, Registro:`, registro);
                 
                 return (
                   <AulaAoVivoCardRefatorado
