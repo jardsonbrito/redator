@@ -579,42 +579,28 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </CardHeader>
           <CardContent>
-            {redacao.redacao_manuscrita_url ? (
-              /* Redação manuscrita - usar sistema de anotações visuais */
-              <div className="w-full">
-                <RedacaoAnotacaoVisual
-                  redacaoId={redacao.id}
-                  imagemUrl={redacao.redacao_manuscrita_url}
-                  corretorId={corretorId}
-                  readonly={false}
-                />
-              </div>
-            ) : redacaoImageUrl ? (
-              /* Redação digitada já convertida - usar sistema de anotações visuais */
-              <div className="w-full">
-                <RedacaoAnotacaoVisual
-                  redacaoId={redacao.id}
-                  imagemUrl={redacaoImageUrl}
-                  corretorId={corretorId}
-                  readonly={false}
-                />
-              </div>
-            ) : (
-              /* Redação digitada que precisa ser convertida */
-              <div className="w-full">
+            {/* Sempre usar o sistema de anotações visuais para redações digitadas */}
+            <div className="w-full">
+              <RedacaoAnotacaoVisual
+                redacaoId={redacao.id}
+                imagemUrl={redacao.image_url || redacaoImageUrl || ''}
+                corretorId={corretorId}
+                readonly={false}
+              />
+              {/* EssayRenderer escondido para gerar imagem no background */}
+              <div style={{ display: 'none' }}>
                 <EssayRenderer
                   essayId={redacao.id}
                   text={redacao.texto || ''}
                   table={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
                          redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
                   imageUrl={redacao.image_url}
-                  className="w-full"
                   onImageGenerated={(imageUrl) => {
                     setRedacaoImageUrl(imageUrl);
                   }}
                 />
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       )}

@@ -85,21 +85,10 @@ export const EssayRenderer = ({
     );
   }
 
-  // Se tem erro, mostra o texto original
+  // Se tem erro, não mostra nada para não interferir com anotações
   if (error) {
-    console.warn('Fallback to text due to error:', error);
-    return (
-      <div className={`space-y-2 ${className}`}>
-        <div className="text-xs text-destructive">Erro ao carregar imagem da redação</div>
-        <div className="p-4 bg-muted/10 rounded-lg">
-          {text.split('\n').map((paragraph, index) => (
-            <p key={index} className="mb-2 last:mb-0">
-              {paragraph || '\u00A0'}
-            </p>
-          ))}
-        </div>
-      </div>
-    );
+    console.warn('Essay image generation error:', error);
+    return null;
   }
 
   // Se tem imagem, mostra a imagem
