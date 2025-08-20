@@ -675,6 +675,113 @@ export type Database = {
           },
         ]
       }
+      lousa: {
+        Row: {
+          ativo: boolean
+          capa_url: string | null
+          created_at: string
+          created_by: string
+          enunciado: string
+          fim_em: string | null
+          id: string
+          inicio_em: string | null
+          permite_visitante: boolean
+          status: string
+          titulo: string
+          turmas: string[]
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          capa_url?: string | null
+          created_at?: string
+          created_by: string
+          enunciado: string
+          fim_em?: string | null
+          id?: string
+          inicio_em?: string | null
+          permite_visitante?: boolean
+          status?: string
+          titulo: string
+          turmas?: string[]
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          capa_url?: string | null
+          created_at?: string
+          created_by?: string
+          enunciado?: string
+          fim_em?: string | null
+          id?: string
+          inicio_em?: string | null
+          permite_visitante?: boolean
+          status?: string
+          titulo?: string
+          turmas?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lousa_resposta: {
+        Row: {
+          aluno_id: string | null
+          comentario_professor: string | null
+          conteudo: string
+          corrected_at: string | null
+          created_at: string
+          email_aluno: string
+          id: string
+          lousa_id: string
+          nome_aluno: string
+          nota: number | null
+          status: string
+          submitted_at: string | null
+          turma: string | null
+          updated_at: string
+        }
+        Insert: {
+          aluno_id?: string | null
+          comentario_professor?: string | null
+          conteudo?: string
+          corrected_at?: string | null
+          created_at?: string
+          email_aluno: string
+          id?: string
+          lousa_id: string
+          nome_aluno: string
+          nota?: number | null
+          status?: string
+          submitted_at?: string | null
+          turma?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string | null
+          comentario_professor?: string | null
+          conteudo?: string
+          corrected_at?: string | null
+          created_at?: string
+          email_aluno?: string
+          id?: string
+          lousa_id?: string
+          nome_aluno?: string
+          nota?: number | null
+          status?: string
+          submitted_at?: string | null
+          turma?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lousa_resposta_lousa_id_fkey"
+            columns: ["lousa_id"]
+            isOneToOne: false
+            referencedRelation: "lousa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marcacoes_visuais: {
         Row: {
           atualizado_em: string
@@ -1246,6 +1353,8 @@ export type Database = {
           email_aluno: string | null
           frase_tematica: string
           id: string
+          image_path: string | null
+          image_url: string | null
           justificativa_devolucao: string | null
           nome_aluno: string | null
           nota_c1: number | null
@@ -1258,9 +1367,14 @@ export type Database = {
           nota_total: number | null
           redacao_manuscrita_url: string | null
           redacao_texto: string
+          render_height: number | null
+          render_image_url: string | null
+          render_status: string | null
+          render_width: number | null
           status: string | null
           status_corretor_1: string | null
           status_corretor_2: string | null
+          thumb_url: string | null
           tipo_envio: string | null
           turma: string | null
           user_id: string | null
@@ -1305,6 +1419,8 @@ export type Database = {
           email_aluno?: string | null
           frase_tematica: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno?: string | null
           nota_c1?: number | null
@@ -1317,9 +1433,14 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto: string
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status?: string | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          thumb_url?: string | null
           tipo_envio?: string | null
           turma?: string | null
           user_id?: string | null
@@ -1364,6 +1485,8 @@ export type Database = {
           email_aluno?: string | null
           frase_tematica?: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno?: string | null
           nota_c1?: number | null
@@ -1376,9 +1499,14 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto?: string
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status?: string | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          thumb_url?: string | null
           tipo_envio?: string | null
           turma?: string | null
           user_id?: string | null
@@ -1447,6 +1575,8 @@ export type Database = {
           email_aluno: string
           exercicio_id: string
           id: string
+          image_path: string | null
+          image_url: string | null
           justificativa_devolucao: string | null
           nome_aluno: string
           nota_c1: number | null
@@ -1459,8 +1589,13 @@ export type Database = {
           nota_total: number | null
           redacao_manuscrita_url: string | null
           redacao_texto: string
+          render_height: number | null
+          render_image_url: string | null
+          render_status: string | null
+          render_width: number | null
           status_corretor_1: string | null
           status_corretor_2: string | null
+          thumb_url: string | null
           turma: string | null
           user_id: string | null
         }
@@ -1503,6 +1638,8 @@ export type Database = {
           email_aluno: string
           exercicio_id: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno: string
           nota_c1?: number | null
@@ -1515,8 +1652,13 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto: string
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          thumb_url?: string | null
           turma?: string | null
           user_id?: string | null
         }
@@ -1559,6 +1701,8 @@ export type Database = {
           email_aluno?: string
           exercicio_id?: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno?: string
           nota_c1?: number | null
@@ -1571,8 +1715,13 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto?: string
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          thumb_url?: string | null
           turma?: string | null
           user_id?: string | null
         }
@@ -1641,6 +1790,8 @@ export type Database = {
           email_aluno: string
           id: string
           id_simulado: string
+          image_path: string | null
+          image_url: string | null
           justificativa_devolucao: string | null
           nome_aluno: string
           nota_c1: number | null
@@ -1652,9 +1803,14 @@ export type Database = {
           nota_final_corretor_2: number | null
           nota_total: number | null
           redacao_manuscrita_url: string | null
+          render_height: number | null
+          render_image_url: string | null
+          render_status: string | null
+          render_width: number | null
           status_corretor_1: string | null
           status_corretor_2: string | null
           texto: string
+          thumb_url: string | null
           turma: string
           user_id: string | null
         }
@@ -1698,6 +1854,8 @@ export type Database = {
           email_aluno: string
           id?: string
           id_simulado: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno: string
           nota_c1?: number | null
@@ -1709,9 +1867,14 @@ export type Database = {
           nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           texto: string
+          thumb_url?: string | null
           turma: string
           user_id?: string | null
         }
@@ -1755,6 +1918,8 @@ export type Database = {
           email_aluno?: string
           id?: string
           id_simulado?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno?: string
           nota_c1?: number | null
@@ -1766,9 +1931,14 @@ export type Database = {
           nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           texto?: string
+          thumb_url?: string | null
           turma?: string
           user_id?: string | null
         }
@@ -2246,8 +2416,11 @@ export type Database = {
           id: string
           nome_aluno: string
           redacao_manuscrita_url: string
+          render_image_url: string
+          render_status: string
           status_minha_correcao: string
           texto: string
+          thumb_url: string
           tipo_redacao: string
           turma: string
         }[]
