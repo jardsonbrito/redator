@@ -114,9 +114,9 @@ async function generateEssaySVG(text: string): Promise<string> {
   
   // Configuration
   const fontSize = 14;
-  const lineHeight = Math.round(14 * 1.15); // 16px (14 * 1.15)
-  const marginX = 64;
-  const marginY = 80;
+  const lineHeight = Math.round(14 * 1.15); // 16.1px (14 * 1.15)
+  const marginX = 32; // Menor margem para aproveitar mais largura
+  const marginY = 40; // Menor margem superior/inferior
   const pageWidth = 800;
   const maxLineWidth = pageWidth - (marginX * 2);
   
@@ -130,8 +130,8 @@ async function generateEssaySVG(text: string): Promise<string> {
     
     for (const word of words) {
       const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      // Approximate character width (this is a rough estimate)
-      const approximateWidth = testLine.length * (fontSize * 0.6);
+      // Approximate character width for Times New Roman at 14px (more accurate estimate)
+      const approximateWidth = testLine.length * (fontSize * 0.55);
       
       if (approximateWidth <= maxLineWidth) {
         currentLine = testLine;
@@ -160,7 +160,7 @@ async function generateEssaySVG(text: string): Promise<string> {
   const totalHeight = contentHeight + (marginY * 2);
   
   // Generate SVG
-  let svg = `<svg width="${pageWidth}" height="${totalHeight}" xmlns="http://www.w3.org/2000/svg">`;
+  let svg = `<svg width="${pageWidth}" height="${totalHeight}" viewBox="0 0 ${pageWidth} ${totalHeight}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">`;
   svg += `<rect width="100%" height="100%" fill="white"/>`;
   svg += `<style>
     .essay-text {
@@ -168,6 +168,7 @@ async function generateEssaySVG(text: string): Promise<string> {
       font-size: ${fontSize}px;
       fill: black;
       line-height: ${lineHeight}px;
+      font-weight: normal;
     }
   </style>`;
   
