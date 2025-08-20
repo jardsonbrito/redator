@@ -84,7 +84,7 @@ serve(async (req) => {
     
     console.log(`🎯 RENDER CONFIG: ${renderWidth}x${contentHeight} | Font: ${fontSize}px | Lines: ${allLines.length}`);
 
-    // SVG GENERATION using robust approach for Deno
+    // SVG GENERATION - clean and scalable
     const imageBuffer = await generateCleanSVG(allLines, renderWidth, contentHeight, fontSize, lineHeight, padding);
     
     // Cache busting with timestamp
@@ -174,7 +174,7 @@ serve(async (req) => {
   }
 })
 
-// SVG GENERATION - ROBUST APPROACH FOR DENO
+// SVG GENERATION - clean and scalable
 async function generateCleanSVG(
   lines: string[], 
   width: number, 

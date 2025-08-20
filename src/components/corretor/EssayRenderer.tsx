@@ -26,7 +26,7 @@ interface EssayRendererProps {
 
 export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = "" }: EssayRendererProps) {
   const [renderStatus, setRenderStatus] = useState(redacao.render_status || 'pending');
-  const [imageUrl, setImageUrl] = useState<string | null>(getEssayDisplayUrl(redacao));
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
   
   const { renderEssay, checkRenderStatus, retryRender, isRendering } = useEssayRenderer();
@@ -40,7 +40,8 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
       needsRender,
       render_status: redacao.render_status,
       hasImage: !!redacao.render_image_url,
-      isTyped: isTypedEssay(redacao)
+      isTyped: isTypedEssay(redacao),
+      manuscritaUrl: redacao.redacao_manuscrita_url
     });
 
     const currentImageUrl = getEssayDisplayUrl(redacao);
@@ -48,6 +49,7 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
     if (currentImageUrl) {
       console.log('✅ Image already available:', currentImageUrl);
       setImageUrl(currentImageUrl);
+      setRenderStatus('ready');
       onImageReady(currentImageUrl);
       return;
     }
@@ -57,7 +59,7 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
       console.log('🎨 Starting render process for typed essay');
       handleManualRender();
     }
-  }, [redacao.render_status, redacao.render_image_url, needsRender]);
+  }, [redacao.render_status, redacao.render_image_url, redacao.redacao_manuscrita_url, redacao.id]);
 
   const startPolling = async () => {
     if (polling) return;
@@ -228,14 +230,14 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
     );
   }
 
-  // If typed essay is ready, show the rendered image
-  if (imageUrl && renderStatus === 'ready') {
+  // If any image URL is available (typed or handwritten), show it
+  if (imageUrl) {
     return (
       <div className={`correction-pane ${className}`}>
         <div className="essay-image-wrapper">
           <img 
             src={imageUrl} 
-            alt="Redação renderizada"
+            alt={isTypedEssay(redacao) ? "Redação renderizada" : "Redação manuscrita"}
             className="essay-image"
             onLoad={() => onImageReady(imageUrl)}
           />

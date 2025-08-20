@@ -47,6 +47,10 @@
     --border: 267 30% 85%;
     --input: 267 30% 85%;
     --ring: 258 100% 20%; /* #2D0066 - Roxo escuro */
+    
+    /* Essay rendering styles */
+    --essay-background: 0 0% 100%;
+    --essay-border: 267 20% 90%;
 
     --radius: 0.5rem;
 
@@ -418,5 +422,28 @@
     #admin-header .btn-back .label { 
       font-size: 13px !important; 
     }
+  }
+}
+
+/* Essay Rendering Styles */
+@layer components {
+  .correction-pane {
+    @apply w-full min-h-[400px] relative;
+  }
+  
+  .essay-image-wrapper {
+    @apply w-full relative overflow-hidden rounded-lg border border-border bg-essay-background;
+  }
+  
+  .essay-image {
+    @apply block w-full h-auto object-contain object-top;
+    max-width: none !important;
+    image-rendering: crisp-edges;
+    background: white;
+    border-radius: 8px;
+  }
+  
+  .essay-text-container {
+    @apply w-full max-h-[400px] overflow-y-auto p-4 border border-border rounded-lg bg-essay-background;
   }
 }
