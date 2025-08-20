@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Video, Clock, Users, Calendar, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,13 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
   const [timestampSaida, setTimestampSaida] = useState<string | null>(null);
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
+
+  // Verificar registros existentes ao carregar o componente
+  useEffect(() => {
+    if (studentData.email) {
+      verificarRegistrosExistentes();
+    }
+  }, [studentData.email, aula.id]);
 
   const verificarRegistrosExistentes = async () => {
     try {
@@ -112,7 +119,9 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
               description: "Entrada registrada com sucesso."
             });
             setJaRegistrouEntrada(true);
-            verificarRegistrosExistentes();
+            setTimestampEntrada(new Date().toISOString());
+            // Atualizar dados do banco para ter timestamps precisos
+            setTimeout(() => verificarRegistrosExistentes(), 500);
             break;
           case 'entrada_ja_registrada':
             toast({
@@ -178,7 +187,9 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
               description: "Saída registrada com sucesso."
             });
             setJaRegistrouSaida(true);
-            verificarRegistrosExistentes();
+            setTimestampSaida(new Date().toISOString());
+            // Atualizar dados do banco para ter timestamps precisos
+            setTimeout(() => verificarRegistrosExistentes(), 500);
             break;
           case 'saida_ja_registrada':
             toast({
@@ -261,7 +272,6 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
       setEmailAluno(studentData.visitanteInfo.email);
     }
     setDialogAberto(tipo);
-    verificarRegistrosExistentes();
   };
 
   const isAgendada = aula.status_transmissao === 'agendada';
