@@ -579,27 +579,46 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </CardHeader>
           <CardContent>
-            {/* Sempre usar o sistema de anotações visuais para redações digitadas */}
-            <div className="w-full">
-              <RedacaoAnotacaoVisual
-                redacaoId={redacao.id}
-                imagemUrl={redacao.image_url || redacaoImageUrl || '/placeholder-essay.png'}
-                corretorId={corretorId}
-                readonly={false}
-              />
-              {/* EssayRenderer escondido para gerar imagem no background */}
-              <div style={{ display: 'none' }}>
-                <EssayRenderer
-                  essayId={redacao.id}
-                  text={redacao.texto || ''}
-                  table={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
-                         redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                  imageUrl={redacao.image_url}
-                  onImageGenerated={(imageUrl) => {
-                    setRedacaoImageUrl(imageUrl);
-                  }}
+            {redacao.image_url || redacaoImageUrl ? (
+              /* Se tem imagem gerada, usar sistema de anotações visuais */
+              <div className="w-full">
+                <RedacaoAnotacaoVisual
+                  redacaoId={redacao.id}
+                  imagemUrl={redacao.image_url || redacaoImageUrl}
+                  corretorId={corretorId}
+                  readonly={false}
                 />
               </div>
+            ) : (
+              /* Se não tem imagem, mostrar texto enquanto gera */
+              <div className="w-full space-y-4">
+                <div className="p-4 bg-muted/10 rounded-lg border-2 border-dashed border-muted">
+                  <div className="text-sm text-muted-foreground mb-2">
+                    Preparando redação para correção visual...
+                  </div>
+                  <div className="text-sm leading-relaxed">
+                    {redacao.texto ? redacao.texto.split('\n').map((paragrafo, index) => (
+                      <p key={index} className="mb-2 last:mb-0">
+                        {paragrafo || '\u00A0'}
+                      </p>
+                    )) : 'Texto da redação não disponível'}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* EssayRenderer para gerar imagem no background */}
+            <div style={{ display: 'none' }}>
+              <EssayRenderer
+                essayId={redacao.id}
+                text={redacao.texto || ''}
+                table={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                       redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                imageUrl={redacao.image_url}
+                onImageGenerated={(imageUrl) => {
+                  setRedacaoImageUrl(imageUrl);
+                }}
+              />
             </div>
           </CardContent>
         </Card>
