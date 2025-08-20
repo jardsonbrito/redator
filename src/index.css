@@ -138,27 +138,6 @@
   .text-redator-primary {
     color: hsl(258, 84%, 29%);
   }
-
-  /* Essay rendering styles */
-  .essay-container {
-    @apply w-full;
-  }
-
-  .essay-image-container {
-    @apply w-full bg-white rounded-lg overflow-hidden;
-  }
-
-  .essay-rendered-image {
-    @apply w-full h-full block;
-    object-fit: fill;
-    width: 100% !important;
-    height: 100% !important;
-  }
-
-  .essay-image-container {
-    @apply w-full h-full;
-    min-height: 600px;
-  }
   
   .text-redator-secondary {
     color: hsl(258, 60%, 78%);

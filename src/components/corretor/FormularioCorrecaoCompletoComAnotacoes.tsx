@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
-import { EssayRenderer } from "@/components/EssayRenderer";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -68,7 +67,6 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   });
 
   const [showRelatorioModal, setShowRelatorioModal] = useState(false);
-  const [redacaoImageUrl, setRedacaoImageUrl] = useState<string | null>(redacao.image_url || null);
   const [showTemaModal, setShowTemaModal] = useState(false);
   const [showDevolverModal, setShowDevolverModal] = useState(false);
   const [showRedacaoExpandida, setShowRedacaoExpandida] = useState(false);
@@ -564,7 +562,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 variant="outline"
                 onClick={copiarRedacaoDigitada}
                 className="icon-btn"
-                aria-label="Copiar texto original"
+                aria-label="Copiar redação"
               >
                 <Copy className="w-4 h-4" />
               </Button>
@@ -572,53 +570,15 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 variant="outline"
                 onClick={() => setShowRedacaoExpandida(true)}
                 className="icon-btn"
-                aria-label="Ver texto original"
+                aria-label="Expandir redação"
               >
                 <Maximize2 className="w-4 h-4" />
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {redacao.image_url || redacaoImageUrl ? (
-              /* Se tem imagem gerada, usar sistema de anotações visuais */
-              <div className="w-full">
-                <RedacaoAnotacaoVisual
-                  redacaoId={redacao.id}
-                  imagemUrl={redacao.image_url || redacaoImageUrl}
-                  corretorId={corretorId}
-                  readonly={false}
-                />
-              </div>
-            ) : (
-              /* Se não tem imagem, mostrar texto enquanto gera */
-              <div className="w-full space-y-4">
-                <div className="p-4 bg-muted/10 rounded-lg border-2 border-dashed border-muted">
-                  <div className="text-sm text-muted-foreground mb-2">
-                    Preparando redação para correção visual...
-                  </div>
-                  <div className="text-sm leading-relaxed">
-                    {redacao.texto ? redacao.texto.split('\n').map((paragrafo, index) => (
-                      <p key={index} className="mb-2 last:mb-0">
-                        {paragrafo || '\u00A0'}
-                      </p>
-                    )) : 'Texto da redação não disponível'}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* EssayRenderer para gerar imagem no background */}
-            <div style={{ display: 'none' }}>
-              <EssayRenderer
-                essayId={redacao.id}
-                text={redacao.texto || ''}
-                table={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
-                       redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                imageUrl={redacao.image_url}
-                onImageGenerated={(imageUrl) => {
-                  setRedacaoImageUrl(imageUrl);
-                }}
-              />
+            <div className="textarea max-h-[200px] overflow-y-auto">
+              {redacao.texto ? formatarTextoComParagrafos(redacao.texto) : 'Texto da redação não disponível'}
             </div>
           </CardContent>
         </Card>

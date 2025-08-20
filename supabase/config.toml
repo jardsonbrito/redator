@@ -59,9 +59,6 @@ verify_jwt = false
 [functions.schedule-tema-publisher]
 verify_jwt = false
 
-[functions.generate-essay-image]
-verify_jwt = false
-
 [edge-runtime]
 enabled = true
 port = 54330
