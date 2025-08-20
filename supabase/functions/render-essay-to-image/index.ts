@@ -180,41 +180,23 @@ serve(async (req) => {
       }
     });
 
-    // Calculate dynamic height based on content
-    const headerHeight = 280;
-    const lineHeight = 25;
-    const footerHeight = 100;
+    // Calculate dynamic height based on content (no header, just text)
+    const lineHeight = 30; // Increased for better readability
+    const padding = 60; // Top and bottom padding
     const contentHeight = allLines.length * lineHeight;
-    const calculatedHeight = Math.max(height, headerHeight + contentHeight + footerHeight);
+    const calculatedHeight = Math.max(400, contentHeight + (padding * 2));
 
     const svgContent = `
       <svg width="${width}" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
         <rect width="100%" height="100%" fill="white"/>
         
-        <!-- Header section -->
-        <text x="40" y="50" font-family="Times New Roman" font-size="20" font-weight="bold" fill="black">Redação Digitada</text>
-        <line x1="40" y1="70" x2="${width - 40}" y2="70" stroke="#333" stroke-width="2"/>
-        
-        <text x="40" y="100" font-family="Times New Roman" font-size="16" fill="black">Aluno(a): ${studentName}</text>
-        ${turma ? `<text x="40" y="125" font-family="Times New Roman" font-size="16" fill="black">Turma: ${turma}</text>` : ''}
-        <text x="40" y="${turma ? 150 : 125}" font-family="Times New Roman" font-size="16" fill="black">Data de Envio: ${new Date(sendDate).toLocaleDateString('pt-BR')}</text>
-        
-        <!-- Thematic phrase box -->
-        <rect x="40" y="${turma ? 170 : 145}" width="${width - 80}" height="60" fill="#f9f9f9" stroke="#333" stroke-width="1"/>
-        <text x="${width / 2}" y="${turma ? 200 : 175}" font-family="Times New Roman" font-size="16" font-weight="bold" text-anchor="middle" fill="black">Frase Temática</text>
-        <text x="${width / 2}" y="${turma ? 220 : 195}" font-family="Times New Roman" font-size="14" text-anchor="middle" fill="black">${thematicPhrase}</text>
-        
-        <!-- Essay content -->
-        <text x="40" y="${turma ? 260 : 235}" font-family="Times New Roman" font-size="16" font-weight="bold" fill="black">Texto da Redação:</text>
+        <!-- Essay content only - no metadata -->
         ${allLines.map((line, i) => {
-          const y = headerHeight + (i * lineHeight);
+          const y = padding + (i * lineHeight);
           return line.trim() ? 
-            `<text x="40" y="${y}" font-family="Times New Roman" font-size="15" fill="black">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
+            `<text x="60" y="${y}" font-family="Times New Roman, serif" font-size="18" fill="black">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
             '';
         }).join('')}
-        
-        <!-- Footer -->
-        <text x="${width - 40}" y="${calculatedHeight - 20}" font-family="Times New Roman" font-size="12" fill="#666" text-anchor="end">ID: ${essayId}</text>
       </svg>
     `
 
