@@ -69,12 +69,11 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
+        model: 'dall-e-3',
         prompt: prompt,
         n: 1,
         size: '1024x1536', // Portrait format like a real essay
-        quality: 'high',
-        response_format: 'url'
+        quality: 'hd'
       }),
     });
 
@@ -257,11 +256,11 @@ async function generateEssaySVG(text: string): Promise<string> {
   // Split text into paragraphs
   const paragraphs = text.split('\n').filter(p => p.trim().length > 0);
   
-  // Configuration
+  // Configuration - similar to shown image
   const fontSize = 14;
   const lineHeight = Math.round(14 * 1.15); // 16.1px (14 * 1.15)
-  const marginX = 32; // Menor margem para aproveitar mais largura
-  const marginY = 40; // Menor margem superior/inferior
+  const marginX = 60; // Margins similar to the image
+  const marginY = 60; // Top/bottom margins
   const pageWidth = 800;
   const maxLineWidth = pageWidth - (marginX * 2);
   
@@ -317,12 +316,25 @@ async function generateEssaySVG(text: string): Promise<string> {
     }
   </style>`;
   
-  // Add text lines
+  // Add text lines with proper spacing
+  let isParagraphStart = true;
   for (let i = 0; i < allLines.length; i++) {
     const line = allLines[i];
     const y = marginY + (i * lineHeight) + fontSize; // Add fontSize to account for baseline
     
-    svg += `<text x="${marginX}" y="${y}" class="essay-text">${escapeXml(line)}</text>`;
+    // Check if this is start of new paragraph (after empty line or first line)
+    if (i === 0 || allLines[i-1] === '') {
+      isParagraphStart = true;
+    }
+    
+    // Only add text if line is not empty
+    if (line.trim()) {
+      // For first line of paragraph, no indentation (like in the image)
+      // For other lines, normal positioning
+      const xPosition = marginX;
+      svg += `<text x="${xPosition}" y="${y}" class="essay-text">${escapeXml(line)}</text>`;
+      isParagraphStart = false;
+    }
   }
   
   svg += '</svg>';

@@ -112,11 +112,27 @@ export const EssayRenderer = ({
 
   // Fallback: mostra o texto enquanto não gera a imagem
   return (
-    <div className={`space-y-2 ${className}`}>
-      <div className="text-xs text-muted-foreground">Preparando visualização...</div>
-      <div className="p-4 bg-muted/10 rounded-lg">
+    <div className={`w-full ${className}`}>
+      <div className="text-xs text-muted-foreground mb-2">Preparando visualização...</div>
+      <div 
+        className="w-full bg-white text-black p-8 rounded-lg shadow-sm"
+        style={{
+          fontFamily: 'Times, "Times New Roman", serif',
+          fontSize: '14px',
+          lineHeight: '1.15',
+          textAlign: 'justify',
+          minHeight: '500px'
+        }}
+      >
         {text.split('\n').map((paragraph, index) => (
-          <p key={index} className="mb-2 last:mb-0">
+          <p 
+            key={index} 
+            className="mb-3 last:mb-0"
+            style={{
+              textIndent: index === 0 ? '0' : '2em',
+              marginBottom: '0.75em'
+            }}
+          >
             {paragraph || '\u00A0'}
           </p>
         ))}
