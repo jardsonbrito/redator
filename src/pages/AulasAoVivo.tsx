@@ -80,8 +80,11 @@ const AulasAoVivo = () => {
   const fetchPresencaAula = async (aulaId: string) => {
     try {
       if (!studentData.email) {
+        console.log('fetchPresencaAula: studentData.email não encontrado');
         return;
       }
+
+      console.log(`Buscando presença para aula ${aulaId} e email ${studentData.email}`);
 
       const { data, error } = await supabase
         .from('presenca_aulas')
@@ -90,12 +93,16 @@ const AulasAoVivo = () => {
         .eq('email_aluno', studentData.email)
         .maybeSingle();
 
+      console.log(`Resultado da busca de presença:`, { data, error });
+
       if (error && error.code !== 'PGRST116') {
         console.error('Erro ao verificar presença:', error);
         return;
       }
 
       const registro = data || { aula_id: aulaId, entrada_at: null, saida_at: null };
+
+      console.log(`Registrando presença no state:`, registro);
 
       setRegistrosPresencaMap(prev => ({
         ...prev,
@@ -155,24 +162,40 @@ const AulasAoVivo = () => {
 
       switch (data) {
         case 'entrada_ok':
+          console.log('Entrada registrada com sucesso, atualizando estado local');
           toast.success('Entrada registrada com sucesso!');
+          // Atualizar estado local imediatamente
+          setRegistrosPresencaMap(prev => ({
+            ...prev,
+            [aulaId]: {
+              aula_id: aulaId,
+              entrada_at: new Date().toISOString(),
+              saida_at: prev[aulaId]?.saida_at || null
+            }
+          }));
           break;
         case 'entrada_ja_registrada':
+          console.log('Entrada já foi registrada');
           toast.info('Entrada já foi registrada anteriormente');
           break;
         case 'token_invalido_ou_expirado':
+          console.error('Token inválido ou expirado');
           toast.error('Sessão expirada. Faça login novamente.');
           break;
         case 'aula_nao_encontrada':
+          console.error('Aula não encontrada');
           toast.error('Aula não encontrada');
           break;
         case 'aula_nao_iniciou':
+          console.log('Aula ainda não iniciou');
           toast.error('Aula ainda não iniciou (tolerância de 10 minutos antes)');
           break;
         case 'janela_encerrada':
+          console.log('Janela de registro encerrada');
           toast.error('Janela de registro encerrada (30 minutos após o fim da aula)');
           break;
         default:
+          console.error('Erro inesperado:', data);
           toast.error('Erro inesperado ao registrar entrada');
       }
       
@@ -222,27 +245,44 @@ const AulasAoVivo = () => {
 
       switch (data) {
         case 'saida_ok':
+          console.log('Saída registrada com sucesso, atualizando estado local');
           toast.success('Saída registrada com sucesso!');
+          // Atualizar estado local imediatamente
+          setRegistrosPresencaMap(prev => ({
+            ...prev,
+            [aulaId]: {
+              aula_id: aulaId,
+              entrada_at: prev[aulaId]?.entrada_at || null,
+              saida_at: new Date().toISOString()
+            }
+          }));
           break;
         case 'saida_ja_registrada':
+          console.log('Saída já foi registrada');
           toast.info('Saída já foi registrada anteriormente');
           break;
         case 'token_invalido_ou_expirado':
+          console.error('Token inválido ou expirado');
           toast.error('Sessão expirada. Faça login novamente.');
           break;
         case 'aula_nao_encontrada':
+          console.error('Aula não encontrada');
           toast.error('Aula não encontrada');
           break;
         case 'aula_nao_iniciou':
+          console.log('Aula ainda não iniciou');
           toast.error('Aula ainda não iniciou');
           break;
         case 'janela_encerrada':
+          console.log('Janela de registro encerrada');
           toast.error('Janela de registro encerrada (30 minutos após o fim da aula)');
           break;
         case 'precisa_entrada':
+          console.log('Precisa registrar entrada primeiro');
           toast.error('Registre a entrada primeiro');
           break;
         default:
+          console.error('Erro inesperado:', data);
           toast.error('Erro inesperado ao registrar saída');
       }
       
