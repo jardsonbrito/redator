@@ -115,23 +115,13 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
     try {
       // Validação básica dos dados
       if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
-        console.warn('Dados incompletos da aula:', aula);
-        return (
-          <Badge variant="outline" className="text-xs mt-1">
-            ❓ Dados Incompletos
-          </Badge>
-        );
+        return null;
       }
 
       // Converte a data do formato YYYY-MM-DD para DD/MM/YYYY
       const dateParts = aula.data_aula.split('-');
       if (dateParts.length !== 3) {
-        console.warn('Formato de data inválido:', aula.data_aula);
-        return (
-          <Badge variant="outline" className="text-xs mt-1">
-            ❓ Data Inválida
-          </Badge>
-        );
+        return null;
       }
 
       const [year, month, day] = dateParts;
@@ -139,12 +129,7 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
       
       // Validação dos horários
       if (!aula.horario_inicio.includes(':') || !aula.horario_fim.includes(':')) {
-        console.warn('Formato de horário inválido:', { inicio: aula.horario_inicio, fim: aula.horario_fim });
-        return (
-          <Badge variant="outline" className="text-xs mt-1">
-            ❓ Horário Inválido
-          </Badge>
-        );
+        return null;
       }
 
       const status = computeStatus({
@@ -169,11 +154,7 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
       );
     } catch (error) {
       console.error('🚨 Erro ao calcular status da aula:', error, aula);
-      return (
-        <Badge variant="outline" className="text-xs mt-1">
-          ❓ Erro no Status
-        </Badge>
-      );
+      return null;
     }
   };
 
