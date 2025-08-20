@@ -2273,8 +2273,11 @@ export type Database = {
           id: string
           nome_aluno: string
           redacao_manuscrita_url: string
+          render_image_url: string
+          render_status: string
           status_minha_correcao: string
           texto: string
+          thumb_url: string
           tipo_redacao: string
           turma: string
         }[]
