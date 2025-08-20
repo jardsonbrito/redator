@@ -2285,6 +2285,15 @@ export type Database = {
         Args: { corretor_email: string }
         Returns: number
       }
+      corrigir_lousa_resposta: {
+        Args: {
+          corretor_email: string
+          p_comentario_professor: string
+          p_nota: number
+          resposta_id: string
+        }
+        Returns: boolean
+      }
       count_student_submitted_redacoes: {
         Args: { student_email: string }
         Returns: number

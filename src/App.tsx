@@ -63,6 +63,8 @@ import AtualizarEmail from "./pages/AtualizarEmail";
 import AjudaRapida from "./pages/AjudaRapida";
 import CorretorAjudaRapida from "./pages/corretor/CorretorAjudaRapida";
 import CorretorTemaDetalhes from "./pages/corretor/CorretorTemaDetalhes";
+import CorretorLousas from "./pages/corretor/CorretorLousas";
+import CorretorLousaDetalhes from "./pages/corretor/CorretorLousaDetalhes";
 import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
@@ -132,6 +134,8 @@ function App() {
                   <Route path="/corretor/redacoes" element={<CorretorRedacoesExemplar />} />
                   <Route path="/corretor/top5" element={<CorretorTop5 />} />
                   <Route path="/corretor/ajuda-rapida" element={<CorretorAjudaRapida />} />
+                  <Route path="/corretor/lousas" element={<CorretorLousas />} />
+                  <Route path="/corretor/lousas/:id" element={<CorretorLousaDetalhes />} />
                   
                   {/* Rotas do Professor */}
                   <Route path="/professor/login" element={<ProfessorLogin />} />

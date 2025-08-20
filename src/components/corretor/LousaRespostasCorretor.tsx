@@ -4,7 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import { Eye, MessageCircle, Star, RotateCcw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useCorretorAuth } from '@/hooks/useCorretorAuth';
 
 interface Lousa {
   id: string;
@@ -36,7 +37,7 @@ interface LousaResposta {
   updated_at: string;
 }
 
-interface LousaRespostasProps {
+interface LousaRespostasCorretorProps {
   lousa: Lousa;
 }
 
@@ -47,12 +48,13 @@ const correcaoSchema = z.object({
 
 type CorrecaoFormData = z.infer<typeof correcaoSchema>;
 
-export default function LousaRespostas({ lousa }: LousaRespostasProps) {
+export function LousaRespostasCorretor({ lousa }: LousaRespostasCorretorProps) {
   const [respostas, setRespostas] = useState<LousaResposta[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingResposta, setViewingResposta] = useState<LousaResposta | null>(null);
   const [correctingResposta, setCorrectingResposta] = useState<LousaResposta | null>(null);
   const { toast } = useToast();
+  const { corretor } = useCorretorAuth();
 
   const form = useForm<CorrecaoFormData>({
     resolver: zodResolver(correcaoSchema),
@@ -101,46 +103,15 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
-  const handleDevolver = async (resposta: LousaResposta, comentario: string) => {
-    try {
-      const { error } = await supabase
-        .from('lousa_resposta')
-        .update({
-          status: 'returned',
-          comentario_professor: comentario,
-          corrected_at: new Date().toISOString()
-        })
-        .eq('id', resposta.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Sucesso',
-        description: 'Resposta devolvida para o aluno'
-      });
-
-      setCorrectingResposta(null);
-      form.reset();
-      fetchRespostas();
-    } catch (error) {
-      console.error('Erro ao devolver resposta:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao devolver resposta',
-        variant: 'destructive'
-      });
-    }
-  };
-
   const handleCorrigir = async (data: CorrecaoFormData) => {
-    if (!correctingResposta) return;
+    if (!correctingResposta || !corretor) return;
 
     try {
       const { error } = await supabase.rpc('corrigir_lousa_resposta', {
         resposta_id: correctingResposta.id,
         p_comentario_professor: data.comentario_professor,
         p_nota: data.nota,
-        corretor_email: 'jardsonbrito@gmail.com' // Email do admin logado
+        corretor_email: corretor.email
       });
 
       if (error) {
@@ -376,27 +347,7 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
                   />
 
                   <div className="flex gap-3 pt-4">
-                    <Button 
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const comentario = form.getValues('comentario_professor');
-                        if (comentario.trim()) {
-                          handleDevolver(correctingResposta, comentario);
-                        } else {
-                          toast({
-                            title: 'Erro',
-                            description: 'Comentário é obrigatório para devolver',
-                            variant: 'destructive'
-                          });
-                        }
-                      }}
-                    >
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Devolver
-                    </Button>
-                    
-                    <Button type="submit">
+                    <Button type="submit" className="flex-1">
                       <Star className="w-4 h-4 mr-2" />
                       Concluir Correção
                     </Button>
