@@ -149,10 +149,15 @@
   }
 
   .essay-rendered-image {
-    @apply w-full h-auto block;
-    object-fit: contain;
-    max-width: 100%;
-    height: auto;
+    @apply w-full h-full block;
+    object-fit: fill;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .essay-image-container {
+    @apply w-full h-full;
+    min-height: 600px;
   }
   
   .text-redator-secondary {

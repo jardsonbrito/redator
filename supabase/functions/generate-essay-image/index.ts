@@ -113,8 +113,8 @@ async function generateEssaySVG(text: string): Promise<string> {
   const paragraphs = text.split('\n').filter(p => p.trim().length > 0);
   
   // Configuration
-  const fontSize = 16;
-  const lineHeight = 24;
+  const fontSize = 14;
+  const lineHeight = Math.round(14 * 1.15); // 16px (14 * 1.15)
   const marginX = 64;
   const marginY = 80;
   const pageWidth = 800;

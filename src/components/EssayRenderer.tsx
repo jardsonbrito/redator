@@ -105,12 +105,16 @@ export const EssayRenderer = ({
   // Se tem imagem, mostra a imagem
   if (imageUrl) {
     return (
-      <div className={`essay-image-container ${className}`}>
+      <div className={`essay-image-container w-full h-full ${className}`}>
         <img 
           src={imageUrl} 
           alt="Redação renderizada"
-          className="essay-rendered-image w-full h-auto object-contain"
-          style={{ maxWidth: '100%', height: 'auto' }}
+          className="essay-rendered-image w-full h-full object-fill"
+          style={{ 
+            width: '100%', 
+            height: '100%',
+            objectFit: 'fill'
+          }}
         />
       </div>
     );
