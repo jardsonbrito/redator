@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { Calendar, Clock, Save, Send } from 'lucide-react';
+import { Save, Send } from 'lucide-react';
+import { DateTimePicker } from '@/components/ui/datetime-picker-custom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -212,37 +213,15 @@ export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
                 name="inicio_em"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Data de Início (Opcional)</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy HH:mm")
-                            ) : (
-                              <span>Selecione uma data</span>
-                            )}
-                            <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormLabel>Data e Hora de Início (Opcional)</FormLabel>
+                     <FormControl>
+                       <DateTimePicker
+                         selected={field.value}
+                         onChange={field.onChange}
+                         placeholder="Selecione data e hora de início"
+                         minDate={new Date()}
+                       />
+                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -253,37 +232,15 @@ export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
                 name="fim_em"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Data de Fim (Opcional)</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "dd/MM/yyyy HH:mm")
-                            ) : (
-                              <span>Selecione uma data</span>
-                            )}
-                            <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormLabel>Data e Hora de Fim (Opcional)</FormLabel>
+                     <FormControl>
+                       <DateTimePicker
+                         selected={field.value}
+                         onChange={field.onChange}
+                         placeholder="Selecione data e hora de fim"
+                         minDate={new Date()}
+                       />
+                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
