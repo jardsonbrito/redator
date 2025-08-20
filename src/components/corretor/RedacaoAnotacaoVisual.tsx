@@ -1072,18 +1072,27 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       )}
 
 
-      {/* Container da Imagem da Redação - Otimizado para redação digitada */}
-      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao bg-white`}>
+      {/* Container da Imagem da Redação - Full width display */}
+      <div className={`container-imagem-redacao border rounded-lg relative bg-white overflow-hidden`}>
         
-        <div ref={containerRef} className="w-full min-h-[70vh] p-0">
+        <div ref={containerRef} className="w-full">
           <img 
             ref={imageRef}
             src={imagemUrl} 
             alt="Redação para correção" 
-            className="img-redacao w-full h-auto block"
+            className="w-full h-auto block max-w-none"
             onLoad={handleImageLoad}
             loading="lazy"
-            style={getImageStyle()}
+            style={{
+              userSelect: 'none',
+              cursor: 'default',
+              transition: 'none',
+              width: '100%',
+              height: 'auto',
+              maxWidth: 'none',
+              objectFit: 'contain',
+              display: 'block'
+            }}
           />
         </div>
       </div>
