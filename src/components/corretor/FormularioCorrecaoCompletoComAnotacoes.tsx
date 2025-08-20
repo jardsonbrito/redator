@@ -583,7 +583,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             <div className="w-full">
               <RedacaoAnotacaoVisual
                 redacaoId={redacao.id}
-                imagemUrl={redacao.image_url || redacaoImageUrl || ''}
+                imagemUrl={redacao.image_url || redacaoImageUrl || '/placeholder-essay.png'}
                 corretorId={corretorId}
                 readonly={false}
               />
