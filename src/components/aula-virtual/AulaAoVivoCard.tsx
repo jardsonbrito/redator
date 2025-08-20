@@ -30,14 +30,13 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
 
   const verificarRegistrosExistentes = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) return;
+      if (!studentData.email) return;
 
       const { data, error } = await supabase
         .from('presenca_aulas')
         .select('entrada_at, saida_at')
         .eq('aula_id', aula.id)
-        .eq('email_aluno', user.email)
+        .eq('email_aluno', studentData.email)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -58,19 +57,42 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
 
   const registrarPresenca = async (tipo: 'entrada' | 'saida') => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!studentData.email) {
         toast({
           title: "Erro",
-          description: "Faça login para registrar presença.",
+          description: "Dados do estudante não encontrados. Faça login novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Obter token de sessão do cookie
+      const getSessionToken = (): string | null => {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'student_session_token') {
+            return value;
+          }
+        }
+        return null;
+      };
+
+      const sessionToken = getSessionToken();
+      
+      if (!sessionToken) {
+        toast({
+          title: "Erro",
+          description: "Sessão expirada. Faça login novamente.",
           variant: "destructive"
         });
         return;
       }
 
       if (tipo === 'entrada') {
-        const { data, error } = await supabase.rpc('registrar_entrada_email', {
-          p_aula_id: aula.id
+        const { data, error } = await supabase.rpc('registrar_entrada_com_token', {
+          p_aula_id: aula.id,
+          p_session_token: sessionToken
         });
 
         if (error) {
@@ -83,34 +105,60 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
           return;
         }
 
-        if (data === 'usuario_nao_autenticado') {
-          toast({
-            title: "Erro",
-            description: "Faça login para registrar presença.",
-            variant: "destructive"
-          });
-        } else if (data === 'entrada_ok') {
-          toast({
-            title: "Presença registrada!",
-            description: "Entrada registrada com sucesso."
-          });
-          setJaRegistrouEntrada(true);
-          verificarRegistrosExistentes(); // Refetch data
-        } else if (data === 'entrada_ja_registrada') {
-          toast({
-            title: "Informação",
-            description: "Entrada já registrada."
-          });
-        } else {
-          toast({
-            title: "Erro",
-            description: "Não foi possível registrar a entrada.",
-            variant: "destructive"
-          });
+        switch (data) {
+          case 'entrada_ok':
+            toast({
+              title: "Presença registrada!",
+              description: "Entrada registrada com sucesso."
+            });
+            setJaRegistrouEntrada(true);
+            verificarRegistrosExistentes();
+            break;
+          case 'entrada_ja_registrada':
+            toast({
+              title: "Informação",
+              description: "Entrada já registrada."
+            });
+            break;
+          case 'token_invalido_ou_expirado':
+            toast({
+              title: "Erro",
+              description: "Sessão expirada. Faça login novamente.",
+              variant: "destructive"
+            });
+            break;
+          case 'aula_nao_encontrada':
+            toast({
+              title: "Erro",
+              description: "Aula não encontrada.",
+              variant: "destructive"
+            });
+            break;
+          case 'aula_nao_iniciou':
+            toast({
+              title: "Erro",
+              description: "Aula ainda não iniciou (tolerância de 10 minutos).",
+              variant: "destructive"
+            });
+            break;
+          case 'janela_encerrada':
+            toast({
+              title: "Erro",
+              description: "Janela de registro encerrada.",
+              variant: "destructive"
+            });
+            break;
+          default:
+            toast({
+              title: "Erro",
+              description: "Não foi possível registrar a entrada.",
+              variant: "destructive"
+            });
         }
       } else {
-        const { data, error } = await supabase.rpc('registrar_saida_email', {
-          p_aula_id: aula.id
+        const { data, error } = await supabase.rpc('registrar_saida_com_token', {
+          p_aula_id: aula.id,
+          p_session_token: sessionToken
         });
 
         if (error) {
@@ -123,36 +171,62 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
           return;
         }
 
-        if (data === 'usuario_nao_autenticado') {
-          toast({
-            title: "Erro",
-            description: "Faça login para registrar presença.",
-            variant: "destructive"
-          });
-        } else if (data === 'precisa_entrada') {
-          toast({
-            title: "Erro",
-            description: "Registre a entrada primeiro.",
-            variant: "destructive"
-          });
-        } else if (data === 'saida_ja_registrada') {
-          toast({
-            title: "Informação",
-            description: "Saída já registrada."
-          });
-        } else if (data === 'saida_ok') {
-          toast({
-            title: "Presença registrada!",
-            description: "Saída registrada com sucesso."
-          });
-          setJaRegistrouSaida(true);
-          verificarRegistrosExistentes(); // Refetch data
-        } else {
-          toast({
-            title: "Erro",
-            description: "Não foi possível registrar a saída.",
-            variant: "destructive"
-          });
+        switch (data) {
+          case 'saida_ok':
+            toast({
+              title: "Presença registrada!",
+              description: "Saída registrada com sucesso."
+            });
+            setJaRegistrouSaida(true);
+            verificarRegistrosExistentes();
+            break;
+          case 'saida_ja_registrada':
+            toast({
+              title: "Informação",
+              description: "Saída já registrada."
+            });
+            break;
+          case 'token_invalido_ou_expirado':
+            toast({
+              title: "Erro",
+              description: "Sessão expirada. Faça login novamente.",
+              variant: "destructive"
+            });
+            break;
+          case 'aula_nao_encontrada':
+            toast({
+              title: "Erro",
+              description: "Aula não encontrada.",
+              variant: "destructive"
+            });
+            break;
+          case 'aula_nao_iniciou':
+            toast({
+              title: "Erro",
+              description: "Aula ainda não iniciou.",
+              variant: "destructive"
+            });
+            break;
+          case 'janela_encerrada':
+            toast({
+              title: "Erro",
+              description: "Janela de registro encerrada.",
+              variant: "destructive"
+            });
+            break;
+          case 'precisa_entrada':
+            toast({
+              title: "Erro",
+              description: "Registre a entrada primeiro.",
+              variant: "destructive"
+            });
+            break;
+          default:
+            toast({
+              title: "Erro",
+              description: "Não foi possível registrar a saída.",
+              variant: "destructive"
+            });
         }
       }
 
@@ -168,28 +242,26 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
   };
 
   const abrirDialog = (tipo: 'entrada' | 'saida') => {
-    // Verificar se usuário está autenticado
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        toast({
-          title: "Erro",
-          description: "Faça login para registrar presença.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Auto-preencher dados quando possível
-      if (studentData.userType === "aluno" && studentData.nomeUsuario) {
-        setNomeAluno(studentData.nomeUsuario);
-        setEmailAluno(user.email || "");
-      } else if (studentData.userType === "visitante" && studentData.visitanteInfo) {
-        setNomeAluno(studentData.visitanteInfo.nome);
-        setEmailAluno(studentData.visitanteInfo.email);
-      }
-      setDialogAberto(tipo);
-      verificarRegistrosExistentes();
-    });
+    // Verificar se há dados do estudante (sistema local, não Supabase Auth)
+    if (!studentData.email) {
+      toast({
+        title: "Erro",
+        description: "Dados do estudante não encontrados. Faça login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Auto-preencher dados quando possível
+    if (studentData.userType === "aluno" && studentData.nomeUsuario) {
+      setNomeAluno(studentData.nomeUsuario);
+      setEmailAluno(studentData.email || "");
+    } else if (studentData.userType === "visitante" && studentData.visitanteInfo) {
+      setNomeAluno(studentData.visitanteInfo.nome);
+      setEmailAluno(studentData.visitanteInfo.email);
+    }
+    setDialogAberto(tipo);
+    verificarRegistrosExistentes();
   };
 
   const isAgendada = aula.status_transmissao === 'agendada';
