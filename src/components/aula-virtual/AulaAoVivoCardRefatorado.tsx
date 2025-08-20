@@ -97,17 +97,16 @@ export const AulaAoVivoCardRefatorado = ({
   };
 
   const abrirDialog = (tipo: 'entrada' | 'saida') => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        toast({
-          title: "Erro",
-          description: "Faça login para registrar presença.",
-          variant: "destructive"
-        });
-        return;
-      }
-      setDialogAberto(tipo);
-    });
+    // Verificar se há dados do estudante (sistema local, não Supabase Auth)
+    if (!studentData.email) {
+      toast({
+        title: "Erro", 
+        description: "Dados do estudante não encontrados. Faça login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setDialogAberto(tipo);
   };
 
   return (

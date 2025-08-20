@@ -113,25 +113,57 @@ const AulasAoVivo = () => {
         return;
       }
 
-      const { data, error } = await supabase.rpc('registrar_entrada_email_param', {
+      // Obter token de sessão do cookie
+      const getSessionToken = (): string | null => {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'student_session_token') {
+            return value;
+          }
+        }
+        return null;
+      };
+
+      const sessionToken = getSessionToken();
+      
+      if (!sessionToken) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      const { data, error } = await supabase.rpc('registrar_entrada_com_token', {
         p_aula_id: aulaId,
-        p_email_aluno: studentData.email
+        p_session_token: sessionToken
       });
 
       if (error) {
         console.error('Erro ao registrar entrada:', error);
-        toast.error('Erro ao registrar entrada.');
+        toast.error('Erro ao registrar entrada');
         return;
       }
 
-      if (data === 'email_invalido') {
-        toast.error('Email inválido');
-      } else if (data === 'entrada_ok') {
-        toast.success('Entrada registrada!');
-      } else if (data === 'entrada_ja_registrada') {
-        toast.info('Entrada já registrada');
-      } else {
-        toast.error('Não foi possível registrar a entrada.');
+      switch (data) {
+        case 'entrada_ok':
+          toast.success('Entrada registrada com sucesso!');
+          break;
+        case 'entrada_ja_registrada':
+          toast.info('Entrada já foi registrada anteriormente');
+          break;
+        case 'token_invalido_ou_expirado':
+          toast.error('Sessão expirada. Faça login novamente.');
+          break;
+        case 'aula_nao_encontrada':
+          toast.error('Aula não encontrada');
+          break;
+        case 'aula_nao_iniciou':
+          toast.error('Aula ainda não iniciou (tolerância de 10 minutos antes)');
+          break;
+        case 'janela_encerrada':
+          toast.error('Janela de registro encerrada (30 minutos após o fim da aula)');
+          break;
+        default:
+          toast.error('Erro inesperado ao registrar entrada');
       }
       
       await fetchPresencaAula(aulaId);
@@ -148,27 +180,60 @@ const AulasAoVivo = () => {
         return;
       }
 
-      const { data, error } = await supabase.rpc('registrar_saida_email_param', {
+      // Obter token de sessão do cookie
+      const getSessionToken = (): string | null => {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'student_session_token') {
+            return value;
+          }
+        }
+        return null;
+      };
+
+      const sessionToken = getSessionToken();
+      
+      if (!sessionToken) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      const { data, error } = await supabase.rpc('registrar_saida_com_token', {
         p_aula_id: aulaId,
-        p_email_aluno: studentData.email
+        p_session_token: sessionToken
       });
 
       if (error) {
         console.error('Erro ao registrar saída:', error);
-        toast.error('Erro ao registrar saída.');
+        toast.error('Erro ao registrar saída');
         return;
       }
 
-      if (data === 'email_invalido') {
-        toast.error('Email inválido');
-      } else if (data === 'precisa_entrada') {
-        toast.error('Registre a entrada primeiro.');
-      } else if (data === 'saida_ja_registrada') {
-        toast.info('Saída já registrada.');
-      } else if (data === 'saida_ok') {
-        toast.success('Saída registrada!');
-      } else {
-        toast.error('Não foi possível registrar a saída.');
+      switch (data) {
+        case 'saida_ok':
+          toast.success('Saída registrada com sucesso!');
+          break;
+        case 'saida_ja_registrada':
+          toast.info('Saída já foi registrada anteriormente');
+          break;
+        case 'token_invalido_ou_expirado':
+          toast.error('Sessão expirada. Faça login novamente.');
+          break;
+        case 'aula_nao_encontrada':
+          toast.error('Aula não encontrada');
+          break;
+        case 'aula_nao_iniciou':
+          toast.error('Aula ainda não iniciou');
+          break;
+        case 'janela_encerrada':
+          toast.error('Janela de registro encerrada (30 minutos após o fim da aula)');
+          break;
+        case 'precisa_entrada':
+          toast.error('Registre a entrada primeiro');
+          break;
+        default:
+          toast.error('Erro inesperado ao registrar saída');
       }
       
       await fetchPresencaAula(aulaId);
