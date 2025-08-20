@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -56,6 +56,13 @@ const Index = () => {
       path: "/exercicios", 
       icon: NotebookPen,
       tooltip: "Pratique com exercícios direcionados.",
+      showAlways: true
+    },
+    {
+      title: "Lousa",
+      path: "/lousa",
+      icon: Presentation,
+      tooltip: "Participe de exercícios rápidos criados pelos professores.",
       showAlways: true
     },
     {

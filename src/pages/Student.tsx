@@ -3,7 +3,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation } from "lucide-react";
 
 const Student = () => {
   const menuItems = [
@@ -46,6 +46,14 @@ const Student = () => {
       path: "/biblioteca",
       icon: File,
       tooltip: "Acesse materiais em PDF organizados por competência.",
+      showAlways: true
+    },
+    // Linha 3, Coluna 1: Lousa
+    {
+      title: "Lousa",
+      path: "/lousa",
+      icon: Presentation,
+      tooltip: "Participe de exercícios rápidos criados pelos professores.",
       showAlways: true
     },
     // Linha 3, Coluna 2: Videoteca

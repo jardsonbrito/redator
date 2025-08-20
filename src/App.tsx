@@ -19,6 +19,8 @@ import Top5 from "./pages/Top5";
 import Exercicios from "./pages/Exercicios";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import MinhasRedacoesList from "./pages/MinhasRedacoesList";
+import AlunoLousaList from "./components/student/AlunoLousaList";
+import LousaResponse from "./components/student/LousaResponse";
 import SimuladoParticipacao from "./pages/SimuladoParticipacao";
 import { AuthProvider } from "./hooks/useAuth";
 import { StudentAuthProvider } from "./hooks/useStudentAuth";
@@ -102,6 +104,8 @@ function App() {
                   <Route path="/biblioteca" element={<Biblioteca />} />
                   <Route path="/redacoes" element={<RedacoesExemplar />} />
                   <Route path="/top5" element={<Top5 />} />
+                  <Route path="/lousa" element={<AlunoLousaList />} />
+                  <Route path="/lousa/:id" element={<LousaResponse />} />
                   <Route path="/ajuda-rapida" element={<AjudaRapida />} />
 
                   {/* Rotas do Admin */}

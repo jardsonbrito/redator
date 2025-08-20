@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   Download,
   Settings,
-  Shield
+  Shield,
+  Presentation
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,6 +79,10 @@ import { CorretorList } from "@/components/admin/CorretorList";
 import { ProfessorForm } from "@/components/admin/ProfessorForm";
 import { ProfessorList } from "@/components/admin/ProfessorList";
 
+// Import lousa components
+import LousaForm from "@/components/admin/LousaForm";
+import LousaList from "@/components/admin/LousaList";
+
 // Import componentes de aprovação de alunos
 import { AlunosAprovacaoPopup } from "@/components/admin/AlunosAprovacaoPopup";
 import { useAlunosPendentes } from "@/hooks/useAlunosPendentes";
@@ -130,6 +135,7 @@ const Admin = () => {
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
     { id: "simulados", label: "Simulados", icon: ClipboardCheck },
     { id: "exercicios", label: "Exercícios", icon: NotebookPen },
+    { id: "lousa", label: "Lousa", icon: Presentation },
     { id: "salas-virtuais", label: "Aula ao Vivo", icon: Video },
     { id: "aulas", label: "Aulas Gravadas", icon: GraduationCap },
     { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
@@ -290,6 +296,9 @@ const Admin = () => {
             </TabsContent>
           </Tabs>
         );
+
+      case "lousa":
+        return <LousaList />;
 
       case "avisos":
         const handleAvisoSuccess = () => {
