@@ -150,19 +150,71 @@ serve(async (req) => {
       return await blob.arrayBuffer();
     `
 
-    // Since Deno doesn't have native canvas, we'll create a simple text-based image
-    // This is a fallback solution that creates an SVG image
+    // Create SVG with proper text wrapping and dynamic height
+    function wrapText(text: string, maxCharsPerLine: number): string[] {
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        if ((currentLine + word).length <= maxCharsPerLine) {
+          currentLine += (currentLine ? ' ' : '') + word;
+        } else {
+          if (currentLine) lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      return lines;
+    }
+
+    // Process essay text with proper line breaks
+    const paragraphs = text.split('\n').filter(p => p.trim());
+    const allLines: string[] = [];
+    
+    paragraphs.forEach(paragraph => {
+      if (paragraph.trim()) {
+        const wrappedLines = wrapText(paragraph.trim(), 80);
+        allLines.push(...wrappedLines);
+        allLines.push(''); // Add space between paragraphs
+      }
+    });
+
+    // Calculate dynamic height based on content
+    const headerHeight = 280;
+    const lineHeight = 25;
+    const footerHeight = 100;
+    const contentHeight = allLines.length * lineHeight;
+    const calculatedHeight = Math.max(height, headerHeight + contentHeight + footerHeight);
+
     const svgContent = `
-      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <svg width="${width}" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
         <rect width="100%" height="100%" fill="white"/>
-        <text x="40" y="80" font-family="Times New Roman" font-size="18" font-weight="bold" fill="black">${studentName}</text>
-        <text x="40" y="120" font-family="Times New Roman" font-size="16" fill="black">${turma ? `Turma: ${turma}` : ''}</text>
-        <text x="40" y="160" font-family="Times New Roman" font-size="14" fill="black">${new Date(sendDate).toLocaleDateString('pt-BR')}</text>
-        <rect x="40" y="180" width="${width - 80}" height="60" fill="#f9f9f9" stroke="#333" stroke-width="1"/>
-        <text x="${width / 2}" y="215" font-family="Times New Roman" font-size="18" font-weight="bold" text-anchor="middle" fill="black">${thematicPhrase}</text>
-        ${text.split('\n').slice(0, 20).map((line, i) => 
-          `<text x="40" y="${280 + i * 25}" font-family="Times New Roman" font-size="16" fill="black">${line.substring(0, 80)}</text>`
-        ).join('')}
+        
+        <!-- Header section -->
+        <text x="40" y="50" font-family="Times New Roman" font-size="20" font-weight="bold" fill="black">Redação Digitada</text>
+        <line x1="40" y1="70" x2="${width - 40}" y2="70" stroke="#333" stroke-width="2"/>
+        
+        <text x="40" y="100" font-family="Times New Roman" font-size="16" fill="black">Aluno(a): ${studentName}</text>
+        ${turma ? `<text x="40" y="125" font-family="Times New Roman" font-size="16" fill="black">Turma: ${turma}</text>` : ''}
+        <text x="40" y="${turma ? 150 : 125}" font-family="Times New Roman" font-size="16" fill="black">Data de Envio: ${new Date(sendDate).toLocaleDateString('pt-BR')}</text>
+        
+        <!-- Thematic phrase box -->
+        <rect x="40" y="${turma ? 170 : 145}" width="${width - 80}" height="60" fill="#f9f9f9" stroke="#333" stroke-width="1"/>
+        <text x="${width / 2}" y="${turma ? 200 : 175}" font-family="Times New Roman" font-size="16" font-weight="bold" text-anchor="middle" fill="black">Frase Temática</text>
+        <text x="${width / 2}" y="${turma ? 220 : 195}" font-family="Times New Roman" font-size="14" text-anchor="middle" fill="black">${thematicPhrase}</text>
+        
+        <!-- Essay content -->
+        <text x="40" y="${turma ? 260 : 235}" font-family="Times New Roman" font-size="16" font-weight="bold" fill="black">Texto da Redação:</text>
+        ${allLines.map((line, i) => {
+          const y = headerHeight + (i * lineHeight);
+          return line.trim() ? 
+            `<text x="40" y="${y}" font-family="Times New Roman" font-size="15" fill="black">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
+            '';
+        }).join('')}
+        
+        <!-- Footer -->
+        <text x="${width - 40}" y="${calculatedHeight - 20}" font-family="Times New Roman" font-size="12" fill="#666" text-anchor="end">ID: ${essayId}</text>
       </svg>
     `
 
