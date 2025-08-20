@@ -30,8 +30,7 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     abrir_aba_externa: false,
     permite_visitante: false,
     ativo: true,
-    eh_aula_ao_vivo: false,
-    status_transmissao: 'agendada' as 'agendada' | 'em_transmissao' | 'encerrada'
+    eh_aula_ao_vivo: false
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,8 +63,7 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         abrir_aba_externa: false,
         permite_visitante: false,
         ativo: true,
-        eh_aula_ao_vivo: false,
-        status_transmissao: 'agendada'
+        eh_aula_ao_vivo: false
       });
       
       onSuccess?.();
@@ -246,26 +244,6 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
               </Label>
             </div>
 
-            {formData.eh_aula_ao_vivo && (
-              <div>
-                <Label htmlFor="status_transmissao">Status da Transmissão</Label>
-                <Select
-                  value={formData.status_transmissao}
-                  onValueChange={(value: 'agendada' | 'em_transmissao' | 'encerrada') => 
-                    setFormData(prev => ({ ...prev, status_transmissao: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="agendada">Agendada</SelectItem>
-                    <SelectItem value="em_transmissao">Em Transmissão</SelectItem>
-                    <SelectItem value="encerrada">Encerrada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full">
