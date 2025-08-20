@@ -142,11 +142,16 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
           status: 'graded',
           nota: data.nota,
           comentario_professor: data.comentario_professor,
-          corrected_at: new Date().toISOString()
+          corrected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
-        .eq('id', correctingResposta.id);
+        .eq('id', correctingResposta.id)
+        .eq('email_aluno', correctingResposta.email_aluno);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao corrigir resposta:', error);
+        throw error;
+      }
 
       toast({
         title: 'Sucesso',
