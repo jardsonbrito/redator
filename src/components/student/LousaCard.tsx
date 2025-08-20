@@ -128,9 +128,6 @@ export default function LousaCard({ lousa, onClick }: LousaCardProps) {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h3 className="font-semibold text-lg mb-2">{lousa.titulo}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-3">
-                {lousa.enunciado}
-              </p>
             </div>
             <Badge variant={statusInfo.variant} className="ml-3">
               <StatusIcon className="w-3 h-3 mr-1" />

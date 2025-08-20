@@ -101,9 +101,9 @@ export default function LousaResponse() {
       const respostaData = {
         lousa_id: lousa.id,
         aluno_id: student.id || null,
-        email_aluno: student.email,
-        nome_aluno: student.nomeUsuario,
-        turma: student.turma,
+        email_aluno: student.email || '',
+        nome_aluno: student.nomeUsuario || '',
+        turma: student.turma || '',
         conteudo: conteudo.trim(),
         status: 'draft'
       };
@@ -143,9 +143,9 @@ export default function LousaResponse() {
       const respostaData = {
         lousa_id: lousa.id,
         aluno_id: student.id || null,
-        email_aluno: student.email,
-        nome_aluno: student.nomeUsuario,
-        turma: student.turma,
+        email_aluno: student.email || '',
+        nome_aluno: student.nomeUsuario || '',
+        turma: student.turma || '',
         conteudo: conteudo.trim(),
         status: 'draft'
       };
@@ -185,10 +185,18 @@ export default function LousaResponse() {
   };
 
   const handleSubmit = async () => {
-    if (!resposta || !conteudo.trim()) return;
+    if (!conteudo.trim()) return;
 
     setSubmitting(true);
     try {
+      // Se não há resposta, crie uma primeiro
+      if (!resposta) {
+        await handleSave();
+        // Aguarde um momento para garantir que a resposta foi criada
+        await fetchData();
+        return;
+      }
+
       const { error } = await supabase
         .from('lousa_resposta')
         .update({
@@ -371,7 +379,7 @@ export default function LousaResponse() {
               <Button
                 variant="outline"
                 onClick={handleSave}
-                disabled={isDisabled() || saving || !conteudo.trim()}
+                disabled={saving || !conteudo.trim() || (resposta && resposta.status === 'submitted')}
               >
                 <Save className="w-4 h-4 mr-2" />
                 {saving ? 'Salvando...' : 'Salvar Rascunho'}
@@ -381,7 +389,7 @@ export default function LousaResponse() {
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
-                      disabled={isDisabled() || !resposta || !conteudo.trim() || submitting}
+                      disabled={!conteudo.trim() || submitting || (resposta && resposta.status === 'submitted')}
                     >
                       <Send className="w-4 h-4 mr-2" />
                       Enviar Resposta
