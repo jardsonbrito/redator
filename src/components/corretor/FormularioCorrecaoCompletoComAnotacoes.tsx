@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check } from "lucide-react";
+import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check, Loader2, AlertCircle } from "lucide-react";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
+import { useEssayRenderer } from "@/hooks/useEssayRenderer";
+import { getTableOriginFromRedacao, isManuscritaRedacao, needsImageRender, getImageUrlForVisualization } from "@/utils/essayUtils";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -75,7 +77,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [temaCompleto, setTemaCompleto] = useState<any>(null);
   const [corretorId, setCorretorId] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [renderStatus, setRenderStatus] = useState<string>('pending');
   const { toast } = useToast();
+  const { renderEssay, checkRenderStatus, retryRender, isRendering } = useEssayRenderer();
 
   // Buscar ID do corretor ao carregar
   useEffect(() => {
@@ -115,7 +120,82 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   useEffect(() => {
     carregarCorrecaoExistente();
     buscarTemaCompleto();
+    initializeImageVisualization();
   }, [redacao.id]);
+
+  const initializeImageVisualization = async () => {
+    console.log('🖼️ Initializing image visualization for essay:', redacao.id);
+    
+    // If it's manuscrita, use the existing URL
+    if (isManuscritaRedacao(redacao)) {
+      console.log('📄 Manuscrita essay detected');
+      setImageUrl(redacao.redacao_manuscrita_url);
+      setRenderStatus('ready');
+      return;
+    }
+
+    // If it's digitada, check/trigger render
+    const tableOrigin = getTableOriginFromRedacao(redacao);
+    console.log('💻 Digitada essay detected, table:', tableOrigin);
+    
+    const statusInfo = await checkRenderStatus(redacao.id, tableOrigin);
+    console.log('📊 Current render status:', statusInfo);
+    
+    setRenderStatus(statusInfo.status);
+    
+    if (statusInfo.status === 'ready' && statusInfo.imageUrl) {
+      setImageUrl(statusInfo.imageUrl);
+    } else if (statusInfo.status === 'pending' || statusInfo.status === 'error') {
+      console.log('🎨 Starting render process...');
+      await renderDigitadaEssay();
+    }
+  };
+
+  const renderDigitadaEssay = async () => {
+    if (isManuscritaRedacao(redacao)) return;
+    
+    const tableOrigin = getTableOriginFromRedacao(redacao);
+    
+    const result = await renderEssay({
+      essayId: redacao.id,
+      tableOrigin,
+      text: redacao.texto || '',
+      studentName: redacao.nome_aluno,
+      thematicPhrase: redacao.frase_tematica,
+      sendDate: redacao.data_envio,
+      turma: redacao.turma
+    });
+    
+    if (result) {
+      setImageUrl(result);
+      setRenderStatus('ready');
+      console.log('✅ Render completed successfully');
+    } else {
+      setRenderStatus('error');
+      console.log('❌ Render failed');
+    }
+  };
+
+  const handleRetryRender = async () => {
+    if (isManuscritaRedacao(redacao)) return;
+    
+    const tableOrigin = getTableOriginFromRedacao(redacao);
+    
+    const result = await retryRender({
+      essayId: redacao.id,
+      tableOrigin,
+      text: redacao.texto || '',
+      studentName: redacao.nome_aluno,
+      thematicPhrase: redacao.frase_tematica,
+      sendDate: redacao.data_envio,
+      turma: redacao.turma
+    });
+    
+    if (result) {
+      setImageUrl(result);
+      setRenderStatus('ready');
+    }
+  };
 
   const buscarTemaCompleto = async () => {
     try {
@@ -536,27 +616,64 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </CardContent>
       </Card>
 
-      {/* Redação Manuscrita - Exibe quando há URL de imagem */}
-      {redacao.redacao_manuscrita_url && (
+      {/* Visualização da Redação como Imagem (Unified Viewer) */}
+      {imageUrl ? (
         <Card>
           <CardHeader>
-            <CardTitle>Redação Manuscrita</CardTitle>
+            <CardTitle>
+              {isManuscritaRedacao(redacao) ? 'Redação Manuscrita' : 'Redação Digitada'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <RedacaoAnotacaoVisual
-              imagemUrl={redacao.redacao_manuscrita_url}
+              imagemUrl={imageUrl}
               redacaoId={redacao.id}
               corretorId={corretorId}
             />
           </CardContent>
         </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {isManuscritaRedacao(redacao) ? 'Redação Manuscrita' : 'Redação Digitada'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {renderStatus === 'rendering' || isRendering ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Preparando visualização...</p>
+              </div>
+            ) : renderStatus === 'error' ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <AlertCircle className="w-8 h-8 text-destructive" />
+                <p className="text-sm text-muted-foreground">Falha ao preparar visualização</p>
+                <Button
+                  variant="outline"
+                  onClick={handleRetryRender}
+                  disabled={isRendering}
+                  className="flex items-center gap-2"
+                >
+                  {isRendering ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Tentar novamente
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Carregando visualização...</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      {/* Redação Digitada (não exibir quando há manuscrita) */}
-      {!redacao.redacao_manuscrita_url && (
+      {/* Redação Digitada - Backup Text View (only for copy functionality) */}
+      {!isManuscritaRedacao(redacao) && (
         <Card className="card">
           <CardHeader className="card__header">
-            <CardTitle>Redação Digitada</CardTitle>
+            <CardTitle>Texto Original (para cópia)</CardTitle>
             <div className="flex gap-2">
               <Button
                 variant="outline"
