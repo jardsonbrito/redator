@@ -20,6 +20,13 @@ export const EssayRenderer = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Callback para notificar quando a imagem for gerada
+  const onImageGenerated = (url: string) => {
+    setImageUrl(url);
+    // Recarregar a página para atualizar o componente pai com a nova image_url
+    window.location.reload();
+  };
+
   useEffect(() => {
     // Se já tem imagem, não precisa gerar
     if (imageUrl) return;
@@ -54,6 +61,7 @@ export const EssayRenderer = ({
       if (data?.imageUrl) {
         setImageUrl(data.imageUrl);
         console.log('Image generated successfully:', data.imageUrl);
+        onImageGenerated(data.imageUrl);
       }
     } catch (err: any) {
       console.error('Error generating image:', err);

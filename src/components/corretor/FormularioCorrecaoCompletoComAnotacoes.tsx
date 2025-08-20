@@ -578,16 +578,29 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="essay-container border rounded-lg overflow-hidden bg-white">
-              <EssayRenderer
-                essayId={redacao.id}
-                text={redacao.texto || ''}
-                table={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
-                       redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-                imageUrl={redacao.image_url}
-                className="w-full"
-              />
-            </div>
+            {redacao.image_url ? (
+              /* Usar sistema de anotações visuais quando há imagem renderizada */
+              <div className="w-full">
+                <RedacaoAnotacaoVisual
+                  redacaoId={redacao.id}
+                  imagemUrl={redacao.image_url}
+                  corretorId={corretorId}
+                  readonly={false}
+                />
+              </div>
+            ) : (
+              /* Fallback: gerar e mostrar imagem */
+              <div className="essay-container border rounded-lg overflow-hidden bg-white">
+                <EssayRenderer
+                  essayId={redacao.id}
+                  text={redacao.texto || ''}
+                  table={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                         redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                  imageUrl={redacao.image_url}
+                  className="w-full"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

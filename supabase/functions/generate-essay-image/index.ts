@@ -33,15 +33,16 @@ serve(async (req) => {
     // Generate SVG from text
     const svg = await generateEssaySVG(text);
     
-    // Convert SVG to PNG buffer
-    const pngBuffer = await svgToPng(svg);
+    console.log('SVG generated, length:', svg.length);
     
-    // Upload to Supabase Storage
-    const fileName = `rendered/${essayId}.png`;
+    // Upload to Supabase Storage as SVG (browsers handle SVG better than fake PNG)
+    const fileName = `rendered/${essayId}.svg`;
+    const svgBuffer = new TextEncoder().encode(svg);
+    
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('essays')
-      .upload(fileName, pngBuffer, {
-        contentType: 'image/png',
+      .upload(fileName, svgBuffer, {
+        contentType: 'image/svg+xml',
         upsert: true
       });
 
@@ -184,16 +185,17 @@ async function generateEssaySVG(text: string): Promise<string> {
 }
 
 async function svgToPng(svg: string): Promise<Uint8Array> {
-  // For this implementation, we'll use a simple approach
-  // In a production environment, you might want to use a more sophisticated SVG to PNG converter
+  // Create a simple PNG header for an SVG-based image
+  // Since we're creating SVG content, we'll encode it as a data URL PNG
   
-  // Convert SVG string to Uint8Array
-  const svgBytes = new TextEncoder().encode(svg);
+  // Convert SVG string to base64
+  const svgBase64 = btoa(svg);
+  const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
   
-  // For now, we'll return the SVG as bytes and let the browser handle it
-  // In a real implementation, you'd use a library like resvg-js or similar
-  // But for MVP, returning SVG should work in most cases
-  return svgBytes;
+  // For now, return the SVG as bytes
+  // In production, you'd use a proper SVG to PNG converter like resvg-js
+  const encoder = new TextEncoder();
+  return encoder.encode(svg);
 }
 
 function escapeXml(text: string): string {
