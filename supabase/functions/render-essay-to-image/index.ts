@@ -174,27 +174,30 @@ serve(async (req) => {
     
     paragraphs.forEach(paragraph => {
       if (paragraph.trim()) {
-        const wrappedLines = wrapText(paragraph.trim(), 80);
+        const wrappedLines = wrapText(paragraph.trim(), 90); // Increased chars per line for wider text
         allLines.push(...wrappedLines);
         allLines.push(''); // Add space between paragraphs
       }
     });
 
-    // Calculate dynamic height based on content (no header, just text)
-    const lineHeight = 30; // Increased for better readability
-    const padding = 60; // Top and bottom padding
+    // Calculate dynamic height for large, readable text
+    const lineHeight = 40; // Larger line height for better readability
+    const padding = 80; // More padding for cleaner look
     const contentHeight = allLines.length * lineHeight;
-    const calculatedHeight = Math.max(400, contentHeight + (padding * 2));
+    const calculatedHeight = Math.max(600, contentHeight + (padding * 2));
+
+    // Use larger width for better text display
+    const renderWidth = Math.max(width, 2800);
 
     const svgContent = `
-      <svg width="${width}" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
+      <svg width="${renderWidth}" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
         <rect width="100%" height="100%" fill="white"/>
         
-        <!-- Essay content only - no metadata -->
+        <!-- Clean essay content optimized for correction -->
         ${allLines.map((line, i) => {
           const y = padding + (i * lineHeight);
           return line.trim() ? 
-            `<text x="60" y="${y}" font-family="Times New Roman, serif" font-size="18" fill="black">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
+            `<text x="80" y="${y}" font-family="Times New Roman, serif" font-size="22" fill="black" font-weight="400">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
             '';
         }).join('')}
       </svg>
