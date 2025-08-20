@@ -385,11 +385,13 @@ export const RedacaoTextoAnotacao = ({
       {/* Container do Texto com Anotações */}
       <div 
         ref={containerRef}
-        className="texto-redacao-container relative"
+        className="texto-redacao-container relative w-full p-6 bg-white border rounded-lg"
         style={{
           fontSize: '14px',
           lineHeight: '1.15',
-          fontFamily: 'Times New Roman, serif'
+          fontFamily: 'Times New Roman, serif',
+          minHeight: '400px',
+          width: '100%'
         }}
       >
         {formatarTextoComParagrafos(texto)}
