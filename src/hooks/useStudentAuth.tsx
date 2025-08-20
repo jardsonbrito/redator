@@ -9,6 +9,7 @@ interface StudentAuthContextType {
     turma: string | null;
     nomeUsuario: string;
     email?: string;
+    sessionToken?: string | null;
     visitanteInfo?: {
       nome: string;
       email: string;
@@ -55,7 +56,8 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
             userType: "aluno",
             turma: alunoTurma,
             nomeUsuario: dados.nome,
-            email: dados.email
+            email: dados.email,
+            sessionToken: dados.sessionToken || null
           });
           console.log('✅ Sessão de aluno restaurada persistentemente');
         } catch (error) {
@@ -185,6 +187,8 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       turma: turma
     };
     
+    let sessionToken = null;
+    
     try {
       // Garantir que o perfil existe no banco de dados
       await ensureProfileExists(email.trim().toLowerCase(), nome.trim(), turma);
@@ -198,6 +202,28 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       if (mergeResult && typeof mergeResult === 'object' && 'auto_merged' in mergeResult && mergeResult.auto_merged) {
         console.log('✅ Redações anteriores reconectadas automaticamente:', mergeResult.total_redacoes_merged);
       }
+
+      // Criar token de sessão para registro de presença
+      try {
+        const { data: tokenResult, error: tokenError } = await supabase.rpc('create_session_token', {
+          p_student_email: email.trim().toLowerCase(),
+          p_student_name: nome.trim(),
+          p_turma: turma
+        });
+
+        if (tokenError) {
+          console.warn('⚠️ Erro ao criar token de sessão:', tokenError);
+        } else if (tokenResult && typeof tokenResult === 'object' && 'success' in tokenResult && tokenResult.success) {
+          const result = tokenResult as { success: boolean; token: string };
+          sessionToken = result.token;
+          console.log('✅ Token de sessão criado com sucesso');
+          
+          // Armazenar token em cookie com configurações seguras
+          document.cookie = `student_session_token=${sessionToken}; path=/; max-age=86400; SameSite=Strict`;
+        }
+      } catch (tokenError) {
+        console.warn('⚠️ Erro ao criar token de sessão (não crítico):', tokenError);
+      }
     } catch (error) {
       console.warn('⚠️ Erro na verificação automática:', error);
       // Não bloquear o login se a verificação falhar
@@ -205,7 +231,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     
     // Garantir persistência com múltiplas estratégias
     localStorage.setItem("alunoTurma", turma);
-    localStorage.setItem("alunoData", JSON.stringify(alunoInfo));
+    localStorage.setItem("alunoData", JSON.stringify({...alunoInfo, sessionToken}));
     localStorage.setItem("userType", "aluno");
     localStorage.removeItem("visitanteData");
     
@@ -218,7 +244,8 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       userType: "aluno",
       turma: turma,
       nomeUsuario: nome,
-      email: email.toLowerCase()
+      email: email.toLowerCase(),
+      sessionToken: sessionToken
     });
   };
 
@@ -273,13 +300,17 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     // Limpar cache do avatar
     localStorage.removeItem("student_avatar_url");
     
+    // Limpar token de sessão do cookie
+    document.cookie = 'student_session_token=; path=/; max-age=0; SameSite=Strict';
+    
     setIsStudentLoggedIn(false);
     setStudentData({
       id: '',
       userType: null,
       turma: null,
       nomeUsuario: '',
-      email: undefined
+      email: undefined,
+      sessionToken: null
     });
   };
 

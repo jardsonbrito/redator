@@ -2053,6 +2053,39 @@ export type Database = {
           },
         ]
       }
+      student_session_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          is_active: boolean
+          student_email: string
+          student_name: string
+          token: string
+          turma: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          student_email: string
+          student_name: string
+          token?: string
+          turma: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          student_email?: string
+          student_name?: string
+          token?: string
+          turma?: string
+        }
+        Relationships: []
+      }
       temas: {
         Row: {
           cabecalho_enem: string | null
@@ -2311,6 +2344,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      create_session_token: {
+        Args: {
+          p_student_email: string
+          p_student_name: string
+          p_turma: string
+        }
+        Returns: Json
+      }
       create_simple_profile: {
         Args: { p_email: string; p_nome: string; p_turma: string }
         Returns: {
@@ -2534,6 +2575,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      limpar_tokens_expirados: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       list_admin_users: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -2578,6 +2623,10 @@ export type Database = {
         Args: { p_aluno_id: string; p_aula_id: string }
         Returns: undefined
       }
+      registrar_entrada_com_token: {
+        Args: { p_aula_id: string; p_session_token: string }
+        Returns: string
+      }
       registrar_entrada_email: {
         Args: { p_aula_id: string }
         Returns: string
@@ -2589,6 +2638,10 @@ export type Database = {
       registrar_saida: {
         Args: { p_aluno_id: string; p_aula_id: string }
         Returns: undefined
+      }
+      registrar_saida_com_token: {
+        Args: { p_aula_id: string; p_session_token: string }
+        Returns: string
       }
       registrar_saida_email: {
         Args: { p_aula_id: string }
