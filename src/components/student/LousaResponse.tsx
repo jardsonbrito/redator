@@ -100,7 +100,7 @@ export default function LousaResponse() {
     try {
       const respostaData = {
         lousa_id: lousa.id,
-        aluno_id: student.id || null,
+        aluno_id: null,
         email_aluno: student.email || '',
         nome_aluno: student.nomeUsuario || '',
         turma: student.turma || '',
@@ -142,7 +142,7 @@ export default function LousaResponse() {
     try {
       const respostaData = {
         lousa_id: lousa.id,
-        aluno_id: student.id || null,
+        aluno_id: null,
         email_aluno: student.email || '',
         nome_aluno: student.nomeUsuario || '',
         turma: student.turma || '',
