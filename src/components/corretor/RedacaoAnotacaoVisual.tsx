@@ -1019,18 +1019,18 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   };
 
 
-  // Estilo estático para a imagem (sem modo de tela cheia)
+  // Estilo otimizado para renderização de redação digitada
   const getImageStyle = () => {
     return {
       userSelect: 'none' as const,
       cursor: 'default' as const,
-      maxWidth: '100%',
-      maxHeight: '100%',
+      width: '100%', // Ocupar toda a largura do container
+      height: 'auto',
       objectFit: 'contain' as const,
       transition: 'none', // Remover transição para evitar movimento
-      width: '100%',
-      height: 'auto',
-      minHeight: '80vh',
+      minHeight: '70vh', // Altura mínima para boa visualização
+      display: 'block', // Garantir display block
+      border: 'none', // Remover bordas
     };
   };
 
@@ -1072,15 +1072,15 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       )}
 
 
-      {/* Container da Imagem da Redação */}
-      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao`}>
+      {/* Container da Imagem da Redação - Otimizado para redação digitada */}
+      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao bg-white`}>
         
-        <div ref={containerRef} className="flex justify-center items-center w-full h-full p-2">
+        <div ref={containerRef} className="w-full min-h-[70vh] p-0">
           <img 
             ref={imageRef}
             src={imagemUrl} 
             alt="Redação para correção" 
-            className="img-redacao"
+            className="img-redacao w-full h-auto block"
             onLoad={handleImageLoad}
             loading="lazy"
             style={getImageStyle()}
