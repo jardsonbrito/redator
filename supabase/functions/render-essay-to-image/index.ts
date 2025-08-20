@@ -31,6 +31,14 @@ serve(async (req) => {
     const { essayId, tableOrigin, text, studentName, thematicPhrase, sendDate, turma }: RenderRequest = await req.json()
 
     console.log(`🎨 RENDERING ESSAY ${essayId} from table ${tableOrigin}`)
+    console.log(`📝 Text length: ${text?.length || 0} characters`)
+    console.log(`👤 Student: ${studentName}`)
+    console.log(`📚 Theme: ${thematicPhrase}`)
+
+    // Validate input
+    if (!essayId || !tableOrigin || !text) {
+      throw new Error('Missing required parameters: essayId, tableOrigin, or text')
+    }
 
     // Update status to rendering
     await supabase

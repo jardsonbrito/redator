@@ -21,11 +21,14 @@ export function useEssayRenderer() {
     
     try {
       console.log('🎨 Starting essay render:', params.essayId);
+      console.log('📋 Render params:', params);
       
       // Call the edge function to render the essay
       const { data, error } = await supabase.functions.invoke('render-essay-to-image', {
         body: params
       });
+
+      console.log('📡 Edge function response:', { data, error });
 
       if (error) {
         console.error('Render function error:', error);

@@ -35,17 +35,27 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
   const needsRender = isTypedEssay(redacao) && needsRendering(redacao);
 
   useEffect(() => {
+    console.log('🎯 EssayRenderer Effect:', {
+      essayId: redacao.id,
+      needsRender,
+      render_status: redacao.render_status,
+      hasImage: !!redacao.render_image_url,
+      isTyped: isTypedEssay(redacao)
+    });
+
     const currentImageUrl = getEssayDisplayUrl(redacao);
     
     if (currentImageUrl) {
+      console.log('✅ Image already available:', currentImageUrl);
       setImageUrl(currentImageUrl);
       onImageReady(currentImageUrl);
       return;
     }
 
-    // If it's a typed essay without image, start polling for render status
+    // If it's a typed essay without image, start rendering immediately
     if (needsRender) {
-      startPolling();
+      console.log('🎨 Starting render process for typed essay');
+      handleManualRender();
     }
   }, [redacao.render_status, redacao.render_image_url, needsRender]);
 
@@ -79,6 +89,8 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
   };
 
   const handleManualRender = async () => {
+    console.log('🚀 Manual render triggered for essay:', redacao.id);
+    
     const params = {
       essayId: redacao.id,
       tableOrigin,
@@ -89,15 +101,27 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
       turma: redacao.turma || 'Visitante'
     };
 
+    console.log('📋 Render params:', params);
+    setRenderStatus('rendering');
+
     const result = await renderEssay(params);
+    
+    console.log('🎯 Render result:', result);
+    
     if (result) {
       setImageUrl(result);
       setRenderStatus('ready');
       onImageReady(result);
+      console.log('✅ Render completed successfully:', result);
+    } else {
+      setRenderStatus('error');
+      console.log('❌ Render failed');
     }
   };
 
   const handleRetry = async () => {
+    console.log('🔄 Retry render for essay:', redacao.id);
+    
     const params = {
       essayId: redacao.id,
       tableOrigin,
@@ -108,11 +132,17 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
       turma: redacao.turma || 'Visitante'
     };
 
+    setRenderStatus('rendering');
     const result = await retryRender(params);
+    
     if (result) {
       setImageUrl(result);
       setRenderStatus('ready');
       onImageReady(result);
+      console.log('✅ Retry completed successfully:', result);
+    } else {
+      setRenderStatus('error');
+      console.log('❌ Retry failed');
     }
   };
 
@@ -143,6 +173,12 @@ export function EssayRenderer({ redacao, tableOrigin, onImageReady, className = 
               <AlertDescription>
                 Preparando visualização da redação digitada...
                 {polling && <div className="text-xs text-muted-foreground mt-1">Verificando status...</div>}
+                <div className="mt-2">
+                  <Button size="sm" variant="outline" onClick={handleManualRender} disabled={isRendering}>
+                    {isRendering ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Eye className="h-3 w-3 mr-1" />}
+                    {isRendering ? 'Processando...' : 'Forçar renderização'}
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}

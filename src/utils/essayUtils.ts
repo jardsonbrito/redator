@@ -91,7 +91,15 @@ export function isTypedEssay(redacao: RedacaoData): boolean {
  * Gets the raw text content from an essay
  */
 export function getEssayText(redacao: RedacaoData): string {
-  return redacao.redacao_texto || redacao.texto || '';
+  // Try redacao_texto first (for regular essays), then texto (for simulados)
+  const text = redacao.redacao_texto || redacao.texto || '';
+  console.log('📝 getEssayText:', { 
+    redacao_texto: redacao.redacao_texto?.length || 0,
+    texto: redacao.texto?.length || 0,
+    result: text.length,
+    preview: text.substring(0, 100) + '...'
+  });
+  return text;
 }
 
 /**
