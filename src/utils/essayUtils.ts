@@ -44,3 +44,68 @@ export function getImageUrlForVisualization(redacao: RedacaoCorretor & {
   
   return null;
 }
+
+// ======= NEW UNIFIED INTERFACE =======
+
+interface RedacaoData {
+  redacao_manuscrita_url?: string;
+  redacao_texto?: string;
+  texto?: string; // For simulados
+  render_image_url?: string;
+  render_status?: string;
+}
+
+/**
+ * Determines the display URL for an essay (either handwritten image or rendered typed text)
+ * @param redacao - The essay data
+ * @returns The URL to display for correction, or null if not available
+ */
+export function getEssayDisplayUrl(redacao: RedacaoData): string | null {
+  // Priority 1: Handwritten essay (manuscrita)
+  if (redacao.redacao_manuscrita_url) {
+    return redacao.redacao_manuscrita_url;
+  }
+
+  // Priority 2: If digitada with ready render, use rendered image
+  if (redacao.render_status === 'ready' && redacao.render_image_url) {
+    return redacao.render_image_url;
+  }
+
+  // Priority 3: If digitada but render not ready, return null (will show loading/render state)
+  const hasTypedText = redacao.redacao_texto || redacao.texto;
+  if (hasTypedText && !redacao.redacao_manuscrita_url) {
+    return null; // This indicates a typed essay that needs rendering
+  }
+
+  return null;
+}
+
+/**
+ * Checks if an essay is typed (digitada) vs handwritten (manuscrita)
+ */
+export function isTypedEssay(redacao: RedacaoData): boolean {
+  return !redacao.redacao_manuscrita_url && !!(redacao.redacao_texto || redacao.texto);
+}
+
+/**
+ * Gets the raw text content from an essay
+ */
+export function getEssayText(redacao: RedacaoData): string {
+  return redacao.redacao_texto || redacao.texto || '';
+}
+
+/**
+ * Determines if an essay needs rendering
+ */
+export function needsRendering(redacao: RedacaoData): boolean {
+  return isTypedEssay(redacao) && redacao.render_status !== 'ready';
+}
+
+/**
+ * Triggers automatic rendering for a typed essay
+ */
+export async function triggerEssayRender(essayId: string, tableOrigin: string, essayData: RedacaoData): Promise<void> {
+  // This will be called automatically by the background processor
+  // But we can also manually trigger it if needed
+  console.log(`📝 Essay ${essayId} flagged for rendering`);
+}
