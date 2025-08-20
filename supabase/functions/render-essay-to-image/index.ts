@@ -76,20 +76,20 @@ serve(async (req) => {
     
     console.log(`🎯 RENDER CONFIG: ${renderWidth}x${contentHeight} | Font: ${fontSize}px | Lines: ${allLines.length}`);
 
-    // PNG GENERATION using Canvas - COMPLETELY ISOLATED
-    const imageBuffer = await generateCleanPNG(allLines, renderWidth, contentHeight, fontSize, lineHeight, padding);
+    // SVG GENERATION using robust approach for Deno
+    const imageBuffer = await generateCleanSVG(allLines, renderWidth, contentHeight, fontSize, lineHeight, padding);
     
     // Cache busting with timestamp
     const timestamp = Date.now();
-    const fileName = `${essayId}_v${timestamp}.png`;
+    const fileName = `${essayId}_v${timestamp}.svg`;
     const filePath = `essay-renders/${fileName}`;
 
-    console.log(`📤 UPLOADING PNG: ${filePath} | Size: ${imageBuffer.length} bytes`);
+    console.log(`📤 UPLOADING SVG: ${filePath} | Size: ${imageBuffer.length} bytes`);
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('essay-renders')
       .upload(filePath, imageBuffer, {
-        contentType: 'image/png',
+        contentType: 'image/svg+xml',
         upsert: true,
         cacheControl: 'no-cache, max-age=0'
       });
@@ -106,7 +106,7 @@ serve(async (req) => {
     
     const finalImageUrl = `${publicUrl}?v=${timestamp}`;
 
-    console.log(`✅ PNG GENERATED: ${finalImageUrl}`);
+    console.log(`✅ SVG GENERATED: ${finalImageUrl}`);
     console.log(`📊 FINAL DIMENSIONS: ${renderWidth}x${contentHeight}px`);
 
     // Update essay record with render URL and complete metadata
@@ -131,7 +131,7 @@ serve(async (req) => {
       render_width: renderWidth,
       render_height: contentHeight,
       timestamp: timestamp,
-      message: `PNG rendered successfully at ${renderWidth}x${contentHeight}px`
+      message: `SVG rendered successfully at ${renderWidth}x${contentHeight}px`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -166,8 +166,8 @@ serve(async (req) => {
   }
 })
 
-// CLEAN PNG GENERATION - ISOLATED FROM ANY FORM CSS
-async function generateCleanPNG(
+// SVG GENERATION - ROBUST APPROACH FOR DENO
+async function generateCleanSVG(
   lines: string[], 
   width: number, 
   height: number, 
@@ -176,36 +176,32 @@ async function generateCleanPNG(
   padding: number
 ): Promise<Uint8Array> {
   
-  // Create canvas for clean PNG generation
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d')!;
+  let svgContent = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
+  svgContent += `<rect width="100%" height="100%" fill="white"/>`;
   
-  // Set white background
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, width, height);
+  let y = padding + fontSize;
   
-  // Set text properties for clean essay rendering
-  ctx.fillStyle = '#000000';
-  ctx.font = `${fontSize}px "Times New Roman", serif`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  
-  let y = padding;
-  
-  // Render each line with proper spacing
+  // Render each line as SVG text
   for (const line of lines) {
     if (line.trim()) {
-      // Manual text wrapping for very long lines
+      // Simple text wrapping for SVG
       const words = line.trim().split(' ');
       let currentLine = '';
+      const maxLineLength = Math.floor((width - padding * 2) / (fontSize * 0.6)); // Estimate character width
       
       for (const word of words) {
         const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        const metrics = ctx.measureText(testLine);
         
-        if (metrics.width > width - (padding * 2) && currentLine) {
-          // Draw current line and move to next
-          ctx.fillText(currentLine, padding, y);
+        if (testLine.length > maxLineLength && currentLine) {
+          // Add current line to SVG
+          const escapedLine = currentLine
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+          
+          svgContent += `<text x="${padding}" y="${y}" font-family="Times New Roman, serif" font-size="${fontSize}" fill="black">${escapedLine}</text>`;
           y += lineHeight;
           currentLine = word;
         } else {
@@ -213,9 +209,16 @@ async function generateCleanPNG(
         }
       }
       
-      // Draw remaining text
+      // Add remaining text
       if (currentLine) {
-        ctx.fillText(currentLine, padding, y);
+        const escapedLine = currentLine
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        
+        svgContent += `<text x="${padding}" y="${y}" font-family="Times New Roman, serif" font-size="${fontSize}" fill="black">${escapedLine}</text>`;
         y += lineHeight;
       }
     } else {
@@ -227,11 +230,9 @@ async function generateCleanPNG(
     if (y > height - padding) break;
   }
   
-  // Convert canvas to PNG
-  const blob = await canvas.convertToBlob({ 
-    type: 'image/png',
-    quality: 1.0
-  });
-  const arrayBuffer = await blob.arrayBuffer();
-  return new Uint8Array(arrayBuffer);
+  svgContent += '</svg>';
+  
+  // Convert SVG to Uint8Array
+  const encoder = new TextEncoder();
+  return encoder.encode(svgContent);
 }
