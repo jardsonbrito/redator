@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useEssayImageGeneration } from "@/hooks/useEssayImageGeneration";
 
 interface RedacaoTextareaSimplesProps {
   value: string;
@@ -8,6 +9,9 @@ interface RedacaoTextareaSimplesProps {
   onValidChange: (isValid: boolean) => void;
   className?: string;
   placeholder?: string;
+  essayId?: string;
+  table?: 'redacoes_enviadas' | 'redacoes_simulado' | 'redacoes_exercicio';
+  generateImage?: boolean;
 }
 
 export const RedacaoTextareaSimples = ({ 
@@ -15,9 +19,20 @@ export const RedacaoTextareaSimples = ({
   onChange, 
   onValidChange, 
   className = "", 
-  placeholder = "Escreva sua redação completa aqui..." 
+  placeholder = "Escreva sua redação completa aqui...",
+  essayId,
+  table,
+  generateImage = false
 }: RedacaoTextareaSimplesProps) => {
   const [wordCount, setWordCount] = useState(0);
+
+  // Hook para gerar imagem da redação automaticamente
+  useEssayImageGeneration({
+    text: value,
+    essayId: essayId || '',
+    table: table || 'redacoes_enviadas',
+    enabled: generateImage && !!essayId && !!table
+  });
 
   // Conta palavras do texto
   const getWordCount = (text: string): number => {

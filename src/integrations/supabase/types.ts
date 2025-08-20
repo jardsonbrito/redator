@@ -1246,6 +1246,8 @@ export type Database = {
           email_aluno: string | null
           frase_tematica: string
           id: string
+          image_path: string | null
+          image_url: string | null
           justificativa_devolucao: string | null
           nome_aluno: string | null
           nota_c1: number | null
@@ -1258,9 +1260,14 @@ export type Database = {
           nota_total: number | null
           redacao_manuscrita_url: string | null
           redacao_texto: string
+          render_height: number | null
+          render_image_url: string | null
+          render_status: string | null
+          render_width: number | null
           status: string | null
           status_corretor_1: string | null
           status_corretor_2: string | null
+          thumb_url: string | null
           tipo_envio: string | null
           turma: string | null
           user_id: string | null
@@ -1305,6 +1312,8 @@ export type Database = {
           email_aluno?: string | null
           frase_tematica: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno?: string | null
           nota_c1?: number | null
@@ -1317,9 +1326,14 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto: string
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status?: string | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          thumb_url?: string | null
           tipo_envio?: string | null
           turma?: string | null
           user_id?: string | null
@@ -1364,6 +1378,8 @@ export type Database = {
           email_aluno?: string | null
           frase_tematica?: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno?: string | null
           nota_c1?: number | null
@@ -1376,9 +1392,14 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto?: string
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status?: string | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          thumb_url?: string | null
           tipo_envio?: string | null
           turma?: string | null
           user_id?: string | null
@@ -1447,6 +1468,8 @@ export type Database = {
           email_aluno: string
           exercicio_id: string
           id: string
+          image_path: string | null
+          image_url: string | null
           justificativa_devolucao: string | null
           nome_aluno: string
           nota_c1: number | null
@@ -1459,8 +1482,13 @@ export type Database = {
           nota_total: number | null
           redacao_manuscrita_url: string | null
           redacao_texto: string
+          render_height: number | null
+          render_image_url: string | null
+          render_status: string | null
+          render_width: number | null
           status_corretor_1: string | null
           status_corretor_2: string | null
+          thumb_url: string | null
           turma: string | null
           user_id: string | null
         }
@@ -1503,6 +1531,8 @@ export type Database = {
           email_aluno: string
           exercicio_id: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno: string
           nota_c1?: number | null
@@ -1515,8 +1545,13 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto: string
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          thumb_url?: string | null
           turma?: string | null
           user_id?: string | null
         }
@@ -1559,6 +1594,8 @@ export type Database = {
           email_aluno?: string
           exercicio_id?: string
           id?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno?: string
           nota_c1?: number | null
@@ -1571,8 +1608,13 @@ export type Database = {
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
           redacao_texto?: string
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          thumb_url?: string | null
           turma?: string | null
           user_id?: string | null
         }
@@ -1641,6 +1683,8 @@ export type Database = {
           email_aluno: string
           id: string
           id_simulado: string
+          image_path: string | null
+          image_url: string | null
           justificativa_devolucao: string | null
           nome_aluno: string
           nota_c1: number | null
@@ -1652,9 +1696,14 @@ export type Database = {
           nota_final_corretor_2: number | null
           nota_total: number | null
           redacao_manuscrita_url: string | null
+          render_height: number | null
+          render_image_url: string | null
+          render_status: string | null
+          render_width: number | null
           status_corretor_1: string | null
           status_corretor_2: string | null
           texto: string
+          thumb_url: string | null
           turma: string
           user_id: string | null
         }
@@ -1698,6 +1747,8 @@ export type Database = {
           email_aluno: string
           id?: string
           id_simulado: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno: string
           nota_c1?: number | null
@@ -1709,9 +1760,14 @@ export type Database = {
           nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           texto: string
+          thumb_url?: string | null
           turma: string
           user_id?: string | null
         }
@@ -1755,6 +1811,8 @@ export type Database = {
           email_aluno?: string
           id?: string
           id_simulado?: string
+          image_path?: string | null
+          image_url?: string | null
           justificativa_devolucao?: string | null
           nome_aluno?: string
           nota_c1?: number | null
@@ -1766,9 +1824,14 @@ export type Database = {
           nota_final_corretor_2?: number | null
           nota_total?: number | null
           redacao_manuscrita_url?: string | null
+          render_height?: number | null
+          render_image_url?: string | null
+          render_status?: string | null
+          render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
           texto?: string
+          thumb_url?: string | null
           turma?: string
           user_id?: string | null
         }
@@ -2246,8 +2309,11 @@ export type Database = {
           id: string
           nome_aluno: string
           redacao_manuscrita_url: string
+          render_image_url: string
+          render_status: string
           status_minha_correcao: string
           texto: string
+          thumb_url: string
           tipo_redacao: string
           turma: string
         }[]

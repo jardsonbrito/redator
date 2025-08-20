@@ -138,6 +138,22 @@
   .text-redator-primary {
     color: hsl(258, 84%, 29%);
   }
+
+  /* Essay rendering styles */
+  .essay-container {
+    @apply w-full;
+  }
+
+  .essay-image-container {
+    @apply w-full bg-white rounded-lg overflow-hidden;
+  }
+
+  .essay-rendered-image {
+    @apply w-full h-auto block;
+    object-fit: contain;
+    max-width: 100%;
+    height: auto;
+  }
   
   .text-redator-secondary {
     color: hsl(258, 60%, 78%);

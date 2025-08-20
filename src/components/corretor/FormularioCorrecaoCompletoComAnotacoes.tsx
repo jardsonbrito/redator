@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
+import { EssayRenderer } from "@/components/EssayRenderer";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -562,7 +563,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 variant="outline"
                 onClick={copiarRedacaoDigitada}
                 className="icon-btn"
-                aria-label="Copiar redação"
+                aria-label="Copiar texto original"
               >
                 <Copy className="w-4 h-4" />
               </Button>
@@ -570,15 +571,22 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 variant="outline"
                 onClick={() => setShowRedacaoExpandida(true)}
                 className="icon-btn"
-                aria-label="Expandir redação"
+                aria-label="Ver texto original"
               >
                 <Maximize2 className="w-4 h-4" />
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="textarea max-h-[200px] overflow-y-auto">
-              {redacao.texto ? formatarTextoComParagrafos(redacao.texto) : 'Texto da redação não disponível'}
+            <div className="essay-container border rounded-lg overflow-hidden bg-white">
+              <EssayRenderer
+                essayId={redacao.id}
+                text={redacao.texto || ''}
+                table={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                       redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                imageUrl={redacao.image_url}
+                className="w-full"
+              />
             </div>
           </CardContent>
         </Card>
