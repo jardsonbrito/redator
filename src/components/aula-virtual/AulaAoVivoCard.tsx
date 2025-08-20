@@ -65,6 +65,7 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
   const registrarPresenca = async (tipo: 'entrada' | 'saida') => {
     try {
       if (!studentData.email) {
+        console.error('Erro: studentData.email não encontrado:', studentData);
         toast({
           title: "Erro",
           description: "Dados do estudante não encontrados. Faça login novamente.",
@@ -72,6 +73,8 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
         });
         return;
       }
+
+      console.log('Iniciando registro de presença:', { tipo, email: studentData.email, aulaId: aula.id });
 
       // Obter token de sessão do cookie
       const getSessionToken = (): string | null => {
@@ -87,7 +90,10 @@ export const AulaAoVivoCard = ({ aula, turmaCode }: AulaAoVivoCardProps) => {
 
       const sessionToken = getSessionToken();
       
+      console.log('Token encontrado:', sessionToken ? 'Sim' : 'Não');
+      
       if (!sessionToken) {
+        console.error('Token de sessão não encontrado nos cookies');
         toast({
           title: "Erro",
           description: "Sessão expirada. Faça login novamente.",
