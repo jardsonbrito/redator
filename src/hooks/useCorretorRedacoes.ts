@@ -18,6 +18,9 @@ export interface RedacaoCorretor {
   corretor_id_1?: string | null;
   corretor_id_2?: string | null;
   turma?: string; // Added turma property
+  render_status?: string; // Added for digitada essay rendering
+  render_image_url?: string; // Added for digitada essay rendering
+  thumb_url?: string; // Added for thumbnails
 }
 
 export const useCorretorRedacoes = (corretorEmail: string) => {
