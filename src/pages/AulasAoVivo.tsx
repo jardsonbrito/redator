@@ -109,9 +109,12 @@ const AulasAoVivo = () => {
   const onRegistrarEntrada = async (aulaId: string) => {
     try {
       if (!studentData.email) {
+        console.error('Erro: studentData.email não encontrado:', studentData);
         toast.error('Erro: dados do estudante não encontrados');
         return;
       }
+
+      console.log('Iniciando registro de entrada:', { aulaId, email: studentData.email });
 
       // Obter token de sessão do cookie
       const getSessionToken = (): string | null => {
@@ -127,15 +130,22 @@ const AulasAoVivo = () => {
 
       const sessionToken = getSessionToken();
       
+      console.log('Token encontrado:', sessionToken ? 'Sim' : 'Não');
+      
       if (!sessionToken) {
+        console.error('Token de sessão não encontrado nos cookies');
         toast.error('Sessão expirada. Faça login novamente.');
         return;
       }
+
+      console.log('Chamando RPC registrar_entrada_com_token:', { aulaId, sessionToken });
 
       const { data, error } = await supabase.rpc('registrar_entrada_com_token', {
         p_aula_id: aulaId,
         p_session_token: sessionToken
       });
+
+      console.log('Resultado da RPC:', { data, error });
 
       if (error) {
         console.error('Erro ao registrar entrada:', error);
