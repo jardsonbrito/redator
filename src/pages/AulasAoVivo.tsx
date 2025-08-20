@@ -307,8 +307,12 @@ const AulasAoVivo = () => {
   };
 
   const getStatusAula = (aula: AulaAoVivo) => {
+    // Converte a data do formato YYYY-MM-DD para DD/MM/YYYY
+    const [year, month, day] = aula.data_aula.split('-');
+    const formattedDate = `${day}/${month}/${year}`;
+    
     return computeStatus({
-      data_aula: aula.data_aula,
+      data_aula: formattedDate,
       horario_inicio: aula.horario_inicio,
       horario_fim: aula.horario_fim
     });
@@ -370,23 +374,15 @@ const AulasAoVivo = () => {
                 const status = getStatusAula(aula);
                 const registro = registrosPresencaMap[aula.id];
 
-                // Determinar status da aula priorizando status_transmissao
-                let normalizedStatus: 'agendada' | 'ao_vivo' | 'encerrada' = 'agendada';
-                
-                if (aula.status_transmissao === 'em_transmissao') {
-                  normalizedStatus = 'ao_vivo';
-                } else if (aula.status_transmissao === 'encerrada') {
-                  normalizedStatus = 'encerrada';
-                } else if (aula.status_transmissao === 'agendada') {
-                  normalizedStatus = 'agendada';
-                } else {
-                  // Fallback para cálculo por horário
-                  normalizedStatus = status === 'indefinido' ? 'encerrada' : status;
-                }
+                // Usar status calculado dinamicamente (não o campo do banco)
+                let normalizedStatus: 'agendada' | 'ao_vivo' | 'encerrada' = 
+                  status === 'indefinido' ? 'encerrada' : status;
 
                 console.log(`Aula ${aula.id}:`, {
                   titulo: aula.titulo,
-                  status_db: aula.status_transmissao,
+                  data_aula: aula.data_aula,
+                  horario_inicio: aula.horario_inicio,
+                  horario_fim: aula.horario_fim,
                   status_calculado: status,
                   status_final: normalizedStatus,
                   registro: registro,
