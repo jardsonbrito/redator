@@ -550,37 +550,42 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             {isManuscritaRedacao(redacao) ? 'Redação Manuscrita' : 'Redação Digitada'}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <EssayRenderer
-            redacao={{
-              id: redacao.id,
-              redacao_manuscrita_url: redacao.redacao_manuscrita_url,
-              redacao_texto: redacao.texto,
-              texto: redacao.texto,
-              render_image_url: redacao.render_image_url,
-              render_status: redacao.render_status,
-              nome_aluno: redacao.nome_aluno,
-              frase_tematica: redacao.frase_tematica,
-              data_envio: redacao.data_envio,
-              turma: redacao.turma,
-              tipo_redacao: redacao.tipo_redacao
-            }}
-            tableOrigin={getTableOriginFromRedacao(redacao)}
-            onImageReady={handleImageReady}
-          />
-          
-          {imageUrl && (
-            <RedacaoAnotacaoVisual
-              imagemUrl={imageUrl}
-              redacaoId={redacao.id}
-              corretorId={corretorId}
+        <CardContent className="p-0">
+          <div className="min-h-[600px]">
+            <EssayRenderer
+              redacao={{
+                id: redacao.id,
+                redacao_manuscrita_url: redacao.redacao_manuscrita_url,
+                redacao_texto: redacao.texto,
+                texto: redacao.texto,
+                render_image_url: redacao.render_image_url,
+                render_status: redacao.render_status,
+                nome_aluno: redacao.nome_aluno,
+                frase_tematica: redacao.frase_tematica,
+                data_envio: redacao.data_envio,
+                turma: redacao.turma,
+                tipo_redacao: redacao.tipo_redacao
+              }}
+              tableOrigin={getTableOriginFromRedacao(redacao)}
+              onImageReady={handleImageReady}
+              className="relative"
             />
-          )}
+            
+            {imageUrl && (
+              <div className="absolute inset-0 pointer-events-none">
+                <RedacaoAnotacaoVisual
+                  imagemUrl={imageUrl}
+                  redacaoId={redacao.id}
+                  corretorId={corretorId}
+                />
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Redação Digitada - Backup Text View (only for copy functionality) */}
-      {!isManuscritaRedacao(redacao) && (
+      {/* Copy Panel - Only show when image is ready */}
+      {!isManuscritaRedacao(redacao) && imageUrl && (
         <Card className="card">
           <CardHeader className="card__header">
             <CardTitle>Texto Original (para cópia)</CardTitle>
@@ -604,7 +609,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="textarea max-h-[200px] overflow-y-auto">
+            <div className="text-sm text-muted-foreground mb-2">
+              Use esta seção apenas para copiar o texto. A correção deve ser feita na imagem acima.
+            </div>
+            <div className="textarea max-h-[120px] overflow-y-auto text-xs">
               {getEssayText(redacao) ? formatarTextoComParagrafos(getEssayText(redacao)) : 'Texto da redação não disponível'}
             </div>
           </CardContent>

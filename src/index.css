@@ -424,11 +424,12 @@
 /* Essay Rendering Styles */
 @layer components {
   .correction-pane {
-    @apply w-full min-h-[400px] relative;
+    @apply w-full min-h-[600px] relative bg-white;
   }
   
   .essay-image-wrapper {
-    @apply w-full relative overflow-hidden rounded-lg border border-border bg-background;
+    @apply w-full relative overflow-hidden bg-white;
+    min-height: 600px;
   }
   
   .essay-image {
@@ -436,10 +437,12 @@
     max-width: none !important;
     image-rendering: crisp-edges;
     background: white;
-    border-radius: 8px;
+    min-height: 600px;
   }
   
   .essay-text-container {
-    @apply w-full max-h-[400px] overflow-y-auto p-4 border border-border rounded-lg bg-background;
+    @apply w-full max-h-[200px] overflow-y-auto p-4 border border-border rounded-lg bg-muted/20;
+    font-size: 0.75rem;
+    line-height: 1.2;
   }
 }
