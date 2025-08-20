@@ -166,14 +166,16 @@ const AulasAoVivo = () => {
           console.log('Entrada registrada com sucesso, atualizando estado local');
           toast.success('Entrada registrada com sucesso!');
           // Atualizar estado local imediatamente
+          const agora = new Date().toISOString();
           setRegistrosPresencaMap(prev => ({
             ...prev,
             [aulaId]: {
               aula_id: aulaId,
-              entrada_at: new Date().toISOString(),
+              entrada_at: agora,
               saida_at: prev[aulaId]?.saida_at || null
             }
           }));
+          console.log('Estado local atualizado para entrada:', { aulaId, entrada_at: agora });
           break;
         case 'entrada_ja_registrada':
           console.log('Entrada já foi registrada');
@@ -200,7 +202,8 @@ const AulasAoVivo = () => {
           toast.error('Erro inesperado ao registrar entrada');
       }
       
-      await fetchPresencaAula(aulaId);
+      // Buscar dados atualizados do banco
+      setTimeout(() => fetchPresencaAula(aulaId), 500);
     } catch (error: any) {
       console.error('Erro ao registrar entrada:', error);
       toast.error('Erro ao registrar entrada');
@@ -213,6 +216,8 @@ const AulasAoVivo = () => {
         toast.error('Erro: dados do estudante não encontrados');
         return;
       }
+
+      console.log('Iniciando registro de saída:', { aulaId, email: studentData.email });
 
       // Obter token de sessão do cookie
       const getSessionToken = (): string | null => {
@@ -233,10 +238,14 @@ const AulasAoVivo = () => {
         return;
       }
 
+      console.log('Chamando RPC registrar_saida_com_token:', { aulaId, sessionToken });
+
       const { data, error } = await supabase.rpc('registrar_saida_com_token', {
         p_aula_id: aulaId,
         p_session_token: sessionToken
       });
+
+      console.log('Resultado da RPC de saída:', { data, error });
 
       if (error) {
         console.error('Erro ao registrar saída:', error);
@@ -249,14 +258,16 @@ const AulasAoVivo = () => {
           console.log('Saída registrada com sucesso, atualizando estado local');
           toast.success('Saída registrada com sucesso!');
           // Atualizar estado local imediatamente
+          const agora = new Date().toISOString();
           setRegistrosPresencaMap(prev => ({
             ...prev,
             [aulaId]: {
               aula_id: aulaId,
               entrada_at: prev[aulaId]?.entrada_at || null,
-              saida_at: new Date().toISOString()
+              saida_at: agora
             }
           }));
+          console.log('Estado local atualizado para saída:', { aulaId, saida_at: agora });
           break;
         case 'saida_ja_registrada':
           console.log('Saída já foi registrada');
@@ -287,7 +298,8 @@ const AulasAoVivo = () => {
           toast.error('Erro inesperado ao registrar saída');
       }
       
-      await fetchPresencaAula(aulaId);
+      // Buscar dados atualizados do banco  
+      setTimeout(() => fetchPresencaAula(aulaId), 500);
     } catch (error: any) {
       console.error('Erro ao registrar saída:', error);
       toast.error('Erro ao registrar saída');
@@ -358,19 +370,29 @@ const AulasAoVivo = () => {
                 const status = getStatusAula(aula);
                 const registro = registrosPresencaMap[aula.id];
 
-                // Normalizar status para garantir compatibilidade de tipos
-                let normalizedStatus = status === 'indefinido' ? 'encerrada' : status;
+                // Determinar status da aula priorizando status_transmissao
+                let normalizedStatus: 'agendada' | 'ao_vivo' | 'encerrada' = 'agendada';
                 
-                // Se tem status_transmissao, usar ele para determinar se está ao vivo
                 if (aula.status_transmissao === 'em_transmissao') {
                   normalizedStatus = 'ao_vivo';
-                } else if (aula.status_transmissao === 'agendada') {
-                  normalizedStatus = 'agendada';
                 } else if (aula.status_transmissao === 'encerrada') {
                   normalizedStatus = 'encerrada';
+                } else if (aula.status_transmissao === 'agendada') {
+                  normalizedStatus = 'agendada';
+                } else {
+                  // Fallback para cálculo por horário
+                  normalizedStatus = status === 'indefinido' ? 'encerrada' : status;
                 }
 
-                console.log(`Aula ${aula.id} - Status: ${normalizedStatus}, Registro:`, registro);
+                console.log(`Aula ${aula.id}:`, {
+                  titulo: aula.titulo,
+                  status_db: aula.status_transmissao,
+                  status_calculado: status,
+                  status_final: normalizedStatus,
+                  registro: registro,
+                  entrada_registrada: !!registro?.entrada_at,
+                  saida_registrada: !!registro?.saida_at
+                });
                 
                 return (
                   <AulaAoVivoCardRefatorado

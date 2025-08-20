@@ -29,9 +29,11 @@ interface AulaAoVivo {
   eh_aula_ao_vivo: boolean;
   ativo: boolean;
   imagem_capa_url?: string;
+  status_transmissao?: string;
 }
 
 interface RegistroPresenca {
+  aula_id: string;
   entrada_at: string | null;
   saida_at: string | null;
 }
@@ -84,13 +86,22 @@ export const AulaAoVivoCardRefatorado = ({
 
   const confirmarPresenca = async (tipo: 'entrada' | 'saida') => {
     try {
+      console.log(`Iniciando registro de ${tipo} para aula ${aula.id}`);
+      
       if (tipo === 'entrada') {
         await onEntrada(aula.id);
       } else {
         await onSaida(aula.id);
       }
+      
+      console.log(`Registro de ${tipo} concluído com sucesso`);
     } catch (error) {
       console.error(`Erro ao registrar ${tipo}:`, error);
+      toast({
+        title: "Erro",
+        description: `Erro ao registrar ${tipo}. Tente novamente.`,
+        variant: "destructive"
+      });
     } finally {
       setDialogAberto(null);
     }
@@ -205,8 +216,8 @@ export const AulaAoVivoCardRefatorado = ({
                status === 'agendada' ? 'Aguardar na Sala' : 'Aula Encerrada'}
             </Button>
 
-            {/* Botões de presença */}
-            {(status === 'ao_vivo' || status === 'encerrada') && (
+            {/* Botões de presença - Mostrar se aula está ao vivo OU se há registro de entrada */}
+            {(status === 'ao_vivo' || entradaRegistrada || aula.status_transmissao === 'em_transmissao') && (
               <div className="grid md:grid-cols-2 gap-2">
                 <Dialog open={dialogAberto === 'entrada'} onOpenChange={(open) => !open && setDialogAberto(null)}>
                   <DialogTrigger asChild>
