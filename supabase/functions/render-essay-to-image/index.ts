@@ -174,89 +174,61 @@ serve(async (req) => {
     
     paragraphs.forEach(paragraph => {
       if (paragraph.trim()) {
-        const wrappedLines = wrapText(paragraph.trim(), 85); // Optimal chars per line
+        const wrappedLines = wrapText(paragraph.trim(), 80);
         allLines.push(...wrappedLines);
         allLines.push(''); // Add space between paragraphs
       }
     });
 
-    // Generate optimized HTML with proper canvas rendering dimensions
-    const htmlWidth = 2400;
-    const lineHeight = 32;
-    const padding = 60;
-    const contentHeight = Math.max(allLines.length * lineHeight + (padding * 2), 1600);
+    // Calculate dynamic height based on content
+    const lineHeight = 35;
+    const padding = 80;
+    const contentHeight = allLines.length * lineHeight;
+    const calculatedHeight = Math.max(800, contentHeight + (padding * 2));
+    const renderWidth = 2400;
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: 'Times New Roman', serif;
-            margin: 0;
-            padding: ${padding}px;
-            background: white;
-            color: #000;
-            line-height: ${lineHeight}px;
-            width: ${htmlWidth}px;
-            height: ${contentHeight}px;
-            box-sizing: border-box;
-            font-size: 20px;
-            font-weight: 400;
-            overflow: hidden;
-        }
-        .essay-content {
-            width: 100%;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            text-align: justify;
-        }
-        .line {
-            margin-bottom: 8px;
-            line-height: ${lineHeight}px;
-        }
-    </style>
-</head>
-<body>
-    <div class="essay-content">
-        ${allLines.map(line => 
-          line.trim() ? 
-            `<div class="line">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` :
-            `<div class="line">&nbsp;</div>`
-        ).join('')}
-    </div>
-</body>
-</html>`;
+    // Create optimized SVG content for clean essay rendering
+    const svgContent = `
+      <svg width="${renderWidth}" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="white"/>
+        
+        <!-- Essay content only - clean and readable -->
+        ${allLines.map((line, i) => {
+          const y = padding + (i * lineHeight);
+          return line.trim() ? 
+            `<text x="80" y="${y}" font-family="Times New Roman, serif" font-size="24" fill="black" font-weight="400">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
+            '';
+        }).join('')}
+      </svg>
+    `;
 
-    console.log('🖼️ Generating PNG image using browser rendering...')
+    console.log('🖼️ Generating SVG image...')
 
-    // Use Deno's built-in DOM and canvas API for better rendering
-    const imageBinaryData = await generatePNGFromHTML(htmlContent, htmlWidth, contentHeight);
+    // Convert SVG to buffer
+    const svgBuffer = new TextEncoder().encode(svgContent);
     
-    // Upload PNG image
-    const fileName = `${essayId}.png`
-    const filePath = `essay-renders/${fileName}`
+    // Upload SVG as image
+    const fileName = `${essayId}.svg`;
+    const filePath = `essay-renders/${fileName}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('essay-renders')
-      .upload(filePath, imageBinaryData, {
-        contentType: 'image/png',
+      .upload(filePath, svgBuffer, {
+        contentType: 'image/svg+xml',
         upsert: true
-      })
+      });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError)
-      throw new Error(`Upload failed: ${uploadError.message}`)
+      console.error('Upload error:', uploadError);
+      throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('essay-renders')
-      .getPublicUrl(filePath)
+      .getPublicUrl(filePath);
 
-    console.log(`✅ Image rendered and uploaded: ${publicUrl}`)
+    console.log(`✅ Image rendered and uploaded: ${publicUrl}`);
 
     // Update essay record with render URL
     const { error: updateError } = await supabase
@@ -265,11 +237,11 @@ serve(async (req) => {
         render_status: 'ready',
         render_image_url: publicUrl
       })
-      .eq('id', essayId)
+      .eq('id', essayId);
 
     if (updateError) {
-      console.error('Update error:', updateError)
-      throw new Error(`Update failed: ${updateError.message}`)
+      console.error('Update error:', updateError);
+      throw new Error(`Update failed: ${updateError.message}`);
     }
 
     return new Response(JSON.stringify({ 
@@ -278,26 +250,26 @@ serve(async (req) => {
       message: 'Essay rendered successfully'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    });
 
   } catch (error) {
-    console.error('Render error:', error)
+    console.error('Render error:', error);
     
     // Update status to error if we have the necessary data
     try {
-      const { essayId, tableOrigin } = await req.clone().json()
+      const { essayId, tableOrigin } = await req.clone().json();
       if (essayId && tableOrigin) {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
         
         await supabase
           .from(tableOrigin as any)
           .update({ render_status: 'error' })
-          .eq('id', essayId)
+          .eq('id', essayId);
       }
     } catch (updateError) {
-      console.error('Failed to update error status:', updateError)
+      console.error('Failed to update error status:', updateError);
     }
 
     return new Response(JSON.stringify({ 
@@ -306,68 +278,6 @@ serve(async (req) => {
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    });
   }
 })
-
-// Function to generate PNG from HTML using canvas rendering
-async function generatePNGFromHTML(htmlContent: string, width: number, height: number): Promise<Uint8Array> {
-  // Create a simplified canvas-based renderer
-  // This is a basic implementation - in production you might want to use puppeteer or similar
-  
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d')!;
-  
-  // Set white background
-  ctx.fillStyle = 'white';
-  ctx.fillRect(0, 0, width, height);
-  
-  // Set text properties for essay rendering
-  ctx.fillStyle = 'black';
-  ctx.font = '20px "Times New Roman", serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  
-  // Parse text from HTML and render line by line
-  const textContent = htmlContent.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-  const lines = textContent.split('\n').filter(line => line.trim());
-  
-  const lineHeight = 32;
-  const padding = 60;
-  let y = padding;
-  
-  for (const line of lines) {
-    if (line.trim()) {
-      // Wrap text manually if too long
-      const words = line.trim().split(' ');
-      let currentLine = '';
-      
-      for (const word of words) {
-        const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        const metrics = ctx.measureText(testLine);
-        
-        if (metrics.width > width - (padding * 2) && currentLine) {
-          ctx.fillText(currentLine, padding, y);
-          y += lineHeight;
-          currentLine = word;
-        } else {
-          currentLine = testLine;
-        }
-      }
-      
-      if (currentLine) {
-        ctx.fillText(currentLine, padding, y);
-        y += lineHeight;
-      }
-    } else {
-      y += lineHeight / 2; // Space for empty lines
-    }
-    
-    if (y > height - padding) break; // Prevent overflow
-  }
-  
-  // Convert canvas to PNG
-  const blob = await canvas.convertToBlob({ type: 'image/png' });
-  const arrayBuffer = await blob.arrayBuffer();
-  return new Uint8Array(arrayBuffer);
-}

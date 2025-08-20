@@ -31,6 +31,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
   const { loading, redacoes, getRedacoesPorStatus } = useCorretorRedacoes(corretorEmail);
   const isMobile = useIsMobile();
   const [notasRedacoes, setNotasRedacoes] = useState<Record<string, NotasRedacao>>({});
+  const [loadingCorrecao, setLoadingCorrecao] = useState<string | null>(null);
   
   // Hook para visualizações em tempo real
   const { isRedacaoVisualizada, getVisualizacao } = useVisualizacoesRealtime();
@@ -268,20 +269,38 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
             </div>
           ) : (
             <Button
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onCorrigir(redacao);
+                
+                // Prevenir duplo clique
+                if (loadingCorrecao === redacao.id) return;
+                
+                setLoadingCorrecao(redacao.id);
+                try {
+                  await onCorrigir(redacao);
+                } finally {
+                  setLoadingCorrecao(null);
+                }
               }}
               variant={redacao.status_minha_correcao === 'corrigida' ? 'outline' : 'default'}
               size="sm"
               className="w-full sm:w-auto text-xs sm:text-sm"
-              disabled={false}
+              disabled={loadingCorrecao === redacao.id}
             >
-              {redacao.status_minha_correcao === 'pendente' && 'Corrigir'}
-              {redacao.status_minha_correcao === 'em_correcao' && 'Continuar'}
-              {redacao.status_minha_correcao === 'incompleta' && 'Continuar'}
-              {redacao.status_minha_correcao === 'corrigida' && 'Editar correção'}
+              {loadingCorrecao === redacao.id ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                  Carregando...
+                </div>
+              ) : (
+                <>
+                  {redacao.status_minha_correcao === 'pendente' && 'Corrigir'}
+                  {redacao.status_minha_correcao === 'em_correcao' && 'Continuar'}
+                  {redacao.status_minha_correcao === 'incompleta' && 'Continuar'}
+                  {redacao.status_minha_correcao === 'corrigida' && 'Editar correção'}
+                </>
+              )}
             </Button>
           )}
         </div>
