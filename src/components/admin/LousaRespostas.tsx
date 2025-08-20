@@ -145,11 +145,10 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
           corrected_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
-        .eq('id', correctingResposta.id)
-        .eq('email_aluno', correctingResposta.email_aluno);
+        .eq('id', correctingResposta.id);
 
       if (error) {
-        console.error('Erro ao corrigir resposta:', error);
+        console.error('Erro detalhado ao corrigir resposta:', error);
         throw error;
       }
 
