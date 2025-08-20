@@ -37,6 +37,8 @@ export function useEssayRenderer() {
       }
 
       console.log('✅ Essay rendered successfully:', data.imageUrl);
+      console.log('📊 Render dimensions:', data.dimensions);
+      
       return data.imageUrl;
 
     } catch (error) {
@@ -95,21 +97,23 @@ export function useEssayRenderer() {
   };
 
   const retryRender = async (params: RenderEssayParams): Promise<string | null> => {
+    console.log('🔄 Retrying render with cache bust for:', params.essayId);
+    
     // Reset status to pending before retrying
     if (params.tableOrigin === 'redacoes_enviadas') {
       await supabase
         .from('redacoes_enviadas')
-        .update({ render_status: 'pending' })
+        .update({ render_status: 'pending', render_image_url: null })
         .eq('id', params.essayId);
     } else if (params.tableOrigin === 'redacoes_simulado') {
       await supabase
         .from('redacoes_simulado')
-        .update({ render_status: 'pending' })
+        .update({ render_status: 'pending', render_image_url: null })
         .eq('id', params.essayId);
     } else if (params.tableOrigin === 'redacoes_exercicio') {
       await supabase
         .from('redacoes_exercicio')
-        .update({ render_status: 'pending' })
+        .update({ render_status: 'pending', render_image_url: null })
         .eq('id', params.essayId);
     }
 

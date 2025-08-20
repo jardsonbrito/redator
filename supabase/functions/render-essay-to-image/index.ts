@@ -174,48 +174,66 @@ serve(async (req) => {
     
     paragraphs.forEach(paragraph => {
       if (paragraph.trim()) {
-        const wrappedLines = wrapText(paragraph.trim(), 80);
+        const wrappedLines = wrapText(paragraph.trim(), 75); // Optimal for 2400px width
         allLines.push(...wrappedLines);
         allLines.push(''); // Add space between paragraphs
       }
     });
 
-    // Calculate dynamic height based on content
-    const lineHeight = 35;
-    const padding = 80;
-    const contentHeight = allLines.length * lineHeight;
-    const calculatedHeight = Math.max(800, contentHeight + (padding * 2));
-    const renderWidth = 2400;
+    // FIXED LARGE DIMENSIONS for independent rendering
+    const renderWidth = 2400; // Fixed wide width
+    const lineHeight = 38; // Generous line height
+    const padding = 80; // Good padding
+    const contentHeight = Math.max(1200, allLines.length * lineHeight + (padding * 2));
+    
+    console.log(`📐 Render dimensions: ${renderWidth}x${contentHeight} | Lines: ${allLines.length}`);
 
-    // Create optimized SVG content for clean essay rendering
+    // Create completely isolated SVG template - NO FORM DEPENDENCIES
     const svgContent = `
-      <svg width="${renderWidth}" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="white"/>
+      <svg width="${renderWidth}" height="${contentHeight}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <style>
+            .essay-text {
+              font-family: 'Times New Roman', serif;
+              font-size: 26px;
+              font-weight: 400;
+              fill: #000000;
+              line-height: ${lineHeight}px;
+            }
+          </style>
+        </defs>
         
-        <!-- Essay content only - clean and readable -->
+        <!-- White background -->
+        <rect width="100%" height="100%" fill="#ffffff"/>
+        
+        <!-- Essay content ONLY - completely independent -->
         ${allLines.map((line, i) => {
           const y = padding + (i * lineHeight);
           return line.trim() ? 
-            `<text x="80" y="${y}" font-family="Times New Roman, serif" font-size="24" fill="black" font-weight="400">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
+            `<text x="${padding}" y="${y}" class="essay-text">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>` :
             '';
         }).join('')}
       </svg>
     `;
 
-    console.log('🖼️ Generating SVG image...')
+    console.log('🎨 Generating clean SVG image - NO FORM INHERITANCE...');
 
     // Convert SVG to buffer
     const svgBuffer = new TextEncoder().encode(svgContent);
     
-    // Upload SVG as image
-    const fileName = `${essayId}.svg`;
+    // Cache busting: add timestamp to ensure new image
+    const timestamp = Date.now();
+    const fileName = `${essayId}_v${timestamp}.svg`;
     const filePath = `essay-renders/${fileName}`;
+
+    console.log(`📤 Uploading to: ${filePath} | Size: ${svgBuffer.length} bytes`);
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('essay-renders')
       .upload(filePath, svgBuffer, {
         contentType: 'image/svg+xml',
-        upsert: true
+        upsert: true,
+        cacheControl: 'no-cache' // Prevent caching issues
       });
 
     if (uploadError) {
@@ -223,19 +241,25 @@ serve(async (req) => {
       throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
-    // Get public URL
+    // Get public URL with cache busting
     const { data: { publicUrl } } = supabase.storage
       .from('essay-renders')
       .getPublicUrl(filePath);
+    
+    const finalUrl = `${publicUrl}?v=${timestamp}`; // Additional cache bust
 
-    console.log(`✅ Image rendered and uploaded: ${publicUrl}`);
+    console.log(`✅ Image rendered: ${finalUrl}`);
+    console.log(`📊 Final dimensions: ${renderWidth}x${contentHeight} | URL: ${finalUrl}`);
 
-    // Update essay record with render URL
+    // Update essay record with render URL and dimensions
     const { error: updateError } = await supabase
       .from(tableOrigin as any)
       .update({ 
         render_status: 'ready',
-        render_image_url: publicUrl
+        render_image_url: finalUrl,
+        // Store dimensions for verification
+        render_width: renderWidth,
+        render_height: contentHeight
       })
       .eq('id', essayId);
 
@@ -246,8 +270,9 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      imageUrl: publicUrl,
-      message: 'Essay rendered successfully'
+      imageUrl: finalUrl,
+      dimensions: { width: renderWidth, height: contentHeight },
+      message: `Essay rendered successfully at ${renderWidth}x${contentHeight}`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

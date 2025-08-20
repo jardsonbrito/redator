@@ -65,6 +65,7 @@ import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
 import RedacaoManuscrita from "./pages/RedacaoManuscrita";
+import RenderTest from "./pages/RenderTest";
 
 function App() {
   return (
@@ -103,6 +104,9 @@ function App() {
                   <Route path="/redacoes" element={<RedacoesExemplar />} />
                   <Route path="/top5" element={<Top5 />} />
                   <Route path="/ajuda-rapida" element={<AjudaRapida />} />
+                  
+                  {/* Rota de teste para renderização */}
+                  <Route path="/render-test/:id" element={<RenderTest />} />
 
                   {/* Rotas do Admin */}
                   <Route path="/admin" element={<Admin />} />

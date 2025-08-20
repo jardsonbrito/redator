@@ -1072,26 +1072,41 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       )}
 
 
-      {/* Container da Imagem da Redação - Full width display */}
-      <div className={`container-imagem-redacao border rounded-lg relative bg-white overflow-hidden`}>
+      {/* Container da Redação - ISOLADO DO FORMULÁRIO */}
+      <div className="correction-pane w-full bg-white border rounded-lg overflow-hidden">
         
-        <div ref={containerRef} className="w-full">
+        <div 
+          ref={containerRef} 
+          className="essay-image-wrapper w-full"
+          style={{
+            width: '100%',
+            maxWidth: 'none',
+            padding: 0,
+            margin: 0,
+            overflow: 'visible',
+            display: 'block'
+          }}
+        >
           <img 
             ref={imageRef}
             src={imagemUrl} 
             alt="Redação para correção" 
-            className="w-full h-auto block max-w-none"
+            className="essay-image w-full h-auto block"
             onLoad={handleImageLoad}
             loading="lazy"
             style={{
+              display: 'block',
+              width: '100%',
+              maxWidth: 'none',
+              height: 'auto',
+              objectFit: 'none', // No scaling/fitting
               userSelect: 'none',
               cursor: 'default',
               transition: 'none',
-              width: '100%',
-              height: 'auto',
-              maxWidth: 'none',
-              objectFit: 'contain',
-              display: 'block'
+              transform: 'none',
+              zoom: 1,
+              border: 'none',
+              outline: 'none'
             }}
           />
         </div>
