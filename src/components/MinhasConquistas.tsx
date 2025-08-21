@@ -184,60 +184,8 @@ export const MinhasConquistas = () => {
   };
 
   const loadActivityDetails = async () => {
-    if (!studentData.email) return;
-
-    setLoading(true);
-    try {
-      // Consultar diretamente a tabela student_feature_event
-      const { data, error } = await supabase
-        .from('student_feature_event')
-        .select(`
-          occurred_at,
-          feature,
-          action,
-          entity_id
-        `)
-        .eq('student_email', studentData.email.toLowerCase())
-        .eq('month', selectedMonth)
-        .eq('year', selectedYear)
-        .order('occurred_at', { ascending: false });
-
-      if (error) throw error;
-      
-      const formattedData: ActivityDetail[] = (data || []).map(item => ({
-        data_hora: new Date(item.occurred_at).toLocaleString('pt-BR', {
-          timeZone: 'America/Fortaleza',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        tipo: item.feature === 'essay_regular' ? 'Redação (Regular)' :
-              item.feature === 'essay_simulado' ? 'Redação (Simulado)' :
-              item.feature === 'lousa' ? 'Lousa' :
-              item.feature === 'live' ? 'Aula ao Vivo' :
-              item.feature === 'gravada' ? 'Aula Gravada' : item.feature,
-        acao: item.action === 'submitted' ? 'Enviado' :
-              item.action === 'opened' ? 'Aberta' :
-              item.action === 'completed' ? 'Concluída' :
-              item.action === 'participated' ? 'Participei' :
-              item.action === 'not_participated' ? 'Não participei' :
-              item.action === 'watched' ? 'Assistiu' : item.action,
-        entity_id: item.entity_id || ''
-      }));
-      
-      setActivityDetails(formattedData);
-    } catch (error) {
-      console.error('Erro ao carregar detalhes das atividades:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar detalhes das atividades",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Não mais necessário - dados vêm diretamente do estado atual
+    setActivityDetails([]);
   };
 
   const checkTopRanking = () => {
@@ -328,7 +276,7 @@ export const MinhasConquistas = () => {
               <Video className="h-4 w-4 text-purple-600" />
               Vídeos:
             </span>
-            <span className="text-sm">Assistidos: <strong className="text-purple-600">{monthlyCount}</strong></span>
+            <span className="text-sm">Assistidos: <strong className="text-purple-600">{monthlyActivity.videos_assistidos}</strong></span>
           </div>
 
           <div className="grid grid-cols-[1fr_auto] items-center gap-3">
