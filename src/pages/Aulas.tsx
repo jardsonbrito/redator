@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useRecordedLessonViews } from "@/hooks/useRecordedLessonViews";
 import { supabase } from "@/integrations/supabase/client";
-import { Search } from "lucide-react";
+import { Search, CheckCircle } from "lucide-react";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone, type UnifiedCardItem } from "@/components/ui/unified-card";
 import { resolveAulaCover } from "@/utils/coverUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +38,7 @@ interface Aula {
 
 const Aulas = () => {
   const { studentData } = useStudentAuth();
+  const { markAsWatched, isWatched } = useRecordedLessonViews();
   const [aulas, setAulas] = useState<Aula[]>([]);
   const [filteredAulas, setFilteredAulas] = useState<Aula[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,6 +133,59 @@ const Aulas = () => {
 
     console.log('📊 Resultado da filtragem:', { totalFiltradas: filtered.length });
     setFilteredAulas(filtered);
+  };
+
+  const handleAssistirAula = async (aula: Aula) => {
+    // Marcar como assistida primeiro (se for vídeo gravado)
+    if (aula.video_id || aula.embed_url || aula.video_url_original) {
+      await markAsWatched(aula.id, aula.titulo);
+    }
+    
+    // Determinar a melhor URL para abrir
+    let videoUrl = '';
+    
+    // Priorizar embed_url ou video_url_original
+    if (aula.embed_url) {
+      videoUrl = aula.embed_url;
+    } else if (aula.video_url_original) {
+      videoUrl = aula.video_url_original;
+    } else if (aula.link_conteudo) {
+      // Verificar se é uma URL do YouTube e convertê-la se necessário
+      const youtubeMatch = aula.link_conteudo.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+      if (youtubeMatch && youtubeMatch[1]) {
+        // Converter para formato embed que funciona melhor
+        videoUrl = `https://www.youtube.com/watch?v=${youtubeMatch[1]}`;
+      } else {
+        videoUrl = aula.link_conteudo;
+      }
+    }
+
+    if (videoUrl) {
+      try {
+        // Abrir em nova aba
+        const newWindow = window.open(videoUrl, '_blank', 'noopener,noreferrer');
+        if (!newWindow) {
+          toast({
+            title: "Bloqueador de pop-up detectado",
+            description: "Por favor, permita pop-ups para este site ou tente novamente.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao abrir vídeo:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível abrir o vídeo. Tente novamente.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      toast({
+        title: "Erro",
+        description: "Link do vídeo não disponível.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDownloadPdf = async (aula: Aula) => {
@@ -246,6 +300,12 @@ filteredAulas.map((aula) => {
                 if (aula.modulo) badges.push({ label: aula.modulo, tone });
                 if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
                 
+                // Adicionar badge "Assistida" se for vídeo gravado e já foi assistido
+                const isVideoContent = aula.video_id || aula.embed_url || aula.video_url_original;
+                if (isVideoContent && isWatched(aula.id)) {
+                  badges.push({ label: "Assistida", tone: 'success' });
+                }
+                
                 const cardItem: UnifiedCardItem = {
                   coverUrl,
                   title: aula.titulo,
@@ -253,7 +313,7 @@ filteredAulas.map((aula) => {
                   badges,
                   cta: {
                     label: "Assistir",
-                    onClick: () => window.open(aula.link_conteudo, '_blank'),
+                    onClick: () => handleAssistirAula(aula),
                     ariaLabel: `Assistir ${aula.titulo}`
                   },
                   ariaLabel: `Aula: ${aula.titulo}`
