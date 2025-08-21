@@ -120,6 +120,7 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
       });
 
       setCorrectingResposta(null);
+      setViewingResposta(null);
       form.reset();
       fetchRespostas();
     } catch (error) {
@@ -154,6 +155,7 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
       });
 
       setCorrectingResposta(null);
+      setViewingResposta(null);
       form.reset();
       fetchRespostas();
     } catch (error) {
@@ -187,7 +189,7 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
       {/* Cabeçalho */}
       <div className="border-b pb-4">
         <h3 className="text-lg font-semibold">{lousa.titulo}</h3>
-        <p className="text-sm text-muted-foreground mt-1">{lousa.enunciado}</p>
+        <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{lousa.enunciado}</p>
         <div className="mt-2 text-sm text-muted-foreground">
           Total de respostas: {respostas.length}
         </div>
@@ -264,8 +266,8 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
                           {viewingResposta && (
                             <div className="space-y-4">
                               <div>
-                                <h4 className="font-semibold mb-2">Enunciado:</h4>
-                                <p className="text-sm bg-muted p-3 rounded">{lousa.enunciado}</p>
+                                 <h4 className="font-semibold mb-2">Enunciado:</h4>
+                                 <p className="text-sm bg-muted p-3 rounded whitespace-pre-line">{lousa.enunciado}</p>
                               </div>
                               <div>
                                 <h4 className="font-semibold mb-2">Resposta do Aluno:</h4>

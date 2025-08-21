@@ -303,10 +303,10 @@ export default function LousaResponse() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div>
-              <h4 className="font-semibold mb-2">Enunciado:</h4>
-              <p className="text-sm bg-muted p-4 rounded-lg">{lousa.enunciado}</p>
-            </div>
+               <div>
+                 <h4 className="font-semibold mb-2">Enunciado:</h4>
+                 <p className="text-sm bg-muted p-4 rounded-lg whitespace-pre-line">{lousa.enunciado}</p>
+               </div>
 
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
