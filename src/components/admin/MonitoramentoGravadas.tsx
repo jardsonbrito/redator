@@ -36,14 +36,16 @@ export const MonitoramentoGravadas = () => {
   const loadRadarData = async () => {
     setLoading(true);
     try {
+      console.log('🔥 Radar: Buscando dados via get_recorded_lessons_radar...');
       const { data, error } = await supabase.rpc('get_recorded_lessons_radar');
       
       if (error) {
-        console.error('Erro ao buscar radar de gravadas:', error);
+        console.error('Erro ao buscar radar de vídeos:', error);
         throw error;
       }
 
-      console.log('Dados do radar de gravadas:', data);
+      console.log('🔥 Radar: Dados recebidos:', data);
+      console.log('🔥 Radar: Antônia encontrada:', data?.find(s => s.student_name?.includes('Antônia')));
       
       const studentsData = data || [];
       setStudents(studentsData);
@@ -53,10 +55,10 @@ export const MonitoramentoGravadas = () => {
       setTurmas(uniqueTurmas.sort());
 
     } catch (error) {
-      console.error('Erro ao carregar radar de gravadas:', error);
+      console.error('Erro ao carregar radar de vídeos:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar dados do radar de aulas gravadas",
+        description: "Erro ao carregar dados do radar de vídeos",
         variant: "destructive"
       });
     } finally {

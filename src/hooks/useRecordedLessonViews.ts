@@ -131,10 +131,12 @@ export function useRecordedLessonViews() {
     queryFn: async () => {
       if (!studentData.email) return 0;
       
+      console.log('🔥 useRecordedLessonViews: Buscando monthlyCount para:', studentData.email);
       const { data, error } = await supabase.rpc('count_monthly_recorded_lessons', {
         p_student_email: studentData.email
       });
       
+      console.log('🔥 useRecordedLessonViews: monthlyCount resultado:', data);
       if (error) {
         console.error('Erro ao contar aulas do mês:', error);
         return 0;

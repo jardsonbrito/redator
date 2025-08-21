@@ -56,6 +56,8 @@ interface TopRankingInfo {
 export const MinhasConquistas = () => {
   const { studentData } = useStudentAuth();
   const { monthlyCount } = useRecordedLessonViews();
+  
+  console.log('🔥 MinhasConquistas: monthlyCount recebido do hook:', monthlyCount);
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -157,18 +159,9 @@ export const MinhasConquistas = () => {
         .gte('occurred_at', monthStart.toISOString())
         .lt('occurred_at', monthEnd.toISOString());
 
-      // Buscar aulas gravadas assistidas
-      const { data: eventosGravadas } = await supabase
-        .from('student_feature_event')
-        .select('entity_id')
-        .eq('student_email', emailBusca)
-        .eq('feature', 'gravada')
-        .eq('action', 'watched')
-        .gte('occurred_at', monthStart.toISOString())
-        .lt('occurred_at', monthEnd.toISOString());
-
       console.log(`📊 Resultado: Regular=${regularCount}, Simulado=${simuladoCount}`);
-      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}, Gravadas=${(eventosGravadas || []).length}`);
+      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}`);
+      console.log(`📊 MonthlyCount do hook (VÍDEOS): ${monthlyCount}`);
 
       setMonthlyActivity({
         essays_regular: regularCount,
