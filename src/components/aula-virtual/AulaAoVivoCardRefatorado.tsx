@@ -216,8 +216,8 @@ export const AulaAoVivoCardRefatorado = ({
                status === 'agendada' ? 'Aguardar na Sala' : 'Aula Encerrada'}
             </Button>
 
-            {/* Botões de presença - Mostrar se aula está ao vivo OU se há registro de entrada */}
-            {(status === 'ao_vivo' || entradaRegistrada) && (
+            {/* Botões de presença - apenas quando aula está AO VIVO */}
+            {status === 'ao_vivo' && (
               <div className="grid md:grid-cols-2 gap-2">
                 <Dialog open={dialogAberto === 'entrada'} onOpenChange={(open) => !open && setDialogAberto(null)}>
                   <DialogTrigger asChild>

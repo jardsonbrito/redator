@@ -310,77 +310,28 @@ const AulasAoVivo = () => {
     try {
       // Validação rigorosa dos dados
       if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
-        console.warn('Dados da aula incompletos:', aula);
+        console.warn('❌ Dados da aula incompletos:', aula);
         return 'indefinido';
       }
 
-      // Validação do formato da data (YYYY-MM-DD)
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(aula.data_aula)) {
-        console.warn('Formato de data inválido:', aula.data_aula);
-        return 'indefinido';
-      }
-
-      // Validação do formato dos horários (HH:MM ou HH:MM:SS)
-      const timeRegex = /^\d{2}:\d{2}(:\d{2})?$/;
-      if (!timeRegex.test(aula.horario_inicio) || !timeRegex.test(aula.horario_fim)) {
-        console.warn('Formato de horário inválido:', { inicio: aula.horario_inicio, fim: aula.horario_fim });
-        return 'indefinido';
-      }
-
-      // Converte a data do formato YYYY-MM-DD para DD/MM/YYYY
-      const dateParts = aula.data_aula.split('-');
-      if (dateParts.length !== 3) {
-        console.warn('Erro ao dividir data:', aula.data_aula);
-        return 'indefinido';
-      }
-
-      const [year, month, day] = dateParts;
-      
-      // Validação adicional dos componentes da data
-      const yearNum = parseInt(year);
-      const monthNum = parseInt(month);
-      const dayNum = parseInt(day);
-      
-      if (yearNum < 2020 || yearNum > 2030 || monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) {
-        console.warn('Componentes de data inválidos:', { year: yearNum, month: monthNum, day: dayNum });
-        return 'indefinido';
-      }
-
-      const formattedDate = `${day}/${month}/${year}`;
-      
-      // Normalizar horários para HH:mm se vier com segundos
-      const normalizeTime = (time: string) => {
-        if (time.includes(':') && time.split(':').length === 3) {
-          return time.substring(0, 5); // Pega apenas HH:mm
-        }
-        return time;
-      };
-
-      const horarioInicioNormalizado = normalizeTime(aula.horario_inicio);
-      const horarioFimNormalizado = normalizeTime(aula.horario_fim);
-      
-      console.log('🎯 Dados validados para computeStatus:', {
+      console.log('🎯 Processando aula:', {
         titulo: aula.titulo,
-        data_original: aula.data_aula,
-        data_formatada: formattedDate,
-        horario_inicio_original: aula.horario_inicio,
-        horario_fim_original: aula.horario_fim,
-        horario_inicio_normalizado: horarioInicioNormalizado,
-        horario_fim_normalizado: horarioFimNormalizado
+        data_aula: aula.data_aula,
+        horario_inicio: aula.horario_inicio,
+        horario_fim: aula.horario_fim
       });
       
       const status = computeStatus({
-        data_aula: formattedDate,
-        horario_inicio: horarioInicioNormalizado,
-        horario_fim: horarioFimNormalizado
+        data_aula: aula.data_aula, // Passa direto, computeStatus vai normalizar
+        horario_inicio: aula.horario_inicio,
+        horario_fim: aula.horario_fim
       });
 
-      console.log(`🚀 Status final calculado para aula "${aula.titulo}": ${status}`);
+      console.log(`🚀 Status final para "${aula.titulo}": ${status}`);
       
       return status;
     } catch (error) {
-      console.error('Erro em getStatusAula:', error, aula);
+      console.error('❌ Erro em getStatusAula:', error, aula);
       return 'indefinido';
     }
   };
