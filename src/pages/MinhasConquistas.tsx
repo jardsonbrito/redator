@@ -323,15 +323,6 @@ export const MinhasConquistas = () => {
       
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-primary mb-2 flex items-center justify-center gap-3">
-              <Trophy className="h-8 w-8" />
-              Minhas Conquistas
-            </h1>
-            <p className="text-muted-foreground">
-              Acompanhe suas atividades mensais e conquistas
-            </p>
-          </div>
 
           {monthlyActivities.length === 0 ? (
             <Card className="max-w-md mx-auto">

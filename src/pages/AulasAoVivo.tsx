@@ -297,12 +297,6 @@ const AulasAoVivo = () => {
       
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-primary mb-2">Aulas ao Vivo</h1>
-            <p className="text-muted-foreground">
-              Participe das aulas ao vivo e registre sua frequência
-            </p>
-          </div>
 
           {aulas.length === 0 ? (
             <Card>

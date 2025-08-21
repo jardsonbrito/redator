@@ -236,9 +236,6 @@ const Exercicios = () => {
         <StudentHeader pageTitle="Exercícios" />
 
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center mb-8">
-            <p className="text-lg text-redator-accent"></p>
-          </div>
 
           {/* Filtros */}
           <Card className="mb-6">

@@ -57,14 +57,6 @@ export default function Temas() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-8">
-          <h2 className="text-xl font-semibold text-redator-primary mb-2">
-            Explore nossa coleção de temas
-          </h2>
-          <p className="text-redator-accent">
-            Temas de redação cuidadosamente selecionados para sua preparação.
-          </p>
-        </div>
 
         {/* Seção de Filtros */}
         <div className="mb-8">

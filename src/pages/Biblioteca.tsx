@@ -179,14 +179,6 @@ const Biblioteca = () => {
           <StudentHeader pageTitle="Biblioteca" />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-redator-primary mb-2">
-            Materiais Disponíveis
-          </h2>
-          <p className="text-redator-accent">
-            Acesse materiais em PDF organizados por categoria para aprimorar seus estudos.
-          </p>
-        </div>
 
         {/* Filtros */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
