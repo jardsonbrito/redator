@@ -257,31 +257,6 @@ export default function LousaList() {
                    </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setEditingLousa(lousa)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Editar Lousa</DialogTitle>
-                          </DialogHeader>
-                          {editingLousa && (
-                            <LousaForm 
-                              editData={editingLousa}
-                              onSuccess={() => {
-                                setEditingLousa(null);
-                                fetchLousas();
-                              }} 
-                            />
-                          )}
-                        </DialogContent>
-                      </Dialog>
 
                        <Dialog>
                          <DialogTrigger asChild>
