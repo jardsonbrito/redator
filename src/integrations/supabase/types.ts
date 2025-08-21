@@ -1220,7 +1220,15 @@ export type Database = {
           student_name?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "recorded_lesson_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       redacao_devolucao_visualizacoes: {
         Row: {
