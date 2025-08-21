@@ -58,7 +58,7 @@ export default function LousaCard({ lousa, onClick }: LousaCardProps) {
           label: 'Corrigida',
           icon: Star,
           variant: 'default' as const,
-          action: 'Ver feedback'
+          action: 'Ver correção'
         };
       default:
         return {

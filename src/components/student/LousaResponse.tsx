@@ -322,15 +322,15 @@ export default function LousaResponse() {
         </CardContent>
       </Card>
 
-      {/* Feedback do Professor */}
-      {resposta?.comentario_professor && (
+      {/* Correção do Professor */}
+      {resposta?.comentario_professor && resposta.status === 'graded' && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-lg">Feedback do Professor</CardTitle>
+            <CardTitle className="text-lg">Correção do Professor</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {resposta.status === 'graded' && resposta.nota !== null && (
+              {resposta.nota !== null && (
                 <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                   <Star className="w-5 h-5 text-yellow-600" />
                   <span className="font-medium text-yellow-800">
@@ -340,7 +340,12 @@ export default function LousaResponse() {
               )}
               
               <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
-                <p className="text-blue-800">{resposta.comentario_professor}</p>
+                <div 
+                  className="text-blue-800 leading-relaxed whitespace-pre-wrap" 
+                  style={{ lineHeight: '1.6', wordWrap: 'break-word' }}
+                >
+                  {resposta.comentario_professor}
+                </div>
               </div>
 
               {resposta.corrected_at && (
@@ -360,14 +365,24 @@ export default function LousaResponse() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Textarea
-              placeholder="Digite sua resposta aqui..."
-              value={conteudo}
-              onChange={(e) => setConteudo(e.target.value)}
-              onBlur={autoSave}
-              disabled={isDisabled() && !canEdit}
-              className="min-h-[200px] resize-none"
-            />
+            {/* Se status for enviada ou corrigida, mostrar em modo leitura */}
+            {resposta && ['submitted', 'graded'].includes(resposta.status) && !canEdit ? (
+              <div className="bg-background border p-4 rounded-lg min-h-[120px]">
+                <div className="whitespace-pre-wrap leading-relaxed">
+                  {conteudo || 'Nenhuma resposta enviada'}
+                </div>
+              </div>
+            ) : (
+              /* Editor ativo apenas para draft, returned ou quando não há resposta */
+              <Textarea
+                placeholder="Digite sua resposta aqui..."
+                value={conteudo}
+                onChange={(e) => setConteudo(e.target.value)}
+                onBlur={autoSave}
+                disabled={isDisabled() && !canEdit}
+                className="min-h-[200px] resize-none"
+              />
+            )}
 
             {resposta?.submitted_at && (
               <p className="text-xs text-muted-foreground">
@@ -375,44 +390,47 @@ export default function LousaResponse() {
               </p>
             )}
 
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={handleSave}
-                disabled={saving || !conteudo.trim() || (resposta && resposta.status === 'submitted')}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Salvando...' : 'Salvar Rascunho'}
-              </Button>
+            {/* Botões apenas se não for enviada/corrigida ou se for devolvida */}
+            {(!resposta || !['submitted', 'graded'].includes(resposta.status) || canEdit) && (
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleSave}
+                  disabled={saving || !conteudo.trim() || (resposta && resposta.status === 'submitted')}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {saving ? 'Salvando...' : 'Salvar Rascunho'}
+                </Button>
 
-              {(!resposta || resposta.status !== 'submitted') && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      disabled={!conteudo.trim() || submitting || (resposta && resposta.status === 'submitted')}
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      Enviar Resposta
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar Envio</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja enviar sua resposta? 
-                        Após o envio, você não poderá mais editá-la (exceto se o professor devolvê-la).
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleSubmit}>
+                {(!resposta || resposta.status !== 'submitted') && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        disabled={!conteudo.trim() || submitting || (resposta && resposta.status === 'submitted')}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
                         Enviar Resposta
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Envio</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja enviar sua resposta? 
+                          Após o envio, você não poderá mais editá-la (exceto se o professor devolvê-la).
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleSubmit}>
+                          Enviar Resposta
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+            )}
 
             {isDisabled() && !canEdit && (
               <Alert>
