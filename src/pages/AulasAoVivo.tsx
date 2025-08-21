@@ -321,8 +321,8 @@ const AulasAoVivo = () => {
         return 'indefinido';
       }
 
-      // Validação do formato dos horários (HH:MM)
-      const timeRegex = /^\d{2}:\d{2}$/;
+      // Validação do formato dos horários (HH:MM ou HH:MM:SS)
+      const timeRegex = /^\d{2}:\d{2}(:\d{2})?$/;
       if (!timeRegex.test(aula.horario_inicio) || !timeRegex.test(aula.horario_fim)) {
         console.warn('Formato de horário inválido:', { inicio: aula.horario_inicio, fim: aula.horario_fim });
         return 'indefinido';
@@ -349,19 +349,36 @@ const AulasAoVivo = () => {
 
       const formattedDate = `${day}/${month}/${year}`;
       
-      console.log('Dados validados para computeStatus:', {
+      // Normalizar horários para HH:mm se vier com segundos
+      const normalizeTime = (time: string) => {
+        if (time.includes(':') && time.split(':').length === 3) {
+          return time.substring(0, 5); // Pega apenas HH:mm
+        }
+        return time;
+      };
+
+      const horarioInicioNormalizado = normalizeTime(aula.horario_inicio);
+      const horarioFimNormalizado = normalizeTime(aula.horario_fim);
+      
+      console.log('🎯 Dados validados para computeStatus:', {
         titulo: aula.titulo,
         data_original: aula.data_aula,
         data_formatada: formattedDate,
-        horario_inicio: aula.horario_inicio,
-        horario_fim: aula.horario_fim
+        horario_inicio_original: aula.horario_inicio,
+        horario_fim_original: aula.horario_fim,
+        horario_inicio_normalizado: horarioInicioNormalizado,
+        horario_fim_normalizado: horarioFimNormalizado
       });
       
-      return computeStatus({
+      const status = computeStatus({
         data_aula: formattedDate,
-        horario_inicio: aula.horario_inicio,
-        horario_fim: aula.horario_fim
+        horario_inicio: horarioInicioNormalizado,
+        horario_fim: horarioFimNormalizado
       });
+
+      console.log(`🚀 Status final calculado para aula "${aula.titulo}": ${status}`);
+      
+      return status;
     } catch (error) {
       console.error('Erro em getStatusAula:', error, aula);
       return 'indefinido';

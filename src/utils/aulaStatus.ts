@@ -50,22 +50,38 @@ export function computeStatus(aula: Aula): 'agendada' | 'ao_vivo' | 'encerrada' 
       return 'indefinido';
     }
 
-  const now = dayjs.tz(dayjs(), TZ);
+    const now = dayjs.tz(dayjs(), TZ);
 
-  // Debug detalhado
-  console.table({
-    TZ: 'America/Sao_Paulo',
-    data_aula: aula.data_aula,
-    horario_inicio: aula.horario_inicio,
-    horario_fim: aula.horario_fim,
-    start_local: start.format(),
-    end_local: end.format(),
-    now_local: now.format(),
-    status_computed: now.isBefore(start) ? 'agendada' : now.isBefore(end) ? 'ao_vivo' : 'encerrada',
-  });
+    // Debug detalhado
+    console.log('🔍 ComputeStatus Debug:', {
+      TZ: 'America/Sao_Paulo',
+      data_aula: aula.data_aula,
+      horario_inicio: aula.horario_inicio,
+      horario_fim: aula.horario_fim,
+      start_timestamp: start.unix(),
+      end_timestamp: end.unix(),
+      now_timestamp: now.unix(),
+      start_formatted: start.format('DD/MM/YYYY HH:mm:ss'),
+      end_formatted: end.format('DD/MM/YYYY HH:mm:ss'),
+      now_formatted: now.format('DD/MM/YYYY HH:mm:ss'),
+      is_before_start: now.isBefore(start),
+      is_before_end: now.isBefore(end),
+      is_after_start: now.isAfter(start) || now.isSame(start),
+      status_computed: now.isBefore(start) ? 'agendada' : (now.isAfter(start) || now.isSame(start)) && now.isBefore(end) ? 'ao_vivo' : 'encerrada'
+    });
 
-    if (now.isBefore(start)) return 'agendada';
-    if (now.isBefore(end))   return 'ao_vivo';
+    // Lógica corrigida - usar isAfter/isSame para ser mais preciso
+    if (now.isBefore(start)) {
+      console.log('✅ Status: AGENDADA (antes do início)');
+      return 'agendada';
+    }
+    
+    if ((now.isAfter(start) || now.isSame(start)) && now.isBefore(end)) {
+      console.log('✅ Status: AO_VIVO (durante a aula)');
+      return 'ao_vivo';
+    }
+    
+    console.log('✅ Status: ENCERRADA (após o fim)');
     return 'encerrada';
   } catch (error) {
     console.error('Erro fatal em computeStatus:', error, aula);
