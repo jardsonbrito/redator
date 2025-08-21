@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -13,7 +13,8 @@ import {
   Users, 
   ExternalLink, 
   LogIn, 
-  LogOut 
+  LogOut,
+  Loader2
 } from "lucide-react";
 
 interface AulaAoVivo {
@@ -45,6 +46,7 @@ interface AulaAoVivoCardRefatoradoProps {
   turmaCode?: string;
   onEntrada: (aulaId: string) => Promise<void>;
   onSaida: (aulaId: string) => Promise<void>;
+  loadingOperation?: 'entrada' | 'saida' | null;
 }
 
 export const AulaAoVivoCardRefatorado = ({
@@ -53,9 +55,9 @@ export const AulaAoVivoCardRefatorado = ({
   registro,
   turmaCode,
   onEntrada,
-  onSaida
+  onSaida,
+  loadingOperation
 }: AulaAoVivoCardRefatoradoProps) => {
-  const [dialogAberto, setDialogAberto] = useState<'entrada' | 'saida' | null>(null);
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
 
@@ -84,7 +86,22 @@ export const AulaAoVivoCardRefatorado = ({
     window.open(aula.link_meet, '_blank');
   };
 
-  const confirmarPresenca = async (tipo: 'entrada' | 'saida') => {
+  const handleClick = async (tipo: 'entrada' | 'saida') => {
+    // Verificar se há dados do estudante (sistema local, não Supabase Auth)
+    if (!studentData.email) {
+      toast({
+        title: "Erro", 
+        description: "Dados do estudante não encontrados. Faça login novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verificar se já está carregando
+    if (loadingOperation) {
+      return;
+    }
+
     try {
       console.log(`Iniciando registro de ${tipo} para aula ${aula.id}`);
       
@@ -102,22 +119,7 @@ export const AulaAoVivoCardRefatorado = ({
         description: `Erro ao registrar ${tipo}. Tente novamente.`,
         variant: "destructive"
       });
-    } finally {
-      setDialogAberto(null);
     }
-  };
-
-  const abrirDialog = (tipo: 'entrada' | 'saida') => {
-    // Verificar se há dados do estudante (sistema local, não Supabase Auth)
-    if (!studentData.email) {
-      toast({
-        title: "Erro", 
-        description: "Dados do estudante não encontrados. Faça login novamente.",
-        variant: "destructive"
-      });
-      return;
-    }
-    setDialogAberto(tipo);
   };
 
   return (
@@ -220,68 +222,36 @@ export const AulaAoVivoCardRefatorado = ({
             {status === 'ao_vivo' && (
               <div className="grid md:grid-cols-2 gap-2">
                 {/* Botão Registrar Entrada */}
-                <Dialog open={dialogAberto === 'entrada'} onOpenChange={(open) => !open && setDialogAberto(null)}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => abrirDialog('entrada')}
-                      disabled={entradaRegistrada}
-                      className={entradaRegistrada ? 'bg-green-50 text-green-700' : ''}
-                    >
-                      <LogIn className="w-4 h-4 mr-2" />
-                      {entradaRegistrada ? 'Entrada Registrada' : 'Registrar Entrada'}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Confirmar Entrada</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Deseja registrar sua entrada na aula "{aula.titulo}"?
-                      </p>
-                      <Button 
-                        onClick={() => confirmarPresenca('entrada')}
-                        className="w-full"
-                      >
-                        Confirmar Entrada
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleClick('entrada')}
+                  disabled={entradaRegistrada || loadingOperation === 'entrada'}
+                  className={entradaRegistrada ? 'bg-green-50 text-green-700' : ''}
+                >
+                  {loadingOperation === 'entrada' ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <LogIn className="w-4 h-4 mr-2" />
+                  )}
+                  {entradaRegistrada ? 'Entrada Registrada' : 'Registrar Entrada'}
+                </Button>
 
                 {/* Botão Registrar Saída - sempre visível, mas desabilitado conforme regras */}
-                <Dialog open={dialogAberto === 'saida'} onOpenChange={(open) => !open && setDialogAberto(null)}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => abrirDialog('saida')}
-                      disabled={!entradaRegistrada || saidaRegistrada}
-                      className={saidaRegistrada ? 'bg-green-50 text-green-700' : ''}
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      {saidaRegistrada ? 'Saída Registrada' : 'Registrar Saída'}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Confirmar Saída</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Deseja registrar sua saída da aula "{aula.titulo}"?
-                      </p>
-                      <Button 
-                        onClick={() => confirmarPresenca('saida')}
-                        className="w-full"
-                      >
-                        Confirmar Saída
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleClick('saida')}
+                  disabled={!entradaRegistrada || saidaRegistrada || loadingOperation === 'saida'}
+                  className={saidaRegistrada ? 'bg-green-50 text-green-700' : ''}
+                >
+                  {loadingOperation === 'saida' ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <LogOut className="w-4 h-4 mr-2" />
+                  )}
+                  {saidaRegistrada ? 'Saída Registrada' : 'Registrar Saída'}
+                </Button>
               </div>
             )}
           </div>

@@ -36,6 +36,7 @@ const AulasAoVivo = () => {
   const [aulas, setAulas] = useState<AulaAoVivo[]>([]);
   const [registrosPresencaMap, setRegistrosPresencaMap] = useState<Record<string, RegistroPresenca>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingOperations, setLoadingOperations] = useState<Record<string, 'entrada' | 'saida' | null>>({});
 
   const fetchAulas = async () => {
     try {
@@ -117,7 +118,13 @@ const AulasAoVivo = () => {
       return;
     }
 
+    // Verificar se já está em operação
+    if (loadingOperations[aulaId]) {
+      return;
+    }
+
     try {
+      setLoadingOperations(prev => ({ ...prev, [aulaId]: 'entrada' }));
       console.log('Registrando entrada via RPC:', { aulaId, email: studentData.email });
 
       const { data, error } = await supabase.rpc('registrar_entrada_sem_auth', {
@@ -154,6 +161,8 @@ const AulasAoVivo = () => {
     } catch (error: any) {
       console.error('Erro inesperado:', error);
       toast.error('Erro inesperado ao registrar entrada');
+    } finally {
+      setLoadingOperations(prev => ({ ...prev, [aulaId]: null }));
     }
   };
 
@@ -163,7 +172,13 @@ const AulasAoVivo = () => {
       return;
     }
 
+    // Verificar se já está em operação
+    if (loadingOperations[aulaId]) {
+      return;
+    }
+
     try {
+      setLoadingOperations(prev => ({ ...prev, [aulaId]: 'saida' }));
       console.log('Registrando saída via RPC:', { aulaId, email: studentData.email });
 
       const { data, error } = await supabase.rpc('registrar_saida_sem_auth', {
@@ -200,6 +215,8 @@ const AulasAoVivo = () => {
     } catch (error: any) {
       console.error('Erro inesperado:', error);
       toast.error('Erro inesperado ao registrar saída');
+    } finally {
+      setLoadingOperations(prev => ({ ...prev, [aulaId]: null }));
     }
   };
 
@@ -314,6 +331,7 @@ const AulasAoVivo = () => {
                     turmaCode={studentData.turma || "Visitante"}
                     onEntrada={onRegistrarEntrada}
                     onSaida={onRegistrarSaida}
+                    loadingOperation={loadingOperations[aula.id]}
                   />
                 );
               })}
