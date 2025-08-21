@@ -219,16 +219,135 @@ const Biblioteca = () => {
             <CardContent className="text-center py-12">
               <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                Nenhum material disponível
+                Nenhum material nesta categoria
               </h3>
-              <p className="text-gray-500">
-                Não há materiais disponíveis para sua turma no momento.
-              </p>
             </CardContent>
           </Card>
-        ) : (
+        ) : categoriaFiltro !== "todas" ? (
+          // Quando um filtro específico está ativo, mostrar apenas essa categoria
           <div className="space-y-8">
-            {/* Exibir todas as categorias, mesmo vazias */}
+            {(() => {
+              const categoriaEscolhida = categorias.find(cat => cat.id === categoriaFiltro);
+              const materiaisCategoria = materiaisAgrupados[categoriaEscolhida?.nome] || [];
+              
+              if (materiaisCategoria.length === 0) {
+                return (
+                  <Card>
+                    <CardContent className="text-center py-12">
+                      <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        Nenhum material nesta categoria
+                      </h3>
+                    </CardContent>
+                  </Card>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-2xl font-bold text-redator-primary">
+                      {categoriaEscolhida?.nome}
+                    </h3>
+                    <Badge variant="outline" className="text-sm">
+                      {materiaisCategoria.length} material(is)
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid gap-4">
+                    {materiaisCategoria.map((material) => {
+                      const isLivroDigital = categoriaEscolhida?.nome.toLowerCase().includes('livro digital');
+                      const podeAcessar = !isVisitante || material.permite_visitante;
+                      
+                      return (
+                        <Card 
+                          key={material.id} 
+                          className={`border-l-4 hover:shadow-lg transition-shadow ${
+                            isLivroDigital ? 'border-l-emerald-500' : 'border-l-redator-primary'
+                          } ${!podeAcessar ? 'opacity-60' : ''}`}
+                        >
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                 <CardTitle className="text-xl mb-2 flex items-center gap-2">
+                                   {material.titulo}
+                                   {!podeAcessar && (
+                                     <Lock className="w-4 h-4 text-gray-400" />
+                                   )}
+                                 </CardTitle>
+                                 {material.descricao && (
+                                   <p className="text-gray-600 mb-3">{material.descricao}</p>
+                                 )}
+                                 
+                                 <div className="flex flex-wrap gap-2 mb-4">
+                                   <Badge 
+                                     className={
+                                       isLivroDigital 
+                                         ? "bg-emerald-500 text-white" 
+                                         : "bg-redator-primary text-white"
+                                     }
+                                   >
+                                     {material.categorias?.nome || 'Categoria não definida'}
+                                   </Badge>
+                                   {!isLivroDigital && (
+                                     <Badge variant="outline">
+                                       <Calendar className="w-3 h-3 mr-1" />
+                                       {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
+                                     </Badge>
+                                   )}
+                                   {material.permite_visitante && (
+                                     <Badge variant="outline" className="text-redator-secondary">
+                                       Público
+                                     </Badge>
+                                   )}
+                                 </div>
+                              </div>
+                              
+                              <div className="ml-4">
+                                {!podeAcessar ? (
+                                  <div className="text-center">
+                                    <Lock className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">
+                                      Disponível apenas<br />para alunos
+                                    </p>
+                                  </div>
+                                ) : (
+                                   <Button
+                                     onClick={() => handleViewPdf(
+                                       material.arquivo_url, 
+                                       material.titulo,
+                                       categoriaEscolhida?.nome || ''
+                                     )}
+                                     className={
+                                       isLivroDigital 
+                                         ? "bg-emerald-500 hover:bg-emerald-600" 
+                                         : "bg-redator-primary hover:bg-redator-secondary"
+                                     }
+                                   >
+                                     {isLivroDigital ? (
+                                       "Ler agora"
+                                     ) : (
+                                       <>
+                                         <Download className="w-4 h-4 mr-2" />
+                                         Baixar PDF
+                                       </>
+                                     )}
+                                   </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        ) : (
+          // Quando "Todas as categorias" está selecionado, mostrar todas
+          <div className="space-y-8">
             {categorias.map((categoria) => {
               const materiaisCategoria = materiaisAgrupados[categoria.nome] || [];
               
