@@ -2635,6 +2635,17 @@ export type Database = {
         Args: { p_aula_id: string; p_email_aluno: string }
         Returns: string
       }
+      registrar_entrada_sem_auth: {
+        Args: { p_aula_id: string; p_email: string }
+        Returns: {
+          aluno_id: string
+          aula_id: string
+          email_aluno: string
+          entrada_at: string
+          nome_aluno: string
+          saida_at: string
+        }[]
+      }
       registrar_saida: {
         Args: { p_aluno_id: string; p_aula_id: string }
         Returns: undefined
@@ -2650,6 +2661,17 @@ export type Database = {
       registrar_saida_email_param: {
         Args: { p_aula_id: string; p_email_aluno: string }
         Returns: string
+      }
+      registrar_saida_sem_auth: {
+        Args: { p_aula_id: string; p_email: string }
+        Returns: {
+          aluno_id: string
+          aula_id: string
+          email_aluno: string
+          entrada_at: string
+          nome_aluno: string
+          saida_at: string
+        }[]
       }
       reprocessar_ranking_simulados: {
         Args: Record<PropertyKey, never>
@@ -2740,6 +2762,15 @@ export type Database = {
       validate_student_login: {
         Args: { p_email: string }
         Returns: Json
+      }
+      verificar_presenca_aluno: {
+        Args: { p_aula_id: string; p_email: string }
+        Returns: {
+          entrada_at: string
+          saida_at: string
+          tem_entrada: boolean
+          tem_saida: boolean
+        }[]
       }
       verificar_redacao_devolvida_visualizada: {
         Args: { redacao_id_param: string; tabela_origem_param: string }

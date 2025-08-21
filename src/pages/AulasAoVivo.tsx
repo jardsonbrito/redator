@@ -79,31 +79,28 @@ const AulasAoVivo = () => {
   };
 
   const fetchPresencaAula = async (aulaId: string) => {
+    if (!studentData?.email) return;
+
     try {
-      if (!studentData.email) {
-        console.log('fetchPresencaAula: studentData.email não encontrado');
-        return;
-      }
+      console.log(`Verificando presença para aula ${aulaId} e email ${studentData.email}`);
 
-      console.log(`Buscando presença para aula ${aulaId} e email ${studentData.email}`);
+      const { data, error } = await supabase.rpc('verificar_presenca_aluno', {
+        p_email: studentData.email,
+        p_aula_id: aulaId
+      });
 
-      const { data, error } = await supabase
-        .from('presenca_aulas')
-        .select('aula_id, entrada_at, saida_at')
-        .eq('aula_id', aulaId)
-        .eq('email_aluno', studentData.email)
-        .maybeSingle();
-
-      console.log(`Resultado da busca de presença:`, { data, error });
-
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Erro ao verificar presença:', error);
         return;
       }
 
-      const registro = data || { aula_id: aulaId, entrada_at: null, saida_at: null };
+      const registro = data && data.length > 0 ? {
+        aula_id: aulaId,
+        entrada_at: data[0].entrada_at,
+        saida_at: data[0].saida_at
+      } : { aula_id: aulaId, entrada_at: null, saida_at: null };
 
-      console.log(`Registrando presença no state:`, registro);
+      console.log(`Registro de presença:`, registro);
 
       setRegistrosPresencaMap(prev => ({
         ...prev,
@@ -115,194 +112,94 @@ const AulasAoVivo = () => {
   };
 
   const onRegistrarEntrada = async (aulaId: string) => {
+    if (!studentData?.email) {
+      toast.error('Dados do estudante não encontrados');
+      return;
+    }
+
     try {
-      if (!studentData.email) {
-        console.error('Erro: studentData.email não encontrado:', studentData);
-        toast.error('Erro: dados do estudante não encontrados');
-        return;
-      }
+      console.log('Registrando entrada via RPC:', { aulaId, email: studentData.email });
 
-      console.log('Iniciando registro de entrada:', { aulaId, email: studentData.email });
-
-      // Obter token de sessão do cookie
-      const getSessionToken = (): string | null => {
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-          const [name, value] = cookie.trim().split('=');
-          if (name === 'student_session_token') {
-            return value;
-          }
-        }
-        return null;
-      };
-
-      const sessionToken = getSessionToken();
-      
-      console.log('Token encontrado:', sessionToken ? 'Sim' : 'Não');
-      
-      if (!sessionToken) {
-        console.error('Token de sessão não encontrado nos cookies');
-        toast.error('Sessão expirada. Faça login novamente.');
-        return;
-      }
-
-      console.log('Chamando RPC registrar_entrada_com_token:', { aulaId, sessionToken });
-
-      const { data, error } = await supabase.rpc('registrar_entrada_com_token', {
-        p_aula_id: aulaId,
-        p_session_token: sessionToken
+      const { data, error } = await supabase.rpc('registrar_entrada_sem_auth', {
+        p_email: studentData.email,
+        p_aula_id: aulaId
       });
-
-      console.log('Resultado da RPC:', { data, error });
 
       if (error) {
         console.error('Erro ao registrar entrada:', error);
-        toast.error('Erro ao registrar entrada');
+        toast.error(error.message || 'Erro ao registrar entrada');
         return;
       }
 
-      switch (data) {
-        case 'entrada_ok':
-          console.log('Entrada registrada com sucesso, atualizando estado local');
-          toast.success('Entrada registrada com sucesso!');
-          // Atualizar estado local imediatamente
-          const agora = new Date().toISOString();
-          setRegistrosPresencaMap(prev => ({
-            ...prev,
-            [aulaId]: {
-              aula_id: aulaId,
-              entrada_at: agora,
-              saida_at: prev[aulaId]?.saida_at || null
-            }
-          }));
-          console.log('Estado local atualizado para entrada:', { aulaId, entrada_at: agora });
-          break;
-        case 'entrada_ja_registrada':
-          console.log('Entrada já foi registrada');
-          toast.info('Entrada já foi registrada anteriormente');
-          break;
-        case 'token_invalido_ou_expirado':
-          console.error('Token inválido ou expirado');
-          toast.error('Sessão expirada. Faça login novamente.');
-          break;
-        case 'aula_nao_encontrada':
-          console.error('Aula não encontrada');
-          toast.error('Aula não encontrada');
-          break;
-        case 'aula_nao_iniciou':
-          console.log('Aula ainda não iniciou');
-          toast.error('Aula ainda não iniciou (tolerância de 10 minutos antes)');
-          break;
-        case 'janela_encerrada':
-          console.log('Janela de registro encerrada');
-          toast.error('Janela de registro encerrada (30 minutos após o fim da aula)');
-          break;
-        default:
-          console.error('Erro inesperado:', data);
-          toast.error('Erro inesperado ao registrar entrada');
-      }
+      console.log('Entrada registrada com sucesso:', data);
+      const timestamp = new Date().toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      toast.success(`Entrada registrada às ${timestamp}`);
+      
+      // Atualizar estado local
+      setRegistrosPresencaMap(prev => ({
+        ...prev,
+        [aulaId]: {
+          aula_id: aulaId,
+          entrada_at: new Date().toISOString(),
+          saida_at: prev[aulaId]?.saida_at || null
+        }
+      }));
       
       // Buscar dados atualizados do banco
       setTimeout(() => fetchPresencaAula(aulaId), 500);
     } catch (error: any) {
-      console.error('Erro ao registrar entrada:', error);
-      toast.error('Erro ao registrar entrada');
+      console.error('Erro inesperado:', error);
+      toast.error('Erro inesperado ao registrar entrada');
     }
   };
 
   const onRegistrarSaida = async (aulaId: string) => {
+    if (!studentData?.email) {
+      toast.error('Dados do estudante não encontrados');
+      return;
+    }
+
     try {
-      if (!studentData.email) {
-        toast.error('Erro: dados do estudante não encontrados');
-        return;
-      }
+      console.log('Registrando saída via RPC:', { aulaId, email: studentData.email });
 
-      console.log('Iniciando registro de saída:', { aulaId, email: studentData.email });
-
-      // Obter token de sessão do cookie
-      const getSessionToken = (): string | null => {
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-          const [name, value] = cookie.trim().split('=');
-          if (name === 'student_session_token') {
-            return value;
-          }
-        }
-        return null;
-      };
-
-      const sessionToken = getSessionToken();
-      
-      if (!sessionToken) {
-        toast.error('Sessão expirada. Faça login novamente.');
-        return;
-      }
-
-      console.log('Chamando RPC registrar_saida_com_token:', { aulaId, sessionToken });
-
-      const { data, error } = await supabase.rpc('registrar_saida_com_token', {
-        p_aula_id: aulaId,
-        p_session_token: sessionToken
+      const { data, error } = await supabase.rpc('registrar_saida_sem_auth', {
+        p_email: studentData.email,
+        p_aula_id: aulaId
       });
-
-      console.log('Resultado da RPC de saída:', { data, error });
 
       if (error) {
         console.error('Erro ao registrar saída:', error);
-        toast.error('Erro ao registrar saída');
+        toast.error(error.message || 'Erro ao registrar saída');
         return;
       }
 
-      switch (data) {
-        case 'saida_ok':
-          console.log('Saída registrada com sucesso, atualizando estado local');
-          toast.success('Saída registrada com sucesso!');
-          // Atualizar estado local imediatamente
-          const agora = new Date().toISOString();
-          setRegistrosPresencaMap(prev => ({
-            ...prev,
-            [aulaId]: {
-              aula_id: aulaId,
-              entrada_at: prev[aulaId]?.entrada_at || null,
-              saida_at: agora
-            }
-          }));
-          console.log('Estado local atualizado para saída:', { aulaId, saida_at: agora });
-          break;
-        case 'saida_ja_registrada':
-          console.log('Saída já foi registrada');
-          toast.info('Saída já foi registrada anteriormente');
-          break;
-        case 'token_invalido_ou_expirado':
-          console.error('Token inválido ou expirado');
-          toast.error('Sessão expirada. Faça login novamente.');
-          break;
-        case 'aula_nao_encontrada':
-          console.error('Aula não encontrada');
-          toast.error('Aula não encontrada');
-          break;
-        case 'aula_nao_iniciou':
-          console.log('Aula ainda não iniciou');
-          toast.error('Aula ainda não iniciou');
-          break;
-        case 'janela_encerrada':
-          console.log('Janela de registro encerrada');
-          toast.error('Janela de registro encerrada (30 minutos após o fim da aula)');
-          break;
-        case 'precisa_entrada':
-          console.log('Precisa registrar entrada primeiro');
-          toast.error('Registre a entrada primeiro');
-          break;
-        default:
-          console.error('Erro inesperado:', data);
-          toast.error('Erro inesperado ao registrar saída');
-      }
+      console.log('Saída registrada com sucesso:', data);
+      const timestamp = new Date().toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
       
-      // Buscar dados atualizados do banco  
+      toast.success(`Saída registrada às ${timestamp}`);
+      
+      // Atualizar estado local
+      setRegistrosPresencaMap(prev => ({
+        ...prev,
+        [aulaId]: {
+          aula_id: aulaId,
+          entrada_at: prev[aulaId]?.entrada_at || null,
+          saida_at: new Date().toISOString()
+        }
+      }));
+      
+      // Buscar dados atualizados do banco
       setTimeout(() => fetchPresencaAula(aulaId), 500);
     } catch (error: any) {
-      console.error('Erro ao registrar saída:', error);
-      toast.error('Erro ao registrar saída');
+      console.error('Erro inesperado:', error);
+      toast.error('Erro inesperado ao registrar saída');
     }
   };
 

@@ -216,9 +216,10 @@ export const AulaAoVivoCardRefatorado = ({
                status === 'agendada' ? 'Aguardar na Sala' : 'Aula Encerrada'}
             </Button>
 
-            {/* Botões de presença - apenas quando aula está AO VIVO */}
+            {/* Botões de presença - mostrar ambos quando aula está AO VIVO */}
             {status === 'ao_vivo' && (
               <div className="grid md:grid-cols-2 gap-2">
+                {/* Botão Registrar Entrada */}
                 <Dialog open={dialogAberto === 'entrada'} onOpenChange={(open) => !open && setDialogAberto(null)}>
                   <DialogTrigger asChild>
                     <Button
@@ -229,7 +230,7 @@ export const AulaAoVivoCardRefatorado = ({
                       className={entradaRegistrada ? 'bg-green-50 text-green-700' : ''}
                     >
                       <LogIn className="w-4 h-4 mr-2" />
-                      {entradaRegistrada ? 'Entrada OK' : 'Registrar Entrada'}
+                      {entradaRegistrada ? 'Entrada Registrada' : 'Registrar Entrada'}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -250,38 +251,37 @@ export const AulaAoVivoCardRefatorado = ({
                   </DialogContent>
                 </Dialog>
 
-                {entradaRegistrada && (
-                  <Dialog open={dialogAberto === 'saida'} onOpenChange={(open) => !open && setDialogAberto(null)}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => abrirDialog('saida')}
-                        disabled={saidaRegistrada}
-                        className={saidaRegistrada ? 'bg-green-50 text-green-700' : ''}
+                {/* Botão Registrar Saída - sempre visível, mas desabilitado conforme regras */}
+                <Dialog open={dialogAberto === 'saida'} onOpenChange={(open) => !open && setDialogAberto(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => abrirDialog('saida')}
+                      disabled={!entradaRegistrada || saidaRegistrada}
+                      className={saidaRegistrada ? 'bg-green-50 text-green-700' : ''}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      {saidaRegistrada ? 'Saída Registrada' : 'Registrar Saída'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Confirmar Saída</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Deseja registrar sua saída da aula "{aula.titulo}"?
+                      </p>
+                      <Button 
+                        onClick={() => confirmarPresenca('saida')}
+                        className="w-full"
                       >
-                        <LogOut className="w-4 h-4 mr-2" />
-                        {saidaRegistrada ? 'Saída OK' : 'Registrar Saída'}
+                        Confirmar Saída
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Confirmar Saída</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                          Deseja registrar sua saída da aula "{aula.titulo}"?
-                        </p>
-                        <Button 
-                          onClick={() => confirmarPresenca('saida')}
-                          className="w-full"
-                        >
-                          Confirmar Saída
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>
