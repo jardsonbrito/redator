@@ -56,8 +56,6 @@ interface TopRankingInfo {
 export const MinhasConquistas = () => {
   const { studentData } = useStudentAuth();
   const { monthlyCount } = useRecordedLessonViews();
-  
-  console.log('🔥 MinhasConquistas: monthlyCount recebido do hook:', monthlyCount);
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -160,8 +158,7 @@ export const MinhasConquistas = () => {
         .lt('occurred_at', monthEnd.toISOString());
 
       console.log(`📊 Resultado: Regular=${regularCount}, Simulado=${simuladoCount}`);
-      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}`);
-      console.log(`📊 MonthlyCount do hook (VÍDEOS): ${monthlyCount}`);
+      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}, Vídeos=${monthlyCount}`);
 
       setMonthlyActivity({
         essays_regular: regularCount,

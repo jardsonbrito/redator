@@ -36,7 +36,6 @@ export const MonitoramentoGravadas = () => {
   const loadRadarData = async () => {
     setLoading(true);
     try {
-      console.log('🔥 Radar: Buscando dados via get_recorded_lessons_radar...');
       const { data, error } = await supabase.rpc('get_recorded_lessons_radar');
       
       if (error) {
@@ -44,9 +43,6 @@ export const MonitoramentoGravadas = () => {
         throw error;
       }
 
-      console.log('🔥 Radar: Dados recebidos:', data);
-      console.log('🔥 Radar: Antônia encontrada:', data?.find(s => s.student_name?.includes('Antônia')));
-      
       const studentsData = data || [];
       setStudents(studentsData);
 
