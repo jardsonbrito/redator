@@ -11,7 +11,6 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { StudentProfile } from "@/components/StudentProfile";
-import { MinhasConquistas } from "@/components/MinhasConquistas";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -128,6 +127,13 @@ const Index = () => {
       icon: FileText,
       tooltip: "Acompanhe todas as suas redações corrigidas com segurança.",
       showAlways: true
+    },
+    {
+      title: "Minhas Conquistas",
+      path: "/minhas-conquistas",
+      icon: Trophy,
+      tooltip: "Acompanhe suas atividades por mês.",
+      showAlways: true
     }
   ];
 
@@ -158,9 +164,8 @@ const Index = () => {
             <StudentProfile />
 
             {/* Cards do painel */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="max-w-5xl mx-auto mb-8">
               <MeuDesempenho />
-              <MinhasConquistas />
             </div>
 
             {/* Mural de Avisos */}
