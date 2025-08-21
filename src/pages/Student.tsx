@@ -2,7 +2,7 @@
 import { StudentHeader } from "@/components/StudentHeader";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
-import { MinhasConquistasCard } from "@/components/MinhasConquistasCard";
+import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation } from "lucide-react";
 
@@ -97,12 +97,12 @@ const Student = () => {
       tooltip: "Visualize suas redações enviadas e corrigidas.",
       showAlways: true
     },
-    // Linha 6, Coluna 1: Top 5
+    // Linha 6, Coluna 1: Minhas Conquistas
     {
-      title: "Top 5",
-      path: "/top5",
+      title: "Minhas Conquistas",
+      path: "/minhas-conquistas",
       icon: Trophy,
-      tooltip: "Veja o ranking dos melhores desempenhos em redações.",
+      tooltip: "Acompanhe suas atividades por mês.",
       showAlways: true
     },
     // Linha 6, Coluna 2: Simulados
@@ -125,7 +125,7 @@ const Student = () => {
             <div className="max-w-5xl mx-auto">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <MinhasRedacoes />
-                <MinhasConquistasCard />
+                <MeuDesempenho />
               </div>
             </div>
             
