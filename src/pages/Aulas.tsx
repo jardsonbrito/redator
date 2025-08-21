@@ -186,11 +186,6 @@ const Aulas = () => {
         <StudentHeader pageTitle="Aulas" />
 
         <main className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-          <div className="text-center mb-6 sm:mb-8">
-            <p className="text-base sm:text-lg text-redator-accent px-2">
-              Acesse conteúdos educacionais organizados por competência
-            </p>
-          </div>
 
           {/* Filtros */}
           <Card className="mb-4 sm:mb-6 mx-1 sm:mx-0">
