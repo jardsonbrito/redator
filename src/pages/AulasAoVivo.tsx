@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { toast } from "sonner";
+import { formatInTimeZone } from 'date-fns-tz';
 import { computeStatus } from "@/utils/aulaStatus";
 import { AulaAoVivoCardRefatorado } from "@/components/aula-virtual/AulaAoVivoCardRefatorado";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
@@ -79,21 +80,40 @@ const AulasAoVivo = () => {
     }
   };
 
+  // Função helper para chamadas RPC com logging detalhado
+  const rpc = async (fn: string, args: Record<string, any>): Promise<any> => {
+    console.log('[RPC] call', fn, args);
+    console.log('payload', { 
+      emailSessao: studentData?.email, 
+      aulaId: args.p_aula_id, 
+      tipos: { 
+        email: typeof studentData?.email, 
+        aula: typeof args.p_aula_id 
+      }
+    });
+    
+    const { data, error } = await supabase.rpc(fn as any, args, { head: false });
+    
+    if (error) {
+      console.error('[RPC] error', fn, error);
+      toast.error(`Erro: ${error.message}`);
+      throw error;
+    }
+    
+    console.log('[RPC] data', fn, data);
+    return data!;
+  };
+
   const fetchPresencaAula = async (aulaId: string) => {
     if (!studentData?.email) return;
 
     try {
-      console.log(`Verificando presença para aula ${aulaId} e email ${studentData.email}`);
+      console.log(`[PRESENCA] Verificando presença para aula ${aulaId} e email ${studentData.email}`);
 
-      const { data, error } = await supabase.rpc('verificar_presenca_aluno', {
+      const data = await rpc('verificar_presenca', {
         p_email: studentData.email,
         p_aula_id: aulaId
       });
-
-      if (error) {
-        console.error('Erro ao verificar presença:', error);
-        return;
-      }
 
       const registro = data && data.length > 0 ? {
         aula_id: aulaId,
@@ -101,14 +121,14 @@ const AulasAoVivo = () => {
         saida_at: data[0].saida_at
       } : { aula_id: aulaId, entrada_at: null, saida_at: null };
 
-      console.log(`Registro de presença:`, registro);
+      console.log(`[PRESENCA] Registro de presença:`, registro);
 
       setRegistrosPresencaMap(prev => ({
         ...prev,
         [aulaId]: registro
       }));
     } catch (error: any) {
-      console.error('Erro ao buscar presença:', error);
+      console.error('[PRESENCA] Erro ao buscar presença:', error);
     }
   };
 
@@ -123,44 +143,41 @@ const AulasAoVivo = () => {
       return;
     }
 
+    setLoadingOperations(prev => ({ ...prev, [aulaId]: 'entrada' }));
+    
     try {
-      setLoadingOperations(prev => ({ ...prev, [aulaId]: 'entrada' }));
-      console.log('Registrando entrada via RPC:', { aulaId, email: studentData.email });
-
-      const { data, error } = await supabase.rpc('registrar_entrada_sem_auth', {
+      console.log('[ENTRADA] Iniciando registro de entrada');
+      
+      const data = await rpc('registrar_entrada', {
         p_email: studentData.email,
         p_aula_id: aulaId
       });
 
-      if (error) {
-        console.error('Erro ao registrar entrada:', error);
-        toast.error(error.message || 'Erro ao registrar entrada');
-        return;
+      console.log('[ENTRADA] Sucesso:', data);
+      
+      // Formatação de hora usando date-fns-tz
+      const TZ = 'America/Sao_Paulo';
+      const hora = formatInTimeZone(new Date(), TZ, 'HH:mm');
+      
+      toast.success(`Entrada registrada às ${hora}`);
+      
+      // Atualizar estado local com dados retornados
+      if (data && data.length > 0) {
+        setRegistrosPresencaMap(prev => ({
+          ...prev,
+          [aulaId]: {
+            aula_id: aulaId,
+            entrada_at: data[0].entrada_at,
+            saida_at: data[0].saida_at
+          }
+        }));
       }
-
-      console.log('Entrada registrada com sucesso:', data);
-      const timestamp = new Date().toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-      
-      toast.success(`Entrada registrada às ${timestamp}`);
-      
-      // Atualizar estado local
-      setRegistrosPresencaMap(prev => ({
-        ...prev,
-        [aulaId]: {
-          aula_id: aulaId,
-          entrada_at: new Date().toISOString(),
-          saida_at: prev[aulaId]?.saida_at || null
-        }
-      }));
       
       // Buscar dados atualizados do banco
       setTimeout(() => fetchPresencaAula(aulaId), 500);
     } catch (error: any) {
-      console.error('Erro inesperado:', error);
-      toast.error('Erro inesperado ao registrar entrada');
+      console.error('[ENTRADA] Erro:', error);
+      // Error toast já foi mostrado pela função rpc
     } finally {
       setLoadingOperations(prev => ({ ...prev, [aulaId]: null }));
     }
@@ -177,44 +194,41 @@ const AulasAoVivo = () => {
       return;
     }
 
+    setLoadingOperations(prev => ({ ...prev, [aulaId]: 'saida' }));
+    
     try {
-      setLoadingOperations(prev => ({ ...prev, [aulaId]: 'saida' }));
-      console.log('Registrando saída via RPC:', { aulaId, email: studentData.email });
-
-      const { data, error } = await supabase.rpc('registrar_saida_sem_auth', {
+      console.log('[SAIDA] Iniciando registro de saída');
+      
+      const data = await rpc('registrar_saida', {
         p_email: studentData.email,
         p_aula_id: aulaId
       });
 
-      if (error) {
-        console.error('Erro ao registrar saída:', error);
-        toast.error(error.message || 'Erro ao registrar saída');
-        return;
+      console.log('[SAIDA] Sucesso:', data);
+      
+      // Formatação de hora usando date-fns-tz
+      const TZ = 'America/Sao_Paulo';
+      const hora = formatInTimeZone(new Date(), TZ, 'HH:mm');
+      
+      toast.success(`Saída registrada às ${hora}`);
+      
+      // Atualizar estado local com dados retornados
+      if (data && data.length > 0) {
+        setRegistrosPresencaMap(prev => ({
+          ...prev,
+          [aulaId]: {
+            aula_id: aulaId,
+            entrada_at: data[0].entrada_at,
+            saida_at: data[0].saida_at
+          }
+        }));
       }
-
-      console.log('Saída registrada com sucesso:', data);
-      const timestamp = new Date().toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-      
-      toast.success(`Saída registrada às ${timestamp}`);
-      
-      // Atualizar estado local
-      setRegistrosPresencaMap(prev => ({
-        ...prev,
-        [aulaId]: {
-          aula_id: aulaId,
-          entrada_at: prev[aulaId]?.entrada_at || null,
-          saida_at: new Date().toISOString()
-        }
-      }));
       
       // Buscar dados atualizados do banco
       setTimeout(() => fetchPresencaAula(aulaId), 500);
     } catch (error: any) {
-      console.error('Erro inesperado:', error);
-      toast.error('Erro inesperado ao registrar saída');
+      console.error('[SAIDA] Erro:', error);
+      // Error toast já foi mostrado pela função rpc
     } finally {
       setLoadingOperations(prev => ({ ...prev, [aulaId]: null }));
     }

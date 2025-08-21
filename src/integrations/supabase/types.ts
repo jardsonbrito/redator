@@ -2620,8 +2620,15 @@ export type Database = {
         Returns: boolean
       }
       registrar_entrada: {
-        Args: { p_aluno_id: string; p_aula_id: string }
-        Returns: undefined
+        Args:
+          | { p_aluno_id: string; p_aula_id: string }
+          | { p_aula_id: string; p_email: string }
+        Returns: {
+          aluno_id: string
+          aula_id: string
+          entrada_at: string
+          saida_at: string
+        }[]
       }
       registrar_entrada_com_token: {
         Args: { p_aula_id: string; p_session_token: string }
@@ -2647,8 +2654,15 @@ export type Database = {
         }[]
       }
       registrar_saida: {
-        Args: { p_aluno_id: string; p_aula_id: string }
-        Returns: undefined
+        Args:
+          | { p_aluno_id: string; p_aula_id: string }
+          | { p_aula_id: string; p_email: string }
+        Returns: {
+          aluno_id: string
+          aula_id: string
+          entrada_at: string
+          saida_at: string
+        }[]
       }
       registrar_saida_com_token: {
         Args: { p_aula_id: string; p_session_token: string }
@@ -2762,6 +2776,15 @@ export type Database = {
       validate_student_login: {
         Args: { p_email: string }
         Returns: Json
+      }
+      verificar_presenca: {
+        Args: { p_aula_id: string; p_email: string }
+        Returns: {
+          aluno_id: string
+          aula_id: string
+          entrada_at: string
+          saida_at: string
+        }[]
       }
       verificar_presenca_aluno: {
         Args: { p_aula_id: string; p_email: string }
