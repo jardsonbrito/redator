@@ -88,17 +88,21 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
     fetchRespostas();
   }, [lousa.id]);
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      draft: { label: 'Pendente', variant: 'outline' as const },
-      submitted: { label: 'Enviada', variant: 'secondary' as const },
-      returned: { label: 'Devolvida', variant: 'destructive' as const },
-      graded: { label: 'Corrigida', variant: 'default' as const }
-    };
-
-    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.draft;
+  const getStatusBadge = (resposta: LousaResposta) => {
+    // Admin status logic: based on whether response has been graded (has nota)
+    if (resposta.nota !== null) {
+      return <Badge variant="default">Corrigida</Badge>;
+    }
     
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    if (resposta.status === 'submitted' || resposta.conteudo) {
+      return <Badge variant="secondary">Pendente</Badge>;
+    }
+    
+    if (resposta.status === 'returned') {
+      return <Badge variant="destructive">Devolvida</Badge>;
+    }
+    
+    return <Badge variant="outline">Sem envio</Badge>;
   };
 
   const handleDevolver = async (resposta: LousaResposta, comentario: string) => {
@@ -228,7 +232,7 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {getStatusBadge(resposta.status)}
+                    {getStatusBadge(resposta)}
                   </TableCell>
                   <TableCell>
                     {resposta.nota !== null ? (
