@@ -64,50 +64,56 @@ export const MinhasConquistas = () => {
       console.log(`🔍 Buscando atividades do aluno ${emailBusca} para ${getMonthName(selectedMonth)}/${selectedYear}`);
       console.log(`📅 Intervalo: ${monthStart.toISOString()} até ${monthEnd.toISOString()}`);
 
-      // === USAR A MESMA FONTE QUE MeuDesempenho para CONSISTÊNCIA ===
+      // === BUSCAR REDAÇÕES ===
       const [redacoesRegulares, redacoesSimulado, redacoesExercicio] = await Promise.all([
         supabase.from('redacoes_enviadas')
-          .select('id, data_envio, status, frase_tematica')
-          .ilike('email_aluno', emailBusca)
+          .select('id, data_envio, status')
+          .eq('email_aluno', emailBusca)
           .gte('data_envio', monthStart.toISOString())
           .lt('data_envio', monthEnd.toISOString()),
         
         supabase.from('redacoes_simulado')
-          .select('id, data_envio, frase_tematica')
-          .ilike('email_aluno', emailBusca)
+          .select('id, data_envio')
+          .eq('email_aluno', emailBusca)
           .gte('data_envio', monthStart.toISOString())
           .lt('data_envio', monthEnd.toISOString()),
           
         supabase.from('redacoes_exercicio')
-          .select('id, data_envio, exercicio_id')
-          .ilike('email_aluno', emailBusca)
+          .select('id, data_envio')
+          .eq('email_aluno', emailBusca)
           .gte('data_envio', monthStart.toISOString())
           .lt('data_envio', monthEnd.toISOString())
       ]);
 
-      // === CLASSIFICAR POR TIPO DE FORMA ÚNICA ===
+      // === CONTAR REDAÇÕES ===
       // 1. Redações regulares (excluindo devolvidas)
       const regularesFiltradas = (redacoesRegulares.data || []).filter(r => r.status !== 'devolvida');
 
-      // 2. Redações de simulado (todas são simulado por definição)
-      const simuladoFiltradas = (redacoesSimulado.data || []);
+      // 2. Redações de simulado (incluindo devolvida_por IS NULL)
+      const { data: simuladoNaoDevolvidas } = await supabase
+        .from('redacoes_simulado')
+        .select('id, data_envio')
+        .eq('email_aluno', emailBusca)
+        .gte('data_envio', monthStart.toISOString())
+        .lt('data_envio', monthEnd.toISOString())
+        .is('devolvida_por', null);
 
-      // 3. Redações de exercício (por enquanto considerar como regulares)
-      const exercicioFiltradas = (redacoesExercicio.data || []);
+      // 3. Redações de exercício (incluindo devolvida_por IS NULL)
+      const { data: exercicioNaoDevolvidas } = await supabase
+        .from('redacoes_exercicio')
+        .select('id, data_envio')
+        .eq('email_aluno', emailBusca)
+        .gte('data_envio', monthStart.toISOString())
+        .lt('data_envio', monthEnd.toISOString())
+        .is('devolvida_por', null);
 
-      // === AGREGAR CONTADORES ===
-      let regularCount = 0;
-      let simuladoCount = 0;
-
-      // Contar regulares (redacoes_enviadas + exercicio)
-      regularCount += regularesFiltradas.length;
-      regularCount += exercicioFiltradas.length;
-
-      // Contar simulados (redacoes_simulado)
-      simuladoCount += simuladoFiltradas.length;
+      // === CONTADORES FINAIS ===
+      const regularCount = regularesFiltradas.length + (exercicioNaoDevolvidas || []).length;
+      const simuladoCount = (simuladoNaoDevolvidas || []).length;
 
       // === OUTRAS ATIVIDADES ===
-      // Buscar presença em aulas ao vivo (nova tabela presenca_aulas)
+      
+      // Buscar presença em aulas ao vivo
       const { data: presencaLive } = await supabase
         .from('presenca_aulas')
         .select('aula_id, entrada_at')
@@ -116,20 +122,22 @@ export const MinhasConquistas = () => {
         .lt('entrada_at', monthEnd.toISOString())
         .not('entrada_at', 'is', null);
 
-      // Contar distinct aulas que participou (entrada registrada)
+      // Contar distinct aulas que participou
       const livesParticipadas = [...new Set((presencaLive || []).map(p => p.aula_id))].length;
 
-      // Buscar eventos de lousa (via student_feature_event)
-      const { data: eventosLousa } = await supabase
-        .from('student_feature_event')
-        .select('entity_id')
-        .eq('student_email', emailBusca)
-        .eq('feature', 'lousa')
-        .eq('action', 'completed')
-        .gte('occurred_at', monthStart.toISOString())
-        .lt('occurred_at', monthEnd.toISOString());
+      // Buscar lousas respondidas (submitted_at não nulo)
+      const { data: lousasRespondidas } = await supabase
+        .from('lousa_resposta')
+        .select('lousa_id, submitted_at')
+        .eq('email_aluno', emailBusca)
+        .gte('submitted_at', monthStart.toISOString())
+        .lt('submitted_at', monthEnd.toISOString())
+        .not('submitted_at', 'is', null);
 
-      // Buscar aulas gravadas assistidas
+      // Contar distinct lousas concluídas
+      const lousasConcluidas = [...new Set((lousasRespondidas || []).map(l => l.lousa_id))].length;
+
+      // Buscar eventos de aulas gravadas assistidas via student_feature_event
       const { data: eventosGravadas } = await supabase
         .from('student_feature_event')
         .select('entity_id')
@@ -139,15 +147,18 @@ export const MinhasConquistas = () => {
         .gte('occurred_at', monthStart.toISOString())
         .lt('occurred_at', monthEnd.toISOString());
 
+      // Contar distinct aulas gravadas assistidas
+      const gravadasAssistidas = [...new Set((eventosGravadas || []).map(e => e.entity_id))].length;
+
       console.log(`📊 Resultado: Regular=${regularCount}, Simulado=${simuladoCount}`);
-      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}, Gravadas=${(eventosGravadas || []).length}`);
+      console.log(`📊 Lousa=${lousasConcluidas}, Live=${livesParticipadas}, Gravadas=${gravadasAssistidas}`);
 
       setMonthlyActivity({
         essays_regular: regularCount,
         essays_simulado: simuladoCount,
-        lousas_concluidas: (eventosLousa || []).length,
+        lousas_concluidas: lousasConcluidas,
         lives_participei: livesParticipadas,
-        gravadas_assistidas: (eventosGravadas || []).length
+        gravadas_assistidas: gravadasAssistidas
       });
       
     } catch (error) {
