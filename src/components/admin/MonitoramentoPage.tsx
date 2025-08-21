@@ -133,11 +133,12 @@ export const MonitoramentoPage = () => {
             .lt('data_envio', monthEnd.toISOString())
             .is('devolvida_por', null),
           
-          // Lousas (contar DISTINCT lousa_id)
+          // Lousas (contar DISTINCT lousa_id onde submitted_at não é null)
           supabase
             .from('lousa_resposta')
             .select('email_aluno, lousa_id')
             .in('email_aluno', emailList)
+            .not('submitted_at', 'is', null)
             .gte('submitted_at', monthStart.toISOString())
             .lt('submitted_at', monthEnd.toISOString()),
           

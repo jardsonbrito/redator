@@ -225,10 +225,11 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
                   <TableCell>
                     <div>
                       <div className="font-medium">{resposta.nome_aluno}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {resposta.email_aluno}
-                        {resposta.turma && ` • Turma ${resposta.turma}`}
-                      </div>
+                      {resposta.turma && (
+                        <div className="text-sm text-muted-foreground">
+                          Turma {resposta.turma}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
