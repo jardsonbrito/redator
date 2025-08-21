@@ -2053,6 +2053,45 @@ export type Database = {
           },
         ]
       }
+      student_feature_event: {
+        Row: {
+          action: string
+          class_name: string | null
+          entity_id: string | null
+          feature: string
+          id: string
+          metadata: Json
+          month: number | null
+          occurred_at: string
+          student_email: string
+          year: number | null
+        }
+        Insert: {
+          action: string
+          class_name?: string | null
+          entity_id?: string | null
+          feature: string
+          id?: string
+          metadata?: Json
+          month?: number | null
+          occurred_at?: string
+          student_email: string
+          year?: number | null
+        }
+        Update: {
+          action?: string
+          class_name?: string | null
+          entity_id?: string | null
+          feature?: string
+          id?: string
+          metadata?: Json
+          month?: number | null
+          occurred_at?: string
+          student_email?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
       student_session_tokens: {
         Row: {
           created_at: string
@@ -2214,6 +2253,30 @@ export type Database = {
       }
     }
     Views: {
+      v_live_status: {
+        Row: {
+          last_action: string | null
+          live_id: string | null
+          student_email: string | null
+        }
+        Relationships: []
+      }
+      v_student_month_activity: {
+        Row: {
+          class_name: string | null
+          essays_regular: number | null
+          essays_simulado: number | null
+          gravadas_assistidas: number | null
+          lives_nao_participei: number | null
+          lives_participei: number | null
+          lousas_abertas: number | null
+          lousas_concluidas: number | null
+          month: number | null
+          student_email: string | null
+          year: number | null
+        }
+        Relationships: []
+      }
       vw_status_presenca: {
         Row: {
           aluno_id: string | null
@@ -2732,6 +2795,17 @@ export type Database = {
       toggle_admin_status: {
         Args: { p_admin_id: string; p_new_status: boolean }
         Returns: Json
+      }
+      track_event_by_email: {
+        Args: {
+          p_action: string
+          p_class_name?: string
+          p_entity_id?: string
+          p_feature: string
+          p_metadata?: Json
+          p_student_email: string
+        }
+        Returns: string
       }
       trocar_senha_professor: {
         Args: { nova_senha: string; professor_id: string }
