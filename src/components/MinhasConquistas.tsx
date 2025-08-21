@@ -25,6 +25,19 @@ interface MonthlyActivity {
   gravadas_assistidas: number;
 }
 
+// Função para classificar tipo de redação de forma consistente
+function classificarTipo(redacao: any): 'regular' | 'simulado' {
+  // 1. Campo explícito se existir
+  if (redacao.tipo) return redacao.tipo;
+  
+  // 2. Via tema se disponível
+  if (redacao.tema?.is_simulado === true) return 'simulado';
+  
+  // 3. Derivação por string (categoria/titulo)
+  const str = `${redacao.tema?.categoria || ''} ${redacao.tema?.titulo || ''} ${redacao.frase_tematica || ''}`;
+  return /simulado/i.test(str) ? 'simulado' : 'regular';
+}
+
 interface ActivityDetail {
   data_hora: string;
   tipo: string;
@@ -77,7 +90,7 @@ export const MinhasConquistas = () => {
       console.log(`🔍 Buscando atividades do aluno ${emailBusca} para ${getMonthName(selectedMonth)}/${selectedYear}`);
       console.log(`📅 Intervalo: ${monthStart.toISOString()} até ${monthEnd.toISOString()}`);
 
-      // Usar a mesma fonte que o MeuDesempenho: consultar as 3 tabelas diretamente
+      // === USAR A MESMA FONTE QUE MeuDesempenho para CONSISTÊNCIA ===
       const [redacoesRegulares, redacoesSimulado, redacoesExercicio] = await Promise.all([
         supabase.from('redacoes_enviadas')
           .select('id, data_envio, status, frase_tematica')
@@ -98,49 +111,68 @@ export const MinhasConquistas = () => {
           .lt('data_envio', monthEnd.toISOString())
       ]);
 
-      // Buscar eventos da lousa no mesmo período
+      // === CLASSIFICAR POR TIPO DE FORMA ÚNICA ===
+      // 1. Redações regulares (excluindo devolvidas)
+      const regularesFiltradas = (redacoesRegulares.data || []).filter(r => r.status !== 'devolvida');
+
+      // 2. Redações de simulado (todas são simulado por definição)
+      const simuladoFiltradas = (redacoesSimulado.data || []);
+
+      // 3. Redações de exercício (por enquanto considerar como regulares)
+      const exercicioFiltradas = (redacoesExercicio.data || []);
+
+      // === AGREGAR CONTADORES ===
+      let regularCount = 0;
+      let simuladoCount = 0;
+
+      // Contar regulares (redacoes_enviadas + exercicio)
+      regularCount += regularesFiltradas.length;
+      regularCount += exercicioFiltradas.length;
+
+      // Contar simulados (redacoes_simulado)
+      simuladoCount += simuladoFiltradas.length;
+
+      // === OUTRAS ATIVIDADES ===
+      // Buscar presença em aulas ao vivo (nova tabela presenca_aulas)
+      const { data: presencaLive } = await supabase
+        .from('presenca_aulas')
+        .select('aula_id, entrada_at')
+        .eq('email_aluno', emailBusca)
+        .gte('entrada_at', monthStart.toISOString())
+        .lt('entrada_at', monthEnd.toISOString())
+        .not('entrada_at', 'is', null);
+
+      // Contar distinct aulas que participou (entrada registrada)
+      const livesParticipadas = [...new Set((presencaLive || []).map(p => p.aula_id))].length;
+
+      // Buscar eventos de lousa (via student_feature_event)
       const { data: eventosLousa } = await supabase
         .from('student_feature_event')
-        .select('action')
+        .select('entity_id')
         .eq('student_email', emailBusca)
         .eq('feature', 'lousa')
         .eq('action', 'completed')
         .gte('occurred_at', monthStart.toISOString())
         .lt('occurred_at', monthEnd.toISOString());
 
-      // Buscar participações em aulas ao vivo no mesmo período
-      const { data: eventosLive } = await supabase
-        .from('student_feature_event')
-        .select('action')
-        .eq('student_email', emailBusca)
-        .eq('feature', 'live')
-        .eq('action', 'participated')
-        .gte('occurred_at', monthStart.toISOString())
-        .lt('occurred_at', monthEnd.toISOString());
-
-      // Buscar aulas gravadas assistidas no mesmo período
+      // Buscar aulas gravadas assistidas
       const { data: eventosGravadas } = await supabase
         .from('student_feature_event')
-        .select('action')
+        .select('entity_id')
         .eq('student_email', emailBusca)
         .eq('feature', 'gravada')
         .eq('action', 'watched')
         .gte('occurred_at', monthStart.toISOString())
         .lt('occurred_at', monthEnd.toISOString());
 
-      // Contabilizar (excluindo devolvidas apenas na tabela que tem status)
-      const regularCount = (redacoesRegulares.data || []).filter(r => r.status !== 'devolvida').length;
-      const simuladoCount = (redacoesSimulado.data || []).length; // simulado não tem status
-      const exercicioCount = (redacoesExercicio.data || []).length; // exercicio não tem status
-      
-      console.log(`📊 Resultado: Regular=${regularCount}, Simulado=${simuladoCount}, Exercício=${exercicioCount}`);
-      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${(eventosLive || []).length}, Gravadas=${(eventosGravadas || []).length}`);
+      console.log(`📊 Resultado: Regular=${regularCount}, Simulado=${simuladoCount}`);
+      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}, Gravadas=${(eventosGravadas || []).length}`);
 
       setMonthlyActivity({
-        essays_regular: regularCount + exercicioCount, // Exercícios contam como regulares
+        essays_regular: regularCount,
         essays_simulado: simuladoCount,
         lousas_concluidas: (eventosLousa || []).length,
-        lives_participei: (eventosLive || []).length,
+        lives_participei: livesParticipadas,
         gravadas_assistidas: (eventosGravadas || []).length
       });
       
@@ -281,27 +313,27 @@ export const MinhasConquistas = () => {
           </Select>
         </div>
 
-        {/* Estatísticas do mês */}
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
+        {/* Estatísticas do mês - Layout compacto em grid */}
+        <div className="space-y-2 max-w-[420px]">
+          <div className="grid grid-cols-[1fr_auto] items-center gap-3">
             <span className="text-sm font-medium">Redações:</span>
-            <div className="flex gap-4 text-sm">
+            <div className="flex gap-3 text-sm">
               <span>Regular: <strong className="text-blue-600">{monthlyActivity.essays_regular}</strong></span>
               <span>Simulado: <strong className="text-green-600">{monthlyActivity.essays_simulado}</strong></span>
             </div>
           </div>
 
-          <div className="flex justify-between items-center">
+          <div className="grid grid-cols-[1fr_auto] items-center gap-3">
             <span className="text-sm font-medium">Ao vivo:</span>
             <span className="text-sm">Participei: <strong className="text-orange-600">{monthlyActivity.lives_participei}</strong></span>
           </div>
 
-          <div className="flex justify-between items-center">
+          <div className="grid grid-cols-[1fr_auto] items-center gap-3">
             <span className="text-sm font-medium">Gravadas:</span>
             <span className="text-sm">Assistidas: <strong className="text-red-600">{monthlyActivity.gravadas_assistidas}</strong></span>
           </div>
 
-          <div className="flex justify-between items-center">
+          <div className="grid grid-cols-[1fr_auto] items-center gap-3">
             <span className="text-sm font-medium">Lousa:</span>
             <span className="text-sm">Concluídas: <strong className="text-purple-600">{monthlyActivity.lousas_concluidas}</strong></span>
           </div>

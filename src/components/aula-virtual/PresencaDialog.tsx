@@ -41,6 +41,7 @@ export const PresencaDialog = ({
           disabled={jaRegistrou}
           onClick={() => onOpenPresencaDialog(tipo, aulaId)}
           className="w-full"
+          aria-label={`${jaRegistrou ? `${label} já registrada` : `Registrar ${label} na aula`}`}
         >
           <Icon className="w-4 h-4 mr-2" />
           {jaRegistrou ? `${label} Registrada` : `Registrar ${label}`}
@@ -70,6 +71,7 @@ export const PresencaDialog = ({
           <Button 
             onClick={() => onRegistrarPresenca(tipo, aulaId)}
             className="w-full"
+            disabled={!formData.nome.trim()}
           >
             Confirmar {label}
           </Button>

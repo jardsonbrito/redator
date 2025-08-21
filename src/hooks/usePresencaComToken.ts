@@ -1,142 +1,170 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
 
-interface UsePresencaComTokenProps {
-  sessionToken?: string | null;
+dayjs.extend(timezone);
+
+interface RegistroPresenca {
+  aula_id: string;
+  entrada_registrada: boolean;
+  saida_registrada: boolean;
+  duracao_minutos?: number;
 }
 
-export const usePresencaComToken = ({ sessionToken }: UsePresencaComTokenProps) => {
-  const [loading, setLoading] = useState(false);
+interface FormData {
+  nome: string;
+  sobrenome: string;
+}
 
-  // Função para obter token de sessão do cookie como fallback
-  const getSessionToken = (): string | null => {
-    if (sessionToken) return sessionToken;
-    
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'student_session_token') {
-        return value;
-      }
-    }
-    return null;
-  };
+export const usePresencaComToken = () => {
+  const { studentData } = useStudentAuth();
+  const { toast } = useToast();
+  const [registrosPresenca, setRegistrosPresenca] = useState<RegistroPresenca[]>([]);
+  const [openDialog, setOpenDialog] = useState<{tipo: 'entrada' | 'saida', aulaId: string} | null>(null);
+  const [formData, setFormData] = useState<FormData>({ nome: '', sobrenome: '' });
 
-  const registrarEntrada = async (aulaId: string): Promise<boolean> => {
-    const token = getSessionToken();
-    
-    if (!token) {
-      toast.error('Sessão expirada. Faça login novamente.');
-      return false;
-    }
+  // Buscar registros existentes do aluno
+  const fetchRegistrosPresenca = useCallback(async () => {
+    if (!studentData.email) return;
 
-    setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('registrar_entrada_com_token', {
-        p_aula_id: aulaId,
-        p_session_token: token
-      });
+      const { data, error } = await supabase
+        .from('presenca_aulas')
+        .select('aula_id, entrada_at, saida_at, duracao_minutos')
+        .eq('email_aluno', studentData.email.toLowerCase())
+        .order('criado_em', { ascending: false });
 
-      if (error) {
-        console.error('Erro ao registrar entrada:', error);
-        toast.error('Erro ao registrar entrada');
-        return false;
-      }
+      if (error) throw error;
+      
+      const transformedData: RegistroPresenca[] = (data || []).map(record => ({
+        aula_id: record.aula_id,
+        entrada_registrada: !!record.entrada_at,
+        saida_registrada: !!record.saida_at,
+        duracao_minutos: record.duracao_minutos || undefined
+      }));
+      
+      setRegistrosPresenca(transformedData);
+    } catch (error) {
+      console.error('Erro ao buscar registros de presença:', error);
+    }
+  }, [studentData.email]);
 
-      // Tratar diferentes respostas do backend
-      switch (data) {
-        case 'entrada_ok':
-          toast.success('Entrada registrada com sucesso!');
-          return true;
-        case 'entrada_ja_registrada':
-          toast.info('Entrada já foi registrada anteriormente');
-          return true;
-        case 'token_invalido_ou_expirado':
-          toast.error('Sessão expirada. Faça login novamente.');
-          return false;
-        case 'aula_nao_encontrada':
-          toast.error('Aula não encontrada');
-          return false;
-        case 'aula_nao_iniciou':
-          toast.error('Aula ainda não iniciou (tolerância de 10 minutos antes)');
-          return false;
-        case 'janela_encerrada':
-          toast.error('Janela de registro encerrada (30 minutos após o fim da aula)');
-          return false;
-        default:
-          toast.error('Erro inesperado ao registrar entrada');
-          return false;
-      }
-    } catch (error: any) {
-      console.error('Erro ao registrar entrada:', error);
-      toast.error('Erro ao registrar entrada');
-      return false;
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    fetchRegistrosPresenca();
+  }, [fetchRegistrosPresenca]);
+
+  // Função para definir email na sessão via RPC
+  const setSessionEmail = async (email: string) => {
+    try {
+      await supabase.rpc('set_current_user_email', { user_email: email });
+    } catch (error) {
+      console.error('Erro ao definir email da sessão:', error);
     }
   };
 
-  const registrarSaida = async (aulaId: string): Promise<boolean> => {
-    const token = getSessionToken();
-    
-    if (!token) {
-      toast.error('Sessão expirada. Faça login novamente.');
-      return false;
+  // Registrar presença (entrada ou saída)
+  const registrarPresenca = async (tipo: 'entrada' | 'saida', aulaId: string) => {
+    if (!studentData.email || !formData.nome.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome é obrigatório para registrar presença",
+        variant: "destructive"
+      });
+      return;
     }
 
-    setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('registrar_saida_com_token', {
+      // Definir email na sessão antes da operação
+      await setSessionEmail(studentData.email.toLowerCase());
+
+      // Escolher função RPC baseada no tipo
+      const rpcFunction = tipo === 'entrada' ? 'registrar_entrada_com_token' : 'registrar_saida_com_token';
+      
+      const { data, error } = await supabase.rpc(rpcFunction, {
         p_aula_id: aulaId,
-        p_session_token: token
+        p_nome: formData.nome.trim(),
+        p_sobrenome: formData.sobrenome.trim() || ''
       });
 
-      if (error) {
-        console.error('Erro ao registrar saída:', error);
-        toast.error('Erro ao registrar saída');
-        return false;
+      if (error) throw error;
+
+      const result = data as { success: boolean; message: string; error?: string };
+
+      if (!result.success) {
+        throw new Error(result.message || `Erro ao registrar ${tipo}`);
       }
 
-      // Tratar diferentes respostas do backend
-      switch (data) {
-        case 'saida_ok':
-          toast.success('Saída registrada com sucesso!');
-          return true;
-        case 'saida_ja_registrada':
-          toast.info('Saída já foi registrada anteriormente');
-          return true;
-        case 'token_invalido_ou_expirado':
-          toast.error('Sessão expirada. Faça login novamente.');
-          return false;
-        case 'aula_nao_encontrada':
-          toast.error('Aula não encontrada');
-          return false;
-        case 'aula_nao_iniciou':
-          toast.error('Aula ainda não iniciou');
-          return false;
-        case 'janela_encerrada':
-          toast.error('Janela de registro encerrada (30 minutos após o fim da aula)');
-          return false;
-        case 'precisa_entrada':
-          toast.error('Registre a entrada primeiro');
-          return false;
-        default:
-          toast.error('Erro inesperado ao registrar saída');
-          return false;
-      }
+      // Sucesso
+      toast({
+        title: "Sucesso",
+        description: result.message,
+        variant: "default"
+      });
+
+      // Atualizar lista de registros
+      await fetchRegistrosPresenca();
+      
+      // Fechar dialog
+      setOpenDialog(null);
+      
     } catch (error: any) {
-      console.error('Erro ao registrar saída:', error);
-      toast.error('Erro ao registrar saída');
-      return false;
-    } finally {
-      setLoading(false);
+      console.error(`Erro ao registrar ${tipo}:`, error);
+      
+      let errorMessage = `Erro ao registrar ${tipo}`;
+      
+      if (error.message?.includes('session_required')) {
+        errorMessage = 'Sessão não encontrada. Faça login novamente.';
+      } else if (error.message?.includes('duplicate')) {
+        errorMessage = `${tipo === 'entrada' ? 'Entrada' : 'Saída'} já foi registrada para esta aula`;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
+  };
+
+  // Verificar se já registrou entrada/saída para uma aula específica
+  const jaRegistrou = useCallback((tipo: 'entrada' | 'saida', aulaId: string): boolean => {
+    const registro = registrosPresenca.find(r => r.aula_id === aulaId);
+    return tipo === 'entrada' ? !!registro?.entrada_registrada : !!registro?.saida_registrada;
+  }, [registrosPresenca]);
+
+  // Abrir dialog de presença
+  const openPresencaDialog = (tipo: 'entrada' | 'saida', aulaId: string) => {
+    // Pré-preencher dados do aluno se disponível
+    const alunoStorage = localStorage.getItem('alunoData');
+    if (alunoStorage) {
+      try {
+        const aluno = JSON.parse(alunoStorage);
+        setFormData({
+          nome: aluno.nome || '',
+          sobrenome: aluno.sobrenome || ''
+        });
+      } catch (error) {
+        console.error('Erro ao carregar dados do aluno:', error);
+      }
+    }
+    
+    setOpenDialog({ tipo, aulaId });
   };
 
   return {
-    registrarEntrada,
-    registrarSaida,
-    loading
+    registrosPresenca,
+    openDialog,
+    formData,
+    setOpenDialog,
+    setFormData,
+    fetchRegistrosPresenca,
+    registrarPresenca,
+    jaRegistrou,
+    openPresencaDialog
   };
 };

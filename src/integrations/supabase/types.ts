@@ -887,12 +887,14 @@ export type Database = {
           aula_id: string
           criado_em: string
           data_registro: string
+          duracao_minutos: number | null
           email_aluno: string
           entrada_at: string | null
           id: string
           nome_aluno: string
           saida_at: string | null
           sobrenome_aluno: string | null
+          status: string | null
           tipo_registro: string
           turma: string
         }
@@ -902,12 +904,14 @@ export type Database = {
           aula_id: string
           criado_em?: string
           data_registro?: string
+          duracao_minutos?: number | null
           email_aluno: string
           entrada_at?: string | null
           id?: string
           nome_aluno: string
           saida_at?: string | null
           sobrenome_aluno?: string | null
+          status?: string | null
           tipo_registro?: string
           turma?: string
         }
@@ -917,12 +921,14 @@ export type Database = {
           aula_id?: string
           criado_em?: string
           data_registro?: string
+          duracao_minutos?: number | null
           email_aluno?: string
           entrada_at?: string | null
           id?: string
           nome_aluno?: string
           saida_at?: string | null
           sobrenome_aluno?: string | null
+          status?: string | null
           tipo_registro?: string
           turma?: string
         }
@@ -2732,8 +2738,10 @@ export type Database = {
         }[]
       }
       registrar_entrada_com_token: {
-        Args: { p_aula_id: string; p_session_token: string }
-        Returns: string
+        Args:
+          | { p_aula_id: string; p_nome: string; p_sobrenome: string }
+          | { p_aula_id: string; p_session_token: string }
+        Returns: Json
       }
       registrar_entrada_email: {
         Args: { p_aula_id: string }
@@ -2766,8 +2774,10 @@ export type Database = {
         }[]
       }
       registrar_saida_com_token: {
-        Args: { p_aula_id: string; p_session_token: string }
-        Returns: string
+        Args:
+          | { p_aula_id: string; p_nome: string; p_sobrenome: string }
+          | { p_aula_id: string; p_session_token: string }
+        Returns: Json
       }
       registrar_saida_email: {
         Args: { p_aula_id: string }
