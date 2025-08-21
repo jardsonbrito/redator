@@ -9,6 +9,13 @@ import { Trophy, Calendar, Eye, Award, TrendingUp } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+// Configurar plugins do dayjs
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 interface MonthlyActivity {
   essays_regular: number;
@@ -61,36 +68,89 @@ export const MinhasConquistas = () => {
 
     setLoading(true);
     try {
-      // Consultar diretamente a view v_student_month_activity
-      const { data, error } = await supabase
-        .from('v_student_month_activity')
-        .select('*')
-        .eq('student_email', studentData.email.toLowerCase())
-        .eq('month', selectedMonth)
-        .eq('year', selectedYear)
-        .limit(1);
-
-      if (error) throw error;
+      const emailBusca = studentData.email.toLowerCase().trim();
       
-      if (data && data.length > 0) {
-        setMonthlyActivity({
-          essays_regular: data[0].essays_regular || 0,
-          essays_simulado: data[0].essays_simulado || 0,
-          lousas_concluidas: data[0].lousas_concluidas || 0,
-          lives_participei: data[0].lives_participei || 0,
-          gravadas_assistidas: data[0].gravadas_assistidas || 0
-        });
-      } else {
-        setMonthlyActivity({
-          essays_regular: 0,
-          essays_simulado: 0,
-          lousas_concluidas: 0,
-          lives_participei: 0,
-          gravadas_assistidas: 0
-        });
-      }
+      // Definir intervalo do mês em timezone America/Fortaleza
+      const monthStart = dayjs.tz(`${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01 00:00:00`, 'America/Fortaleza').startOf('month');
+      const monthEnd = monthStart.add(1, 'month');
+      
+      console.log(`🔍 Buscando atividades do aluno ${emailBusca} para ${getMonthName(selectedMonth)}/${selectedYear}`);
+      console.log(`📅 Intervalo: ${monthStart.toISOString()} até ${monthEnd.toISOString()}`);
+
+      // Usar a mesma fonte que o MeuDesempenho: consultar as 3 tabelas diretamente
+      const [redacoesRegulares, redacoesSimulado, redacoesExercicio] = await Promise.all([
+        supabase.from('redacoes_enviadas')
+          .select('id, data_envio, status, frase_tematica')
+          .ilike('email_aluno', emailBusca)
+          .gte('data_envio', monthStart.toISOString())
+          .lt('data_envio', monthEnd.toISOString()),
+        
+        supabase.from('redacoes_simulado')
+          .select('id, data_envio, frase_tematica')
+          .ilike('email_aluno', emailBusca)
+          .gte('data_envio', monthStart.toISOString())
+          .lt('data_envio', monthEnd.toISOString()),
+          
+        supabase.from('redacoes_exercicio')
+          .select('id, data_envio, exercicio_id')
+          .ilike('email_aluno', emailBusca)
+          .gte('data_envio', monthStart.toISOString())
+          .lt('data_envio', monthEnd.toISOString())
+      ]);
+
+      // Buscar eventos da lousa no mesmo período
+      const { data: eventosLousa } = await supabase
+        .from('student_feature_event')
+        .select('action')
+        .eq('student_email', emailBusca)
+        .eq('feature', 'lousa')
+        .eq('action', 'completed')
+        .gte('occurred_at', monthStart.toISOString())
+        .lt('occurred_at', monthEnd.toISOString());
+
+      // Buscar participações em aulas ao vivo no mesmo período
+      const { data: eventosLive } = await supabase
+        .from('student_feature_event')
+        .select('action')
+        .eq('student_email', emailBusca)
+        .eq('feature', 'live')
+        .eq('action', 'participated')
+        .gte('occurred_at', monthStart.toISOString())
+        .lt('occurred_at', monthEnd.toISOString());
+
+      // Buscar aulas gravadas assistidas no mesmo período
+      const { data: eventosGravadas } = await supabase
+        .from('student_feature_event')
+        .select('action')
+        .eq('student_email', emailBusca)
+        .eq('feature', 'gravada')
+        .eq('action', 'watched')
+        .gte('occurred_at', monthStart.toISOString())
+        .lt('occurred_at', monthEnd.toISOString());
+
+      // Contabilizar (excluindo devolvidas apenas na tabela que tem status)
+      const regularCount = (redacoesRegulares.data || []).filter(r => r.status !== 'devolvida').length;
+      const simuladoCount = (redacoesSimulado.data || []).length; // simulado não tem status
+      const exercicioCount = (redacoesExercicio.data || []).length; // exercicio não tem status
+      
+      console.log(`📊 Resultado: Regular=${regularCount}, Simulado=${simuladoCount}, Exercício=${exercicioCount}`);
+      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${(eventosLive || []).length}, Gravadas=${(eventosGravadas || []).length}`);
+
+      setMonthlyActivity({
+        essays_regular: regularCount + exercicioCount, // Exercícios contam como regulares
+        essays_simulado: simuladoCount,
+        lousas_concluidas: (eventosLousa || []).length,
+        lives_participei: (eventosLive || []).length,
+        gravadas_assistidas: (eventosGravadas || []).length
+      });
+      
     } catch (error) {
       console.error('Erro ao carregar atividades mensais:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar atividades do mês",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
