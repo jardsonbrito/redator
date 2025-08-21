@@ -78,9 +78,37 @@ const Videoteca = () => {
     // Marcar como assistida primeiro
     const success = await markAsWatched(video.id, video.titulo);
     
-    // Abrir vídeo independente do resultado do tracking
+    // Determinar a melhor URL para abrir
+    let videoUrl = '';
+    
     if (video.video_url_original) {
-      window.open(video.video_url_original, '_blank');
+      videoUrl = video.video_url_original;
+    } else if (video.youtube_url) {
+      videoUrl = video.youtube_url;
+    }
+    
+    if (videoUrl) {
+      // Verificar se é uma URL do YouTube e convertê-la para formato compatível
+      const youtubeMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+      if (youtubeMatch && youtubeMatch[1]) {
+        // Usar embed do YouTube que contorna bloqueios
+        const embedUrl = `https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
+        
+        // Tentar abrir em nova janela primeiro
+        try {
+          const newWindow = window.open(embedUrl, '_blank', 'width=1280,height=720,scrollbars=yes,resizable=yes');
+          if (!newWindow) {
+            // Se bloqueado, tentar URL original
+            window.open(videoUrl, '_blank', 'noopener,noreferrer');
+          }
+        } catch (error) {
+          // Fallback para URL original
+          window.open(videoUrl, '_blank', 'noopener,noreferrer');
+        }
+      } else {
+        // Para outras URLs, abrir diretamente
+        window.open(videoUrl, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 

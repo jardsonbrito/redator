@@ -73,7 +73,7 @@ export const MonitoramentoGravadas = () => {
       'Nome do Aluno',
       'Email',
       'Turma',
-      'Aulas Gravadas Assistidas (Mês Atual)'
+      'Vídeos Assistidos (Mês Atual)'
     ];
 
     const csvData = filteredStudents.map(student => [
@@ -92,7 +92,7 @@ export const MonitoramentoGravadas = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `radar_gravadas_${dayjs().format('YYYY-MM-DD')}.csv`);
+    link.setAttribute('download', `radar_videos_${dayjs().format('YYYY-MM-DD')}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -128,7 +128,7 @@ export const MonitoramentoGravadas = () => {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Video className="h-6 w-6" />
-            Radar - Aulas Gravadas
+            Radar - Vídeos
           </h2>
           <p className="text-muted-foreground flex items-center gap-1 mt-1">
             <Calendar className="h-4 w-4" />
@@ -207,7 +207,7 @@ export const MonitoramentoGravadas = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Video className="h-5 w-5" />
-            Aulas Gravadas por Aluno
+            Vídeos por Aluno
             {selectedTurma !== 'todas' && (
               <Badge variant="secondary">
                 Turma: {selectedTurma}
@@ -223,7 +223,7 @@ export const MonitoramentoGravadas = () => {
                   <TableHead>Aluno</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Turma</TableHead>
-                  <TableHead className="text-center">Assistidas</TableHead>
+                  <TableHead className="text-center">Vídeos</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>

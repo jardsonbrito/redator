@@ -2424,7 +2424,9 @@ export type Database = {
         Returns: boolean
       }
       count_monthly_recorded_lessons: {
-        Args: { p_student_email?: string; p_user_id?: string }
+        Args:
+          | { p_student_email: string }
+          | { p_student_email?: string; p_user_id?: string }
         Returns: number
       }
       count_student_submitted_redacoes: {

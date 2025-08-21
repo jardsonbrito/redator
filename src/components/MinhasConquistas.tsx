@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trophy, Calendar, Eye, Award, TrendingUp } from "lucide-react";
+import { Trophy, Calendar, Eye, Award, TrendingUp, Video } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useRecordedLessonViews } from "@/hooks/useRecordedLessonViews";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +23,7 @@ interface MonthlyActivity {
   essays_simulado: number;
   lousas_concluidas: number;
   lives_participei: number;
-  gravadas_assistidas: number;
+  videos_assistidos: number;
 }
 
 // Função para classificar tipo de redação de forma consistente
@@ -55,6 +55,7 @@ interface TopRankingInfo {
 
 export const MinhasConquistas = () => {
   const { studentData } = useStudentAuth();
+  const { monthlyCount } = useRecordedLessonViews();
   const { monthlyCount: recordedLessonsCount } = useRecordedLessonViews();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -64,7 +65,7 @@ export const MinhasConquistas = () => {
     essays_simulado: 0,
     lousas_concluidas: 0,
     lives_participei: 0,
-    gravadas_assistidas: 0
+    videos_assistidos: 0
   });
   const [activityDetails, setActivityDetails] = useState<ActivityDetail[]>([]);
   const [loading, setLoading] = useState(false);
@@ -175,7 +176,7 @@ export const MinhasConquistas = () => {
         essays_simulado: simuladoCount,
         lousas_concluidas: (eventosLousa || []).length,
         lives_participei: livesParticipadas,
-        gravadas_assistidas: recordedLessonsCount // Usar dados do hook de tracking
+        videos_assistidos: recordedLessonsCount // Usar dados do hook de tracking
       });
       
     } catch (error) {
@@ -331,8 +332,11 @@ export const MinhasConquistas = () => {
           </div>
 
           <div className="grid grid-cols-[1fr_auto] items-center gap-3">
-            <span className="text-sm font-medium">Gravadas:</span>
-            <span className="text-sm">Assistidas: <strong className="text-red-600">{monthlyActivity.gravadas_assistidas}</strong></span>
+            <span className="text-sm font-medium flex items-center gap-2">
+              <Video className="h-4 w-4 text-purple-600" />
+              Vídeos:
+            </span>
+            <span className="text-sm">Assistidos: <strong className="text-purple-600">{monthlyCount}</strong></span>
           </div>
 
           <div className="grid grid-cols-[1fr_auto] items-center gap-3">
@@ -384,8 +388,8 @@ export const MinhasConquistas = () => {
                 </Card>
                 <Card>
                   <CardContent className="p-3 text-center">
-                    <div className="text-lg font-bold text-red-600">{monthlyActivity.gravadas_assistidas}</div>
-                    <div className="text-xs text-muted-foreground">Gravadas</div>
+                    <div className="text-lg font-bold text-purple-600">{monthlyActivity.videos_assistidos}</div>
+                    <div className="text-xs text-muted-foreground">Vídeos</div>
                   </CardContent>
                 </Card>
               </div>
