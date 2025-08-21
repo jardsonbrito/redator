@@ -195,11 +195,6 @@ export function LousaRespostasCorretor({ lousa }: LousaRespostasCorretorProps) {
                   <TableCell>
                     <div>
                       <div className="font-medium">{resposta.nome_aluno}</div>
-                      {resposta.turma && (
-                        <div className="text-sm text-muted-foreground">
-                          Turma {resposta.turma}
-                        </div>
-                      )}
                     </div>
                   </TableCell>
                   <TableCell>
