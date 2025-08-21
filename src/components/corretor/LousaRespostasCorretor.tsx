@@ -92,7 +92,7 @@ export function LousaRespostasCorretor({ lousa }: LousaRespostasCorretorProps) {
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      draft: { label: 'Rascunho', variant: 'outline' as const },
+      draft: { label: 'Pendente', variant: 'outline' as const },
       submitted: { label: 'Enviada', variant: 'secondary' as const },
       returned: { label: 'Devolvida', variant: 'destructive' as const },
       graded: { label: 'Corrigida', variant: 'default' as const }
