@@ -2,7 +2,7 @@
 import { StudentHeader } from "@/components/StudentHeader";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
-import { MinhasConquistas } from "@/components/MinhasConquistas";
+import { MinhasConquistasCard } from "@/components/MinhasConquistasCard";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation } from "lucide-react";
 
@@ -125,7 +125,7 @@ const Student = () => {
             <div className="max-w-5xl mx-auto">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <MinhasRedacoes />
-                <MinhasConquistas />
+                <MinhasConquistasCard />
               </div>
             </div>
             

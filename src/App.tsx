@@ -69,6 +69,7 @@ import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
 import RedacaoManuscrita from "./pages/RedacaoManuscrita";
+import MinhasConquistas from "./pages/MinhasConquistas";
 
 function App() {
   return (
@@ -109,6 +110,7 @@ function App() {
                   <Route path="/lousa" element={<AlunoLousaList />} />
                   <Route path="/lousa/:id" element={<LousaResponse />} />
                   <Route path="/ajuda-rapida" element={<AjudaRapida />} />
+                  <Route path="/minhas-conquistas" element={<MinhasConquistas />} />
 
                   {/* Rotas do Admin */}
                   <Route path="/admin" element={<Admin />} />
