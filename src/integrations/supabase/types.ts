@@ -2730,12 +2730,7 @@ export type Database = {
         Args:
           | { p_aluno_id: string; p_aula_id: string }
           | { p_aula_id: string; p_email: string }
-        Returns: {
-          aluno_id: string
-          aula_id: string
-          entrada_at: string
-          saida_at: string
-        }[]
+        Returns: undefined
       }
       registrar_entrada_com_token: {
         Args:
