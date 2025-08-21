@@ -2565,6 +2565,31 @@ export type Database = {
           turma: string
         }[]
       }
+      get_student_activity_details: {
+        Args: {
+          p_class_name: string
+          p_month: number
+          p_student_email: string
+          p_year: number
+        }
+        Returns: {
+          acao: string
+          data_hora: string
+          entity_id: string
+          metadata: Json
+          tipo: string
+        }[]
+      }
+      get_student_monthly_summary: {
+        Args: { p_month: number; p_student_email: string; p_year: number }
+        Returns: {
+          essays_regular: number
+          essays_simulado: number
+          gravadas_assistidas: number
+          lives_participei: number
+          lousas_concluidas: number
+        }[]
+      }
       get_student_redacoes: {
         Args: { student_email: string }
         Returns: {
@@ -2596,6 +2621,19 @@ export type Database = {
           nota_total: number
           status: string
           tipo_envio: string
+        }[]
+      }
+      get_students_monthly_activity: {
+        Args: { p_class_name: string; p_month: number; p_year: number }
+        Returns: {
+          essays_regular: number
+          essays_simulado: number
+          gravadas_assistidas: number
+          lives_participei: number
+          lousas_concluidas: number
+          nome: string
+          profile_id: string
+          student_email: string
         }[]
       }
       get_turma_codigo: {

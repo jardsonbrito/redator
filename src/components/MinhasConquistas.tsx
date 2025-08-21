@@ -69,8 +69,8 @@ export const MinhasConquistas = () => {
 
       if (error) throw error;
       
-      if (data && data.length > 0) {
-        setMonthlyActivity(data[0]);
+      if (data && Array.isArray(data) && data.length > 0) {
+        setMonthlyActivity(data[0] as MonthlyActivity);
       } else {
         setMonthlyActivity({
           essays_regular: 0,
@@ -100,7 +100,7 @@ export const MinhasConquistas = () => {
       });
 
       if (error) throw error;
-      setActivityDetails(data || []);
+      setActivityDetails((data as ActivityDetail[]) || []);
     } catch (error) {
       console.error('Erro ao carregar detalhes das atividades:', error);
       toast({

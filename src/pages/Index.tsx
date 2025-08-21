@@ -11,6 +11,7 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { StudentProfile } from "@/components/StudentProfile";
+import { MinhasConquistas } from "@/components/MinhasConquistas";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -156,8 +157,11 @@ const Index = () => {
             {/* Perfil do Estudante */}
             <StudentProfile />
 
-            {/* Componente Meu Desempenho */}
-            <MeuDesempenho />
+            {/* Cards do painel */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <MeuDesempenho />
+              <MinhasConquistas />
+            </div>
 
             {/* Mural de Avisos */}
             <MuralAvisos turmaCode={turmaCode} />

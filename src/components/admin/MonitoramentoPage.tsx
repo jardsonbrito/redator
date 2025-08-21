@@ -70,7 +70,7 @@ export const MonitoramentoPage = () => {
       });
 
       if (error) throw error;
-      setStudents(data || []);
+      setStudents((data as StudentActivity[]) || []);
     } catch (error) {
       console.error('Erro ao carregar alunos:', error);
       toast({
@@ -96,7 +96,7 @@ export const MonitoramentoPage = () => {
       });
 
       if (error) throw error;
-      setStudentDetails(data || []);
+      setStudentDetails((data as StudentDetail[]) || []);
     } catch (error) {
       console.error('Erro ao carregar detalhes do aluno:', error);
       toast({

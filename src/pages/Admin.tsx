@@ -62,6 +62,7 @@ import { AvisoList } from "@/components/admin/AvisoList";
 import { RadarUpload } from "@/components/admin/RadarUpload";
 import { RadarList } from "@/components/admin/RadarList";
 import { RadarRedacoes } from "@/components/admin/RadarRedacoes";
+import { MonitoramentoPage } from "@/components/admin/MonitoramentoPage";
 import { AulaVirtualForm } from "@/components/admin/AulaVirtualForm";
 import { AulaVirtualList } from "@/components/admin/AulaVirtualList";
 import { AulaVirtualEditForm } from "@/components/admin/AulaVirtualEditForm";
@@ -374,12 +375,15 @@ const Admin = () => {
                 Acompanhe aqui o desempenho geral dos alunos nos exercícios e redações corrigidas.
               </p>
             </div>
-            <Tabs defaultValue="exercicios" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="monitoramento" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="monitoramento">Monitoramento</TabsTrigger>
                 <TabsTrigger value="exercicios">Dados de Exercícios</TabsTrigger>
                 <TabsTrigger value="redacoes">Redações Corrigidas</TabsTrigger>
-                
               </TabsList>
+              <TabsContent value="monitoramento" className="space-y-6">
+                <MonitoramentoPage />
+              </TabsContent>
               <TabsContent value="exercicios" className="space-y-6">
                 <RadarUpload />
                 <RadarList />
