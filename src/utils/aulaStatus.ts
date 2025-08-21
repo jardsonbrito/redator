@@ -1,7 +1,4 @@
-import { format, parseISO, isAfter, isBefore, isEqual } from 'date-fns';
-import { fromZonedTime, toZonedTime } from 'date-fns-tz';
-
-const TZ = 'America/Sao_Paulo';
+import { format, parseISO, isAfter, isBefore, isEqual, addHours } from 'date-fns';
 
 type Aula = {
   data_aula: string;       // "2025-08-20" ou "20/08/2025"
@@ -33,21 +30,16 @@ export function computeStatus(aula: Aula): 'agendada' | 'ao_vivo' | 'encerrada' 
     const horarioInicioNorm = normalizeTime(aula.horario_inicio);
     const horarioFimNorm = normalizeTime(aula.horario_fim);
 
-    // Criar DateTimes no fuso horário de São Paulo
-    const startISO = `${dataFormatada}T${horarioInicioNorm}:00`;
-    const endISO = `${dataFormatada}T${horarioFimNorm}:00`;
+    // Criar DateTimes em ISO (assumindo horário local de Brasília UTC-3)
+    const startISO = `${dataFormatada}T${horarioInicioNorm}:00-03:00`;
+    const endISO = `${dataFormatada}T${horarioFimNorm}:00-03:00`;
     
     // Parse das datas
     const startDate = parseISO(startISO);
     const endDate = parseISO(endISO);
     
-    // Converter para o fuso horário de São Paulo
-    const startLocal = fromZonedTime(startDate, TZ);
-    const endLocal = fromZonedTime(endDate, TZ);
-    
-    // Data atual no fuso horário de São Paulo
+    // Data atual
     const now = new Date();
-    const nowLocal = toZonedTime(now, TZ);
     
     console.log('⏰ Status Calculation:', {
       data_original: aula.data_aula,
@@ -58,21 +50,21 @@ export function computeStatus(aula: Aula): 'agendada' | 'ao_vivo' | 'encerrada' 
       horario_fim_norm: horarioFimNorm,
       start_iso: startISO,
       end_iso: endISO,
-      start_local: format(startLocal, 'dd/MM/yyyy HH:mm:ss'),
-      end_local: format(endLocal, 'dd/MM/yyyy HH:mm:ss'),
-      now_local: format(nowLocal, 'dd/MM/yyyy HH:mm:ss'),
-      is_before_start: isBefore(nowLocal, startLocal),
-      is_after_start: isAfter(nowLocal, startLocal) || isEqual(nowLocal, startLocal),
-      is_before_end: isBefore(nowLocal, endLocal),
+      start_date: format(startDate, 'dd/MM/yyyy HH:mm:ss'),
+      end_date: format(endDate, 'dd/MM/yyyy HH:mm:ss'),
+      now: format(now, 'dd/MM/yyyy HH:mm:ss'),
+      is_before_start: isBefore(now, startDate),
+      is_after_start: isAfter(now, startDate) || isEqual(now, startDate),
+      is_before_end: isBefore(now, endDate),
     });
 
     // Lógica de status
-    if (isBefore(nowLocal, startLocal)) {
+    if (isBefore(now, startDate)) {
       console.log('✅ Status: AGENDADA');
       return 'agendada';
     }
     
-    if ((isAfter(nowLocal, startLocal) || isEqual(nowLocal, startLocal)) && isBefore(nowLocal, endLocal)) {
+    if ((isAfter(now, startDate) || isEqual(now, startDate)) && isBefore(now, endDate)) {
       console.log('✅ Status: AO_VIVO');
       return 'ao_vivo';
     }
@@ -100,18 +92,15 @@ export function toUTCISO(aula: Aula) {
       return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
     };
 
-    const startISO = `${dataFormatada}T${normalizeTime(aula.horario_inicio)}:00`;
-    const endISO = `${dataFormatada}T${normalizeTime(aula.horario_fim)}:00`;
+    const startISO = `${dataFormatada}T${normalizeTime(aula.horario_inicio)}:00-03:00`;
+    const endISO = `${dataFormatada}T${normalizeTime(aula.horario_fim)}:00-03:00`;
     
     const startDate = parseISO(startISO);
     const endDate = parseISO(endISO);
     
-    const startUTC = fromZonedTime(startDate, TZ);
-    const endUTC = fromZonedTime(endDate, TZ);
-    
     return { 
-      start_utc: startUTC.toISOString(), 
-      end_utc: endUTC.toISOString() 
+      start_utc: startDate.toISOString(), 
+      end_utc: endDate.toISOString() 
     };
   } catch (error) {
     console.error('Erro em toUTCISO:', error);
