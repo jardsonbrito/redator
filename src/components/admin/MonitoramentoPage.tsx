@@ -63,14 +63,48 @@ export const MonitoramentoPage = () => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_students_monthly_activity', {
-        p_class_name: selectedTurma,
-        p_month: selectedMonth,
-        p_year: selectedYear
-      });
+      // Consultar alunos da turma com resumo mensal usando joins
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          nome,
+          email
+        `)
+        .eq('user_type', 'aluno')
+        .eq('ativo', true)
+        .eq('turma', selectedTurma)
+        .order('nome');
 
       if (error) throw error;
-      setStudents((data as StudentActivity[]) || []);
+
+      // Para cada aluno, buscar suas atividades do mês
+      const studentsWithActivity: StudentActivity[] = [];
+      
+      for (const student of data || []) {
+        const { data: activities } = await supabase
+          .from('v_student_month_activity')
+          .select('*')
+          .eq('student_email', student.email.toLowerCase())
+          .eq('class_name', selectedTurma)
+          .eq('month', selectedMonth)
+          .eq('year', selectedYear)
+          .limit(1);
+
+        const activity = activities?.[0];
+        studentsWithActivity.push({
+          profile_id: student.id,
+          nome: student.nome,
+          student_email: student.email.toLowerCase(),
+          essays_regular: activity?.essays_regular || 0,
+          essays_simulado: activity?.essays_simulado || 0,
+          lousas_concluidas: activity?.lousas_concluidas || 0,
+          lives_participei: activity?.lives_participei || 0,
+          gravadas_assistidas: activity?.gravadas_assistidas || 0
+        });
+      }
+
+      setStudents(studentsWithActivity);
     } catch (error) {
       console.error('Erro ao carregar alunos:', error);
       toast({
@@ -88,15 +122,49 @@ export const MonitoramentoPage = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_student_activity_details', {
-        p_student_email: selectedStudent.student_email,
-        p_class_name: selectedTurma,
-        p_month: selectedMonth,
-        p_year: selectedYear
-      });
+      // Consultar diretamente a tabela student_feature_event
+      const { data, error } = await supabase
+        .from('student_feature_event')
+        .select(`
+          occurred_at,
+          feature,
+          action,
+          entity_id,
+          metadata
+        `)
+        .eq('student_email', selectedStudent.student_email)
+        .eq('class_name', selectedTurma)
+        .eq('month', selectedMonth)
+        .eq('year', selectedYear)
+        .order('occurred_at', { ascending: false });
 
       if (error) throw error;
-      setStudentDetails((data as StudentDetail[]) || []);
+
+      const formattedData: StudentDetail[] = (data || []).map(item => ({
+        data_hora: new Date(item.occurred_at).toLocaleString('pt-BR', {
+          timeZone: 'America/Fortaleza',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        tipo: item.feature === 'essay_regular' ? 'Redação (Regular)' :
+              item.feature === 'essay_simulado' ? 'Redação (Simulado)' :
+              item.feature === 'lousa' ? 'Lousa' :
+              item.feature === 'live' ? 'Aula ao Vivo' :
+              item.feature === 'gravada' ? 'Aula Gravada' : item.feature,
+        acao: item.action === 'submitted' ? 'Enviado' :
+              item.action === 'opened' ? 'Aberta' :
+              item.action === 'completed' ? 'Concluída' :
+              item.action === 'participated' ? 'Participei' :
+              item.action === 'not_participated' ? 'Não participei' :
+              item.action === 'watched' ? 'Assistiu' : item.action,
+        entity_id: item.entity_id || '',
+        metadata: item.metadata
+      }));
+
+      setStudentDetails(formattedData);
     } catch (error) {
       console.error('Erro ao carregar detalhes do aluno:', error);
       toast({

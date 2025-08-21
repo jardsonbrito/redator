@@ -61,16 +61,25 @@ export const MinhasConquistas = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_student_monthly_summary', {
-        p_student_email: studentData.email.toLowerCase(),
-        p_month: selectedMonth,
-        p_year: selectedYear
-      });
+      // Consultar diretamente a view v_student_month_activity
+      const { data, error } = await supabase
+        .from('v_student_month_activity')
+        .select('*')
+        .eq('student_email', studentData.email.toLowerCase())
+        .eq('month', selectedMonth)
+        .eq('year', selectedYear)
+        .limit(1);
 
       if (error) throw error;
       
-      if (data && Array.isArray(data) && data.length > 0) {
-        setMonthlyActivity(data[0] as MonthlyActivity);
+      if (data && data.length > 0) {
+        setMonthlyActivity({
+          essays_regular: data[0].essays_regular || 0,
+          essays_simulado: data[0].essays_simulado || 0,
+          lousas_concluidas: data[0].lousas_concluidas || 0,
+          lives_participei: data[0].lives_participei || 0,
+          gravadas_assistidas: data[0].gravadas_assistidas || 0
+        });
       } else {
         setMonthlyActivity({
           essays_regular: 0,
@@ -92,15 +101,46 @@ export const MinhasConquistas = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_student_activity_details', {
-        p_student_email: studentData.email.toLowerCase(),
-        p_class_name: studentData.turma || '',
-        p_month: selectedMonth,
-        p_year: selectedYear
-      });
+      // Consultar diretamente a tabela student_feature_event
+      const { data, error } = await supabase
+        .from('student_feature_event')
+        .select(`
+          occurred_at,
+          feature,
+          action,
+          entity_id
+        `)
+        .eq('student_email', studentData.email.toLowerCase())
+        .eq('month', selectedMonth)
+        .eq('year', selectedYear)
+        .order('occurred_at', { ascending: false });
 
       if (error) throw error;
-      setActivityDetails((data as ActivityDetail[]) || []);
+      
+      const formattedData: ActivityDetail[] = (data || []).map(item => ({
+        data_hora: new Date(item.occurred_at).toLocaleString('pt-BR', {
+          timeZone: 'America/Fortaleza',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        tipo: item.feature === 'essay_regular' ? 'Redação (Regular)' :
+              item.feature === 'essay_simulado' ? 'Redação (Simulado)' :
+              item.feature === 'lousa' ? 'Lousa' :
+              item.feature === 'live' ? 'Aula ao Vivo' :
+              item.feature === 'gravada' ? 'Aula Gravada' : item.feature,
+        acao: item.action === 'submitted' ? 'Enviado' :
+              item.action === 'opened' ? 'Aberta' :
+              item.action === 'completed' ? 'Concluída' :
+              item.action === 'participated' ? 'Participei' :
+              item.action === 'not_participated' ? 'Não participei' :
+              item.action === 'watched' ? 'Assistiu' : item.action,
+        entity_id: item.entity_id || ''
+      }));
+      
+      setActivityDetails(formattedData);
     } catch (error) {
       console.error('Erro ao carregar detalhes das atividades:', error);
       toast({
