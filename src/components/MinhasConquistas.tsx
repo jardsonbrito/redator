@@ -56,7 +56,6 @@ interface TopRankingInfo {
 export const MinhasConquistas = () => {
   const { studentData } = useStudentAuth();
   const { monthlyCount } = useRecordedLessonViews();
-  const { monthlyCount: recordedLessonsCount } = useRecordedLessonViews();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -77,7 +76,7 @@ export const MinhasConquistas = () => {
       loadMonthlyActivity();
       checkTopRanking();
     }
-  }, [studentData.email, selectedMonth, selectedYear, recordedLessonsCount]);
+  }, [studentData.email, selectedMonth, selectedYear, monthlyCount]);
 
   const loadMonthlyActivity = async () => {
     if (!studentData.email) return;
@@ -176,7 +175,7 @@ export const MinhasConquistas = () => {
         essays_simulado: simuladoCount,
         lousas_concluidas: (eventosLousa || []).length,
         lives_participei: livesParticipadas,
-        videos_assistidos: recordedLessonsCount // Usar dados do hook de tracking
+        videos_assistidos: monthlyCount // Usar dados do hook de tracking
       });
       
     } catch (error) {
