@@ -63,45 +63,97 @@ export const MonitoramentoPage = () => {
     
     setLoading(true);
     try {
-      // Consultar alunos da turma com resumo mensal usando joins
-      const { data, error } = await supabase
+      // Consultar alunos da turma
+      const { data: alunosData, error: alunosError } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          nome,
-          email
-        `)
+        .select('id, nome, email')
         .eq('user_type', 'aluno')
         .eq('ativo', true)
         .eq('turma', selectedTurma)
         .order('nome');
 
-      if (error) throw error;
+      if (alunosError) throw alunosError;
 
-      // Para cada aluno, buscar suas atividades do mês
+      // Para cada aluno, buscar suas atividades do mês usando email
       const studentsWithActivity: StudentActivity[] = [];
       
-      for (const student of data || []) {
-        const { data: activities } = await supabase
+      for (const aluno of alunosData || []) {
+        const emailAluno = aluno.email.toLowerCase().trim();
+        
+        // Primeiro tentar buscar da view agregada
+        const { data: viewActivity } = await supabase
           .from('v_student_month_activity')
           .select('*')
-          .eq('student_email', student.email.toLowerCase())
+          .eq('student_email', emailAluno)
           .eq('class_name', selectedTurma)
           .eq('month', selectedMonth)
           .eq('year', selectedYear)
-          .limit(1);
+          .maybeSingle();
 
-        const activity = activities?.[0];
-        studentsWithActivity.push({
-          profile_id: student.id,
-          nome: student.nome,
-          student_email: student.email.toLowerCase(),
-          essays_regular: activity?.essays_regular || 0,
-          essays_simulado: activity?.essays_simulado || 0,
-          lousas_concluidas: activity?.lousas_concluidas || 0,
-          lives_participei: activity?.lives_participei || 0,
-          gravadas_assistidas: activity?.gravadas_assistidas || 0
-        });
+        if (viewActivity) {
+          // Se encontrou na view, usar os dados
+          studentsWithActivity.push({
+            profile_id: aluno.id,
+            nome: aluno.nome,
+            student_email: emailAluno,
+            essays_regular: viewActivity.essays_regular || 0,
+            essays_simulado: viewActivity.essays_simulado || 0,
+            lousas_concluidas: viewActivity.lousas_concluidas || 0,
+            lives_participei: viewActivity.lives_participei || 0,
+            gravadas_assistidas: viewActivity.gravadas_assistidas || 0
+          });
+        } else {
+          // Se não encontrou na view, calcular manualmente
+          const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+          const endDate = new Date(selectedYear, selectedMonth, 1);
+          
+          // Contar redações regulares
+          const { count: regulares } = await supabase
+            .from('redacoes_enviadas')
+            .select('*', { count: 'exact', head: true })
+            .ilike('email_aluno', emailAluno)
+            .gte('data_envio', startDate.toISOString())
+            .lt('data_envio', endDate.toISOString())
+            .neq('status', 'devolvida');
+
+          // Contar redações de simulado
+          const { count: simulados } = await supabase
+            .from('redacoes_simulado')
+            .select('*', { count: 'exact', head: true })
+            .ilike('email_aluno', emailAluno)
+            .gte('data_envio', startDate.toISOString())
+            .lt('data_envio', endDate.toISOString())
+            .is('devolvida_por', null);
+
+          // Contar lousas concluídas
+          const { count: lousas } = await supabase
+            .from('lousa_resposta')
+            .select('*', { count: 'exact', head: true })
+            .ilike('email_aluno', emailAluno)
+            .eq('status', 'submitted')
+            .gte('submitted_at', startDate.toISOString())
+            .lt('submitted_at', endDate.toISOString());
+
+          // Contar presenças em aulas ao vivo
+          const { count: lives } = await supabase
+            .from('presenca_aulas')
+            .select('*', { count: 'exact', head: true })
+            .ilike('email_aluno', emailAluno)
+            .not('entrada_at', 'is', null)
+            .gte('entrada_at', startDate.toISOString())
+            .lt('entrada_at', endDate.toISOString());
+
+          studentsWithActivity.push({
+            profile_id: aluno.id,
+            nome: aluno.nome,
+            student_email: emailAluno,
+            essays_regular: regulares || 0,
+            essays_simulado: simulados || 0,
+            lousas_concluidas: lousas || 0,
+            lives_participei: lives || 0,
+            gravadas_assistidas: 0 // Placeholder - implementar se necessário
+          });
+        }
       }
 
       setStudents(studentsWithActivity);
