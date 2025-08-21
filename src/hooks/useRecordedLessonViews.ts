@@ -98,6 +98,9 @@ export function useRecordedLessonViews() {
         queryClient.invalidateQueries({ 
           queryKey: ['radar-gravadas'] 
         }),
+        queryClient.invalidateQueries({ 
+          queryKey: ['monthly-recorded-lessons-count'] 
+        }),
       ]);
 
       return true;
@@ -146,7 +149,8 @@ export function useRecordedLessonViews() {
     },
     enabled: !!studentData.email,
     refetchOnMount: true,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // Forçar refetch
+    staleTime: 0, // Sempre considerar dados como antigos
   });
 
   return {
