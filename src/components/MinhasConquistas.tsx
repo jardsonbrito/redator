@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trophy, Calendar, Eye, Award, TrendingUp } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useRecordedLessonViews } from "@/hooks/useRecordedLessonViews";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import dayjs from 'dayjs';
@@ -54,6 +55,7 @@ interface TopRankingInfo {
 
 export const MinhasConquistas = () => {
   const { studentData } = useStudentAuth();
+  const { monthlyCount: recordedLessonsCount } = useRecordedLessonViews();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -74,7 +76,7 @@ export const MinhasConquistas = () => {
       loadMonthlyActivity();
       checkTopRanking();
     }
-  }, [studentData.email, selectedMonth, selectedYear]);
+  }, [studentData.email, selectedMonth, selectedYear, recordedLessonsCount]);
 
   const loadMonthlyActivity = async () => {
     if (!studentData.email) return;
@@ -173,7 +175,7 @@ export const MinhasConquistas = () => {
         essays_simulado: simuladoCount,
         lousas_concluidas: (eventosLousa || []).length,
         lives_participei: livesParticipadas,
-        gravadas_assistidas: (eventosGravadas || []).length
+        gravadas_assistidas: recordedLessonsCount // Usar dados do hook de tracking
       });
       
     } catch (error) {

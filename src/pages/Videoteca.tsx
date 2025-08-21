@@ -1,13 +1,28 @@
-
-import { Card, CardContent } from "@/components/ui/card";
-import { Play } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StudentHeader } from "@/components/StudentHeader";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { StudentHeader } from "@/components/StudentHeader";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Play, CheckCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useRecordedLessonViews } from "@/hooks/useRecordedLessonViews";
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const Videoteca = () => {
+  const { 
+    markAsWatched, 
+    isWatched, 
+    getWatchedDate, 
+    isMarking 
+  } = useRecordedLessonViews();
+
   const { data: videos, isLoading, error } = useQuery({
     queryKey: ['videos'],
     queryFn: async () => {
@@ -59,9 +74,14 @@ const Videoteca = () => {
     );
   }
 
-  const openVideo = (url: string) => {
-    console.log('Abrindo vídeo:', url);
-    window.open(url, '_blank');
+  const handleAssistir = async (video: any) => {
+    // Marcar como assistida primeiro
+    const success = await markAsWatched(video.id, video.titulo);
+    
+    // Abrir vídeo independente do resultado do tracking
+    if (video.video_url_original) {
+      window.open(video.video_url_original, '_blank');
+    }
   };
 
   // Função para extrair thumbnail do YouTube
@@ -96,11 +116,8 @@ const Videoteca = () => {
               const defaultImageUrl = `https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop&auto=format&q=80&sig=${video.id}`;
               const finalImageUrl = imageUrl || defaultImageUrl;
               
-              // URL para abrir o vídeo
-              const videoUrl = video.video_url_original || video.youtube_url;
-              
               return (
-                <div key={video.id} className="group cursor-pointer" onClick={() => openVideo(videoUrl)}>
+                <div key={video.id} className="group">
                   <Card className="h-full transition-all duration-300 hover:shadow-lg hover:scale-105 border-redator-accent/20 hover:border-redator-secondary/50">
                     <div className="aspect-video overflow-hidden rounded-t-lg relative">
                       <img 
@@ -125,20 +142,63 @@ const Videoteca = () => {
                       </div>
                     </div>
                     <CardContent className="p-3 sm:p-4">
-                      {(video.eixo_tematico || video.categoria) && (
-                        <div className="mb-2">
-                          <span className="text-xs font-medium text-white bg-redator-secondary px-2 py-1 rounded">
-                            {video.eixo_tematico || video.categoria}
-                          </span>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            {video.titulo && (
+                              <h3 className="font-semibold text-sm sm:text-base text-redator-primary line-clamp-2 group-hover:text-redator-accent transition-colors">
+                                {video.titulo}
+                              </h3>
+                            )}
+                            {isWatched(video.id) && (
+                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            )}
+                          </div>
+                          
+                          {(video.eixo_tematico || video.categoria) && (
+                            <div className="mb-2">
+                              <span className="text-xs font-medium text-white bg-redator-secondary px-2 py-1 rounded">
+                                {video.eixo_tematico || video.categoria}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div className="text-xs text-redator-accent">
+                            📅 {new Date(video.created_at).toLocaleDateString('pt-BR')}
+                          </div>
+
+                          {isWatched(video.id) && (
+                            <div className="text-xs text-green-600 mt-1">
+                              Assistida em {dayjs(getWatchedDate(video.id))
+                                .tz('America/Fortaleza')
+                                .format('DD/MM/YYYY HH:mm')}
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {video.titulo && (
-                        <h3 className="font-semibold text-sm sm:text-base text-redator-primary line-clamp-2 group-hover:text-redator-accent transition-colors">
-                          {video.titulo}
-                        </h3>
-                      )}
-                      <div className="mt-2 text-xs text-redator-accent">
-                        📅 {new Date(video.created_at).toLocaleDateString('pt-BR')}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {isWatched(video.id) ? (
+                            <Badge variant="default" className="text-xs bg-green-100 text-green-700">
+                              Assistida
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
+                              Nova
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <Button 
+                          size="sm"
+                          className="flex items-center gap-2" 
+                          onClick={() => handleAssistir(video)}
+                          disabled={isMarking}
+                        >
+                          <Play className="h-3 w-3" />
+                          Assistir
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

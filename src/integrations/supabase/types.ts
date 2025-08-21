@@ -1195,6 +1195,33 @@ export type Database = {
           },
         ]
       }
+      recorded_lesson_views: {
+        Row: {
+          created_at: string
+          first_watched_at: string
+          lesson_id: string
+          student_email: string | null
+          student_name: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_watched_at?: string
+          lesson_id: string
+          student_email?: string | null
+          student_name?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_watched_at?: string
+          lesson_id?: string
+          student_email?: string | null
+          student_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       redacao_devolucao_visualizacoes: {
         Row: {
           created_at: string | null
@@ -2396,6 +2423,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      count_monthly_recorded_lessons: {
+        Args: { p_student_email?: string; p_user_id?: string }
+        Returns: number
+      }
       count_student_submitted_redacoes: {
         Args: { student_email: string }
         Returns: number
@@ -2482,6 +2513,23 @@ export type Database = {
       get_credits_by_email: {
         Args: { user_email: string }
         Returns: number
+      }
+      get_recorded_lesson_views_map: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          first_watched_at: string
+          lesson_id: string
+        }[]
+      }
+      get_recorded_lessons_radar: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          recorded_lessons_count: number
+          student_email: string
+          student_id: string
+          student_name: string
+          turma: string
+        }[]
       }
       get_redacoes_by_turma: {
         Args: { p_turma: string }
@@ -2717,6 +2765,14 @@ export type Database = {
           tabela_origem_param: string
         }
         Returns: boolean
+      }
+      mark_recorded_lesson_view: {
+        Args: {
+          p_lesson_id: string
+          p_student_email?: string
+          p_student_name?: string
+        }
+        Returns: Json
       }
       merge_student_redacoes: {
         Args: { source_student_id: string; target_student_id: string }
