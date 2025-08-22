@@ -95,7 +95,7 @@ export const RadarUpload = () => {
             data_realizacao: dataRealizacao,
             nota,
             exercicio_id: exercicioId || null,
-            importado_por: user.id
+            importado_por: null // Remover dependência do usuário
           });
         }
       }
