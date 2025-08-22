@@ -93,7 +93,7 @@ export const MinhasConquistas = () => {
       console.log(`📅 Intervalo: ${monthStart.toISOString()} até ${monthEnd.toISOString()}`);
 
       // === USAR A MESMA FONTE QUE MeuDesempenho para CONSISTÊNCIA ===
-      const [redacoesRegulares, redacoesSimulado, redacoesExercicio] = await Promise.all([
+      const [redacoesRegulares, redacoesSimulado, redacoesExercicio, radarDados] = await Promise.all([
         supabase.from('redacoes_enviadas')
           .select('id, data_envio, status, frase_tematica')
           .ilike('email_aluno', emailBusca)
@@ -110,7 +110,14 @@ export const MinhasConquistas = () => {
           .select('id, data_envio, exercicio_id')
           .ilike('email_aluno', emailBusca)
           .gte('data_envio', monthStart.toISOString())
-          .lt('data_envio', monthEnd.toISOString())
+          .lt('data_envio', monthEnd.toISOString()),
+
+        // Buscar dados importados via CSV/radar
+        supabase.from('radar_dados')
+          .select('id, data_realizacao, titulo_exercicio, nota')
+          .ilike('email_aluno', emailBusca)
+          .gte('data_realizacao', monthStart.format('YYYY-MM-DD'))
+          .lte('data_realizacao', monthEnd.format('YYYY-MM-DD'))
       ]);
 
       // === CLASSIFICAR POR TIPO DE FORMA ÚNICA ===
@@ -123,13 +130,17 @@ export const MinhasConquistas = () => {
       // 3. Redações de exercício (por enquanto considerar como regulares)
       const exercicioFiltradas = (redacoesExercicio.data || []);
 
+      // 4. Dados importados via radar/CSV (classificar como exercícios regulares)
+      const radarFiltrados = (radarDados.data || []);
+
       // === AGREGAR CONTADORES ===
       let regularCount = 0;
       let simuladoCount = 0;
 
-      // Contar regulares (redacoes_enviadas + exercicio)
+      // Contar regulares (redacoes_enviadas + exercicio + radar)
       regularCount += regularesFiltradas.length;
       regularCount += exercicioFiltradas.length;
+      regularCount += radarFiltrados.length; // Adicionar dados do radar
 
       // Contar simulados (redacoes_simulado)
       simuladoCount += simuladoFiltradas.length;
@@ -158,6 +169,7 @@ export const MinhasConquistas = () => {
         .lt('occurred_at', monthEnd.toISOString());
 
       console.log(`📊 Resultado: Regular=${regularCount}, Simulado=${simuladoCount}`);
+      console.log(`📊 Incluindo ${radarFiltrados.length} exercícios importados via CSV/radar`);
       console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}, Vídeos=${monthlyCount}`);
 
       setMonthlyActivity({
