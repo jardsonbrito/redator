@@ -604,7 +604,10 @@ const Admin = () => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => setActiveView("dashboard")}
+                onClick={() => {
+                  setActiveView("dashboard");
+                  navigate('/admin', { replace: true });
+                }}
                 className="hover:bg-primary/10 text-primary"
               >
                 Dashboard
