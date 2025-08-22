@@ -22,7 +22,7 @@ import {
   AlertTriangle,
   Download,
   Settings,
-  Shield,
+  ShieldCheck,
   Presentation
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -112,13 +112,36 @@ const Admin = () => {
   const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
   const [mostrarPopupAprovacao, setMostrarPopupAprovacao] = useState(false);
 
+  // Definir menuItems antes dos useEffects
+  const menuItems = [
+    { id: "temas", label: "Temas", icon: BookOpen },
+    { id: "redacoes", label: "Redações Exemplares", icon: FileText },
+    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
+    { id: "simulados", label: "Simulados", icon: ClipboardCheck },
+    { id: "exercicios", label: "Exercícios", icon: NotebookPen },
+    { id: "lousa", label: "Lousa", icon: Presentation },
+    { id: "salas-virtuais", label: "Aula ao Vivo", icon: Video },
+    { id: "aulas", label: "Aulas Gravadas", icon: GraduationCap },
+    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
+    { id: "videos", label: "Vídeos", icon: Video },
+    { id: "biblioteca", label: "Biblioteca", icon: File },
+    { id: "radar", label: "Radar", icon: Radar },
+    { id: "ajuda-rapida", label: "Ajuda Rápida", icon: MessageSquare },
+    { id: "alunos", label: "Alunos", icon: Users },
+    { id: "corretores", label: "Corretores", icon: UserCheck },
+    { id: "professores", label: "Professores", icon: GraduationCap },
+    { id: "exportacao", label: "Exportação", icon: Download },
+    { id: "configuracoes", label: "Configurações", icon: Settings },
+    { id: "administradores", label: "Administradores", icon: ShieldCheck }
+  ];
+
   // Verificar parâmetros de query string para definir view inicial
   useEffect(() => {
     const view = searchParams.get('view');
     if (view && menuItems.some(item => item.id === view)) {
       setActiveView(view);
     }
-  }, [searchParams]);
+  }, [searchParams, menuItems]);
 
   // Mostrar popup automaticamente quando há alunos pendentes
   useEffect(() => {
@@ -139,27 +162,6 @@ const Admin = () => {
     signOut();
   };
 
-  const menuItems = [
-    { id: "temas", label: "Temas", icon: BookOpen },
-    { id: "redacoes", label: "Redações Exemplares", icon: FileText },
-    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
-    { id: "simulados", label: "Simulados", icon: ClipboardCheck },
-    { id: "exercicios", label: "Exercícios", icon: NotebookPen },
-    { id: "lousa", label: "Lousa", icon: Presentation },
-    { id: "salas-virtuais", label: "Aula ao Vivo", icon: Video },
-    { id: "aulas", label: "Aulas Gravadas", icon: GraduationCap },
-    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
-    { id: "videos", label: "Vídeos", icon: Video },
-    { id: "biblioteca", label: "Biblioteca", icon: File },
-    { id: "radar", label: "Radar", icon: Radar },
-    { id: "ajuda-rapida", label: "Ajuda Rápida", icon: MessageSquare },
-    { id: "alunos", label: "Alunos", icon: Users },
-    { id: "corretores", label: "Corretores", icon: UserCheck },
-    { id: "professores", label: "Professores", icon: GraduationCap },
-    { id: "exportacao", label: "Exportação", icon: Download },
-    { id: "configuracoes", label: "Configurações", icon: Settings },
-    { id: "administradores", label: "Administradores", icon: Shield },
-  ];
 
   const renderContent = () => {
     switch (activeView) {
