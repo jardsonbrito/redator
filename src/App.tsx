@@ -66,6 +66,7 @@ import CorretorTemaDetalhes from "./pages/corretor/CorretorTemaDetalhes";
 import CorretorLousas from "./pages/corretor/CorretorLousas";
 import CorretorLousaDetalhes from "./pages/corretor/CorretorLousaDetalhes";
 import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
+import LousaRespostasPage from "./pages/admin/LousaRespostas";
 import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
 import RedacaoManuscrita from "./pages/RedacaoManuscrita";
@@ -122,6 +123,7 @@ function App() {
                   <Route path="/admin/corretores" element={<CorretoresAdmin />} />
                   <Route path="/admin/exportacao" element={<Exportacao />} />
                   <Route path="/admin/ajuda-rapida" element={<AjudaRapidaAdmin />} />
+                  <Route path="/admin/lousa/:lousaId/respostas" element={<LousaRespostasPage />} />
                   
                   {/* Rotas do Corretor */}
                   <Route path="/corretor/login" element={<CorretorLogin />} />

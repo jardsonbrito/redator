@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Edit, MessageSquare, EyeOff, Plus, Clock, Users, Trash2 } from 'lucide-react';
+import { Plus, MessageSquare, EyeOff, Clock, Users, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +12,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LousaForm from './LousaForm';
-import LousaRespostas from './LousaRespostas';
 
 interface Lousa {
   id: string;
@@ -30,10 +30,9 @@ interface Lousa {
 export default function LousaList() {
   const [lousas, setLousas] = useState<Lousa[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingLousa, setEditingLousa] = useState<Lousa | null>(null);
-  const [viewingResponses, setViewingResponses] = useState<Lousa | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fetchLousas = async () => {
     try {
@@ -252,27 +251,15 @@ export default function LousaList() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => setViewingResponses(lousa)}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Respostas
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Respostas - {lousa.titulo}</DialogTitle>
-                      </DialogHeader>
-                      {viewingResponses && (
-                        <LousaRespostas lousa={viewingResponses} />
-                      )}
-                    </DialogContent>
-                  </Dialog>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => navigate(`/admin/lousa/${lousa.id}/respostas`)}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Respostas
+                  </Button>
 
                   <div className="flex gap-1">
                     {lousa.ativo && (
