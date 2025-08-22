@@ -120,6 +120,9 @@ export const MinhasConquistas = () => {
           .lte('data_realizacao', monthEnd.format('YYYY-MM-DD'))
       ]);
 
+      console.log("🔍 Consultando radar_dados para:", emailBusca);
+      console.log("📅 Período radar:", monthStart.format('YYYY-MM-DD'), "até", monthEnd.format('YYYY-MM-DD'));
+
       // === CLASSIFICAR POR TIPO DE FORMA ÚNICA ===
       // 1. Redações regulares (excluindo devolvidas)
       const regularesFiltradas = (redacoesRegulares.data || []).filter(r => r.status !== 'devolvida');
@@ -132,6 +135,7 @@ export const MinhasConquistas = () => {
 
       // 4. Dados importados via radar/CSV (classificar como exercícios regulares)
       const radarFiltrados = (radarDados.data || []);
+      console.log("📊 Dados radar encontrados:", radarFiltrados.length, radarFiltrados);
 
       // === AGREGAR CONTADORES ===
       let regularCount = 0;

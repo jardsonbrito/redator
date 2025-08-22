@@ -17,8 +17,12 @@ export const RadarUpload = () => {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user) {
+      toast.error("Usuário não autenticado ou arquivo não selecionado");
+      return;
+    }
 
+    console.log("🔄 Iniciando importação de arquivo:", file.name);
     setIsUploading(true);
 
     try {
@@ -101,12 +105,20 @@ export const RadarUpload = () => {
         return;
       }
 
-      const { error } = await supabase
+      console.log("📊 Dados processados para inserção:", dados.length, "registros");
+      console.log("🔍 Primeiro registro:", dados[0]);
+
+      const { data, error } = await supabase
         .from('radar_dados')
-        .insert(dados);
+        .insert(dados)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Erro na inserção:", error);
+        throw error;
+      }
 
+      console.log("✅ Dados inseridos com sucesso:", data?.length);
       toast.success(`${dados.length} registros importados com sucesso!`);
       
       // Limpar formulário
