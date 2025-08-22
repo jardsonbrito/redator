@@ -60,24 +60,34 @@ export default function LousaList() {
 
   const fetchLousas = async () => {
     try {
-      const { data, error } = await supabase
+      // First get all lousas
+      const { data: lousasData, error: lousasError } = await supabase
         .from('lousa')
-        .select(`
-          *,
-          respostas_pendentes:lousa_resposta(count)
-        `)
-        .not('lousa_resposta.status', 'eq', 'corrected')
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      // Process the data to get the count properly
-      const processedData = data?.map(lousa => ({
-        ...lousa,
-        respostas_pendentes: lousa.respostas_pendentes?.[0]?.count || 0
-      })) || [];
-      
-      setLousas(processedData);
+      if (lousasError) throw lousasError;
+
+      // Then for each lousa, count pending responses
+      const lousasWithPendingCount = await Promise.all(
+        (lousasData || []).map(async (lousa) => {
+          const { count, error: countError } = await supabase
+            .from('lousa_resposta')
+            .select('*', { count: 'exact', head: true })
+            .eq('lousa_id', lousa.id)
+            .neq('status', 'corrected')
+            .is('nota', null); // Additional check for uncorrected responses
+
+          if (countError) {
+            console.error('Erro ao contar respostas pendentes:', countError);
+            return { ...lousa, respostas_pendentes: 0 };
+          }
+
+          return { ...lousa, respostas_pendentes: count || 0 };
+        })
+      );
+
+      setLousas(lousasWithPendingCount);
     } catch (error) {
       console.error('Erro ao carregar lousas:', error);
       toast({
