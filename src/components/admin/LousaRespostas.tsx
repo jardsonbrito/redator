@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Eye, MessageCircle, Star, RotateCcw } from 'lucide-react';
+import { Eye, MessageCircle, Star, RotateCcw, User, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,20 +89,20 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
   }, [lousa.id]);
 
   const getStatusBadge = (resposta: LousaResposta) => {
-    // Admin status logic: based on whether response has been graded (has nota)
+    // Enhanced status badges with better colors
     if (resposta.nota !== null) {
-      return <Badge variant="default">Corrigida</Badge>;
+      return <Badge className="bg-green-100 text-green-800 border-green-200 font-medium">Corrigida</Badge>;
     }
     
     if (resposta.status === 'submitted' || resposta.conteudo) {
-      return <Badge variant="secondary">Pendente</Badge>;
+      return <Badge className="bg-purple-100 text-purple-800 border-purple-200 font-medium">Pendente</Badge>;
     }
     
     if (resposta.status === 'returned') {
-      return <Badge variant="destructive">Devolvida</Badge>;
+      return <Badge className="bg-red-100 text-red-800 border-red-200 font-medium">Devolvida</Badge>;
     }
     
-    return <Badge variant="outline">Sem envio</Badge>;
+    return <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">Sem envio</Badge>;
   };
 
   const handleDevolver = async (resposta: LousaResposta, comentario: string) => {
@@ -188,87 +188,113 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
     );
   }
 
+  const totalRespostas = respostas.length;
+
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="border-b pb-4">
-        <h3 className="text-lg font-semibold">{lousa.titulo}</h3>
-        <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{lousa.enunciado}</p>
-        <div className="mt-2 text-sm text-muted-foreground">
-          Total de respostas: {respostas.length}
+      {/* Header com contador */}
+      <div className="flex items-center justify-between bg-gradient-to-r from-primary/5 to-primary/10 p-6 rounded-xl border border-primary/10">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Respostas Recebidas</h3>
+          <p className="text-gray-600">Total de {totalRespostas} {totalRespostas === 1 ? 'resposta' : 'respostas'}</p>
         </div>
+        <div className="text-2xl font-bold text-primary">{totalRespostas}</div>
       </div>
 
       {respostas.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
-              📝
+        <Card className="shadow-lg border-0">
+          <CardContent className="py-12 text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+              <MessageCircle className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Nenhuma resposta ainda</h3>
-            <p className="text-muted-foreground">
-              Os alunos ainda não enviaram respostas para esta lousa
+            <h3 className="text-xl font-semibold mb-3 text-gray-900">Nenhuma resposta ainda</h3>
+            <p className="text-gray-600 max-w-md mx-auto">
+              Os alunos ainda não enviaram respostas para esta lousa. Elas aparecerão aqui quando forem enviadas.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Aluno</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Nota</TableHead>
-                <TableHead>Última Atualização</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {respostas.map((resposta) => (
-                <TableRow key={resposta.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{resposta.nome_aluno}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(resposta)}
-                  </TableCell>
-                  <TableCell>
-                    {resposta.nota !== null ? (
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        {resposta.nota}/10
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(resposta.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-1 justify-end">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setViewingResposta(resposta)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>Resposta - {resposta.nome_aluno}</DialogTitle>
-                          </DialogHeader>
-                          {viewingResposta && (
-                            <div className="space-y-4">
-                              <div>
-                                 <h4 className="font-semibold mb-2">Enunciado:</h4>
-                                 <p className="text-sm bg-muted p-3 rounded whitespace-pre-line">{lousa.enunciado}</p>
-                              </div>
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block">
+            <Card className="shadow-lg border-0 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+                    <TableHead className="font-semibold text-gray-900">Aluno</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Status</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Nota</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Última Atualização</TableHead>
+                    <TableHead className="text-right font-semibold text-gray-900">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                  <TableBody>
+                    {respostas.map((resposta, index) => (
+                      <TableRow 
+                        key={resposta.id} 
+                        className={`border-b transition-colors hover:bg-gray-50/50 ${
+                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                        }`}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">{resposta.nome_aluno}</div>
+                              {resposta.turma && (
+                                <div className="text-sm text-gray-500">{resposta.turma}</div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(resposta)}
+                        </TableCell>
+                        <TableCell>
+                          {resposta.nota !== null ? (
+                            <div className="flex items-center gap-2">
+                              <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                              <span className="font-bold text-amber-700 text-lg">{resposta.nota}/10</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 font-medium">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Clock className="w-4 h-4" />
+                            {format(new Date(resposta.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="hover:bg-primary hover:text-white transition-colors"
+                                  onClick={() => setViewingResposta(resposta)}
+                                >
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  Ver
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle className="text-xl">Resposta - {resposta.nome_aluno}</DialogTitle>
+                                </DialogHeader>
+                                {viewingResposta && (
+                                  <div className="space-y-6">
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                        <MessageCircle className="w-5 h-5 text-primary" />
+                                        Enunciado:
+                                      </h4>
+                                      <p className="text-gray-700 whitespace-pre-line leading-relaxed">{lousa.enunciado}</p>
+                                    </div>
                               <div>
                                 <h4 className="font-semibold mb-2">Resposta do Aluno:</h4>
                                 <div className="bg-background border p-4 rounded min-h-[120px]">
@@ -310,8 +336,118 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-        </Card>
+              </Table>
+            </Card>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-4">
+            {respostas.map((resposta, index) => (
+              <Card key={resposta.id} className="shadow-md border-0 bg-white">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900">{resposta.nome_aluno}</div>
+                        {resposta.turma && (
+                          <div className="text-sm text-gray-500">{resposta.turma}</div>
+                        )}
+                      </div>
+                    </div>
+                    {getStatusBadge(resposta)}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Nota</div>
+                      {resposta.nota !== null ? (
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                          <span className="font-bold text-amber-700">{resposta.nota}/10</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Atualização</div>
+                      <div className="text-sm text-gray-600">
+                        {format(new Date(resposta.updated_at), 'dd/MM/yyyy', { locale: ptBR })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => setViewingResposta(resposta)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Ver Resposta
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl">Resposta - {resposta.nome_aluno}</DialogTitle>
+                        </DialogHeader>
+                        {viewingResposta && (
+                          <div className="space-y-6">
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                <MessageCircle className="w-5 h-5 text-primary" />
+                                Enunciado:
+                              </h4>
+                              <p className="text-gray-700 whitespace-pre-line leading-relaxed">{lousa.enunciado}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold mb-2">Resposta do Aluno:</h4>
+                              <div className="bg-background border p-4 rounded min-h-[120px]">
+                                {viewingResposta.conteudo || (
+                                  <span className="text-muted-foreground italic">
+                                    Nenhuma resposta enviada ainda
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {viewingResposta.comentario_professor && (
+                              <div>
+                                <h4 className="font-semibold mb-2">Comentário do Professor:</h4>
+                                <p className="text-sm bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+                                  {viewingResposta.comentario_professor}
+                                </p>
+                              </div>
+                            )}
+                            <div className="flex justify-end pt-4">
+                              <Button onClick={() => openCorrectionModal(viewingResposta)}>
+                                <MessageCircle className="w-4 h-4 mr-2" />
+                                Corrigir
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => openCorrectionModal(resposta)}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Modal de Correção */}

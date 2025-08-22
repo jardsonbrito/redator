@@ -3,11 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Clock, Users, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Clock, Users, MessageSquare, Edit, Trash2, Star, Eye, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LousaRespostas from '@/components/admin/LousaRespostas';
@@ -54,7 +55,7 @@ export default function LousaRespostasPage() {
     const fim = lousa.fim_em ? new Date(lousa.fim_em) : null;
 
     if (lousa.status === 'draft') {
-      return <Badge variant="outline">Rascunho</Badge>;
+      return <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">Rascunho</Badge>;
     }
 
     if (!lousa.ativo) {
@@ -62,14 +63,14 @@ export default function LousaRespostasPage() {
     }
 
     if (inicio && now < inicio) {
-      return <Badge variant="secondary">Programada</Badge>;
+      return <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300">Programada</Badge>;
     }
 
     if (fim && now > fim) {
       return <Badge variant="destructive">Encerrada</Badge>;
     }
 
-    return <Badge variant="default">Publicada</Badge>;
+    return <Badge className="bg-green-100 text-green-700 border-green-300">Publicada</Badge>;
   };
 
   const getPeriodText = (lousa: Lousa) => {
@@ -107,9 +108,11 @@ export default function LousaRespostasPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center p-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
         </div>
       </div>
     );
@@ -117,109 +120,199 @@ export default function LousaRespostasPage() {
 
   if (!lousa) {
     return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <h3 className="text-lg font-semibold mb-2">Lousa não encontrada</h3>
-            <p className="text-muted-foreground mb-4">
-              A lousa solicitada não foi encontrada ou você não tem permissão para acessá-la.
-            </p>
-            <Button onClick={() => navigate('/admin/lousa')}>
-              Voltar para Minhas Lousas
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        <div className="container mx-auto px-4 py-8">
+          <Card className="max-w-2xl mx-auto shadow-lg">
+            <CardContent className="py-12 text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-destructive/10 flex items-center justify-center">
+                <MessageSquare className="w-8 h-8 text-destructive" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-foreground">Lousa não encontrada</h3>
+              <p className="text-muted-foreground mb-6">
+                A lousa solicitada não foi encontrada ou você não tem permissão para acessá-la.
+              </p>
+              <Button 
+                onClick={() => navigate('/admin/lousa')} 
+                className="bg-primary hover:bg-primary/90"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar para Minhas Lousas
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink 
-              className="cursor-pointer hover:text-primary"
-              onClick={() => navigate('/admin')}
-            >
-              Dashboard
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink 
-              className="cursor-pointer hover:text-primary"
-              onClick={() => navigate('/admin/lousa')}
-            >
-              Lousa
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbPage>Respostas - {lousa.titulo}</BreadcrumbPage>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <div className="container mx-auto px-4 py-6 space-y-8">
+        {/* Breadcrumb - mais discreto */}
+        <div className="flex items-center justify-between">
+          <Breadcrumb className="text-sm">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink 
+                  className="cursor-pointer hover:text-primary transition-colors text-muted-foreground"
+                  onClick={() => navigate('/admin')}
+                >
+                  Dashboard
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink 
+                  className="cursor-pointer hover:text-primary transition-colors text-muted-foreground"
+                  onClick={() => navigate('/admin/lousa')}
+                >
+                  Lousa
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbPage className="text-foreground font-medium">Respostas</BreadcrumbPage>
+            </BreadcrumbList>
+          </Breadcrumb>
 
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => navigate('/admin/lousa')}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Respostas - {lousa.titulo}</h1>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate('/admin/lousa')}
+            className="bg-white/50 hover:bg-white/80 border-white/20 backdrop-blur-sm"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
         </div>
-      </div>
 
-      {/* Lousa Info Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-xl">{lousa.titulo}</CardTitle>
-                {getStatusBadge(lousa)}
-              </div>
-              
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  {getPeriodText(lousa)}
+        {/* Header Banner com Capa */}
+        <div className="relative overflow-hidden rounded-2xl shadow-xl">
+          {/* Background Image or Gradient */}
+          {lousa.capa_url ? (
+            <div 
+              className="h-64 bg-cover bg-center relative"
+              style={{ backgroundImage: `url(${lousa.capa_url})` }}
+            >
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
+            </div>
+          ) : (
+            <div className="h-64 bg-gradient-to-br from-primary via-primary/80 to-primary/60 relative">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              <div className="absolute top-8 right-8 text-6xl opacity-20">📝</div>
+            </div>
+          )}
+          
+          {/* Overlay Content */}
+          <div className="absolute inset-0 flex flex-col justify-end p-8">
+            <div className="text-white space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-3">
+                  <h1 className="text-4xl font-bold leading-tight drop-shadow-lg">
+                    Respostas - {lousa.titulo}
+                  </h1>
+                  <div className="flex items-center gap-3">
+                    {getStatusBadge(lousa)}
+                  </div>
                 </div>
                 
-                <div className="flex items-center gap-1">
-                  <Users className="w-4 h-4" />
-                  {lousa.turmas.length > 0 ? lousa.turmas.join(', ') : 'Nenhuma'}
-                  {lousa.permite_visitante && (
-                    <Badge variant="outline" className="ml-1">Visitantes</Badge>
-                  )}
+                <div className="flex gap-2">
+                  <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/20">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/20">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </div>
           </div>
-        </CardHeader>
-        
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                Enunciado da Atividade
-              </h3>
-              <p className="text-muted-foreground leading-relaxed">
-                {lousa.enunciado}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Responses Component */}
-      <LousaRespostas lousa={lousa} />
+        {/* Resumo da Atividade */}
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <MessageSquare className="w-6 h-6 text-primary" />
+              {lousa.titulo}
+            </CardTitle>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 text-gray-600">
+                  <Clock className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Período:</span>
+                  <span>{getPeriodText(lousa)}</span>
+                </div>
+                
+                <div className="flex items-center gap-3 text-gray-600">
+                  <Users className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Turmas:</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {lousa.turmas.length > 0 ? (
+                      lousa.turmas.map((turma, index) => (
+                        <Badge key={index} variant="outline" className="bg-primary/10 text-primary">
+                          {turma}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground">Nenhuma turma</span>
+                    )}
+                    {lousa.permite_visitante && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        Visitantes
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Enunciado da Atividade - Collapsible */}
+        <Card className="shadow-lg border-0">
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-gray-50/50 transition-colors">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <MessageSquare className="w-5 h-5 text-primary" />
+                    Enunciado da Atividade
+                  </div>
+                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <div className="bg-gray-50/50 rounded-xl p-6 border border-gray-100">
+                  <p className="text-gray-700 leading-relaxed text-lg whitespace-pre-line">
+                    {lousa.enunciado}
+                  </p>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Lista de Respostas */}
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <Star className="w-6 h-6 text-amber-500" />
+              Respostas dos Alunos
+            </CardTitle>
+          </CardHeader>
+          
+          <CardContent className="p-0">
+            <LousaRespostas lousa={lousa} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
