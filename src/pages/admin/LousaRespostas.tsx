@@ -102,7 +102,7 @@ export default function LousaRespostasPage() {
       description: 'Erro ao carregar dados da lousa',
       variant: 'destructive'
     });
-    navigate('/admin/lousa');
+    navigate('/admin?view=lousa');
     return null;
   }
 
@@ -132,7 +132,7 @@ export default function LousaRespostasPage() {
                 A lousa solicitada não foi encontrada ou você não tem permissão para acessá-la.
               </p>
               <Button 
-                onClick={() => navigate('/admin/lousa')} 
+                  onClick={() => navigate('/admin?view=lousa')}
                 className="bg-primary hover:bg-primary/90"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -164,7 +164,7 @@ export default function LousaRespostasPage() {
               <BreadcrumbItem>
                 <BreadcrumbLink 
                   className="cursor-pointer hover:text-primary transition-colors text-muted-foreground"
-                  onClick={() => navigate('/admin/lousa')}
+                  onClick={() => navigate('/admin?view=lousa')}
                 >
                   Lousa
                 </BreadcrumbLink>
@@ -177,7 +177,7 @@ export default function LousaRespostasPage() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => navigate('/admin/lousa')}
+            onClick={() => navigate('/admin?view=lousa')}
             className="bg-white/50 hover:bg-white/80 border-white/20 backdrop-blur-sm"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

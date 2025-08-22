@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -96,6 +96,7 @@ import { AdminList } from "@/components/admin/AdminList";
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeView, setActiveView] = useState("dashboard");
   const [refreshAvisos, setRefreshAvisos] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState(null);
@@ -110,6 +111,14 @@ const Admin = () => {
   // Hook para gerenciar alunos pendentes
   const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
   const [mostrarPopupAprovacao, setMostrarPopupAprovacao] = useState(false);
+
+  // Verificar parâmetros de query string para definir view inicial
+  useEffect(() => {
+    const view = searchParams.get('view');
+    if (view && menuItems.some(item => item.id === view)) {
+      setActiveView(view);
+    }
+  }, [searchParams]);
 
   // Mostrar popup automaticamente quando há alunos pendentes
   useEffect(() => {
