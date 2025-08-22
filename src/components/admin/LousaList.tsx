@@ -209,134 +209,130 @@ export default function LousaList() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Título</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Período</TableHead>
-                <TableHead>Turmas</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lousas.map((lousa) => (
-                <TableRow key={lousa.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{lousa.titulo}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {lousa.enunciado.length > 80 
-                          ? `${lousa.enunciado.substring(0, 80)}...` 
-                          : lousa.enunciado
-                        }
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(lousa)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Clock className="w-4 h-4" />
-                      {getPeriodText(lousa)}
-                    </div>
-                  </TableCell>
-                   <TableCell>
-                     <div className="flex items-center gap-1 text-sm">
-                       <Users className="w-4 h-4" />
-                       {lousa.turmas.length > 0 
-                         ? lousa.turmas.join(', ')
-                         : 'Nenhuma'
-                       }
-                       {lousa.permite_visitante && (
-                         <Badge variant="outline" className="ml-1">Visitantes</Badge>
-                       )}
-                     </div>
-                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-1 justify-end">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {lousas.map((lousa) => (
+            <Card key={lousa.id} className="relative overflow-hidden">
+              {lousa.capa_url && (
+                <div className="h-48 bg-cover bg-center" style={{ backgroundImage: `url(${lousa.capa_url})` }} />
+              )}
+              {!lousa.capa_url && (
+                <div className="h-48 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                  <div className="text-4xl">📝</div>
+                </div>
+              )}
+              
+              <div className="absolute top-2 right-2">
+                {getStatusBadge(lousa)}
+              </div>
 
-                       <Dialog>
-                         <DialogTrigger asChild>
-                           <Button 
-                             variant="ghost" 
-                             size="sm"
-                             onClick={() => setViewingResponses(lousa)}
-                           >
-                             <MessageSquare className="w-4 h-4" />
-                           </Button>
-                         </DialogTrigger>
-                         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                           <DialogHeader>
-                             <DialogTitle>Respostas - {lousa.titulo}</DialogTitle>
-                           </DialogHeader>
-                           {viewingResponses && (
-                             <LousaRespostas lousa={viewingResponses} />
-                           )}
-                         </DialogContent>
-                       </Dialog>
+              <CardContent className="p-4 space-y-3">
+                <div>
+                  <h3 className="font-semibold text-lg leading-tight line-clamp-2 mb-2">
+                    {lousa.titulo}
+                  </h3>
+                </div>
 
-                       {lousa.ativo && (
-                         <AlertDialog>
-                           <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="sm">
-                               <EyeOff className="w-4 h-4" />
-                             </Button>
-                           </AlertDialogTrigger>
-                           <AlertDialogContent>
-                             <AlertDialogHeader>
-                               <AlertDialogTitle>Encerrar Lousa</AlertDialogTitle>
-                               <AlertDialogDescription>
-                                 Tem certeza que deseja encerrar esta lousa? 
-                                 Os alunos não poderão mais enviar respostas.
-                               </AlertDialogDescription>
-                             </AlertDialogHeader>
-                             <AlertDialogFooter>
-                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                               <AlertDialogAction 
-                                 onClick={() => handleEndLousa(lousa.id)}
-                               >
-                                 Encerrar
-                               </AlertDialogAction>
-                             </AlertDialogFooter>
-                           </AlertDialogContent>
-                         </AlertDialog>
-                       )}
-
-                       <AlertDialog>
-                         <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="sm">
-                             <Trash2 className="w-4 h-4" />
-                           </Button>
-                         </AlertDialogTrigger>
-                         <AlertDialogContent>
-                           <AlertDialogHeader>
-                             <AlertDialogTitle>Excluir Lousa</AlertDialogTitle>
-                             <AlertDialogDescription>
-                               Tem certeza que deseja excluir esta lousa? 
-                               Esta ação não pode ser desfeita e todas as respostas serão perdidas.
-                             </AlertDialogDescription>
-                           </AlertDialogHeader>
-                           <AlertDialogFooter>
-                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                             <AlertDialogAction 
-                               onClick={() => handleDeleteLousa(lousa.id)}
-                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                             >
-                               Excluir
-                             </AlertDialogAction>
-                           </AlertDialogFooter>
-                         </AlertDialogContent>
-                       </AlertDialog>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 flex-shrink-0" />
+                    <span className="line-clamp-1">{getPeriodText(lousa)}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 flex-shrink-0" />
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="line-clamp-1">
+                        {lousa.turmas.length > 0 ? lousa.turmas.join(', ') : 'Nenhuma'}
+                      </span>
+                      {lousa.permite_visitante && (
+                        <Badge variant="outline" className="text-xs">Visitantes</Badge>
+                      )}
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setViewingResponses(lousa)}
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Respostas
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Respostas - {lousa.titulo}</DialogTitle>
+                      </DialogHeader>
+                      {viewingResponses && (
+                        <LousaRespostas lousa={viewingResponses} />
+                      )}
+                    </DialogContent>
+                  </Dialog>
+
+                  <div className="flex gap-1">
+                    {lousa.ativo && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <EyeOff className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Encerrar Lousa</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja encerrar esta lousa? 
+                              Os alunos não poderão mais enviar respostas.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleEndLousa(lousa.id)}
+                            >
+                              Encerrar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir Lousa</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir esta lousa? 
+                            Esta ação não pode ser desfeita e todas as respostas serão perdidas.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteLousa(lousa.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
