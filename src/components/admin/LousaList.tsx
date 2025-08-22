@@ -26,6 +26,7 @@ interface Lousa {
   ativo: boolean;
   created_at: string;
   capa_url: string | null;
+  respostas_pendentes?: number;
 }
 
 export default function LousaList() {
@@ -35,15 +36,48 @@ export default function LousaList() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Setup realtime subscription for automatic updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('lousa-respostas-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lousa_resposta'
+        },
+        () => {
+          fetchLousas(); // Refresh data when responses change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchLousas = async () => {
     try {
       const { data, error } = await supabase
         .from('lousa')
-        .select('*')
+        .select(`
+          *,
+          respostas_pendentes:lousa_resposta(count)
+        `)
+        .not('lousa_resposta.status', 'eq', 'corrected')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setLousas(data || []);
+      
+      // Process the data to get the count properly
+      const processedData = data?.map(lousa => ({
+        ...lousa,
+        respostas_pendentes: lousa.respostas_pendentes?.[0]?.count || 0
+      })) || [];
+      
+      setLousas(processedData);
     } catch (error) {
       console.error('Erro ao carregar lousas:', error);
       toast({
@@ -255,11 +289,19 @@ export default function LousaList() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="flex-1"
+                    className="flex-1 relative"
                     onClick={() => navigate(`/admin/lousa/${lousa.id}/respostas`)}
                   >
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Respostas
+                    {lousa.respostas_pendentes && lousa.respostas_pendentes > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-bold"
+                      >
+                        {lousa.respostas_pendentes > 99 ? '99+' : lousa.respostas_pendentes}
+                      </Badge>
+                    )}
                   </Button>
 
                   <div className="flex gap-1">
