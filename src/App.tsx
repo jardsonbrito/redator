@@ -114,7 +114,7 @@ function App() {
                   <Route path="/minhas-conquistas" element={<MinhasConquistas />} />
 
                   {/* Rotas do Admin */}
-                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/admin" element={<Dashboard />} />
                   <Route path="/admin/dashboard" element={<Dashboard />} />
                   <Route path="/admin/avisos" element={<Avisos />} />
                   <Route path="/admin/redacoes" element={<Redacoes />} />
