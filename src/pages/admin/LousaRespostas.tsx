@@ -190,52 +190,31 @@ export default function LousaRespostasPage() {
           {/* Background Image or Gradient */}
           {lousa.capa_url ? (
             <div 
-              className="h-64 bg-cover bg-center relative"
+              className="h-64 bg-cover bg-center"
               style={{ backgroundImage: `url(${lousa.capa_url})` }}
-            >
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
-            </div>
+            />
           ) : (
             <div className="h-64 bg-gradient-to-br from-primary via-primary/80 to-primary/60 relative">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               <div className="absolute top-8 right-8 text-6xl opacity-20">📝</div>
             </div>
           )}
-          
-          {/* Overlay Content */}
-          <div className="absolute inset-0 flex flex-col justify-end p-8">
-            <div className="text-white space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-3">
-                  <h1 className="text-4xl font-bold leading-tight drop-shadow-lg">
-                    Respostas - {lousa.titulo}
-                  </h1>
-                  <div className="flex items-center gap-3">
-                    {getStatusBadge(lousa)}
-                  </div>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/20">
-                    <Edit className="w-4 h-4 mr-2" />
-                    Editar
-                  </Button>
-                  <Button size="sm" variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-white/20">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Resumo da Atividade */}
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              <MessageSquare className="w-6 h-6 text-primary" />
-              {lousa.titulo}
-            </CardTitle>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
+                <MessageSquare className="w-4 h-4" />
+                Respostas
+              </div>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-2xl font-bold text-gray-900">
+                  {lousa.titulo}
+                </CardTitle>
+                {getStatusBadge(lousa)}
+              </div>
+            </div>
           </CardHeader>
           
           <CardContent className="space-y-6">
