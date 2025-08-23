@@ -155,10 +155,10 @@ if (isLoading) {
         return (
           <Card key={simulado.id} className="border border-primary/20">
             <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-primary mb-2">{simulado.titulo}</h3>
-                  <div className="flex flex-wrap gap-2 mb-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 flex-1">
+                    <h3 className="text-xl font-semibold text-primary">{simulado.titulo}</h3>
                     {badges.map((badge, index) => (
                       <span 
                         key={index}
@@ -168,20 +168,20 @@ if (isLoading) {
                       </span>
                     ))}
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 text-sm text-muted-foreground">
-                    {meta.map((item, index) => (
-                      <div key={index} className="flex items-center gap-1">
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.text}</span>
-                      </div>
-                    ))}
+                  <div className="flex-shrink-0">
+                    <SimuladoCountdown 
+                      dataInicio={simulado.data_inicio} 
+                      horaInicio={simulado.hora_inicio} 
+                    />
                   </div>
                 </div>
-                <div className="flex-shrink-0">
-                  <SimuladoCountdown 
-                    dataInicio={simulado.data_inicio} 
-                    horaInicio={simulado.hora_inicio} 
-                  />
+                <div className="flex flex-col sm:flex-row gap-2 text-sm text-muted-foreground">
+                  {meta.map((item, index) => (
+                    <div key={index} className="flex items-center gap-1">
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.text}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </CardContent>

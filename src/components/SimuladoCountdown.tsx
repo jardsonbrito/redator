@@ -51,9 +51,9 @@ export const SimuladoCountdown = ({ dataInicio, horaInicio }: SimuladoCountdownP
   }, [dataInicio, horaInicio]);
 
   return (
-    <div className="text-center py-8">
-      <div className="text-2xl font-bold text-primary mb-2">{timeLeft}</div>
-      <div className="text-sm text-muted-foreground">Contagem regressiva</div>
+    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium transition-all duration-300">
+      <span className="text-base">⏳</span>
+      <span className="tabular-nums">{timeLeft}</span>
     </div>
   );
 };
