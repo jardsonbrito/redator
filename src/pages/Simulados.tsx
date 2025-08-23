@@ -11,6 +11,15 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
 import { resolveSimuladoCover } from "@/utils/coverUtils";
+import { SimuladoCountdown } from "@/components/SimuladoCountdown";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const TZ = 'America/Fortaleza';
 
 const Simulados = () => {
   const { studentData } = useStudentAuth();
@@ -104,33 +113,83 @@ if (isLoading) {
       const status = computeSimuladoStatus(simulado);
       const isAgendado = status === 'agendado';
       const tema = simulado.tema as any | null;
-      const coverUrl = resolveSimuladoCover(simulado);
+      
+      // Para simulado agendado, usar uma imagem placeholder ou nenhuma capa
+      const coverUrl = isAgendado ? undefined : resolveSimuladoCover(simulado);
       
       // Para simulado agendado, não mostrar subtitle (frase_tematica)
       const subtitle = isAgendado ? undefined : (tema?.frase_tematica as string) || undefined;
       
-      // Para badges, se for agendado não incluir eixo_tematico
+      // Para badges, se for agendado dar destaque visual especial
       const badges: { label: string; tone?: BadgeTone }[] = [];
       if (!isAgendado && tema?.eixo_tematico) {
         badges.push({ label: tema.eixo_tematico as string, tone: 'primary' });
       }
-      badges.push({ label: info.label, tone: info.tone });
+      
+      // Badge com destaque para agendado
+      if (isAgendado) {
+        badges.push({ label: info.label, tone: 'primary' }); // Azul/lilás suave
+      } else {
+        badges.push({ label: info.label, tone: info.tone });
+      }
 
-      // Adicionar meta com as datas (especialmente importante para agendados)
+      // Formatação correta de datas no timezone de Fortaleza
       const meta = [];
       if (simulado.data_inicio && simulado.hora_inicio) {
+        const dataInicio = dayjs.tz(`${simulado.data_inicio} ${simulado.hora_inicio}`, 'YYYY-MM-DD HH:mm', TZ);
         meta.push({
           icon: Calendar,
-          text: `Início: ${simulado.data_inicio} às ${simulado.hora_inicio}`
+          text: `Início: ${dataInicio.format('DD/MM/YYYY')} às ${dataInicio.format('HH')}h`
         });
       }
       if (simulado.data_fim && simulado.hora_fim) {
+        const dataFim = dayjs.tz(`${simulado.data_fim} ${simulado.hora_fim}`, 'YYYY-MM-DD HH:mm', TZ);
         meta.push({
           icon: Clock,
-          text: `Fim: ${simulado.data_fim} às ${simulado.hora_fim}`
+          text: `Fim: ${dataFim.format('DD/MM/YYYY')} às ${dataFim.format('HH')}h`
         });
       }
 
+      // Para simulados agendados, renderizar layout especial
+      if (isAgendado) {
+        return (
+          <Card key={simulado.id} className="border border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold text-primary mb-2">{simulado.titulo}</h3>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {badges.map((badge, index) => (
+                      <span 
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                      >
+                        {badge.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 text-sm text-muted-foreground">
+                    {meta.map((item, index) => (
+                      <div key={index} className="flex items-center gap-1">
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <SimuladoCountdown 
+                    dataInicio={simulado.data_inicio} 
+                    horaInicio={simulado.hora_inicio} 
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      // Para simulados em andamento e encerrados, usar UnifiedCard normal
       return (
         <UnifiedCard
           key={simulado.id}
