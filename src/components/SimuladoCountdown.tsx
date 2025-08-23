@@ -51,9 +51,11 @@ export const SimuladoCountdown = ({ dataInicio, horaInicio }: SimuladoCountdownP
   }, [dataInicio, horaInicio]);
 
   return (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium transition-all duration-300">
-      <span className="text-base">⏳</span>
-      <span className="tabular-nums">{timeLeft}</span>
+    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-primary/10 text-primary rounded-full text-xs sm:text-sm font-medium transition-all duration-300 max-w-full overflow-hidden">
+      <span className="text-sm sm:text-base flex-shrink-0">⏳</span>
+      <span className="tabular-nums whitespace-nowrap text-ellipsis overflow-hidden min-w-0">
+        {timeLeft}
+      </span>
     </div>
   );
 };

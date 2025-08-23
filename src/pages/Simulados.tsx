@@ -186,33 +186,54 @@ if (isLoading) {
       // Para simulados agendados, renderizar layout especial
       if (isAgendado) {
         return (
-          <Card key={simulado.id} className="border border-primary/20">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 flex-1">
-                    <h3 className="text-xl font-semibold text-primary">{simulado.titulo}</h3>
-                    {badges.map((badge, index) => (
-                      <span 
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
-                      >
-                        {badge.label}
-                      </span>
-                    ))}
+          <Card key={simulado.id} className="border border-primary/20 overflow-hidden">
+            <CardContent className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
+                {/* Mobile: Stack layout, Desktop: Horizontal layout */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    {/* Título com tamanho responsivo */}
+                    <h3 className="text-lg sm:text-xl font-semibold text-primary leading-tight line-clamp-2" 
+                        style={{ wordBreak: 'keep-all', hyphens: 'auto' }}>
+                      {simulado.titulo}
+                    </h3>
+                    
+                    {/* Badges abaixo do título no mobile, inline no desktop */}
+                    <div className="flex flex-wrap gap-2">
+                      {badges.map((badge, index) => (
+                        <span 
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                        >
+                          {badge.label}
+                        </span>
+                      ))}
+                    </div>
+                    
+                    {/* Contador abaixo dos badges no mobile */}
+                    <div className="w-full sm:hidden">
+                      <SimuladoCountdown 
+                        dataInicio={simulado.data_inicio} 
+                        horaInicio={simulado.hora_inicio} 
+                      />
+                    </div>
                   </div>
-                  <div className="flex-shrink-0">
+                  
+                  {/* Contador à direita no desktop */}
+                  <div className="hidden sm:block flex-shrink-0">
                     <SimuladoCountdown 
                       dataInicio={simulado.data_inicio} 
                       horaInicio={simulado.hora_inicio} 
                     />
                   </div>
                 </div>
+                
+                {/* Informações de data/hora */}
                 <div className="flex flex-col sm:flex-row gap-2 text-sm text-muted-foreground">
                   {meta.map((item, index) => (
                     <div key={index} className="flex items-center gap-1">
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.text}</span>
+                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{item.text}</span>
                     </div>
                   ))}
                 </div>
