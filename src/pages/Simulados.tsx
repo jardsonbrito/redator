@@ -37,8 +37,7 @@ const { data: simulados, isLoading } = useQuery({
     let query = supabase
       .from('simulados')
       .select('*')
-      .eq('ativo', true)
-      .order('data_inicio', { ascending: true });
+      .eq('ativo', true);
 
     // Filtra simulados baseado na turma do usuário
     if (turmaCode === "Visitante") {
@@ -60,7 +59,41 @@ const { data: simulados, isLoading } = useQuery({
       temasMap = (temas || []).reduce((acc: any, t: any) => { acc[t.id] = t; return acc; }, {});
     }
 
-    return (sims || []).map((s: any) => ({ ...s, tema: s.tema_id ? temasMap[s.tema_id] || null : null }));
+    const simuladosComTema = (sims || []).map((s: any) => ({ ...s, tema: s.tema_id ? temasMap[s.tema_id] || null : null }));
+
+    // Ordenar simulados baseado no status e datas (timezone Fortaleza)
+    return simuladosComTema.sort((a: any, b: any) => {
+      const now = dayjs().tz(TZ);
+      
+      const aInicio = dayjs.tz(`${a.data_inicio} ${a.hora_inicio}`, 'YYYY-MM-DD HH:mm', TZ);
+      const aFim = dayjs.tz(`${a.data_fim} ${a.hora_fim}`, 'YYYY-MM-DD HH:mm', TZ);
+      const bInicio = dayjs.tz(`${b.data_inicio} ${b.hora_inicio}`, 'YYYY-MM-DD HH:mm', TZ);
+      const bFim = dayjs.tz(`${b.data_fim} ${b.hora_fim}`, 'YYYY-MM-DD HH:mm', TZ);
+      
+      const aStatus = computeSimuladoStatus(a);
+      const bStatus = computeSimuladoStatus(b);
+      
+      // 1. Em andamento (primeiro)
+      if (aStatus === 'ativo' && bStatus !== 'ativo') return -1;
+      if (bStatus === 'ativo' && aStatus !== 'ativo') return 1;
+      if (aStatus === 'ativo' && bStatus === 'ativo') {
+        return aInicio.isBefore(bInicio) ? -1 : 1;
+      }
+      
+      // 2. Agendados (segundo)
+      if (aStatus === 'agendado' && bStatus === 'encerrado') return -1;
+      if (bStatus === 'agendado' && aStatus === 'encerrado') return 1;
+      if (aStatus === 'agendado' && bStatus === 'agendado') {
+        return aInicio.isBefore(bInicio) ? -1 : 1;
+      }
+      
+      // 3. Encerrados (último) - ordenados por fim desc (mais recente primeiro)
+      if (aStatus === 'encerrado' && bStatus === 'encerrado') {
+        return aFim.isAfter(bFim) ? -1 : 1;
+      }
+      
+      return 0;
+    });
   }
 });
 
