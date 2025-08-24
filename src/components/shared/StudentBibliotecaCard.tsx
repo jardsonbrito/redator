@@ -42,18 +42,16 @@ export const StudentBibliotecaCard = ({
   
   // Calcular se está dentro do período de disponibilidade
   const now = new Date();
-  const publishedDate = publishedAt ? new Date(publishedAt) : null;
   const unpublishedDate = unpublishedAt ? new Date(unpublishedAt) : null;
   
-  const isPublished = !publishedDate || now >= publishedDate;
+  // Simplificando: se tem permissão e não expirou, está disponível
   const isExpired = unpublishedDate && now >= unpublishedDate;
-  const isAvailable = isPublished && !isExpired && podeAcessar;
+  const isAvailable = !isExpired && podeAcessar;
 
   console.log(`[CARD] ${title}:`, {
     publishedAt,
     unpublishedAt,
     now: now.toISOString(),
-    isPublished,
     isExpired,
     podeAcessar,
     isAvailable
