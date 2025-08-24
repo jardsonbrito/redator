@@ -45,7 +45,7 @@ import RedacaoSimuladoList from "@/components/admin/RedacaoSimuladoList";
 
 // Import biblioteca components
 import { BibliotecaForm } from "@/components/admin/BibliotecaForm";
-import BibliotecaList from "@/components/admin/BibliotecaList";
+import { BibliotecaList } from "@/components/admin/BibliotecaList";
 
 // Import new components for Aulas and Exercicios
 import { AulaForm } from "@/components/admin/AulaForm";
