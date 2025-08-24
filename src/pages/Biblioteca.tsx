@@ -24,7 +24,6 @@ import { useBibliotecaPermissions } from "@/hooks/useBibliotecaPermissions";
 const Biblioteca = () => {
   const { studentData } = useStudentAuth();
   const { toast } = useToast();
-  const { verificarPermissao } = useBibliotecaPermissions();
   const [busca, setBusca] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
@@ -112,13 +111,14 @@ const Biblioteca = () => {
   });
 
   const handleDownload = async (materialId: string, arquivoUrl: string, arquivoNome: string, titulo: string) => {
+    console.log('=== INICIANDO DOWNLOAD ===');
+    console.log('Material ID:', materialId);
+    console.log('Arquivo URL:', arquivoUrl);
+    console.log('Arquivo Nome:', arquivoNome);
+    console.log('Título:', titulo);
+    console.log('Turma Code:', turmaCode);
+    
     try {
-      // Validar permissões antes do download
-      const material = { 
-        turmas_autorizadas: [], // Será preenchido pela query principal
-        permite_visitante: true 
-      };
-      
       // Buscar material específico para verificar permissões
       const { data: materialData, error: materialError } = await supabase
         .from('biblioteca_materiais')
@@ -127,13 +127,36 @@ const Biblioteca = () => {
         .single();
 
       if (materialError || !materialData) {
+        console.error('Erro ao buscar material:', materialError);
         throw new Error('Material não encontrado');
       }
 
-      // Verificar permissão usando o hook
-      const podeAcessar = verificarPermissao(materialData);
+      console.log('Material Data:', materialData);
+
+      // Implementar lógica de permissão diretamente
+      const turmasAutorizadas = materialData.turmas_autorizadas || [];
+      const permiteVisitante = materialData.permite_visitante;
+      
+      console.log('Turmas Autorizadas:', turmasAutorizadas);
+      console.log('Permite Visitante:', permiteVisitante);
+      
+      let podeAcessar = false;
+      if (turmaCode === "Visitante") {
+        // Visitantes só veem materiais que explicitamente permitem visitantes
+        podeAcessar = permiteVisitante === true;
+      } else {
+        // Alunos veem materiais se:
+        // 1. Sua turma está na lista de turmas autorizadas OU
+        // 2. O material permite visitantes (se não há turmas específicas)
+        const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
+        const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
+        podeAcessar = turmaEstaAutorizada || semRestricaoTurma;
+      }
+      
+      console.log('Pode Acessar:', podeAcessar);
       
       if (!podeAcessar) {
+        console.log('ACESSO NEGADO - Mostrando toast');
         toast({
           title: "Acesso negado",
           description: 'Você não tem permissão para baixar este material',
@@ -142,11 +165,14 @@ const Biblioteca = () => {
         return;
       }
 
+      console.log('PERMISSÃO LIBERADA - Iniciando download');
+
       // Gerar URL pública para download
       const { data } = supabase.storage
         .from('biblioteca-pdfs')
         .getPublicUrl(arquivoUrl);
       
+      console.log('URL Pública gerada:', data.publicUrl);
       console.log('Download autorizado para:', titulo);
       
       // Tentar download direto
@@ -186,8 +212,6 @@ const Biblioteca = () => {
     try {
       // Para livros digitais, usar visualização inline
       if (categoria.toLowerCase().includes('livro digital')) {
-        // Validar permissões usando o hook
-        
         // Buscar material específico para verificar permissões
         const { data: materialData, error: materialError } = await supabase
           .from('biblioteca_materiais')
@@ -199,7 +223,18 @@ const Biblioteca = () => {
           throw new Error('Material não encontrado');
         }
 
-        const podeAcessar = verificarPermissao(materialData);
+        // Implementar lógica de permissão diretamente
+        const turmasAutorizadas = materialData.turmas_autorizadas || [];
+        const permiteVisitante = materialData.permite_visitante;
+        
+        let podeAcessar = false;
+        if (turmaCode === "Visitante") {
+          podeAcessar = permiteVisitante === true;
+        } else {
+          const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
+          const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
+          podeAcessar = turmaEstaAutorizada || semRestricaoTurma;
+        }
         
         if (!podeAcessar) {
           toast({
