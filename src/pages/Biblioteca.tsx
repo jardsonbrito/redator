@@ -88,13 +88,9 @@ const Biblioteca = () => {
             // Visitantes só veem materiais que permitem visitantes
             return permiteVisitante;
           } else {
-            // Alunos veem:
-            // 1. Materiais da sua turma específica
-            // 2. Materiais exclusivos para visitantes (permite_visitante=true E sem turmas específicas)
-            const incluiTurma = turmasAutorizadas.includes(turmaCode);
-            const exclusivoVisitante = permiteVisitante && turmasAutorizadas.length === 0;
-            
-            return incluiTurma || exclusivoVisitante;
+            // Alunos veem apenas materiais da sua turma específica
+            // Materiais exclusivos para visitantes (permite_visitante=true E sem turmas) NÃO são vistos por turmas
+            return turmasAutorizadas.includes(turmaCode);
           }
         });
         

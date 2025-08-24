@@ -53,13 +53,9 @@ const { data: simulados, isLoading } = useQuery({
         // Visitantes só veem simulados que permitem visitantes
         return permiteVisitante;
       } else {
-        // Alunos veem:
-        // 1. Simulados da sua turma específica
-        // 2. Simulados exclusivos para visitantes (permite_visitante=true E sem turmas específicas)
-        const incluiTurma = turmasAutorizadas.includes(turmaCode);
-        const exclusivoVisitante = permiteVisitante && turmasAutorizadas.length === 0;
-        
-        return incluiTurma || exclusivoVisitante;
+        // Alunos veem apenas simulados da sua turma específica
+        // Simulados exclusivos para visitantes (permite_visitante=true E sem turmas) NÃO são vistos por turmas
+        return turmasAutorizadas.includes(turmaCode);
       }
     });
 
