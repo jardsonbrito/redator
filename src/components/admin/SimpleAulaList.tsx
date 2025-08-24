@@ -10,7 +10,6 @@ import { Trash2, ExternalLink, FileText, Edit, Search, Calendar, Grid, List } fr
 import { AulaForm } from "./AulaForm";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
 import { resolveAulaCover } from "@/utils/coverUtils";
-import { useQuery } from '@tanstack/react-query';
 
 interface Modulo {
   id: string;
@@ -55,8 +54,6 @@ export const SimpleAulaList = () => {
 
   // Buscar módulos únicos das aulas existentes
   const [modulos, setModulos] = useState<string[]>([]);
-  const [novoModuloNome, setNovoModuloNome] = useState("");
-  const [mostrarNovoModulo, setMostrarNovoModulo] = useState(false);
 
   // Função para buscar módulos únicos das aulas
   const fetchModulos = async () => {
@@ -68,7 +65,7 @@ export const SimpleAulaList = () => {
       
       if (error) throw error;
       
-      // Extrair módulos únicos
+      // Extrair módulos únicos das aulas existentes
       const modulosUnicos = Array.from(new Set(
         data?.map(item => item.modulo).filter(Boolean) || []
       )).sort();
@@ -77,20 +74,6 @@ export const SimpleAulaList = () => {
     } catch (error) {
       console.error('Erro ao buscar módulos:', error);
     }
-  };
-
-  // Função para "criar" novo módulo (adicionar à lista local)
-  const criarNovoModulo = () => {
-    if (!novoModuloNome.trim()) return;
-    
-    const novoModulo = novoModuloNome.trim();
-    if (!modulos.includes(novoModulo)) {
-      setModulos(prev => [...prev, novoModulo].sort());
-    }
-    
-    setNovoModuloNome("");
-    setMostrarNovoModulo(false);
-    toast.success("Módulo adicionado à lista!");
   };
 
   const fetchAulas = async () => {
@@ -248,54 +231,19 @@ if (isLoading) {
             />
           </div>
           
-          <div className="flex gap-2">
-            <Select value={moduloFiltro} onValueChange={setModuloFiltro}>
-              <SelectTrigger>
-                <SelectValue placeholder="Módulo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                {modulos.map((modulo) => (
-                  <SelectItem key={modulo} value={modulo}>
-                    {modulo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMostrarNovoModulo(!mostrarNovoModulo)}
-              title="Criar novo módulo"
-            >
-              +
-            </Button>
-          </div>
-
-          {mostrarNovoModulo && (
-            <div className="flex gap-2">
-              <Input
-                placeholder="Nome do novo módulo"
-                value={novoModuloNome}
-                onChange={(e) => setNovoModuloNome(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && criarNovoModulo()}
-              />
-              <Button size="sm" onClick={criarNovoModulo}>
-                Criar
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => {
-                  setMostrarNovoModulo(false);
-                  setNovoModuloNome("");
-                }}
-              >
-                Cancelar
-              </Button>
-            </div>
-          )}
+          <Select value={moduloFiltro} onValueChange={setModuloFiltro}>
+            <SelectTrigger>
+              <SelectValue placeholder="Módulo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {modulos.map((modulo) => (
+                <SelectItem key={modulo} value={modulo}>
+                  {modulo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <div></div>
 
