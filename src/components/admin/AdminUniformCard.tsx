@@ -38,9 +38,19 @@ export const AdminUniformCard = ({
               src={coverUrl} 
               alt={coverAlt}
               className="w-full h-full object-cover"
+              onLoad={() => console.log('Image loaded successfully:', coverUrl)}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                target.src = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=200&fit=crop';
+                console.error('Failed to load image:', coverUrl);
+                target.src = '/placeholders/aula-cover.png';
+                target.onerror = () => {
+                  // Se até o placeholder falhar, mostrar div vazia
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = '<div class="w-full h-full bg-muted flex items-center justify-center"><span class="text-xs text-muted-foreground">Sem imagem</span></div>';
+                  }
+                };
               }}
             />
           ) : (

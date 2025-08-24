@@ -564,8 +564,8 @@ export const BibliotecaList = () => {
               <AdminUniformCard
                 key={material.id}
                 title={material.titulo}
-                coverUrl={material.thumbnail_url}
-                coverAlt={`Material ${material.titulo}`}
+                coverUrl={material.thumbnail_url || undefined}
+                coverAlt={`Thumbnail do material ${material.titulo}`}
                 badges={badges}
                 actions={actions}
                 metaInfo={material.descricao?.substring(0, 100) + (material.descricao && material.descricao.length > 100 ? '...' : '')}

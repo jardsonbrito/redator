@@ -193,6 +193,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
         let thumbnailUrl = formData.thumbnail_url;
         if (thumbnail) {
           thumbnailUrl = await uploadThumbnail(thumbnail);
+          console.log('New thumbnail URL for update:', thumbnailUrl);
         }
 
         // Atualizar material existente
@@ -228,6 +229,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
         let thumbnailUrl = formData.thumbnail_url;
         if (thumbnail) {
           thumbnailUrl = await uploadThumbnail(thumbnail);
+          console.log('New thumbnail URL for insert:', thumbnailUrl);
         }
 
         // Inserir novo material
