@@ -1,17 +1,13 @@
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Search } from "lucide-react";
-import ExerciseCard from "@/components/shared/ExerciseCard";
-import { AdminActions } from "./AdminActions";
 import { ExercicioForm } from "./ExercicioForm";
-import { convertExerciseData } from "@/utils/exerciseHelpers";
+import { AdminExerciseCard } from "./AdminExerciseCard";
 
 interface Exercicio {
   id: string;
@@ -201,48 +197,20 @@ export const ExercicioList = () => {
         {filteredExercicios.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
-              <p className="text-gray-500">Nenhum exercício encontrado.</p>
+              <p className="text-muted-foreground">Nenhum exercício encontrado.</p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredExercicios.map((exercicio) => {
-              const cardData = convertExerciseData(exercicio);
-
-              return (
-                <ExerciseCard
-                  key={exercicio.id}
-                  coverUrl={cardData.coverUrl}
-                  title={cardData.title}
-                  status={cardData.status}
-                  kind={cardData.kind}
-                  startAt={cardData.startAt}
-                  endAt={cardData.endAt}
-                  availableFrom={cardData.availableFrom}
-                  classes={cardData.classes}
-                  tags={cardData.tags}
-                  rightActionsDesktop={
-                    <AdminActions 
-                      exercicio={exercicio}
-                      onEdit={setEditingExercise}
-                      onToggleActive={handleToggleActive}
-                      onDelete={handleDelete}
-                      variant="desktop"
-                    />
-                  }
-                  bottomActionsMobile={
-                    <AdminActions 
-                      exercicio={exercicio}
-                      onEdit={setEditingExercise}
-                      onToggleActive={handleToggleActive}
-                      onDelete={handleDelete}
-                      variant="mobile"
-                    />
-                  }
-                  showActions
-                />
-              );
-            })}
+            {filteredExercicios.map((exercicio) => (
+              <AdminExerciseCard
+                key={exercicio.id}
+                exercicio={exercicio}
+                onEdit={setEditingExercise}
+                onToggleActive={handleToggleActive}
+                onDelete={handleDelete}
+              />
+            ))}
           </div>
         )}
       </div>
