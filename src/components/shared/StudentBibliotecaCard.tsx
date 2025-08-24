@@ -49,6 +49,16 @@ export const StudentBibliotecaCard = ({
   const isExpired = unpublishedDate && now >= unpublishedDate;
   const isAvailable = isPublished && !isExpired && podeAcessar;
 
+  console.log(`[CARD] ${title}:`, {
+    publishedAt,
+    unpublishedAt,
+    now: now.toISOString(),
+    isPublished,
+    isExpired,
+    podeAcessar,
+    isAvailable
+  });
+
   // Preparar badges
   const badges: BadgeType[] = [
     {
