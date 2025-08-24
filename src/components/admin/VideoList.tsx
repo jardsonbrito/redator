@@ -3,11 +3,8 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
-import { IconActionGroup } from '@/components/admin/IconActionGroup';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -21,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { VideoForm } from './VideoForm';
+import { AdminUniformCard, type BadgeType } from './AdminUniformCard';
 
 export const VideoList = () => {
   const { toast } = useToast();
@@ -178,120 +176,96 @@ export const VideoList = () => {
       <h3 className="text-lg font-semibold text-redator-primary">Vídeos Cadastrados</h3>
       
       {videos && videos.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
           {videos.map((video) => {
             const thumbnailUrl = video.thumbnail_url || 
               (video.video_id && video.platform === 'youtube' 
                 ? `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`
                 : null);
             
-            return (
-              <Card key={video.id} className="border-redator-accent/20">
-                <div className="flex gap-4 p-4">
-                  {/* Thumbnail */}
-                  <div className="flex-shrink-0 w-32 h-20">
-                    {thumbnailUrl ? (
-                      <img 
-                        src={thumbnailUrl} 
-                        alt={video.titulo}
-                        className="w-full h-full object-cover rounded"
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=128&h=80&fit=crop';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-muted rounded flex items-center justify-center">
-                        <span className="text-xs text-muted-foreground">
-                          {video.platform === 'instagram' ? 'IG' : 'Vídeo'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-semibold text-redator-primary line-clamp-2 flex-1">
-                        {video.titulo}
-                      </h3>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {video.eixo_tematico && (
-                        <Badge variant="secondary" className="text-xs">
-                          {video.eixo_tematico}
-                        </Badge>
-                      )}
-                      <Badge 
-                        variant={video.status_publicacao === 'publicado' ? 'default' : 'outline'}
-                        className="text-xs"
+            // Preparar badges
+            const badges: BadgeType[] = [];
+            
+            if (video.eixo_tematico) {
+              badges.push({
+                label: video.eixo_tematico,
+                variant: 'outline' as const
+              });
+            }
+            
+            badges.push({
+              label: video.status_publicacao === 'publicado' ? 'Publicado' : 'Rascunho',
+              variant: video.status_publicacao === 'publicado' ? 'default' : 'secondary'
+            });
+            
+            if (video.platform) {
+              badges.push({
+                label: video.platform === 'youtube' ? 'YouTube' : 'Instagram',
+                variant: video.platform === 'youtube' ? 'destructive' : 'default'
+              });
+            }
+
+            // Preparar ações
+            const actions = (
+              <>
+                <IconAction
+                  icon={ACTION_ICON.editar}
+                  label="Editar vídeo"
+                  intent="neutral"
+                  onClick={() => {
+                    setEditingId(video.id);
+                    setEditingVideo(video);
+                  }}
+                />
+
+                <IconAction
+                  icon={video.status_publicacao === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
+                  label={video.status_publicacao === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
+                  intent={video.status_publicacao === 'publicado' ? 'attention' : 'positive'}
+                  onClick={() => handleToggleStatus(video)}
+                />
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <IconAction
+                      icon={ACTION_ICON.excluir}
+                      label="Excluir vídeo"
+                      intent="danger"
+                    />
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="max-w-md mx-4">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                        Confirmar Exclusão
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir este vídeo? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                      <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => handleDelete(video.id)}
+                        className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
                       >
-                        {video.status_publicacao === 'publicado' ? 'Publicado' : 'Rascunho'}
-                      </Badge>
-                      {video.platform && (
-                        <Badge 
-                          variant={video.platform === 'youtube' ? 'destructive' : 'default'}
-                          className="text-xs"
-                        >
-                          {video.platform === 'youtube' ? 'YouTube' : 'Instagram'}
-                        </Badge>
-                      )}
-                    </div>
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            );
 
-                    <IconActionGroup responsive>
-                      <IconAction
-                        icon={ACTION_ICON.editar}
-                        label="Editar"
-                        intent="neutral"
-                        onClick={() => {
-                          setEditingId(video.id);
-                          setEditingVideo(video);
-                        }}
-                        className="flex-1 sm:flex-none justify-center sm:justify-start"
-                      />
-
-                      <IconAction
-                        icon={video.status_publicacao === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
-                        label={video.status_publicacao === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
-                        intent={video.status_publicacao === 'publicado' ? 'attention' : 'positive'}
-                        onClick={() => handleToggleStatus(video)}
-                        className="flex-1 sm:flex-none justify-center sm:justify-start"
-                      />
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <IconAction
-                            icon={ACTION_ICON.excluir}
-                            label="Excluir"
-                            intent="danger"
-                            className="flex-1 sm:flex-none justify-center sm:justify-start"
-                          />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="max-w-md mx-4">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="flex items-center gap-2">
-                              <AlertTriangle className="w-5 h-5 text-red-500" />
-                              Confirmar Exclusão
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja excluir este vídeo? Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleDelete(video.id)}
-                              className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </IconActionGroup>
-                  </div>
-                </div>
-              </Card>
+            return (
+              <AdminUniformCard
+                key={video.id}
+                title={video.titulo}
+                coverUrl={thumbnailUrl || undefined}
+                coverAlt={`Thumbnail do vídeo: ${video.titulo}`}
+                badges={badges}
+                actions={actions}
+              />
             );
           })}
         </div>

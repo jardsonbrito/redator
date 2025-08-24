@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Calendar, Clock, CheckCircle, X as ClearIcon } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, CheckCircle, X as ClearIcon, Ban } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TemaForm } from './TemaForm';
-import { TemaActionButtons } from './TemaActionButtons';
+import { AdminUniformCard, type BadgeType } from './AdminUniformCard';
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 import { useAdminTemasFilters } from '@/hooks/useAdminTemasFilters';
 import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
@@ -356,74 +356,110 @@ export const TemaList = () => {
       </div>
       
       {temas && temas.length > 0 ? (
-        <div className="grid gap-4">
-          {temas.map((tema) => (
-            <Card key={tema.id} className="border-redator-accent/20">
-              <div className="flex flex-col sm:flex-row">
-                {/* Cover Image */}
-                <div className="w-full sm:w-48 h-32 sm:h-auto overflow-hidden rounded-t-lg sm:rounded-l-lg sm:rounded-t-none bg-muted flex-shrink-0">
-                  <img 
-                    src={getTemaCoverUrl(tema)} 
-                    alt={`Capa do tema: ${tema.frase_tematica}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
-                    }}
-                  />
-                </div>
+        <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+          {temas.map((tema) => {
+            const status = getThemeStatus(tema);
+            
+            // Preparar badges
+            const badges: BadgeType[] = [
+              {
+                label: tema.eixo_tematico,
+                variant: 'outline' as const
+              },
+              {
+                label: status.label,
+                variant: status.variant,
+                icon: status.type === 'published' ? <CheckCircle className="w-3 h-3" /> :
+                      status.type === 'scheduled' ? <Clock className="w-3 h-3" /> :
+                      status.type === 'overdue' ? <AlertTriangle className="w-3 h-3" /> : undefined
+              }
+            ];
+
+            if (tema.needs_media_update) {
+              badges.push({
+                label: 'Pendente de mídia',
+                variant: 'destructive' as const
+              });
+            }
+
+            // Preparar ações
+            const actions = (
+              <>
+                <IconAction
+                  icon={ACTION_ICON.editar}
+                  label="Editar tema"
+                  intent="neutral"
+                  onClick={() => setEditingId(tema.id)}
+                />
                 
-                <div className="flex-1">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-base text-redator-primary line-clamp-2 mb-2">
-                          {tema.frase_tematica}
-                        </CardTitle>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {tema.eixo_tematico}
-                          </Badge>
-                          
-                          {(() => {
-                            const status = getThemeStatus(tema);
-                            return (
-                              <Badge variant={status.variant} className="text-xs flex items-center gap-1">
-                                {status.type === 'published' && <CheckCircle className="w-3 h-3" />}
-                                {status.type === 'scheduled' && <Clock className="w-3 h-3" />}
-                                {status.type === 'overdue' && <AlertTriangle className="w-3 h-3" />}
-                                {status.label}
-                              </Badge>
-                            );
-                          })()}
-                          
-                          {tema.needs_media_update && (
-                            <Badge variant="destructive" className="text-xs">
-                              Pendente de mídia
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                   <CardContent className="pt-2">
-                     <div className="mt-4">
-                       <TemaActionButtons
-                         tema={tema}
-                         status={getThemeStatus(tema)}
-                         onEdit={() => setEditingId(tema.id)}
-                         onToggleStatus={toggleStatus}
-                         onPublishNow={publishNow}
-                         onCancelScheduling={cancelScheduling}
-                         onDelete={handleDelete}
-                       />
-                     </div>
-                   </CardContent>
-                </div>
-              </div>
-            </Card>
-          ))}
+                <IconAction
+                  icon={tema.status === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
+                  label={tema.status === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
+                  intent={tema.status === 'publicado' ? 'attention' : 'positive'}
+                  onClick={() => toggleStatus(tema.id, tema.status)}
+                />
+                
+                {status.type === 'scheduled' && (
+                  <IconAction
+                    icon={Ban}
+                    label="Cancelar agendamento"
+                    intent="attention"
+                    onClick={() => cancelScheduling(tema.id)}
+                  />
+                )}
+                
+                {status.type === 'overdue' && (
+                  <IconAction
+                    icon={ACTION_ICON.publicar}
+                    label="Publicar agora"
+                    intent="positive"
+                    onClick={() => publishNow(tema.id)}
+                  />
+                )}
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <IconAction
+                      icon={ACTION_ICON.excluir}
+                      label="Excluir tema"
+                      intent="danger"
+                    />
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="max-w-md mx-4">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                        Confirmar Exclusão
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir este tema? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                      <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => handleDelete(tema.id)}
+                        className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            );
+
+            return (
+              <AdminUniformCard
+                key={tema.id}
+                title={tema.frase_tematica}
+                coverUrl={getTemaCoverUrl(tema)}
+                coverAlt={`Capa do tema: ${tema.frase_tematica}`}
+                badges={badges}
+                actions={actions}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-8">
