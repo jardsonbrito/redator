@@ -57,6 +57,33 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
   const [cover, setCover] = useState<any>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [currentAulaData, setCurrentAulaData] = useState<AulaEditando | null>(null);
+  const [modulos, setModulos] = useState<{id: string, nome: string}[]>([]);
+  const [turmas, setTurmas] = useState<string[]>([]);
+
+  // Buscar dados do banco
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Definir módulos padrão (modulos table não existe nos tipos)
+        setModulos([
+          { id: 'comp1', nome: 'Competência 1' },
+          { id: 'comp2', nome: 'Competência 2' },
+          { id: 'comp3', nome: 'Competência 3' },
+          { id: 'comp4', nome: 'Competência 4' },
+          { id: 'comp5', nome: 'Competência 5' },
+          { id: 'aovivo', nome: 'Aula ao vivo' }
+        ]);
+
+        // Definir turmas padrão
+        setTurmas(['TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E']);
+      } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+        toast.error('Erro ao carregar dados do formulário');
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Preencher formulário ao editar
   useEffect(() => {
@@ -82,18 +109,6 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
     }
   }, [aulaEditando]);
 
-  const modulosDisponiveis = [
-    'Competência 1',
-    'Competência 2', 
-    'Competência 3',
-    'Competência 4',
-    'Competência 5',
-    'Aula ao vivo'
-  ];
-
-  const turmasDisponiveis = [
-    'TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E'
-  ];
 
   const handleTurmaChange = (turma: string, checked: boolean) => {
     if (checked) {
@@ -309,9 +324,9 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
                 <SelectValue placeholder="Selecione o módulo" />
               </SelectTrigger>
               <SelectContent>
-                {modulosDisponiveis.map((mod) => (
-                  <SelectItem key={mod} value={mod}>
-                    {mod}
+                {modulos.map((mod) => (
+                  <SelectItem key={mod.id} value={mod.nome}>
+                    {mod.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -448,7 +463,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
           <div>
             <Label>Turmas Autorizadas</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-              {turmasDisponiveis.map((turma) => (
+              {turmas.map((turma) => (
                 <div key={turma} className="flex items-center space-x-2">
                   <Checkbox
                     id={turma}

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Video, Clock, Users, Link as LinkIcon, Radio } from "lucide-react";
 
-const turmasDisponiveis = [
-  "Turma A", "Turma B", "Turma C", "Turma D", "Turma E"
-];
-
 export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [turmas, setTurmas] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     titulo: "",
     descricao: "",
@@ -32,6 +29,11 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     ativo: true,
     eh_aula_ao_vivo: false
   });
+
+  // Buscar turmas ao carregar componente
+  useEffect(() => {
+    setTurmas(['TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E']);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +168,7 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
               Turmas Autorizadas *
             </Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-              {turmasDisponiveis.map((turma) => (
+              {turmas.map((turma) => (
                 <div key={turma} className="flex items-center space-x-2">
                   <Checkbox
                     id={turma}
