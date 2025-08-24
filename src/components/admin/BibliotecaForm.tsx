@@ -153,6 +153,30 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
       path: data.path, 
       publicUrl 
     });
+
+    // Verificar se a imagem está acessível antes de retornar
+    try {
+      await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          console.log('Thumbnail verification successful:', publicUrl);
+          resolve(true);
+        };
+        img.onerror = () => {
+          console.warn('Thumbnail not immediately accessible, but URL generated:', publicUrl);
+          resolve(true); // Continuar mesmo se não carregar imediatamente
+        };
+        img.src = publicUrl;
+        
+        // Timeout após 5 segundos
+        setTimeout(() => {
+          console.log('Thumbnail verification timeout, proceeding with URL:', publicUrl);
+          resolve(true);
+        }, 5000);
+      });
+    } catch (error) {
+      console.warn('Thumbnail verification failed, but continuing:', error);
+    }
     
     return publicUrl;
   };
@@ -283,6 +307,11 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
       }
 
       queryClient.invalidateQueries({ queryKey: ['admin-biblioteca'] });
+      
+      // Aguardar um momento para o cache se atualizar
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['admin-biblioteca'] });
+      }, 1000);
 
       if (onSuccess) {
         onSuccess();

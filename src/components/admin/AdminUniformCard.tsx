@@ -42,15 +42,26 @@ export const AdminUniformCard = ({
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 console.error('Failed to load image:', coverUrl);
-                target.src = '/placeholders/aula-cover.png';
-                target.onerror = () => {
-                  // Se até o placeholder falhar, mostrar div vazia
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.innerHTML = '<div class="w-full h-full bg-muted flex items-center justify-center"><span class="text-xs text-muted-foreground">Sem imagem</span></div>';
-                  }
-                };
+                
+                // Tentar recarregar a imagem uma vez após 2 segundos
+                if (!target.dataset.retried) {
+                  target.dataset.retried = 'true';
+                  console.log('Attempting to reload image after delay:', coverUrl);
+                  setTimeout(() => {
+                    target.src = coverUrl + '?t=' + Date.now(); // Cache busting
+                  }, 2000);
+                } else {
+                  // Se falhar na segunda tentativa, usar placeholder
+                  target.src = '/placeholders/aula-cover.png';
+                  target.onerror = () => {
+                    // Se até o placeholder falhar, mostrar div vazia
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="w-full h-full bg-muted flex items-center justify-center"><span class="text-xs text-muted-foreground">Sem imagem</span></div>';
+                    }
+                  };
+                }
               }}
             />
           ) : (
