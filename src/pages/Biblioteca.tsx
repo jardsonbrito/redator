@@ -19,10 +19,12 @@ import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
 import { LockedResourceCard } from "@/components/LockedResourceCard";
 import { StudentBibliotecaCard } from "@/components/shared/StudentBibliotecaCard";
 import { useToast } from "@/hooks/use-toast";
+import { useBibliotecaPermissions } from "@/hooks/useBibliotecaPermissions";
 
 const Biblioteca = () => {
   const { studentData } = useStudentAuth();
   const { toast } = useToast();
+  const { verificarPermissao } = useBibliotecaPermissions();
   const [busca, setBusca] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
@@ -109,38 +111,43 @@ const Biblioteca = () => {
     }
   });
 
-  const handleDownload = async (materialId: string, arquivoUrl: string, arquivoNome: string) => {
+  const handleDownload = async (materialId: string, arquivoUrl: string, arquivoNome: string, titulo: string) => {
     try {
-      // Usar função do banco para validar permissões e obter dados do download
-      const { data: downloadData, error } = await supabase.rpc('gerar_url_download_biblioteca', {
-        material_id: materialId,
-        user_turma: turmaCode === "Visitante" ? null : turmaCode,
-        is_visitante: turmaCode === "Visitante"
-      });
+      // Validar permissões antes do download
+      const material = { 
+        turmas_autorizadas: [], // Será preenchido pela query principal
+        permite_visitante: true 
+      };
+      
+      // Buscar material específico para verificar permissões
+      const { data: materialData, error: materialError } = await supabase
+        .from('biblioteca_materiais')
+        .select('turmas_autorizadas, permite_visitante, titulo')
+        .eq('id', materialId)
+        .single();
 
-      if (error) {
-        console.error('Erro ao validar permissões:', error);
-        throw new Error('Erro ao verificar permissões de download');
+      if (materialError || !materialData) {
+        throw new Error('Material não encontrado');
       }
 
-      // Validar tipo da resposta
-      const response = downloadData as any;
-      if (!response?.success) {
-        console.error('Download negado:', response?.message);
+      // Verificar permissão usando o hook
+      const podeAcessar = verificarPermissao(materialData);
+      
+      if (!podeAcessar) {
         toast({
           title: "Acesso negado",
-          description: response?.message || 'Você não tem permissão para baixar este material',
+          description: 'Você não tem permissão para baixar este material',
           variant: "destructive"
         });
         return;
       }
 
-      // Usar dados validados para download
+      // Gerar URL pública para download
       const { data } = supabase.storage
         .from('biblioteca-pdfs')
-        .getPublicUrl(response.arquivo_url);
+        .getPublicUrl(arquivoUrl);
       
-      console.log('Download autorizado para:', response.titulo);
+      console.log('Download autorizado para:', titulo);
       
       // Tentar download direto
       const fetchResponse = await fetch(data.publicUrl);
@@ -153,7 +160,7 @@ const Biblioteca = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = response.arquivo_nome || 'documento.pdf';
+      a.download = arquivoNome || 'documento.pdf';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -161,7 +168,7 @@ const Biblioteca = () => {
       
       toast({
         title: "Download iniciado",
-        description: `Download de "${response.titulo}" foi iniciado com sucesso.`,
+        description: `Download de "${titulo}" foi iniciado com sucesso.`,
         variant: "default"
       });
       
@@ -179,19 +186,25 @@ const Biblioteca = () => {
     try {
       // Para livros digitais, usar visualização inline
       if (categoria.toLowerCase().includes('livro digital')) {
-        // Validar permissões antes de mostrar o PDF
-        const { data: downloadData, error } = await supabase.rpc('gerar_url_download_biblioteca', {
-          material_id: materialId,
-          user_turma: turmaCode === "Visitante" ? null : turmaCode,
-          is_visitante: turmaCode === "Visitante"
-        });
+        // Validar permissões usando o hook
+        
+        // Buscar material específico para verificar permissões
+        const { data: materialData, error: materialError } = await supabase
+          .from('biblioteca_materiais')
+          .select('turmas_autorizadas, permite_visitante, titulo')
+          .eq('id', materialId)
+          .single();
 
-        // Validar tipo da resposta
-        const response = downloadData as any;
-        if (error || !response?.success) {
+        if (materialError || !materialData) {
+          throw new Error('Material não encontrado');
+        }
+
+        const podeAcessar = verificarPermissao(materialData);
+        
+        if (!podeAcessar) {
           toast({
             title: "Acesso negado",
-            description: response?.message || 'Você não tem permissão para acessar este material',
+            description: 'Você não tem permissão para acessar este material',
             variant: "destructive"
           });
           return;
@@ -199,16 +212,23 @@ const Biblioteca = () => {
 
         const { data } = await supabase.storage
           .from('biblioteca-pdfs')
-          .getPublicUrl(response.arquivo_url);
+          .getPublicUrl(arquivoUrl);
         
         setSelectedPdf({
           url: data.publicUrl,
-          title: response.titulo
+          title: titulo
         });
         setPdfViewerOpen(true);
       } else {
         // Para outras categorias, fazer download normal
-        await handleDownload(materialId, arquivoUrl, titulo);
+        // Buscar o nome do arquivo original
+        const { data: materialData } = await supabase
+          .from('biblioteca_materiais')
+          .select('arquivo_nome')
+          .eq('id', materialId)
+          .single();
+          
+        await handleDownload(materialId, arquivoUrl, materialData?.arquivo_nome || 'documento.pdf', titulo);
       }
     } catch (error) {
       console.error('Erro ao visualizar arquivo:', error);
