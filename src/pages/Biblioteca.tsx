@@ -18,9 +18,11 @@ import { PDFViewer } from "@/components/admin/PDFViewer";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
 import { LockedResourceCard } from "@/components/LockedResourceCard";
 import { StudentBibliotecaCard } from "@/components/shared/StudentBibliotecaCard";
+import { useToast } from "@/hooks/use-toast";
 
 const Biblioteca = () => {
   const { studentData } = useStudentAuth();
+  const { toast } = useToast();
   const [busca, setBusca] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
@@ -80,18 +82,22 @@ const Biblioteca = () => {
           throw error;
         }
         
-        // Filtrar por turma e visitante no frontend para ter controle total
+        // Filtrar materiais usando a lógica correta de permissões
         const materiaisFiltrados = (data || []).filter((material) => {
           const turmasAutorizadas = material.turmas_autorizadas || [];
           const permiteVisitante = material.permite_visitante;
           
           if (turmaCode === "Visitante") {
-            // Visitantes só veem materiais que permitem visitantes
-            return permiteVisitante;
+            // Visitantes só veem materiais que explicitamente permitem visitantes
+            return permiteVisitante === true;
           } else {
-            // Alunos veem apenas materiais da sua turma específica
-            // Materiais exclusivos para visitantes (permite_visitante=true E sem turmas) NÃO são vistos por turmas
-            return turmasAutorizadas.includes(turmaCode);
+            // Alunos veem materiais se:
+            // 1. Sua turma está na lista de turmas autorizadas OU
+            // 2. O material permite visitantes (se não há turmas específicas)
+            const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
+            const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
+            
+            return turmaEstaAutorizada || semRestricaoTurma;
           }
         });
         
@@ -103,67 +109,114 @@ const Biblioteca = () => {
     }
   });
 
-  const handleDownload = async (arquivoUrl: string, arquivoNome: string) => {
+  const handleDownload = async (materialId: string, arquivoUrl: string, arquivoNome: string) => {
     try {
-      // Para bucket público, usar URL pública direta
+      // Usar função do banco para validar permissões e obter dados do download
+      const { data: downloadData, error } = await supabase.rpc('gerar_url_download_biblioteca', {
+        material_id: materialId,
+        user_turma: turmaCode === "Visitante" ? null : turmaCode,
+        is_visitante: turmaCode === "Visitante"
+      });
+
+      if (error) {
+        console.error('Erro ao validar permissões:', error);
+        throw new Error('Erro ao verificar permissões de download');
+      }
+
+      // Validar tipo da resposta
+      const response = downloadData as any;
+      if (!response?.success) {
+        console.error('Download negado:', response?.message);
+        toast({
+          title: "Acesso negado",
+          description: response?.message || 'Você não tem permissão para baixar este material',
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Usar dados validados para download
       const { data } = supabase.storage
         .from('biblioteca-pdfs')
-        .getPublicUrl(arquivoUrl);
+        .getPublicUrl(response.arquivo_url);
       
-      console.log('Public URL for download:', data.publicUrl);
+      console.log('Download autorizado para:', response.titulo);
       
-      // Tentar download direto usando URL pública
-      const response = await fetch(data.publicUrl);
+      // Tentar download direto
+      const fetchResponse = await fetch(data.publicUrl);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!fetchResponse.ok) {
+        throw new Error(`HTTP error! status: ${fetchResponse.status}`);
       }
       
-      const blob = await response.blob();
+      const blob = await fetchResponse.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = arquivoNome || 'documento.pdf';
+      a.download = response.arquivo_nome || 'documento.pdf';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
+      toast({
+        title: "Download iniciado",
+        description: `Download de "${response.titulo}" foi iniciado com sucesso.`,
+        variant: "default"
+      });
+      
     } catch (error) {
       console.error('Erro ao baixar arquivo:', error);
-      
-      // Fallback: tentar URL pública direta em nova aba
-      try {
-        const { data } = supabase.storage
-          .from('biblioteca-pdfs')
-          .getPublicUrl(arquivoUrl);
-        
-        window.open(data.publicUrl, '_blank');
-      } catch (fallbackError) {
-        console.error('Erro no fallback:', fallbackError);
-      }
+      toast({
+        title: "Erro no download",
+        description: "Erro ao baixar o arquivo. Tente novamente.",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleViewPdf = async (arquivoUrl: string, titulo: string, categoria: string) => {
+  const handleViewPdf = async (materialId: string, arquivoUrl: string, titulo: string, categoria: string) => {
     try {
       // Para livros digitais, usar visualização inline
       if (categoria.toLowerCase().includes('livro digital')) {
+        // Validar permissões antes de mostrar o PDF
+        const { data: downloadData, error } = await supabase.rpc('gerar_url_download_biblioteca', {
+          material_id: materialId,
+          user_turma: turmaCode === "Visitante" ? null : turmaCode,
+          is_visitante: turmaCode === "Visitante"
+        });
+
+        // Validar tipo da resposta
+        const response = downloadData as any;
+        if (error || !response?.success) {
+          toast({
+            title: "Acesso negado",
+            description: response?.message || 'Você não tem permissão para acessar este material',
+            variant: "destructive"
+          });
+          return;
+        }
+
         const { data } = await supabase.storage
           .from('biblioteca-pdfs')
-          .getPublicUrl(arquivoUrl);
+          .getPublicUrl(response.arquivo_url);
         
         setSelectedPdf({
           url: data.publicUrl,
-          title: titulo
+          title: response.titulo
         });
         setPdfViewerOpen(true);
       } else {
         // Para outras categorias, fazer download normal
-        await handleDownload(arquivoUrl, titulo);
+        await handleDownload(materialId, arquivoUrl, titulo);
       }
     } catch (error) {
       console.error('Erro ao visualizar arquivo:', error);
+      toast({
+        title: "Erro de acesso",
+        description: "Erro ao acessar o material. Tente novamente.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -282,30 +335,42 @@ const Biblioteca = () => {
                   </div>
                   
                   <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
-                    {materiaisCategoria.map((material) => {
-                      const isLivroDigital = categoriaEscolhida?.nome.toLowerCase().includes('livro digital');
-                      const podeAcessar = !isVisitante || material.permite_visitante;
-                      
-                      return (
-                        <StudentBibliotecaCard
-                          key={material.id}
-                          title={material.titulo}
-                          description={material.descricao}
-                          coverUrl={material.thumbnail_url}
-                          coverAlt={`Capa do material ${material.titulo}`}
-                          categoria={material.categorias?.nome || 'Sem categoria'}
-                          publishedAt={material.published_at}
-                          unpublishedAt={material.unpublished_at}
-                          isLivroDigital={isLivroDigital}
-                          podeAcessar={podeAcessar}
-                          onViewPdf={() => handleViewPdf(
-                            material.arquivo_url, 
-                            material.titulo,
-                            categoriaEscolhida?.nome || ''
-                          )}
-                        />
-                      );
-                    })}
+                      {materiaisCategoria.map((material) => {
+                        const isLivroDigital = categoriaEscolhida?.nome.toLowerCase().includes('livro digital');
+                        // Verificar se o usuário pode acessar baseado na lógica correta
+                        const turmasAutorizadas = material.turmas_autorizadas || [];
+                        const permiteVisitante = material.permite_visitante;
+                        
+                        let podeAcessar = false;
+                        if (turmaCode === "Visitante") {
+                          podeAcessar = permiteVisitante === true;
+                        } else {
+                          const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
+                          const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
+                          podeAcessar = turmaEstaAutorizada || semRestricaoTurma;
+                        }
+                        
+                        return (
+                          <StudentBibliotecaCard
+                            key={material.id}
+                            title={material.titulo}
+                            description={material.descricao}
+                            coverUrl={material.thumbnail_url}
+                            coverAlt={`Capa do material ${material.titulo}`}
+                            categoria={material.categorias?.nome || 'Sem categoria'}
+                            publishedAt={material.published_at}
+                            unpublishedAt={material.unpublished_at}
+                            isLivroDigital={isLivroDigital}
+                            podeAcessar={podeAcessar}
+                            onViewPdf={() => handleViewPdf(
+                              material.id,
+                              material.arquivo_url, 
+                              material.titulo,
+                              categoriaEscolhida?.nome || ''
+                            )}
+                          />
+                        );
+                      })}
                   </div>
                 </div>
               );
@@ -336,7 +401,18 @@ const Biblioteca = () => {
                     <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
                       {materiaisCategoria.map((material) => {
                         const isLivroDigital = categoria.nome.toLowerCase().includes('livro digital');
-                        const podeAcessar = !isVisitante || material.permite_visitante;
+                        // Verificar se o usuário pode acessar baseado na lógica correta
+                        const turmasAutorizadas = material.turmas_autorizadas || [];
+                        const permiteVisitante = material.permite_visitante;
+                        
+                        let podeAcessar = false;
+                        if (turmaCode === "Visitante") {
+                          podeAcessar = permiteVisitante === true;
+                        } else {
+                          const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
+                          const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
+                          podeAcessar = turmaEstaAutorizada || semRestricaoTurma;
+                        }
                         
                         return (
                           <StudentBibliotecaCard
@@ -351,6 +427,7 @@ const Biblioteca = () => {
                             isLivroDigital={isLivroDigital}
                             podeAcessar={podeAcessar}
                             onViewPdf={() => handleViewPdf(
+                              material.id,
                               material.arquivo_url, 
                               material.titulo,
                               categoria.nome
