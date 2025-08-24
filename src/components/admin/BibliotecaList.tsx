@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Download, Search, Calendar, Grid, List } from 'lucide-react';
+import { Edit, Trash2, Download, Search, Calendar, Grid, List, Eye, EyeOff } from 'lucide-react';
+import { AdminUniformCard, BadgeType } from './AdminUniformCard';
+import { CompactIconButton } from '@/components/ui/compact-icon-button';
 import { BibliotecaForm } from './BibliotecaForm';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -171,6 +173,56 @@ export const BibliotecaList = () => {
       });
     }
   });
+
+  // Derivar status baseado nas datas de visibilidade
+  const getStatus = (material: any) => {
+    const now = new Date();
+    const publishedAt = material.published_at ? new Date(material.published_at) : null;
+    const unpublishedAt = material.unpublished_at ? new Date(material.unpublished_at) : null;
+
+    if (unpublishedAt && now >= unpublishedAt) {
+      return { status: 'despublicado', variant: 'destructive' as const };
+    }
+    if (publishedAt && now >= publishedAt) {
+      return { status: 'publicado', variant: 'default' as const };
+    }
+    if (publishedAt && now < publishedAt) {
+      return { status: 'agendado', variant: 'secondary' as const };
+    }
+    return { status: 'rascunho', variant: 'outline' as const };
+  };
+
+  // Derivar texto da data
+  const getDateText = (material: any) => {
+    const { status } = getStatus(material);
+    if (status === 'publicado' && material.published_at) {
+      return `Publicado em ${format(new Date(material.published_at), "dd/MM/yyyy", { locale: ptBR })}`;
+    }
+    if (status === 'agendado' && material.published_at) {
+      return `Publicará em ${format(new Date(material.published_at), "dd/MM/yyyy", { locale: ptBR })}`;
+    }
+    if (status === 'despublicado' && material.unpublished_at) {
+      return `Despublicado em ${format(new Date(material.unpublished_at), "dd/MM/yyyy", { locale: ptBR })}`;
+    }
+    return '';
+  };
+
+  // Derivar texto do público
+  const getPublicText = (material: any) => {
+    const hasVisitantes = material.permite_visitante;
+    const numTurmas = material.turmas_autorizadas?.length || 0;
+    
+    if (hasVisitantes && numTurmas > 0) {
+      return `${numTurmas} turma(s) + Visitantes`;
+    }
+    if (hasVisitantes) {
+      return 'Visitantes';
+    }
+    if (numTurmas > 0) {
+      return `${numTurmas} turma(s)`;
+    }
+    return 'Acesso restrito';
+  };
 
   const handleDownload = async (arquivoUrl: string, arquivoNome: string) => {
     try {
@@ -447,104 +499,102 @@ export const BibliotecaList = () => {
           })}
         </div>
       ) : (
-        <div className="grid gap-4">
-          {materiais.map((material) => (
-            <Card key={material.id} className="border-l-4 border-l-redator-primary">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">{material.titulo}</CardTitle>
-                    {material.descricao && (
-                      <p className="text-gray-600 mb-3">{material.descricao}</p>
-                    )}
-                    
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <Badge className="bg-redator-primary text-white">
-                        {material.categorias?.nome || 'Categoria não definida'}
-                      </Badge>
-                      <Badge variant={material.status === 'publicado' ? 'default' : 'secondary'}>
-                        {material.status === 'publicado' ? 'Publicado' : 'Rascunho'}
-                      </Badge>
-                      <Badge variant="outline">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
-                      </Badge>
-                      {material.permite_visitante && (
-                        <Badge variant="outline" className="text-redator-secondary">
-                          Visitantes
-                        </Badge>
-                      )}
-                      {material.turmas_autorizadas && material.turmas_autorizadas.length > 0 && (
-                        <Badge variant="outline">
-                          {material.turmas_autorizadas.length} turma(s)
-                        </Badge>
-                      )}
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {materiais.map((material) => {
+            const statusInfo = getStatus(material);
+            const dateText = getDateText(material);
+            const publicText = getPublicText(material);
 
-                    <p className="text-sm text-gray-500">
-                      Arquivo: {material.arquivo_nome}
-                    </p>
-                  </div>
-                  
-                  <div className="ml-4 flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
+            const badges: BadgeType[] = [
+              {
+                label: material.categorias?.nome || 'Categoria não definida',
+                variant: 'outline'
+              },
+              {
+                label: statusInfo.status.charAt(0).toUpperCase() + statusInfo.status.slice(1),
+                variant: statusInfo.variant
+              }
+            ];
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(material)}
-                      title="Editar material"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
+            if (dateText) {
+              badges.push({
+                label: dateText,
+                variant: 'outline'
+              });
+            }
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleStatusMutation.mutate({
-                        id: material.id,
-                        novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
-                      })}
-                      title={material.status === 'publicado' ? 'Tornar rascunho' : 'Publicar'}
-                    >
-                      {material.status === 'publicado' ? '📝' : '✅'}
-                    </Button>
+            badges.push({
+              label: publicText,
+              variant: 'outline'
+            });
 
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir este material? Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteMutation.mutate(material.id)}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+            const actions = (
+              <div className="flex items-center gap-2">
+                <CompactIconButton
+                  icon={Download}
+                  label="Baixar material"
+                  intent="neutral"
+                  onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
+                />
+                
+                <CompactIconButton
+                  icon={Edit}
+                  label="Editar material"
+                  intent="neutral"
+                  onClick={() => handleEdit(material)}
+                />
+                
+                <CompactIconButton
+                  icon={material.status === 'publicado' ? EyeOff : Eye}
+                  label={material.status === 'publicado' ? 'Tornar rascunho' : 'Publicar'}
+                  intent="attention"
+                  onClick={() => toggleStatusMutation.mutate({
+                    id: material.id,
+                    novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
+                  })}
+                />
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <CompactIconButton
+                      icon={Trash2}
+                      label="Excluir material"
+                      intent="danger"
+                    />
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir este material? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteMutation.mutate(material.id)}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            );
+
+            return (
+              <AdminUniformCard
+                key={material.id}
+                title={material.titulo}
+                coverUrl={undefined}
+                coverAlt={`Capa do material ${material.titulo}`}
+                badges={badges}
+                actions={actions}
+                metaInfo={material.descricao ? material.descricao.substring(0, 100) + (material.descricao.length > 100 ? '...' : '') : undefined}
+              />
+            );
+          })}
         </div>
       )}
     </div>
