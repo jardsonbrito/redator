@@ -37,6 +37,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
 
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
 
 
@@ -86,6 +87,16 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setThumbnail(file);
+      
+      // Criar preview da imagem
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setThumbnailPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      // Limpar URL manual se arquivo for selecionado
+      setFormData(prev => ({ ...prev, thumbnail_url: '' }));
     } else {
       toast({
         title: "Erro",
@@ -249,6 +260,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
         });
         setArquivo(null);
         setThumbnail(null);
+        setThumbnailPreview('');
         
         // Limpar inputs de arquivo
         const fileInput = document.getElementById('arquivo') as HTMLInputElement;
@@ -364,28 +376,41 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
               id="thumbnail_url"
               type="url"
               value={formData.thumbnail_url}
-              onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
+              onChange={(e) => {
+                setFormData({...formData, thumbnail_url: e.target.value});
+                // Limpar arquivo selecionado se URL for preenchida
+                if (e.target.value) {
+                  setThumbnail(null);
+                  setThumbnailPreview('');
+                  const thumbnailInput = document.getElementById('thumbnail') as HTMLInputElement;
+                  if (thumbnailInput) thumbnailInput.value = '';
+                }
+              }}
               placeholder="https://exemplo.com/imagem.jpg"
             />
           </div>
           
-          {thumbnail && (
-            <p className="text-sm text-green-600">
-              Nova imagem selecionada: {thumbnail.name}
-            </p>
+          {/* Preview da imagem */}
+          {(thumbnailPreview || formData.thumbnail_url) && (
+            <div className="mt-3">
+              <Label className="text-sm text-gray-600">Preview:</Label>
+              <div className="mt-1">
+                <img 
+                  src={thumbnailPreview || formData.thumbnail_url} 
+                  alt="Preview da thumbnail" 
+                  className="w-32 h-20 object-cover rounded border shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            </div>
           )}
           
-          {formData.thumbnail_url && !thumbnail && (
-            <div className="mt-2">
-              <img 
-                src={formData.thumbnail_url} 
-                alt="Preview" 
-                className="w-20 h-20 object-cover rounded border"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            </div>
+          {thumbnail && (
+            <p className="text-sm text-green-600 flex items-center gap-1">
+              ✓ Nova imagem selecionada: {thumbnail.name}
+            </p>
           )}
         </div>
       </div>
