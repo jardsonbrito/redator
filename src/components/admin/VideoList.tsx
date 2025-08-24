@@ -216,6 +216,7 @@ export const VideoList = () => {
                     setEditingId(video.id);
                     setEditingVideo(video);
                   }}
+                  density="compact"
                 />
 
                 <IconAction
@@ -223,6 +224,7 @@ export const VideoList = () => {
                   label={video.status_publicacao === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
                   intent={video.status_publicacao === 'publicado' ? 'attention' : 'positive'}
                   onClick={() => handleToggleStatus(video)}
+                  density="compact"
                 />
                 
                 <AlertDialog>
@@ -231,6 +233,7 @@ export const VideoList = () => {
                       icon={ACTION_ICON.excluir}
                       label="Excluir vídeo"
                       intent="danger"
+                      density="compact"
                     />
                   </AlertDialogTrigger>
                   <AlertDialogContent className="max-w-md mx-4">

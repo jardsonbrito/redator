@@ -390,6 +390,7 @@ export const TemaList = () => {
                   label="Editar tema"
                   intent="neutral"
                   onClick={() => setEditingId(tema.id)}
+                  density="compact"
                 />
                 
                 <IconAction
@@ -397,6 +398,7 @@ export const TemaList = () => {
                   label={tema.status === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
                   intent={tema.status === 'publicado' ? 'attention' : 'positive'}
                   onClick={() => toggleStatus(tema.id, tema.status)}
+                  density="compact"
                 />
                 
                 {status.type === 'scheduled' && (
@@ -405,6 +407,7 @@ export const TemaList = () => {
                     label="Cancelar agendamento"
                     intent="attention"
                     onClick={() => cancelScheduling(tema.id)}
+                    density="compact"
                   />
                 )}
                 
@@ -414,6 +417,7 @@ export const TemaList = () => {
                     label="Publicar agora"
                     intent="positive"
                     onClick={() => publishNow(tema.id)}
+                    density="compact"
                   />
                 )}
                 
@@ -423,6 +427,7 @@ export const TemaList = () => {
                       icon={ACTION_ICON.excluir}
                       label="Excluir tema"
                       intent="danger"
+                      density="compact"
                     />
                   </AlertDialogTrigger>
                   <AlertDialogContent className="max-w-md mx-4">

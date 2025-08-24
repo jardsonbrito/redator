@@ -79,11 +79,11 @@ export const AdminUniformCard = ({
               </p>
             )}
             
-            {/* Actions - sempre na parte inferior */}
+            {/* Actions - sempre na parte inferior, apenas ícones */}
             <div className="mt-auto">
-              <IconActionGroup responsive>
+              <div className="flex items-center gap-2 flex-wrap">
                 {actions}
-              </IconActionGroup>
+              </div>
             </div>
           </CardContent>
         </div>
