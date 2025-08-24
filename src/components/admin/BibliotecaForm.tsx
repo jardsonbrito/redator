@@ -129,7 +129,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
     const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `thumbnails/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     
-    const { error: uploadError } = await supabase.storage
+    const { data, error: uploadError } = await supabase.storage
       .from('biblioteca-pdfs')
       .upload(fileName, file);
 
@@ -138,10 +138,21 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
       throw new Error(`Erro no upload da imagem: ${uploadError.message}`);
     }
 
+    // Verificar se o upload foi bem-sucedido e obter URL público
+    if (!data?.path) {
+      throw new Error('Upload realizado mas path não retornado');
+    }
+
     // Retornar URL público da imagem
     const { data: { publicUrl } } = supabase.storage
       .from('biblioteca-pdfs')
-      .getPublicUrl(fileName);
+      .getPublicUrl(data.path);
+    
+    console.log('Thumbnail uploaded successfully:', { 
+      fileName, 
+      path: data.path, 
+      publicUrl 
+    });
     
     return publicUrl;
   };
