@@ -377,7 +377,7 @@ export const RedacaoEnviadaCard = ({
                     {redacao.redacao_texto?.trim() ? (
                       <div>
                         <h4 className="font-medium text-primary mb-2"></h4>
-                        <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-gray-800 p-3 bg-white rounded border">
+                        <p className="text-sm sm:text-base leading-relaxed prose whitespace-pre-line text-gray-800 p-3 bg-white rounded border">
                           {redacao.redacao_texto}
                         </p>
                       </div>

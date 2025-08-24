@@ -246,7 +246,9 @@ export const RedacaoExercicioList = () => {
                   <div>
                     <strong>Redação:</strong>
                     <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                      <p className="whitespace-pre-wrap">{redacao.redacao_texto}</p>
+                      <div className="prose whitespace-pre-line">
+                        {redacao.redacao_texto}
+                      </div>
                     </div>
                   </div>
 

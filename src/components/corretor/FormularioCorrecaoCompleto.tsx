@@ -580,7 +580,7 @@ export const FormularioCorrecaoCompleto = ({
                 </Button>
               </div>
               <div className="prose prose-base max-w-none">
-                <p className="text-base leading-relaxed whitespace-pre-wrap text-gray-800">
+                <p className="text-base leading-relaxed prose whitespace-pre-line text-gray-800">
                   {redacao.texto}
                 </p>
               </div>

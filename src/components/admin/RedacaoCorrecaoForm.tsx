@@ -105,7 +105,7 @@ export const RedacaoCorrecaoForm = ({ redacao, onCancel, onSuccess, onCopyRedaca
 
         <div>
           <Label className="text-base font-semibold">Texto da Redação:</Label>
-          <div className="mt-1 p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
+          <div className="mt-1 p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto prose whitespace-pre-line">
             {redacao.redacao_texto}
           </div>
         </div>

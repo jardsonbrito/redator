@@ -400,7 +400,7 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
             <CardTitle>Texto da Redação</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto whitespace-pre-wrap">
+            <div className="p-4 bg-gray-50 rounded-md max-h-96 overflow-y-auto prose whitespace-pre-line">
               {redacao.texto}
             </div>
           </CardContent>

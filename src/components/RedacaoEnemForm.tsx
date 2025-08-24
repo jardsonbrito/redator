@@ -1,8 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Label } from "@/components/ui/label";
 
 interface RedacaoEnemFormProps {
   value: string;
@@ -19,181 +17,69 @@ export const RedacaoEnemForm = ({
   className = "", 
   placeholder = "Escreva sua redação aqui..." 
 }: RedacaoEnemFormProps) => {
-  const [currentLines, setCurrentLines] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isMobile = useIsMobile();
   
   // Conta palavras do texto
   const getWordCount = (text: string): number => {
+    if (!text.trim()) return 0;
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   };
 
-  // Calcula linhas baseado apenas em palavras para mobile (mais confiável)
-  const getWordBasedLineCount = (text: string): number => {
-    if (!text.trim()) return 0;
-    
-    // Estimativa simples: ~12 palavras por linha no formato ENEM
-    const wordsPerLine = 12;
-    const wordCount = getWordCount(text);
-    return Math.ceil(wordCount / wordsPerLine);
-  };
-  
-  // Calcula o número real de linhas visuais baseado no scrollHeight (desktop)
-  const getVisualLineCount = (textarea: HTMLTextAreaElement | null): number => {
-    if (!textarea || !textarea.value.trim()) return 0;
-    
-    // Força o recálculo do scrollHeight
-    const originalHeight = textarea.style.height;
-    textarea.style.height = 'auto';
-    
-    const lineHeight = 26.64; // Altura definida no CSS
-    const paddingTop = 24; // Padding top definido
-    const paddingBottom = 24; // Padding bottom definido
-    
-    // Calcula linhas baseado no scrollHeight real
-    const contentHeight = textarea.scrollHeight - paddingTop - paddingBottom;
-    const lines = Math.floor(contentHeight / lineHeight);
-    
-    // Restaura a altura original
-    textarea.style.height = originalHeight;
-    
-    // Retorna pelo menos 1 linha se há conteúdo, mas não infla a contagem
-    return Math.max(1, lines);
+  // Auto-resize textarea
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.max(textarea.scrollHeight, 192)}px`; // Mínimo 6 linhas
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const textarea = e.target;
-    const newValue = textarea.value;
-    
-    // Atualiza contagem de linhas apenas para exibição
-    let currentLineCount: number;
-    if (isMobile) {
-      currentLineCount = getWordBasedLineCount(newValue);
-    } else {
-      currentLineCount = getVisualLineCount(textarea);
-    }
-    
-    setCurrentLines(currentLineCount);
+    const newValue = e.target.value;
     onChange(newValue);
+    // Pequeno delay para garantir que o DOM foi atualizado
+    setTimeout(adjustTextareaHeight, 0);
   };
 
   useEffect(() => {
-    // Atualiza o contador de linhas quando o valor muda
-    let lines: number;
-    
-    if (isMobile) {
-      // No mobile, usa estimativa baseada em palavras
-      lines = getWordBasedLineCount(value);
-    } else {
-      // No desktop, usa cálculo visual
-      if (textareaRef.current) {
-        lines = getVisualLineCount(textareaRef.current);
-      } else {
-        lines = 0;
-      }
-    }
-    
-    setCurrentLines(lines);
+    adjustTextareaHeight();
     
     // Valida apenas se há texto
     const valid = value.trim().length > 0;
     onValidChange(valid);
-  }, [value, onValidChange, isMobile]);
+  }, [value, onValidChange]);
 
-  // Gera array de números de 1 a 30 para numeração
-  const lineNumbers = Array.from({ length: 30 }, (_, i) => i + 1);
+  const wordCount = getWordCount(value);
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <div className="relative mx-auto max-w-4xl">
-        {/* Container principal com proporções da folha ENEM */}
-        <div 
-          className={`relative bg-white rounded-xl shadow-lg border border-gray-200 ${
-            isMobile ? 'w-full' : ''
-          }`}
-          style={{
-            width: '100%',
-            aspectRatio: isMobile ? 'auto' : '18/20', // No mobile, permite altura automática
-            maxWidth: isMobile ? '100%' : '720px',
-            height: isMobile ? 'auto' : '848px', // No mobile, altura automática
-            minHeight: isMobile ? '600px' : '848px' // Altura mínima menor no mobile
-          }}
-        >
-          {/* Numeração das linhas */}
-          <div 
-            className={`absolute left-0 top-0 flex flex-col justify-start text-gray-500 font-mono ${
-              isMobile ? 'text-xs' : 'text-sm'
-            }`}
+      <div className="w-full max-w-4xl mx-auto">
+        <Label htmlFor="redacao-textarea" className="text-sm font-medium text-foreground mb-2 block">
+          Texto da Redação
+        </Label>
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            id="redacao-textarea"
+            value={value}
+            onChange={handleChange}
+            placeholder={placeholder}
+            className="w-full resize-none overflow-hidden rounded-2xl border p-4 leading-relaxed border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent min-h-[192px]"
             style={{
-              width: isMobile ? '12%' : '8.33%', // Mais espaço no mobile
-              height: '100%',
-              paddingTop: '24px'
+              fontSize: '16px',
+              lineHeight: '1.6',
+              fontFamily: 'system-ui, -apple-system, sans-serif'
             }}
-          >
-            {lineNumbers.map((num) => (
-              <div 
-                key={num} 
-                className="flex items-center justify-center text-xs"
-                style={{ 
-                  height: '26.64px', // Mesma altura do line-height do texto
-                  lineHeight: '26.64px'
-                }}
-              >
-                {num}
-              </div>
-            ))}
-          </div>
-
-          {/* Área de escrita */}
+            wrap="soft"
+            spellCheck={false}
+            aria-describedby="word-count-enem"
+          />
           <div 
-            className="absolute right-0 top-0 h-full"
-            style={{
-              width: isMobile ? '88%' : '91.67%', // Menos espaço no mobile para compensar numeração
-              paddingLeft: isMobile ? '4px' : '8px',
-              paddingRight: isMobile ? '4px' : '8px'
-            }}
+            id="word-count-enem"
+            className="text-sm text-muted-foreground mt-2 w-full text-right"
           >
-            {/* Linhas de fundo - exatamente 30 linhas */}
-            <div className="absolute inset-0 pointer-events-none">
-              {lineNumbers.map((num) => (
-                <div 
-                  key={num}
-                  className="absolute w-full"
-                  style={{
-                    top: `${24 + (num - 1) * 26.64 + 20}px`, // Posição da linha na base do texto
-                    height: '1px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.25)', // Linha preta com 25% de opacidade
-                    borderBottom: '1px solid rgba(0, 0, 0, 0.25)'
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Textarea sobreposto */}
-            <textarea
-              ref={textareaRef}
-              value={value}
-              onChange={handleChange}
-              placeholder={placeholder}
-              className="w-full h-full resize-none border-none outline-none bg-transparent text-gray-900 font-sans p-0 overflow-hidden"
-              style={{
-                fontSize: isMobile ? '14px' : '16px', // Fonte menor no mobile
-                lineHeight: '26.64px',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                paddingTop: '24px',
-                paddingBottom: '24px'
-              }}
-              spellCheck={false}
-            />
+            Palavras: {wordCount}
           </div>
-        </div>
-        
-        {/* Contador mostrando apenas informações estatísticas */}
-        <div className="mt-4 text-center">
-          <span className="text-sm text-gray-500">
-            Palavras: {getWordCount(value)}
-            <span className="ml-2 text-xs">({currentLines} linhas aprox.)</span>
-          </span>
         </div>
       </div>
     </div>
