@@ -53,15 +53,45 @@ export const SimpleAulaList = () => {
   const [moduloFiltro, setModuloFiltro] = useState('todos');
   const [showGrouped, setShowGrouped] = useState(false);
 
-  // Módulos hardcoded para o filtro
-  const modulos = [
-    'Competência 1',
-    'Competência 2', 
-    'Competência 3',
-    'Competência 4',
-    'Competência 5',
-    'Geral'
-  ];
+  // Buscar módulos únicos das aulas existentes
+  const [modulos, setModulos] = useState<string[]>([]);
+  const [novoModuloNome, setNovoModuloNome] = useState("");
+  const [mostrarNovoModulo, setMostrarNovoModulo] = useState(false);
+
+  // Função para buscar módulos únicos das aulas
+  const fetchModulos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('aulas')
+        .select('modulo')
+        .not('modulo', 'is', null);
+      
+      if (error) throw error;
+      
+      // Extrair módulos únicos
+      const modulosUnicos = Array.from(new Set(
+        data?.map(item => item.modulo).filter(Boolean) || []
+      )).sort();
+      
+      setModulos(modulosUnicos);
+    } catch (error) {
+      console.error('Erro ao buscar módulos:', error);
+    }
+  };
+
+  // Função para "criar" novo módulo (adicionar à lista local)
+  const criarNovoModulo = () => {
+    if (!novoModuloNome.trim()) return;
+    
+    const novoModulo = novoModuloNome.trim();
+    if (!modulos.includes(novoModulo)) {
+      setModulos(prev => [...prev, novoModulo].sort());
+    }
+    
+    setNovoModuloNome("");
+    setMostrarNovoModulo(false);
+    toast.success("Módulo adicionado à lista!");
+  };
 
   const fetchAulas = async () => {
     try {
@@ -148,12 +178,19 @@ export const SimpleAulaList = () => {
   };
 
   useEffect(() => {
+    fetchModulos();
     fetchAulas();
   }, [busca, moduloFiltro]);
 
-  // Agrupar aulas por módulo (usando o campo modulo existente)
+  // Buscar módulos inicialmente
+  useEffect(() => {
+    fetchModulos();
+  }, []);
+
+  // Agrupar aulas por módulo
   const aulasAgrupadas = aulas?.reduce((grupos: any, aula: any) => {
     const moduloNome = aula.modulo || 'Sem módulo';
+    
     if (!grupos[moduloNome]) {
       grupos[moduloNome] = [];
     }
@@ -211,19 +248,54 @@ if (isLoading) {
             />
           </div>
           
-          <Select value={moduloFiltro} onValueChange={setModuloFiltro}>
-            <SelectTrigger>
-              <SelectValue placeholder="Módulo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              {modulos.map((modulo) => (
-                <SelectItem key={modulo} value={modulo}>
-                  {modulo}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={moduloFiltro} onValueChange={setModuloFiltro}>
+              <SelectTrigger>
+                <SelectValue placeholder="Módulo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {modulos.map((modulo) => (
+                  <SelectItem key={modulo} value={modulo}>
+                    {modulo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMostrarNovoModulo(!mostrarNovoModulo)}
+              title="Criar novo módulo"
+            >
+              +
+            </Button>
+          </div>
+
+          {mostrarNovoModulo && (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nome do novo módulo"
+                value={novoModuloNome}
+                onChange={(e) => setNovoModuloNome(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && criarNovoModulo()}
+              />
+              <Button size="sm" onClick={criarNovoModulo}>
+                Criar
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => {
+                  setMostrarNovoModulo(false);
+                  setNovoModuloNome("");
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          )}
 
           <div></div>
 
