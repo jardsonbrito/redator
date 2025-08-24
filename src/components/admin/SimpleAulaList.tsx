@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +49,7 @@ export const SimpleAulaList = () => {
   const [aulaEditando, setAulaEditando] = useState<Aula | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [busca, setBusca] = useState('');
+  const [buscaDebounced, setBuscaDebounced] = useState('');
   const [moduloFiltro, setModuloFiltro] = useState('todos');
   const [showGrouped, setShowGrouped] = useState(false);
 
@@ -80,8 +81,8 @@ export const SimpleAulaList = () => {
         .select("*")
         .order("criado_em", { ascending: false });
 
-      if (busca) {
-        query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
+      if (buscaDebounced) {
+        query = query.or(`titulo.ilike.%${buscaDebounced}%,descricao.ilike.%${buscaDebounced}%`);
       }
 
       const { data, error } = await query;
@@ -171,10 +172,19 @@ export const SimpleAulaList = () => {
     fetchAulas();
   };
 
+  // Debounce para busca
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBuscaDebounced(busca);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [busca]);
+
   useEffect(() => {
     fetchModulos();
     fetchAulas();
-  }, [busca, moduloFiltro]);
+  }, [buscaDebounced, moduloFiltro]);
 
   // Buscar módulos inicialmente
   useEffect(() => {
