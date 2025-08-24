@@ -84,16 +84,32 @@ export const SimpleAulaList = () => {
         query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
       }
 
-      // Não filtrar por módulo por enquanto - apenas listar todas as aulas
-      // if (moduloFiltro && moduloFiltro !== 'todos') {
-      //   // Implementar filtro depois que resolver os problemas de tipos
-      // }
-
       const { data, error } = await query;
 
       if (error) throw error;
       
-      setAulas(data || []);
+      // Filtrar por módulo no frontend já que temos problemas com join
+      let aulasFiltered = data || [];
+      if (moduloFiltro && moduloFiltro !== 'todos') {
+        // Mapear módulos para IDs reais da base de dados
+        const moduloIds: { [key: string]: string } = {
+          'Competência 1': 'e951e007-2e33-4491-9cde-883ffc691f24', 
+          'Competência 2': '62c8f686-b03a-4175-8bb2-1812e7d46128',
+          'Competência 3': '17bc8189-a4ee-4c5a-a604-f188c2699188', 
+          'Competência 4': '65c74163-0e9a-4d16-b142-ef4eade26c13',
+          'Competência 5': '40b054c6-0df4-4b63-99ba-0fe9f315ef3c',
+          'Redatoria': '1ef05609-c5ed-418e-90ee-4968f29ebfd9',
+          'Aula ao vivo': 'b14dd9be-a203-45df-97b7-ae592f5c60ed'
+        };
+        
+        // Filtrar por modulo_id baseado no nome selecionado
+        const moduloId = moduloIds[moduloFiltro];
+        if (moduloId) {
+          aulasFiltered = aulasFiltered.filter((aula: any) => aula.modulo_id === moduloId);
+        }
+      }
+      
+      setAulas(aulasFiltered);
     } catch (err: any) {
       console.error("Erro ao buscar aulas:", err);
       setError(err.message || "Erro ao carregar aulas");
@@ -167,7 +183,18 @@ export const SimpleAulaList = () => {
 
   // Agrupar aulas por módulo
   const aulasAgrupadas = aulas?.reduce((grupos: any, aula: any) => {
-    const moduloNome = 'Sem módulo'; // Por enquanto todas vão para "Sem módulo"
+    // Mapear modulo_id para nome do módulo usando IDs reais
+    const moduloNomes: { [key: string]: string } = {
+      'e951e007-2e33-4491-9cde-883ffc691f24': 'Competência 1',
+      '62c8f686-b03a-4175-8bb2-1812e7d46128': 'Competência 2', 
+      '17bc8189-a4ee-4c5a-a604-f188c2699188': 'Competência 3',
+      '65c74163-0e9a-4d16-b142-ef4eade26c13': 'Competência 4',
+      '40b054c6-0df4-4b63-99ba-0fe9f315ef3c': 'Competência 5',
+      '1ef05609-c5ed-418e-90ee-4968f29ebfd9': 'Redatoria',
+      'b14dd9be-a203-45df-97b7-ae592f5c60ed': 'Aula ao vivo'
+    };
+    
+    const moduloNome = moduloNomes[aula.modulo_id] || 'Sem módulo';
     
     if (!grupos[moduloNome]) {
       grupos[moduloNome] = [];
@@ -304,8 +331,19 @@ if (isLoading) {
                   <div className="grid gap-4">
                     {aulasModulo.map((aula) => {
                       const coverUrl = resolveAulaCover(aula);
-                      const badges: { label: string; tone?: BadgeTone }[] = [];
-                      // if (aula.modulos?.nome) badges.push({ label: aula.modulos.nome, tone: 'primary' });
+            const badges: { label: string; tone?: BadgeTone }[] = [];
+                      const moduloNomes: { [key: string]: string } = {
+                        'e951e007-2e33-4491-9cde-883ffc691f24': 'Competência 1',
+                        '62c8f686-b03a-4175-8bb2-1812e7d46128': 'Competência 2',
+                        '17bc8189-a4ee-4c5a-a604-f188c2699188': 'Competência 3',
+                        '65c74163-0e9a-4d16-b142-ef4eade26c13': 'Competência 4',
+                        '40b054c6-0df4-4b63-99ba-0fe9f315ef3c': 'Competência 5',
+                        '1ef05609-c5ed-418e-90ee-4968f29ebfd9': 'Redatoria',
+                        'b14dd9be-a203-45df-97b7-ae592f5c60ed': 'Aula ao vivo'
+                      };
+                      if ((aula as any).modulo_id && moduloNomes[(aula as any).modulo_id]) {
+                        badges.push({ label: moduloNomes[(aula as any).modulo_id], tone: 'primary' });
+            }
                       if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
                       badges.push({ label: aula.ativo ? 'Ativo' : 'Inativo', tone: aula.ativo ? 'success' : 'neutral' });
 
@@ -351,8 +389,19 @@ if (isLoading) {
         <div className="grid gap-4">
           {aulas.map((aula) => {
             const coverUrl = resolveAulaCover(aula);
-            const badges: { label: string; tone?: BadgeTone }[] = [];
-            // if (aula.modulos?.nome) badges.push({ label: aula.modulos.nome, tone: 'primary' });
+                      const badges: { label: string; tone?: BadgeTone }[] = [];
+            const moduloNomes: { [key: string]: string } = {
+              'e951e007-2e33-4491-9cde-883ffc691f24': 'Competência 1',
+              '62c8f686-b03a-4175-8bb2-1812e7d46128': 'Competência 2',
+              '17bc8189-a4ee-4c5a-a604-f188c2699188': 'Competência 3',
+              '65c74163-0e9a-4d16-b142-ef4eade26c13': 'Competência 4',
+              '40b054c6-0df4-4b63-99ba-0fe9f315ef3c': 'Competência 5',
+              '1ef05609-c5ed-418e-90ee-4968f29ebfd9': 'Redatoria',
+              'b14dd9be-a203-45df-97b7-ae592f5c60ed': 'Aula ao vivo'
+            };
+                      if ((aula as any).modulo_id && moduloNomes[(aula as any).modulo_id]) {
+                        badges.push({ label: moduloNomes[(aula as any).modulo_id], tone: 'primary' });
+                      }
             if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
             badges.push({ label: aula.ativo ? 'Ativo' : 'Inativo', tone: aula.ativo ? 'success' : 'neutral' });
 
