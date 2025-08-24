@@ -294,30 +294,27 @@ const Biblioteca = () => {
             })()}
           </div>
         ) : (
-          // Quando "Todas as categorias" está selecionado, mostrar todas
+          // Quando "Todas as categorias" está selecionado, mostrar apenas categorias com materiais
           <div className="space-y-8">
-            {categorias.map((categoria) => {
-              const materiaisCategoria = materiaisAgrupados[categoria.nome] || [];
-              
-              return (
-                <div key={categoria.id} className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-2xl font-bold text-redator-primary">
-                      {categoria.nome}
-                    </h3>
-                    <Badge variant="outline" className="text-sm">
-                      {materiaisCategoria.length} material(is)
-                    </Badge>
-                  </div>
-                  
-                  {materiaisCategoria.length === 0 ? (
-                    <Card className="border-dashed">
-                      <CardContent className="text-center py-8">
-                        <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500">Nenhum material nesta categoria</p>
-                      </CardContent>
-                    </Card>
-                  ) : (
+            {categorias
+              .filter((categoria) => {
+                const materiaisCategoria = materiaisAgrupados[categoria.nome] || [];
+                return materiaisCategoria.length > 0;
+              })
+              .map((categoria) => {
+                const materiaisCategoria = materiaisAgrupados[categoria.nome] || [];
+                
+                return (
+                  <div key={categoria.id} className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-2xl font-bold text-redator-primary">
+                        {categoria.nome}
+                      </h3>
+                      <Badge variant="outline" className="text-sm">
+                        {materiaisCategoria.length} material(is)
+                      </Badge>
+                    </div>
+                    
                     <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
                       {materiaisCategoria.map((material) => {
                         const isLivroDigital = categoria.nome.toLowerCase().includes('livro digital');
@@ -344,10 +341,9 @@ const Biblioteca = () => {
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
           </div>
         )}
         </main>
