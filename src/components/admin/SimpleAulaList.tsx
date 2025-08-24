@@ -2,18 +2,29 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trash2, ExternalLink, FileText, Edit } from "lucide-react";
+import { Trash2, ExternalLink, FileText, Edit, Search, Calendar, Grid, List } from "lucide-react";
 import { AulaForm } from "./AulaForm";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
 import { resolveAulaCover } from "@/utils/coverUtils";
+import { useQuery } from '@tanstack/react-query';
+
+interface Modulo {
+  id: string;
+  nome: string;
+  slug?: string;
+}
 
 interface Aula {
   id: string;
   titulo: string;
   descricao: string | null;
   modulo: string;
+  modulo_id?: string;
+  modulos?: Modulo;
   link_conteudo: string;
   pdf_url: string | null;
   pdf_nome: string | null;
@@ -38,16 +49,39 @@ export const SimpleAulaList = () => {
   const [error, setError] = useState<string | null>(null);
   const [aulaEditando, setAulaEditando] = useState<Aula | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [busca, setBusca] = useState('');
+  const [moduloFiltro, setModuloFiltro] = useState('todos');
+  const [showGrouped, setShowGrouped] = useState(false);
+
+  // Módulos hardcoded para o filtro
+  const modulos = [
+    'Competência 1',
+    'Competência 2', 
+    'Competência 3',
+    'Competência 4',
+    'Competência 5',
+    'Geral'
+  ];
 
   const fetchAulas = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("aulas")
         .select("*")
         .order("criado_em", { ascending: false });
+
+      if (busca) {
+        query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
+      }
+
+      if (moduloFiltro && moduloFiltro !== 'todos') {
+        query = query.eq('modulo', moduloFiltro);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -115,7 +149,17 @@ export const SimpleAulaList = () => {
 
   useEffect(() => {
     fetchAulas();
-  }, []);
+  }, [busca, moduloFiltro]);
+
+  // Agrupar aulas por módulo (usando o campo modulo existente)
+  const aulasAgrupadas = aulas?.reduce((grupos: any, aula: any) => {
+    const moduloNome = aula.modulo || 'Sem módulo';
+    if (!grupos[moduloNome]) {
+      grupos[moduloNome] = [];
+    }
+    grupos[moduloNome].push(aula);
+    return grupos;
+  }, {}) || {};
 
 if (isLoading) {
     return (
@@ -153,7 +197,53 @@ if (isLoading) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Filtros */}
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="grid md:grid-cols-4 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar aulas..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <Select value={moduloFiltro} onValueChange={setModuloFiltro}>
+            <SelectTrigger>
+              <SelectValue placeholder="Módulo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {modulos.map((modulo) => (
+                <SelectItem key={modulo} value={modulo}>
+                  {modulo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div></div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showGrouped ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowGrouped(!showGrouped)}
+            >
+              {showGrouped ? <List className="w-4 h-4 mr-2" /> : <Grid className="w-4 h-4 mr-2" />}
+              {showGrouped ? 'Lista' : 'Agrupar'}
+            </Button>
+            <div className="text-sm text-gray-600 flex items-center">
+              <Calendar className="w-4 h-4 mr-2" />
+              {aulas?.length || 0} aula(s)
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Aulas Cadastradas</h2>
         <div className="flex gap-2">
@@ -172,6 +262,76 @@ if (isLoading) {
             <p className="text-gray-500">Nenhuma aula encontrada.</p>
           </CardContent>
         </Card>
+      ) : showGrouped ? (
+        <div className="space-y-8">
+          {/* Exibir aulas agrupadas por módulo */}
+          {Object.keys(aulasAgrupadas).map((moduloNome) => {
+            const aulasModulo = aulasAgrupadas[moduloNome] || [];
+            
+            return (
+              <div key={moduloNome} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-bold text-primary">
+                    {moduloNome}
+                  </h3>
+                  <Badge variant="outline" className="text-sm">
+                    {aulasModulo.length} aula(s)
+                  </Badge>
+                </div>
+                
+                {aulasModulo.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="text-center py-8">
+                      <p className="text-gray-500">Nenhuma aula neste módulo</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4">
+                    {aulasModulo.map((aula) => {
+                      const coverUrl = resolveAulaCover(aula);
+                      const badges: { label: string; tone?: BadgeTone }[] = [];
+                      if (aula.modulo) badges.push({ label: aula.modulo, tone: 'primary' });
+                      if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
+                      badges.push({ label: aula.ativo ? 'Ativo' : 'Inativo', tone: aula.ativo ? 'success' : 'neutral' });
+
+                      const meta = [
+                        ...(aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0
+                          ? [{ icon: ExternalLink, text: `Turmas: ${aula.turmas_autorizadas.join(', ')}` }]
+                          : []),
+                        ...(aula.criado_em ? [{ icon: ExternalLink, text: `Criado em: ${new Date(aula.criado_em).toLocaleString('pt-BR')}` }] : []),
+                      ];
+
+                      const actions = [
+                        { icon: ExternalLink, label: 'Abrir', onClick: () => window.open(aula.link_conteudo, '_blank') },
+                        ...(aula.pdf_url ? [{ icon: FileText, label: 'PDF', onClick: () => window.open(aula.pdf_url!, '_blank') }] : []),
+                        { icon: Edit, label: 'Editar', onClick: () => handleEdit(aula) },
+                        { icon: Edit, label: aula.ativo ? 'Desativar' : 'Ativar', onClick: () => toggleAtivo(aula.id, aula.ativo) },
+                        { icon: Trash2, label: 'Excluir', onClick: () => handleDelete(aula.id), tone: 'danger' as const },
+                      ];
+
+                      return (
+                        <UnifiedCard
+                          key={aula.id}
+                          variant="admin"
+                          item={{
+                            id: aula.id,
+                            module: 'aulas',
+                            coverUrl,
+                            title: aula.titulo,
+                            subtitle: aula.descricao || undefined,
+                            badges,
+                            meta,
+                            actions,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="grid gap-4">
           {aulas.map((aula) => {

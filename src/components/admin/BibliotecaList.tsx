@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -292,20 +291,20 @@ export const BibliotecaList = () => {
             </SelectContent>
           </Select>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant={showGrouped ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowGrouped(!showGrouped)}
-              >
-                {showGrouped ? <List className="w-4 h-4 mr-2" /> : <Grid className="w-4 h-4 mr-2" />}
-                {showGrouped ? 'Lista' : 'Agrupar'}
-              </Button>
-              <div className="text-sm text-gray-600 flex items-center">
-                <Calendar className="w-4 h-4 mr-2" />
-                {materiais?.length || 0} material(is)
-              </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showGrouped ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowGrouped(!showGrouped)}
+            >
+              {showGrouped ? <List className="w-4 h-4 mr-2" /> : <Grid className="w-4 h-4 mr-2" />}
+              {showGrouped ? 'Lista' : 'Agrupar'}
+            </Button>
+            <div className="text-sm text-gray-600 flex items-center">
+              <Calendar className="w-4 h-4 mr-2" />
+              {materiais?.length || 0} material(is)
             </div>
+          </div>
         </div>
       </div>
 
@@ -329,7 +328,7 @@ export const BibliotecaList = () => {
             return (
               <div key={categoria.id} className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-xl font-bold text-redator-primary">
+                  <h3 className="text-xl font-bold text-primary">
                     {categoria.nome}
                   </h3>
                   <Badge variant="outline" className="text-sm">
@@ -344,104 +343,129 @@ export const BibliotecaList = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid gap-4">
-                    {materiaisCategoria.map((material) => (
-                      <Card key={material.id} className="border-l-4 border-l-redator-primary">
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <CardTitle className="text-lg mb-2">{material.titulo}</CardTitle>
-                              {material.descricao && (
-                                <p className="text-gray-600 mb-3">{material.descricao}</p>
-                              )}
-                              
-                              <div className="flex flex-wrap gap-2 mb-4">
-                                <Badge className="bg-redator-primary text-white">
-                                  {material.categorias?.nome || 'Categoria não definida'}
-                                </Badge>
-                                <Badge variant={material.status === 'publicado' ? 'default' : 'secondary'}>
-                                  {material.status === 'publicado' ? 'Publicado' : 'Rascunho'}
-                                </Badge>
-                                <Badge variant="outline">
-                                  <Calendar className="w-3 h-3 mr-1" />
-                                  {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
-                                </Badge>
-                                {material.permite_visitante && (
-                                  <Badge variant="outline" className="text-redator-secondary">
-                                    Visitantes
-                                  </Badge>
-                                )}
-                                {material.turmas_autorizadas && material.turmas_autorizadas.length > 0 && (
-                                  <Badge variant="outline">
-                                    {material.turmas_autorizadas.length} turma(s)
-                                  </Badge>
-                                )}
-                              </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {materiaisCategoria.map((material) => {
+                      // Calcular status baseado em datas
+                      const now = new Date();
+                      const publishedAt = material.published_at ? new Date(material.published_at) : null;
+                      const unpublishedAt = material.unpublished_at ? new Date(material.unpublished_at) : null;
+                      
+                      let statusInfo: { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } = { label: 'Rascunho', variant: 'secondary' };
+                      if (material.status === 'publicado') {
+                        if (unpublishedAt && now >= unpublishedAt) {
+                          statusInfo = { label: 'Despublicado', variant: 'destructive' };
+                        } else if (!publishedAt || now >= publishedAt) {
+                          statusInfo = { label: 'Publicado', variant: 'default' };
+                        } else {
+                          statusInfo = { label: 'Agendado', variant: 'secondary' };
+                        }
+                      }
 
-                              <p className="text-sm text-gray-500">
-                                Arquivo: {material.arquivo_nome}
-                              </p>
-                            </div>
-                            
-                            <div className="ml-4 flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
+                      // Preparar badges
+                      const badges: BadgeType[] = [
+                        {
+                          label: material.categorias?.nome || 'Sem categoria',
+                          variant: 'outline'
+                        },
+                        {
+                          label: statusInfo.label,
+                          variant: statusInfo.variant
+                        },
+                        {
+                          label: format(new Date(material.published_at || material.criado_em), "dd/MM/yyyy", { locale: ptBR }),
+                          variant: 'outline'
+                        }
+                      ];
 
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(material)}
-                                title="Editar material"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
+                      // Badge de público
+                      const hasVisitantes = material.permite_visitante;
+                      const numTurmas = material.turmas_autorizadas?.length || 0;
+                      
+                      if (hasVisitantes && numTurmas > 0) {
+                        badges.push({
+                          label: `${numTurmas} turma(s) + Visitantes`,
+                          variant: 'outline'
+                        });
+                      } else if (hasVisitantes) {
+                        badges.push({
+                          label: 'Visitantes',
+                          variant: 'outline'
+                        });
+                      } else if (numTurmas > 0) {
+                        badges.push({
+                          label: `${numTurmas} turma(s)`,
+                          variant: 'outline'
+                        });
+                      }
 
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => toggleStatusMutation.mutate({
-                                  id: material.id,
-                                  novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
-                                })}
-                                title={material.status === 'publicado' ? 'Tornar rascunho' : 'Publicar'}
-                              >
-                                {material.status === 'publicado' ? '📝' : '✅'}
-                              </Button>
+                      // Preparar ações
+                      const actions = (
+                        <>
+                          <CompactIconButton
+                            icon={Edit}
+                            label="Editar material"
+                            intent="neutral"
+                            onClick={() => handleEdit(material)}
+                          />
+                          
+                          <CompactIconButton
+                            icon={material.status === 'publicado' ? EyeOff : Eye}
+                            label={material.status === 'publicado' ? 'Tornar rascunho' : 'Publicar'}
+                            intent="attention"
+                            onClick={() => toggleStatusMutation.mutate({
+                              id: material.id,
+                              novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
+                            })}
+                          />
 
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja excluir este material? Esta ação não pode ser desfeita.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => deleteMutation.mutate(material.id)}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Excluir
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
+                          <CompactIconButton
+                            icon={Download}
+                            label="Baixar material"
+                            intent="positive"
+                            onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
+                          />
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <CompactIconButton
+                                icon={Trash2}
+                                label="Excluir material"
+                                intent="danger"
+                              />
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir este material? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMutation.mutate(material.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </>
+                      );
+
+                      return (
+                        <AdminUniformCard
+                          key={material.id}
+                          title={material.titulo}
+                          coverUrl={material.thumbnail_url || undefined}
+                          coverAlt={`Thumbnail do material ${material.titulo}`}
+                          badges={badges}
+                          actions={actions}
+                          metaInfo={material.descricao?.substring(0, 100) + (material.descricao && material.descricao.length > 100 ? '...' : '')}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -577,5 +601,3 @@ export const BibliotecaList = () => {
     </div>
   );
 };
-
-export default BibliotecaList;
