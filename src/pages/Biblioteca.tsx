@@ -105,25 +105,43 @@ const Biblioteca = () => {
 
   const handleDownload = async (arquivoUrl: string, arquivoNome: string) => {
     try {
-      const { data, error } = await supabase.storage
+      // Para bucket público, usar URL pública direta
+      const { data } = supabase.storage
         .from('biblioteca-pdfs')
-        .download(arquivoUrl);
-
-      if (error) {
-        console.error('Download error:', error);
-        throw error;
+        .getPublicUrl(arquivoUrl);
+      
+      console.log('Public URL for download:', data.publicUrl);
+      
+      // Tentar download direto usando URL pública
+      const response = await fetch(data.publicUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const url = URL.createObjectURL(data);
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = arquivoNome;
+      a.download = arquivoNome || 'documento.pdf';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
     } catch (error) {
       console.error('Erro ao baixar arquivo:', error);
+      
+      // Fallback: tentar URL pública direta em nova aba
+      try {
+        const { data } = supabase.storage
+          .from('biblioteca-pdfs')
+          .getPublicUrl(arquivoUrl);
+        
+        window.open(data.publicUrl, '_blank');
+      } catch (fallbackError) {
+        console.error('Erro no fallback:', fallbackError);
+      }
     }
   };
 
