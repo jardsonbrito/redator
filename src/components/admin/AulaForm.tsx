@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BookOpen, Plus, X } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -60,11 +61,14 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
   const [modulos, setModulos] = useState<{id: string, nome: string}[]>([]);
   const [turmas, setTurmas] = useState<string[]>([]);
 
+  const [novoModuloNome, setNovoModuloNome] = useState("");
+  const [mostrarNovoModulo, setMostrarNovoModulo] = useState(false);
+
   // Buscar dados do banco
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Definir módulos padrão (modulos table não existe nos tipos)
+        // Usar módulos padrão pois modulos não está no schema do Supabase client
         setModulos([
           { id: 'comp1', nome: 'Competência 1' },
           { id: 'comp2', nome: 'Competência 2' },
@@ -109,6 +113,30 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
     }
   }, [aulaEditando]);
 
+
+  const criarNovoModulo = async () => {
+    if (!novoModuloNome.trim()) {
+      toast.error("Digite o nome do módulo");
+      return;
+    }
+
+    try {
+      // Simular criação do módulo (adicionar localmente)
+      const newModulo = { 
+        id: Date.now().toString(), 
+        nome: novoModuloNome.trim() 
+      };
+      
+      setModulos([...modulos, newModulo]);
+      setModulo(newModulo.nome);
+      setNovoModuloNome("");
+      setMostrarNovoModulo(false);
+      toast.success("Módulo adicionado com sucesso!");
+    } catch (error) {
+      console.error('Erro ao criar módulo:', error);
+      toast.error('Erro ao criar módulo');
+    }
+  };
 
   const handleTurmaChange = (turma: string, checked: boolean) => {
     if (checked) {
@@ -317,20 +345,67 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
             />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="modulo">Módulo *</Label>
-            <Select value={modulo} onValueChange={setModulo} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o módulo" />
-              </SelectTrigger>
-              <SelectContent>
-                {modulos.map((mod) => (
-                  <SelectItem key={mod.id} value={mod.nome}>
-                    {mod.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={modulo} onValueChange={setModulo}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione o módulo" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {modulos.map((mod) => (
+                    <SelectItem key={mod.id} value={mod.nome}>
+                      {mod.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon"
+                onClick={() => setMostrarNovoModulo(!mostrarNovoModulo)}
+                title="Criar novo módulo"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {mostrarNovoModulo && (
+              <div className="flex gap-2 p-3 border rounded-lg bg-muted/50">
+                <div className="flex-1">
+                  <Label htmlFor="novoModulo" className="text-sm">Nome do novo módulo</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="novoModulo"
+                      value={novoModuloNome}
+                      onChange={(e) => setNovoModuloNome(e.target.value)}
+                      placeholder="Ex: Módulo 6"
+                      onKeyPress={(e) => e.key === 'Enter' && criarNovoModulo()}
+                    />
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      onClick={criarNovoModulo}
+                      disabled={!novoModuloNome.trim()}
+                    >
+                      Criar
+                    </Button>
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => {
+                        setMostrarNovoModulo(false);
+                        setNovoModuloNome("");
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
