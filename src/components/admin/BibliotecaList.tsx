@@ -174,56 +174,6 @@ export const BibliotecaList = () => {
     }
   });
 
-  // Derivar status baseado nas datas de visibilidade
-  const getStatus = (material: any) => {
-    const now = new Date();
-    const publishedAt = material.published_at ? new Date(material.published_at) : null;
-    const unpublishedAt = material.unpublished_at ? new Date(material.unpublished_at) : null;
-
-    if (unpublishedAt && now >= unpublishedAt) {
-      return { status: 'despublicado', variant: 'destructive' as const };
-    }
-    if (publishedAt && now >= publishedAt) {
-      return { status: 'publicado', variant: 'default' as const };
-    }
-    if (publishedAt && now < publishedAt) {
-      return { status: 'agendado', variant: 'secondary' as const };
-    }
-    return { status: 'rascunho', variant: 'outline' as const };
-  };
-
-  // Derivar texto da data
-  const getDateText = (material: any) => {
-    const { status } = getStatus(material);
-    if (status === 'publicado' && material.published_at) {
-      return `Publicado em ${format(new Date(material.published_at), "dd/MM/yyyy", { locale: ptBR })}`;
-    }
-    if (status === 'agendado' && material.published_at) {
-      return `Publicará em ${format(new Date(material.published_at), "dd/MM/yyyy", { locale: ptBR })}`;
-    }
-    if (status === 'despublicado' && material.unpublished_at) {
-      return `Despublicado em ${format(new Date(material.unpublished_at), "dd/MM/yyyy", { locale: ptBR })}`;
-    }
-    return '';
-  };
-
-  // Derivar texto do público
-  const getPublicText = (material: any) => {
-    const hasVisitantes = material.permite_visitante;
-    const numTurmas = material.turmas_autorizadas?.length || 0;
-    
-    if (hasVisitantes && numTurmas > 0) {
-      return `${numTurmas} turma(s) + Visitantes`;
-    }
-    if (hasVisitantes) {
-      return 'Visitantes';
-    }
-    if (numTurmas > 0) {
-      return `${numTurmas} turma(s)`;
-    }
-    return 'Acesso restrito';
-  };
-
   const handleDownload = async (arquivoUrl: string, arquivoNome: string) => {
     try {
       const { data, error } = await supabase.storage
@@ -501,42 +451,46 @@ export const BibliotecaList = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {materiais.map((material) => {
-            const statusInfo = getStatus(material);
-            const dateText = getDateText(material);
-            const publicText = getPublicText(material);
-
+            // Preparar badges seguindo modelo dos Temas
             const badges: BadgeType[] = [
               {
-                label: material.categorias?.nome || 'Categoria não definida',
+                label: material.categorias?.nome || 'Sem categoria',
                 variant: 'outline'
               },
               {
-                label: statusInfo.status.charAt(0).toUpperCase() + statusInfo.status.slice(1),
-                variant: statusInfo.variant
+                label: material.status === 'publicado' ? 'Publicado' : 'Rascunho',
+                variant: material.status === 'publicado' ? 'default' : 'secondary'
+              },
+              {
+                label: format(new Date(material.data_publicacao || material.criado_em), "dd/MM/yyyy", { locale: ptBR }),
+                variant: 'outline'
               }
             ];
 
-            if (dateText) {
+            // Badge de público
+            const hasVisitantes = material.permite_visitante;
+            const numTurmas = material.turmas_autorizadas?.length || 0;
+            
+            if (hasVisitantes && numTurmas > 0) {
               badges.push({
-                label: dateText,
+                label: `${numTurmas} turma(s) + Visitantes`,
+                variant: 'outline'
+              });
+            } else if (hasVisitantes) {
+              badges.push({
+                label: 'Visitantes',
+                variant: 'outline'
+              });
+            } else if (numTurmas > 0) {
+              badges.push({
+                label: `${numTurmas} turma(s)`,
                 variant: 'outline'
               });
             }
 
-            badges.push({
-              label: publicText,
-              variant: 'outline'
-            });
-
+            // Preparar ações seguindo modelo dos Temas
             const actions = (
-              <div className="flex items-center gap-2">
-                <CompactIconButton
-                  icon={Download}
-                  label="Baixar material"
-                  intent="neutral"
-                  onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
-                />
-                
+              <>
                 <CompactIconButton
                   icon={Edit}
                   label="Editar material"
@@ -552,6 +506,13 @@ export const BibliotecaList = () => {
                     id: material.id,
                     novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
                   })}
+                />
+
+                <CompactIconButton
+                  icon={Download}
+                  label="Baixar material"
+                  intent="positive"
+                  onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
                 />
 
                 <AlertDialog>
@@ -580,18 +541,18 @@ export const BibliotecaList = () => {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              </div>
+              </>
             );
 
             return (
               <AdminUniformCard
                 key={material.id}
                 title={material.titulo}
-                coverUrl={undefined}
-                coverAlt={`Capa do material ${material.titulo}`}
+                coverUrl={undefined} // Biblioteca não tem capa por enquanto
+                coverAlt={`Material ${material.titulo}`}
                 badges={badges}
                 actions={actions}
-                metaInfo={material.descricao ? material.descricao.substring(0, 100) + (material.descricao.length > 100 ? '...' : '') : undefined}
+                metaInfo={material.descricao?.substring(0, 100) + (material.descricao && material.descricao.length > 100 ? '...' : '')}
               />
             );
           })}
