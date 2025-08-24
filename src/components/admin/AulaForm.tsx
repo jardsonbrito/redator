@@ -68,22 +68,37 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Usar módulos padrão pois modulos não está no schema do Supabase client
-        setModulos([
-          { id: 'comp1', nome: 'Competência 1' },
-          { id: 'comp2', nome: 'Competência 2' },
-          { id: 'comp3', nome: 'Competência 3' },
-          { id: 'comp4', nome: 'Competência 4' },
-          { id: 'comp5', nome: 'Competência 5' },
-          { id: 'aovivo', nome: 'Aula ao vivo' }
-        ]);
-
-        // Definir turmas padrão
-        setTurmas(['TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E']);
+        // Buscar módulos reais do banco de dados
+        const response = await fetch('https://kgmxntpmvlnbftjqtyxx.supabase.co/rest/v1/modulos?select=id,nome&ativo=eq.true&order=sort_order.asc', {
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnbXhudHBtdmxuYmZ0anF0eXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5Nzk3MzQsImV4cCI6MjA2NjU1NTczNH0.57rSKhhANhbPH4-KMS8D6EuxW1dhAimML-rPNSlnEX0',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'Accept-Profile': 'public'
+          }
+        });
+        
+        if (response.ok) {
+          const modulosData = await response.json();
+          setModulos(modulosData);
+        } else {
+          throw new Error('Erro ao buscar módulos');
+        }
       } catch (error) {
-        console.error('Erro ao buscar dados:', error);
-        toast.error('Erro ao carregar dados do formulário');
+        console.error('Erro ao buscar módulos:', error);
+        // Fallback para módulos padrão se houver erro
+        setModulos([
+          { id: 'e951e007-2e33-4491-9cde-883ffc691f24', nome: 'Competência 1' },
+          { id: '62c8f686-b03a-4175-8bb2-1812e7d46128', nome: 'Competência 2' },
+          { id: '17bc8189-a4ee-4c5a-a604-f188c2699188', nome: 'Competência 3' },
+          { id: '65c74163-0e9a-4d16-b142-ef4eade26c13', nome: 'Competência 4' },
+          { id: '40b054c6-0df4-4b63-99ba-0fe9f315ef3c', nome: 'Competência 5' },
+          { id: '1ef05609-c5ed-418e-90ee-4968f29ebfd9', nome: 'Redatoria' },
+          { id: 'b14dd9be-a203-45df-97b7-ae592f5c60ed', nome: 'Aula ao vivo' }
+        ]);
       }
+
+      // Definir turmas padrão
+      setTurmas(['TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E']);
     };
 
     fetchData();
@@ -206,6 +221,13 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
       return;
     }
 
+    // Encontrar o ID do módulo selecionado
+    const moduloSelecionado = modulos.find(m => m.nome === modulo);
+    if (!moduloSelecionado) {
+      toast.error("Módulo selecionado inválido.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -238,7 +260,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
       const aulaData = {
         titulo,
         descricao,
-        modulo,
+        modulo_id: moduloSelecionado.id, // Usar o ID do módulo, não o nome
         link_conteudo: linkConteudo,
         pdf_url: finalPdfUrl || null,
         pdf_nome: finalPdfNome || null,
