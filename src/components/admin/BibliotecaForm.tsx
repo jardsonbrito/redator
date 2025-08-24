@@ -29,7 +29,9 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
     categoria_id: materialEditando?.categoria_id || '',
     turmas_autorizadas: materialEditando?.turmas_autorizadas || [] as string[],
     permite_visitante: materialEditando?.permite_visitante || false,
-    status: materialEditando?.status || 'publicado' as 'publicado' | 'rascunho'
+    status: materialEditando?.status || 'publicado' as 'publicado' | 'rascunho',
+    published_at: materialEditando?.published_at || new Date().toISOString().slice(0, 16),
+    unpublished_at: materialEditando?.unpublished_at || ''
   });
 
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -141,6 +143,8 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
             turmas_autorizadas: formData.turmas_autorizadas,
             permite_visitante: formData.permite_visitante,
             status: formData.status,
+            published_at: formData.published_at ? new Date(formData.published_at).toISOString() : null,
+            unpublished_at: formData.unpublished_at ? new Date(formData.unpublished_at).toISOString() : null,
             atualizado_em: new Date().toISOString()
           })
           .eq('id', materialEditando.id);
@@ -166,7 +170,9 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
             arquivo_nome,
             turmas_autorizadas: formData.turmas_autorizadas,
             permite_visitante: formData.permite_visitante,
-            status: formData.status
+            status: formData.status,
+            published_at: formData.published_at ? new Date(formData.published_at).toISOString() : new Date().toISOString(),
+            unpublished_at: formData.unpublished_at ? new Date(formData.unpublished_at).toISOString() : null
           }]);
 
         if (error) {
@@ -186,7 +192,9 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
           categoria_id: '',
           turmas_autorizadas: [],
           permite_visitante: false,
-          status: 'publicado'
+          status: 'publicado',
+          published_at: new Date().toISOString().slice(0, 16),
+          unpublished_at: ''
         });
         setArquivo(null);
         
@@ -310,6 +318,28 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
         permiteeVisitante={formData.permite_visitante}
         onPermiteVisitanteChange={handlePermiteVisitanteChange}
       />
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="published_at">Data de Publicação</Label>
+          <Input
+            id="published_at"
+            type="datetime-local"
+            value={formData.published_at}
+            onChange={(e) => setFormData({...formData, published_at: e.target.value})}
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="unpublished_at">Data de Despublicação (opcional)</Label>
+          <Input
+            id="unpublished_at"
+            type="datetime-local"
+            value={formData.unpublished_at}
+            onChange={(e) => setFormData({...formData, unpublished_at: e.target.value})}
+          />
+        </div>
+      </div>
 
       <div>
         <Label htmlFor="status">Status</Label>

@@ -451,23 +451,39 @@ export const BibliotecaList = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {materiais.map((material) => {
-            // Preparar badges seguindo modelo dos Temas
+            // Calcular status baseado em datas - seguindo modelo da imagem
+            const now = new Date();
+            const publishedAt = material.published_at ? new Date(material.published_at) : null;
+            const unpublishedAt = material.unpublished_at ? new Date(material.unpublished_at) : null;
+            
+            let statusInfo: { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } = { label: 'Rascunho', variant: 'secondary' };
+            if (material.status === 'publicado') {
+              if (unpublishedAt && now >= unpublishedAt) {
+                statusInfo = { label: 'Despublicado', variant: 'destructive' };
+              } else if (!publishedAt || now >= publishedAt) {
+                statusInfo = { label: 'Publicado', variant: 'default' };
+              } else {
+                statusInfo = { label: 'Agendado', variant: 'secondary' };
+              }
+            }
+
+            // Preparar badges seguindo exatamente o modelo da imagem
             const badges: BadgeType[] = [
               {
                 label: material.categorias?.nome || 'Sem categoria',
                 variant: 'outline'
               },
               {
-                label: material.status === 'publicado' ? 'Publicado' : 'Rascunho',
-                variant: material.status === 'publicado' ? 'default' : 'secondary'
+                label: statusInfo.label,
+                variant: statusInfo.variant
               },
               {
-                label: format(new Date(material.data_publicacao || material.criado_em), "dd/MM/yyyy", { locale: ptBR }),
+                label: format(new Date(material.published_at || material.criado_em), "dd/MM/yyyy", { locale: ptBR }),
                 variant: 'outline'
               }
             ];
 
-            // Badge de público
+            // Badge de público - seguindo exatamente o modelo da imagem
             const hasVisitantes = material.permite_visitante;
             const numTurmas = material.turmas_autorizadas?.length || 0;
             
@@ -488,7 +504,7 @@ export const BibliotecaList = () => {
               });
             }
 
-            // Preparar ações seguindo modelo dos Temas
+            // Preparar ações seguindo cores da imagem
             const actions = (
               <>
                 <CompactIconButton
@@ -548,7 +564,7 @@ export const BibliotecaList = () => {
               <AdminUniformCard
                 key={material.id}
                 title={material.titulo}
-                coverUrl={undefined} // Biblioteca não tem capa por enquanto
+                coverUrl={material.thumbnail_url}
                 coverAlt={`Material ${material.titulo}`}
                 badges={badges}
                 actions={actions}
