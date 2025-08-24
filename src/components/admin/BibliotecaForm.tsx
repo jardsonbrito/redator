@@ -4,14 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { X, Upload, Plus } from 'lucide-react';
+import { Upload, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { CategoriaModal } from './CategoriaModal';
+import { TurmaSelector } from '@/components/TurmaSelector';
 
 interface BibliotecaFormProps {
   materialEditando?: any;
@@ -34,13 +33,8 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
   });
 
   const [arquivo, setArquivo] = useState<File | null>(null);
-  const [turmaSelecionada, setTurmaSelecionada] = useState('');
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
 
-  // Lista oficial de turmas do sistema
-  const turmasOficiais = [
-    'Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'
-  ];
 
   // Buscar categorias disponíveis
   const { data: categorias = [], isLoading: loadingCategorias } = useQuery({
@@ -57,20 +51,17 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
     }
   });
 
-  const adicionarTurma = () => {
-    if (turmaSelecionada && !formData.turmas_autorizadas.includes(turmaSelecionada)) {
-      setFormData(prev => ({
-        ...prev,
-        turmas_autorizadas: [...prev.turmas_autorizadas, turmaSelecionada]
-      }));
-      setTurmaSelecionada('');
-    }
-  };
-
-  const removerTurma = (turma: string) => {
+  const handleTurmasChange = (turmas: string[]) => {
     setFormData(prev => ({
       ...prev,
-      turmas_autorizadas: prev.turmas_autorizadas.filter(t => t !== turma)
+      turmas_autorizadas: turmas
+    }));
+  };
+
+  const handlePermiteVisitanteChange = (permite: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      permite_visitante: permite
     }));
   };
 
@@ -313,47 +304,12 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
         )}
       </div>
 
-      <div>
-        <Label>Turmas Autorizadas</Label>
-        <div className="flex gap-2 mt-2">
-          <Select value={turmaSelecionada} onValueChange={setTurmaSelecionada}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Selecionar turma" />
-            </SelectTrigger>
-            <SelectContent>
-              {turmasOficiais.map((turma) => (
-                <SelectItem key={turma} value={turma}>{turma}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button type="button" onClick={adicionarTurma} variant="outline">
-            Adicionar
-          </Button>
-        </div>
-        
-        {formData.turmas_autorizadas.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {formData.turmas_autorizadas.map((turma) => (
-              <Badge key={turma} variant="secondary" className="flex items-center gap-1">
-                {turma}
-                <X 
-                  className="w-3 h-3 cursor-pointer hover:text-red-500" 
-                  onClick={() => removerTurma(turma)}
-                />
-              </Badge>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="permite_visitante"
-          checked={formData.permite_visitante}
-          onCheckedChange={(checked) => setFormData({...formData, permite_visitante: !!checked})}
-        />
-        <Label htmlFor="permite_visitante">Permitir acesso a visitantes</Label>
-      </div>
+      <TurmaSelector
+        selectedTurmas={formData.turmas_autorizadas}
+        onTurmasChange={handleTurmasChange}
+        permiteeVisitante={formData.permite_visitante}
+        onPermiteVisitanteChange={handlePermiteVisitanteChange}
+      />
 
       <div>
         <Label htmlFor="status">Status</Label>
