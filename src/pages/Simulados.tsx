@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Calendar, Clock } from "lucide-react";
@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
 import { resolveSimuladoCover } from "@/utils/coverUtils";
 import { SimuladoCountdown } from "@/components/SimuladoCountdown";
+import { SimuladoAgendadoCard } from "@/components/SimuladoAgendadoCard";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -24,6 +25,7 @@ const TZ = 'America/Fortaleza';
 const Simulados = () => {
   const { studentData } = useStudentAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
   // Determina a turma do usuário - NOMES CORRETOS DAS TURMAS (sem anos)
   let turmaCode = "Visitante";
@@ -186,60 +188,11 @@ if (isLoading) {
       // Para simulados agendados, renderizar layout especial
       if (isAgendado) {
         return (
-          <Card key={simulado.id} className="border border-primary/20 overflow-hidden">
-            <CardContent className="p-4 sm:p-6">
-              <div className="space-y-3 sm:space-y-4">
-                {/* Mobile: Stack layout, Desktop: Horizontal layout */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                  <div className="flex flex-col gap-2 flex-1 min-w-0">
-                    {/* Título com tamanho responsivo */}
-                    <h3 className="text-lg sm:text-xl font-semibold text-primary leading-tight line-clamp-2" 
-                        style={{ wordBreak: 'keep-all', hyphens: 'auto' }}>
-                      {simulado.titulo}
-                    </h3>
-                    
-                    {/* Badges abaixo do título no mobile, inline no desktop */}
-                    <div className="flex flex-wrap gap-2">
-                      {badges.map((badge, index) => (
-                        <span 
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
-                        >
-                          {badge.label}
-                        </span>
-                      ))}
-                    </div>
-                    
-                    {/* Contador abaixo dos badges no mobile */}
-                    <div className="w-full sm:hidden">
-                      <SimuladoCountdown 
-                        dataInicio={simulado.data_inicio} 
-                        horaInicio={simulado.hora_inicio} 
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Contador à direita no desktop */}
-                  <div className="hidden sm:block flex-shrink-0">
-                    <SimuladoCountdown 
-                      dataInicio={simulado.data_inicio} 
-                      horaInicio={simulado.hora_inicio} 
-                    />
-                  </div>
-                </div>
-                
-                {/* Informações de data/hora */}
-                <div className="flex flex-col sm:flex-row gap-2 text-sm text-muted-foreground">
-                  {meta.map((item, index) => (
-                    <div key={index} className="flex items-center gap-1">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">{item.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <SimuladoAgendadoCard
+            key={simulado.id}
+            simulado={simulado}
+            onStatusChange={() => queryClient.invalidateQueries({ queryKey: ['simulados', turmaCode] })}
+          />
         );
       }
 
