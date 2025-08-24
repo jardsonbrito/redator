@@ -280,21 +280,23 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
 
       if (aulaEditando) {
         // Atualizar aula existente
-        const result = await supabase
+        const { error: updateError } = await supabase
           .from("aulas")
           .update(aulaData)
           .eq("id", aulaEditando.id);
-        error = result.error;
+        error = updateError;
         aulaId = aulaEditando.id;
+        console.log('✅ Aula atualizada:', aulaEditando.id);
       } else {
         // Criar nova aula
-        const result = await supabase
+        const { data: newAula, error: insertError } = await supabase
           .from("aulas")
-          .insert(aulaData)
+          .insert([aulaData])
           .select('id')
           .single();
-        error = result.error;
-        aulaId = result.data?.id;
+        error = insertError;
+        aulaId = newAula?.id;
+        console.log('✅ Nova aula criada:', newAula);
       }
 
       if (error) throw error;
