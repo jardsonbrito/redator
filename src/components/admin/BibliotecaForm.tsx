@@ -30,11 +30,13 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
     turmas_autorizadas: materialEditando?.turmas_autorizadas || [] as string[],
     permite_visitante: materialEditando?.permite_visitante || false,
     status: materialEditando?.status || 'publicado' as 'publicado' | 'rascunho',
-    published_at: materialEditando?.published_at || new Date().toISOString().slice(0, 16),
-    unpublished_at: materialEditando?.unpublished_at || ''
+    published_at: materialEditando?.published_at ? new Date(materialEditando.published_at).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+    unpublished_at: materialEditando?.unpublished_at ? new Date(materialEditando.unpublished_at).toISOString().slice(0, 16) : '',
+    thumbnail_url: materialEditando?.thumbnail_url || ''
   });
 
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
 
 
@@ -80,6 +82,19 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
     }
   };
 
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setThumbnail(file);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione apenas arquivos de imagem.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const uploadArquivo = async (file: File): Promise<{ url: string; nome: string }> => {
     const fileExt = 'pdf';
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -97,6 +112,27 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
       url: fileName,
       nome: file.name
     };
+  };
+
+  const uploadThumbnail = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const fileName = `thumbnails/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('biblioteca-pdfs')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      console.error('Thumbnail upload error:', uploadError);
+      throw new Error(`Erro no upload da imagem: ${uploadError.message}`);
+    }
+
+    // Retornar URL público da imagem
+    const { data: { publicUrl } } = supabase.storage
+      .from('biblioteca-pdfs')
+      .getPublicUrl(fileName);
+    
+    return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,6 +167,12 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
       }
 
       if (materialEditando) {
+        // Upload de thumbnail se houver
+        let thumbnailUrl = formData.thumbnail_url;
+        if (thumbnail) {
+          thumbnailUrl = await uploadThumbnail(thumbnail);
+        }
+
         // Atualizar material existente
         const { error } = await supabase
           .from('biblioteca_materiais')
@@ -145,6 +187,7 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
             status: formData.status,
             published_at: formData.published_at ? new Date(formData.published_at).toISOString() : null,
             unpublished_at: formData.unpublished_at ? new Date(formData.unpublished_at).toISOString() : null,
+            thumbnail_url: thumbnailUrl,
             atualizado_em: new Date().toISOString()
           })
           .eq('id', materialEditando.id);
@@ -159,6 +202,12 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
           description: "O material foi atualizado com sucesso.",
         });
       } else {
+        // Upload de thumbnail se houver
+        let thumbnailUrl = formData.thumbnail_url;
+        if (thumbnail) {
+          thumbnailUrl = await uploadThumbnail(thumbnail);
+        }
+
         // Inserir novo material
         const { error } = await supabase
           .from('biblioteca_materiais')
@@ -172,7 +221,8 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
             permite_visitante: formData.permite_visitante,
             status: formData.status,
             published_at: formData.published_at ? new Date(formData.published_at).toISOString() : new Date().toISOString(),
-            unpublished_at: formData.unpublished_at ? new Date(formData.unpublished_at).toISOString() : null
+            unpublished_at: formData.unpublished_at ? new Date(formData.unpublished_at).toISOString() : null,
+            thumbnail_url: thumbnailUrl
           }]);
 
         if (error) {
@@ -194,15 +244,17 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
           permite_visitante: false,
           status: 'publicado',
           published_at: new Date().toISOString().slice(0, 16),
-          unpublished_at: ''
+          unpublished_at: '',
+          thumbnail_url: ''
         });
         setArquivo(null);
+        setThumbnail(null);
         
-        // Limpar input de arquivo
+        // Limpar inputs de arquivo
         const fileInput = document.getElementById('arquivo') as HTMLInputElement;
-        if (fileInput) {
-          fileInput.value = '';
-        }
+        const thumbnailInput = document.getElementById('thumbnail') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+        if (thumbnailInput) thumbnailInput.value = '';
       }
 
       queryClient.invalidateQueries({ queryKey: ['admin-biblioteca'] });
@@ -285,6 +337,56 @@ export const BibliotecaForm = ({ materialEditando, onSuccess, onCancelEdit }: Bi
           >
             <Plus className="w-4 h-4" />
           </Button>
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="thumbnail">Imagem de Capa (Thumbnail)</Label>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Input
+              id="thumbnail"
+              type="file"
+              accept="image/*"
+              onChange={handleThumbnailChange}
+              className="cursor-pointer"
+            />
+            <Upload className="w-4 h-4 text-gray-500" />
+          </div>
+          
+          <div className="text-sm text-gray-600">
+            <p>OU</p>
+          </div>
+          
+          <div>
+            <Label htmlFor="thumbnail_url">URL da Imagem</Label>
+            <Input
+              id="thumbnail_url"
+              type="url"
+              value={formData.thumbnail_url}
+              onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
+              placeholder="https://exemplo.com/imagem.jpg"
+            />
+          </div>
+          
+          {thumbnail && (
+            <p className="text-sm text-green-600">
+              Nova imagem selecionada: {thumbnail.name}
+            </p>
+          )}
+          
+          {formData.thumbnail_url && !thumbnail && (
+            <div className="mt-2">
+              <img 
+                src={formData.thumbnail_url} 
+                alt="Preview" 
+                className="w-20 h-20 object-cover rounded border"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
