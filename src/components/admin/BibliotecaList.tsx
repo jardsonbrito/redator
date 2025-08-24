@@ -601,3 +601,5 @@ export const BibliotecaList = () => {
     </div>
   );
 };
+
+export default BibliotecaList;
