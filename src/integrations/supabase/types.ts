@@ -419,9 +419,12 @@ export type Database = {
           descricao: string | null
           id: string
           permite_visitante: boolean | null
+          published_at: string | null
           status: string | null
+          thumbnail_url: string | null
           titulo: string
           turmas_autorizadas: string[] | null
+          unpublished_at: string | null
         }
         Insert: {
           arquivo_nome: string
@@ -433,9 +436,12 @@ export type Database = {
           descricao?: string | null
           id?: string
           permite_visitante?: boolean | null
+          published_at?: string | null
           status?: string | null
+          thumbnail_url?: string | null
           titulo: string
           turmas_autorizadas?: string[] | null
+          unpublished_at?: string | null
         }
         Update: {
           arquivo_nome?: string
@@ -447,9 +453,12 @@ export type Database = {
           descricao?: string | null
           id?: string
           permite_visitante?: boolean | null
+          published_at?: string | null
           status?: string | null
+          thumbnail_url?: string | null
           titulo?: string
           turmas_autorizadas?: string[] | null
+          unpublished_at?: string | null
         }
         Relationships: [
           {
