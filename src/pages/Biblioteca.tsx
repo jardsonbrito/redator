@@ -63,14 +63,7 @@ const Biblioteca = () => {
           .eq('status', 'publicado')
           .order('data_publicacao', { ascending: false });
 
-        // Filtra por turma ou visitante
-        if (turmaCode === "Visitante") {
-          query = query.eq('permite_visitante', true);
-        } else {
-          query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
-        }
-
-        // Aplica filtros de busca
+        // Aplica filtros de busca primeiro
         if (busca) {
           query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
         }
@@ -86,7 +79,26 @@ const Biblioteca = () => {
           throw error;
         }
         
-        return data || [];
+        // Filtrar por turma e visitante no frontend para ter controle total
+        const materiaisFiltrados = (data || []).filter((material) => {
+          const turmasAutorizadas = material.turmas_autorizadas || [];
+          const permiteVisitante = material.permite_visitante;
+          
+          if (turmaCode === "Visitante") {
+            // Visitantes só veem materiais que permitem visitantes
+            return permiteVisitante;
+          } else {
+            // Alunos veem:
+            // 1. Materiais da sua turma específica
+            // 2. Materiais exclusivos para visitantes (permite_visitante=true E sem turmas específicas)
+            const incluiTurma = turmasAutorizadas.includes(turmaCode);
+            const exclusivoVisitante = permiteVisitante && turmasAutorizadas.length === 0;
+            
+            return incluiTurma || exclusivoVisitante;
+          }
+        });
+        
+        return materiaisFiltrados;
       } catch (error) {
         console.error('Query error:', error);
         throw error;

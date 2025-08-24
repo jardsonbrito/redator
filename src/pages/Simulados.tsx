@@ -41,17 +41,29 @@ const { data: simulados, isLoading } = useQuery({
       .select('*')
       .eq('ativo', true);
 
-    // Filtra simulados baseado na turma do usuário
-    if (turmaCode === "Visitante") {
-      query = query.eq('permite_visitante', true);
-    } else {
-      query = query.or(`turmas_autorizadas.cs.{${turmaCode}},permite_visitante.eq.true`);
-    }
-    
     const { data: sims, error } = await query;
     if (error) throw error;
 
-    const temaIds = Array.from(new Set((sims || []).map((s: any) => s.tema_id).filter(Boolean)));
+    // Filtrar simulados baseado na turma do usuário no frontend para controle total
+    const simuladosFiltrados = (sims || []).filter((simulado) => {
+      const turmasAutorizadas = simulado.turmas_autorizadas || [];
+      const permiteVisitante = simulado.permite_visitante;
+      
+      if (turmaCode === "Visitante") {
+        // Visitantes só veem simulados que permitem visitantes
+        return permiteVisitante;
+      } else {
+        // Alunos veem:
+        // 1. Simulados da sua turma específica
+        // 2. Simulados exclusivos para visitantes (permite_visitante=true E sem turmas específicas)
+        const incluiTurma = turmasAutorizadas.includes(turmaCode);
+        const exclusivoVisitante = permiteVisitante && turmasAutorizadas.length === 0;
+        
+        return incluiTurma || exclusivoVisitante;
+      }
+    });
+
+    const temaIds = Array.from(new Set(simuladosFiltrados.map((s: any) => s.tema_id).filter(Boolean)));
     let temasMap: Record<string, any> = {};
     if (temaIds.length > 0) {
       const { data: temas } = await supabase
@@ -61,7 +73,7 @@ const { data: simulados, isLoading } = useQuery({
       temasMap = (temas || []).reduce((acc: any, t: any) => { acc[t.id] = t; return acc; }, {});
     }
 
-    const simuladosComTema = (sims || []).map((s: any) => ({ ...s, tema: s.tema_id ? temasMap[s.tema_id] || null : null }));
+    const simuladosComTema = simuladosFiltrados.map((s: any) => ({ ...s, tema: s.tema_id ? temasMap[s.tema_id] || null : null }));
 
     // Ordenar simulados baseado no status e datas (timezone Fortaleza)
     return simuladosComTema.sort((a: any, b: any) => {
