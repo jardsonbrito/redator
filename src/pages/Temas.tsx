@@ -151,18 +151,32 @@ export default function Temas() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="aspect-video overflow-hidden rounded-md">
-                      <img 
-                        src={getTemaCoverUrl(tema)} 
-                        alt={`Capa do tema: ${tema.frase_tematica}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
-                        }}
-                      />
-                    </div>
+                   <div className="space-y-4">
+                     <div className="aspect-video overflow-hidden rounded-md relative">
+                       <img 
+                         src={getTemaCoverUrl(tema)} 
+                         alt={`Capa do tema: ${tema.frase_tematica}`}
+                         className="w-full h-full object-cover"
+                         onError={(e) => {
+                           const target = e.target as HTMLImageElement;
+                           target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
+                         }}
+                       />
+                       {tema.published_at && (
+                         <div className="absolute top-2 right-2">
+                           <span 
+                             className="inline-block px-2 py-0.5 text-xs sm:text-[10px] md:text-xs font-semibold text-violet-700 bg-violet-100 rounded-full"
+                             aria-label={`Data de publicação: ${new Date(tema.published_at).toLocaleDateString('pt-BR', { 
+                               day: '2-digit', 
+                               month: 'long', 
+                               year: 'numeric' 
+                             })}`}
+                           >
+                             Publicado em {new Date(tema.published_at).toLocaleDateString('pt-BR')}
+                           </span>
+                         </div>
+                       )}
+                     </div>
                     
                     <div className="pt-2">
                       <Link to={`/temas/${tema.id}`}>

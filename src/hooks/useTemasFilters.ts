@@ -11,6 +11,7 @@ export interface Tema {
   eixo_tematico?: string;
   status?: string;
   publicado_em?: string;
+  published_at?: string;
   updated_at?: string;
   created_at?: string;
   cover_url?: string;
@@ -39,8 +40,8 @@ export const useTemasFilters = () => {
           .from('temas')
           .select('*')
           .eq('status', 'publicado') // Apenas temas publicados para alunos
-          .order('publicado_em', { ascending: false, nullsFirst: false })
           .order('published_at', { ascending: false, nullsFirst: false })
+          .order('updated_at', { ascending: false, nullsFirst: false })
           .order('id', { ascending: false }); // Fallback final para consistência
 
         if (error) throw error;
