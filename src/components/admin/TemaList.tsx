@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TemaForm } from './TemaForm';
+import { TemaActionButtons } from './TemaActionButtons';
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 import { useAdminTemasFilters } from '@/hooks/useAdminTemasFilters';
 import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
@@ -56,39 +57,40 @@ export const TemaList = () => {
     await queryClient.invalidateQueries({ queryKey: ['admin-temas-all'] });
   };
 
-  const getThemeStatus = (tema: any) => {
+  const getThemeStatus = (tema: any): {
+    type: 'published' | 'scheduled' | 'overdue' | 'draft';
+    label: string;
+    variant: 'default' | 'destructive' | 'secondary' | 'outline';
+  } => {
     const now = new Date();
     const scheduledDate = tema.scheduled_publish_at ? new Date(tema.scheduled_publish_at) : null;
     
     if (tema.status === 'publicado') {
       return { 
-        type: 'published', 
+        type: 'published' as const, 
         label: 'Publicado', 
         variant: 'default' as const,
-        publishedAt: tema.published_at ? new Date(tema.published_at) : null
       };
     }
     
     if (scheduledDate && scheduledDate > now) {
       return { 
-        type: 'scheduled', 
+        type: 'scheduled' as const, 
         label: `Agendado para ${format(scheduledDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 
         variant: 'secondary' as const,
-        scheduledDate
       };
     }
     
     if (scheduledDate && scheduledDate <= now) {
       return { 
-        type: 'overdue', 
+        type: 'overdue' as const, 
         label: 'Publicação pendente', 
         variant: 'destructive' as const,
-        scheduledDate
       };
     }
     
     return { 
-      type: 'draft', 
+      type: 'draft' as const, 
       label: 'Rascunho', 
       variant: 'secondary' as const
     };
@@ -405,99 +407,19 @@ export const TemaList = () => {
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="pt-2">
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
-                      <IconAction
-                        icon={ACTION_ICON.editar}
-                        label="Editar"
-                        intent="neutral"
-                        onClick={() => setEditingId(tema.id)}
-                        className="flex-1 sm:flex-none justify-center sm:justify-start"
-                      />
-
-                      {(() => {
-                        const status = getThemeStatus(tema);
-                        
-                        if (status.type === 'scheduled') {
-                          return (
-                            <>
-                              <IconAction
-                                icon={ACTION_ICON.publicar}
-                                label="Publicar Agora"
-                                intent="positive"
-                                onClick={() => publishNow(tema.id)}
-                                className="flex-1 sm:flex-none justify-center sm:justify-start"
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => cancelScheduling(tema.id)}
-                                className="flex-1 sm:flex-none"
-                              >
-                                <Calendar className="w-4 h-4 mr-2" />
-                                Cancelar Agendamento
-                              </Button>
-                            </>
-                          );
-                        }
-                        
-                        if (status.type === 'overdue') {
-                          return (
-                            <IconAction
-                              icon={ACTION_ICON.publicar}
-                              label="Publicar Agora (Atrasado)"
-                              intent="positive"
-                              onClick={() => publishNow(tema.id)}
-                              className="flex-1 sm:flex-none justify-center sm:justify-start"
-                            />
-                          );
-                        }
-                        
-                        return (
-                          <IconAction
-                            icon={tema.status === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
-                            label={tema.status === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
-                            intent={tema.status === 'publicado' ? 'neutral' : 'positive'}
-                            onClick={() => toggleStatus(tema.id, tema.status || 'publicado')}
-                            className="flex-1 sm:flex-none justify-center sm:justify-start"
-                            asSwitch
-                            checked={tema.status === 'publicado'}
-                          />
-                        );
-                      })()}
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <IconAction
-                            icon={ACTION_ICON.excluir}
-                            label="Excluir"
-                            intent="danger"
-                            className="flex-1 sm:flex-none justify-center sm:justify-start"
-                          />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="max-w-md mx-4">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="flex items-center gap-2">
-                              <AlertTriangle className="w-5 h-5 text-red-500" />
-                              Confirmar Exclusão Permanente
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              <strong>ATENÇÃO:</strong> Esta ação é irreversível! O tema será removido permanentemente do banco de dados e não poderá ser recuperado.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleDelete(tema.id)}
-                              className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
-                            >
-                              Excluir Permanentemente
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </CardContent>
+                   <CardContent className="pt-2">
+                     <div className="mt-4">
+                       <TemaActionButtons
+                         tema={tema}
+                         status={getThemeStatus(tema)}
+                         onEdit={() => setEditingId(tema.id)}
+                         onToggleStatus={toggleStatus}
+                         onPublishNow={publishNow}
+                         onCancelScheduling={cancelScheduling}
+                         onDelete={handleDelete}
+                       />
+                     </div>
+                   </CardContent>
                 </div>
               </div>
             </Card>
