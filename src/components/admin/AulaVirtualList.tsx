@@ -2,14 +2,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Video, Calendar, Clock, Users, ExternalLink, Trash2, Power, PowerOff, Edit, Radio, BarChart3 } from "lucide-react";
-import { computeStatus } from "@/utils/aulaStatus";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Video } from "lucide-react";
 import { FrequenciaModal } from "./FrequenciaModal";
+import { AdminAulaVirtualCard } from "./AdminAulaVirtualCard";
 
 interface AulaVirtual {
   id: string;
@@ -109,55 +106,6 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
     });
   };
 
-  const getStatusBadge = (aula: AulaVirtual) => {
-    if (!aula.eh_aula_ao_vivo) return null;
-    
-    try {
-      // Validação básica dos dados
-      if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
-        return null;
-      }
-
-      // Converte a data do formato YYYY-MM-DD para DD/MM/YYYY
-      const dateParts = aula.data_aula.split('-');
-      if (dateParts.length !== 3) {
-        return null;
-      }
-
-      const [year, month, day] = dateParts;
-      const formattedDate = `${day}/${month}/${year}`;
-      
-      // Validação dos horários
-      if (!aula.horario_inicio.includes(':') || !aula.horario_fim.includes(':')) {
-        return null;
-      }
-
-      const status = computeStatus({
-        data_aula: formattedDate,
-        horario_inicio: aula.horario_inicio,
-        horario_fim: aula.horario_fim
-      });
-
-      const statusMap = {
-        'agendada': { emoji: '📅', text: 'Agendada' },
-        'ao_vivo': { emoji: '🔴', text: 'Em Transmissão' },
-        'encerrada': { emoji: '⏹️', text: 'Encerrada' },
-        'indefinido': { emoji: '❓', text: 'Indefinido' }
-      };
-
-      const currentStatus = statusMap[status] || statusMap['indefinido'];
-      
-      return (
-        <Badge variant="outline" className="text-xs mt-1">
-          {currentStatus.emoji} {currentStatus.text}
-        </Badge>
-      );
-    } catch (error) {
-      console.error('🚨 Erro ao calcular status da aula:', error, aula);
-      return null;
-    }
-  };
-
   useEffect(() => {
     fetchAulas();
   }, [refresh]);
@@ -194,138 +142,17 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
               <p>Nenhuma aula virtual criada ainda</p>
             </div>
           ) : (
-            <div className="rounded-md border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Data/Horário</TableHead>
-                    <TableHead>Turmas</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {aulas.map((aula) => (
-                    <TableRow key={aula.id}>
-                      <TableCell>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{aula.titulo}</p>
-                            {aula.eh_aula_ao_vivo && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Radio className="w-3 h-3 mr-1" />
-                                Ao Vivo
-                              </Badge>
-                            )}
-                          </div>
-                          {aula.descricao && (
-                            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                              {aula.descricao}
-                            </p>
-                          )}
-                          {getStatusBadge(aula)}
-                        </div>
-                      </TableCell>
-                       <TableCell>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(aula.data_aula + 'T00:00:00').toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          {aula.horario_inicio} - {aula.horario_fim}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {aula.turmas_autorizadas.slice(0, 2).map((turma) => (
-                            <Badge key={turma} variant="outline" className="text-xs">
-                              {turma}
-                            </Badge>
-                          ))}
-                          {aula.turmas_autorizadas.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{aula.turmas_autorizadas.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={aula.abrir_aba_externa ? "default" : "secondary"}>
-                          {aula.abrir_aba_externa ? (
-                            <><ExternalLink className="w-3 h-3 mr-1" />Externa</>
-                          ) : (
-                            <>Embutida</>
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={aula.ativo ? "default" : "secondary"}>
-                          {aula.ativo ? "Ativa" : "Inativa"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {aula.eh_aula_ao_vivo && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openFrequenciaModal(aula)}
-                              title="Ver frequência"
-                            >
-                              <BarChart3 className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {onEdit && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onEdit(aula)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleAulaStatus(aula.id, aula.ativo)}
-                          >
-                            {aula.ativo ? (
-                              <PowerOff className="w-4 h-4" />
-                            ) : (
-                              <Power className="w-4 h-4" />
-                            )}
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza de que deseja excluir a aula "{aula.titulo}"? 
-                                  Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteAula(aula.id)}>
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {aulas.map((aula) => (
+                <AdminAulaVirtualCard
+                  key={aula.id}
+                  aula={aula}
+                  onEdit={onEdit}
+                  onToggleStatus={toggleAulaStatus}
+                  onDelete={deleteAula}
+                  onOpenFrequencia={openFrequenciaModal}
+                />
+              ))}
             </div>
           )}
         </CardContent>
