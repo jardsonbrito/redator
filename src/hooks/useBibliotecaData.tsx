@@ -52,25 +52,20 @@ export const useBibliotecaData = (busca: string, categoriaFiltro: string) => {
         }
         
         // Filtrar materiais usando a lógica centralizada de permissões
-        const materiaisPermitidos = (data || []).filter((material) => 
-          verificarPermissaoMaterial(material as MaterialBiblioteca, usuario)
-        );
+        console.log('=== ANTES DO FILTRO DE PERMISSÕES ===');
+        console.log('Total materiais da query:', data?.length || 0);
         
-        console.log('=== BIBLIOTECA DATA DEBUG ===');
+        const materiaisPermitidos = (data || []).filter((material) => {
+          const podeAcessar = verificarPermissaoMaterial(material as MaterialBiblioteca, usuario);
+          return podeAcessar;
+        });
+        
+        console.log('=== BIBLIOTECA DATA DEBUG FINAL ===');
         console.log('Turma Code:', turmaCode);
         console.log('Usuario:', usuario);
-        console.log('Total materiais encontrados:', data?.length || 0);
+        console.log('Total materiais encontrados na query:', data?.length || 0);
         console.log('Materiais após filtro de permissão:', materiaisPermitidos.length);
-        
-        // Debug de cada material
-        (data || []).forEach(material => {
-          const podeAcessar = verificarPermissaoMaterial(material as MaterialBiblioteca, usuario);
-          console.log(`Material "${material.titulo}":`, {
-            turmas_autorizadas: material.turmas_autorizadas,
-            permite_visitante: material.permite_visitante,
-            podeAcessar
-          });
-        });
+        console.log('Lista de materiais permitidos:', materiaisPermitidos.map(m => m.titulo));
         
         return materiaisPermitidos;
       } catch (error) {
