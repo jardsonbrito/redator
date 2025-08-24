@@ -18,7 +18,8 @@ interface AulaEditando {
   id: string;
   titulo: string;
   descricao: string;
-  modulo: string;
+  modulo?: string;
+  modulo_id?: string;
   link_conteudo: string;
   pdf_url?: string;
   pdf_nome?: string;
@@ -106,10 +107,14 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
 
   // Preencher formulário ao editar
   useEffect(() => {
-    if (aulaEditando) {
+    if (aulaEditando && modulos.length > 0) {
       setTitulo(aulaEditando.titulo || "");
       setDescricao(aulaEditando.descricao || "");
-      setModulo(aulaEditando.modulo || "");
+      
+      // Buscar o nome do módulo pelo modulo_id
+      const moduloEncontrado = modulos.find(m => m.id === aulaEditando.modulo_id);
+      setModulo(moduloEncontrado ? moduloEncontrado.nome : "");
+      
       setLinkConteudo(aulaEditando.link_conteudo || "");
       setPdfUrl(aulaEditando.pdf_url || "");
       setPdfNome(aulaEditando.pdf_nome || "");
@@ -126,7 +131,7 @@ export const AulaForm = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProp
       setVideoPreview(resolveAulaCover(aulaEditando));
       setCurrentAulaData(aulaEditando);
     }
-  }, [aulaEditando]);
+  }, [aulaEditando, modulos]);
 
 
   const criarNovoModulo = async () => {
