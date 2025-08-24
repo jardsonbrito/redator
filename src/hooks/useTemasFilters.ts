@@ -41,7 +41,6 @@ export const useTemasFilters = () => {
           .select('*')
           .eq('status', 'publicado') // Apenas temas publicados para alunos
           .order('published_at', { ascending: false, nullsFirst: false })
-          .order('updated_at', { ascending: false, nullsFirst: false })
           .order('id', { ascending: false }); // Fallback final para consistência
 
         if (error) throw error;
