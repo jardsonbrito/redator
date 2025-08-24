@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock } from 'lucide-react';
+import { computeSimuladoStatus } from '@/utils/simuladoStatus';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -19,6 +20,7 @@ interface SimuladoAgendadoCardProps {
     hora_inicio: string;
     data_fim: string;
     hora_fim: string;
+    ativo?: boolean;
   };
   onStatusChange?: () => void;
 }
@@ -28,6 +30,14 @@ export const SimuladoAgendadoCard = ({ simulado, onStatusChange }: SimuladoAgend
 
   useEffect(() => {
     const updateCountdown = () => {
+      // Verificar se o status ainda é "agendado"
+      const currentStatus = computeSimuladoStatus(simulado);
+      if (currentStatus !== 'agendado') {
+        // Status mudou, disparar atualização
+        onStatusChange?.();
+        return;
+      }
+
       const now = dayjs.tz(dayjs(), TZ);
       const start = dayjs.tz(`${simulado.data_inicio} ${simulado.hora_inicio}`, 'YYYY-MM-DD HH:mm', TZ);
       
@@ -35,7 +45,6 @@ export const SimuladoAgendadoCard = ({ simulado, onStatusChange }: SimuladoAgend
       
       if (diff <= 0) {
         // Simulado já começou, disparar mudança de status
-        setTimeLeft(null);
         onStatusChange?.();
         return;
       }
@@ -53,7 +62,13 @@ export const SimuladoAgendadoCard = ({ simulado, onStatusChange }: SimuladoAgend
     const interval = setInterval(updateCountdown, 30000);
 
     return () => clearInterval(interval);
-  }, [simulado.data_inicio, simulado.hora_inicio, onStatusChange]);
+  }, [simulado, onStatusChange]);
+
+  // Verificação adicional para garantir que só renderiza se for agendado
+  const currentStatus = computeSimuladoStatus(simulado);
+  if (currentStatus !== 'agendado') {
+    return null;
+  }
 
   // Formatação das datas
   const dataInicio = dayjs.tz(`${simulado.data_inicio} ${simulado.hora_inicio}`, 'YYYY-MM-DD HH:mm', TZ);
