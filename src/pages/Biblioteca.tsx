@@ -19,22 +19,19 @@ import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
 import { LockedResourceCard } from "@/components/LockedResourceCard";
 import { StudentBibliotecaCard } from "@/components/shared/StudentBibliotecaCard";
 import { useToast } from "@/hooks/use-toast";
-import { useBibliotecaPermissions } from "@/hooks/useBibliotecaPermissions";
+import { useBibliotecaData } from "@/hooks/useBibliotecaData";
+import { verificarPermissaoMaterial, type MaterialBiblioteca } from "@/utils/bibliotecaPermissions";
 
 const Biblioteca = () => {
-  const { studentData } = useStudentAuth();
   const { toast } = useToast();
   const [busca, setBusca] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState({ url: '', title: '' });
   
-  // Determina a turma do usuário
-  let turmaCode = "Visitante";
-  if (studentData.userType === "aluno" && studentData.turma) {
-    turmaCode = studentData.turma;
-  }
-
+  // Usar hook centralizado para dados da biblioteca
+  const { materiais, isLoading, error, turmaCode, usuario } = useBibliotecaData(busca, categoriaFiltro);
+  
   // Buscar categorias disponíveis
   const { data: categorias = [] } = useQuery({
     queryKey: ['categorias'],
@@ -50,66 +47,6 @@ const Biblioteca = () => {
     }
   });
 
-  const { data: materiais, isLoading, error } = useQuery({
-    queryKey: ['biblioteca-materiais', turmaCode, busca, categoriaFiltro],
-    queryFn: async () => {
-      try {
-        let query = supabase
-          .from('biblioteca_materiais')
-          .select(`
-            *,
-            categorias (
-              id,
-              nome,
-              slug
-            )
-          `)
-          .eq('status', 'publicado')
-          .order('data_publicacao', { ascending: false });
-
-        // Aplica filtros de busca primeiro
-        if (busca) {
-          query = query.or(`titulo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
-        }
-
-        if (categoriaFiltro && categoriaFiltro !== "todas") {
-          query = query.eq('categoria_id', categoriaFiltro);
-        }
-        
-        const { data, error } = await query;
-        
-        if (error) {
-          console.error('Database error:', error);
-          throw error;
-        }
-        
-        // Filtrar materiais usando a lógica correta de permissões
-        const materiaisFiltrados = (data || []).filter((material) => {
-          const turmasAutorizadas = material.turmas_autorizadas || [];
-          const permiteVisitante = material.permite_visitante;
-          
-          if (turmaCode === "Visitante") {
-            // Visitantes só veem materiais que explicitamente permitem visitantes
-            return permiteVisitante === true;
-          } else {
-            // Alunos veem materiais se:
-            // 1. Sua turma está na lista de turmas autorizadas OU
-            // 2. O material permite visitantes (se não há turmas específicas)
-            const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
-            const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
-            
-            return turmaEstaAutorizada || semRestricaoTurma;
-          }
-        });
-        
-        return materiaisFiltrados;
-      } catch (error) {
-        console.error('Query error:', error);
-        throw error;
-      }
-    }
-  });
-
   const handleDownload = async (materialId: string, arquivoUrl: string, arquivoNome: string, titulo: string) => {
     console.log('=== INICIANDO DOWNLOAD ===');
     console.log('Material ID:', materialId);
@@ -122,7 +59,7 @@ const Biblioteca = () => {
       // Buscar material específico para verificar permissões
       const { data: materialData, error: materialError } = await supabase
         .from('biblioteca_materiais')
-        .select('turmas_autorizadas, permite_visitante, titulo')
+        .select('turmas_autorizadas, permite_visitante, titulo, status')
         .eq('id', materialId)
         .single();
 
@@ -133,27 +70,10 @@ const Biblioteca = () => {
 
       console.log('Material Data:', materialData);
 
-      // Implementar lógica de permissão diretamente
-      const turmasAutorizadas = materialData.turmas_autorizadas || [];
-      const permiteVisitante = materialData.permite_visitante;
+      // Usar a lógica centralizada de permissões
+      const podeAcessar = verificarPermissaoMaterial(materialData as MaterialBiblioteca, usuario);
       
-      console.log('Turmas Autorizadas:', turmasAutorizadas);
-      console.log('Permite Visitante:', permiteVisitante);
-      
-      let podeAcessar = false;
-      if (turmaCode === "Visitante") {
-        // Visitantes só veem materiais que explicitamente permitem visitantes
-        podeAcessar = permiteVisitante === true;
-      } else {
-        // Alunos veem materiais se:
-        // 1. Sua turma está na lista de turmas autorizadas OU
-        // 2. O material permite visitantes (se não há turmas específicas)
-        const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
-        const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
-        podeAcessar = turmaEstaAutorizada || semRestricaoTurma;
-      }
-      
-      console.log('Pode Acessar:', podeAcessar);
+      console.log('Pode Acessar (lógica centralizada):', podeAcessar);
       
       if (!podeAcessar) {
         console.log('ACESSO NEGADO - Mostrando toast');
@@ -215,7 +135,7 @@ const Biblioteca = () => {
         // Buscar material específico para verificar permissões
         const { data: materialData, error: materialError } = await supabase
           .from('biblioteca_materiais')
-          .select('turmas_autorizadas, permite_visitante, titulo')
+          .select('turmas_autorizadas, permite_visitante, titulo, status')
           .eq('id', materialId)
           .single();
 
@@ -223,18 +143,8 @@ const Biblioteca = () => {
           throw new Error('Material não encontrado');
         }
 
-        // Implementar lógica de permissão diretamente
-        const turmasAutorizadas = materialData.turmas_autorizadas || [];
-        const permiteVisitante = materialData.permite_visitante;
-        
-        let podeAcessar = false;
-        if (turmaCode === "Visitante") {
-          podeAcessar = permiteVisitante === true;
-        } else {
-          const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
-          const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
-          podeAcessar = turmaEstaAutorizada || semRestricaoTurma;
-        }
+        // Usar a lógica centralizada de permissões
+        const podeAcessar = verificarPermissaoMaterial(materialData as MaterialBiblioteca, usuario);
         
         if (!podeAcessar) {
           toast({
@@ -392,18 +302,9 @@ const Biblioteca = () => {
                   <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
                       {materiaisCategoria.map((material) => {
                         const isLivroDigital = categoriaEscolhida?.nome.toLowerCase().includes('livro digital');
-                        // Verificar se o usuário pode acessar baseado na lógica correta
-                        const turmasAutorizadas = material.turmas_autorizadas || [];
-                        const permiteVisitante = material.permite_visitante;
                         
-                        let podeAcessar = false;
-                        if (turmaCode === "Visitante") {
-                          podeAcessar = permiteVisitante === true;
-                        } else {
-                          const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
-                          const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
-                          podeAcessar = turmaEstaAutorizada || semRestricaoTurma;
-                        }
+                        // Usar a lógica centralizada de permissões
+                        const podeAcessar = verificarPermissaoMaterial(material as MaterialBiblioteca, usuario);
                         
                         return (
                           <StudentBibliotecaCard
@@ -426,7 +327,7 @@ const Biblioteca = () => {
                           />
                         );
                       })}
-                  </div>
+                    </div>
                 </div>
               );
             })()}
@@ -456,18 +357,9 @@ const Biblioteca = () => {
                     <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
                       {materiaisCategoria.map((material) => {
                         const isLivroDigital = categoria.nome.toLowerCase().includes('livro digital');
-                        // Verificar se o usuário pode acessar baseado na lógica correta
-                        const turmasAutorizadas = material.turmas_autorizadas || [];
-                        const permiteVisitante = material.permite_visitante;
                         
-                        let podeAcessar = false;
-                        if (turmaCode === "Visitante") {
-                          podeAcessar = permiteVisitante === true;
-                        } else {
-                          const turmaEstaAutorizada = turmasAutorizadas.includes(turmaCode);
-                          const semRestricaoTurma = turmasAutorizadas.length === 0 && permiteVisitante;
-                          podeAcessar = turmaEstaAutorizada || semRestricaoTurma;
-                        }
+                        // Usar a lógica centralizada de permissões
+                        const podeAcessar = verificarPermissaoMaterial(material as MaterialBiblioteca, usuario);
                         
                         return (
                           <StudentBibliotecaCard
