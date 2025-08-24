@@ -17,6 +17,7 @@ import { useState } from "react";
 import { PDFViewer } from "@/components/admin/PDFViewer";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
 import { LockedResourceCard } from "@/components/LockedResourceCard";
+import { StudentBibliotecaCard } from "@/components/shared/StudentBibliotecaCard";
 
 const Biblioteca = () => {
   const { studentData } = useStudentAuth();
@@ -222,7 +223,7 @@ const Biblioteca = () => {
           </div>
         </div>
 
-{!materiais || materiais.length === 0 ? (
+        {!materiais || materiais.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <Home className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -262,90 +263,29 @@ const Biblioteca = () => {
                     </Badge>
                   </div>
                   
-                  <div className="grid gap-4">
+                  <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
                     {materiaisCategoria.map((material) => {
                       const isLivroDigital = categoriaEscolhida?.nome.toLowerCase().includes('livro digital');
                       const podeAcessar = !isVisitante || material.permite_visitante;
                       
                       return (
-                        <Card 
-                          key={material.id} 
-                          className={`border-l-4 hover:shadow-lg transition-shadow ${
-                            isLivroDigital ? 'border-l-emerald-500' : 'border-l-redator-primary'
-                          } ${!podeAcessar ? 'opacity-60' : ''}`}
-                        >
-                          <CardHeader>
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                 <CardTitle className="text-xl mb-2 flex items-center gap-2">
-                                   {material.titulo}
-                                   {!podeAcessar && (
-                                     <Lock className="w-4 h-4 text-gray-400" />
-                                   )}
-                                 </CardTitle>
-                                 {material.descricao && (
-                                   <p className="text-gray-600 mb-3">{material.descricao}</p>
-                                 )}
-                                 
-                                 <div className="flex flex-wrap gap-2 mb-4">
-                                   <Badge 
-                                     className={
-                                       isLivroDigital 
-                                         ? "bg-emerald-500 text-white" 
-                                         : "bg-redator-primary text-white"
-                                     }
-                                   >
-                                     {material.categorias?.nome || 'Categoria não definida'}
-                                   </Badge>
-                                   {!isLivroDigital && (
-                                     <Badge variant="outline">
-                                       <Calendar className="w-3 h-3 mr-1" />
-                                       {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
-                                     </Badge>
-                                   )}
-                                   {material.permite_visitante && (
-                                     <Badge variant="outline" className="text-redator-secondary">
-                                       Público
-                                     </Badge>
-                                   )}
-                                 </div>
-                              </div>
-                              
-                              <div className="ml-4">
-                                {!podeAcessar ? (
-                                  <div className="text-center">
-                                    <Lock className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                                    <p className="text-sm text-gray-500">
-                                      Disponível apenas<br />para alunos
-                                    </p>
-                                  </div>
-                                ) : (
-                                   <Button
-                                     onClick={() => handleViewPdf(
-                                       material.arquivo_url, 
-                                       material.titulo,
-                                       categoriaEscolhida?.nome || ''
-                                     )}
-                                     className={
-                                       isLivroDigital 
-                                         ? "bg-emerald-500 hover:bg-emerald-600" 
-                                         : "bg-redator-primary hover:bg-redator-secondary"
-                                     }
-                                   >
-                                     {isLivroDigital ? (
-                                       "Ler agora"
-                                     ) : (
-                                       <>
-                                         <Download className="w-4 h-4 mr-2" />
-                                         Baixar PDF
-                                       </>
-                                     )}
-                                   </Button>
-                                )}
-                              </div>
-                            </div>
-                          </CardHeader>
-                        </Card>
+                        <StudentBibliotecaCard
+                          key={material.id}
+                          title={material.titulo}
+                          description={material.descricao}
+                          coverUrl={material.thumbnail_url}
+                          coverAlt={`Capa do material ${material.titulo}`}
+                          categoria={material.categorias?.nome || 'Sem categoria'}
+                          publishedAt={material.published_at}
+                          unpublishedAt={material.unpublished_at}
+                          isLivroDigital={isLivroDigital}
+                          podeAcessar={podeAcessar}
+                          onViewPdf={() => handleViewPdf(
+                            material.arquivo_url, 
+                            material.titulo,
+                            categoriaEscolhida?.nome || ''
+                          )}
+                        />
                       );
                     })}
                   </div>
@@ -378,90 +318,29 @@ const Biblioteca = () => {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="grid gap-4">
+                    <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
                       {materiaisCategoria.map((material) => {
                         const isLivroDigital = categoria.nome.toLowerCase().includes('livro digital');
                         const podeAcessar = !isVisitante || material.permite_visitante;
                         
                         return (
-                          <Card 
-                            key={material.id} 
-                            className={`border-l-4 hover:shadow-lg transition-shadow ${
-                              isLivroDigital ? 'border-l-emerald-500' : 'border-l-redator-primary'
-                            } ${!podeAcessar ? 'opacity-60' : ''}`}
-                          >
-                            <CardHeader>
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                   <CardTitle className="text-xl mb-2 flex items-center gap-2">
-                                     {material.titulo}
-                                     {!podeAcessar && (
-                                       <Lock className="w-4 h-4 text-gray-400" />
-                                     )}
-                                   </CardTitle>
-                                   {material.descricao && (
-                                     <p className="text-gray-600 mb-3">{material.descricao}</p>
-                                   )}
-                                   
-                                   <div className="flex flex-wrap gap-2 mb-4">
-                                     <Badge 
-                                       className={
-                                         isLivroDigital 
-                                           ? "bg-emerald-500 text-white" 
-                                           : "bg-redator-primary text-white"
-                                       }
-                                     >
-                                       {material.categorias?.nome || 'Categoria não definida'}
-                                     </Badge>
-                                     {!isLivroDigital && (
-                                       <Badge variant="outline">
-                                         <Calendar className="w-3 h-3 mr-1" />
-                                         {format(new Date(material.data_publicacao), "dd/MM/yyyy", { locale: ptBR })}
-                                       </Badge>
-                                     )}
-                                     {material.permite_visitante && (
-                                       <Badge variant="outline" className="text-redator-secondary">
-                                         Público
-                                       </Badge>
-                                     )}
-                                   </div>
-                                </div>
-                                
-                                <div className="ml-4">
-                                  {!podeAcessar ? (
-                                    <div className="text-center">
-                                      <Lock className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                                      <p className="text-sm text-gray-500">
-                                        Disponível apenas<br />para alunos
-                                      </p>
-                                    </div>
-                                  ) : (
-                                     <Button
-                                       onClick={() => handleViewPdf(
-                                         material.arquivo_url, 
-                                         material.titulo,
-                                         categoria.nome
-                                       )}
-                                       className={
-                                         isLivroDigital 
-                                           ? "bg-emerald-500 hover:bg-emerald-600" 
-                                           : "bg-redator-primary hover:bg-redator-secondary"
-                                       }
-                                     >
-                                       {isLivroDigital ? (
-                                         "Ler agora"
-                                       ) : (
-                                         <>
-                                           <Download className="w-4 h-4 mr-2" />
-                                           Baixar PDF
-                                         </>
-                                       )}
-                                     </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </CardHeader>
-                          </Card>
+                          <StudentBibliotecaCard
+                            key={material.id}
+                            title={material.titulo}
+                            description={material.descricao}
+                            coverUrl={material.thumbnail_url}
+                            coverAlt={`Capa do material ${material.titulo}`}
+                            categoria={material.categorias?.nome || 'Sem categoria'}
+                            publishedAt={material.published_at}
+                            unpublishedAt={material.unpublished_at}
+                            isLivroDigital={isLivroDigital}
+                            podeAcessar={podeAcessar}
+                            onViewPdf={() => handleViewPdf(
+                              material.arquivo_url, 
+                              material.titulo,
+                              categoria.nome
+                            )}
+                          />
                         );
                       })}
                     </div>
