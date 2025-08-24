@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
+import { CompactIconButton } from '@/components/ui/compact-icon-button';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -208,7 +209,7 @@ export const VideoList = () => {
             // Preparar ações
             const actions = (
               <>
-                <IconAction
+                <CompactIconButton
                   icon={ACTION_ICON.editar}
                   label="Editar vídeo"
                   intent="neutral"
@@ -216,24 +217,21 @@ export const VideoList = () => {
                     setEditingId(video.id);
                     setEditingVideo(video);
                   }}
-                  density="compact"
                 />
 
-                <IconAction
+                <CompactIconButton
                   icon={video.status_publicacao === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
                   label={video.status_publicacao === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
                   intent={video.status_publicacao === 'publicado' ? 'attention' : 'positive'}
                   onClick={() => handleToggleStatus(video)}
-                  density="compact"
                 />
                 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <IconAction
+                    <CompactIconButton
                       icon={ACTION_ICON.excluir}
                       label="Excluir vídeo"
                       intent="danger"
-                      density="compact"
                     />
                   </AlertDialogTrigger>
                   <AlertDialogContent className="max-w-md mx-4">

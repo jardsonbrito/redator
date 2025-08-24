@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Calendar, Clock, CheckCircle, X as ClearIcon, Ban } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
+import { CompactIconButton } from '@/components/ui/compact-icon-button';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -385,49 +386,44 @@ export const TemaList = () => {
             // Preparar ações
             const actions = (
               <>
-                <IconAction
+                <CompactIconButton
                   icon={ACTION_ICON.editar}
                   label="Editar tema"
                   intent="neutral"
                   onClick={() => setEditingId(tema.id)}
-                  density="compact"
                 />
                 
-                <IconAction
+                <CompactIconButton
                   icon={tema.status === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
                   label={tema.status === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
                   intent={tema.status === 'publicado' ? 'attention' : 'positive'}
                   onClick={() => toggleStatus(tema.id, tema.status)}
-                  density="compact"
                 />
                 
                 {status.type === 'scheduled' && (
-                  <IconAction
+                  <CompactIconButton
                     icon={Ban}
                     label="Cancelar agendamento"
                     intent="attention"
                     onClick={() => cancelScheduling(tema.id)}
-                    density="compact"
                   />
                 )}
                 
                 {status.type === 'overdue' && (
-                  <IconAction
+                  <CompactIconButton
                     icon={ACTION_ICON.publicar}
                     label="Publicar agora"
                     intent="positive"
                     onClick={() => publishNow(tema.id)}
-                    density="compact"
                   />
                 )}
                 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <IconAction
+                    <CompactIconButton
                       icon={ACTION_ICON.excluir}
                       label="Excluir tema"
                       intent="danger"
-                      density="compact"
                     />
                   </AlertDialogTrigger>
                   <AlertDialogContent className="max-w-md mx-4">
