@@ -2507,6 +2507,14 @@ export type Database = {
           student_name: string
         }[]
       }
+      gerar_url_download_biblioteca: {
+        Args: {
+          is_visitante?: boolean
+          material_id: string
+          user_turma?: string
+        }
+        Returns: Json
+      }
       get_alunos_pendentes: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -2968,6 +2976,14 @@ export type Database = {
       validate_student_login: {
         Args: { p_email: string }
         Returns: Json
+      }
+      verificar_permissao_biblioteca: {
+        Args: {
+          is_visitante?: boolean
+          material_id: string
+          user_turma?: string
+        }
+        Returns: boolean
       }
       verificar_presenca: {
         Args: { p_aula_id: string; p_email: string }
