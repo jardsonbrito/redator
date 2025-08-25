@@ -65,6 +65,8 @@ const Aulas = () => {
 
   const fetchAulas = async () => {
     try {
+      console.log('🔄 Buscando aulas - userType:', studentData.userType, 'turma:', studentData.turma);
+      
       const { data, error } = await supabase
         .from("aulas")
         .select(`
@@ -74,13 +76,25 @@ const Aulas = () => {
         .eq("ativo", true)
         .order("criado_em", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Erro na consulta:", error);
+        throw error;
+      }
+      
+      console.log('📊 Aulas encontradas:', data?.length || 0);
+      console.log('📋 Primeira aula exemplo:', data?.[0]);
+      
       setAulas((data || []).map(aula => ({
         ...aula,
         modulo: aula.modulos?.nome || 'Sem módulo'
       })));
     } catch (error) {
       console.error("Erro ao buscar aulas:", error);
+      toast({
+        title: "Erro ao carregar aulas",
+        description: "Não foi possível carregar as aulas. Tente recarregar a página.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -113,14 +127,34 @@ const Aulas = () => {
       
       // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
       if (!isVisitante && userTurma && userTurma !== "visitante") {
-        const turmasAutorizadas = aula.turmas_autorizadas || [];
+        // Garantir que turmasAutorizadas seja sempre um array
+        let turmasAutorizadas = aula.turmas_autorizadas;
+        
+        // Validação robusta para diferentes estruturas de dados
+        if (!turmasAutorizadas || turmasAutorizadas === null) {
+          turmasAutorizadas = [];
+        }
+        
+        // Se turmas_autorizadas estiver vazio ou nulo, permitir acesso a todos
+        if (turmasAutorizadas.length === 0) {
+          console.log('✅ Acesso permitido - nenhuma restrição de turma');
+          return true;
+        }
         
         // Fazer comparação case insensitive e sem considerar espaços extras
         const turmaAluno = userTurma.trim().toUpperCase();
-        const turmasAutorizadasNormalizadas = turmasAutorizadas.map(t => t.trim().toUpperCase());
         
-        const hasAccess = turmasAutorizadas.length === 0 || 
-          turmasAutorizadasNormalizadas.includes(turmaAluno);
+        // Verificar se turmasAutorizadas é realmente um array
+        if (!Array.isArray(turmasAutorizadas)) {
+          console.warn('⚠️ turmas_autorizadas não é um array:', turmasAutorizadas);
+          return false;
+        }
+        
+        const turmasAutorizadasNormalizadas = turmasAutorizadas.map(t => 
+          (t && typeof t === 'string') ? t.trim().toUpperCase() : ''
+        ).filter(t => t.length > 0);
+        
+        const hasAccess = turmasAutorizadasNormalizadas.includes(turmaAluno);
           
         console.log('👤 Verificando acesso do aluno:', { 
           turmaAluno, 
