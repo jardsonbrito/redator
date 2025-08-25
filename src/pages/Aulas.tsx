@@ -68,48 +68,20 @@ const Aulas = () => {
       console.log('🔄 Buscando aulas - userType:', studentData.userType, 'turma:', studentData.turma);
       console.log('🔄 Dados do estudante completos:', JSON.stringify(studentData, null, 2));
       
-      // Testar conexão com Supabase primeiro
-      console.log('🔌 Testando conexão com Supabase...');
-      const { data: testData, error: testError } = await supabase
-        .from("aulas")
-        .select("count", { count: 'exact', head: true });
+      // Validar dados antes de fazer a consulta
+      const userType = studentData.userType || null;
+      const userTurma = (studentData.userType === 'aluno' && studentData.turma) ? studentData.turma : null;
       
-      if (testError) {
-        console.error("❌ Erro na conexão com Supabase:", testError);
-        throw new Error("Falha na conexão com o banco de dados");
-      }
+      console.log('📋 Parâmetros para RPC:', { userType, userTurma });
       
-      console.log('✅ Conexão com Supabase OK. Total de aulas no banco:', testData);
-      
-      // Buscar aulas com log detalhado
-      const { data, error } = await supabase
-        .from("aulas")
-        .select(`
-          id,
-          titulo,
-          descricao,
-          link_conteudo,
-          pdf_url,
-          pdf_nome,
-          turmas_autorizadas,
-          permite_visitante,
-          ativo,
-          criado_em,
-          cover_source,
-          cover_file_path,
-          cover_url,
-          video_url_original,
-          platform,
-          video_id,
-          embed_url,
-          video_thumbnail_url,
-          modulos!inner(nome)
-        `)
-        .eq("ativo", true)
-        .order("criado_em", { ascending: false });
+      // Usar a nova função RPC que garante acesso correto
+      const { data, error } = await supabase.rpc('get_accessible_aulas', {
+        p_user_type: userType,
+        p_user_turma: userTurma
+      });
 
       if (error) {
-        console.error("❌ Erro na consulta detalhada:", {
+        console.error("❌ Erro na consulta RPC:", {
           message: error.message,
           details: error.details,
           hint: error.hint,
@@ -118,19 +90,19 @@ const Aulas = () => {
         throw error;
       }
       
-      console.log('📊 Aulas encontradas no banco:', data?.length || 0);
+      console.log('📊 Aulas encontradas via RPC:', data?.length || 0);
       
       if (data && data.length > 0) {
         console.log('📋 Exemplo de aula (primeira):', JSON.stringify(data[0], null, 2));
         console.log('📋 Tipos de dados das turmas_autorizadas:', typeof data[0]?.turmas_autorizadas, data[0]?.turmas_autorizadas);
       } else {
-        console.warn('⚠️ Nenhuma aula encontrada na consulta');
+        console.warn('⚠️ Nenhuma aula encontrada na consulta RPC');
       }
       
       const processedAulas = (data || []).map(aula => {
         const processed = {
           ...aula,
-          modulo: aula.modulos?.nome || 'Sem módulo'
+          modulo: aula.modulo_nome || 'Sem módulo'
         };
         console.log('🔧 Aula processada:', { 
           id: processed.id, 
@@ -156,73 +128,11 @@ const Aulas = () => {
   };
 
   const filterAulas = () => {
-    console.log('🔍 Filtrando aulas:', { 
-      totalAulas: aulas.length, 
-      userType: studentData.userType, 
-      userTurma: studentData.turma 
-    });
-
-    let filtered = aulas.filter(aula => {
-      console.log('📚 Verificando aula:', { 
-        titulo: aula.titulo, 
-        turmasAutorizadas: aula.turmas_autorizadas, 
-        permiteVisitante: aula.permite_visitante,
-        ativo: aula.ativo
-      });
-
-      // Verificar se o usuário tem acesso
-      const isVisitante = studentData.userType === "visitante";
-      const userTurma = studentData.turma;
-
-      // Permitir se for visitante e aula permite visitante
-      if (isVisitante && aula.permite_visitante) {
-        console.log('✅ Acesso de visitante permitido');
-        return true;
-      }
-      
-      // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
-      if (!isVisitante && userTurma && userTurma !== "visitante") {
-        // Garantir que turmasAutorizadas seja sempre um array
-        let turmasAutorizadas = aula.turmas_autorizadas;
-        
-        // Validação robusta para diferentes estruturas de dados
-        if (!turmasAutorizadas || turmasAutorizadas === null) {
-          turmasAutorizadas = [];
-        }
-        
-        // Se turmas_autorizadas estiver vazio ou nulo, permitir acesso a todos
-        if (turmasAutorizadas.length === 0) {
-          console.log('✅ Acesso permitido - nenhuma restrição de turma');
-          return true;
-        }
-        
-        // Fazer comparação case insensitive e sem considerar espaços extras
-        const turmaAluno = userTurma.trim().toUpperCase();
-        
-        // Verificar se turmasAutorizadas é realmente um array
-        if (!Array.isArray(turmasAutorizadas)) {
-          console.warn('⚠️ turmas_autorizadas não é um array:', turmasAutorizadas);
-          return false;
-        }
-        
-        const turmasAutorizadasNormalizadas = turmasAutorizadas.map(t => 
-          (t && typeof t === 'string') ? t.trim().toUpperCase() : ''
-        ).filter(t => t.length > 0);
-        
-        const hasAccess = turmasAutorizadasNormalizadas.includes(turmaAluno);
-          
-        console.log('👤 Verificando acesso do aluno:', { 
-          turmaAluno, 
-          turmasAutorizadasNormalizadas, 
-          turmasAutorizadasOriginais: turmasAutorizadas,
-          hasAccess 
-        });
-        return hasAccess;
-      }
-
-      console.log('❌ Acesso negado');
-      return false;
-    });
+    console.log('🔍 Aplicando filtros locais apenas para busca e módulo');
+    
+    // As aulas já foram filtradas por acesso na função RPC
+    // Aqui só aplicamos filtros de busca e módulo
+    let filtered = aulas;
 
     // Aplicar filtros de busca
     if (searchTerm) {
@@ -236,7 +146,12 @@ const Aulas = () => {
       filtered = filtered.filter(aula => aula.modulo === moduloFilter);
     }
 
-    console.log('📊 Resultado da filtragem:', { totalFiltradas: filtered.length });
+    console.log('📊 Resultado da filtragem local:', { 
+      totalAulas: aulas.length,
+      totalFiltradas: filtered.length,
+      filtroTexto: searchTerm,
+      filtroModulo: moduloFilter
+    });
     setFilteredAulas(filtered);
   };
 

@@ -2608,6 +2608,31 @@ export type Database = {
         }
         Returns: Json
       }
+      get_accessible_aulas: {
+        Args: { p_user_turma?: string; p_user_type?: string }
+        Returns: {
+          ativo: boolean
+          cover_file_path: string
+          cover_source: string
+          cover_url: string
+          criado_em: string
+          descricao: string
+          embed_url: string
+          id: string
+          link_conteudo: string
+          modulo_id: string
+          modulo_nome: string
+          pdf_nome: string
+          pdf_url: string
+          permite_visitante: boolean
+          platform: string
+          titulo: string
+          turmas_autorizadas: string[]
+          video_id: string
+          video_thumbnail_url: string
+          video_url_original: string
+        }[]
+      }
       get_alunos_pendentes: {
         Args: Record<PropertyKey, never>
         Returns: {
