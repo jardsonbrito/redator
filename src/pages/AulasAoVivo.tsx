@@ -61,7 +61,18 @@ const AulasAoVivo = () => {
           return true;
         }
         if (studentData.userType === 'aluno' && studentData.turma) {
-          return aula.turmas_autorizadas.includes(studentData.turma);
+          // Fazer comparação case insensitive e sem considerar espaços extras
+          const turmaAluno = studentData.turma.trim().toUpperCase();
+          const turmasAutorizadas = aula.turmas_autorizadas.map(t => t.trim().toUpperCase());
+          
+          console.log('[DEBUG] Verificando autorização:', {
+            turmaAluno,
+            turmasAutorizadas,
+            aula: aula.titulo,
+            autorizado: turmasAutorizadas.includes(turmaAluno)
+          });
+          
+          return turmasAutorizadas.includes(turmaAluno);
         }
         return false;
       });
