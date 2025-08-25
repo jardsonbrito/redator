@@ -114,10 +114,20 @@ const Aulas = () => {
       // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
       if (!isVisitante && userTurma && userTurma !== "visitante") {
         const turmasAutorizadas = aula.turmas_autorizadas || [];
-        // Comparação case-insensitive para as turmas
+        
+        // Fazer comparação case insensitive e sem considerar espaços extras
+        const turmaAluno = userTurma.trim().toUpperCase();
+        const turmasAutorizadasNormalizadas = turmasAutorizadas.map(t => t.trim().toUpperCase());
+        
         const hasAccess = turmasAutorizadas.length === 0 || 
-          turmasAutorizadas.some(turma => turma.toUpperCase() === userTurma.toUpperCase());
-        console.log('👤 Verificando acesso do aluno:', { userTurma, turmasAutorizadas, hasAccess });
+          turmasAutorizadasNormalizadas.includes(turmaAluno);
+          
+        console.log('👤 Verificando acesso do aluno:', { 
+          turmaAluno, 
+          turmasAutorizadasNormalizadas, 
+          turmasAutorizadasOriginais: turmasAutorizadas,
+          hasAccess 
+        });
         return hasAccess;
       }
 
