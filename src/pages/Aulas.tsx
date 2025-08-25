@@ -74,7 +74,7 @@ const Aulas = () => {
       
       console.log('📋 Parâmetros para RPC:', { userType, userTurma });
       
-      // Usar a nova função RPC que garante acesso correto
+      // Usar a nova função RPC que garante acesso correto em produção
       const { data, error } = await supabase.rpc('get_accessible_aulas', {
         p_user_type: userType,
         p_user_turma: userTurma
@@ -128,13 +128,11 @@ const Aulas = () => {
   };
 
   const filterAulas = () => {
-    console.log('🔍 Aplicando filtros locais apenas para busca e módulo');
-    
-    // As aulas já foram filtradas por acesso na função RPC
-    // Aqui só aplicamos filtros de busca e módulo
+    console.log('🔍 Aplicando filtros locais de busca e módulo');
+
     let filtered = aulas;
 
-    // Aplicar filtros de busca
+    // Aplicar apenas filtros de busca e módulo (a filtragem por turma já foi feita na RPC)
     if (searchTerm) {
       filtered = filtered.filter(aula =>
         aula.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -147,10 +145,10 @@ const Aulas = () => {
     }
 
     console.log('📊 Resultado da filtragem local:', { 
-      totalAulas: aulas.length,
+      totalOriginal: aulas.length,
       totalFiltradas: filtered.length,
-      filtroTexto: searchTerm,
-      filtroModulo: moduloFilter
+      searchTerm,
+      moduloFilter 
     });
     setFilteredAulas(filtered);
   };
@@ -312,7 +310,7 @@ const Aulas = () => {
                 </CardContent>
               </Card>
             ) : (
-filteredAulas.map((aula) => {
+              filteredAulas.map((aula) => {
                 const coverUrl = resolveAulaCover(aula);
                 const tone: BadgeTone = aula.modulo === 'Aula ao vivo' ? 'warning' : 'primary';
                 const badges: { label: string; tone: BadgeTone }[] = [];
