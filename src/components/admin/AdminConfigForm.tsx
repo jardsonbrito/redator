@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
-import { Mail, Key, User, Clock, AlertTriangle } from 'lucide-react';
+import { AppSettingsForm } from './AppSettingsForm';
+import { Mail, Key, User, Clock, AlertTriangle, Settings } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AdminUser {
@@ -121,8 +123,21 @@ export const AdminConfigForm = () => {
 
   return (
     <div className="space-y-6">
-      {/* Informações do Admin */}
-      <Card>
+      <Tabs defaultValue="account" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="account" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Conta
+          </TabsTrigger>
+          <TabsTrigger value="submissions" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Envios
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="account" className="space-y-6">
+          {/* Informações do Admin */}
+          <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -289,6 +304,12 @@ export const AdminConfigForm = () => {
           </form>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="submissions">
+          <AppSettingsForm />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

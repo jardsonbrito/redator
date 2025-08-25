@@ -196,6 +196,30 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          created_at: string
+          free_topic_enabled: boolean
+          id: string
+          submission_allowed_weekdays_for_topics: number[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          free_topic_enabled?: boolean
+          id?: string
+          submission_allowed_weekdays_for_topics?: number[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          free_topic_enabled?: boolean
+          id?: string
+          submission_allowed_weekdays_for_topics?: number[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       aulas: {
         Row: {
           ativo: boolean | null
@@ -207,7 +231,7 @@ export type Database = {
           embed_url: string | null
           id: string
           link_conteudo: string
-          modulo: string
+          modulo_id: string
           pdf_nome: string | null
           pdf_url: string | null
           permite_visitante: boolean | null
@@ -228,7 +252,7 @@ export type Database = {
           embed_url?: string | null
           id?: string
           link_conteudo: string
-          modulo: string
+          modulo_id: string
           pdf_nome?: string | null
           pdf_url?: string | null
           permite_visitante?: boolean | null
@@ -249,7 +273,7 @@ export type Database = {
           embed_url?: string | null
           id?: string
           link_conteudo?: string
-          modulo?: string
+          modulo_id?: string
           pdf_nome?: string | null
           pdf_url?: string | null
           permite_visitante?: boolean | null
@@ -260,7 +284,15 @@ export type Database = {
           video_thumbnail_url?: string | null
           video_url_original?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "aulas_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aulas_virtuais: {
         Row: {
@@ -858,6 +890,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      modulos: {
+        Row: {
+          ativo: boolean
+          id: string
+          inserted_at: string
+          nome: string
+          slug: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          id?: string
+          inserted_at?: string
+          nome: string
+          slug?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          id?: string
+          inserted_at?: string
+          nome?: string
+          slug?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       presenca_audit_log: {
         Row: {
@@ -2303,6 +2365,37 @@ export type Database = {
       }
     }
     Views: {
+      aulas_front: {
+        Row: {
+          descricao: string | null
+          id: string | null
+          link_conteudo: string | null
+          modulo: string | null
+          modulo_ativo: boolean | null
+          modulo_id: string | null
+          modulo_slug: string | null
+          pdf_url: string | null
+          sort_order: number | null
+          titulo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aulas_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_app_settings: {
+        Row: {
+          free_topic_enabled: boolean | null
+          submission_allowed_weekdays_for_topics: number[] | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       v_live_status: {
         Row: {
           last_action: string | null
@@ -2905,6 +2998,10 @@ export type Database = {
           tabela_nome: string
         }
         Returns: boolean
+      }
+      set_app_settings: {
+        Args: { p_free_topic_enabled: boolean; p_weekdays_for_topics: number[] }
+        Returns: undefined
       }
       set_current_user_email: {
         Args: { user_email: string }

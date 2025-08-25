@@ -9,6 +9,7 @@ import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
 import { useNewContentTags } from "@/hooks/useNewContentTags";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface MenuItem {
   title: string;
@@ -33,6 +34,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
   const { shouldShowNewTag, handleCardClick } = useNewContentTags();
   const { buscarMensagensNaoLidasAluno } = useAjudaRapida();
   const { studentData } = useStudentAuth();
+  const { settings } = useAppSettings();
 
   useEffect(() => {
     if (studentData.email) {
@@ -94,6 +96,10 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           const cardColor = getCardColor(index, item.title);
           const isBlocked = item.resourceType && isBlockedResource(item.resourceType);
           
+          // Verificar se é o card "Enviar Redação Avulsa — Tema Livre" e se está desabilitado
+          const isFreeTopicCard = item.title === "Enviar Redação Avulsa — Tema Livre";
+          const isFreeTopicDisabled = isFreeTopicCard && settings && !settings.free_topic_enabled;
+          
           
           return (
             <Tooltip key={index}>
@@ -117,6 +123,25 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                     <div className="absolute top-2 right-2">
                       <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
                         Bloqueado
+                      </div>
+                    </div>
+                  </div>
+                ) : isFreeTopicDisabled ? (
+                  <div className={`group relative flex flex-col items-center justify-center p-6 ${cardColor.bg} rounded-2xl shadow-lg opacity-60 min-h-[120px] cursor-not-allowed`}>
+                    {/* Ícone de cadeado para tema livre desabilitado */}
+                    <div className="mb-3">
+                      <Lock className={`w-8 h-8 ${cardColor.icon}`} />
+                    </div>
+                    
+                    {/* Título do card */}
+                    <h3 className={`text-sm font-bold ${cardColor.icon} text-center leading-tight`}>
+                      {item.title}
+                    </h3>
+                    
+                    {/* Badge de desabilitado */}
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full">
+                        Desabilitado
                       </div>
                     </div>
                   </div>
@@ -154,7 +179,12 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs text-center p-3 bg-white border border-gray-200 shadow-lg rounded-xl">
                 <p className="text-xs font-medium text-gray-700">
-                  {isBlocked ? "Recurso bloqueado para Turma E" : item.tooltip}
+                  {isBlocked 
+                    ? "Recurso bloqueado para Turma E" 
+                    : isFreeTopicDisabled 
+                    ? "Tema Livre temporariamente desabilitado pelo administrador"
+                    : item.tooltip
+                  }
                 </p>
               </TooltipContent>
             </Tooltip>

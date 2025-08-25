@@ -9,6 +9,7 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getTemaCoverUrl, getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 // Type extension para incluir os campos novos e legado
 type TemaWithImage = {
@@ -35,12 +36,17 @@ const TemaDetalhes = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { studentData } = useStudentAuth();
+  const { checkIfTodayAllowsTopicSubmissions, getDaysAllowedText, settings } = useAppSettings();
   
   // Permitir acesso tanto para alunos quanto visitantes
   const canWriteRedacao = studentData.userType === "aluno" || studentData.userType === "visitante";
   
+  // Verificar se hoje é permitido envio por tema
+  const todayAllowsSubmission = checkIfTodayAllowsTopicSubmissions();
+  const daysAllowedText = getDaysAllowedText();
+  
   const handleEscreverRedacao = () => {
-    if (tema) {
+    if (tema && todayAllowsSubmission) {
       // Redirecionar para página de envio com parâmetros
       navigate(`/envie-redacao?tema=${encodeURIComponent(tema.frase_tematica)}&fonte=tema&temaId=${id}`);
     }
@@ -209,12 +215,23 @@ const TemaDetalhes = () => {
                   </p>
                   <Button
                     onClick={handleEscreverRedacao}
-                    className="bg-redator-primary hover:bg-redator-primary/90 text-white px-6 py-3"
+                    disabled={!todayAllowsSubmission}
+                    className={`px-6 py-3 ${
+                      todayAllowsSubmission 
+                        ? 'bg-redator-primary hover:bg-redator-primary/90 text-white' 
+                        : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    }`}
                     size="lg"
                   >
                     <Edit className="w-5 h-5 mr-2" />
                     ✍️ Escreva sobre este tema
                   </Button>
+                  
+                  {!todayAllowsSubmission && (
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      Envios por tema não estão liberados hoje. Dias permitidos: {daysAllowedText}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

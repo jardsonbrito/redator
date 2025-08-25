@@ -12,7 +12,7 @@ import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/u
 import { resolveAulaCover } from "@/utils/coverUtils";
 
 interface Modulo {
-  id: string;
+  id?: string;
   nome: string;
   slug?: string;
 }
@@ -78,7 +78,10 @@ export const SimpleAulaList = () => {
       
       let query = supabase
         .from("aulas")
-        .select("*")
+        .select(`
+          *,
+          modulos!inner(nome)
+        `)
         .order("criado_em", { ascending: false });
 
       if (buscaDebounced) {
@@ -110,7 +113,10 @@ export const SimpleAulaList = () => {
         }
       }
       
-      setAulas(aulasFiltered);
+      setAulas(aulasFiltered.map(aula => ({
+        ...aula,
+        modulo: aula.modulos?.nome || 'Sem módulo'
+      })));
     } catch (err: any) {
       console.error("Erro ao buscar aulas:", err);
       setError(err.message || "Erro ao carregar aulas");

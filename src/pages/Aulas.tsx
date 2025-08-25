@@ -67,12 +67,18 @@ const Aulas = () => {
     try {
       const { data, error } = await supabase
         .from("aulas")
-        .select("*")
+        .select(`
+          *,
+          modulos!inner(nome)
+        `)
         .eq("ativo", true)
         .order("criado_em", { ascending: false });
 
       if (error) throw error;
-      setAulas(data || []);
+      setAulas((data || []).map(aula => ({
+        ...aula,
+        modulo: aula.modulos?.nome || 'Sem módulo'
+      })));
     } catch (error) {
       console.error("Erro ao buscar aulas:", error);
     } finally {

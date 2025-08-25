@@ -12,12 +12,18 @@ const CorretorAulas = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('aulas')
-        .select('*')
+        .select(`
+          *,
+          modulos!inner(nome)
+        `)
         .eq('ativo', true)
         .order('criado_em', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      return (data || []).map(aula => ({
+        ...aula,
+        modulo: aula.modulos?.nome || 'Sem módulo'
+      }));
     }
   });
 

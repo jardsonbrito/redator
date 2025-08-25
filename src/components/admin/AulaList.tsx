@@ -52,14 +52,20 @@ export const AulaList = () => {
       console.log('🔍 Buscando aulas...');
       const { data, error } = await supabase
         .from("aulas")
-        .select("*")
+        .select(`
+          *,
+          modulos!inner(nome)
+        `)
         .order("criado_em", { ascending: false });
 
       console.log('✅ Dados recebidos:', data);
       console.log('❌ Erro:', error);
 
       if (error) throw error;
-      setAulas(data || []);
+      setAulas((data || []).map(aula => ({
+        ...aula,
+        modulo: aula.modulos?.nome || 'Sem módulo'
+      })));
     } catch (error) {
       console.error("Erro ao buscar aulas:", error);
       toast.error("Erro ao carregar aulas");

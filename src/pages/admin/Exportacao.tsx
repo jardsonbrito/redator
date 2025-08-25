@@ -167,14 +167,17 @@ export default function Exportacao() {
     try {
       const { data, error } = await supabase
         .from('aulas')
-        .select('*')
+        .select(`
+          *,
+          modulos!inner(nome)
+        `)
         .order('criado_em', { ascending: false });
 
       if (error) throw error;
 
       const csvData = data.map(item => ({
         'Título': item.titulo || '',
-        'Módulo': item.modulo || '',
+        'Módulo': item.modulos?.nome || 'Sem módulo',
         'Descrição': item.descricao || '',
         'Link': item.link_conteudo || '',
         'Nome do PDF': item.pdf_nome || '',
