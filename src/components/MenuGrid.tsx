@@ -98,7 +98,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           
           // Verificar se é o card "Enviar Redação — Tema Livre" e se está desabilitado
           const isFreeTopicCard = item.title === "Enviar Redação — Tema Livre";
-          const isFreeTopicDisabled = isFreeTopicCard && settings && !settings.free_topic_enabled;
+          const isFreeTopicDisabled = isFreeTopicCard && settings && settings.free_topic_enabled === false;
           
           
           return (
