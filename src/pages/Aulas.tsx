@@ -66,33 +66,88 @@ const Aulas = () => {
   const fetchAulas = async () => {
     try {
       console.log('🔄 Buscando aulas - userType:', studentData.userType, 'turma:', studentData.turma);
+      console.log('🔄 Dados do estudante completos:', JSON.stringify(studentData, null, 2));
       
+      // Testar conexão com Supabase primeiro
+      console.log('🔌 Testando conexão com Supabase...');
+      const { data: testData, error: testError } = await supabase
+        .from("aulas")
+        .select("count", { count: 'exact', head: true });
+      
+      if (testError) {
+        console.error("❌ Erro na conexão com Supabase:", testError);
+        throw new Error("Falha na conexão com o banco de dados");
+      }
+      
+      console.log('✅ Conexão com Supabase OK. Total de aulas no banco:', testData);
+      
+      // Buscar aulas com log detalhado
       const { data, error } = await supabase
         .from("aulas")
         .select(`
-          *,
+          id,
+          titulo,
+          descricao,
+          link_conteudo,
+          pdf_url,
+          pdf_nome,
+          turmas_autorizadas,
+          permite_visitante,
+          ativo,
+          criado_em,
+          cover_source,
+          cover_file_path,
+          cover_url,
+          video_url_original,
+          platform,
+          video_id,
+          embed_url,
+          video_thumbnail_url,
           modulos!inner(nome)
         `)
         .eq("ativo", true)
         .order("criado_em", { ascending: false });
 
       if (error) {
-        console.error("❌ Erro na consulta:", error);
+        console.error("❌ Erro na consulta detalhada:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         throw error;
       }
       
-      console.log('📊 Aulas encontradas:', data?.length || 0);
-      console.log('📋 Primeira aula exemplo:', data?.[0]);
+      console.log('📊 Aulas encontradas no banco:', data?.length || 0);
       
-      setAulas((data || []).map(aula => ({
-        ...aula,
-        modulo: aula.modulos?.nome || 'Sem módulo'
-      })));
+      if (data && data.length > 0) {
+        console.log('📋 Exemplo de aula (primeira):', JSON.stringify(data[0], null, 2));
+        console.log('📋 Tipos de dados das turmas_autorizadas:', typeof data[0]?.turmas_autorizadas, data[0]?.turmas_autorizadas);
+      } else {
+        console.warn('⚠️ Nenhuma aula encontrada na consulta');
+      }
+      
+      const processedAulas = (data || []).map(aula => {
+        const processed = {
+          ...aula,
+          modulo: aula.modulos?.nome || 'Sem módulo'
+        };
+        console.log('🔧 Aula processada:', { 
+          id: processed.id, 
+          titulo: processed.titulo, 
+          turmas_autorizadas: processed.turmas_autorizadas,
+          permite_visitante: processed.permite_visitante
+        });
+        return processed;
+      });
+      
+      setAulas(processedAulas);
+      
     } catch (error) {
-      console.error("Erro ao buscar aulas:", error);
+      console.error("❌ Erro completo ao buscar aulas:", error);
       toast({
         title: "Erro ao carregar aulas",
-        description: "Não foi possível carregar as aulas. Tente recarregar a página.",
+        description: error.message || "Não foi possível carregar as aulas. Tente recarregar a página.",
         variant: "destructive"
       });
     } finally {
