@@ -35,7 +35,7 @@ const Student = () => {
     },
     // Linha 2, Coluna 2: Enviar Redação - Tema Livre
     {
-      title: "Enviar Redação",
+      title: "Enviar Redação — Tema Livre",
       path: "/envie-redacao",
       icon: Send,
       tooltip: "Submeta seu texto para correção detalhada.",

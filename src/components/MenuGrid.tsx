@@ -96,8 +96,8 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           const cardColor = getCardColor(index, item.title);
           const isBlocked = item.resourceType && isBlockedResource(item.resourceType);
           
-          // Verificar se é o card "Enviar Redação Avulsa — Tema Livre" e se está desabilitado
-          const isFreeTopicCard = item.title === "Enviar Redação Avulsa — Tema Livre";
+          // Verificar se é o card "Enviar Redação — Tema Livre" e se está desabilitado
+          const isFreeTopicCard = item.title === "Enviar Redação — Tema Livre";
           const isFreeTopicDisabled = isFreeTopicCard && settings && !settings.free_topic_enabled;
           
           

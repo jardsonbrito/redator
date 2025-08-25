@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Home, Send, Upload, X, Camera, Edit3 } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Home, Send, Upload, X, Camera, Edit3, Lock } from "lucide-react";
+import { Link, useSearchParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnemForm } from "@/components/RedacaoEnemForm";
@@ -13,6 +13,7 @@ import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
@@ -27,10 +28,15 @@ const EnvieRedacao = () => {
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [tipoRedacao, setTipoRedacao] = useState<"manuscrita" | "digitada">("digitada");
   const { toast } = useToast();
+  const { settings, loading: settingsLoading } = useAppSettings();
 
   const temaFromUrl = searchParams.get('tema');
   const fonteFromUrl = searchParams.get('fonte');
   const exercicioFromUrl = searchParams.get('exercicio');
+
+  // Verificar se acesso ao tema livre está desabilitado
+  const isFreeTopicAccess = !temaFromUrl && !exercicioFromUrl;
+  const isFreeTopicDisabled = isFreeTopicAccess && settings && !settings.free_topic_enabled;
 
   const userType = localStorage.getItem("userType");
   const alunoTurma = localStorage.getItem("alunoTurma");
@@ -292,6 +298,32 @@ const EnvieRedacao = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Se carregando configurações, mostrar loading
+  if (settingsLoading) {
+    return (
+      <ProtectedRoute>
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+            <StudentHeader pageTitle="Carregando..." />
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="flex justify-center items-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Carregando configurações...</p>
+                </div>
+              </div>
+            </main>
+          </div>
+        </TooltipProvider>
+      </ProtectedRoute>
+    );
+  }
+
+  // Se é acesso por tema livre e está desabilitado, redirecionar
+  if (isFreeTopicDisabled) {
+    return <Navigate to="/app" replace />;
+  }
 
   return (
     <ProtectedRoute>
