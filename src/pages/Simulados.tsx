@@ -118,10 +118,12 @@ if (isLoading) {
       <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Simulados" />
-          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">
-            <UnifiedCardSkeleton />
-            <UnifiedCardSkeleton />
-            <UnifiedCardSkeleton />
+          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <UnifiedCardSkeleton />
+              <UnifiedCardSkeleton />
+              <UnifiedCardSkeleton />
+            </div>
           </main>
         </div>
       </TooltipProvider>
@@ -150,7 +152,7 @@ if (isLoading) {
     </CardContent>
   </Card>
 ) : (
-  <div className="grid gap-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {simulados.map((simulado: any) => {
       const info = getStatusSimulado(simulado);
       const status = computeSimuladoStatus(simulado);
