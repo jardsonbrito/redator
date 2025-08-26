@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Eye, MessageCircle, Star, RotateCcw, User, Clock } from 'lucide-react';
+import { MessageCircle, Star, RotateCcw, User, Clock, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -270,69 +270,15 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="hover:bg-primary hover:text-white transition-colors"
-                                  onClick={() => setViewingResposta(resposta)}
-                                >
-                                  <Eye className="w-4 h-4 mr-1" />
-                                  Ver
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle className="text-xl">Resposta - {resposta.nome_aluno}</DialogTitle>
-                                </DialogHeader>
-                                {viewingResposta && (
-                                  <div className="space-y-6">
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                        <MessageCircle className="w-5 h-5 text-primary" />
-                                        Enunciado:
-                                      </h4>
-                                      <p className="text-gray-700 whitespace-pre-line leading-relaxed">{lousa.enunciado}</p>
-                                    </div>
-                              <div>
-                                <h4 className="font-semibold mb-2">Resposta do Aluno:</h4>
-                                <div className="bg-background border p-4 rounded min-h-[120px]">
-                                  {viewingResposta.conteudo || (
-                                    <span className="text-muted-foreground italic">
-                                      Nenhuma resposta enviada ainda
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {viewingResposta.comentario_professor && (
-                                <div>
-                                  <h4 className="font-semibold mb-2">Comentário do Professor:</h4>
-                                  <p className="text-sm bg-blue-50 p-3 rounded border-l-4 border-blue-400">
-                                    {viewingResposta.comentario_professor}
-                                  </p>
-                                </div>
-                              )}
-                              <div className="flex justify-end pt-4">
-                                <Button onClick={() => openCorrectionModal(viewingResposta)}>
-                                  <MessageCircle className="w-4 h-4 mr-2" />
-                                  Corrigir
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
-
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => openCorrectionModal(resposta)}
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => openCorrectionModal(resposta)}
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -381,63 +327,10 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => setViewingResposta(resposta)}
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Ver Resposta
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle className="text-xl">Resposta - {resposta.nome_aluno}</DialogTitle>
-                        </DialogHeader>
-                        {viewingResposta && (
-                          <div className="space-y-6">
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                <MessageCircle className="w-5 h-5 text-primary" />
-                                Enunciado:
-                              </h4>
-                              <p className="text-gray-700 whitespace-pre-line leading-relaxed">{lousa.enunciado}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-semibold mb-2">Resposta do Aluno:</h4>
-                              <div className="bg-background border p-4 rounded min-h-[120px]">
-                                {viewingResposta.conteudo || (
-                                  <span className="text-muted-foreground italic">
-                                    Nenhuma resposta enviada ainda
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {viewingResposta.comentario_professor && (
-                              <div>
-                                <h4 className="font-semibold mb-2">Comentário do Professor:</h4>
-                                <p className="text-sm bg-blue-50 p-3 rounded border-l-4 border-blue-400">
-                                  {viewingResposta.comentario_professor}
-                                </p>
-                              </div>
-                            )}
-                            <div className="flex justify-end pt-4">
-                              <Button onClick={() => openCorrectionModal(viewingResposta)}>
-                                <MessageCircle className="w-4 h-4 mr-2" />
-                                Corrigir
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                    
                     <Button 
                       variant="ghost" 
                       size="sm"
+                      className="flex-1"
                       onClick={() => openCorrectionModal(resposta)}
                     >
                       <MessageCircle className="w-4 h-4" />
@@ -537,6 +430,22 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
                     <Button type="submit">
                       <Star className="w-4 h-4 mr-2" />
                       Concluir Correção
+                    </Button>
+
+                    <Button 
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const textToCopy = `${correctingResposta.nome_aluno}\n\n${correctingResposta.conteudo || 'Nenhuma resposta enviada'}`;
+                        navigator.clipboard.writeText(textToCopy);
+                        toast({
+                          title: 'Copiado!',
+                          description: 'Nome e resposta do aluno copiados para a área de transferência'
+                        });
+                      }}
+                    >
+                      <Copy className="w-4 h-4" />
                     </Button>
                   </div>
                 </form>
