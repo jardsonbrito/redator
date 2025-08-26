@@ -156,10 +156,39 @@ const Exercicios = () => {
             cover_file_path
           )
         `).eq("ativo", true).order("criado_em", {
-        ascending: false
+        ascending: true // Order by creation date ascending for proper sorting
       });
+
       if (error) throw error;
-      setExercicios(data || []);
+      
+      // Sort exercises: Available first, then Ended, both by creation date (oldest to newest)
+      const sortedExercicios = (data || []).sort((a, b) => {
+        const statusA = getExercicioStatus(a);
+        const statusB = getExercicioStatus(b);
+        
+        // Assign priority: disponivel = 0, agendado = 1, encerrado = 2
+        const getPriority = (status: string) => {
+          switch (status) {
+            case 'disponivel': return 0;
+            case 'agendado': return 1;
+            case 'encerrado': return 2;
+            default: return 3;
+          }
+        };
+        
+        const priorityA = getPriority(statusA);
+        const priorityB = getPriority(statusB);
+        
+        // If different priorities, sort by priority
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        
+        // If same priority, sort by creation date (already ascending from query)
+        return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime();
+      });
+      
+      setExercicios(sortedExercicios);
     } catch (error) {
       console.error("Erro ao buscar exercícios:", error);
     } finally {
