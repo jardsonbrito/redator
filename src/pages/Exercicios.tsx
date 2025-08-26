@@ -159,7 +159,7 @@ const Exercicios = () => {
 
       if (error) throw error;
       
-      // Sort exercises: Available first, then Ended, both by creation date (newest to oldest)
+      // Sort exercises: Available first (newest to oldest), then Ended (newest to oldest)
       const sortedExercicios = (data || []).sort((a, b) => {
         const statusA = getExercicioStatus(a);
         const statusB = getExercicioStatus(b);
@@ -167,9 +167,9 @@ const Exercicios = () => {
         // Assign priority: disponivel = 0, agendado = 1, encerrado = 2
         const getPriority = (status: string) => {
           switch (status) {
-            case 'disponivel': return 0;
-            case 'agendado': return 1;
-            case 'encerrado': return 2;
+            case 'disponivel': return 0; // Available exercises first
+            case 'agendado': return 1;   // Scheduled in the middle
+            case 'encerrado': return 2;  // Ended exercises last
             default: return 3;
           }
         };
@@ -177,12 +177,12 @@ const Exercicios = () => {
         const priorityA = getPriority(statusA);
         const priorityB = getPriority(statusB);
         
-        // If different priorities, sort by priority
+        // If different priorities, sort by priority (Available -> Scheduled -> Ended)
         if (priorityA !== priorityB) {
           return priorityA - priorityB;
         }
         
-        // If same priority, sort by creation date DESCENDING (newest to oldest)
+        // If same priority, sort by creation date DESCENDING (newest first within each group)
         return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime();
       });
       
