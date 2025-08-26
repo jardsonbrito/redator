@@ -164,6 +164,8 @@ const Exercicios = () => {
         const statusA = getExercicioStatus(a);
         const statusB = getExercicioStatus(b);
         
+        console.log(`Comparando: ${a.titulo} (${statusA}) vs ${b.titulo} (${statusB})`);
+        
         // Assign priority: disponivel = 0, agendado = 1, encerrado = 2
         const getPriority = (status: string) => {
           switch (status) {
@@ -177,13 +179,21 @@ const Exercicios = () => {
         const priorityA = getPriority(statusA);
         const priorityB = getPriority(statusB);
         
+        console.log(`Prioridades: ${a.titulo} = ${priorityA}, ${b.titulo} = ${priorityB}`);
+        
         // If different priorities, sort by priority (Available -> Scheduled -> Ended)
         if (priorityA !== priorityB) {
-          return priorityA - priorityB;
+          const result = priorityA - priorityB;
+          console.log(`Diferentes prioridades, resultado: ${result}`);
+          return result;
         }
         
         // If same priority, sort by creation date DESCENDING (newest first within each group)
-        return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime();
+        const dateA = new Date(a.criado_em).getTime();
+        const dateB = new Date(b.criado_em).getTime();
+        const result = dateB - dateA;
+        console.log(`Mesma prioridade, ordenando por data: ${result}`);
+        return result;
       });
       
       setExercicios(sortedExercicios);
