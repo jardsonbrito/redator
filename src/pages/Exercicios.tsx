@@ -161,10 +161,15 @@ const Exercicios = () => {
       
       // Sort exercises: Available first (newest to oldest), then Ended (newest to oldest)
       const sortedExercicios = (data || []).sort((a, b) => {
-        const statusA = getExercicioStatus(a);
-        const statusB = getExercicioStatus(b);
+        // Use the same status logic as ExerciseCard for consistency
+        const availabilityA = getExerciseAvailability(a);
+        const availabilityB = getExerciseAvailability(b);
         
-        console.log(`Comparando: ${a.titulo} (${statusA}) vs ${b.titulo} (${statusB})`);
+        const statusA = availabilityA.status;
+        const statusB = availabilityB.status;
+        
+        console.log(`${a.titulo}: status=${statusA}`);
+        console.log(`${b.titulo}: status=${statusB}`);
         
         // Assign priority: disponivel = 0, agendado = 1, encerrado = 2
         const getPriority = (status: string) => {
@@ -179,21 +184,17 @@ const Exercicios = () => {
         const priorityA = getPriority(statusA);
         const priorityB = getPriority(statusB);
         
-        console.log(`Prioridades: ${a.titulo} = ${priorityA}, ${b.titulo} = ${priorityB}`);
+        console.log(`Prioridades: ${a.titulo}=${priorityA}, ${b.titulo}=${priorityB}`);
         
         // If different priorities, sort by priority (Available -> Scheduled -> Ended)
         if (priorityA !== priorityB) {
           const result = priorityA - priorityB;
-          console.log(`Diferentes prioridades, resultado: ${result}`);
+          console.log(`Resultado: ${result}`);
           return result;
         }
         
         // If same priority, sort by creation date DESCENDING (newest first within each group)
-        const dateA = new Date(a.criado_em).getTime();
-        const dateB = new Date(b.criado_em).getTime();
-        const result = dateB - dateA;
-        console.log(`Mesma prioridade, ordenando por data: ${result}`);
-        return result;
+        return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime();
       });
       
       setExercicios(sortedExercicios);
