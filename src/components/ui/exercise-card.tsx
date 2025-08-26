@@ -97,57 +97,152 @@ export function ExerciseCard({
 
 
   return (
-    <Card className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 bg-white border border-gray-200 rounded-2xl ${isDisabled ? 'opacity-60' : ''}`}>
-      <div className="flex flex-col lg:flex-row">
-        {/* Capa */}
-        <div className="w-full lg:w-56 h-36 flex-shrink-0 bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden">
-          <img
-            src={imageSources && imageSources[currentImageIndex] ? imageSources[currentImageIndex] : '/placeholders/aula-cover.png'}
-            alt={`Capa do exercício: ${exercise.titulo}`}
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-            onError={handleImageError}
-          />
-        </div>
+    <Card className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 bg-white border border-gray-200 rounded-2xl ${isDisabled ? 'opacity-60' : ''}`} role="listitem">
+      {/* Capa - Always on top with 16:9 ratio */}
+      <div className="aspect-[16/9] overflow-hidden rounded-t-2xl bg-gradient-to-br from-purple-100 to-purple-200">
+        <img
+          src={imageSources && imageSources[currentImageIndex] ? imageSources[currentImageIndex] : '/placeholders/aula-cover.png'}
+          alt={`Capa do exercício: ${exercise.titulo}`}
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          onError={handleImageError}
+          loading="lazy"
+        />
+      </div>
 
-        {/* Conteúdo */}
-        <div className="flex-1 p-4 lg:p-6">
-          <div className="space-y-3">
-            {/* Título e Botões Admin (Desktop) */}
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="font-semibold text-lg lg:text-xl text-gray-900 leading-tight break-words flex-1">
-                {exercise.titulo}
-              </h3>
-              
-              {/* Botões Admin Desktop */}
-              {isAdmin && showActions && (
-                <div className="hidden lg:flex items-center gap-2">
+      {/* Content */}
+      <div className="p-4 md:p-5">
+        <div className="space-y-3">
+          {/* Title and Desktop Admin Actions */}
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="font-semibold text-lg text-gray-900 leading-tight line-clamp-2 flex-1">
+              {exercise.titulo}
+            </h3>
+            
+            {/* Desktop Admin Actions */}
+            {isAdmin && showActions && (
+              <div className="hidden lg:flex items-center gap-2">
+                {onEdit && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => onEdit(exercise)}
+                    title="Editar"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                )}
+                {exercise.link_forms && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => window.open(exercise.link_forms, '_blank')}
+                    title="Abrir Formulário"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                )}
+                {onToggleStatus && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="px-3 py-1 text-xs"
+                    onClick={() => onToggleStatus(exercise.id, exercise.ativo || false)}
+                  >
+                    {exercise.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                )}
+                {onDelete && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => onDelete(exercise.id)}
+                    title="Excluir"
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Badges */}
+          <div className="flex flex-wrap items-center gap-2">
+            {getStatusBadge()}
+            <Badge variant="outline" className="text-xs font-medium">
+              {exercise.tipo}
+            </Badge>
+            {exercise.temas && (
+              <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                {exercise.temas.eixo_tematico}
+              </Badge>
+            )}
+          </div>
+
+          {/* Period Information */}
+          <div className="space-y-1 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span>{periodText}</span>
+            </div>
+            {availability.message && (
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span className="italic">{availability.message}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Authorized Classes */}
+          {exercise.turmas_autorizadas && exercise.turmas_autorizadas.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-500" />
+              <div className="flex flex-wrap gap-1">
+                {exercise.turmas_autorizadas.slice(0, 4).map((turma) => (
+                  <span
+                    key={turma}
+                    className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium"
+                  >
+                    {turma}
+                  </span>
+                ))}
+                {exercise.turmas_autorizadas.length > 4 && (
+                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
+                    +{exercise.turmas_autorizadas.length - 4}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          {showActions && (
+            <div className="pt-2">
+              {isAdmin ? (
+                /* Mobile Admin Actions */
+                <div className="flex lg:hidden flex-wrap gap-2">
                   {onEdit && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => onEdit(exercise)}
-                      title="Editar"
-                    >
-                      <ExternalLink className="w-4 h-4" />
+                    <Button variant="outline" size="sm" onClick={() => onEdit(exercise)}>
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      Editar
                     </Button>
                   )}
                   {exercise.link_forms && (
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="h-8 w-8 p-0"
                       onClick={() => window.open(exercise.link_forms, '_blank')}
-                      title="Abrir Formulário"
                     >
-                      <FileText className="w-4 h-4" />
+                      <FileText className="w-3 h-3 mr-1" />
+                      Ver Forms
                     </Button>
                   )}
                   {onToggleStatus && (
                     <Button 
                       variant="outline" 
-                      size="sm"
-                      className="px-3 py-1 text-xs"
+                      size="sm" 
                       onClick={() => onToggleStatus(exercise.id, exercise.ativo || false)}
                     >
                       {exercise.ativo ? 'Desativar' : 'Ativar'}
@@ -155,143 +250,45 @@ export function ExerciseCard({
                   )}
                   {onDelete && (
                     <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      variant="destructive" 
+                      size="sm" 
                       onClick={() => onDelete(exercise.id)}
-                      title="Excluir"
                     >
-                      ×
+                      Excluir
                     </Button>
                   )}
                 </div>
-              )}
-            </div>
-
-            {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              {getStatusBadge()}
-              <Badge variant="outline" className="text-xs font-medium">
-                {exercise.tipo}
-              </Badge>
-              {exercise.temas && (
-                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                  {exercise.temas.eixo_tematico}
-                </Badge>
-              )}
-            </div>
-
-            {/* Informações do Período */}
-            <div className="space-y-1 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>{periodText}</span>
-              </div>
-              {availability.message && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span className="italic">{availability.message}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Turmas Autorizadas */}
-            {exercise.turmas_autorizadas && exercise.turmas_autorizadas.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-gray-500" />
-                <div className="flex flex-wrap gap-1">
-                  {exercise.turmas_autorizadas.slice(0, 4).map((turma) => (
-                    <span
-                      key={turma}
-                      className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium"
-                    >
-                      {turma}
-                    </span>
-                  ))}
-                  {exercise.turmas_autorizadas.length > 4 && (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
-                      +{exercise.turmas_autorizadas.length - 4}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Botões Mobile e Ações do Aluno */}
-            {showActions && (
-              <div className="pt-2">
-                {isAdmin ? (
-                  /* Botões Admin Mobile */
-                  <div className="flex lg:hidden flex-wrap gap-2">
-                    {onEdit && (
-                      <Button variant="outline" size="sm" onClick={() => onEdit(exercise)}>
-                        <ExternalLink className="w-3 h-3 mr-1" />
-                        Editar
-                      </Button>
-                    )}
-                    {exercise.link_forms && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(exercise.link_forms, '_blank')}
-                      >
-                        <FileText className="w-3 h-3 mr-1" />
-                        Ver Forms
-                      </Button>
-                    )}
-                    {onToggleStatus && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => onToggleStatus(exercise.id, exercise.ativo || false)}
-                      >
-                        {exercise.ativo ? 'Desativar' : 'Ativar'}
-                      </Button>
-                    )}
-                    {onDelete && (
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={() => onDelete(exercise.id)}
-                      >
-                        Excluir
-                      </Button>
-                    )}
-                  </div>
+              ) : (
+                /* Student Actions - Full width button */
+                availability.status === 'agendado' ? (
+                  <Button variant="outline" size="sm" disabled className="w-full">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Agendado
+                  </Button>
+                ) : availability.status === 'encerrado' ? (
+                  <Button variant="outline" size="sm" disabled className="w-full">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Encerrado
+                  </Button>
                 ) : (
-                  /* Ações do Aluno */
-                  <div className="flex items-center gap-3">
-                    {availability.status === 'agendado' ? (
-                      <Button variant="outline" size="sm" disabled className="rounded-full">
-                        <Clock className="w-4 h-4 mr-2" />
-                        Agendado
-                      </Button>
-                    ) : availability.status === 'encerrado' ? (
-                      <Button variant="outline" size="sm" disabled className="rounded-full">
-                        <Clock className="w-4 h-4 mr-2" />
-                        Encerrado
-                      </Button>
-                    ) : (
-                      onAction && (
-                        <Button 
-                          className="bg-purple-600 hover:bg-purple-700 text-white rounded-full px-6"
-                          size="sm" 
-                          onClick={() => onAction(exercise)}
-                          disabled={isDisabled}
-                        >
-                          {exercise.tipo === 'Google Forms' ? (
-                            <><ExternalLink className="w-4 h-4 mr-2" /> Abrir Formulário</>
-                          ) : (
-                            <><FileText className="w-4 h-4 mr-2" /> Escrever Redação</>
-                          )}
-                        </Button>
-                      )
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                  onAction && (
+                    <Button 
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                      size="sm" 
+                      onClick={() => onAction(exercise)}
+                      disabled={isDisabled}
+                    >
+                      {exercise.tipo === 'Google Forms' ? (
+                        <><ExternalLink className="w-4 h-4 mr-2" /> Abrir Formulário</>
+                      ) : (
+                        <><FileText className="w-4 h-4 mr-2" /> Escrever Redação</>
+                      )}
+                    </Button>
+                  )
+                )
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Card>
