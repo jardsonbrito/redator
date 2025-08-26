@@ -218,21 +218,29 @@ const Exercicios = () => {
         ativo: exercicio.ativo
       });
 
-      // Verificar se o usuário tem acesso
       const isVisitante = studentData.userType === "visitante";
       const userTurma = studentData.turma;
+      const turmasAutorizadas = exercicio.turmas_autorizadas || [];
 
-      // Permitir se for visitante e exercício permite visitante
-      if (isVisitante && exercicio.permite_visitante) {
-        console.log('✅ Acesso de visitante permitido');
-        return true;
+      // REGRA 1: Visitante - só tem acesso se permite_visitante = true
+      if (isVisitante) {
+        const hasAccess = exercicio.permite_visitante;
+        console.log('🎯 Visitante:', { hasAccess });
+        return hasAccess;
       }
 
-      // Permitir se for aluno e está na turma autorizada ou se turmas_autorizadas está vazio/null
+      // REGRA 2-4: Aluno - verificar turmas autorizadas
       if (!isVisitante && userTurma && userTurma !== "visitante") {
-        const turmasAutorizadas = exercicio.turmas_autorizadas || [];
-        // Comparação case-insensitive para as turmas
-        const hasAccess = turmasAutorizadas.length === 0 || turmasAutorizadas.some(turma => turma.toUpperCase() === userTurma.toUpperCase());
+        // Se não há turmas autorizadas, só visitantes têm acesso (se permite_visitante = true)
+        if (turmasAutorizadas.length === 0) {
+          console.log('❌ Aluno sem turmas autorizadas');
+          return false;
+        }
+        
+        // Verificar se o aluno está em uma das turmas autorizadas
+        const hasAccess = turmasAutorizadas.some(turma => 
+          turma.toUpperCase() === userTurma.toUpperCase()
+        );
         console.log('👤 Verificando acesso do aluno:', {
           userTurma,
           turmasAutorizadas,
@@ -240,6 +248,7 @@ const Exercicios = () => {
         });
         return hasAccess;
       }
+      
       console.log('❌ Acesso negado');
       return false;
     });
