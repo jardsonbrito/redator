@@ -1,16 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, X as ClearIcon } from "lucide-react";
+import { BookOpen, X as ClearIcon } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
-import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
-import { resolveExemplarCover } from "@/utils/coverUtils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { dicaToHTML } from "@/utils/dicaToHTML";
 import { useRedacoesExemplarFilters } from "@/hooks/useRedacoesExemplarFilters";
 import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
 import { MultiSelectDropdown } from "@/components/filters/MultiSelectDropdown";
+import { ExemplarCard } from "@/components/ExemplarCard";
 
 const RedacoesExemplar = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<any>(null);
@@ -36,7 +36,7 @@ const RedacoesExemplar = () => {
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
             <StudentHeader pageTitle="Redações Exemplares" />
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="mx-auto max-w-6xl px-4 py-8">
               {/* Skeleton dos filtros */}
               <div className="mb-8">
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -49,11 +49,21 @@ const RedacoesExemplar = () => {
                 </div>
               </div>
               
-              {/* Skeleton dos cards */}
-              <div className="space-y-4">
-                <UnifiedCardSkeleton />
-                <UnifiedCardSkeleton />
-                <UnifiedCardSkeleton />
+              {/* Skeleton dos cards em grid */}
+              <div className="mx-auto max-w-6xl">
+                <div role="list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="space-y-3">
+                      <Skeleton className="w-full aspect-video rounded-xl" />
+                      <div className="px-4 space-y-3">
+                        <Skeleton className="h-5 w-20" />
+                        <Skeleton className="h-6 w-full" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-9 w-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </main>
           </div>
@@ -68,7 +78,7 @@ const RedacoesExemplar = () => {
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
             <StudentHeader pageTitle="Redações Exemplares" />
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="mx-auto max-w-6xl px-4 py-8">
               <div className="text-center py-8">
                 <p className="text-red-600">Erro ao carregar redações. Tente novamente.</p>
               </div>
@@ -85,7 +95,7 @@ const RedacoesExemplar = () => {
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle="Redações Exemplares" />
 
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="mx-auto max-w-6xl px-4 py-8">
             {/* Seção de Filtros */}
             <div className="mb-8">
               <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -163,30 +173,19 @@ const RedacoesExemplar = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
-                {redacoesExemplares.map((redacao: any) => {
-                  const coverUrl = resolveExemplarCover(redacao);
-                  return (
-                    <UnifiedCard
-                      key={redacao.id}
-                      variant="aluno"
-                      item={{
-                        coverUrl,
-                        title: redacao.frase_tematica,
-                        badges: redacao.eixo_tematico
-                          ? [{ label: redacao.eixo_tematico, tone: "primary" }]
-                          : undefined,
-                        meta: [{ icon: User, text: "Jardson Brito" }],
-                        cta: { 
-                          label: "Ver Redação", 
-                          onClick: () => setSelectedRedacao(redacao),
-                          ariaLabel: `Ver redação exemplar: ${redacao.frase_tematica}`
-                        },
-                        ariaLabel: `Redação exemplar: ${redacao.frase_tematica}`
-                      }}
-                    />
-                  );
-                })}
+              <div role="list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {redacoesExemplares.map((redacao: any) => (
+                  <ExemplarCard
+                    key={redacao.id}
+                    id={redacao.id}
+                    titulo={redacao.frase_tematica}
+                    eixo={redacao.eixo_tematico}
+                    autorNome="Jardson Brito"
+                    capaUrl={redacao.imagem_url || redacao.pdf_url}
+                    onViewRedacao={() => setSelectedRedacao(redacao)}
+                    variant="student"
+                  />
+                ))}
               </div>
             )}
 
