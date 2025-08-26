@@ -155,13 +155,11 @@ const Exercicios = () => {
             cover_url,
             cover_file_path
           )
-        `).eq("ativo", true).order("criado_em", {
-        ascending: true // Order by creation date ascending for proper sorting
-      });
+        `).eq("ativo", true);
 
       if (error) throw error;
       
-      // Sort exercises: Available first, then Ended, both by creation date (oldest to newest)
+      // Sort exercises: Available first, then Ended, both by creation date (newest to oldest)
       const sortedExercicios = (data || []).sort((a, b) => {
         const statusA = getExercicioStatus(a);
         const statusB = getExercicioStatus(b);
@@ -184,8 +182,8 @@ const Exercicios = () => {
           return priorityA - priorityB;
         }
         
-        // If same priority, sort by creation date (already ascending from query)
-        return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime();
+        // If same priority, sort by creation date DESCENDING (newest to oldest)
+        return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime();
       });
       
       setExercicios(sortedExercicios);
