@@ -97,7 +97,9 @@ const AulasAoVivo = () => {
 
   const fetchAttendanceStatus = async (sessionId: string) => {
     try {
+      console.log('🔄 Buscando status de presença para aula:', sessionId);
       const status = await getMyAttendanceStatus(sessionId);
+      console.log('📍 Status retornado para aula', sessionId, ':', status);
       setAttendanceMap(prev => ({
         ...prev,
         [sessionId]: status
@@ -218,6 +220,12 @@ const AulasAoVivo = () => {
               {aulas.map((aula) => {
                 const status = getStatusAula(aula);
                 const attendanceStatus = attendanceMap[aula.id] || 'ausente';
+
+                console.log('🎯 Renderizando aula:', aula.titulo);
+                console.log('   - ID da aula:', aula.id);
+                console.log('   - Status calculado:', status);
+                console.log('   - Attendance Map:', attendanceMap);
+                console.log('   - Attendance Status:', attendanceStatus);
 
                 // Usar status calculado dinamicamente (não o campo do banco)
                 let normalizedStatus: 'agendada' | 'ao_vivo' | 'encerrada' = 
