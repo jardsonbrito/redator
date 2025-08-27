@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Video, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { toast } from "sonner";
 import { formatInTimeZone } from 'date-fns-tz';
 import { computeStatus } from "@/utils/aulaStatus";
-import { AulaAoVivoCardRefatorado } from "@/components/aula-virtual/AulaAoVivoCardRefatorado";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
+import { StatusBadge } from "@/components/aula-virtual/StatusBadge";
+import { getMyAttendanceStatus, registrarEntrada, AttendanceStatus } from "@/utils/attendanceHelpers";
+import { AulaStatusBadge } from "@/components/aula-virtual/AulaStatusBadge";
 
 interface AulaAoVivo {
   id: string;
@@ -26,18 +30,17 @@ interface AulaAoVivo {
   status_transmissao?: string;
 }
 
-interface RegistroPresenca {
-  aula_id: string;
-  entrada_at: string | null;
-  saida_at: string | null;
+interface AttendanceRecord {
+  session_id: string;
+  status: AttendanceStatus;
 }
 
 const AulasAoVivo = () => {
   const { studentData } = useStudentAuth();
   const [aulas, setAulas] = useState<AulaAoVivo[]>([]);
-  const [registrosPresencaMap, setRegistrosPresencaMap] = useState<Record<string, RegistroPresenca>>({});
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingOperations, setLoadingOperations] = useState<Record<string, 'entrada' | 'saida' | null>>({});
+  const [loadingOperations, setLoadingOperations] = useState<Record<string, boolean>>({});
 
   const fetchAulas = async () => {
     try {
@@ -79,9 +82,9 @@ const AulasAoVivo = () => {
 
       setAulas(aulasAutorizadas);
 
-      // Buscar registros de presença para cada aula autorizada
+      // Buscar status de presença para cada aula autorizada
       for (const aula of aulasAutorizadas) {
-        await fetchPresencaAula(aula.id);
+        await fetchAttendanceStatus(aula.id);
       }
     } catch (error: any) {
       console.error('Erro ao carregar aulas:', error);
@@ -91,157 +94,47 @@ const AulasAoVivo = () => {
     }
   };
 
-  // Função helper para chamadas RPC com logging detalhado
-  const rpc = async (fn: string, args: Record<string, any>): Promise<any> => {
-    console.log('[RPC] call', fn, args);
-    console.log('payload', { 
-      emailSessao: studentData?.email, 
-      aulaId: args.p_aula_id, 
-      tipos: { 
-        email: typeof studentData?.email, 
-        aula: typeof args.p_aula_id 
-      }
-    });
-    
-    const { data, error } = await supabase.rpc(fn as any, args, { head: false });
-    
-    if (error) {
-      console.error('[RPC] error', fn, error);
-      toast.error(`Erro: ${error.message}`);
-      throw error;
-    }
-    
-    console.log('[RPC] data', fn, data);
-    return data!;
-  };
-
-  const fetchPresencaAula = async (aulaId: string) => {
-    if (!studentData?.email) return;
-
+  const fetchAttendanceStatus = async (sessionId: string) => {
     try {
-      console.log(`[PRESENCA] Verificando presença para aula ${aulaId} e email ${studentData.email}`);
-
-      const data = await rpc('verificar_presenca', {
-        p_email: studentData.email,
-        p_aula_id: aulaId
-      });
-
-      const registro = data && data.length > 0 ? {
-        aula_id: aulaId,
-        entrada_at: data[0].entrada_at,
-        saida_at: data[0].saida_at
-      } : { aula_id: aulaId, entrada_at: null, saida_at: null };
-
-      console.log(`[PRESENCA] Registro de presença:`, registro);
-
-      setRegistrosPresencaMap(prev => ({
+      const status = await getMyAttendanceStatus(sessionId);
+      setAttendanceMap(prev => ({
         ...prev,
-        [aulaId]: registro
+        [sessionId]: status
       }));
-    } catch (error: any) {
-      console.error('[PRESENCA] Erro ao buscar presença:', error);
+    } catch (error) {
+      console.error('Error fetching attendance status:', error);
     }
   };
 
-  const onRegistrarEntrada = async (aulaId: string) => {
-    if (!studentData?.email) {
-      toast.error('Dados do estudante não encontrados');
-      return;
-    }
+  const handleRegistrarEntrada = async (sessionId: string) => {
+    if (loadingOperations[sessionId]) return;
 
-    // Verificar se já está em operação
-    if (loadingOperations[aulaId]) {
-      return;
-    }
-
-    setLoadingOperations(prev => ({ ...prev, [aulaId]: 'entrada' }));
+    setLoadingOperations(prev => ({ ...prev, [sessionId]: true }));
     
     try {
-      console.log('[ENTRADA] Iniciando registro de entrada');
+      await registrarEntrada(sessionId);
       
-      const data = await rpc('registrar_entrada', {
-        p_email: studentData.email,
-        p_aula_id: aulaId
-      });
-
-      console.log('[ENTRADA] Sucesso:', data);
+      // Update local state optimistically
+      setAttendanceMap(prev => ({
+        ...prev,
+        [sessionId]: 'presente'
+      }));
       
-      // Formatação de hora usando date-fns-tz
-      const TZ = 'America/Sao_Paulo';
-      const hora = formatInTimeZone(new Date(), TZ, 'HH:mm');
-      
+      const hora = formatInTimeZone(new Date(), 'America/Sao_Paulo', 'HH:mm');
       toast.success(`Entrada registrada às ${hora}`);
       
-      // Atualizar estado local com dados retornados
-      if (data && data.length > 0) {
-        setRegistrosPresencaMap(prev => ({
-          ...prev,
-          [aulaId]: {
-            aula_id: aulaId,
-            entrada_at: data[0].entrada_at,
-            saida_at: data[0].saida_at
-          }
-        }));
-      }
-      
-      // Buscar dados atualizados do banco
-      setTimeout(() => fetchPresencaAula(aulaId), 500);
+      // Refresh status from database
+      setTimeout(() => fetchAttendanceStatus(sessionId), 500);
     } catch (error: any) {
-      console.error('[ENTRADA] Erro:', error);
-      // Error toast já foi mostrado pela função rpc
-    } finally {
-      setLoadingOperations(prev => ({ ...prev, [aulaId]: null }));
-    }
-  };
-
-  const onRegistrarSaida = async (aulaId: string) => {
-    if (!studentData?.email) {
-      toast.error('Dados do estudante não encontrados');
-      return;
-    }
-
-    // Verificar se já está em operação
-    if (loadingOperations[aulaId]) {
-      return;
-    }
-
-    setLoadingOperations(prev => ({ ...prev, [aulaId]: 'saida' }));
-    
-    try {
-      console.log('[SAIDA] Iniciando registro de saída');
+      console.error('Error registering attendance:', error);
       
-      const data = await rpc('registrar_saida', {
-        p_email: studentData.email,
-        p_aula_id: aulaId
-      });
-
-      console.log('[SAIDA] Sucesso:', data);
-      
-      // Formatação de hora usando date-fns-tz
-      const TZ = 'America/Sao_Paulo';
-      const hora = formatInTimeZone(new Date(), TZ, 'HH:mm');
-      
-      toast.success(`Saída registrada às ${hora}`);
-      
-      // Atualizar estado local com dados retornados
-      if (data && data.length > 0) {
-        setRegistrosPresencaMap(prev => ({
-          ...prev,
-          [aulaId]: {
-            aula_id: aulaId,
-            entrada_at: data[0].entrada_at,
-            saida_at: data[0].saida_at
-          }
-        }));
+      if (error.message.includes('Fora do horário')) {
+        toast.error('Só é possível registrar presença durante o horário da aula (10min antes até 15min após)');
+      } else {
+        toast.error('Erro ao registrar entrada. Tente novamente.');
       }
-      
-      // Buscar dados atualizados do banco
-      setTimeout(() => fetchPresencaAula(aulaId), 500);
-    } catch (error: any) {
-      console.error('[SAIDA] Erro:', error);
-      // Error toast já foi mostrado pela função rpc
     } finally {
-      setLoadingOperations(prev => ({ ...prev, [aulaId]: null }));
+      setLoadingOperations(prev => ({ ...prev, [sessionId]: false }));
     }
   };
 
@@ -323,35 +216,77 @@ const AulasAoVivo = () => {
             <div className="grid gap-4 md:gap-6">
               {aulas.map((aula) => {
                 const status = getStatusAula(aula);
-                const registro = registrosPresencaMap[aula.id];
+                const attendanceStatus = attendanceMap[aula.id] || 'ausente';
+                const isLoading = loadingOperations[aula.id] || false;
 
-                // Usar status calculado dinamicamente (não o campo do banco)
-                let normalizedStatus: 'agendada' | 'ao_vivo' | 'encerrada' = 
-                  status === 'indefinido' ? 'encerrada' : status;
-
-                console.log(`Aula ${aula.id}:`, {
-                  titulo: aula.titulo,
-                  data_aula: aula.data_aula,
-                  horario_inicio: aula.horario_inicio,
-                  horario_fim: aula.horario_fim,
-                  status_calculado: status,
-                  status_final: normalizedStatus,
-                  registro: registro,
-                  entrada_registrada: !!registro?.entrada_at,
-                  saida_registrada: !!registro?.saida_at
-                });
+                // Calculate status for badge
+                const aulaEmAndamento = status === 'ao_vivo';
+                const aulaFutura = status === 'agendada';
+                const aulaEncerrada = status === 'encerrada';
                 
                 return (
-                  <AulaAoVivoCardRefatorado
-                    key={aula.id}
-                    aula={aula}
-                    status={normalizedStatus}
-                    registro={registro}
-                    turmaCode={studentData.turma || "Visitante"}
-                    onEntrada={onRegistrarEntrada}
-                    onSaida={onRegistrarSaida}
-                    loadingOperation={loadingOperations[aula.id]}
-                  />
+                  <Card key={aula.id} className="overflow-hidden">
+                    <div className="relative">
+                      <div className="aspect-video bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                        {aula.imagem_capa_url ? (
+                          <img 
+                            src={aula.imagem_capa_url} 
+                            alt={aula.titulo}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Video className="w-16 h-16 text-white" />
+                        )}
+                      </div>
+                      
+                      <div className="absolute top-4 left-4 flex gap-2">
+                        <AulaStatusBadge aulaEmAndamento={aulaEmAndamento} aulaFutura={aulaFutura} />
+                        <StatusBadge status={attendanceStatus} />
+                      </div>
+                      
+                      <div className="absolute top-4 right-4">
+                        <Badge variant="secondary" className="bg-white/90 text-gray-700">
+                          <Users className="w-4 h-4 mr-1" />
+                          Google Meet
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-lg mb-2">{aula.titulo}</h3>
+                      {aula.descricao && (
+                        <p className="text-muted-foreground mb-4">{aula.descricao}</p>
+                      )}
+                      
+                      <div className="text-sm text-muted-foreground mb-4">
+                        📅 {new Date(aula.data_aula).toLocaleDateString('pt-BR')} ⏰ {aula.horario_inicio} - {aula.horario_fim}
+                      </div>
+
+                      <div className="flex gap-2">
+                        {/* Google Meet Button */}
+                        <Button
+                          onClick={() => window.open(aula.link_meet, '_blank')}
+                          className="flex-1"
+                          disabled={aulaEncerrada}
+                        >
+                          {aulaEmAndamento ? '🔴 Entrar na Aula ao Vivo' : 
+                           aulaFutura ? 'Entre na sala e aguarde o professor' : 
+                           'Aula Encerrada'}
+                        </Button>
+                        
+                        {/* Attendance Button */}
+                        {attendanceStatus === 'ausente' && !aulaEncerrada && (
+                          <Button
+                            onClick={() => handleRegistrarEntrada(aula.id)}
+                            disabled={isLoading}
+                            variant="outline"
+                          >
+                            {isLoading ? 'Registrando...' : 'Registrar entrada'}
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>

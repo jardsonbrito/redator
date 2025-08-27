@@ -716,6 +716,44 @@ export type Database = {
           },
         ]
       }
+      live_class_attendance: {
+        Row: {
+          created_at: string | null
+          id: string
+          marked_via: string | null
+          session_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          marked_via?: string | null
+          session_id: string
+          status: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          marked_via?: string | null
+          session_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_lca_session"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "aulas_virtuais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lousa: {
         Row: {
           ativo: boolean
@@ -2946,6 +2984,10 @@ export type Database = {
       registrar_entrada_email_param: {
         Args: { p_aula_id: string; p_email_aluno: string }
         Returns: string
+      }
+      registrar_entrada_live_class: {
+        Args: { p_session_id: string }
+        Returns: undefined
       }
       registrar_entrada_sem_auth: {
         Args: { p_aula_id: string; p_email: string }
