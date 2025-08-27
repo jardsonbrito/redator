@@ -214,64 +214,62 @@ export function LousaRespostasCorretor({ lousa }: LousaRespostasCorretorProps) {
                     {format(new Date(resposta.updated_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex gap-1 justify-end">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setViewingResposta(resposta)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>Resposta - {resposta.nome_aluno}</DialogTitle>
-                          </DialogHeader>
-                          {viewingResposta && (
-                            <div className="space-y-4">
-                              <div>
-                                 <h4 className="font-semibold mb-2">Enunciado:</h4>
-                                 <p className="text-sm bg-muted p-3 rounded whitespace-pre-line">{lousa.enunciado}</p>
-                              </div>
-                              <div>
-                                <h4 className="font-semibold mb-2">Resposta do Aluno:</h4>
-                                <div className="bg-background border p-4 rounded min-h-[120px]">
-                                  {viewingResposta.conteudo || (
-                                    <span className="text-muted-foreground italic">
-                                      Nenhuma resposta enviada ainda
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {viewingResposta.comentario_professor && (
-                                <div>
-                                  <h4 className="font-semibold mb-2">Comentário do Professor:</h4>
-                                  <p className="text-sm bg-blue-50 p-3 rounded border-l-4 border-blue-400">
-                                    {viewingResposta.comentario_professor}
-                                  </p>
-                                </div>
-                              )}
-                              <div className="flex justify-end pt-4">
-                                <Button onClick={() => openCorrectionModal(viewingResposta)}>
-                                  <MessageCircle className="w-4 h-4 mr-2" />
-                                  Corrigir
-                                </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setViewingResposta(resposta)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Visualizar e Editar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader className="pb-4">
+                          <DialogTitle>Resposta - {resposta.nome_aluno}</DialogTitle>
+                        </DialogHeader>
+                        {viewingResposta && (
+                          <div className="space-y-6">
+                            <div>
+                               <h4 className="font-semibold mb-3 text-base">📝 Enunciado:</h4>
+                               <div className="text-sm bg-muted p-4 rounded-lg whitespace-pre-line border-l-4 border-primary">
+                                 {lousa.enunciado}
+                               </div>
+                            </div>
+                            
+                            <div>
+                              <h4 className="font-semibold mb-3 text-base">✍️ Resposta do Aluno:</h4>
+                              <div className="bg-background border p-4 rounded-lg min-h-[120px] whitespace-pre-line">
+                                {viewingResposta.conteudo || (
+                                  <span className="text-muted-foreground italic">
+                                    Nenhuma resposta enviada ainda
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
-
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => openCorrectionModal(resposta)}
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </Button>
-                    </div>
+                            
+                            {viewingResposta.comentario_professor && (
+                              <div>
+                                <h4 className="font-semibold mb-3 text-base">💬 Comentário do Professor:</h4>
+                                <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
+                                  <div className="text-sm whitespace-pre-line leading-relaxed">
+                                    {viewingResposta.comentario_professor}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="flex justify-end pt-4 border-t">
+                              <Button onClick={() => openCorrectionModal(viewingResposta)} size="lg">
+                                <MessageCircle className="w-4 h-4 mr-2" />
+                                {viewingResposta.comentario_professor ? 'Editar Correção' : 'Corrigir'}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
                   </TableCell>
                 </TableRow>
               ))}

@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useCorretorAuth } from '@/hooks/useCorretorAuth';
 
 interface Lousa {
   id: string;
@@ -23,39 +24,34 @@ interface Lousa {
 
 export default function CorretorLousas() {
   const navigate = useNavigate();
+  const { corretor } = useCorretorAuth();
 
   const { data: lousas, isLoading } = useQuery({
-    queryKey: ['corretor-lousas'],
+    queryKey: ['corretor-lousas', corretor?.email],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lousa')
-        .select(`
-          *,
-          lousa_resposta!inner(count),
-          lousa_resposta!inner(
-            id,
-            status
-          )
-        `)
-        .eq('ativo', true)
-        .order('created_at', { ascending: false });
+      if (!corretor?.email) {
+        throw new Error('Corretor não autenticado');
+      }
 
-      if (error) throw error;
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_corretor_lousas', {
+          corretor_email: corretor.email
+        });
 
-      // Processar contagem de respostas
-      const lousasProcessadas = data?.map((lousa: any) => {
-        const respostas = lousa.lousa_resposta || [];
-        const respostasCorrigidas = respostas.filter((r: any) => r.status === 'graded').length;
-        
-        return {
-          ...lousa,
-          respostas_count: respostas.length,
-          respostas_corrigidas: respostasCorrigidas
-        };
-      }) || [];
+      if (rpcError) {
+        console.error('❌ Erro ao buscar lousas do corretor:', rpcError);
+        throw rpcError;
+      }
 
-      return lousasProcessadas;
-    }
+      if (!rpcData?.success) {
+        console.error('❌ Falha na busca de lousas:', rpcData?.message);
+        throw new Error(rpcData?.message || 'Erro ao buscar lousas');
+      }
+
+      console.log('✅ Lousas carregadas para corretor:', rpcData.data);
+      return rpcData.data || [];
+    },
+    enabled: !!corretor?.email
   });
 
   const getStatusBadge = (status: string) => {
