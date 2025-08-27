@@ -1,19 +1,15 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { StatusBadge } from "./StatusBadge";
 import { 
   Video, 
   Calendar, 
   Clock, 
-  Users, 
   ExternalLink, 
-  LogIn, 
-  LogOut,
+  LogIn,
   Loader2
 } from "lucide-react";
 
@@ -33,36 +29,25 @@ interface AulaAoVivo {
   status_transmissao?: string;
 }
 
-interface RegistroPresenca {
-  aula_id: string;
-  entrada_at: string | null;
-  saida_at: string | null;
-}
-
 interface AulaAoVivoCardRefatoradoProps {
   aula: AulaAoVivo;
   status: 'agendada' | 'ao_vivo' | 'encerrada';
-  registro?: RegistroPresenca;
+  attendanceStatus: 'presente' | 'ausente';
   turmaCode?: string;
   onEntrada: (aulaId: string) => Promise<void>;
-  onSaida: (aulaId: string) => Promise<void>;
-  loadingOperation?: 'entrada' | 'saida' | null;
+  loadingOperation?: boolean;
 }
 
 export const AulaAoVivoCardRefatorado = ({
   aula,
   status,
-  registro,
+  attendanceStatus,
   turmaCode,
   onEntrada,
-  onSaida,
   loadingOperation
 }: AulaAoVivoCardRefatoradoProps) => {
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
-
-  const entradaRegistrada = !!registro?.entrada_at;
-  const saidaRegistrada = !!registro?.saida_at;
 
   const getStatusBadge = () => {
     switch (status) {
@@ -77,17 +62,11 @@ export const AulaAoVivoCardRefatorado = ({
     }
   };
 
-  const formatTimestamp = (timestamp?: string | null) => {
-    if (!timestamp) return '—';
-    return new Date(timestamp).toLocaleTimeString('pt-BR');
-  };
-
   const abrirAula = () => {
     window.open(aula.link_meet, '_blank');
   };
 
-  const handleClick = async (tipo: 'entrada' | 'saida') => {
-    // Verificar se há dados do estudante (sistema local, não Supabase Auth)
+  const handleRegistrarEntrada = async () => {
     if (!studentData.email) {
       toast({
         title: "Erro", 
@@ -97,26 +76,17 @@ export const AulaAoVivoCardRefatorado = ({
       return;
     }
 
-    // Verificar se já está carregando
     if (loadingOperation) {
       return;
     }
 
     try {
-      console.log(`Iniciando registro de ${tipo} para aula ${aula.id}`);
-      
-      if (tipo === 'entrada') {
-        await onEntrada(aula.id);
-      } else {
-        await onSaida(aula.id);
-      }
-      
-      console.log(`Registro de ${tipo} concluído com sucesso`);
+      await onEntrada(aula.id);
     } catch (error) {
-      console.error(`Erro ao registrar ${tipo}:`, error);
+      console.error('Erro ao registrar entrada:', error);
       toast({
         title: "Erro",
-        description: `Erro ao registrar ${tipo}. Tente novamente.`,
+        description: "Erro ao registrar entrada. Tente novamente.",
         variant: "destructive"
       });
     }
@@ -152,9 +122,7 @@ export const AulaAoVivoCardRefatorado = ({
           <div className="flex flex-wrap items-center gap-2">
             {getStatusBadge()}
             <Badge variant="outline" className="text-xs">Google Meet</Badge>
-            {turmaCode && turmaCode !== "Visitante" && (
-              <Badge variant="outline" className="text-xs">{turmaCode}</Badge>
-            )}
+            <StatusBadge status={attendanceStatus} />
           </div>
 
           {/* Título */}
@@ -179,30 +147,7 @@ export const AulaAoVivoCardRefatorado = ({
               <Clock className="w-4 h-4" />
               {aula.horario_inicio} – {aula.horario_fim}
             </span>
-            {turmaCode === "Visitante" && (
-              <span className="inline-flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                Visitantes
-              </span>
-            )}
           </div>
-
-          {/* Status de Presença */}
-          {(entradaRegistrada || saidaRegistrada) && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="text-sm text-green-800">
-                <p className="font-medium">Status da Presença:</p>
-                <div className="mt-1 space-y-1">
-                  {entradaRegistrada && (
-                    <p>✅ Entrada registrada às {formatTimestamp(registro?.entrada_at)}</p>
-                  )}
-                  {saidaRegistrada && (
-                    <p>✅ Saída registrada às {formatTimestamp(registro?.saida_at)}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Ações */}
           <div className="mt-1 flex flex-col gap-2">
@@ -218,41 +163,22 @@ export const AulaAoVivoCardRefatorado = ({
                status === 'agendada' ? 'Aguardar na Sala' : 'Aula Encerrada'}
             </Button>
 
-            {/* Botões de presença - mostrar ambos quando aula está AO VIVO */}
-            {status === 'ao_vivo' && (
-              <div className="grid md:grid-cols-2 gap-2">
-                {/* Botão Registrar Entrada */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleClick('entrada')}
-                  disabled={entradaRegistrada || loadingOperation === 'entrada'}
-                  className={entradaRegistrada ? 'bg-green-50 text-green-700' : ''}
-                >
-                  {loadingOperation === 'entrada' ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <LogIn className="w-4 h-4 mr-2" />
-                  )}
-                  {entradaRegistrada ? 'Entrada Registrada' : 'Registrar Entrada'}
-                </Button>
-
-                {/* Botão Registrar Saída - sempre visível, mas desabilitado conforme regras */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleClick('saida')}
-                  disabled={!entradaRegistrada || saidaRegistrada || loadingOperation === 'saida'}
-                  className={saidaRegistrada ? 'bg-green-50 text-green-700' : ''}
-                >
-                  {loadingOperation === 'saida' ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <LogOut className="w-4 h-4 mr-2" />
-                  )}
-                  {saidaRegistrada ? 'Saída Registrada' : 'Registrar Saída'}
-                </Button>
-              </div>
+            {/* Botão de registrar entrada - apenas quando ausente e aula não encerrada */}
+            {attendanceStatus === 'ausente' && status !== 'encerrada' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegistrarEntrada}
+                disabled={loadingOperation}
+                className="w-full"
+              >
+                {loadingOperation ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <LogIn className="w-4 h-4 mr-2" />
+                )}
+                {loadingOperation ? 'Registrando...' : 'Registrar Entrada'}
+              </Button>
             )}
           </div>
         </div>

@@ -13,6 +13,7 @@ import { SkeletonCard } from "@/components/ui/skeleton-card";
 import { StatusBadge } from "@/components/aula-virtual/StatusBadge";
 import { getMyAttendanceStatus, registrarEntrada, AttendanceStatus } from "@/utils/attendanceHelpers";
 import { AulaStatusBadge } from "@/components/aula-virtual/AulaStatusBadge";
+import { AulaAoVivoCardRefatorado } from "@/components/aula-virtual/AulaAoVivoCardRefatorado";
 
 interface AulaAoVivo {
   id: string;
@@ -217,76 +218,21 @@ const AulasAoVivo = () => {
               {aulas.map((aula) => {
                 const status = getStatusAula(aula);
                 const attendanceStatus = attendanceMap[aula.id] || 'ausente';
-                const isLoading = loadingOperations[aula.id] || false;
 
-                // Calculate status for badge
-                const aulaEmAndamento = status === 'ao_vivo';
-                const aulaFutura = status === 'agendada';
-                const aulaEncerrada = status === 'encerrada';
+                // Usar status calculado dinamicamente (não o campo do banco)
+                let normalizedStatus: 'agendada' | 'ao_vivo' | 'encerrada' = 
+                  status === 'indefinido' ? 'encerrada' : status;
                 
                 return (
-                  <Card key={aula.id} className="overflow-hidden">
-                    <div className="relative">
-                      <div className="aspect-video bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                        {aula.imagem_capa_url ? (
-                          <img 
-                            src={aula.imagem_capa_url} 
-                            alt={aula.titulo}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Video className="w-16 h-16 text-white" />
-                        )}
-                      </div>
-                      
-                      <div className="absolute top-4 left-4 flex gap-2">
-                        <AulaStatusBadge aulaEmAndamento={aulaEmAndamento} aulaFutura={aulaFutura} />
-                        <StatusBadge status={attendanceStatus} />
-                      </div>
-                      
-                      <div className="absolute top-4 right-4">
-                        <Badge variant="secondary" className="bg-white/90 text-gray-700">
-                          <Users className="w-4 h-4 mr-1" />
-                          Google Meet
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold text-lg mb-2">{aula.titulo}</h3>
-                      {aula.descricao && (
-                        <p className="text-muted-foreground mb-4">{aula.descricao}</p>
-                      )}
-                      
-                      <div className="text-sm text-muted-foreground mb-4">
-                        📅 {new Date(aula.data_aula).toLocaleDateString('pt-BR')} ⏰ {aula.horario_inicio} - {aula.horario_fim}
-                      </div>
-
-                      <div className="flex gap-2">
-                        {/* Google Meet Button */}
-                        <Button
-                          onClick={() => window.open(aula.link_meet, '_blank')}
-                          className="flex-1"
-                          disabled={aulaEncerrada}
-                        >
-                          {aulaEmAndamento ? '🔴 Entrar na Aula ao Vivo' : 
-                           aulaFutura ? 'Entre na sala e aguarde o professor' : 
-                           'Aula Encerrada'}
-                        </Button>
-                        
-                        {/* Attendance Button */}
-                        {attendanceStatus === 'ausente' && !aulaEncerrada && (
-                          <Button
-                            onClick={() => handleRegistrarEntrada(aula.id)}
-                            disabled={isLoading}
-                            variant="outline"
-                          >
-                            {isLoading ? 'Registrando...' : 'Registrar entrada'}
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <AulaAoVivoCardRefatorado
+                    key={aula.id}
+                    aula={aula}
+                    status={normalizedStatus}
+                    attendanceStatus={attendanceStatus}
+                    turmaCode={studentData.turma || "Visitante"}
+                    onEntrada={handleRegistrarEntrada}
+                    loadingOperation={loadingOperations[aula.id]}
+                  />
                 );
               })}
             </div>
