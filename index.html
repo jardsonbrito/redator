@@ -9,10 +9,11 @@
     <meta name="author" content="App do Redator" />
     
     <!-- Favicons - Configuração completa para todos os navegadores -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png">
-    <link rel="shortcut icon" href="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico">
     
     <!-- Meta tags para redes sociais - Open Graph -->
     <meta property="og:title" content="App do Redator – Plataforma Educacional" />
@@ -44,10 +45,19 @@
     <!-- Meta theme color -->
     <meta name="theme-color" content="#6B46C1">
     <meta name="msapplication-TileColor" content="#6B46C1">
+    <meta name="msapplication-TileImage" content="/favicon.ico">
+    <meta name="msapplication-config" content="browserconfig.xml">
     
-    <!-- PWA Icons -->
-    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png">
+    <!-- Preconnect para melhor performance -->
+    <link rel="preload" href="/favicon.ico" as="image" type="image/x-icon">
+    
+    <!-- PWA Icons - Usando favicon para consistência -->
+    <link rel="apple-touch-icon" sizes="192x192" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="512x512" href="/favicon.ico">
+    
+    <!-- Fallback para ícones específicos se existirem -->
+    <link rel="icon" sizes="192x192" href="/icons/icon-192x192.png">
+    <link rel="icon" sizes="512x512" href="/icons/icon-512x512.png">
   </head>
 
   <body>
