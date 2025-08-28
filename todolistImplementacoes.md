@@ -11,14 +11,10 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
   - Sistema de auditoria completo
   - Testado e funcionando
 
----
+### 💾 **Nível 1 - Fácil (UI/UX Simples) - CONCLUÍDO** ✅
 
-## 🔄 Pendente
-
-### 💾 **Nível 1 - Fácil (UI/UX Simples)**
-
-#### 1. **Storage de Fotos de Perfil**
-- [x] Foto do usuário logado não está sendo salva no storage
+#### 1. **Storage de Fotos de Perfil** ✅
+- [x] **Foto do usuário logado não está sendo salva no storage**
 - ✅ Sistema completamente funcional no componente `StudentAvatar`
 - ✅ Upload para Supabase Storage bucket `avatars` configurado  
 - ✅ Integração com campo `avatar_url` da tabela profiles
@@ -26,19 +22,42 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 - ✅ Suporte a alunos com localStorage e admin com Supabase Auth
 - ✅ Avatar exibido no header e página principal
 - ✅ Corrigido problema de duplicação de caminho
+- ✅ Funções RPC para bypass de RLS: `get_student_profile_by_email`, `update_student_avatar`
 
-#### 2. **Verificar Presença na Visão Aluno**
-- [x] Verificar presença na visão aluno
-- Corrigido: função `getMyAttendanceStatus` agora busca na tabela `presenca_aulas`
-- Corrigido: função `registrarEntrada` agora usa `registrar_entrada_email`
-- Sistema de presença agora funciona corretamente para alunos
+#### 2. **Verificar Presença na Visão Aluno** ✅
+- [x] **Verificar presença na visão aluno**
+- ✅ Corrigido: função `getMyAttendanceStatus` agora busca na tabela `presenca_aulas`
+- ✅ Corrigido: função `registrarEntrada` agora usa `registrar_entrada_email`
+- ✅ Sistema de presença agora funciona corretamente para alunos
+- ✅ Suporte completo ao localStorage authentication
 
-#### 3. **Lousa - Remover Duplicidade**
+#### 3. **Lousa - Remover Duplicidade** ✅
 - [x] **Lousa retirar duplicidade dos botões em ações**
-- ✅ Removido botão "Corrigir" duplicado da tabela de respostas
-- ✅ Botão de visualização renomeado para "Visualizar e Editar"
-- ✅ Mantido fluxo: Visualizar → Corrigir (dentro do modal)
-- ✅ Interface mais limpa e intuitiva
+- ✅ **Corretor pode acessar lousas**: Erro 400 Bad Request corrigido
+- ✅ **Políticas RLS criadas** para tabelas `lousa` e `lousa_resposta`
+- ✅ **Funções RPC implementadas**: `get_corretor_lousas`, `get_lousa_respostas_corretor`
+- ✅ **Botões duplicados removidos** da tabela de respostas
+- ✅ **Botão renomeado** para "Visualizar e Editar"
+- ✅ **Modal melhorado** com formatação adequada de texto
+- ✅ **Botão de fechar** movido para a direita (padrão UX)
+- ✅ **Interface limpa e intuitiva**
+
+### 🎨 **Melhorias de UX Global**
+- [x] **Padronização de Modais**
+  - ✅ Botão de fechar movido para direita em todos os modais
+  - ✅ Layout consistente e responsivo
+  - ✅ Formatação de texto melhorada (`whitespace-pre-line`)
+
+---
+
+## 🔄 Pendente
+
+### 🎨 **Nível 2 - Médio (UX/Design)**
+
+#### 4. **Padronizar UX**
+- [ ] Padronizar UX a partir de uma página escolhida - layout clean
+- Escolher página de referência
+- Criar design system/guia de estilo
 
 ---
 
@@ -156,11 +175,56 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 
 ## 🎯 **Próximos Passos**
 
-1. **Foco Imediato**: Itens do Nível 1
-2. **Sprint Seguinte**: Itens do Nível 2
+1. **✅ Concluído**: ~~Itens do Nível 1~~ - **TODOS IMPLEMENTADOS!**
+2. **Foco Atual**: Itens do Nível 2 (UX/Design)
 3. **Médio Prazo**: Itens do Nível 3-4
 4. **Longo Prazo**: Itens do Nível 5
 
 ---
 
-*Última atualização: 27/08/2025*
+## 📊 **Status do Projeto**
+
+### **Progresso Geral: 4/12 tarefas concluídas (33%)**
+
+**✅ Nível 1 - Fácil**: **3/3 CONCLUÍDO (100%)**
+- Storage de Fotos ✅
+- Verificação de Presença ✅  
+- Lousa - Duplicidade ✅
+
+**🔄 Nível 2 - Médio**: **0/2 (0%)**
+- Padronizar UX
+- Sistema de Login Visitante
+
+**🔄 Nível 3 - Médio-Complexo**: **0/3 (0%)**
+- Exercícios no Radar
+- Redações em JPG
+- Perfil do Aluno no Radar
+
+**🔄 Nível 4 - Complexo**: **0/2 (0%)**
+- Lembretes por E-mail
+- Notificação de Correção
+
+**🔄 Nível 5 - Muito Complexo**: **0/2 (0%)**
+- Sistema de Provas Google Forms
+- Correção Automática de Testes
+
+---
+
+## 🏆 **Conquistas Recentes (Sessão 28/08/2025)**
+
+### **🔧 Problemas Críticos Resolvidos:**
+1. **Corretores não conseguiam acessar lousas** → **RESOLVIDO**
+2. **Presença mostrava "Ausente" para alunos presentes** → **RESOLVIDO**  
+3. **Upload de avatar falhava para alunos** → **RESOLVIDO**
+4. **Interface confusa com botões duplicados** → **RESOLVIDO**
+
+### **🚀 Melhorias Técnicas:**
+- **5 Commits** enviados para GitHub
+- **Políticas RLS** criadas para segurança
+- **Funções RPC** implementadas para contornar limitações
+- **UX Global** melhorada em modais
+- **Documentação** completa criada
+
+---
+
+*Última atualização: 28/08/2025*
