@@ -73,37 +73,49 @@ export default function CorretorLousaForm({ onSuccess, editData }: CorretorLousa
 
     setIsSubmitting(true);
     try {
-      // Buscar o ID do corretor
-      const { data: corretorData, error: corretorError } = await supabase
-        .from('corretores')
-        .select('id')
-        .eq('email', corretor.email)
-        .eq('ativo', true)
-        .single();
+      let result;
 
-      if (corretorError || !corretorData) {
-        throw new Error('Corretor não encontrado');
+      if (editData) {
+        // Atualizar lousa existente
+        const { data: rpcResult, error } = await supabase.rpc('update_corretor_lousa', {
+          corretor_email: corretor.email,
+          lousa_id: editData.id,
+          lousa_titulo: data.titulo,
+          lousa_enunciado: data.enunciado,
+          lousa_turmas: data.turmas,
+          lousa_permite_visitante: data.permite_visitante,
+          lousa_ativo: data.ativo,
+          lousa_status: status,
+          lousa_capa_url: data.capa_url || null,
+          lousa_inicio_em: data.inicio_em?.toISOString() || null,
+          lousa_fim_em: data.fim_em?.toISOString() || null
+        });
+
+        if (error) throw error;
+        result = rpcResult;
+      } else {
+        // Criar nova lousa
+        const { data: rpcResult, error } = await supabase.rpc('create_corretor_lousa', {
+          corretor_email: corretor.email,
+          lousa_titulo: data.titulo,
+          lousa_enunciado: data.enunciado,
+          lousa_turmas: data.turmas,
+          lousa_permite_visitante: data.permite_visitante,
+          lousa_ativo: data.ativo,
+          lousa_status: status,
+          lousa_capa_url: data.capa_url || null,
+          lousa_inicio_em: data.inicio_em?.toISOString() || null,
+          lousa_fim_em: data.fim_em?.toISOString() || null
+        });
+
+        if (error) throw error;
+        result = rpcResult;
       }
 
-      const lousaData = {
-        titulo: data.titulo,
-        enunciado: data.enunciado,
-        turmas: data.turmas,
-        permite_visitante: data.permite_visitante,
-        corretor_id: corretorData.id, // Auto-atribuir o corretor logado
-        ativo: data.ativo,
-        status,
-        capa_url: data.capa_url || null,
-        inicio_em: data.inicio_em?.toISOString() || null,
-        fim_em: data.fim_em?.toISOString() || null,
-        created_by: corretorData.id
-      };
-
-      const { error } = editData
-        ? await supabase.from('lousa').update(lousaData).eq('id', editData.id)
-        : await supabase.from('lousa').insert([lousaData]);
-
-      if (error) throw error;
+      // Verificar resultado da RPC
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro ao salvar lousa');
+      }
 
       toast({
         title: 'Sucesso!',
