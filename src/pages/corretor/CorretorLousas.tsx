@@ -4,13 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, MessageCircle, Calendar, Users, Plus } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Eye, MessageCircle, Calendar, Users, Plus, Edit, Trash2, StopCircle, MoreHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useCorretorAuth } from '@/hooks/useCorretorAuth';
+import { useToast } from '@/hooks/use-toast';
 import CorretorLousaForm from '@/components/corretor/CorretorLousaForm';
 
 interface Lousa {
@@ -27,7 +30,13 @@ interface Lousa {
 export default function CorretorLousas() {
   const navigate = useNavigate();
   const { corretor } = useCorretorAuth();
+  const { toast } = useToast();
   const [refresh, setRefresh] = useState(false);
+  const [editingLousa, setEditingLousa] = useState<Lousa | null>(null);
+  const [deletingLousaId, setDeletingLousaId] = useState<string | null>(null);
+  const [endingLousaId, setEndingLousaId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
 
   const { data: lousas, isLoading, refetch } = useQuery({
     queryKey: ['corretor-lousas', corretor?.email, refresh],
@@ -81,6 +90,85 @@ export default function CorretorLousas() {
     refetch();
   };
 
+  const handleDeleteLousa = async (lousaId: string) => {
+    if (!corretor?.email) return;
+
+    setIsDeleting(true);
+    try {
+      const { data: result, error } = await supabase.rpc('delete_corretor_lousa', {
+        corretor_email: corretor.email,
+        lousa_id: lousaId
+      });
+
+      if (error) throw error;
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro ao deletar lousa');
+      }
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Lousa deletada com sucesso.',
+      });
+
+      setDeletingLousaId(null);
+      refetch();
+    } catch (error) {
+      console.error('Erro ao deletar lousa:', error);
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao deletar lousa. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEndLousa = async (lousaId: string) => {
+    if (!corretor?.email) return;
+
+    setIsEnding(true);
+    try {
+      const { data: result, error } = await supabase.rpc('end_corretor_lousa', {
+        corretor_email: corretor.email,
+        lousa_id: lousaId
+      });
+
+      if (error) throw error;
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro ao encerrar lousa');
+      }
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Lousa encerrada com sucesso.',
+      });
+
+      setEndingLousaId(null);
+      refetch();
+    } catch (error) {
+      console.error('Erro ao encerrar lousa:', error);
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao encerrar lousa. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsEnding(false);
+    }
+  };
+
+  const handleEditLousa = (lousa: Lousa) => {
+    setEditingLousa(lousa);
+  };
+
+  const handleEditSuccess = () => {
+    setEditingLousa(null);
+    refetch();
+  };
+
   const getStatusBadge = (status: string) => {
     const statusMap = {
       draft: { label: 'Rascunho', variant: 'outline' as const },
@@ -109,12 +197,21 @@ export default function CorretorLousas() {
           <h1 className="text-3xl font-bold">Lousas</h1>
         </div>
 
-        <Tabs defaultValue="list" className="w-full">
+        <Tabs defaultValue="list" value={editingLousa ? "create" : undefined} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="list">Minhas Lousas</TabsTrigger>
             <TabsTrigger value="create">
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Lousa
+              {editingLousa ? (
+                <>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar Lousa
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Lousa
+                </>
+              )}
             </TabsTrigger>
           </TabsList>
           
@@ -141,6 +238,32 @@ export default function CorretorLousas() {
                             {getStatusBadge(lousa.status)}
                           </div>
                         </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditLousa(lousa)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            {lousa.status === 'active' && (
+                              <DropdownMenuItem onClick={() => setEndingLousaId(lousa.id)}>
+                                <StopCircle className="mr-2 h-4 w-4" />
+                                Encerrar
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => setDeletingLousaId(lousa.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Deletar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -188,9 +311,78 @@ export default function CorretorLousas() {
           </TabsContent>
 
           <TabsContent value="create">
-            <CorretorLousaForm onSuccess={handleLousaCreated} />
+            {editingLousa && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-blue-900">Editando: {editingLousa.titulo}</h3>
+                    <p className="text-sm text-blue-700">Modifique os campos abaixo para atualizar a lousa.</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setEditingLousa(null)}
+                  >
+                    Cancelar Edição
+                  </Button>
+                </div>
+              </div>
+            )}
+            {editingLousa ? (
+              <CorretorLousaForm editData={editingLousa} onSuccess={handleEditSuccess} />
+            ) : (
+              <CorretorLousaForm onSuccess={handleLousaCreated} />
+            )}
           </TabsContent>
         </Tabs>
+
+        {/* Dialog para confirmar exclusão */}
+        <AlertDialog open={!!deletingLousaId} onOpenChange={(open) => !open && setDeletingLousaId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deletar Lousa</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja deletar esta lousa? Esta ação não pode ser desfeita.
+                {deletingLousaId && lousas?.find(l => l.id === deletingLousaId)?.respostas_count && lousas.find(l => l.id === deletingLousaId)!.respostas_count! > 0 && (
+                  <div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded">
+                    <strong>Atenção:</strong> Esta lousa possui respostas e não pode ser deletada.
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deletingLousaId && handleDeleteLousa(deletingLousaId)}
+                disabled={isDeleting || (deletingLousaId && lousas?.find(l => l.id === deletingLousaId)?.respostas_count ? lousas.find(l => l.id === deletingLousaId)!.respostas_count! > 0 : false)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? 'Deletando...' : 'Deletar'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Dialog para confirmar encerramento */}
+        <AlertDialog open={!!endingLousaId} onOpenChange={(open) => !open && setEndingLousaId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Encerrar Lousa</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja encerrar esta lousa? Após encerrar, os alunos não poderão mais enviar respostas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isEnding}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => endingLousaId && handleEndLousa(endingLousaId)}
+                disabled={isEnding}
+              >
+                {isEnding ? 'Encerrando...' : 'Encerrar'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </CorretorLayout>
   );
