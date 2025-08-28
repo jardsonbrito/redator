@@ -27,6 +27,8 @@ interface Lousa {
   created_at: string;
   capa_url: string | null;
   respostas_pendentes?: number;
+  corretor_id?: string;
+  corretor_nome?: string;
 }
 
 export default function LousaList() {
@@ -60,10 +62,16 @@ export default function LousaList() {
 
   const fetchLousas = async () => {
     try {
-      // First get all lousas
+      // Get all lousas with corretor information
       const { data: lousasData, error: lousasError } = await supabase
         .from('lousa')
-        .select('*')
+        .select(`
+          *,
+          corretores!lousa_corretor_id_fkey (
+            id,
+            nome_completo
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (lousasError) throw lousasError;
@@ -75,7 +83,7 @@ export default function LousaList() {
             .from('lousa_resposta')
             .select('*', { count: 'exact', head: true })
             .eq('lousa_id', lousa.id)
-            .neq('status', 'corrected')
+            .neq('status', 'graded')
             .is('nota', null); // Additional check for uncorrected responses
 
           if (countError) {
@@ -83,7 +91,11 @@ export default function LousaList() {
             return { ...lousa, respostas_pendentes: 0 };
           }
 
-          return { ...lousa, respostas_pendentes: count || 0 };
+          return { 
+            ...lousa, 
+            respostas_pendentes: count || 0,
+            corretor_nome: lousa.corretores?.nome_completo || null
+          };
         })
       );
 
@@ -213,8 +225,8 @@ export default function LousaList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Minhas Lousas</h1>
-          <p className="text-muted-foreground">Gerencie suas lousas e acompanhe as respostas dos alunos</p>
+          <h1 className="text-3xl font-bold">Gerenciar Lousas</h1>
+          <p className="text-muted-foreground">Visualize e gerencie todas as lousas da plataforma</p>
         </div>
         
         <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
@@ -293,6 +305,15 @@ export default function LousaList() {
                       )}
                     </div>
                   </div>
+
+                  {lousa.corretor_nome && (
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 flex-shrink-0" />
+                      <span className="line-clamp-1 text-sm">
+                        Corretor: {lousa.corretor_nome}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2 pt-2">
