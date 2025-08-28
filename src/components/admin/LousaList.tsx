@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageSquare, EyeOff, Clock, Users, Trash2 } from 'lucide-react';
+import { MessageSquare, EyeOff, Clock, Users, Trash2, UserCheck } from 'lucide-react';
 import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
