@@ -11,6 +11,12 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
   - Sistema de auditoria completo
   - Testado e funcionando
 
+- [x] **Correção de Bug: Erro "atualizado_em" na troca de email**  
+  - ✅ Problema: Triggers com inconsistência de nomenclatura de campos
+  - ✅ Solução: Função `update_updated_at_column()` robusta com try/catch
+  - ✅ Suporte a ambos padrões: `updated_at` e `atualizado_em`
+  - ✅ Testado e funcionando perfeitamente
+
 ### 💾 **Nível 1 - Fácil (UI/UX Simples) - CONCLUÍDO** ✅
 
 #### 1. **Storage de Fotos de Perfil** ✅
@@ -114,11 +120,27 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 - Configurações de usuário
 
 #### 10. **Notificação de Correção**
-- [ ] Quando ocorrer alguma correção o aluno receber um email
+- [ ] **Quando ocorrer alguma correção o aluno receber um email**
+
+**📧 Layout do E-mail:**
+- **Header**: Logo centralizado no topo
+- **Mensagem principal**: "Olá [NOME], sua redação acaba de ser corrigida."
+- **CTA**: "Clique no botão abaixo para ter acesso aos detalhes da correção"
+
+**📋 Caixa de Informações:**
+- **Tema**: [Título do tema da redação]
+- **Envio**: [Regular/Simulado/Exercício] 
+- **Corretor**: [Nome do corretor responsável]
+- **Botão**: "Ver Correção" (linkando para a plataforma)
+
+**⚠️ Footer**: "Caso você não reconheça este email, ignore esta mensagem."
+
+**🔧 Implementação Técnica:**
 - Hook de correção finalizada
-- Template de email de correção
-- Sistema de notificações
-- Configurações de preferência
+- Template HTML responsivo de email  
+- Sistema de notificações automático
+- Configurações de preferência do usuário
+- Integração com serviço SMTP/Hostinger
 
 ---
 
