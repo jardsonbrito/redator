@@ -49,8 +49,10 @@ export default function AlunoLousaList() {
       const lousasComResposta = await Promise.all(
         (lousasData || []).map(async (lousa) => {
           // Verificar se o aluno tem acesso à lousa
-          const temAcesso = lousa.permite_visitante || 
-            (student.turma && lousa.turmas.includes(student.turma.replace('Turma ', '')));
+          // Apenas alunos da turma específica podem ver (sem visitantes)
+          const turmaSemPrefixo = student.turma?.replace('Turma ', '');
+          const temAcesso = student.userType === 'visitante' ? lousa.permite_visitante : 
+            (turmaSemPrefixo && lousa.turmas.includes(turmaSemPrefixo));
 
           if (!temAcesso) return null;
 

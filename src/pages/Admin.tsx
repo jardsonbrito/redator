@@ -93,6 +93,9 @@ import { AdminConfigForm } from "@/components/admin/AdminConfigForm";
 import { AdminForm } from "@/components/admin/AdminForm";
 import { AdminList } from "@/components/admin/AdminList";
 
+// Import avatar component
+import { AdminAvatar } from "@/components/admin/AdminAvatar";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
@@ -579,9 +582,19 @@ const Admin = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              <div className="bg-secondary/20 px-3 py-1 rounded-full">
-                <span className="text-sm font-medium text-primary">Olá, {user.email}</span>
+              {/* Perfil do administrador com avatar, nome e função */}
+              <div className="flex items-center gap-3">
+                <AdminAvatar size="sm" showUpload={true} />
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-foreground font-medium text-sm">
+                    {user?.email || 'Administrador'}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    Administrador
+                  </span>
+                </div>
               </div>
+              
               <Button 
                 variant="outline" 
                 size="sm" 

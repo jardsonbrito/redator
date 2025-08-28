@@ -10,7 +10,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
-import { StudentProfile } from "@/components/StudentProfile";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -160,8 +159,6 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Perfil do Estudante */}
-            <StudentProfile />
 
             {/* Cards do painel */}
             <div className="max-w-5xl mx-auto mb-8">

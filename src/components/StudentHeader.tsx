@@ -47,9 +47,21 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
             <h1 className="text-xl font-bold text-primary-foreground">{pageTitle}</h1>
           )}
           
-          <div className="flex items-center gap-3">
-            {/* Avatar do usuário */}
-            <StudentAvatar size="sm" showUpload={false} />
+          <div className="flex items-center gap-4">
+            {/* Perfil do usuário com avatar clicável, nome e turma */}
+            <div className="flex items-center gap-3">
+              <StudentAvatar size="sm" showUpload={true} />
+              <div className="hidden sm:flex flex-col">
+                <span className="text-primary-foreground font-medium text-sm">
+                  {studentData.nomeUsuario || 'Usuário'}
+                </span>
+                {studentData.userType === "aluno" && studentData.turma && (
+                  <span className="text-primary-foreground/70 text-xs">
+                    {studentData.turma}
+                  </span>
+                )}
+              </div>
+            </div>
             
             {/* Link para Professor apenas se for admin autenticado */}
             {user && isAdmin && (

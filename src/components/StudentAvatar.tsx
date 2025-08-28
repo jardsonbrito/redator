@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Camera, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
@@ -342,12 +342,11 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
   };
 
   return (
-    <div className="relative">
+    <div className="relative group">
       <Avatar 
-        className={`${sizeClasses[size]} border border-primary/20 transition-all hover:shadow-lg ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer' : ''}`}
+        className={`${sizeClasses[size]} border border-primary/20 transition-all ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer hover:ring-2 hover:ring-primary/50 hover:ring-offset-2 hover:shadow-lg' : ''}`}
         onClick={showUpload ? handleAvatarClick : undefined}
       >
-        
         {avatarUrl && (
           <AvatarImage 
             src={avatarUrl} 
@@ -361,24 +360,13 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       </Avatar>
       
       {showUpload && (
-        <>
-          <div 
-            className={`absolute -bottom-1 -right-1 bg-primary rounded-full shadow-lg cursor-pointer hover:bg-primary/80 transition-colors ${
-              size === 'lg' ? 'p-2' : 'p-1.5'
-            }`}
-            onClick={handleAvatarClick}
-          >
-            <Camera className={`text-primary-foreground ${size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'}`} />
-          </div>
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-        </>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
       )}
     </div>
   );

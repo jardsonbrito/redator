@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, User, Home, BookOpen, Video, Library, FileText, Trophy, Menu, X, MessageCircle, Presentation } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
 
 interface CorretorLayoutProps {
   children: React.ReactNode;
@@ -82,13 +83,22 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {!isMobile && (
-              <div className="flex items-center gap-2 text-xs sm:text-sm">
-                <User className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="max-w-32 sm:max-w-none truncate">{corretor?.email}</span>
-              </div>
-            )}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            {/* Perfil do corretor com avatar, nome e função */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <CorretorAvatar size="sm" showUpload={true} />
+              {!isMobile && (
+                <div className="flex flex-col">
+                  <span className="text-foreground font-medium text-xs sm:text-sm truncate max-w-32 sm:max-w-none">
+                    {corretor?.nome_completo || 'Corretor'}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    Corretor
+                  </span>
+                </div>
+              )}
+            </div>
+            
             <Button variant="outline" onClick={logout} size="sm" className="px-2 sm:px-4">
               <LogOut className="w-4 h-4 sm:mr-2" />
               {!isMobile && <span>Sair</span>}

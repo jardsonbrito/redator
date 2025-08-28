@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
 import { Save, Send } from 'lucide-react';
 import { DateTimePicker } from '@/components/ui/datetime-picker-custom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,54 +11,41 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useCorretorAuth } from '@/hooks/useCorretorAuth';
 
 const lousaSchema = z.object({
   titulo: z.string().min(1, 'Título é obrigatório'),
   enunciado: z.string().min(1, 'Enunciado é obrigatório'),
-  turmas: z.array(z.string()).min(0),
+  turmas: z.array(z.string()).min(1, 'Pelo menos uma turma deve ser selecionada'),
   permite_visitante: z.boolean().default(false),
-  corretor_id: z.string().default('all'),
   inicio_em: z.date().optional(),
   fim_em: z.date().optional(),
   capa_url: z.string().url('URL inválida').optional().or(z.literal('')),
   ativo: z.boolean().default(true)
 }).refine((data) => {
-  if (data.turmas.length === 0 && !data.permite_visitante) {
-    return false;
-  }
   if (data.inicio_em && data.fim_em && data.inicio_em >= data.fim_em) {
     return false;
   }
   return true;
 }, {
-  message: "Pelo menos uma turma deve ser selecionada OU visitantes permitidos, e data de início deve ser anterior à data fim"
+  message: "Data de início deve ser anterior à data fim"
 });
 
 type LousaFormData = z.infer<typeof lousaSchema>;
 
-interface LousaFormProps {
+interface CorretorLousaFormProps {
   onSuccess?: () => void;
   editData?: any;
 }
 
 const TURMAS = ['A', 'B', 'C', 'D', 'E'];
 
-interface Corretor {
-  id: string;
-  nome_completo: string;
-  email: string;
-}
-
-export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
+export default function CorretorLousaForm({ onSuccess, editData }: CorretorLousaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [corretores, setCorretores] = useState<Corretor[]>([]);
   const { toast } = useToast();
+  const { corretor } = useCorretorAuth();
 
   const form = useForm<LousaFormData>({
     resolver: zodResolver(lousaSchema),
@@ -68,7 +54,6 @@ export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
       enunciado: editData?.enunciado || '',
       turmas: editData?.turmas || [],
       permite_visitante: editData?.permite_visitante || false,
-      corretor_id: editData?.corretor_id ? editData.corretor_id : 'all',
       inicio_em: editData?.inicio_em ? new Date(editData.inicio_em) : undefined,
       fim_em: editData?.fim_em ? new Date(editData.fim_em) : undefined,
       capa_url: editData?.capa_url || '',
@@ -76,46 +61,42 @@ export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
     }
   });
 
-  // Carregar lista de corretores ativos
-  useEffect(() => {
-    const fetchCorretores = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('corretores')
-          .select('id, nome_completo, email')
-          .eq('ativo', true)
-          .order('nome_completo');
-        
-        if (error) throw error;
-        setCorretores(data || []);
-      } catch (error) {
-        console.error('Erro ao carregar corretores:', error);
-        toast({
-          title: 'Erro',
-          description: 'Erro ao carregar lista de corretores.',
-          variant: 'destructive'
-        });
-      }
-    };
-
-    fetchCorretores();
-  }, [toast]);
-
   const handleSubmit = async (data: LousaFormData, status: 'draft' | 'active') => {
+    if (!corretor?.email) {
+      toast({
+        title: 'Erro',
+        description: 'Erro de autenticação. Faça login novamente.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      // Buscar o ID do corretor
+      const { data: corretorData, error: corretorError } = await supabase
+        .from('corretores')
+        .select('id')
+        .eq('email', corretor.email)
+        .eq('ativo', true)
+        .single();
+
+      if (corretorError || !corretorData) {
+        throw new Error('Corretor não encontrado');
+      }
+
       const lousaData = {
         titulo: data.titulo,
         enunciado: data.enunciado,
         turmas: data.turmas,
         permite_visitante: data.permite_visitante,
-        corretor_id: data.corretor_id === 'all' ? null : data.corretor_id,
+        corretor_id: corretorData.id, // Auto-atribuir o corretor logado
         ativo: data.ativo,
         status,
         capa_url: data.capa_url || null,
         inicio_em: data.inicio_em?.toISOString() || null,
         fim_em: data.fim_em?.toISOString() || null,
-        created_by: (await supabase.auth.getUser()).data.user?.id || ''
+        created_by: corretorData.id
       };
 
       const { error } = editData
@@ -128,6 +109,11 @@ export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
         title: 'Sucesso!',
         description: `Lousa ${status === 'draft' ? 'salva como rascunho' : 'publicada'} com sucesso.`
       });
+
+      // Limpar formulário se for criação
+      if (!editData) {
+        form.reset();
+      }
 
       onSuccess?.();
     } catch (error) {
@@ -151,6 +137,9 @@ export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
           </div>
           {editData ? 'Editar Lousa' : 'Nova Lousa'}
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          A lousa será automaticamente atribuída a você como responsável
+        </p>
       </CardHeader>
 
       <CardContent>
@@ -190,36 +179,6 @@ export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
               )}
             />
 
-            {/* Corretor Responsável */}
-            <FormField
-              control={form.control}
-              name="corretor_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Corretor Responsável (Opcional)</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um corretor ou deixe vazio para todos" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os corretores</SelectItem>
-                      {corretores.map((corretor) => (
-                        <SelectItem key={corretor.id} value={corretor.id}>
-                          {corretor.nome_completo} ({corretor.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="text-sm text-muted-foreground">
-                    Se um corretor for selecionado, apenas ele e os administradores terão acesso
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {/* Turmas e Visitantes */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
@@ -227,7 +186,7 @@ export default function LousaForm({ onSuccess, editData }: LousaFormProps) {
                 name="turmas"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Turmas Autorizadas</FormLabel>
+                    <FormLabel>Turmas Autorizadas *</FormLabel>
                     <div className="grid grid-cols-3 gap-2">
                       {TURMAS.map((turma) => (
                         <div key={turma} className="flex items-center space-x-2">

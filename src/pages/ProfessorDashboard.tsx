@@ -19,6 +19,7 @@ import {
   Lightbulb
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ProfessorAvatar } from "@/components/professor/ProfessorAvatar";
 
 export const ProfessorDashboard = () => {
   const { professor, logout, isProfessor, isAdmin } = useProfessorAuth();
@@ -120,9 +121,19 @@ export const ProfessorDashboard = () => {
             </div>
 
             <div className="header__right">
-              <div className="header__greet">
-                Olá, {professor.nome_completo || professor.email}
+              {/* Perfil do professor com avatar, nome e função */}
+              <div className="flex items-center gap-3">
+                <ProfessorAvatar size="sm" showUpload={true} />
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-foreground font-medium text-sm">
+                    {professor.nome_completo || 'Professor'}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    {isAdmin ? 'Administrador' : 'Professor'}
+                  </span>
+                </div>
               </div>
+              
               <Button
                 onClick={logout}
                 className="btn-exit"

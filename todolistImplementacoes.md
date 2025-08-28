@@ -30,6 +30,20 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 - ✅ Corrigido problema de duplicação de caminho
 - ✅ Funções RPC para bypass de RLS: `get_student_profile_by_email`, `update_student_avatar`
 
+**🔄 UPGRADE COMPLETO - Sistema de Avatars Unificado** ✅
+- [x] **Mudança de local**: Avatars movidos para header apenas (removidos das páginas principais)
+- [x] **Avatars clicáveis**: Todos os avatars agora permitem upload ao clicar
+- [x] **Hover effects**: Indicação visual de que o avatar é clicável
+- [x] **Informações contextuais**: Nome + função/turma exibidos ao lado do avatar
+- [x] **Responsivo**: Nome/função ocultos em telas pequenas
+- [x] **Todos os tipos de usuário**:
+  - ✅ **Alunos**: `StudentAvatar` no `StudentHeader` (mostra nome + turma)
+  - ✅ **Professores**: `ProfessorAvatar` no `ProfessorDashboard` (mostra nome + "Professor/Administrador")
+  - ✅ **Corretores**: `CorretorAvatar` no `CorretorLayout` (mostra nome + "Corretor")
+  - ✅ **Administradores**: `AdminAvatar` no `Admin.tsx` (mostra email + "Administrador")
+- [x] **Componentes de perfil removidos**: `StudentProfile` e similares removidos das páginas principais
+- [x] **Interface limpa**: Experiência unificada e consistente em toda a plataforma
+
 #### 2. **Verificar Presença na Visão Aluno** ✅
 - [x] **Verificar presença na visão aluno**
 - ✅ Corrigido: função `getMyAttendanceStatus` agora busca na tabela `presenca_aulas`
@@ -37,7 +51,7 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 - ✅ Sistema de presença agora funciona corretamente para alunos
 - ✅ Suporte completo ao localStorage authentication
 
-#### 3. **Lousa - Remover Duplicidade** ✅
+#### 3. **Sistema de Lousas - Completo** ✅
 - [x] **Lousa retirar duplicidade dos botões em ações**
 - ✅ **Corretor pode acessar lousas**: Erro 400 Bad Request corrigido
 - ✅ **Políticas RLS criadas** para tabelas `lousa` e `lousa_resposta`
@@ -47,6 +61,21 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 - ✅ **Modal melhorado** com formatação adequada de texto
 - ✅ **Botão de fechar** movido para a direita (padrão UX)
 - ✅ **Interface limpa e intuitiva**
+
+**🚀 UPGRADE AVANÇADO - Sistema de Atribuição de Lousas** ✅
+- [x] **Campo corretor_id**: Adicionado na tabela `lousa` com referência para `corretores`
+- [x] **Seletor de corretor**: Implementado no formulário admin com lista de corretores ativos
+- [x] **Atribuição automática**: Corretores se tornam responsáveis pelas lousas que criam
+- [x] **Políticas RLS atualizadas**: Acesso restrito baseado em atribuição
+- [x] **Corretores podem criar lousas**: Interface completa com abas no painel corretor
+- [x] **Controle de acesso refinado**:
+  - ✅ **Lousas sem atribuição** (`corretor_id = NULL`): Todos os corretores podem ver
+  - ✅ **Lousas com atribuição**: Apenas corretor específico + administradores
+  - ✅ **Alunos restritos**: Só veem lousas da sua turma específica
+  - ✅ **Visitantes**: Só veem lousas com `permite_visitante = true`
+- [x] **Interface corretor**: `CorretorLousaForm.tsx` e abas em `CorretorLousas.tsx`
+- [x] **Bug corrigido**: SelectItem com value vazio causando erro Radix UI
+- [x] **Testes realizados**: Todos os cenários de acesso validados
 
 ### 🎨 **Melhorias de UX Global**
 - [x] **Padronização de Modais**
@@ -110,19 +139,21 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 
 ---
 
-### 📧 **Nível 4 - Complexo (Notificações)**
+### 📧 **Nível 4 - Complexo (Notificações) - Resend Integration**
 
 #### 9. **Lembretes por E-mail**
-- [ ] Lembretes por email se possível, solicitar acesso Hostinger
-- Configurar SMTP/serviço de email
-- Sistema de templates de email
-- Agendamento de lembretes
-- Configurações de usuário
+- [ ] **Sistema de lembretes automáticos por e-mail**
+- 📧 **Integração Resend API** (resend.com)
+- Configurar domínio personalizado 
+- Sistema de templates de email responsivos
+- Agendamento de lembretes (Edge Functions + Cron)
+- Configurações de usuário (frequência, tipos)
+- Analytics de entrega e abertura
 
-#### 10. **Notificação de Correção**
+#### 10. **Notificação de Correção via Resend**
 - [ ] **Quando ocorrer alguma correção o aluno receber um email**
 
-**📧 Layout do E-mail:**
+**📧 Layout do E-mail (Template Resend):**
 - **Header**: Logo centralizado no topo
 - **Mensagem principal**: "Olá [NOME], sua redação acaba de ser corrigida."
 - **CTA**: "Clique no botão abaixo para ter acesso aos detalhes da correção"
@@ -135,12 +166,14 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 
 **⚠️ Footer**: "Caso você não reconheça este email, ignore esta mensagem."
 
-**🔧 Implementação Técnica:**
-- Hook de correção finalizada
-- Template HTML responsivo de email  
-- Sistema de notificações automático
-- Configurações de preferência do usuário
-- Integração com serviço SMTP/Hostinger
+**🔧 Implementação Técnica Resend:**
+- **Edge Function**: Trigger automático pós-correção
+- **Template React Email**: Components modernos e responsivos
+- **Resend SDK**: Integração com Supabase Edge Functions
+- **Webhook Resend**: Status de entrega (delivered, bounced, opened)
+- **Database Log**: Registro de emails enviados e status
+- **Rate Limiting**: Controle de frequência de envios
+- **Unsubscribe**: Link de descadastro automático
 
 ---
 
@@ -209,9 +242,9 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 ### **Progresso Geral: 4/12 tarefas concluídas (33%)**
 
 **✅ Nível 1 - Fácil**: **3/3 CONCLUÍDO (100%)**
-- Storage de Fotos ✅
+- Sistema de Avatars Unificado ✅
 - Verificação de Presença ✅  
-- Lousa - Duplicidade ✅
+- Sistema de Lousas Completo ✅
 
 **🔄 Nível 2 - Médio**: **0/2 (0%)**
 - Padronizar UX
@@ -239,13 +272,32 @@ Lista organizada de tarefas para implementação na plataforma Redator, ordenada
 2. **Presença mostrava "Ausente" para alunos presentes** → **RESOLVIDO**  
 3. **Upload de avatar falhava para alunos** → **RESOLVIDO**
 4. **Interface confusa com botões duplicados** → **RESOLVIDO**
+5. **Avatar não aparecia no painel administrativo** → **RESOLVIDO**
+6. **Alunos viam lousas de outras turmas** → **RESOLVIDO**
+7. **Corretores não podiam criar lousas** → **RESOLVIDO**
+8. **Bug SelectItem com value vazio** → **RESOLVIDO**
 
 ### **🚀 Melhorias Técnicas:**
-- **5 Commits** enviados para GitHub
-- **Políticas RLS** criadas para segurança
-- **Funções RPC** implementadas para contornar limitações
-- **UX Global** melhorada em modais
-- **Documentação** completa criada
+- **8 Migrations** aplicadas no Supabase
+- **Políticas RLS** refinadas para acesso baseado em atribuição
+- **Funções RPC** atualizadas para nova lógica de corretores
+- **Sistema de Avatars** unificado para todos os usuários
+- **Sistema de Lousas** completamente reformulado
+- **Interface de corretor** expandida com criação de lousas
+
+### **🎯 Sistema de Lousas - Implementação Completa:**
+1. **Banco de dados**: Campo `corretor_id` com relacionamento para atribuição
+2. **Políticas RLS**: Acesso refinado baseado em corretor responsável
+3. **Interface Admin**: Seletor de corretor no formulário de criação
+4. **Interface Corretor**: Abas para visualização e criação de lousas
+5. **Controle de acesso**: Alunos restritos à sua turma, corretores às suas lousas
+6. **Auto-atribuição**: Corretores automaticamente responsáveis pelas lousas criadas
+7. **Bug fixes**: Correção de erro Radix UI com SelectItem valor vazio
+
+### **📁 Arquivos Principais Modificados/Criados:**
+- **Criados**: `CorretorLousaForm.tsx`, `AdminAvatar.tsx`, `ProfessorAvatar.tsx`, `CorretorAvatar.tsx`
+- **Atualizados**: `LousaForm.tsx`, `CorretorLousas.tsx`, `AlunoLousaList.tsx`, `Admin.tsx`
+- **Migrations**: 3 novas migrations para políticas RLS e estrutura do banco
 
 ---
 
