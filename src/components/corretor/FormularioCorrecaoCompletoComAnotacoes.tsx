@@ -75,15 +75,16 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [temaCompleto, setTemaCompleto] = useState<any>(null);
   const [corretorId, setCorretorId] = useState<string>('');
+  const [corretorNome, setCorretorNome] = useState<string>('');
   const { toast } = useToast();
 
-  // Buscar ID do corretor ao carregar
+  // Buscar ID e nome do corretor ao carregar
   useEffect(() => {
     const buscarCorretorId = async () => {
       try {
         const { data, error } = await supabase
           .from('corretores')
-          .select('id')
+          .select('id, nome_completo')
           .eq('email', corretorEmail)
           .eq('ativo', true)
           .single();
@@ -95,6 +96,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
         if (data?.id) {
           setCorretorId(data.id);
+          setCorretorNome(data.nome_completo || corretorEmail);
           console.log('ID do corretor encontrado:', data.id);
         }
       } catch (error) {
@@ -244,14 +246,29 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         try {
           console.log('📧 Enviando email de notificação...');
           
+          // Garantir encoding UTF-8 correto dos dados
+          const ensureUtf8 = (str: string): string => {
+            try {
+              // Tentar decodificar e recodificar como UTF-8
+              const bytes = new TextEncoder().encode(str);
+              return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+            } catch (e) {
+              return str;
+            }
+          };
+          
+          const studentNameClean = ensureUtf8(redacao.nome_aluno || '');
+          const temaTituloClean = ensureUtf8(redacao.frase_tematica || 'Tema sem título');
+          const corretorNomeClean = ensureUtf8(corretorNome || corretorEmail);
+          
           const { data: emailData, error: emailError } = await supabase.functions.invoke('send-correction-email', {
             body: {
               redacao_id: redacao.id,
               student_email: redacao.email_aluno,
-              student_name: redacao.nome_aluno,
-              tema_titulo: redacao.frase_tematica || 'Tema sem título',
+              student_name: studentNameClean,
+              tema_titulo: temaTituloClean,
               tipo_envio: redacao.tipo_redacao || 'Regular',
-              corretor_nome: corretorEmail,
+              corretor_nome: corretorNomeClean,
               nota: notas.total
             }
           });
