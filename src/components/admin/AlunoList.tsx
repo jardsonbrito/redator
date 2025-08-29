@@ -325,7 +325,7 @@ const AlunoTable = ({
               <TableCell>{aluno.email}</TableCell>
               <TableCell>
                 <Badge className={getTurmaColor(aluno.turma)}>
-                  {aluno.turma}
+                  {aluno.turma?.replace('Turma ', '') || ''}
                 </Badge>
               </TableCell>
               <TableCell>
