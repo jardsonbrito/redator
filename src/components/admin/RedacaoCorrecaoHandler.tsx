@@ -151,6 +151,37 @@ export const useRedacaoCorrecaoHandler = () => {
 
       console.log('✅ Verificação final bem-sucedida:', verificacao);
 
+      // 6. Enviar email de notificação para o aluno
+      try {
+        const { data: redacaoCompleta } = await supabase
+          .from('redacoes_enviadas')
+          .select('nome_aluno, email_aluno, frase_tematica, tipo_envio')
+          .eq('id', redacaoId)
+          .single();
+
+        if (redacaoCompleta?.email_aluno && redacaoCompleta?.nome_aluno) {
+          const { error: emailError } = await supabase.functions.invoke('send-email-v2', {
+            body: {
+              redacao_id: redacaoId,
+              student_email: redacaoCompleta.email_aluno,
+              student_name: redacaoCompleta.nome_aluno,
+              tema_titulo: redacaoCompleta.frase_tematica || 'Tema sem título',
+              tipo_envio: redacaoCompleta.tipo_envio || 'Regular',
+              corretor_nome: 'Administrador',
+              nota: Math.round(notaTotal / 100) // Converter de 1000 para 10
+            }
+          });
+
+          if (emailError) {
+            console.error('⚠️ Erro ao enviar email:', emailError);
+          } else {
+            console.log('📧 Email de correção enviado com sucesso!');
+          }
+        }
+      } catch (emailError) {
+        console.error('⚠️ Falha no envio do email (não bloqueia correção):', emailError);
+      }
+
       return {
         success: true,
         notaTotal,
