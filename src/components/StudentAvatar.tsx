@@ -44,25 +44,26 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
           }
         }
         
-        // 2. Se não encontrou por user.id, tentar por email (aluno) usando RPC
+        // 2. Se não encontrou por user.id, tentar por email (aluno) usando query direta
         if (!profileData && studentData.email) {
-          console.log('🔍 Carregando avatar - busca via RPC para email:', studentData.email.toLowerCase());
+          console.log('🔍 Carregando avatar - busca por email:', studentData.email.toLowerCase());
           
-          const { data: rpcData, error: rpcError } = await supabase
-            .rpc('get_student_profile_by_email', { 
-              student_email: studentData.email 
-            });
+          const { data: directData, error: directError } = await supabase
+            .from('profiles')
+            .select('id, nome, sobrenome, email, turma, user_type, avatar_url')
+            .eq('email', studentData.email.toLowerCase())
+            .eq('user_type', 'aluno')
+            .maybeSingle();
           
-          console.log('🔍 Carregando avatar - resultado da busca RPC:', { rpcData, rpcError });
+          console.log('🔍 Carregando avatar - resultado da busca direta:', { directData, directError });
           
-          if (rpcError) {
-            console.error('❌ Erro ao buscar avatar via RPC:', rpcError);
-          } else if (rpcData?.success && rpcData?.data) {
-            console.log('✅ Perfil encontrado via RPC para avatar:', rpcData.data);
-            profileData = rpcData.data;
+          if (directError) {
+            console.error('❌ Erro ao buscar avatar:', directError);
+          } else if (directData) {
+            console.log('✅ Perfil encontrado para avatar:', directData);
+            profileData = directData;
           } else {
-            console.log('❌ Avatar - nenhum perfil encontrado via RPC para email:', studentData.email.toLowerCase());
-            console.log('❌ Resposta RPC:', rpcData);
+            console.log('❌ Avatar - nenhum perfil encontrado para email:', studentData.email.toLowerCase());
           }
         }
         
@@ -204,25 +205,26 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
           }
         }
         
-        // 2. Se não encontrou por user.id, tentar por email (aluno) usando RPC
+        // 2. Se não encontrou por user.id, tentar por email (aluno) usando query direta
         if (!profileData && studentData.email) {
-          console.log("🔍 Tentando buscar por email via RPC:", studentData.email);
+          console.log("🔍 Tentando buscar por email:", studentData.email);
           
-          const { data: rpcData, error: rpcError } = await supabase
-            .rpc('get_student_profile_by_email', { 
-              student_email: studentData.email 
-            });
+          const { data: directData, error: directError } = await supabase
+            .from('profiles')
+            .select('id, nome, sobrenome, email, turma, user_type, avatar_url')
+            .eq('email', studentData.email.toLowerCase())
+            .eq('user_type', 'aluno')
+            .maybeSingle();
           
-          console.log("🔍 Resultado da busca RPC no upload:", { rpcData, rpcError });
+          console.log("🔍 Resultado da busca direta no upload:", { directData, directError });
           
-          if (rpcError) {
-            console.error("❌ Erro ao buscar via RPC:", rpcError);
-          } else if (rpcData?.success && rpcData?.data) {
-            console.log("✅ Perfil encontrado via RPC para upload:", rpcData.data);
-            profileData = rpcData.data;
+          if (directError) {
+            console.error("❌ Erro ao buscar por email:", directError);
+          } else if (directData) {
+            console.log("✅ Perfil encontrado para upload:", directData);
+            profileData = directData;
           } else {
-            console.log("❌ Nenhum resultado RPC para email:", studentData.email);
-            console.log("❌ Resposta RPC completa:", rpcData);
+            console.log("❌ Nenhum perfil encontrado para email:", studentData.email);
           }
         }
 
@@ -283,27 +285,21 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       
       console.log("🌐 Nova URL pública gerada:", newAvatarUrl);
 
-      // 4. Atualizar avatar_url no banco usando RPC
-      console.log("🔍 Tentando atualizar avatar_url via RPC para email:", studentData.email);
+      // 4. Atualizar avatar_url no banco usando update direto
+      console.log("🔍 Tentando atualizar avatar_url para email:", studentData.email);
       
-      const { data: updateRpcData, error: updateRpcError } = await supabase
-        .rpc('update_student_avatar', {
-          student_email: studentData.email,
-          new_avatar_path: filePath
-        });
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: newAvatarUrl })
+        .eq('email', studentData.email.toLowerCase())
+        .eq('user_type', 'aluno');
 
-      if (updateRpcError) {
-        console.error("❌ Erro ao atualizar avatar via RPC:", updateRpcError);
-        throw updateRpcError;
+      if (updateError) {
+        console.error("❌ Erro ao atualizar avatar:", updateError);
+        throw updateError;
       }
 
-      if (!updateRpcData?.success) {
-        console.error("❌ Falha ao atualizar avatar via RPC:", updateRpcData);
-        throw new Error(updateRpcData?.message || "Falha ao atualizar avatar no banco de dados");
-      }
-
-      console.log("✅ Avatar atualizado via RPC com sucesso!");
-      console.log("📝 Resultado RPC:", updateRpcData);
+      console.log("✅ Avatar atualizado com sucesso!");
 
       // 5. Atualizar visualização SOMENTE após confirmação do banco
       setAvatarUrl(newAvatarUrl);

@@ -62,39 +62,37 @@ export default function LousaList() {
 
   const fetchLousas = async () => {
     try {
-      // Get all lousas with corretor information
+      // Get all lousas
       const { data: lousasData, error: lousasError } = await supabase
         .from('lousa')
-        .select(`
-          *,
-          corretores!lousa_corretor_id_fkey (
-            id,
-            nome_completo
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (lousasError) throw lousasError;
 
-      // Then for each lousa, count pending responses
+      // Then for each lousa, get corretor info and count pending responses
       const lousasWithPendingCount = await Promise.all(
         (lousasData || []).map(async (lousa) => {
+          // Since corretor_id doesn't exist in the schema, set to null
+          let corretorNome = null;
+
+          // Count pending responses
           const { count, error: countError } = await supabase
             .from('lousa_resposta')
             .select('*', { count: 'exact', head: true })
             .eq('lousa_id', lousa.id)
             .neq('status', 'graded')
-            .is('nota', null); // Additional check for uncorrected responses
+            .is('nota', null);
 
           if (countError) {
             console.error('Erro ao contar respostas pendentes:', countError);
-            return { ...lousa, respostas_pendentes: 0 };
+            return { ...lousa, respostas_pendentes: 0, corretor_nome: corretorNome };
           }
 
           return { 
             ...lousa, 
             respostas_pendentes: count || 0,
-            corretor_nome: lousa.corretores?.nome_completo || null
+            corretor_nome: corretorNome
           };
         })
       );

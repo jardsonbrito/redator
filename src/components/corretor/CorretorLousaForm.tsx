@@ -77,39 +77,42 @@ export default function CorretorLousaForm({ onSuccess, editData }: CorretorLousa
 
       if (editData) {
         // Atualizar lousa existente
-        const { data: rpcResult, error } = await supabase.rpc('update_corretor_lousa', {
-          corretor_email: corretor.email,
-          lousa_id: editData.id,
-          lousa_titulo: data.titulo,
-          lousa_enunciado: data.enunciado,
-          lousa_turmas: data.turmas,
-          lousa_permite_visitante: data.permite_visitante,
-          lousa_ativo: data.ativo,
-          lousa_status: status,
-          lousa_capa_url: data.capa_url || null,
-          lousa_inicio_em: data.inicio_em?.toISOString() || null,
-          lousa_fim_em: data.fim_em?.toISOString() || null
-        });
+        const { error } = await supabase
+          .from('lousa')
+          .update({
+            titulo: data.titulo,
+            enunciado: data.enunciado,
+            turmas: data.turmas,
+            permite_visitante: data.permite_visitante,
+            ativo: data.ativo,
+            status: status,
+            capa_url: data.capa_url || null,
+            inicio_em: data.inicio_em?.toISOString() || null,
+            fim_em: data.fim_em?.toISOString() || null
+          })
+          .eq('id', editData.id);
 
         if (error) throw error;
-        result = rpcResult;
+        result = { success: true };
       } else {
         // Criar nova lousa
-        const { data: rpcResult, error } = await supabase.rpc('create_corretor_lousa', {
-          corretor_email: corretor.email,
-          lousa_titulo: data.titulo,
-          lousa_enunciado: data.enunciado,
-          lousa_turmas: data.turmas,
-          lousa_permite_visitante: data.permite_visitante,
-          lousa_ativo: data.ativo,
-          lousa_status: status,
-          lousa_capa_url: data.capa_url || null,
-          lousa_inicio_em: data.inicio_em?.toISOString() || null,
-          lousa_fim_em: data.fim_em?.toISOString() || null
-        });
+        const { error } = await supabase
+          .from('lousa')
+          .insert({
+            titulo: data.titulo,
+            enunciado: data.enunciado,
+            turmas: data.turmas,
+            permite_visitante: data.permite_visitante,
+            ativo: data.ativo,
+            status: status,
+            capa_url: data.capa_url || null,
+            inicio_em: data.inicio_em?.toISOString() || null,
+            fim_em: data.fim_em?.toISOString() || null,
+            created_by: corretor.id || ''
+          });
 
         if (error) throw error;
-        result = rpcResult;
+        result = { success: true };
       }
 
       // Verificar resultado da RPC

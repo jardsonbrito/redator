@@ -46,12 +46,12 @@ export default function CorretorLousas() {
       }
 
       const { data: lousasData, error: lousasError } = await supabase
-        .rpc('get_corretor_lousas', {
-          corretor_email: corretor.email
-        });
+        .from('lousa')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (lousasError) {
-        console.error('❌ Erro ao buscar lousas do corretor:', lousasError);
+        console.error('❌ Erro ao buscar lousas:', lousasError);
         throw lousasError;
       }
 
@@ -95,16 +95,12 @@ export default function CorretorLousas() {
 
     setIsDeleting(true);
     try {
-      const { data: result, error } = await supabase.rpc('delete_corretor_lousa', {
-        corretor_email: corretor.email,
-        lousa_id: lousaId
-      });
+      const { error } = await supabase
+        .from('lousa')
+        .delete()
+        .eq('id', lousaId);
 
       if (error) throw error;
-
-      if (!result?.success) {
-        throw new Error(result?.error || 'Erro ao deletar lousa');
-      }
 
       toast({
         title: 'Sucesso!',
@@ -130,16 +126,12 @@ export default function CorretorLousas() {
 
     setIsEnding(true);
     try {
-      const { data: result, error } = await supabase.rpc('end_corretor_lousa', {
-        corretor_email: corretor.email,
-        lousa_id: lousaId
-      });
+      const { error } = await supabase
+        .from('lousa')
+        .update({ status: 'ended' })
+        .eq('id', lousaId);
 
       if (error) throw error;
-
-      if (!result?.success) {
-        throw new Error(result?.error || 'Erro ao encerrar lousa');
-      }
 
       toast({
         title: 'Sucesso!',
