@@ -231,6 +231,45 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
 
       if (error) throw error;
 
+      console.log('🔍 Status da correção:', status);
+      console.log('🔍 Dados para email:', { 
+        redacao_id: redacao.id,
+        student_email: redacao.email_aluno,
+        student_name: redacao.nome_aluno,
+        status 
+      });
+
+      // Enviar email de notificação se a correção foi finalizada
+      if (status === 'corrigida') {
+        try {
+          console.log('📧 Enviando email de notificação...');
+          
+          const { data: emailData, error: emailError } = await supabase.functions.invoke('send-correction-email', {
+            body: {
+              redacao_id: redacao.id,
+              student_email: redacao.email_aluno,
+              student_name: redacao.nome_aluno,
+              tema_titulo: redacao.frase_tematica || 'Tema sem título',
+              tipo_envio: redacao.tipo_redacao || 'Regular',
+              corretor_nome: corretorEmail,
+              nota: notas.total
+            }
+          });
+
+          console.log('📧 Resultado do email:', { emailData, emailError });
+
+          if (emailError) {
+            console.error('⚠️ Erro ao enviar email:', emailError);
+          } else {
+            console.log('📧 Email de correção enviado com sucesso!');
+          }
+        } catch (emailError) {
+          console.error('⚠️ Falha no envio do email:', emailError);
+        }
+      } else {
+        console.log('📧 Email não enviado - status não é "corrigida"');
+      }
+
       toast({
         title: status === 'corrigida' ? "Correção finalizada!" : "Correção salva!",
         description: status === 'corrigida' ? 

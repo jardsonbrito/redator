@@ -5,9 +5,16 @@
       "mcp__supabase__execute_sql",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__deploy_edge_function",
+      "Bash(curl:*)",
+      "mcp__supabase__get_anon_key",
+      "mcp__supabase__get_logs",
+      "mcp__supabase__list_edge_functions"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
   ]

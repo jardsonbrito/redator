@@ -62,7 +62,21 @@ Deno.serve(async (req) => {
 
     const resend = new Resend(resendApiKey);
 
-    const tipoTexto = tipo_envio === 'Exercicio' ? 'exercicio' : tipo_envio === 'Lousa' ? 'lousa' : 'redacao';
+    // Determinar tipo e gênero correto
+    const isExercicio = tipo_envio === 'Exercicio' || tipo_envio === 'exercicio'
+    const isLousa = tipo_envio === 'Lousa' || tipo_envio === 'lousa'
+    
+    let tipoTexto, tipoArticle
+    if (isExercicio) {
+      tipoTexto = 'exercício'
+      tipoArticle = 'Seu'
+    } else if (isLousa) {
+      tipoTexto = 'lousa'  
+      tipoArticle = 'Sua'
+    } else {
+      tipoTexto = 'redação'
+      tipoArticle = 'Sua'
+    }
     
     // Template HTML puro otimizado para email com estrutura de tabelas
     const emailHtml = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -70,7 +84,7 @@ Deno.serve(async (req) => {
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Sua ${tipoTexto} foi corrigida!</title>
+    <title>${tipoArticle} ${tipoTexto} foi corrigid${isExercicio ? 'o' : 'a'}!</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f6f9fc;">
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0; background-color: #f6f9fc;">
@@ -88,7 +102,7 @@ Deno.serve(async (req) => {
                                 <tr>
                                     <td style="text-align: center; padding-bottom: 20px;">
                                         <h1 style="color: #333333; font-size: 24px; font-weight: 600; line-height: 1.4; margin: 0; font-family: Arial, sans-serif;">
-                                            🎉 Seu ${tipoTexto} foi corrigido!
+                                            🎉 ${tipoArticle} ${tipoTexto} foi corrigid${isExercicio ? 'o' : 'a'}!
                                         </h1>
                                     </td>
                                 </tr>
@@ -97,7 +111,7 @@ Deno.serve(async (req) => {
                                 <tr>
                                     <td style="padding-bottom: 20px;">
                                         <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0; font-family: Arial, sans-serif;">
-                                            Ola <strong>${student_name}</strong>, seu ${tipoTexto} acaba de ser corrigido.
+                                            Olá <strong>${student_name}</strong>, ${isExercicio ? 'seu' : 'sua'} ${tipoTexto} acaba de ser corrigid${isExercicio ? 'o' : 'a'}.
                                         </p>
                                     </td>
                                 </tr>
@@ -110,7 +124,7 @@ Deno.serve(async (req) => {
                                             <tr>
                                                 <td style="padding: 16px; text-align: center;">
                                                     <p style="color: #0369a1; font-size: 18px; font-weight: 600; margin: 0; font-family: Arial, sans-serif;">
-                                                        📊 Nota recebida: ${nota}/10
+                                                        📊 Nota recebida: ${nota}/1000
                                                     </p>
                                                 </td>
                                             </tr>
@@ -193,7 +207,7 @@ Deno.serve(async (req) => {
     const emailResult = await resend.emails.send({
       from: 'App do Redator <noreply@laboratoriodoredator.com>',
       to: [student_email],
-      subject: `🎉 Seu ${tipoTexto} "${tema_titulo}" foi corrigido!`,
+      subject: `🎉 ${tipoArticle} ${tipoTexto} foi corrigid${isExercicio ? 'o' : 'a'}!`,
       html: emailHtml,
       tags: [
         { name: 'category', value: 'correction-notification' },
