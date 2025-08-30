@@ -58,11 +58,11 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   });
 
   const [comentarios, setComentarios] = useState<ComentariosCorrecao>({
-    c1: "",
-    c2: "",
-    c3: "",
-    c4: "",
-    c5: "",
+    c1: "sem_comentario",
+    c2: "sem_comentario",
+    c3: "sem_comentario",
+    c4: "sem_comentario",
+    c5: "sem_comentario",
     elogios: ""
   });
 
@@ -192,13 +192,23 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       });
 
       setComentarios({
-        c1: data[`comentario_c1_${prefixo}`] || "",
-        c2: data[`comentario_c2_${prefixo}`] || "",
-        c3: data[`comentario_c3_${prefixo}`] || "",
-        c4: data[`comentario_c4_${prefixo}`] || "",
-        c5: data[`comentario_c5_${prefixo}`] || "",
+        c1: data[`comentario_c1_${prefixo}`] || "sem_comentario",
+        c2: data[`comentario_c2_${prefixo}`] || "sem_comentario",
+        c3: data[`comentario_c3_${prefixo}`] || "sem_comentario",
+        c4: data[`comentario_c4_${prefixo}`] || "sem_comentario",
+        c5: data[`comentario_c5_${prefixo}`] || "sem_comentario",
         elogios: data[`elogios_pontos_atencao_${prefixo}`] || ""
       });
+
+      // Converter strings vazias para "sem_comentario"
+      setComentarios(prev => ({
+        ...prev,
+        c1: prev.c1 === "" ? "sem_comentario" : prev.c1,
+        c2: prev.c2 === "" ? "sem_comentario" : prev.c2,
+        c3: prev.c3 === "" ? "sem_comentario" : prev.c3,
+        c4: prev.c4 === "" ? "sem_comentario" : prev.c4,
+        c5: prev.c5 === "" ? "sem_comentario" : prev.c5,
+      }));
 
       setAudioUrl(data[`audio_url_${prefixo}`] || null);
 
@@ -223,11 +233,11 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         c5_nota: notas.c5,
         nota_final: notas.total,
         status_correcao: status,
-        comentario_c1: comentarios.c1,
-        comentario_c2: comentarios.c2,
-        comentario_c3: comentarios.c3,
-        comentario_c4: comentarios.c4,
-        comentario_c5: comentarios.c5,
+        comentario_c1: comentarios.c1 === "sem_comentario" ? "" : comentarios.c1,
+        comentario_c2: comentarios.c2 === "sem_comentario" ? "" : comentarios.c2,
+        comentario_c3: comentarios.c3 === "sem_comentario" ? "" : comentarios.c3,
+        comentario_c4: comentarios.c4 === "sem_comentario" ? "" : comentarios.c4,
+        comentario_c5: comentarios.c5 === "sem_comentario" ? "" : comentarios.c5,
         elogios_pontos: comentarios.elogios
       });
 
@@ -499,7 +509,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                       <SelectValue placeholder="Selecionar comentário" />
                     </SelectTrigger>
                     <SelectContent className="z-50">
-                      <SelectItem value="">Sem comentário</SelectItem>
+                      <SelectItem value="sem_comentario">Sem comentário</SelectItem>
                       <SelectItem value="Excelente domínio da competência">Excelente domínio</SelectItem>
                       <SelectItem value="Bom desenvolvimento da competência">Bom desenvolvimento</SelectItem>
                       <SelectItem value="Desenvolvimento mediano da competência">Desenvolvimento mediano</SelectItem>
@@ -541,7 +551,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                       <SelectValue placeholder="Selecionar comentário" />
                     </SelectTrigger>
                     <SelectContent className="z-50">
-                      <SelectItem value="">Sem comentário</SelectItem>
+                      <SelectItem value="sem_comentario">Sem comentário</SelectItem>
                       <SelectItem value="Excelente domínio da competência">Excelente domínio</SelectItem>
                       <SelectItem value="Bom desenvolvimento da competência">Bom desenvolvimento</SelectItem>
                       <SelectItem value="Desenvolvimento mediano da competência">Desenvolvimento mediano</SelectItem>
