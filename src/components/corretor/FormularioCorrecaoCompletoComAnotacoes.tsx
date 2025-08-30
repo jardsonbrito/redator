@@ -466,22 +466,21 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           <CardTitle>Vista Pedagógica</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Grid de competências - Duas linhas */}
+          {/* Grid de competências em 2 linhas */}
           <div className="space-y-4">
-            {/* Primeira linha: C1, C2, C3 */}
-            <div className="grid grid-cols-3 gap-4">
-              {(['c1', 'c2', 'c3'] as const).map((competencia, index) => (
-                <div key={competencia} className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full shrink-0 ${
-                    competencia === 'c1' ? 'bg-red-500' :
-                    competencia === 'c2' ? 'bg-green-500' : 'bg-blue-500'
+            {/* Primeira linha: C1, C2 */}
+            <div className="grid grid-cols-2 gap-6">
+              {(['c1', 'c2'] as const).map((competencia, index) => (
+                <div key={competencia} className="flex items-center gap-3">
+                  <div className={`w-4 h-4 rounded-full shrink-0 ${
+                    competencia === 'c1' ? 'bg-red-500' : 'bg-green-500'
                   }`} />
-                  <span className="text-sm font-medium">C{index + 1}</span>
+                  <span className="text-base font-medium">C{index + 1}</span>
                   <Select
                     value={notas[competencia].toString()}
                     onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
                   >
-                    <SelectTrigger className="h-8 w-16">
+                    <SelectTrigger className="h-10 w-20">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="z-50">
@@ -492,105 +491,118 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select
+                    value={comentarios[competencia]}
+                    onValueChange={(value) => atualizarComentario(competencia, value)}
+                  >
+                    <SelectTrigger className="h-10 flex-1">
+                      <SelectValue placeholder="Selecionar comentário" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      <SelectItem value="">Sem comentário</SelectItem>
+                      <SelectItem value="Excelente domínio da competência">Excelente domínio</SelectItem>
+                      <SelectItem value="Bom desenvolvimento da competência">Bom desenvolvimento</SelectItem>
+                      <SelectItem value="Desenvolvimento mediano da competência">Desenvolvimento mediano</SelectItem>
+                      <SelectItem value="Desenvolvimento insuficiente da competência">Desenvolvimento insuficiente</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               ))}
             </div>
             
-            {/* Segunda linha: C4, C5 e Nota Total */}
-            <div className="grid grid-cols-3 gap-4 items-center">
-              {/* C4 */}
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full shrink-0 bg-orange-500" />
-                <span className="text-sm font-medium">C4</span>
-                <Select
-                  value={notas.c4.toString()}
-                  onValueChange={(value) => atualizarNota('c4', parseInt(value))}
-                >
-                  <SelectTrigger className="h-8 w-16">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {opcoesNota.map(nota => (
-                      <SelectItem key={nota} value={nota.toString()}>
-                        {nota}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* C5 */}
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full shrink-0 bg-purple-500" />
-                <span className="text-sm font-medium">C5</span>
-                <Select
-                  value={notas.c5.toString()}
-                  onValueChange={(value) => atualizarNota('c5', parseInt(value))}
-                >
-                  <SelectTrigger className="h-8 w-16">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {opcoesNota.map(nota => (
-                      <SelectItem key={nota} value={nota.toString()}>
-                        {nota}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Nota Total */}
-              <div className="bg-muted/50 rounded-lg p-3 text-center shadow-sm">
-                <div className="text-xs text-muted-foreground">Nota</div>
-                <div className="text-2xl font-bold">{notas.total}</div>
-              </div>
+            {/* Segunda linha: C3, C5 */}
+            <div className="grid grid-cols-2 gap-6">
+              {(['c3', 'c5'] as const).map((competencia, index) => (
+                <div key={competencia} className="flex items-center gap-3">
+                  <div className={`w-4 h-4 rounded-full shrink-0 ${
+                    competencia === 'c3' ? 'bg-orange-500' : 'bg-blue-500'
+                  }`} />
+                  <span className="text-base font-medium">{competencia.toUpperCase()}</span>
+                  <Select
+                    value={notas[competencia].toString()}
+                    onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
+                  >
+                    <SelectTrigger className="h-10 w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      {opcoesNota.map(nota => (
+                        <SelectItem key={nota} value={nota.toString()}>
+                          {nota}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={comentarios[competencia]}
+                    onValueChange={(value) => atualizarComentario(competencia, value)}
+                  >
+                    <SelectTrigger className="h-10 flex-1">
+                      <SelectValue placeholder="Selecionar comentário" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      <SelectItem value="">Sem comentário</SelectItem>
+                      <SelectItem value="Excelente domínio da competência">Excelente domínio</SelectItem>
+                      <SelectItem value="Bom desenvolvimento da competência">Bom desenvolvimento</SelectItem>
+                      <SelectItem value="Desenvolvimento mediano da competência">Desenvolvimento mediano</SelectItem>
+                      <SelectItem value="Desenvolvimento insuficiente da competência">Desenvolvimento insuficiente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
             </div>
           </div>
-          
-          {/* Audio Player */}
-          <div className="mt-4">
-            <AudioRecorder 
-              redacaoId={redacao.id} 
+
+          {/* Botão de Gravar Áudio */}
+          <div className="flex justify-center">
+            <AudioRecorder
+              redacaoId={redacao.id}
               tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
                      redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-              ehCorretor1={redacao.eh_corretor_1}
+              onAudioSaved={(url) => setAudioUrl(url)}
               existingAudioUrl={audioUrl}
-              onAudioSaved={setAudioUrl}
+              ehCorretor1={redacao.eh_corretor_1}
             />
           </div>
-          
-          {/* Botões de Ação - Uma linha */}
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => salvarCorrecao('incompleta')}
-              disabled={loading}
-              className="flex items-center gap-2 h-10 px-4"
-            >
-              <Pause className="w-4 h-4" />
-              <span className="hidden sm:inline">Incompleta</span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowDevolverModal(true)}
-              disabled={loading}
-              className="flex items-center gap-2 h-10 px-4 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-600"
-            >
-              <Package className="w-4 h-4" />
-              <span className="hidden sm:inline">Devolver Redação</span>
-            </Button>
-            <Button
-              onClick={() => salvarCorrecao('corrigida')}
-              disabled={loading}
-              className="flex items-center gap-2 h-10 px-4 bg-green-600 hover:bg-green-700"
-            >
-              <Check className="w-4 h-4" />
-              <span className="hidden sm:inline">Finalizar Correção</span>
-            </Button>
+
+          {/* Nota Total */}
+          <div className="flex justify-end">
+            <div className="bg-muted rounded-lg p-4 text-center min-w-[100px]">
+              <div className="text-2xl font-bold">{notas.total}</div>
+              <div className="text-sm text-muted-foreground">Nota</div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Botões de Ação */}
+      <div className="flex gap-4 justify-between">
+        <Button
+          variant="outline"
+          onClick={() => salvarCorrecao('incompleta')}
+          disabled={loading}
+          className="flex-1"
+        >
+          Incompleta
+        </Button>
+        
+        <Button
+          variant="outline"
+          onClick={() => setShowDevolverModal(true)}
+          disabled={loading}
+          className="flex-1"
+        >
+          Devolver redação
+        </Button>
+        
+        <Button
+          onClick={() => salvarCorrecao('corrigida')}
+          disabled={loading}
+          className="flex-1 bg-purple-600 hover:bg-purple-700"
+        >
+          Finalizar correção
+        </Button>
+      </div>
 
       {/* Redação Manuscrita - Exibe quando há URL de imagem */}
       {redacao.redacao_manuscrita_url && (

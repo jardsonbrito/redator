@@ -634,23 +634,19 @@ export const FormularioCorrecaoCompleto = ({
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Vista Pedagógica</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {['c1', 'c2', 'c3', 'c4', 'c5'].map((competencia, index) => {
-                const cores = ['#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#f97316'];
-                const corCompetencia = cores[index];
-                
-                return (
-                  <div key={competencia} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: corCompetencia }}
-                        />
-                        <Label className="text-sm font-medium">C{index + 1}</Label>
-                      </div>
+            <CardContent className="space-y-6">
+              {/* Grid de competências em 2 linhas */}
+              <div className="space-y-4">
+                {/* Primeira linha: C1, C2 */}
+                <div className="grid grid-cols-2 gap-6">
+                  {(['c1', 'c2'] as const).map((competencia, index) => (
+                    <div key={competencia} className="flex items-center gap-3">
+                      <div className={`w-4 h-4 rounded-full shrink-0 ${
+                        competencia === 'c1' ? 'bg-red-500' : 'bg-green-500'
+                      }`} />
+                      <span className="text-base font-medium">C{index + 1}</span>
                       <Select
-                        value={notas[competencia as keyof typeof notas].toString()}
+                        value={notas[competencia].toString()}
                         onValueChange={(value) => 
                           setNotas(prev => ({
                             ...prev,
@@ -658,10 +654,10 @@ export const FormularioCorrecaoCompleto = ({
                           }))
                         }
                       >
-                        <SelectTrigger className="w-16 h-7 text-xs">
+                        <SelectTrigger className="h-10 w-20">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-50">
                           {opcoesNota.map(nota => (
                             <SelectItem key={nota} value={nota.toString()}>
                               {nota}
@@ -669,16 +665,66 @@ export const FormularioCorrecaoCompleto = ({
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-xs text-gray-500">/200</span>
+                      <Select disabled>
+                        <SelectTrigger className="h-10 flex-1">
+                          <SelectValue placeholder="Comentários automáticos" />
+                        </SelectTrigger>
+                      </Select>
                     </div>
-                  </div>
-                );
-              })}
-              
-              <div className="pt-3 border-t space-y-3">
-                <div className="text-center">
-                  <Label className="text-sm font-medium">Nota Total</Label>
-                  <div className="text-lg font-bold text-primary">{calcularNotaTotal()}/1000</div>
+                  ))}
+                </div>
+                
+                {/* Segunda linha: C3, C5 */}
+                <div className="grid grid-cols-2 gap-6">
+                  {(['c3', 'c5'] as const).map((competencia, index) => (
+                    <div key={competencia} className="flex items-center gap-3">
+                      <div className={`w-4 h-4 rounded-full shrink-0 ${
+                        competencia === 'c3' ? 'bg-orange-500' : 'bg-blue-500'
+                      }`} />
+                      <span className="text-base font-medium">{competencia.toUpperCase()}</span>
+                      <Select
+                        value={notas[competencia].toString()}
+                        onValueChange={(value) => 
+                          setNotas(prev => ({
+                            ...prev,
+                            [competencia]: parseInt(value)
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="h-10 w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="z-50">
+                          {opcoesNota.map(nota => (
+                            <SelectItem key={nota} value={nota.toString()}>
+                              {nota}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select disabled>
+                        <SelectTrigger className="h-10 flex-1">
+                          <SelectValue placeholder="Comentários automáticos" />
+                        </SelectTrigger>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Botão de Gravar Áudio - placeholder */}
+              <div className="flex justify-center">
+                <Button variant="outline" className="flex items-center gap-2" disabled>
+                  <div className="w-4 h-4 rounded-full bg-purple-500" />
+                  Gravar áudio
+                </Button>
+              </div>
+
+              {/* Nota Total */}
+              <div className="flex justify-end">
+                <div className="bg-muted rounded-lg p-4 text-center min-w-[100px]">
+                  <div className="text-2xl font-bold">{calcularNotaTotal()}</div>
+                  <div className="text-sm text-muted-foreground">Nota</div>
                 </div>
               </div>
             </CardContent>
