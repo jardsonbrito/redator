@@ -18,6 +18,8 @@ import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useCredits } from "@/hooks/useCredits";
+import { CreditDisplay } from "@/components/CreditDisplay";
 
 const SimuladoParticipacao = () => {
   const { id } = useParams();
@@ -33,6 +35,13 @@ const SimuladoParticipacao = () => {
   const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canSubmit, setCanSubmit] = useState(false);
+
+  // Simulados sempre precisam de 2 corretores
+  const requiredCredits = 2;
+  
+  // Hook para gerenciar créditos
+  const { consumeCredits, checkSufficientCredits } = useCredits(email);
 
   useEffect(() => {
     // Preencher automaticamente os dados do usuário logado
@@ -180,6 +189,24 @@ const SimuladoParticipacao = () => {
       return;
     }
 
+    // Verificar créditos se é um aluno autenticado
+    if (studentData.email && studentData.userType === 'aluno') {
+      const hasCredits = checkSufficientCredits(requiredCredits);
+      if (!hasCredits) {
+        return; // O hook já mostra a mensagem de erro
+      }
+
+      // Consumir créditos antes de processar o envio
+      const creditConsumed = await consumeCredits(
+        requiredCredits, 
+        `Envio de redação de simulado: ${simulado.titulo}`
+      );
+      
+      if (!creditConsumed) {
+        return; // O hook já mostra a mensagem de erro
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -210,10 +237,13 @@ const SimuladoParticipacao = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Redação enviada com sucesso!",
-        description: "Sua redação do simulado foi enviada e será corrigida pelos corretores selecionados.",
-      });
+      // Toast adicional apenas para visitantes (alunos já recebem o toast de créditos)
+      if (studentData.userType !== 'aluno') {
+        toast({
+          title: "Redação enviada com sucesso!",
+          description: "Sua redação do simulado foi enviada e será corrigida pelos corretores selecionados.",
+        });
+      }
 
       navigate('/app');
 
@@ -457,6 +487,15 @@ const SimuladoParticipacao = () => {
                     </div>
                   </div>
 
+                  {/* Exibir informações de créditos para alunos */}
+                  {studentData.email && studentData.userType === 'aluno' && (
+                    <CreditDisplay 
+                      userEmail={studentData.email}
+                      requiredCredits={requiredCredits}
+                      onCreditCheck={setCanSubmit}
+                    />
+                  )}
+
                   <CorretorSelector
                     selectedCorretores={selectedCorretores}
                     onCorretoresChange={setSelectedCorretores}
@@ -525,7 +564,11 @@ const SimuladoParticipacao = () => {
 
                   <Button 
                     type="submit" 
-                    disabled={isSubmitting || (!isRedacaoValid && !redacaoManuscrita)}
+                    disabled={
+                      isSubmitting || 
+                      (!isRedacaoValid && !redacaoManuscrita) ||
+                      (studentData.userType === 'aluno' && !canSubmit)
+                    }
                     className="w-full bg-primary"
                   >
                     {isSubmitting ? "Enviando..." : "Enviar Redação do Simulado"}

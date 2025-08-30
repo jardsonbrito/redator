@@ -14,6 +14,8 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useCredits } from "@/hooks/useCredits";
+import { CreditDisplay } from "@/components/CreditDisplay";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
@@ -27,8 +29,15 @@ const EnvieRedacao = () => {
   const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [tipoRedacao, setTipoRedacao] = useState<"manuscrita" | "digitada">("digitada");
+  const [canSubmit, setCanSubmit] = useState(false);
   const { toast } = useToast();
   const { settings, loading: settingsLoading } = useAppSettings();
+
+  // Determinar quantos créditos são necessários
+  const requiredCredits = selectedCorretores.length === 2 ? 2 : 1;
+  
+  // Hook para gerenciar créditos
+  const { consumeCredits, checkSufficientCredits } = useCredits(email);
 
   const temaFromUrl = searchParams.get('tema');
   const fonteFromUrl = searchParams.get('fonte');
@@ -211,6 +220,24 @@ const EnvieRedacao = () => {
       return;
     }
 
+    // Verificar se é aluno autenticado e verificar créditos
+    if (userType === "aluno" && email) {
+      const hasCredits = checkSufficientCredits(requiredCredits);
+      if (!hasCredits) {
+        return; // O hook já mostra a mensagem de erro
+      }
+
+      // Consumir créditos antes de processar o envio
+      const creditConsumed = await consumeCredits(
+        requiredCredits, 
+        `Envio de redação ${exercicioFromUrl ? 'de exercício' : tipoEnvio}`
+      );
+      
+      if (!creditConsumed) {
+        return; // O hook já mostra a mensagem de erro
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -272,10 +299,13 @@ const EnvieRedacao = () => {
         }
       }
 
-      toast({
-        title: "Redação enviada com sucesso!",
-        description: `Sua redação foi salva e será corrigida pelos corretores selecionados. ${exercicioFromUrl ? 'O exercício foi marcado como concluído.' : 'Você poderá visualizá-la no card "Minhas Redações" na página inicial.'}`,
-      });
+      // Toast adicional apenas para visitantes (alunos já recebem o toast de créditos)
+      if (userType !== "aluno") {
+        toast({
+          title: "Redação enviada com sucesso!",
+          description: `Sua redação foi salva e será corrigida pelos corretores selecionados. ${exercicioFromUrl ? 'O exercício foi marcado como concluído.' : 'Você poderá visualizá-la no card "Minhas Redações" na página inicial.'}`,
+        });
+      }
 
       // Limpar formulário após sucesso
       if (userType !== "visitante") {
@@ -378,6 +408,17 @@ const EnvieRedacao = () => {
                       )}
                     </p>
                   </div>
+
+                  {/* Exibir informações de créditos para alunos */}
+                  {userType === "aluno" && email && (
+                    <div className="col-span-1 md:col-span-2">
+                      <CreditDisplay 
+                        userEmail={email}
+                        requiredCredits={requiredCredits}
+                        onCreditCheck={setCanSubmit}
+                      />
+                    </div>
+                  )}
 
                   {/* Layout compacto: seletor de corretores e tipo de redação */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -542,14 +583,11 @@ const EnvieRedacao = () => {
 
                   <Button 
                     type="submit" 
-                    disabled={
-                      isSubmitting || 
-                      (tipoRedacao === "digitada" && !isRedacaoValid) ||
-                      (tipoRedacao === "manuscrita" && !redacaoManuscrita)
-                    }
-                    className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white"
+                    className="w-full text-white py-3 text-lg font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl" 
+                    style={{ backgroundColor: '#662f96' }}
+                    disabled={isSubmitting || (userType === "aluno" && !canSubmit)}
                   >
-                    {isSubmitting ? "Salvando..." : "Enviar Redação"}
+                    {isSubmitting ? "Enviando..." : "Enviar Redação"}
                   </Button>
                 </form>
               </CardContent>

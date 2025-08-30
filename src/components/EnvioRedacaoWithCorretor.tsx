@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CorretorSelector } from "./CorretorSelector";
+import { CreditDisplay } from "./CreditDisplay";
+import { useCredits } from "@/hooks/useCredits";
 import { Upload, X } from "lucide-react";
 
 interface EnvioRedacaoProps {
@@ -40,7 +42,14 @@ export const EnvioRedacaoWithCorretor = ({
   const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [canSubmit, setCanSubmit] = useState(false);
   const { toast } = useToast();
+
+  // Determinar quantos créditos são necessários
+  const requiredCredits = selectedCorretores.length === 2 ? 2 : 1;
+  
+  // Hook para gerenciar créditos
+  const { consumeCredits, checkSufficientCredits } = useCredits(formData.email_aluno);
 
   // Preencher dados automaticamente quando o usuário está logado
   useEffect(() => {
@@ -189,6 +198,24 @@ export const EnvioRedacaoWithCorretor = ({
     
     if (!validateForm()) return;
 
+    // Verificar créditos se é um aluno autenticado
+    if (studentData.email && studentData.userType === 'aluno') {
+      const hasCredits = checkSufficientCredits(requiredCredits);
+      if (!hasCredits) {
+        return; // O hook já mostra a mensagem de erro
+      }
+
+      // Consumir créditos antes de processar o envio
+      const creditConsumed = await consumeCredits(
+        requiredCredits, 
+        `Envio de redação ${isSimulado ? 'de simulado' : exercicioId ? 'de exercício' : 'regular'}`
+      );
+      
+      if (!creditConsumed) {
+        return; // O hook já mostra a mensagem de erro
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -239,10 +266,13 @@ export const EnvioRedacaoWithCorretor = ({
 
       if (result.error) throw result.error;
 
-      toast({
-        title: "Redação enviada com sucesso!",
-        description: "Sua redação foi enviada e será corrigida pelos corretores selecionados.",
-      });
+      // Toast adicional apenas para visitantes (alunos já recebem o toast de créditos)
+      if (studentData.userType !== 'aluno') {
+        toast({
+          title: "Redação enviada com sucesso!",
+          description: "Sua redação foi enviada e será corrigida pelos corretores selecionados.",
+        });
+      }
 
       // Limpar formulário
       setFormData({
@@ -334,6 +364,16 @@ export const EnvioRedacaoWithCorretor = ({
             </div>
           )}
 
+          {/* Exibir informações de créditos para alunos */}
+          {studentData.email && studentData.userType === 'aluno' && (
+            <CreditDisplay 
+              userEmail={studentData.email}
+              requiredCredits={requiredCredits}
+              onCreditCheck={setCanSubmit}
+              showCompact={true}
+            />
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <CorretorSelector
@@ -408,7 +448,11 @@ export const EnvioRedacaoWithCorretor = ({
             />
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary/90">
+          <Button 
+            type="submit" 
+            disabled={loading || (studentData.userType === 'aluno' && !canSubmit)} 
+            className="w-full bg-primary hover:bg-primary/90"
+          >
             {loading ? "Enviando..." : "Enviar Redação"}
           </Button>
         </form>
