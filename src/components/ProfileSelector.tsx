@@ -12,10 +12,10 @@ export const ProfileSelector = ({ selectedProfile, onProfileChange }: ProfileSel
       <Button
         variant={selectedProfile === "professor" ? "default" : "outline"}
         onClick={() => onProfileChange("professor")}
-        className={`h-16 text-xs ${
+        className={`h-16 text-xs font-medium transition-all duration-200 ${
           selectedProfile === "professor"
-            ? "bg-redator-primary hover:bg-redator-primary/90 text-white"
-            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"
+            ? "bg-redator-primary hover:bg-redator-primary/90 text-white border-redator-primary"
+            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/5 hover:border-redator-primary/50 hover:text-redator-primary"
         }`}
       >
         Sou Professor
@@ -23,10 +23,10 @@ export const ProfileSelector = ({ selectedProfile, onProfileChange }: ProfileSel
       <Button
         variant={selectedProfile === "aluno" ? "default" : "outline"}
         onClick={() => onProfileChange("aluno")}
-        className={`h-16 text-xs ${
+        className={`h-16 text-xs font-medium transition-all duration-200 ${
           selectedProfile === "aluno"
-            ? "bg-redator-primary hover:bg-redator-primary/90 text-white"
-            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"
+            ? "bg-redator-primary hover:bg-redator-primary/90 text-white border-redator-primary"
+            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/5 hover:border-redator-primary/50 hover:text-redator-primary"
         }`}
       >
         Sou Aluno
@@ -34,10 +34,10 @@ export const ProfileSelector = ({ selectedProfile, onProfileChange }: ProfileSel
       <Button
         variant={selectedProfile === "visitante" ? "default" : "outline"}
         onClick={() => onProfileChange("visitante")}
-        className={`h-16 text-xs ${
+        className={`h-16 text-xs font-medium transition-all duration-200 ${
           selectedProfile === "visitante"
-            ? "bg-redator-primary hover:bg-redator-primary/90 text-white"
-            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"
+            ? "bg-redator-primary hover:bg-redator-primary/90 text-white border-redator-primary"
+            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/5 hover:border-redator-primary/50 hover:text-redator-primary"
         }`}
       >
         Sou Visitante
@@ -45,10 +45,10 @@ export const ProfileSelector = ({ selectedProfile, onProfileChange }: ProfileSel
       <Button
         variant={selectedProfile === "corretor" ? "default" : "outline"}
         onClick={() => onProfileChange("corretor")}
-        className={`h-16 text-xs ${
+        className={`h-16 text-xs font-medium transition-all duration-200 ${
           selectedProfile === "corretor"
-            ? "bg-redator-primary hover:bg-redator-primary/90 text-white"
-            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/10"
+            ? "bg-redator-primary hover:bg-redator-primary/90 text-white border-redator-primary"
+            : "border-redator-accent/30 text-redator-primary hover:bg-redator-primary/5 hover:border-redator-primary/50 hover:text-redator-primary"
         }`}
       >
         Sou Corretor
