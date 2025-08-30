@@ -202,10 +202,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     destacarRetangulo
   }));
 
-  // Função para destacar retângulo específico com debugging extensivo
+  // Função para destacar retângulo específico - VERSÃO DEFINITIVA
   const destacarRetangulo = (annotationId: string) => {
-    console.log('=== DEBUGGING OLHO CLICK ===');
-    console.log('1. ID da anotação clicada:', annotationId);
+    console.log('=== CLIQUE NO OLHO ===', annotationId);
     
     try {
       if (!annotoriousRef.current) {
@@ -213,200 +212,126 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         return;
       }
 
-      // Debug: Listar todas as anotações disponíveis
+      // Encontrar a anotação correspondente
       const annotations = annotoriousRef.current.getAnnotations();
-      console.log('2. Total de anotações no Annotorious:', annotations.length);
-      console.log('3. IDs de todas as anotações:', annotations.map((ann: any) => ann.id));
+      const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
       
-      const targetAnnotation = annotations.find((ann: any) => ann.id === annotationId);
-      if (!targetAnnotation) {
-        console.error('❌ Anotação não encontrada no Annotorious');
+      if (annotationIndex === -1) {
+        console.error('❌ Anotação não encontrada');
         return;
       }
-      console.log('4. ✅ Anotação encontrada:', targetAnnotation);
 
-      // Debug: Inspecionar toda a estrutura DOM do container
+      console.log('✅ Anotação encontrada no índice:', annotationIndex);
+
+      // Buscar o SVG no container (qualquer SVG)
       const containerElement = containerRef.current;
       if (!containerElement) {
         console.error('❌ Container não encontrado');
         return;
       }
 
-      console.log('5. === ESTRUTURA DOM COMPLETA ===');
-      
-      // Debug: SVG container
       const svgElement = containerElement.querySelector('svg');
-      console.log('6. SVG encontrado:', !!svgElement);
-      if (svgElement) {
-        console.log('7. Classes do SVG:', svgElement.className);
-        console.log('8. Atributos do SVG:', Array.from(svgElement.attributes).map(attr => `${attr.name}="${attr.value}"`));
+      if (!svgElement) {
+        console.error('❌ SVG não encontrado');
+        return;
       }
 
-      // Debug: Todos os elementos g (grupos)
-      const allGroups = containerElement.querySelectorAll('g');
-      console.log('9. Total de grupos <g> encontrados:', allGroups.length);
-      
-      allGroups.forEach((group, index) => {
-        const groupElement = group as SVGGElement;
-        console.log(`10.${index}. Grupo:`, {
-          className: (groupElement.className as any)?.baseVal || groupElement.className,
-          dataId: groupElement.getAttribute('data-id'),
-          innerHTML: groupElement.innerHTML.substring(0, 100) + '...'
-        });
-      });
+      console.log('✅ SVG encontrado');
 
-      // Debug: Todos os elementos .r6o-shape
-      const allShapes = containerElement.querySelectorAll('.r6o-shape');
-      console.log('11. Total de elementos .r6o-shape:', allShapes.length);
-      
-      allShapes.forEach((shape, index) => {
-        const shapeElement = shape as SVGElement;
-        const parent = shapeElement.parentElement as HTMLElement | null;
-        console.log(`12.${index}. Shape:`, {
-          tagName: shapeElement.tagName,
-          className: (shapeElement as any).className?.baseVal || shapeElement.className,
-          parentDataId: parent?.getAttribute('data-id'),
-          parentClassName: (parent as any)?.className?.baseVal || parent?.className,
-          style: shapeElement.getAttribute('style')
-        });
-      });
+      // Buscar TODOS os grupos g no SVG
+      const allGroups = svgElement.querySelectorAll('g');
+      console.log('📍 Total de grupos no SVG:', allGroups.length);
 
-      // Debug: Todos os elementos com data-id
-      const elementsWithDataId = containerElement.querySelectorAll('[data-id]');
-      console.log('13. Elementos com data-id:', elementsWithDataId.length);
-      
-      elementsWithDataId.forEach((el, index) => {
-        const element = el as HTMLElement;
-        console.log(`14.${index}. Elemento data-id="${element.getAttribute('data-id')}":`, {
-          tagName: element.tagName,
-          className: (element as any).className?.baseVal || element.className,
-          hasShape: !!element.querySelector('.r6o-shape')
-        });
-      });
+      // Buscar TODOS os elementos rect, path, polygon, circle
+      const allShapes = svgElement.querySelectorAll('rect, path, polygon, circle, ellipse');
+      console.log('📍 Total de shapes no SVG:', allShapes.length);
 
-      // Debug: Tentar encontrar o elemento correto
-      console.log('15. === TENTATIVAS DE LOCALIZAÇÃO ===');
-      
-      // NOVO Método 1: Buscar no SVG overlay específico
-      const svgOverlay = containerElement.querySelector('svg.r6o-svg');
-      console.log('16. SVG Overlay encontrado:', !!svgOverlay);
-      
-      if (svgOverlay) {
-        // Buscar grupos g dentro do SVG overlay
-        const svgGroups = svgOverlay.querySelectorAll('g');
-        console.log('17. Grupos no SVG overlay:', svgGroups.length);
-        
-        svgGroups.forEach((group, index) => {
-          console.log(`18.${index}. Grupo SVG:`, {
-            dataId: group.getAttribute('data-id'),
-            className: group.getAttribute('class'),
-            innerHTML: group.innerHTML.substring(0, 50) + '...'
-          });
-        });
-        
-        // NOVO Método 2: Buscar por qualquer elemento rect/path/polygon
-        const allShapesInSvg = svgOverlay.querySelectorAll('rect, path, polygon, circle, ellipse');
-        console.log('19. Elementos shape no SVG:', allShapesInSvg.length);
-        
-        allShapesInSvg.forEach((shape, index) => {
-          const group = shape.closest('g');
-          console.log(`20.${index}. Shape no SVG:`, {
-            tagName: shape.tagName,
-            groupDataId: group?.getAttribute('data-id'),
-            groupClass: group?.getAttribute('class')
-          });
-        });
-        
-        // NOVO Método 3: Encontrar pelo índice direto no SVG
-        const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
-        console.log('21. Índice da anotação procurada:', annotationIndex);
-        
-        let targetShape = null;
-        
-        // Tentar pelo data-id no grupo
-        const targetGroup = svgOverlay.querySelector(`g[data-id="${annotationId}"]`);
-        if (targetGroup) {
-          targetShape = targetGroup.querySelector('rect, path, polygon, circle, ellipse') as HTMLElement;
-          console.log('22. ✅ Encontrado por data-id no grupo');
-        }
-        
-        // Fallback: usar índice
-        if (!targetShape && annotationIndex >= 0 && allShapesInSvg[annotationIndex]) {
-          targetShape = allShapesInSvg[annotationIndex] as HTMLElement;
-          console.log('23. ✅ Encontrado por índice no SVG');
-        }
-        
-        // Fallback 2: pegar qualquer shape do grupo correspondente
-        if (!targetShape && annotationIndex >= 0 && svgGroups[annotationIndex]) {
-          const groupShape = svgGroups[annotationIndex].querySelector('rect, path, polygon, circle, ellipse');
-          if (groupShape) {
-            targetShape = groupShape as HTMLElement;
-            console.log('24. ✅ Encontrado shape no grupo por índice');
+      let targetShape: HTMLElement | null = null;
+
+      // MÉTODO 1: Buscar por data-id exato no grupo
+      for (let i = 0; i < allGroups.length; i++) {
+        const group = allGroups[i];
+        if (group.getAttribute('data-id') === annotationId) {
+          const shape = group.querySelector('rect, path, polygon, circle, ellipse') as HTMLElement;
+          if (shape) {
+            targetShape = shape;
+            console.log('✅ MÉTODO 1: Encontrado por data-id:', annotationId);
+            break;
           }
         }
-        
-        if (targetShape) {
-          console.log('25. ✅ Elemento shape encontrado! Aplicando destaque...');
-          
-          // Limpar destaques anteriores
-          document.querySelectorAll('.pulse-highlight').forEach(el => {
-            el.classList.remove('pulse-highlight');
-          });
-          
-          // Aplicar destaque
-          targetShape.classList.add('pulse-highlight');
-          
-          // Backup: alterar estilo diretamente
-          const originalStroke = targetShape.style.stroke;
-          const originalStrokeWidth = targetShape.style.strokeWidth;
-          const originalFill = targetShape.style.fill;
-          
-          targetShape.style.stroke = '#FFD700';
-          targetShape.style.strokeWidth = '5px';
-          targetShape.style.fill = 'rgba(255, 215, 0, 0.3)';
-          targetShape.style.filter = 'drop-shadow(0 0 10px #FFD700)';
-          
-          // Adicionar animação via atributo também
-          targetShape.setAttribute('data-highlighted', 'true');
-          
-          console.log('26. ✅ Destaque aplicado com sucesso!');
-          
-          // Remover após 3 segundos
-          setTimeout(() => {
-            targetShape.classList.remove('pulse-highlight');
-            targetShape.style.stroke = originalStroke;
-            targetShape.style.strokeWidth = originalStrokeWidth;
-            targetShape.style.fill = originalFill;
-            targetShape.style.filter = '';
-            targetShape.removeAttribute('data-highlighted');
-            console.log('27. ✅ Destaque removido');
-          }, 3000);
-          
-        } else {
-          console.error('❌ Nenhum método conseguiu encontrar o elemento shape no SVG');
+      }
+
+      // MÉTODO 2: Se não encontrou, usar índice direto
+      if (!targetShape && annotationIndex >= 0 && annotationIndex < allShapes.length) {
+        targetShape = allShapes[annotationIndex] as HTMLElement;
+        console.log('✅ MÉTODO 2: Encontrado por índice:', annotationIndex);
+      }
+
+      // MÉTODO 3: Se ainda não encontrou, usar índice no grupo
+      if (!targetShape && annotationIndex >= 0 && annotationIndex < allGroups.length) {
+        const group = allGroups[annotationIndex];
+        const shape = group.querySelector('rect, path, polygon, circle, ellipse') as HTMLElement;
+        if (shape) {
+          targetShape = shape;
+          console.log('✅ MÉTODO 3: Encontrado shape no grupo por índice:', annotationIndex);
         }
+      }
+
+      if (targetShape) {
+        console.log('🎯 ELEMENTO ENCONTRADO! Aplicando destaque...');
+
+        // Limpar destaques anteriores
+        document.querySelectorAll('[data-highlighted="true"]').forEach(el => {
+          const element = el as HTMLElement;
+          element.style.stroke = '';
+          element.style.strokeWidth = '';
+          element.style.fill = '';
+          element.style.filter = '';
+          element.removeAttribute('data-highlighted');
+        });
+
+        // Aplicar destaque DUPLO
+        targetShape.setAttribute('data-highlighted', 'true');
         
+        // Estilo direto
+        targetShape.style.stroke = '#FFD700 !important';
+        targetShape.style.strokeWidth = '6px !important';
+        targetShape.style.fill = 'rgba(255, 215, 0, 0.4) !important';
+        targetShape.style.filter = 'drop-shadow(0 0 15px #FFD700) !important';
+        
+        // CSS Class também
+        targetShape.classList.add('pulse-highlight');
+
+        console.log('✅ DESTAQUE APLICADO COM SUCESSO!');
+
+        // Scroll para o retângulo
+        targetShape.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'center'
+        });
+
+        // Remover destaque após 4 segundos
+        setTimeout(() => {
+          targetShape!.style.stroke = '';
+          targetShape!.style.strokeWidth = '';
+          targetShape!.style.fill = '';
+          targetShape!.style.filter = '';
+          targetShape!.classList.remove('pulse-highlight');
+          targetShape!.removeAttribute('data-highlighted');
+          console.log('✅ DESTAQUE REMOVIDO');
+        }, 4000);
+
       } else {
-        console.error('❌ SVG overlay não encontrado');
-        
-        // Debug final: tentar buscar qualquer SVG
-        const anySvg = containerElement.querySelector('svg');
-        console.log('28. Qualquer SVG encontrado:', !!anySvg);
-        if (anySvg) {
-          console.log('29. Classes do SVG:', anySvg.getAttribute('class'));
-          console.log('30. Conteúdo do SVG:', anySvg.innerHTML.substring(0, 200) + '...');
-        }
-        
-        // Debug final: dump completo do HTML
-        console.log('31. === HTML COMPLETO DO CONTAINER ===');
-        console.log(containerElement.innerHTML);
+        console.error('❌ FALHA TOTAL - Elemento não encontrado por nenhum método');
+        console.log('Debug - Total grupos:', allGroups.length);
+        console.log('Debug - Total shapes:', allShapes.length);
+        console.log('Debug - Índice procurado:', annotationIndex);
       }
 
     } catch (error) {
-      console.error('❌ Erro durante debugging:', error);
+      console.error('❌ ERRO CRÍTICO:', error);
     }
-    
-    console.log('=== FIM DO DEBUGGING ===');
   };
 
   // Função para carregar dimensões da imagem
