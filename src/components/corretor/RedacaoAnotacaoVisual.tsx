@@ -221,107 +221,103 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         return;
       }
 
-      // Buscar o elemento SVG da anotação com múltiplos seletores
-      const possibleSelectors = [
-        `[data-annotation-id="${annotationId}"]`,
-        `[data-id="${annotationId}"] .r6o-shape`,
-        `.r6o-annotation[data-id="${annotationId}"] .r6o-shape`,
-        `g[data-id="${annotationId}"] .r6o-shape`,
-        `.r6o-shape[data-annotation-id="${annotationId}"]`
-      ];
-
-      let annotationElement = null;
-      for (const selector of possibleSelectors) {
-        annotationElement = document.querySelector(selector);
-        if (annotationElement) {
-          console.log('Elemento encontrado com seletor:', selector);
-          break;
-        }
-      }
-
-      // Se não encontrou pelo seletor específico, tentar buscar por todos os elementos .r6o-shape
-      if (!annotationElement) {
-        console.log('Tentando buscar entre todos os elementos .r6o-shape...');
-        const allShapes = document.querySelectorAll('.r6o-shape');
-        console.log('Total de shapes encontrados:', allShapes.length);
+      // Scroll para o retângulo primeiro usando as coordenadas da anotação
+      if (imageRef.current && targetAnnotation.target?.selector?.value) {
+        const selectorValue = targetAnnotation.target.selector.value;
+        const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
         
-        // Para debug, listar todos os elementos encontrados
-        allShapes.forEach((shape, index) => {
-          console.log(`Shape ${index}:`, shape.parentElement?.getAttribute('data-id'), shape.getAttribute('data-annotation-id'));
-        });
-
-        // Tentar encontrar pelo índice da anotação (fallback)
-        const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
-        if (annotationIndex >= 0 && allShapes[annotationIndex]) {
-          annotationElement = allShapes[annotationIndex];
-          console.log('Elemento encontrado pelo índice:', annotationIndex);
-        }
-      }
-      
-      if (annotationElement) {
-        console.log('retangulo_ok:' + annotationId);
-        
-        // Remover destaque anterior se existir (reiniciar animação)
-        annotationElement.classList.remove('pulse-highlight');
-        
-        // Forçar reflow para garantir que a classe foi removida
-        annotationElement.offsetHeight;
-        
-        // Adicionar classe de destaque com data-annotation-id para identificação
-        annotationElement.setAttribute('data-annotation-id', annotationId);
-        annotationElement.classList.add('pulse-highlight');
-        
-        console.log('pulse_start:' + annotationId);
-        
-        // Remover destaque após 2 segundos
-        setTimeout(() => {
-          annotationElement.classList.remove('pulse-highlight');
-          console.log('pulse_end:' + annotationId);
-        }, 2000);
-
-        // Scroll suave para o retângulo
-        const imageElement = imageRef.current;
-        const containerElement = containerRef.current;
-        
-        if (imageElement && containerElement && targetAnnotation.target?.selector?.value) {
-          // Parse da posição do retângulo
-          const selectorValue = targetAnnotation.target.selector.value;
-          const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+        if (match) {
+          const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
+          const imageRect = imageRef.current.getBoundingClientRect();
           
-          if (match) {
-            const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
-            
-            // Calcular posição absoluta na imagem
-            const imageRect = imageElement.getBoundingClientRect();
-            const targetX = imageRect.left + (xPercent / 100) * imageRect.width;
-            const targetY = imageRect.top + (yPercent / 100) * imageRect.height;
-            
-            // Calcular posição do centro do retângulo
-            const centerX = targetX + ((wPercent / 100) * imageRect.width) / 2;
-            const centerY = targetY + ((hPercent / 100) * imageRect.height) / 2;
-            
-            // Scroll suave para centralizar o retângulo na viewport
-            const viewportCenterX = window.innerWidth / 2;
-            const viewportCenterY = window.innerHeight / 2;
-            
-            const scrollX = window.scrollX + (centerX - viewportCenterX);
-            const scrollY = window.scrollY + (centerY - viewportCenterY);
-            
-            window.scrollTo({
-              left: Math.max(0, scrollX),
-              top: Math.max(0, scrollY),
-              behavior: 'smooth'
-            });
+          // Calcular posição do centro do retângulo
+          const centerX = imageRect.left + (xPercent / 100) * imageRect.width + ((wPercent / 100) * imageRect.width) / 2;
+          const centerY = imageRect.top + (yPercent / 100) * imageRect.height + ((hPercent / 100) * imageRect.height) / 2;
+          
+          // Scroll suave para centralizar
+          const viewportCenterX = window.innerWidth / 2;
+          const viewportCenterY = window.innerHeight / 2;
+          
+          window.scrollTo({
+            left: Math.max(0, window.scrollX + (centerX - viewportCenterX)),
+            top: Math.max(0, window.scrollY + (centerY - viewportCenterY)),
+            behavior: 'smooth'
+          });
+        }
+      }
+
+      // Aguardar um pouco para o scroll completar e depois aplicar o destaque
+      setTimeout(() => {
+        // Buscar o elemento SVG da anotação 
+        const svgContainer = containerRef.current?.querySelector('svg');
+        if (!svgContainer) {
+          console.error('SVG container não encontrado');
+          return;
+        }
+
+        // Buscar todos os elementos de annotation no SVG
+        const allAnnotationGroups = svgContainer.querySelectorAll('g[data-id]');
+        let targetGroup = null;
+
+        // Primeiro, tentar encontrar pelo data-id
+        for (const group of allAnnotationGroups) {
+          if (group.getAttribute('data-id') === annotationId) {
+            targetGroup = group;
+            break;
           }
         }
 
-      } else {
-        console.error('retangulo_nao_encontrado:' + annotationId, 'Elemento SVG não encontrado no DOM');
-        
-        // Debug adicional
-        console.log('Debug - Anotações disponíveis:', annotations.map((ann: any) => ann.id));
-        console.log('Debug - Total de elementos .r6o-shape:', document.querySelectorAll('.r6o-shape').length);
-      }
+        // Se não encontrou, usar o índice da anotação como fallback
+        if (!targetGroup && allAnnotationGroups.length > 0) {
+          const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
+          if (annotationIndex >= 0 && annotationIndex < allAnnotationGroups.length) {
+            targetGroup = allAnnotationGroups[annotationIndex];
+            console.log('Usando fallback por índice:', annotationIndex);
+          }
+        }
+
+        if (targetGroup) {
+          const shapeElement = targetGroup.querySelector('.r6o-shape');
+          if (shapeElement) {
+            console.log('retangulo_ok:' + annotationId);
+            
+            // Remover destaque anterior
+            document.querySelectorAll('.pulse-highlight').forEach(el => {
+              el.classList.remove('pulse-highlight');
+            });
+            
+            // Aplicar destaque visual
+            shapeElement.classList.add('pulse-highlight');
+            
+            // Aplicar destaque com mudança direta de estilo também
+            const originalStroke = shapeElement.style.stroke;
+            const originalStrokeWidth = shapeElement.style.strokeWidth;
+            
+            // Aplicar efeito imediato
+            shapeElement.style.stroke = 'hsl(48, 100%, 50%)';
+            shapeElement.style.strokeWidth = '4px';
+            shapeElement.style.filter = 'drop-shadow(0 0 8px hsl(48 100% 50% / 0.8))';
+            
+            console.log('pulse_start:' + annotationId);
+            
+            // Remover destaque após 2 segundos
+            setTimeout(() => {
+              shapeElement.classList.remove('pulse-highlight');
+              shapeElement.style.stroke = originalStroke;
+              shapeElement.style.strokeWidth = originalStrokeWidth;
+              shapeElement.style.filter = '';
+              console.log('pulse_end:' + annotationId);
+            }, 2000);
+          } else {
+            console.error('Elemento .r6o-shape não encontrado no grupo');
+          }
+        } else {
+          console.error('retangulo_nao_encontrado:' + annotationId, 'Grupo da anotação não encontrado');
+          console.log('Debug - Total de grupos:', allAnnotationGroups.length);
+          console.log('Debug - IDs disponíveis:', Array.from(allAnnotationGroups).map(g => g.getAttribute('data-id')));
+        }
+      }, 300); // Aguardar 300ms para o scroll
+
     } catch (error) {
       console.error('retangulo_nao_encontrado:' + annotationId, 'Erro ao destacar retângulo:', error);
     }
