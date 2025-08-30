@@ -202,125 +202,150 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     destacarRetangulo
   }));
 
-  // Função para destacar retângulo específico
+  // Função para destacar retângulo específico com debugging extensivo
   const destacarRetangulo = (annotationId: string) => {
-    console.log('olho_click:' + annotationId);
+    console.log('=== DEBUGGING OLHO CLICK ===');
+    console.log('1. ID da anotação clicada:', annotationId);
     
     try {
       if (!annotoriousRef.current) {
-        console.error('retangulo_nao_encontrado:' + annotationId, 'Annotorious não inicializado');
+        console.error('❌ Annotorious não inicializado');
         return;
       }
 
-      // Encontrar a anotação correspondente
+      // Debug: Listar todas as anotações disponíveis
       const annotations = annotoriousRef.current.getAnnotations();
-      const targetAnnotation = annotations.find((ann: any) => ann.id === annotationId);
+      console.log('2. Total de anotações no Annotorious:', annotations.length);
+      console.log('3. IDs de todas as anotações:', annotations.map((ann: any) => ann.id));
       
+      const targetAnnotation = annotations.find((ann: any) => ann.id === annotationId);
       if (!targetAnnotation) {
-        console.error('retangulo_nao_encontrado:' + annotationId, 'Anotação não encontrada');
+        console.error('❌ Anotação não encontrada no Annotorious');
+        return;
+      }
+      console.log('4. ✅ Anotação encontrada:', targetAnnotation);
+
+      // Debug: Inspecionar toda a estrutura DOM do container
+      const containerElement = containerRef.current;
+      if (!containerElement) {
+        console.error('❌ Container não encontrado');
         return;
       }
 
-      // Scroll para o retângulo primeiro usando as coordenadas da anotação
-      if (imageRef.current && targetAnnotation.target?.selector?.value) {
-        const selectorValue = targetAnnotation.target.selector.value;
-        const match = selectorValue.match(/xywh=percent:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
-        
-        if (match) {
-          const [, xPercent, yPercent, wPercent, hPercent] = match.map(parseFloat);
-          const imageRect = imageRef.current.getBoundingClientRect();
-          
-          // Calcular posição do centro do retângulo
-          const centerX = imageRect.left + (xPercent / 100) * imageRect.width + ((wPercent / 100) * imageRect.width) / 2;
-          const centerY = imageRect.top + (yPercent / 100) * imageRect.height + ((hPercent / 100) * imageRect.height) / 2;
-          
-          // Scroll suave para centralizar
-          const viewportCenterX = window.innerWidth / 2;
-          const viewportCenterY = window.innerHeight / 2;
-          
-          window.scrollTo({
-            left: Math.max(0, window.scrollX + (centerX - viewportCenterX)),
-            top: Math.max(0, window.scrollY + (centerY - viewportCenterY)),
-            behavior: 'smooth'
-          });
-        }
+      console.log('5. === ESTRUTURA DOM COMPLETA ===');
+      
+      // Debug: SVG container
+      const svgElement = containerElement.querySelector('svg');
+      console.log('6. SVG encontrado:', !!svgElement);
+      if (svgElement) {
+        console.log('7. Classes do SVG:', svgElement.className);
+        console.log('8. Atributos do SVG:', Array.from(svgElement.attributes).map(attr => `${attr.name}="${attr.value}"`));
       }
 
-      // Aguardar um pouco para o scroll completar e depois aplicar o destaque
-      setTimeout(() => {
-        // Buscar o elemento SVG da anotação 
-        const svgContainer = containerRef.current?.querySelector('svg');
-        if (!svgContainer) {
-          console.error('SVG container não encontrado');
-          return;
-        }
+      // Debug: Todos os elementos g (grupos)
+      const allGroups = containerElement.querySelectorAll('g');
+      console.log('9. Total de grupos <g> encontrados:', allGroups.length);
+      
+      allGroups.forEach((group, index) => {
+        const groupElement = group as SVGGElement;
+        console.log(`10.${index}. Grupo:`, {
+          className: (groupElement.className as any)?.baseVal || groupElement.className,
+          dataId: groupElement.getAttribute('data-id'),
+          innerHTML: groupElement.innerHTML.substring(0, 100) + '...'
+        });
+      });
 
-        // Buscar todos os elementos de annotation no SVG
-        const allAnnotationGroups = svgContainer.querySelectorAll('g[data-id]');
-        let targetGroup = null;
+      // Debug: Todos os elementos .r6o-shape
+      const allShapes = containerElement.querySelectorAll('.r6o-shape');
+      console.log('11. Total de elementos .r6o-shape:', allShapes.length);
+      
+      allShapes.forEach((shape, index) => {
+        const shapeElement = shape as SVGElement;
+        const parent = shapeElement.parentElement as HTMLElement | null;
+        console.log(`12.${index}. Shape:`, {
+          tagName: shapeElement.tagName,
+          className: (shapeElement as any).className?.baseVal || shapeElement.className,
+          parentDataId: parent?.getAttribute('data-id'),
+          parentClassName: (parent as any)?.className?.baseVal || parent?.className,
+          style: shapeElement.getAttribute('style')
+        });
+      });
 
-        // Primeiro, tentar encontrar pelo data-id
-        for (const group of allAnnotationGroups) {
-          if (group.getAttribute('data-id') === annotationId) {
-            targetGroup = group;
-            break;
-          }
-        }
+      // Debug: Todos os elementos com data-id
+      const elementsWithDataId = containerElement.querySelectorAll('[data-id]');
+      console.log('13. Elementos com data-id:', elementsWithDataId.length);
+      
+      elementsWithDataId.forEach((el, index) => {
+        const element = el as HTMLElement;
+        console.log(`14.${index}. Elemento data-id="${element.getAttribute('data-id')}":`, {
+          tagName: element.tagName,
+          className: (element as any).className?.baseVal || element.className,
+          hasShape: !!element.querySelector('.r6o-shape')
+        });
+      });
 
-        // Se não encontrou, usar o índice da anotação como fallback
-        if (!targetGroup && allAnnotationGroups.length > 0) {
-          const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
-          if (annotationIndex >= 0 && annotationIndex < allAnnotationGroups.length) {
-            targetGroup = allAnnotationGroups[annotationIndex];
-            console.log('Usando fallback por índice:', annotationIndex);
-          }
-        }
+      // Debug: Tentar encontrar o elemento correto
+      console.log('15. === TENTATIVAS DE LOCALIZAÇÃO ===');
+      
+      // Método 1: Por data-id exato
+      const method1 = containerElement.querySelector(`[data-id="${annotationId}"]`);
+      console.log('16. Método 1 - Por data-id exato:', !!method1, method1?.tagName);
+      
+      // Método 2: Por data-id + shape
+      const method2 = containerElement.querySelector(`[data-id="${annotationId}"] .r6o-shape`) as HTMLElement;
+      console.log('17. Método 2 - Por data-id + .r6o-shape:', !!method2, method2?.tagName);
+      
+      // Método 3: Por índice
+      const annotationIndex = annotations.findIndex((ann: any) => ann.id === annotationId);
+      const method3 = allShapes[annotationIndex] as HTMLElement;
+      console.log('18. Método 3 - Por índice:', annotationIndex, !!method3, method3?.tagName);
 
-        if (targetGroup) {
-          const shapeElement = targetGroup.querySelector('.r6o-shape');
-          if (shapeElement) {
-            console.log('retangulo_ok:' + annotationId);
-            
-            // Remover destaque anterior
-            document.querySelectorAll('.pulse-highlight').forEach(el => {
-              el.classList.remove('pulse-highlight');
-            });
-            
-            // Aplicar destaque visual
-            shapeElement.classList.add('pulse-highlight');
-            
-            // Aplicar destaque com mudança direta de estilo também
-            const originalStroke = shapeElement.style.stroke;
-            const originalStrokeWidth = shapeElement.style.strokeWidth;
-            
-            // Aplicar efeito imediato
-            shapeElement.style.stroke = 'hsl(48, 100%, 50%)';
-            shapeElement.style.strokeWidth = '4px';
-            shapeElement.style.filter = 'drop-shadow(0 0 8px hsl(48 100% 50% / 0.8))';
-            
-            console.log('pulse_start:' + annotationId);
-            
-            // Remover destaque após 2 segundos
-            setTimeout(() => {
-              shapeElement.classList.remove('pulse-highlight');
-              shapeElement.style.stroke = originalStroke;
-              shapeElement.style.strokeWidth = originalStrokeWidth;
-              shapeElement.style.filter = '';
-              console.log('pulse_end:' + annotationId);
-            }, 2000);
-          } else {
-            console.error('Elemento .r6o-shape não encontrado no grupo');
-          }
-        } else {
-          console.error('retangulo_nao_encontrado:' + annotationId, 'Grupo da anotação não encontrado');
-          console.log('Debug - Total de grupos:', allAnnotationGroups.length);
-          console.log('Debug - IDs disponíveis:', Array.from(allAnnotationGroups).map(g => g.getAttribute('data-id')));
-        }
-      }, 300); // Aguardar 300ms para o scroll
+      // Tentar aplicar destaque
+      let targetShape = method2 || method3;
+      
+      if (targetShape) {
+        console.log('19. ✅ Elemento shape encontrado! Aplicando destaque...');
+        
+        // Limpar destaques anteriores
+        document.querySelectorAll('.pulse-highlight').forEach(el => {
+          el.classList.remove('pulse-highlight');
+        });
+        
+        // Aplicar destaque
+        targetShape.classList.add('pulse-highlight');
+        
+        // Backup: alterar estilo diretamente
+        const originalStroke = targetShape.style.stroke;
+        const originalStrokeWidth = targetShape.style.strokeWidth;
+        
+        targetShape.style.stroke = '#FFD700';
+        targetShape.style.strokeWidth = '5px';
+        targetShape.style.filter = 'drop-shadow(0 0 10px #FFD700)';
+        
+        console.log('20. ✅ Destaque aplicado com sucesso!');
+        
+        // Remover após 3 segundos
+        setTimeout(() => {
+          targetShape.classList.remove('pulse-highlight');
+          targetShape.style.stroke = originalStroke;
+          targetShape.style.strokeWidth = originalStrokeWidth;
+          targetShape.style.filter = '';
+          console.log('21. ✅ Destaque removido');
+        }, 3000);
+        
+      } else {
+        console.error('❌ Nenhum método conseguiu encontrar o elemento shape');
+        
+        // Debug final: dump completo do HTML
+        console.log('22. === HTML COMPLETO DO CONTAINER ===');
+        console.log(containerElement.innerHTML);
+      }
 
     } catch (error) {
-      console.error('retangulo_nao_encontrado:' + annotationId, 'Erro ao destacar retângulo:', error);
+      console.error('❌ Erro durante debugging:', error);
     }
+    
+    console.log('=== FIM DO DEBUGGING ===');
   };
 
   // Função para carregar dimensões da imagem
