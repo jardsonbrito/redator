@@ -1117,25 +1117,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                     <Badge variant="outline" style={{ color: anotacao.cor_marcacao, borderColor: anotacao.cor_marcacao }}>
                       {CORES_COMPETENCIAS[anotacao.competencia as keyof typeof CORES_COMPETENCIAS]?.label}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      data-annotation-id={anotacao.id}
-                      onClick={() => { destacarRetangulo(anotacao.id!); destacarComentario(anotacao.id!); }}
-                      className="h-6 w-6 p-0 text-gray-500 hover:text-primary hover:bg-gray-100 transition-colors"
-                      title="Mostrar marcação"
-                      aria-label="Mostrar marcação deste comentário"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          destacarRetangulo(anotacao.id!);
-                          destacarComentario(anotacao.id!);
-                        }
-                      }}
-                    >
-                      <Eye className="w-3 h-3" />
-                    </Button>
                     {!readonly && (
                       <Button
                         size="sm"
