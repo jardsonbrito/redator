@@ -7,7 +7,8 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { AppSettingsForm } from './AppSettingsForm';
-import { Mail, Key, User, Clock, AlertTriangle, Settings } from 'lucide-react';
+import { CreditManagement } from './CreditManagement';
+import { Mail, Key, User, Clock, AlertTriangle, Settings, CreditCard } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AdminUser {
@@ -124,7 +125,7 @@ export const AdminConfigForm = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="account" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="account" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Conta
@@ -132,6 +133,10 @@ export const AdminConfigForm = () => {
           <TabsTrigger value="submissions" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Envios
+          </TabsTrigger>
+          <TabsTrigger value="credits" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Créditos
           </TabsTrigger>
         </TabsList>
 
@@ -308,6 +313,10 @@ export const AdminConfigForm = () => {
 
         <TabsContent value="submissions">
           <AppSettingsForm />
+        </TabsContent>
+
+        <TabsContent value="credits">
+          <CreditManagement />
         </TabsContent>
       </Tabs>
     </div>
