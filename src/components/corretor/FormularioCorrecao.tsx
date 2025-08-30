@@ -411,52 +411,55 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         <CardHeader>
           <CardTitle>Vista Pedagógica</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Todas as 5 competências em uma linha */}
-          <div className="grid grid-cols-5 gap-4">
-            {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
-              <div key={competencia} className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full shrink-0 ${
-                  competencia === 'c1' ? 'bg-red-500' :
-                  competencia === 'c2' ? 'bg-green-500' :
-                  competencia === 'c3' ? 'bg-blue-500' :
-                  competencia === 'c4' ? 'bg-orange-500' : 'bg-purple-500'
-                }`} />
-                <span className="text-sm font-medium">C{index + 1}</span>
-                <Select
-                  value={notas[competencia].toString()}
-                  onValueChange={(value) => 
-                    setNotas(prev => ({
-                      ...prev,
-                      [competencia]: parseInt(value)
-                    }))
-                  }
-                >
-                  <SelectTrigger className="h-10 w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {opcoesNota.map(nota => (
-                      <SelectItem key={nota} value={nota.toString()}>
-                        {nota}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
-          </div>
-
-          {/* Segunda linha: Gravar áudio e Nota */}
-          <div className="flex items-center justify-between">
-            <Button variant="outline" className="flex items-center gap-2" disabled>
-              <div className="w-4 h-4 rounded-full bg-purple-500" />
-              Gravar áudio
-            </Button>
+        <CardContent className="space-y-2 p-3">
+          {/* Todas as competências, botão gravar áudio e nota em uma única linha */}
+          <div className="flex items-center gap-2 justify-between">
+            {/* Competências C1-C5 compactas */}
+            <div className="flex items-center gap-1">
+              {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
+                <div key={competencia} className="flex items-center gap-1">
+                  <div className={`w-3 h-3 rounded-full shrink-0 ${
+                    competencia === 'c1' ? 'bg-red-500' :
+                    competencia === 'c2' ? 'bg-green-500' :
+                    competencia === 'c3' ? 'bg-blue-500' :
+                    competencia === 'c4' ? 'bg-orange-500' : 'bg-purple-500'
+                  }`} />
+                  <span className="text-xs font-medium">C{index + 1}</span>
+                  <Select
+                    value={notas[competencia].toString()}
+                    onValueChange={(value) => 
+                      setNotas(prev => ({
+                        ...prev,
+                        [competencia]: parseInt(value)
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-8 w-16 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      {opcoesNota.map(nota => (
+                        <SelectItem key={nota} value={nota.toString()}>
+                          {nota}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
             
-            <div className="bg-muted rounded-lg p-3 text-center min-w-[80px]">
-              <div className="text-xl font-bold">{calcularNotaTotal()}</div>
-              <div className="text-xs text-muted-foreground">Nota</div>
+            {/* Botão gravar áudio e nota */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" className="flex items-center gap-2 text-xs" disabled>
+                <div className="w-3 h-3 rounded-full bg-purple-500" />
+                Gravar áudio
+              </Button>
+              
+              <div className="bg-muted rounded-lg p-2 text-center min-w-[60px]">
+                <div className="text-lg font-bold">{calcularNotaTotal()}</div>
+                <div className="text-xs text-muted-foreground">Nota</div>
+              </div>
             </div>
           </div>
         </CardContent>

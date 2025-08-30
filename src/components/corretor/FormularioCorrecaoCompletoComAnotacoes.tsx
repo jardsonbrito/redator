@@ -475,51 +475,54 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         <CardHeader>
           <CardTitle>Vista Pedagógica</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Todas as 5 competências em uma linha */}
-          <div className="grid grid-cols-5 gap-4">
-            {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
-              <div key={competencia} className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full shrink-0 ${
-                  competencia === 'c1' ? 'bg-red-500' :
-                  competencia === 'c2' ? 'bg-green-500' :
-                  competencia === 'c3' ? 'bg-blue-500' :
-                  competencia === 'c4' ? 'bg-orange-500' : 'bg-purple-500'
-                }`} />
-                <span className="text-sm font-medium">C{index + 1}</span>
-                <Select
-                  value={notas[competencia].toString()}
-                  onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
-                >
-                  <SelectTrigger className="h-10 w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {opcoesNota.map(nota => (
-                      <SelectItem key={nota} value={nota.toString()}>
-                        {nota}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
-          </div>
-
-          {/* Segunda linha: Gravar áudio e Nota */}
-          <div className="flex items-center justify-between">
-            <AudioRecorder
-              redacaoId={redacao.id}
-              tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
-                     redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
-              onAudioSaved={(url) => setAudioUrl(url)}
-              existingAudioUrl={audioUrl}
-              ehCorretor1={redacao.eh_corretor_1}
-            />
+        <CardContent className="space-y-2 p-3">
+          {/* Todas as competências, botão gravar áudio e nota em uma única linha */}
+          <div className="flex items-center gap-2 justify-between">
+            {/* Competências C1-C5 compactas */}
+            <div className="flex items-center gap-1">
+              {(['c1', 'c2', 'c3', 'c4', 'c5'] as const).map((competencia, index) => (
+                <div key={competencia} className="flex items-center gap-1">
+                  <div className={`w-3 h-3 rounded-full shrink-0 ${
+                    competencia === 'c1' ? 'bg-red-500' :
+                    competencia === 'c2' ? 'bg-green-500' :
+                    competencia === 'c3' ? 'bg-blue-500' :
+                    competencia === 'c4' ? 'bg-orange-500' : 'bg-purple-500'
+                  }`} />
+                  <span className="text-xs font-medium">C{index + 1}</span>
+                  <Select
+                    value={notas[competencia].toString()}
+                    onValueChange={(value) => atualizarNota(competencia, parseInt(value))}
+                  >
+                    <SelectTrigger className="h-8 w-16 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-50">
+                      {opcoesNota.map(nota => (
+                        <SelectItem key={nota} value={nota.toString()}>
+                          {nota}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
             
-            <div className="bg-muted rounded-lg p-3 text-center min-w-[80px]">
-              <div className="text-xl font-bold">{notas.total}</div>
-              <div className="text-xs text-muted-foreground">Nota</div>
+            {/* Botão gravar áudio e nota */}
+            <div className="flex items-center gap-2">
+              <AudioRecorder
+                redacaoId={redacao.id}
+                tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
+                       redacao.tipo_redacao === 'simulado' ? 'redacoes_simulado' : 'redacoes_exercicio'}
+                onAudioSaved={(url) => setAudioUrl(url)}
+                existingAudioUrl={audioUrl}
+                ehCorretor1={redacao.eh_corretor_1}
+              />
+              
+              <div className="bg-muted rounded-lg p-2 text-center min-w-[60px]">
+                <div className="text-lg font-bold">{notas.total}</div>
+                <div className="text-xs text-muted-foreground">Nota</div>
+              </div>
             </div>
           </div>
         </CardContent>
