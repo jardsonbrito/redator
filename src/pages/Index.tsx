@@ -1,6 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -132,6 +132,13 @@ const Index = () => {
       path: "/minhas-conquistas",
       icon: Trophy,
       tooltip: "Acompanhe suas atividades por mês.",
+      showAlways: true
+    },
+    {
+      title: "Gamificação",
+      path: "/gamificacao",
+      icon: Gamepad2,
+      tooltip: "Participe de jogos educativos para treinar redação.",
       showAlways: true
     }
   ];

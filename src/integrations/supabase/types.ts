@@ -604,6 +604,101 @@ export type Database = {
           },
         ]
       }
+      email_change_audit: {
+        Row: {
+          affected_tables_count: number
+          changed_at: string | null
+          id: string
+          ip_address: unknown | null
+          new_email: string
+          old_email: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          affected_tables_count?: number
+          changed_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          new_email: string
+          old_email: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          affected_tables_count?: number
+          changed_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          new_email?: string
+          old_email?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_email_change_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_logs: {
+        Row: {
+          corretor_nome: string | null
+          created_at: string | null
+          delivery_status: Json | null
+          email_id: string | null
+          email_type: string
+          id: string
+          nota: number | null
+          recipient_email: string
+          redacao_id: string | null
+          sent_at: string | null
+          status: string
+          student_name: string
+          tema_titulo: string | null
+          tipo_envio: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          corretor_nome?: string | null
+          created_at?: string | null
+          delivery_status?: Json | null
+          email_id?: string | null
+          email_type: string
+          id?: string
+          nota?: number | null
+          recipient_email: string
+          redacao_id?: string | null
+          sent_at?: string | null
+          status?: string
+          student_name: string
+          tema_titulo?: string | null
+          tipo_envio?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          corretor_nome?: string | null
+          created_at?: string | null
+          delivery_status?: Json | null
+          email_id?: string | null
+          email_type?: string
+          id?: string
+          nota?: number | null
+          recipient_email?: string
+          redacao_id?: string | null
+          sent_at?: string | null
+          status?: string
+          student_name?: string
+          tema_titulo?: string | null
+          tipo_envio?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       exercicios: {
         Row: {
           abrir_aba_externa: boolean | null
@@ -674,6 +769,161 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      game_levels: {
+        Row: {
+          created_at: string
+          game_id: string
+          id: string
+          level_index: number
+          payload: Json
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          id?: string
+          level_index: number
+          payload: Json
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          id?: string
+          level_index?: number
+          payload?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_levels_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_plays: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          game_id: string
+          id: string
+          level_id: string
+          result: Json | null
+          score_points: number | null
+          started_at: string
+          student_class: string | null
+          student_email: string
+          student_name: string
+          time_spent_seconds: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          game_id: string
+          id?: string
+          level_id: string
+          result?: Json | null
+          score_points?: number | null
+          started_at?: string
+          student_class?: string | null
+          student_email: string
+          student_name: string
+          time_spent_seconds?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          game_id?: string
+          id?: string
+          level_id?: string
+          result?: Json | null
+          score_points?: number | null
+          started_at?: string
+          student_class?: string | null
+          student_email?: string
+          student_name?: string
+          time_spent_seconds?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_plays_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_plays_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "game_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          allow_visitor: boolean
+          competencies: number[]
+          created_at: string
+          created_by: string
+          difficulty: number
+          end_at: string | null
+          id: string
+          start_at: string | null
+          status: string
+          tags: string[]
+          template: string
+          title: string
+          turmas_autorizadas: string[]
+          updated_at: string
+        }
+        Insert: {
+          allow_visitor?: boolean
+          competencies?: number[]
+          created_at?: string
+          created_by: string
+          difficulty?: number
+          end_at?: string | null
+          id?: string
+          start_at?: string | null
+          status?: string
+          tags?: string[]
+          template: string
+          title: string
+          turmas_autorizadas?: string[]
+          updated_at?: string
+        }
+        Update: {
+          allow_visitor?: boolean
+          competencies?: number[]
+          created_at?: string
+          created_by?: string
+          difficulty?: number
+          end_at?: string | null
+          id?: string
+          start_at?: string | null
+          status?: string
+          tags?: string[]
+          template?: string
+          title?: string
+          turmas_autorizadas?: string[]
+          updated_at?: string
+        }
+        Relationships: []
       }
       importacao_csv: {
         Row: {
@@ -758,6 +1008,7 @@ export type Database = {
         Row: {
           ativo: boolean
           capa_url: string | null
+          corretor_id: string | null
           created_at: string
           created_by: string
           enunciado: string
@@ -773,6 +1024,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           capa_url?: string | null
+          corretor_id?: string | null
           created_at?: string
           created_by: string
           enunciado: string
@@ -788,6 +1040,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           capa_url?: string | null
+          corretor_id?: string | null
           created_at?: string
           created_by?: string
           enunciado?: string
@@ -800,7 +1053,15 @@ export type Database = {
           turmas?: string[]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lousa_corretor_id_fkey"
+            columns: ["corretor_id"]
+            isOneToOne: false
+            referencedRelation: "corretores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lousa_resposta: {
         Row: {
@@ -2523,6 +2784,10 @@ export type Database = {
         Args: { student_email: string }
         Returns: Json
       }
+      bytea_to_text: {
+        Args: { data: string }
+        Returns: string
+      }
       calcular_tempo_presenca: {
         Args: { p_aula_id: string; p_email_aluno: string }
         Returns: number
@@ -2534,6 +2799,16 @@ export type Database = {
       check_and_publish_expired_simulados: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      check_email_usage_history: {
+        Args: { email_to_check: string }
+        Returns: {
+          current_user_email: string
+          current_user_id: string
+          current_user_name: string
+          previous_users: Json
+          was_used_before: boolean
+        }[]
       }
       check_student_exists: {
         Args: { p_email: string }
@@ -2594,6 +2869,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      create_corretor_lousa: {
+        Args: {
+          corretor_email: string
+          lousa_ativo?: boolean
+          lousa_capa_url?: string
+          lousa_enunciado: string
+          lousa_fim_em?: string
+          lousa_inicio_em?: string
+          lousa_permite_visitante?: boolean
+          lousa_status?: string
+          lousa_titulo: string
+          lousa_turmas: string[]
+        }
+        Returns: Json
+      }
       create_session_token: {
         Args: {
           p_student_email: string
@@ -2627,6 +2917,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      delete_corretor_lousa: {
+        Args: { corretor_email: string; lousa_id: string }
+        Returns: Json
+      }
       detect_duplicate_students: {
         Args: { student_email: string }
         Returns: {
@@ -2637,6 +2931,10 @@ export type Database = {
           redacoes_count: number
           student_name: string
         }[]
+      }
+      end_corretor_lousa: {
+        Args: { corretor_email: string; lousa_id: string }
+        Returns: Json
       }
       gerar_url_download_biblioteca: {
         Args: {
@@ -2693,9 +2991,32 @@ export type Database = {
           titulo: string
         }[]
       }
+      get_corretor_lousas: {
+        Args: { corretor_email: string }
+        Returns: {
+          ativo: boolean
+          capa_url: string
+          corretor_id: string
+          corretor_nome: string
+          created_at: string
+          enunciado: string
+          fim_em: string
+          id: string
+          inicio_em: string
+          permite_visitante: boolean
+          status: string
+          titulo: string
+          turmas: string[]
+          updated_at: string
+        }[]
+      }
       get_credits_by_email: {
         Args: { user_email: string }
         Returns: number
+      }
+      get_lousa_respostas_corretor: {
+        Args: { corretor_email: string; lousa_id_param: string }
+        Returns: Json
       }
       get_recorded_lesson_views_map: {
         Args: Record<PropertyKey, never>
@@ -2817,6 +3138,17 @@ export type Database = {
           tipo: string
         }[]
       }
+      get_student_email_history: {
+        Args: { student_email_current?: string; student_id_param?: string }
+        Returns: {
+          affected_tables_count: number
+          changed_at: string
+          new_email: string
+          old_email: string
+          student_name: string
+          user_id: string
+        }[]
+      }
       get_student_monthly_summary: {
         Args: { p_month: number; p_student_email: string; p_year: number }
         Returns: {
@@ -2826,6 +3158,10 @@ export type Database = {
           lives_participei: number
           lousas_concluidas: number
         }[]
+      }
+      get_student_profile_by_email: {
+        Args: { student_email: string }
+        Returns: Json
       }
       get_student_redacoes: {
         Args: { student_email: string }
@@ -2876,6 +3212,57 @@ export type Database = {
       get_turma_codigo: {
         Args: { turma_nome: string }
         Returns: string
+      }
+      http: {
+        Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_delete: {
+        Args:
+          | { content: string; content_type: string; uri: string }
+          | { uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_get: {
+        Args: { data: Json; uri: string } | { uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_head: {
+        Args: { uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_header: {
+        Args: { field: string; value: string }
+        Returns: Database["public"]["CompositeTypes"]["http_header"]
+      }
+      http_list_curlopt: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          curlopt: string
+          value: string
+        }[]
+      }
+      http_patch: {
+        Args: { content: string; content_type: string; uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_post: {
+        Args:
+          | { content: string; content_type: string; uri: string }
+          | { data: Json; uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_put: {
+        Args: { content: string; content_type: string; uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_reset_curlopt: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      http_set_curlopt: {
+        Args: { curlopt: string; value: string }
+        Returns: boolean
       }
       iniciar_correcao_redacao: {
         Args: {
@@ -3066,6 +3453,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      send_correction_notification: {
+        Args: {
+          p_corretor_nome: string
+          p_nota?: number
+          p_redacao_id: string
+          p_student_email: string
+          p_student_name: string
+          p_tema_titulo: string
+          p_tipo_envio: string
+        }
+        Returns: undefined
+      }
       set_app_settings: {
         Args: { p_free_topic_enabled: boolean; p_weekdays_for_topics: number[] }
         Returns: undefined
@@ -3081,6 +3480,10 @@ export type Database = {
       test_admin_login_simple: {
         Args: { p_email: string; p_password: string }
         Returns: Json
+      }
+      text_to_bytea: {
+        Args: { data: string }
+        Returns: string
       }
       toggle_admin_status: {
         Args: { p_admin_id: string; p_new_status: boolean }
@@ -3117,9 +3520,33 @@ export type Database = {
         }
         Returns: Json
       }
+      update_corretor_lousa: {
+        Args: {
+          corretor_email: string
+          lousa_ativo?: boolean
+          lousa_capa_url?: string
+          lousa_enunciado: string
+          lousa_fim_em?: string
+          lousa_id: string
+          lousa_inicio_em?: string
+          lousa_permite_visitante?: boolean
+          lousa_status?: string
+          lousa_titulo: string
+          lousa_turmas: string[]
+        }
+        Returns: Json
+      }
+      update_student_avatar: {
+        Args: { new_avatar_path: string; student_email: string }
+        Returns: Json
+      }
       update_student_email: {
         Args: { current_email: string; new_email: string }
         Returns: Json
+      }
+      urlencode: {
+        Args: { data: Json } | { string: string } | { string: string }
+        Returns: string
       }
       validar_integridade_simulados: {
         Args: Record<PropertyKey, never>
@@ -3182,7 +3609,23 @@ export type Database = {
       tipo_envio_enum: "regular" | "exercicio" | "simulado" | "visitante"
     }
     CompositeTypes: {
-      [_ in never]: never
+      http_header: {
+        field: string | null
+        value: string | null
+      }
+      http_request: {
+        method: unknown | null
+        uri: string | null
+        headers: Database["public"]["CompositeTypes"]["http_header"][] | null
+        content_type: string | null
+        content: string | null
+      }
+      http_response: {
+        status: number | null
+        content_type: string | null
+        headers: Database["public"]["CompositeTypes"]["http_header"][] | null
+        content: string | null
+      }
     }
   }
 }
