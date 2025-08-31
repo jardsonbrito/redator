@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CorretorSelector } from "./CorretorSelector";
 import { CreditDisplay } from "./CreditDisplay";
 import { useCredits } from "@/hooks/useCredits";
+import { CreditDebugger } from "./CreditDebugger";
 import { Upload, X } from "lucide-react";
 
 interface EnvioRedacaoProps {
@@ -315,12 +316,16 @@ export const EnvioRedacaoWithCorretor = ({
   };
 
   return (
-    <Card className="max-w-5xl mx-auto">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-lg text-primary">
-          Enviar Redação {isSimulado ? "- Simulado" : exercicioId ? "- Exercício" : "- Tema Livre"}
-        </CardTitle>
-      </CardHeader>
+    <>
+      {/* Debugger temporário - REMOVER após resolver problema */}
+      <CreditDebugger />
+      
+      <Card className="max-w-5xl mx-auto">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg text-primary">
+            Enviar Redação {isSimulado ? "- Simulado" : exercicioId ? "- Exercício" : "- Tema Livre"}
+          </CardTitle>
+        </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -465,6 +470,7 @@ export const EnvioRedacaoWithCorretor = ({
           </Button>
         </form>
       </CardContent>
-    </Card>
+      </Card>
+    </>
   );
 };
