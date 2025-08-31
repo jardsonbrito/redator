@@ -67,15 +67,26 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
     const currentLevelIndex = game.levels.findIndex(l => l.id === level.id);
     const isLastLevel = currentLevelIndex === game.levels.length - 1;
 
+    // Reset do estado quando a fase muda
+    React.useEffect(() => {
+      setSelectedAnswer('');
+      setShowResult(false);
+      setIsCorrect(false);
+    }, [level.id]);
+
     const handleAnswerSubmit = () => {
       const correct = sentence.answers.includes(selectedAnswer);
       setIsCorrect(correct);
       setShowResult(true);
       
-      // Aguardar 2.5 segundos antes de avançar automaticamente
+      // Fechar popup após 2.5 segundos e depois avançar
       setTimeout(() => {
-        const questionScore = correct ? 100 : 0;
-        handleQuestionComplete(questionScore);
+        setShowResult(false);
+        // Pequeno delay para garantir que o popup fechou antes de avançar
+        setTimeout(() => {
+          const questionScore = correct ? 100 : 0;
+          handleQuestionComplete(questionScore);
+        }, 200);
       }, 2500);
     };
 
