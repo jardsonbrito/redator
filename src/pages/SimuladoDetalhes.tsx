@@ -278,6 +278,10 @@ export default function SimuladoDetalhes() {
                         src={tema.motivator4_url || tema.imagem_texto_4_url} 
                         alt="Texto motivador IV" 
                         className="w-full max-w-lg mx-auto rounded"
+                        onError={(e) => {
+                          console.error('Erro ao carregar imagem do Texto IV:', e);
+                        }}
+                        onLoad={() => console.log('Imagem do Texto IV carregada com sucesso')}
                       />
                     </div>
                   </div>
