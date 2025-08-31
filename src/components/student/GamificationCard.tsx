@@ -41,31 +41,34 @@ const GamificationCard: React.FC = () => {
     try {
       setLoading(true);
       
-      // Buscar jogos publicados
-      let gamesQuery = supabase
+      // Buscar todos os jogos publicados primeiro e filtrar no frontend
+      const { data: gamesData, error: gamesError } = await supabase
         .from('games')
         .select(`
           *,
           game_levels(*)
         `)
-        .eq('status', 'published');
-      
-      // Aplicar filtro baseado na turma do aluno
-      if (!studentData.turma || studentData.turma === 'Visitante') {
-        // Visitantes só veem jogos que permitem visitante
-        gamesQuery = gamesQuery.eq('allow_visitor', true);
-      } else {
-        // Alunos veem jogos da sua turma OU que permitem visitante
-        gamesQuery = gamesQuery.or(`turmas_autorizadas.cs.{${studentData.turma}},allow_visitor.eq.true`);
-      }
-      
-      const { data: gamesData, error: gamesError } = await gamesQuery
+        .eq('status', 'published')
         .order('created_at', { ascending: true });
 
       if (gamesError) throw gamesError;
 
+      // Filtrar jogos baseado na turma do aluno
+      const filteredGames = (gamesData || []).filter(game => {
+        // Se permite visitante, sempre mostrar
+        if (game.allow_visitor) return true;
+        
+        // Se não tem turma ou é visitante, só mostrar se permite visitante
+        if (!studentData.turma || studentData.turma === 'Visitante') {
+          return game.allow_visitor;
+        }
+        
+        // Se tem turma, verificar se está autorizada
+        return game.turmas_autorizadas && game.turmas_autorizadas.includes(studentData.turma);
+      });
+
       // Map games with their levels
-      const mappedGames = (gamesData || []).map(game => ({
+      const mappedGames = filteredGames.map(game => ({
         id: game.id,
         title: game.title,
         template: game.template as 'conectivos' | 'desvios' | 'intervencao',
