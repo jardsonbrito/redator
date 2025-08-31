@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale/pt-BR";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 
 export default function SimuladoDetalhes() {
   const { id } = useParams();
@@ -48,6 +49,7 @@ export default function SimuladoDetalhes() {
             imagem_texto_4_url,
             motivator4_url,
             motivator4_source,
+            motivator4_file_path,
             cabecalho_enem
           )
         `)
@@ -270,18 +272,20 @@ export default function SimuladoDetalhes() {
                   </div>
                 )}
 
-                {(tema.motivator4_url || tema.imagem_texto_4_url) && (
+                {/* Texto Motivador IV usando a mesma lógica de TemaDetalhes */}
+                {getTemaMotivatorIVUrl(tema) && (
                   <div>
                     <h4 className="font-bold text-purple-800 mb-2">TEXTO IV</h4>
                     <div className="p-4 bg-gray-50 rounded border">
                       <img 
-                        src={tema.motivator4_url || tema.imagem_texto_4_url} 
-                        alt="Texto motivador IV" 
+                        src={getTemaMotivatorIVUrl(tema)!}
+                        alt="Charge/Infográfico — Texto Motivador IV" 
                         className="w-full max-w-lg mx-auto rounded"
                         onError={(e) => {
-                          console.error('Erro ao carregar imagem do Texto IV:', e);
+                          console.error('Erro ao carregar imagem do Texto IV');
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
                         }}
-                        onLoad={() => console.log('Imagem do Texto IV carregada com sucesso')}
                       />
                     </div>
                   </div>
