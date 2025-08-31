@@ -41,14 +41,23 @@ const GamificationCard: React.FC = () => {
     try {
       setLoading(true);
       
-      const { data: gamesData, error: gamesError } = await supabase
+      // Para visitantes, só mostrar jogos que permitem visitante
+      // Para alunos com turma, mostrar jogos da turma ou que permitem visitante
+      let query = supabase
         .from('games')
         .select(`
           *,
           game_levels(*)
         `)
-        .eq('status', 'published')
-        .or(`turmas_autorizadas.cs.{${studentData.turma || 'Visitante'}},allow_visitor.eq.true`)
+        .eq('status', 'published');
+      
+      if (!studentData.turma || studentData.turma === 'Visitante') {
+        query = query.eq('allow_visitor', true);
+      } else {
+        query = query.or(`turmas_autorizadas.cs.{${studentData.turma}},allow_visitor.eq.true`);
+      }
+      
+      const { data: gamesData, error: gamesError } = await query
         .order('created_at', { ascending: true });
 
       if (gamesError) throw gamesError;

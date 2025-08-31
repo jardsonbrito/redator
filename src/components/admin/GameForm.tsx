@@ -71,7 +71,7 @@ const GameForm: React.FC<GameFormProps> = ({ onSuccess, onCancel }) => {
             game_id: game.id,
             title: `Fase ${i + 1}`,
             payload: generatedLevels[i],
-            status: 'draft',
+            status: 'published',
             level_index: i
           });
       }
