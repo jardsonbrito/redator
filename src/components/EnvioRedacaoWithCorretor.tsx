@@ -48,8 +48,9 @@ export const EnvioRedacaoWithCorretor = ({
   // Determinar quantos créditos são necessários
   const requiredCredits = selectedCorretores.length === 2 ? 2 : 1;
   
-  // Hook para gerenciar créditos
-  const { consumeCredits, checkSufficientCredits } = useCredits(formData.email_aluno);
+  // Hook para gerenciar créditos - usar o email do studentData quando disponível
+  const emailForCredits = studentData.email || formData.email_aluno;
+  const { consumeCredits, checkSufficientCredits } = useCredits(emailForCredits);
 
   // Preencher dados automaticamente quando o usuário está logado
   useEffect(() => {
