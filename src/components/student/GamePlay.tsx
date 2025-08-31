@@ -198,10 +198,6 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
         >
           Confirmar Correção
         </Button>
-
-        <div className="text-xs text-muted-foreground text-center">
-          Dica: {item.explanation}
-        </div>
       </div>
     );
   };
