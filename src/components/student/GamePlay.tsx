@@ -43,7 +43,8 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
   const [currentItemIndex, setCurrentItemIndex] = useState<number>(0);
   const [userCorrection, setUserCorrection] = useState<string>('');
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-
+  const [answeredItems, setAnsweredItems] = useState<Record<number, { correct: boolean; userAnswer: string }>>({});
+  
   const handleQuestionComplete = (questionScore: number) => {
     const newScore = score + questionScore;
     setScore(newScore);
@@ -172,6 +173,7 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
       setCurrentItemIndex(0);
       setUserCorrection('');
       setIsCorrect(null);
+      setAnsweredItems({});
     }, [level.id]);
 
     const handleNext = () => {
@@ -181,20 +183,42 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
         setUserCorrection('');
         setIsCorrect(null);
       } else {
-        // Completou todas as frases do nível - usar handleQuestionComplete
-        const finalScore = isCorrect ? 100 : 0;
-        handleQuestionComplete(finalScore);
+        // Verificar se todas as frases foram respondidas corretamente
+        const allCorrect = Object.values(answeredItems).length === items.length && 
+                          Object.values(answeredItems).every(item => item.correct);
+        
+        if (allCorrect) {
+          // Passou de fase
+          handleQuestionComplete(100);
+        } else {
+          // Voltar para o início para tentar novamente as erradas
+          setCurrentItemIndex(0);
+          setUserCorrection('');
+          setIsCorrect(null);
+        }
       }
     };
 
     const checkAnswer = () => {
       const correct = userCorrection.toLowerCase().trim() === currentItem.correct.toLowerCase().trim();
       setIsCorrect(correct);
+      
+      // Salvar a resposta
+      setAnsweredItems(prev => ({
+        ...prev,
+        [currentItemIndex]: { correct, userAnswer: userCorrection }
+      }));
+      
       if (correct) {
         setScore(prev => prev + 50);
       }
+      
       setTimeout(handleNext, 1500);
     };
+
+    const allItemsAnswered = Object.keys(answeredItems).length === items.length;
+    const allCorrect = allItemsAnswered && Object.values(answeredItems).every(item => item.correct);
+    const hasWrongAnswers = Object.values(answeredItems).some(item => !item.correct);
 
     return (
       <div className="space-y-6">
@@ -205,11 +229,37 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
           <div className="text-xl p-4 bg-red-50 border border-red-200 rounded-lg">
             {currentItem.incorrect}
           </div>
+          
+          {/* Indicador de progresso */}
+          <div className="mt-4 flex justify-center gap-2">
+            {items.map((_, index) => (
+              <div
+                key={index}
+                className={`w-3 h-3 rounded-full ${
+                  answeredItems[index]?.correct
+                    ? 'bg-green-500'
+                    : answeredItems[index]
+                    ? 'bg-red-500'
+                    : index === currentItemIndex
+                    ? 'bg-blue-500'
+                    : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+          
+          {allItemsAnswered && !allCorrect && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-800">
+                Você precisa acertar todas as frases para passar de fase. Continue tentando!
+              </p>
+            </div>
+          )}
         </div>
 
         {isCorrect !== null && (
           <div className={`text-center p-3 rounded-lg ${isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-            {isCorrect ? '✅ Correto!' : '❌ Incorreto. A resposta era: ' + currentItem.correct}
+            {isCorrect ? '✅ Correto!' : '❌ Incorreto. Tente novamente!'}
           </div>
         )}
 
