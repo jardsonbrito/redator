@@ -72,11 +72,11 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
       setIsCorrect(correct);
       setShowResult(true);
       
-      // Aguardar 3 segundos antes de avançar automaticamente
+      // Aguardar 2.5 segundos antes de avançar automaticamente
       setTimeout(() => {
         const questionScore = correct ? 100 : 0;
         handleQuestionComplete(questionScore);
-      }, 3000);
+      }, 2500);
     };
 
     if (showResult) {
@@ -101,9 +101,6 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
             )}
             <div className="mt-4 text-sm text-muted-foreground">
               Pontos desta fase: {isCorrect ? '+100' : '+0'}
-            </div>
-            <div className="mt-4 text-xs text-muted-foreground">
-              Prosseguindo automaticamente...
             </div>
           </div>
         </div>
