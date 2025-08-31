@@ -93,18 +93,13 @@ const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
 
       <CardContent>
         <div className="space-y-3">
-          {/* Difficulty and Competencies */}
+          {/* Difficulty */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
               <span className="text-sm font-medium text-muted-foreground">Dificuldade:</span>
               <div className="flex gap-1">
                 {getDifficultyStars(game.difficulty)}
               </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-sm text-muted-foreground">
-                Competências: {game.competencies.join(', ')}
-              </span>
             </div>
           </div>
 

@@ -30,7 +30,7 @@ interface GamePlayProps {
   level: GameLevel;
   onComplete: (score: number, timeSpent: number) => void;
   onExit: () => void;
-  onNextLevel?: (score: number) => void;
+  onNextLevel?: (score: number, timeSpent: number) => void;
 }
 
 const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, onNextLevel }) => {
@@ -52,7 +52,7 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
       onComplete(newScore, Math.floor((Date.now() - startTime) / 1000));
     } else {
       // Avançar para próxima fase
-      onNextLevel?.(newScore);
+      onNextLevel?.(newScore, Math.floor((Date.now() - startTime) / 1000));
     }
   };
 
@@ -160,17 +160,50 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
     const { items } = level.payload;
     if (!items || items.length === 0) return <div>Jogo não configurado</div>;
 
-    const item = items[0];
+    const [currentItemIndex, setCurrentItemIndex] = useState<number>(0);
     const [userCorrection, setUserCorrection] = useState<string>('');
+    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+
+    const currentItem = items[currentItemIndex];
+
+    const handleNext = () => {
+      if (currentItemIndex < items.length - 1) {
+        // Próxima frase do mesmo nível
+        setCurrentItemIndex(currentItemIndex + 1);
+        setUserCorrection('');
+        setIsCorrect(null);
+      } else {
+        // Completou todas as frases do nível - usar handleQuestionComplete
+        const finalScore = isCorrect ? 100 : 0;
+        handleQuestionComplete(finalScore);
+      }
+    };
+
+    const checkAnswer = () => {
+      const correct = userCorrection.toLowerCase().trim() === currentItem.correct.toLowerCase().trim();
+      setIsCorrect(correct);
+      if (correct) {
+        setScore(prev => prev + 50);
+      }
+      setTimeout(handleNext, 1500);
+    };
 
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h3 className="text-lg font-semibold mb-4">Corrija a frase:</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Corrija a frase ({currentItemIndex + 1} de {items.length}):
+          </h3>
           <div className="text-xl p-4 bg-red-50 border border-red-200 rounded-lg">
-            {item.incorrect}
+            {currentItem.incorrect}
           </div>
         </div>
+
+        {isCorrect !== null && (
+          <div className={`text-center p-3 rounded-lg ${isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            {isCorrect ? '✅ Correto!' : '❌ Incorreto. A resposta era: ' + currentItem.correct}
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium mb-2">Sua correção:</label>
@@ -180,24 +213,19 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
             className="w-full p-3 border rounded-lg"
             rows={3}
             placeholder="Digite aqui a frase corrigida..."
+            disabled={isCorrect !== null}
           />
         </div>
 
-        <Button
-          onClick={() => {
-            const similarity = userCorrection.toLowerCase().includes(item.correct.toLowerCase());
-            const newScore = similarity ? score + 100 : score;
-            setScore(newScore);
-            
-            setTimeout(() => {
-              onComplete(newScore, Math.floor((Date.now() - startTime) / 1000));
-            }, 1000);
-          }}
-          disabled={!userCorrection.trim()}
-          className="w-full"
-        >
-          Confirmar Correção
-        </Button>
+        {isCorrect === null && (
+          <Button
+            onClick={checkAnswer}
+            disabled={!userCorrection.trim()}
+            className="w-full"
+          >
+            Confirmar Correção
+          </Button>
+        )}
       </div>
     );
   };

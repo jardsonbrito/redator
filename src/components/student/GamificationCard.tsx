@@ -159,7 +159,7 @@ const GamificationCard: React.FC = () => {
     setGameDialogOpen(true);
   };
 
-  const handleNextLevel = (score: number) => {
+  const handleNextLevel = (score: number, timeSpent: number) => {
     if (!currentGame) return;
     
     const nextIndex = currentLevelIndex + 1;
@@ -177,6 +177,9 @@ const GamificationCard: React.FC = () => {
         variant: "default",
         className: "bg-green-50 border-green-200 text-green-800"
       });
+    } else {
+      // Completou todos os níveis
+      handleGameComplete(score, timeSpent);
     }
   };
 
