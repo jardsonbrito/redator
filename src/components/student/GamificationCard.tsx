@@ -26,6 +26,8 @@ const GamificationCard: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [bestScores, setBestScores] = useState<Record<string, number>>({});
+  const [totalScore, setTotalScore] = useState(0);
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [currentLevel, setCurrentLevel] = useState<any>(null);
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
@@ -98,6 +100,7 @@ const GamificationCard: React.FC = () => {
     if (!studentData.email) return;
 
     try {
+      // Buscar estatísticas gerais
       const { count, error } = await supabase
         .from('game_plays')
         .select('*', { count: 'exact', head: true })
@@ -106,6 +109,31 @@ const GamificationCard: React.FC = () => {
 
       if (error) throw error;
       setGamesPlayed(count || 0);
+
+      // Buscar melhores pontuações por jogo e pontuação total
+      const { data: playsData, error: playsError } = await supabase
+        .from('game_plays')
+        .select('game_id, score_points')
+        .eq('student_email', studentData.email)
+        .not('finished_at', 'is', null);
+
+      if (playsError) throw playsError;
+
+      // Calcular melhores pontuações por jogo
+      const bestByGame: Record<string, number> = {};
+      let total = 0;
+
+      playsData?.forEach(play => {
+        const score = play.score_points || 0;
+        total += score;
+        
+        if (!bestByGame[play.game_id] || score > bestByGame[play.game_id]) {
+          bestByGame[play.game_id] = score;
+        }
+      });
+
+      setBestScores(bestByGame);
+      setTotalScore(total);
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
     }
@@ -234,10 +262,17 @@ const GamificationCard: React.FC = () => {
               Gamificação
             </CardTitle>
           </div>
-          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-            <TrophyIcon className="h-4 w-4 mr-1" />
-            {gamesPlayed} jogos concluídos
-          </Badge>
+          <div className="flex items-center gap-4">
+            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+              <TrophyIcon className="h-4 w-4 mr-1" />
+              {gamesPlayed} jogos concluídos
+            </Badge>
+            {totalScore > 0 && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+                🎯 {totalScore} pontos totais
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
 
@@ -257,7 +292,8 @@ const GamificationCard: React.FC = () => {
                   key={game.id}
                   game={{
                     ...game,
-                    levels: game.levels.length
+                    levels: game.levels.length,
+                    bestScore: bestScores[game.id]
                   }}
                   onPlay={handlePlayGame}
                 />
