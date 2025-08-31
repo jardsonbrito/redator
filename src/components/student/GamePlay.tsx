@@ -38,6 +38,11 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
   const [startTime] = useState(Date.now());
   const [score, setScore] = useState(0);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  
+  // Estados para jogo de desvios
+  const [currentItemIndex, setCurrentItemIndex] = useState<number>(0);
+  const [userCorrection, setUserCorrection] = useState<string>('');
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
   const handleQuestionComplete = (questionScore: number) => {
     const newScore = score + questionScore;
@@ -160,11 +165,14 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
     const { items } = level.payload;
     if (!items || items.length === 0) return <div>Jogo não configurado</div>;
 
-    const [currentItemIndex, setCurrentItemIndex] = useState<number>(0);
-    const [userCorrection, setUserCorrection] = useState<string>('');
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-
     const currentItem = items[currentItemIndex];
+    
+    // Reset estados quando o nível muda
+    React.useEffect(() => {
+      setCurrentItemIndex(0);
+      setUserCorrection('');
+      setIsCorrect(null);
+    }, [level.id]);
 
     const handleNext = () => {
       if (currentItemIndex < items.length - 1) {
