@@ -59,22 +59,43 @@ export const CreditManagement = () => {
   }, [selectedTurma]);
 
   const loadStudents = async () => {
+    console.log('🔍 CreditManagement.loadStudents - INICIANDO');
+    console.log('🎓 Turma selecionada:', selectedTurma);
+    
     if (!selectedTurma) return;
     
     setLoading(true);
     try {
+      console.log('🔄 Executando query para buscar alunos...');
+      
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, nome, sobrenome, email, turma, creditos')
+        .select('id, nome, sobrenome, email, turma, creditos, user_type, ativo, status_aprovacao')
         .eq('user_type', 'aluno')
         .eq('turma', selectedTurma)
         .eq('ativo', true)
         .order('nome');
       
-      if (error) throw error;
+      console.log('📊 Resultado da query loadStudents:', { data, error });
+      
+      if (error) {
+        console.error('❌ Erro na query:', error);
+        throw error;
+      }
+      
+      console.log('✅ Alunos encontrados:', data?.length || 0);
+      data?.forEach((student, index) => {
+        console.log(`👤 Aluno ${index + 1}:`, {
+          nome: student.nome,
+          email: student.email,
+          creditos: student.creditos,
+          turma: student.turma
+        });
+      });
+      
       setStudents(data || []);
     } catch (error) {
-      console.error('Erro ao carregar alunos:', error);
+      console.error('💥 Erro ao carregar alunos:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar alunos",
@@ -82,11 +103,18 @@ export const CreditManagement = () => {
       });
     } finally {
       setLoading(false);
+      console.log('🏁 loadStudents finalizado');
     }
   };
 
   const handleCreditAction = async () => {
+    console.log('💰 CreditManagement.handleCreditAction - INICIANDO');
+    console.log('👤 Aluno selecionado:', selectedStudent);
+    console.log('🎯 Ação:', actionType);
+    console.log('💰 Quantidade:', creditAmount);
+    
     if (!selectedStudent || creditAmount <= 0) {
+      console.log('❌ Dados inválidos');
       toast({
         title: "Erro",
         description: "Dados inválidos",
@@ -98,6 +126,8 @@ export const CreditManagement = () => {
     setLoading(true);
     try {
       const currentCredits = selectedStudent.creditos || 0;
+      console.log('💰 Créditos atuais:', currentCredits);
+      
       let newCredits: number;
 
       switch (actionType) {
@@ -114,13 +144,21 @@ export const CreditManagement = () => {
           throw new Error('Tipo de ação inválido');
       }
 
+      console.log('💰 Novos créditos calculados:', newCredits);
+
       // Atualizar créditos do aluno
+      console.log('🔄 Atualizando créditos no banco...');
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ creditos: newCredits })
         .eq('id', selectedStudent.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ Erro ao atualizar:', updateError);
+        throw updateError;
+      }
+
+      console.log('✅ Créditos atualizados no banco');
 
       // Registrar no audit
       const { error: auditError } = await supabase
@@ -134,20 +172,22 @@ export const CreditManagement = () => {
         });
 
       if (auditError) {
-        console.warn('Erro ao registrar audit (não crítico):', auditError);
+        console.warn('⚠️ Erro ao registrar audit (não crítico):', auditError);
       }
+
+      console.log('✅ Ação de crédito concluída com sucesso');
 
       toast({
         title: "Sucesso",
-        description: "Créditos atualizados com sucesso"
+        description: `Créditos atualizados com sucesso! ${currentCredits} → ${newCredits}`
       });
       
       setActionDialogOpen(false);
       setCreditAmount(1);
       setReason('');
-      loadStudents();
+      loadStudents(); // Recarregar a lista
     } catch (error) {
-      console.error('Erro ao atualizar créditos:', error);
+      console.error('💥 Erro ao atualizar créditos:', error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar créditos",
@@ -155,10 +195,16 @@ export const CreditManagement = () => {
       });
     } finally {
       setLoading(false);
+      console.log('🏁 handleCreditAction finalizado');
     }
   };
 
   const handleBulkAction = async () => {
+    console.log('📦 CreditManagement.handleBulkAction - INICIANDO');
+    console.log('🎓 Turma:', selectedTurma);
+    console.log('🎯 Ação em lote:', bulkAction);
+    console.log('💰 Quantidade:', bulkAmount);
+    
     if (!selectedTurma || bulkAmount <= 0) {
       toast({
         title: "Erro",
@@ -191,12 +237,18 @@ export const CreditManagement = () => {
         return {
           id: student.id,
           creditos: newCredits,
-          oldCredits: currentCredits
+          oldCredits: currentCredits,
+          email: student.email,
+          nome: student.nome
         };
       });
 
+      console.log('📦 Atualizações a serem feitas:', updates.length);
+
       // Atualizar todos os alunos
       for (const update of updates) {
+        console.log(`🔄 Atualizando ${update.nome} (${update.email}): ${update.oldCredits} → ${update.creditos}`);
+        
         await supabase
           .from('profiles')
           .update({ creditos: update.creditos })
@@ -214,6 +266,8 @@ export const CreditManagement = () => {
           });
       }
 
+      console.log('✅ Ação em lote concluída com sucesso');
+
       toast({
         title: "Sucesso",
         description: `Créditos atualizados em lote para ${updates.length} alunos`
@@ -223,7 +277,7 @@ export const CreditManagement = () => {
       setBulkReason('');
       loadStudents();
     } catch (error) {
-      console.error('Erro ao atualizar créditos em lote:', error);
+      console.error('💥 Erro ao atualizar créditos em lote:', error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar créditos em lote",
@@ -231,6 +285,7 @@ export const CreditManagement = () => {
       });
     } finally {
       setLoading(false);
+      console.log('🏁 handleBulkAction finalizado');
     }
   };
 
@@ -352,7 +407,7 @@ export const CreditManagement = () => {
       {selectedTurma && (
         <Card>
           <CardHeader>
-            <CardTitle>Alunos - {selectedTurma}</CardTitle>
+            <CardTitle>Alunos - {selectedTurma} ({students.length} encontrados)</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -531,6 +586,12 @@ export const CreditManagement = () => {
                   ))}
                 </TableBody>
               </Table>
+            )}
+            
+            {!loading && students.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Nenhum aluno encontrado para a turma selecionada.</p>
+              </div>
             )}
           </CardContent>
         </Card>

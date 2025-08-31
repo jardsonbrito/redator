@@ -18,34 +18,78 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
   const { toast } = useToast();
 
   const loadCredits = async () => {
+    console.log('🔍 useCredits.loadCredits - INICIANDO');
+    console.log('📧 Email recebido:', userEmail);
+    
     if (!userEmail) {
+      console.log('❌ Email não fornecido, parando aqui');
       setLoading(false);
       return;
     }
 
+    const normalizedEmail = userEmail.toLowerCase().trim();
+    console.log('📧 Email normalizado:', normalizedEmail);
+
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      console.log('🔄 Executando query no Supabase...');
+      
+      const { data, error, count } = await supabase
         .from('profiles')
-        .select('creditos')
-        .eq('email', userEmail.toLowerCase().trim())
-        .eq('user_type', 'aluno')
-        .single();
+        .select('creditos, id, nome, sobrenome, user_type, ativo, status_aprovacao', { count: 'exact' })
+        .eq('email', normalizedEmail)
+        .eq('user_type', 'aluno');
 
-      if (error) throw error;
-      setCredits(data?.creditos || 0);
-      setError(null);
+      console.log('📊 Resultado da query:', { data, error, count });
+      
+      if (error) {
+        console.error('❌ Erro na query:', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        console.log('⚠️ Nenhum perfil encontrado para email:', normalizedEmail);
+        console.log('🔍 Vamos buscar TODOS os perfis para debug...');
+        
+        // Debug: buscar todos os perfis para ver se o email existe
+        const { data: allProfiles } = await supabase
+          .from('profiles')
+          .select('email, creditos, user_type, ativo, status_aprovacao')
+          .limit(10);
+        
+        console.log('👥 Primeiros 10 perfis no banco:', allProfiles);
+        
+        setCredits(0);
+        setError('Perfil não encontrado');
+      } else {
+        const profile = data[0];
+        console.log('✅ Perfil encontrado:', profile);
+        console.log('💰 Créditos no banco:', profile.creditos);
+        
+        const creditValue = profile.creditos || 0;
+        setCredits(creditValue);
+        setError(null);
+        
+        console.log('💰 Créditos definidos no estado:', creditValue);
+      }
     } catch (err) {
-      console.error('Erro ao carregar créditos:', err);
+      console.error('💥 Erro ao carregar créditos:', err);
       setError('Erro ao carregar créditos');
       setCredits(0);
     } finally {
       setLoading(false);
+      console.log('🏁 loadCredits finalizado');
     }
   };
 
   const consumeCredits = async (amount: number, reason?: string): Promise<boolean> => {
+    console.log('💸 useCredits.consumeCredits - INICIANDO');
+    console.log('📧 Email:', userEmail);
+    console.log('💰 Quantidade a consumir:', amount);
+    console.log('💰 Créditos atuais no estado:', credits);
+    
     if (!userEmail) {
+      console.log('❌ Email não encontrado');
       toast({
         title: "Erro",
         description: "Email do usuário não encontrado",
@@ -57,6 +101,7 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
     try {
       // Verificar se tem créditos suficientes
       if (credits < amount) {
+        console.log('❌ Créditos insuficientes:', { atual: credits, necessário: amount });
         toast({
           title: "Créditos Insuficientes",
           description: `Você precisa de ${amount} crédito(s) para enviar esta redação. Seus créditos atuais: ${credits}`,
@@ -66,6 +111,7 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
       }
 
       const newCredits = credits - amount;
+      console.log('💰 Novos créditos calculados:', newCredits);
 
       // Buscar o ID do usuário
       const { data: userData, error: userError } = await supabase
@@ -75,7 +121,12 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
         .eq('user_type', 'aluno')
         .single();
 
-      if (userError) throw userError;
+      if (userError) {
+        console.error('❌ Erro ao buscar usuário:', userError);
+        throw userError;
+      }
+
+      console.log('👤 ID do usuário encontrado:', userData.id);
 
       // Atualizar créditos
       const { error: updateError } = await supabase
@@ -83,7 +134,12 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
         .update({ creditos: newCredits })
         .eq('id', userData.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ Erro ao atualizar créditos:', updateError);
+        throw updateError;
+      }
+
+      console.log('✅ Créditos atualizados no banco');
 
       // Registrar no audit
       const { error: auditError } = await supabase
@@ -97,11 +153,13 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
         });
 
       if (auditError) {
-        console.warn('Erro ao registrar audit (não crítico):', auditError);
+        console.warn('⚠️ Erro ao registrar audit (não crítico):', auditError);
       }
 
       const oldCredits = credits;
       setCredits(newCredits);
+
+      console.log('💰 Estado atualizado - Antigo:', oldCredits, 'Novo:', newCredits);
 
       // Mostrar notificação verde de sucesso com informações dos créditos
       toast({
@@ -113,7 +171,7 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
 
       return true;
     } catch (err) {
-      console.error('Erro ao consumir créditos:', err);
+      console.error('💥 Erro ao consumir créditos:', err);
       toast({
         title: "Erro",
         description: "Erro ao processar créditos. Tente novamente.",
@@ -124,16 +182,21 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
   };
 
   const checkSufficientCredits = (amount: number): boolean => {
+    console.log('🔍 Verificando créditos suficientes:', { atual: credits, necessário: amount });
     return credits >= amount;
   };
 
   const refreshCredits = async () => {
+    console.log('🔄 Atualizando créditos...');
     await loadCredits();
   };
 
   useEffect(() => {
+    console.log('🔄 useCredits useEffect disparado - userEmail:', userEmail);
     loadCredits();
   }, [userEmail]);
+
+  console.log('📊 useCredits retornando:', { credits, loading, error });
 
   return {
     credits,

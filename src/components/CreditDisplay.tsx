@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,22 +20,34 @@ export const CreditDisplay = ({
   onCreditCheck,
   showCompact = false 
 }: CreditDisplayProps) => {
+  console.log('🎨 CreditDisplay renderizando');
+  console.log('📧 Email recebido:', userEmail);
+  console.log('💰 Créditos necessários:', requiredCredits);
+  console.log('📱 Modo compacto:', showCompact);
+
   const { credits, loading, refreshCredits } = useCredits(userEmail);
   const hasEnoughCredits = credits >= requiredCredits;
 
+  console.log('📊 Estado do useCredits:', { credits, loading });
+  console.log('✅ Tem créditos suficientes:', hasEnoughCredits);
+
   useEffect(() => {
+    console.log('🔄 CreditDisplay useEffect - onCreditCheck');
     if (onCreditCheck) {
       onCreditCheck(hasEnoughCredits);
     }
   }, [hasEnoughCredits, onCreditCheck]);
 
   if (loading) {
+    console.log('⏳ Carregando créditos...');
     return (
       <div className="animate-pulse">
         <div className="h-16 bg-gray-200 rounded"></div>
       </div>
     );
   }
+
+  console.log('🎨 Renderizando componente final');
 
   if (showCompact) {
     return (
@@ -52,6 +65,17 @@ export const CreditDisplay = ({
             (necessários: {requiredCredits})
           </span>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            console.log('🔄 Botão atualizar clicado (modo compacto)');
+            refreshCredits();
+          }}
+          className="ml-2"
+        >
+          Atualizar
+        </Button>
       </div>
     );
   }
@@ -109,7 +133,10 @@ export const CreditDisplay = ({
         <Button
           variant="outline"
           size="sm"
-          onClick={refreshCredits}
+          onClick={() => {
+            console.log('🔄 Botão atualizar saldo clicado');
+            refreshCredits();
+          }}
           className="w-full"
         >
           Atualizar Saldo
