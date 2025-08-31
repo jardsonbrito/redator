@@ -51,6 +51,13 @@ export const EnvioRedacaoWithCorretor = ({
   // Hook para gerenciar créditos - usar o email do studentData quando disponível
   const emailForCredits = studentData.email || formData.email_aluno;
   const { consumeCredits, checkSufficientCredits } = useCredits(emailForCredits);
+  
+  // LOG ESPECÍFICO PARA DEBUG DO ABÍLIO
+  console.log('🔍 ENVIO REDAÇÃO - Debug dos emails:');
+  console.log('  - studentData.email:', studentData.email);
+  console.log('  - formData.email_aluno:', formData.email_aluno);
+  console.log('  - emailForCredits (usado no useCredits):', emailForCredits);
+  console.log('  - studentData completo:', studentData);
 
   // Preencher dados automaticamente quando o usuário está logado
   useEffect(() => {

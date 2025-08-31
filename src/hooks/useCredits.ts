@@ -20,9 +20,13 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
   const loadCredits = async () => {
     console.log('🔍 useCredits.loadCredits - INICIANDO');
     console.log('📧 Email recebido:', userEmail);
+    console.log('📧 Tipo do email:', typeof userEmail);
+    console.log('📧 Email é null/undefined?', userEmail == null);
+    console.log('📧 Email é string vazia?', userEmail === '');
     
     if (!userEmail) {
       console.log('❌ Email não fornecido, parando aqui');
+      console.log('📧 Valor exato do userEmail:', JSON.stringify(userEmail));
       setLoading(false);
       return;
     }
@@ -33,6 +37,17 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
     try {
       setLoading(true);
       console.log('🔄 Executando query no Supabase...');
+      
+      // TESTE ESPECÍFICO PARA ABÍLIO
+      if (normalizedEmail === 'abilio.gomes@aluno.ce.gov.br') {
+        console.log('🎯 TESTE ESPECÍFICO PARA ABÍLIO DETECTADO!');
+        
+        // Primeiro, vamos testar a função RPC
+        const { data: rpcResult, error: rpcError } = await supabase
+          .rpc('get_credits_by_email', { user_email: normalizedEmail });
+        
+        console.log('🎯 ABÍLIO - Resultado da função RPC:', { data: rpcResult, error: rpcError });
+      }
       
       const { data, error, count } = await supabase
         .from('profiles')

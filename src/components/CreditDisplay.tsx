@@ -22,13 +22,21 @@ export const CreditDisplay = ({
 }: CreditDisplayProps) => {
   console.log('🎨 CreditDisplay renderizando');
   console.log('📧 Email recebido:', userEmail);
+  console.log('📧 Tipo do email:', typeof userEmail);
+  console.log('📧 Email é válido?', !!userEmail);
   console.log('💰 Créditos necessários:', requiredCredits);
   console.log('📱 Modo compacto:', showCompact);
 
   const { credits, loading, refreshCredits } = useCredits(userEmail);
   const hasEnoughCredits = credits >= requiredCredits;
 
-  console.log('📊 Estado do useCredits:', { credits, loading });
+  console.log('📊 Estado do useCredits:', { 
+    credits, 
+    loading, 
+    userEmail, 
+    hasEnoughCredits,
+    timestamp: new Date().toISOString()
+  });
   console.log('✅ Tem créditos suficientes:', hasEnoughCredits);
 
   useEffect(() => {
