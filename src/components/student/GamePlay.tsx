@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { PlayIcon, TrophyIcon, TimerIcon, StarIcon, CheckCircleIcon } from "lucide-react";
+import { PlayIcon, TrophyIcon, TimerIcon, StarIcon, CheckCircleIcon, GripVerticalIcon } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -139,55 +140,149 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit }) 
     if (!slots || !pieces) return <div>Jogo não configurado</div>;
 
     const [assignments, setAssignments] = useState<Record<string, string>>({});
+    const [availablePieces, setAvailablePieces] = useState<string[]>(pieces);
+
+    const handleDragEnd = (result: any) => {
+      if (!result.destination) return;
+
+      const sourceId = result.source.droppableId;
+      const destId = result.destination.droppableId;
+      const draggedPiece = result.draggableId;
+
+      if (sourceId === 'pieces' && destId.startsWith('slot-')) {
+        const slotIndex = destId.replace('slot-', '');
+        const slot = slots[parseInt(slotIndex)];
+        
+        // Remove piece from available and assign to slot
+        setAvailablePieces(prev => prev.filter(p => p !== draggedPiece));
+        setAssignments(prev => ({ ...prev, [slot]: draggedPiece }));
+      } else if (sourceId.startsWith('slot-') && destId === 'pieces') {
+        const slotIndex = sourceId.replace('slot-', '');
+        const slot = slots[parseInt(slotIndex)];
+        
+        // Return piece to available
+        setAvailablePieces(prev => [...prev, draggedPiece]);
+        setAssignments(prev => {
+          const newAssignments = { ...prev };
+          delete newAssignments[slot];
+          return newAssignments;
+        });
+      }
+    };
 
     return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold mb-4">Monte a proposta de intervenção:</h3>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="space-y-6">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold mb-4">Monte a proposta de intervenção:</h3>
+            <p className="text-sm text-muted-foreground">Arraste as peças para os slots corretos</p>
+          </div>
+
+          <div className="grid gap-4">
+            {slots.map((slot: string, index: number) => (
+              <div key={slot} className="space-y-2">
+                <label className="block text-sm font-medium">{slot}:</label>
+                <Droppable droppableId={`slot-${index}`}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`min-h-16 p-3 border-2 border-dashed rounded-lg transition-colors ${
+                        snapshot.isDraggingOver 
+                          ? 'border-primary bg-primary/10' 
+                          : 'border-border bg-muted/50'
+                      }`}
+                    >
+                      {assignments[slot] ? (
+                        <Draggable draggableId={assignments[slot]} index={0}>
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className="p-2 bg-primary text-primary-foreground rounded cursor-move flex items-center gap-2"
+                            >
+                              <GripVerticalIcon className="h-4 w-4" />
+                              {assignments[slot]}
+                            </div>
+                          )}
+                        </Draggable>
+                      ) : (
+                        <div className="text-center text-muted-foreground py-4">
+                          Arraste uma peça aqui
+                        </div>
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Peças disponíveis:</label>
+            <Droppable droppableId="pieces" direction="horizontal">
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={`min-h-20 p-4 border-2 border-dashed rounded-lg transition-colors ${
+                    snapshot.isDraggingOver 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border bg-background'
+                  }`}
+                >
+                  <div className="flex flex-wrap gap-2">
+                    {availablePieces.map((piece, index) => (
+                      <Draggable key={piece} draggableId={piece} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`p-2 bg-secondary text-secondary-foreground rounded cursor-move flex items-center gap-2 transition-transform ${
+                              snapshot.isDragging ? 'rotate-3 scale-105' : ''
+                            }`}
+                          >
+                            <GripVerticalIcon className="h-4 w-4" />
+                            {piece}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                  </div>
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </div>
+
+          <Button
+            onClick={() => {
+              const validSet = valid_sets[0];
+              let correctCount = 0;
+              
+              slots.forEach((slot: string) => {
+                if (assignments[slot] === validSet[slot]) {
+                  correctCount++;
+                }
+              });
+
+              const newScore = (correctCount / slots.length) * 100;
+              setScore(Math.floor(newScore));
+              
+              setTimeout(() => {
+                onComplete(Math.floor(newScore), Math.floor((Date.now() - startTime) / 1000));
+              }, 1000);
+            }}
+            disabled={slots.some((slot: string) => !assignments[slot])}
+            className="w-full"
+          >
+            Confirmar Proposta
+          </Button>
         </div>
-
-        <div className="grid gap-4">
-          {slots.map((slot: string) => (
-            <div key={slot} className="space-y-2">
-              <label className="block text-sm font-medium">{slot}:</label>
-              <select
-                value={assignments[slot] || ''}
-                onChange={(e) => setAssignments({ ...assignments, [slot]: e.target.value })}
-                className="w-full p-2 border rounded"
-              >
-                <option value="">Selecione...</option>
-                {pieces.map((piece: string, index: number) => (
-                  <option key={index} value={piece}>{piece}</option>
-                ))}
-              </select>
-            </div>
-          ))}
-        </div>
-
-        <Button
-          onClick={() => {
-            const validSet = valid_sets[0];
-            let correctCount = 0;
-            
-            slots.forEach((slot: string) => {
-              if (assignments[slot] === validSet[slot]) {
-                correctCount++;
-              }
-            });
-
-            const newScore = (correctCount / slots.length) * 100;
-            setScore(Math.floor(newScore));
-            
-            setTimeout(() => {
-              onComplete(Math.floor(newScore), Math.floor((Date.now() - startTime) / 1000));
-            }, 1000);
-          }}
-          disabled={slots.some((slot: string) => !assignments[slot])}
-          className="w-full"
-        >
-          Confirmar Proposta
-        </Button>
-      </div>
+      </DragDropContext>
     );
   };
 
