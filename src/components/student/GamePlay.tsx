@@ -49,14 +49,10 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
 
     if (isLastLevel) {
       // Completar jogo
-      setTimeout(() => {
-        onComplete(newScore, Math.floor((Date.now() - startTime) / 1000));
-      }, 1500);
+      onComplete(newScore, Math.floor((Date.now() - startTime) / 1000));
     } else {
       // Avançar para próxima fase
-      setTimeout(() => {
-        onNextLevel?.(newScore);
-      }, 1500);
+      onNextLevel?.(newScore);
     }
   };
 
@@ -66,8 +62,50 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
 
     const sentence = sentences[0];
     const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+    const [showResult, setShowResult] = useState(false);
+    const [isCorrect, setIsCorrect] = useState(false);
     const currentLevelIndex = game.levels.findIndex(l => l.id === level.id);
     const isLastLevel = currentLevelIndex === game.levels.length - 1;
+
+    const handleAnswerSubmit = () => {
+      const correct = sentence.answers.includes(selectedAnswer);
+      setIsCorrect(correct);
+      setShowResult(true);
+      
+      // Aguardar 2 segundos antes de avançar
+      setTimeout(() => {
+        const questionScore = correct ? 100 : 0;
+        handleQuestionComplete(questionScore);
+      }, 2000);
+    };
+
+    if (showResult) {
+      return (
+        <div className="space-y-6 text-center">
+          <div className={`p-6 rounded-lg ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border-2`}>
+            <div className={`text-4xl mb-2 ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+              {isCorrect ? '✅' : '❌'}
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+              {isCorrect ? 'Correto!' : 'Incorreto!'}
+            </h3>
+            <div className="text-lg p-4 bg-white rounded-lg border">
+              {sentence.text.replace('___', `**${selectedAnswer}**`)}
+            </div>
+            {!isCorrect && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Resposta correta:</strong> {sentence.answers[0]}
+                </p>
+              </div>
+            )}
+            <div className="mt-4 text-sm text-muted-foreground">
+              Pontos desta fase: {isCorrect ? '+100' : '+0'}
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-6">
@@ -97,15 +135,11 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
         </div>
 
         <Button
-          onClick={() => {
-            const isCorrect = sentence.answers.includes(selectedAnswer);
-            const questionScore = isCorrect ? 100 : 0;
-            handleQuestionComplete(questionScore);
-          }}
+          onClick={handleAnswerSubmit}
           disabled={!selectedAnswer}
           className="w-full"
         >
-          {isLastLevel ? 'Finalizar Jogo' : 'Próxima Fase'}
+          Confirmar Resposta
         </Button>
       </div>
     );
@@ -342,7 +376,7 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
                 </span>
                 <span className="flex items-center gap-1">
                   <TrophyIcon className="h-4 w-4" />
-                  {score} pts
+                  <strong>{score} pts</strong>
                 </span>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: game.difficulty }, (_, i) => (
