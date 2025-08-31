@@ -23,7 +23,8 @@ import {
   Download,
   Settings,
   ShieldCheck,
-  Presentation
+  Presentation,
+  Gamepad2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -134,6 +135,7 @@ const Admin = () => {
     { id: "corretores", label: "Corretores", icon: UserCheck },
     { id: "professores", label: "Professores", icon: GraduationCap },
     { id: "exportacao", label: "Exportação", icon: Download },
+    { id: "gamificacao", label: "Gamificação", icon: Gamepad2 },
     { id: "configuracoes", label: "Configurações", icon: Settings },
     { id: "administradores", label: "Administradores", icon: ShieldCheck }
   ];
@@ -526,6 +528,10 @@ const Admin = () => {
             </TabsContent>
           </Tabs>
         );
+
+      case "gamificacao":
+        navigate('/admin/gamificacao');
+        return null;
       
       default:
         return (

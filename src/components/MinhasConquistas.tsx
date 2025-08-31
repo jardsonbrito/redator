@@ -24,6 +24,7 @@ interface MonthlyActivity {
   lousas_concluidas: number;
   lives_participei: number;
   videos_assistidos: number;
+  jogos_concluidos: number;
 }
 
 // Função para classificar tipo de redação de forma consistente
@@ -64,7 +65,8 @@ export const MinhasConquistas = () => {
     essays_simulado: 0,
     lousas_concluidas: 0,
     lives_participei: 0,
-    videos_assistidos: 0
+    videos_assistidos: 0,
+    jogos_concluidos: 0
   });
   const [activityDetails, setActivityDetails] = useState<ActivityDetail[]>([]);
   const [loading, setLoading] = useState(false);
@@ -159,6 +161,15 @@ export const MinhasConquistas = () => {
         .lt('entrada_at', monthEnd.toISOString())
         .not('entrada_at', 'is', null);
 
+      // Buscar jogos concluídos do sistema de gamificação
+      const { data: jogosData } = await supabase
+        .from('game_plays')
+        .select('id')
+        .eq('student_email', emailBusca)
+        .not('finished_at', 'is', null)
+        .gte('finished_at', monthStart.toISOString())
+        .lt('finished_at', monthEnd.toISOString());
+
       // Contar distinct aulas que participou (entrada registrada)
       const livesParticipadas = [...new Set((presencaLive || []).map(p => p.aula_id))].length;
 
@@ -174,14 +185,15 @@ export const MinhasConquistas = () => {
 
       console.log(`📊 Resultado: Regular=${regularCount}, Simulado=${simuladoCount}`);
       console.log(`📊 Incluindo ${radarFiltrados.length} exercícios importados via CSV/radar`);
-      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}, Vídeos=${monthlyCount}`);
+      console.log(`📊 Lousa=${(eventosLousa || []).length}, Live=${livesParticipadas}, Vídeos=${monthlyCount}, Jogos=${(jogosData || []).length}`);
 
       setMonthlyActivity({
         essays_regular: regularCount,
         essays_simulado: simuladoCount,
         lousas_concluidas: (eventosLousa || []).length,
         lives_participei: livesParticipadas,
-        videos_assistidos: monthlyCount // Usar dados do hook de tracking
+        videos_assistidos: monthlyCount, // Usar dados do hook de tracking
+        jogos_concluidos: (jogosData || []).length
       });
       
     } catch (error) {
@@ -293,6 +305,11 @@ export const MinhasConquistas = () => {
           </div>
 
           <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+            <span className="text-sm font-medium">Gamificação:</span>
+            <span className="text-sm">Jogos concluídos: <strong className="text-green-600">{monthlyActivity.jogos_concluidos}</strong></span>
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto] items-center gap-3">
             <span className="text-sm font-medium">Lousa:</span>
             <span className="text-sm">Concluídas: <strong className="text-purple-600">{monthlyActivity.lousas_concluidas}</strong></span>
           </div>
@@ -314,7 +331,7 @@ export const MinhasConquistas = () => {
             </DialogHeader>
             <div className="space-y-4">
               {/* Resumo */}
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-6 gap-4">
                 <Card>
                   <CardContent className="p-3 text-center">
                     <div className="text-lg font-bold text-blue-600">{monthlyActivity.essays_regular}</div>
@@ -343,6 +360,12 @@ export const MinhasConquistas = () => {
                   <CardContent className="p-3 text-center">
                     <div className="text-lg font-bold text-purple-600">{monthlyActivity.videos_assistidos}</div>
                     <div className="text-xs text-muted-foreground">Vídeos</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 text-center">
+                    <div className="text-lg font-bold text-emerald-600">{monthlyActivity.jogos_concluidos}</div>
+                    <div className="text-xs text-muted-foreground">Jogos</div>
                   </CardContent>
                 </Card>
               </div>

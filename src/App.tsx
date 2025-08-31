@@ -1,6 +1,7 @@
 
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import GamificacaoAdmin from "./pages/admin/GamificacaoAdmin";
 import Welcome from "./pages/Welcome";
 import Admin from "./pages/Admin";
 import Exportacao from "./pages/admin/Exportacao";
@@ -71,6 +72,7 @@ import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
 import RedacaoManuscrita from "./pages/RedacaoManuscrita";
 import MinhasConquistas from "./pages/MinhasConquistas";
+import Gamificacao from "./pages/Gamificacao";
 
 function App() {
   return (
@@ -112,6 +114,7 @@ function App() {
                   <Route path="/lousa/:id" element={<LousaResponse />} />
                   <Route path="/ajuda-rapida" element={<AjudaRapida />} />
                   <Route path="/minhas-conquistas" element={<MinhasConquistas />} />
+                  <Route path="/gamificacao" element={<Gamificacao />} />
 
                   {/* Rotas do Admin */}
                   <Route path="/admin" element={<Admin />} />
@@ -123,6 +126,7 @@ function App() {
                   <Route path="/admin/corretores" element={<CorretoresAdmin />} />
                   <Route path="/admin/exportacao" element={<Exportacao />} />
                   <Route path="/admin/ajuda-rapida" element={<AjudaRapidaAdmin />} />
+                  <Route path="/admin/gamificacao" element={<GamificacaoAdmin />} />
                   <Route path="/admin/lousa/:lousaId/respostas" element={<LousaRespostasPage />} />
                   
                   {/* Rotas do Corretor */}

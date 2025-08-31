@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GamepadIcon, PlayIcon, TrophyIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useToast } from "@/hooks/use-toast";
 import GameCard from "./GameCard";
+import GamePlay from "./GamePlay";
 
 interface Game {
   id: string;
@@ -23,7 +26,11 @@ const GamificationCard: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [currentGame, setCurrentGame] = useState<Game | null>(null);
+  const [currentLevel, setCurrentLevel] = useState<any>(null);
+  const [gameDialogOpen, setGameDialogOpen] = useState(false);
   const { studentData } = useStudentAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     loadGames();
@@ -81,10 +88,73 @@ const GamificationCard: React.FC = () => {
     }
   };
 
-  const handlePlayGame = (gameId: string) => {
-    // Navigate to game play page
-    console.log('Playing game:', gameId);
-    // This would typically navigate to a game playing interface
+  const handlePlayGame = async (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game || !game.levels || game.levels.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Este jogo não possui fases disponíveis",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Pegar primeira fase disponível
+    const firstLevel = game.levels[0];
+    setCurrentGame(game);
+    setCurrentLevel(firstLevel);
+    setGameDialogOpen(true);
+  };
+
+  const handleGameComplete = async (score: number, timeSpent: number) => {
+    if (!currentGame || !currentLevel || !studentData.email) return;
+
+    try {
+      // Registrar jogada no banco
+      const { error } = await supabase
+        .from('game_plays')
+        .insert({
+          game_id: currentGame.id,
+          level_id: currentLevel.id,
+          student_email: studentData.email,
+          student_name: studentData.nomeUsuario || 'Jogador',
+          student_class: studentData.turma,
+          finished_at: new Date().toISOString(),
+          time_spent_seconds: timeSpent,
+          result: { score, completed: true },
+          score_points: score
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Parabéns!",
+        description: `Jogo concluído com ${score} pontos em ${timeSpent}s!`,
+        variant: "default",
+        className: "bg-green-50 border-green-200 text-green-800"
+      });
+
+      // Atualizar estatísticas
+      loadGameStats();
+      
+    } catch (error) {
+      console.error('Erro ao salvar jogada:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar progresso do jogo",
+        variant: "destructive"
+      });
+    } finally {
+      setGameDialogOpen(false);
+      setCurrentGame(null);
+      setCurrentLevel(null);
+    }
+  };
+
+  const handleGameExit = () => {
+    setGameDialogOpen(false);
+    setCurrentGame(null);
+    setCurrentLevel(null);
   };
 
   if (loading) {
@@ -145,6 +215,25 @@ const GamificationCard: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Dialog do jogo */}
+        <Dialog open={gameDialogOpen} onOpenChange={setGameDialogOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0">
+            <DialogHeader className="p-6 pb-0">
+              <DialogTitle>Jogando: {currentGame?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="overflow-y-auto">
+              {currentGame && currentLevel && (
+                <GamePlay
+                  game={currentGame}
+                  level={currentLevel}
+                  onComplete={handleGameComplete}
+                  onExit={handleGameExit}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
