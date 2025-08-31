@@ -350,6 +350,84 @@ const GameForm: React.FC<GameFormProps> = ({ gameId, onSuccess, onCancel }) => {
     setGameLevels(newLevels);
   };
 
+  // Funções para jogos de desvios
+  const updateLevelItem = (levelIndex: number, itemIndex: number, field: string, value: any) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const items = [...level.payload.items];
+    items[itemIndex] = { ...items[itemIndex], [field]: value };
+    level.payload = { ...level.payload, items };
+    setGameLevels(newLevels);
+  };
+
+  const addLevelItem = (levelIndex: number) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const items = [...(level.payload.items || []), { incorrect: '', correct: '', explanation: '' }];
+    level.payload = { ...level.payload, items };
+    setGameLevels(newLevels);
+  };
+
+  const removeLevelItem = (levelIndex: number, itemIndex: number) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const items = level.payload.items.filter((_: any, i: number) => i !== itemIndex);
+    level.payload = { ...level.payload, items };
+    setGameLevels(newLevels);
+  };
+
+  // Funções para jogos de intervenção - slots
+  const updateLevelSlot = (levelIndex: number, slotIndex: number, value: string) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const slots = [...level.payload.slots];
+    slots[slotIndex] = value;
+    level.payload = { ...level.payload, slots };
+    setGameLevels(newLevels);
+  };
+
+  const addLevelSlot = (levelIndex: number) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const slots = [...(level.payload.slots || []), ''];
+    level.payload = { ...level.payload, slots };
+    setGameLevels(newLevels);
+  };
+
+  const removeLevelSlot = (levelIndex: number, slotIndex: number) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const slots = level.payload.slots.filter((_: any, i: number) => i !== slotIndex);
+    level.payload = { ...level.payload, slots };
+    setGameLevels(newLevels);
+  };
+
+  // Funções para jogos de intervenção - peças
+  const updateLevelPiece = (levelIndex: number, pieceIndex: number, value: string) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const pieces = [...level.payload.pieces];
+    pieces[pieceIndex] = value;
+    level.payload = { ...level.payload, pieces };
+    setGameLevels(newLevels);
+  };
+
+  const addLevelPiece = (levelIndex: number) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const pieces = [...(level.payload.pieces || []), ''];
+    level.payload = { ...level.payload, pieces };
+    setGameLevels(newLevels);
+  };
+
+  const removeLevelPiece = (levelIndex: number, pieceIndex: number) => {
+    const newLevels = [...gameLevels];
+    const level = newLevels[levelIndex];
+    const pieces = level.payload.pieces.filter((_: any, i: number) => i !== pieceIndex);
+    level.payload = { ...level.payload, pieces };
+    setGameLevels(newLevels);
+  };
+
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
@@ -485,7 +563,8 @@ const GameForm: React.FC<GameFormProps> = ({ gameId, onSuccess, onCancel }) => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {level.payload.sentences?.map((sentence: any, sentenceIndex: number) => (
+                  {/* Conectivos - Editor de Frases */}
+                  {formData.template === 'conectivos' && level.payload.sentences?.map((sentence: any, sentenceIndex: number) => (
                     <div key={sentenceIndex} className="space-y-4 p-4 border rounded-lg">
                       <div>
                         <Label>Frase (use ___ para indicar onde vai o conectivo)</Label>
@@ -555,6 +634,139 @@ const GameForm: React.FC<GameFormProps> = ({ gameId, onSuccess, onCancel }) => {
                       </div>
                     </div>
                   ))}
+
+                  {/* Desvios - Editor de Frases Incorretas/Corretas */}
+                  {formData.template === 'desvios' && level.payload.items?.map((item: any, itemIndex: number) => (
+                    <div key={itemIndex} className="space-y-4 p-4 border rounded-lg">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Frase Incorreta (com erro)</Label>
+                          <Textarea
+                            value={item.incorrect || ''}
+                            onChange={(e) => updateLevelItem(levelIndex, itemIndex, 'incorrect', e.target.value)}
+                            rows={3}
+                            placeholder="Digite a frase com erro ortográfico/gramatical"
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Frase Corrigida</Label>
+                          <Textarea
+                            value={item.correct || ''}
+                            onChange={(e) => updateLevelItem(levelIndex, itemIndex, 'correct', e.target.value)}
+                            rows={3}
+                            placeholder="Digite a frase corrigida"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Explicação do Erro (opcional)</Label>
+                        <Input
+                          value={item.explanation || ''}
+                          onChange={(e) => updateLevelItem(levelIndex, itemIndex, 'explanation', e.target.value)}
+                          placeholder="Explique brevemente qual é o erro"
+                        />
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => removeLevelItem(levelIndex, itemIndex)}
+                        >
+                          <TrashIcon className="h-4 w-4 mr-1" />
+                          Remover Frase
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Botão para adicionar nova frase nos jogos de desvios */}
+                  {formData.template === 'desvios' && (
+                    <div className="text-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => addLevelItem(levelIndex)}
+                      >
+                        <PlusIcon className="h-4 w-4 mr-2" />
+                        Adicionar Nova Frase
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Intervenção - Editor de Slots e Peças */}
+                  {formData.template === 'intervencao' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Slots da Proposta de Intervenção</Label>
+                        <div className="space-y-2">
+                          {level.payload.slots?.map((slot: string, slotIndex: number) => (
+                            <div key={slotIndex} className="flex gap-2">
+                              <Input
+                                value={slot}
+                                onChange={(e) => updateLevelSlot(levelIndex, slotIndex, e.target.value)}
+                                placeholder="Nome do slot (ex: Agente, Ação, Meio...)"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => removeLevelSlot(levelIndex, slotIndex)}
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => addLevelSlot(levelIndex)}
+                          className="mt-2"
+                        >
+                          <PlusIcon className="h-4 w-4 mr-1" />
+                          Adicionar Slot
+                        </Button>
+                      </div>
+
+                      <div>
+                        <Label>Peças Disponíveis</Label>
+                        <div className="space-y-2">
+                          {level.payload.pieces?.map((piece: string, pieceIndex: number) => (
+                            <div key={pieceIndex} className="flex gap-2">
+                              <Input
+                                value={piece}
+                                onChange={(e) => updateLevelPiece(levelIndex, pieceIndex, e.target.value)}
+                                placeholder="Texto da peça"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => removeLevelPiece(levelIndex, pieceIndex)}
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => addLevelPiece(levelIndex)}
+                          className="mt-2"
+                        >
+                          <PlusIcon className="h-4 w-4 mr-1" />
+                          Adicionar Peça
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

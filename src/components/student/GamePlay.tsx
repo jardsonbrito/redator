@@ -204,13 +204,28 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
       setIsCorrect(correct);
       
       // Salvar a resposta
-      setAnsweredItems(prev => ({
-        ...prev,
+      const newAnsweredItems = {
+        ...answeredItems,
         [currentItemIndex]: { correct, userAnswer: userCorrection }
-      }));
+      };
+      setAnsweredItems(newAnsweredItems);
       
       if (correct) {
         setScore(prev => prev + 50);
+      }
+      
+      // Verificar se é a última frase e se completou todas corretamente
+      if (currentItemIndex === items.length - 1) {
+        const allCorrect = Object.values(newAnsweredItems).length === items.length && 
+                          Object.values(newAnsweredItems).every(item => item.correct);
+        
+        if (allCorrect) {
+          // Todas as frases foram respondidas corretamente - pode avançar de fase
+          setTimeout(() => {
+            handleQuestionComplete(100);
+          }, 1500);
+          return;
+        }
       }
       
       setTimeout(handleNext, 1500);
