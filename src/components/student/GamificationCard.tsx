@@ -28,6 +28,8 @@ const GamificationCard: React.FC = () => {
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [currentLevel, setCurrentLevel] = useState<any>(null);
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const [currentScore, setCurrentScore] = useState(0);
   const [gameDialogOpen, setGameDialogOpen] = useState(false);
   const { studentData } = useStudentAuth();
   const { toast } = useToast();
@@ -120,11 +122,34 @@ const GamificationCard: React.FC = () => {
       return;
     }
 
-    // Pegar primeira fase disponível
+    // Começar na primeira fase
     const firstLevel = game.levels[0];
     setCurrentGame(game);
     setCurrentLevel(firstLevel);
+    setCurrentLevelIndex(0);
+    setCurrentScore(0);
     setGameDialogOpen(true);
+  };
+
+  const handleNextLevel = (score: number) => {
+    if (!currentGame) return;
+    
+    const nextIndex = currentLevelIndex + 1;
+    setCurrentScore(score);
+    
+    if (nextIndex < currentGame.levels.length) {
+      // Avançar para próxima fase
+      const nextLevel = currentGame.levels[nextIndex];
+      setCurrentLevel(nextLevel);
+      setCurrentLevelIndex(nextIndex);
+      
+      toast({
+        title: "Parabéns!",
+        description: `Fase ${currentLevelIndex + 1} concluída! Avançando para a Fase ${nextIndex + 1}`,
+        variant: "default",
+        className: "bg-green-50 border-green-200 text-green-800"
+      });
+    }
   };
 
   const handleGameComplete = async (score: number, timeSpent: number) => {
@@ -142,15 +167,15 @@ const GamificationCard: React.FC = () => {
           student_class: studentData.turma,
           finished_at: new Date().toISOString(),
           time_spent_seconds: timeSpent,
-          result: { score, completed: true },
+          result: { score, completed: true, total_levels: currentGame.levels.length },
           score_points: score
         });
 
       if (error) throw error;
 
       toast({
-        title: "Parabéns!",
-        description: `Jogo concluído com ${score} pontos em ${timeSpent}s!`,
+        title: "🎉 Jogo Concluído!",
+        description: `Todas as ${currentGame.levels.length} fases foram concluídas com ${score} pontos em ${timeSpent}s!`,
         variant: "default",
         className: "bg-green-50 border-green-200 text-green-800"
       });
@@ -169,6 +194,8 @@ const GamificationCard: React.FC = () => {
       setGameDialogOpen(false);
       setCurrentGame(null);
       setCurrentLevel(null);
+      setCurrentLevelIndex(0);
+      setCurrentScore(0);
     }
   };
 
@@ -176,6 +203,8 @@ const GamificationCard: React.FC = () => {
     setGameDialogOpen(false);
     setCurrentGame(null);
     setCurrentLevel(null);
+    setCurrentLevelIndex(0);
+    setCurrentScore(0);
   };
 
   if (loading) {
@@ -250,6 +279,7 @@ const GamificationCard: React.FC = () => {
                   level={currentLevel}
                   onComplete={handleGameComplete}
                   onExit={handleGameExit}
+                  onNextLevel={handleNextLevel}
                 />
               )}
             </div>

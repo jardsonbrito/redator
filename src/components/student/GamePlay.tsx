@@ -22,6 +22,7 @@ interface Game {
   template: 'conectivos' | 'desvios' | 'intervencao';
   difficulty: number;
   competencies: number[];
+  levels: GameLevel[];
 }
 
 interface GamePlayProps {
@@ -29,13 +30,35 @@ interface GamePlayProps {
   level: GameLevel;
   onComplete: (score: number, timeSpent: number) => void;
   onExit: () => void;
+  onNextLevel?: (score: number) => void;
 }
 
-const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit }) => {
+const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, onNextLevel }) => {
   const [playState, setPlayState] = useState<any>({});
   const [startTime] = useState(Date.now());
   const [score, setScore] = useState(0);
   const [showExitDialog, setShowExitDialog] = useState(false);
+
+  const handleQuestionComplete = (questionScore: number) => {
+    const newScore = score + questionScore;
+    setScore(newScore);
+
+    // Verificar se é a última fase
+    const currentLevelIndex = game.levels.findIndex(l => l.id === level.id);
+    const isLastLevel = currentLevelIndex === game.levels.length - 1;
+
+    if (isLastLevel) {
+      // Completar jogo
+      setTimeout(() => {
+        onComplete(newScore, Math.floor((Date.now() - startTime) / 1000));
+      }, 1500);
+    } else {
+      // Avançar para próxima fase
+      setTimeout(() => {
+        onNextLevel?.(newScore);
+      }, 1500);
+    }
+  };
 
   const renderConectivosGame = () => {
     const { sentences } = level.payload;
@@ -43,10 +66,17 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit }) 
 
     const sentence = sentences[0];
     const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+    const currentLevelIndex = game.levels.findIndex(l => l.id === level.id);
+    const isLastLevel = currentLevelIndex === game.levels.length - 1;
 
     return (
       <div className="space-y-6">
         <div className="text-center">
+          <div className="mb-4">
+            <span className="text-sm text-muted-foreground">
+              Fase {currentLevelIndex + 1} de {game.levels.length} - {level.title}
+            </span>
+          </div>
           <h3 className="text-lg font-semibold mb-4">Complete a frase:</h3>
           <div className="text-xl p-4 bg-muted rounded-lg">
             {sentence.text.replace('___', selectedAnswer || '___')}
@@ -69,17 +99,13 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit }) 
         <Button
           onClick={() => {
             const isCorrect = sentence.answers.includes(selectedAnswer);
-            const newScore = isCorrect ? score + 100 : score;
-            setScore(newScore);
-            
-            setTimeout(() => {
-              onComplete(newScore, Math.floor((Date.now() - startTime) / 1000));
-            }, 1000);
+            const questionScore = isCorrect ? 100 : 0;
+            handleQuestionComplete(questionScore);
           }}
           disabled={!selectedAnswer}
           className="w-full"
         >
-          Confirmar Resposta
+          {isLastLevel ? 'Finalizar Jogo' : 'Próxima Fase'}
         </Button>
       </div>
     );
