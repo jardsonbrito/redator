@@ -64,7 +64,14 @@ const GamificationCard: React.FC = () => {
         }
         
         // Se tem turma, verificar se está autorizada
-        return game.turmas_autorizadas && game.turmas_autorizadas.includes(studentData.turma);
+        // Comparar tanto a turma completa quanto apenas a letra (ex: "Turma E" vs "E")
+        const alunoTurma = studentData.turma;
+        const alunoTurmaLetra = alunoTurma.replace('Turma ', ''); // Remove "Turma " para ficar só a letra
+        
+        return game.turmas_autorizadas && (
+          game.turmas_autorizadas.includes(alunoTurma) || 
+          game.turmas_autorizadas.includes(alunoTurmaLetra)
+        );
       });
 
       // Map games with their levels
