@@ -13,6 +13,7 @@ import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/u
 import { resolveSimuladoCover } from "@/utils/coverUtils";
 import { SimuladoCountdown } from "@/components/SimuladoCountdown";
 import { SimuladoAgendadoCard } from "@/components/SimuladoAgendadoCard";
+import { useSimuladoSubmission } from "@/hooks/useSimuladoSubmission";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -112,6 +113,53 @@ const getStatusSimulado = (simulado: any) => {
   return getSimuladoStatusInfo(status, simulado);
 };
 
+// Componente para card de simulado com verificação de submissão
+const SimuladoCardWithSubmission = ({ 
+  simulado, 
+  info, 
+  coverUrl, 
+  subtitle, 
+  badges, 
+  meta, 
+  onNavigate 
+}: {
+  simulado: any;
+  info: any;
+  coverUrl?: string;
+  subtitle?: string;
+  badges: { label: string; tone?: BadgeTone }[];
+  meta: any[];
+  onNavigate: () => void;
+}) => {
+  const { data: submissionData } = useSimuladoSubmission(simulado.id);
+  
+  // Se o aluno já enviou, adicionar badge "Enviado" e desabilitar botão
+  const finalBadges = submissionData?.hasSubmitted 
+    ? [...badges, { label: 'Enviado', tone: 'secondary' as BadgeTone }]
+    : badges;
+    
+  const ctaButton = info.isActive && !submissionData?.hasSubmitted ? {
+    label: 'Abrir',
+    onClick: onNavigate,
+    ariaLabel: `Abrir simulado ${simulado.titulo}`
+  } : undefined;
+
+  return (
+    <UnifiedCard
+      variant="aluno"
+      item={{
+        coverUrl,
+        title: simulado.titulo,
+        subtitle,
+        badges: finalBadges,
+        meta: meta.length > 0 ? meta : undefined,
+        cta: ctaButton,
+        ariaLabel: `Simulado: ${simulado.titulo}`
+      }}
+    />
+  );
+};
+
 if (isLoading) {
   return (
     <ProtectedRoute>
@@ -208,22 +256,15 @@ if (isLoading) {
 
       // Para simulados em andamento e encerrados, usar UnifiedCard normal
       return (
-        <UnifiedCard
+        <SimuladoCardWithSubmission
           key={simulado.id}
-          variant="aluno"
-          item={{
-            coverUrl,
-            title: simulado.titulo,
-            subtitle,
-            badges,
-            meta: meta.length > 0 ? meta : undefined,
-            cta: info.isActive ? { 
-              label: 'Abrir', 
-              onClick: () => navigate(`/simulados/${simulado.id}`),
-              ariaLabel: `Abrir simulado ${simulado.titulo}`
-            } : undefined,
-            ariaLabel: `Simulado: ${simulado.titulo}`
-          }}
+          simulado={simulado}
+          info={info}
+          coverUrl={coverUrl}
+          subtitle={subtitle}
+          badges={badges}
+          meta={meta}
+          onNavigate={() => navigate(`/simulados/${simulado.id}`)}
         />
       );
     })}

@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 
-export type BadgeTone = "primary" | "neutral" | "success" | "warning";
+export type BadgeTone = "primary" | "neutral" | "success" | "warning" | "secondary";
 export type ActionTone = "danger" | "neutral";
 export type CardVariant = "admin" | "corretor" | "aluno";
 
@@ -30,6 +30,7 @@ const toneToVariant: Record<BadgeTone, { className?: string; variant?: "secondar
   neutral: { variant: "outline" },
   success: { className: "bg-green-600 text-white" },
   warning: { className: "bg-yellow-600 text-white" },
+  secondary: { className: "bg-gray-100 text-gray-800 border-gray-300" },
 };
 
 interface UnifiedCardProps {
