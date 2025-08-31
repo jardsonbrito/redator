@@ -72,11 +72,11 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
       setIsCorrect(correct);
       setShowResult(true);
       
-      // Aguardar 2 segundos antes de avançar
+      // Aguardar 3 segundos antes de avançar automaticamente
       setTimeout(() => {
         const questionScore = correct ? 100 : 0;
         handleQuestionComplete(questionScore);
-      }, 2000);
+      }, 3000);
     };
 
     if (showResult) {
@@ -90,17 +90,20 @@ const GamePlay: React.FC<GamePlayProps> = ({ game, level, onComplete, onExit, on
               {isCorrect ? 'Correto!' : 'Incorreto!'}
             </h3>
             <div className="text-lg p-4 bg-white rounded-lg border">
-              {sentence.text.replace('___', `**${selectedAnswer}**`)}
+              {sentence.text.replace('___', selectedAnswer.toUpperCase())}
             </div>
             {!isCorrect && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  <strong>Resposta correta:</strong> {sentence.answers[0]}
+                  <strong>Resposta correta:</strong> {sentence.answers[0].toUpperCase()}
                 </p>
               </div>
             )}
             <div className="mt-4 text-sm text-muted-foreground">
               Pontos desta fase: {isCorrect ? '+100' : '+0'}
+            </div>
+            <div className="mt-4 text-xs text-muted-foreground">
+              Prosseguindo automaticamente...
             </div>
           </div>
         </div>
