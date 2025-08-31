@@ -36,14 +36,6 @@ const GamificationAdmin: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <GamepadIcon className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl font-bold">Gamificação</CardTitle>
-          </div>
-        </CardHeader>
-      </Card>
 
       {currentView === 'list' && (
         <GameList 
