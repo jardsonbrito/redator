@@ -272,44 +272,21 @@ export default function SimuladoDetalhes() {
                   </div>
                 )}
 
-                {/* Texto Motivador IV - Forçar renderização */}
-                {(() => {
-                  console.log('=== DEBUG TEXTO IV ===');
-                  console.log('tema completo:', tema);
-                  console.log('motivator4_source:', tema.motivator4_source);
-                  console.log('motivator4_url:', tema.motivator4_url);
-                  console.log('motivator4_file_path:', tema.motivator4_file_path);
-                  console.log('imagem_texto_4_url:', tema.imagem_texto_4_url);
-                  
-                  const motivatorUrl = getTemaMotivatorIVUrl(tema);
-                  console.log('URL retornada pela função:', motivatorUrl);
-                  
-                  // Forçar renderização se tiver qualquer URL
-                  const hasMotivator4 = tema.motivator4_url || tema.motivator4_file_path || tema.imagem_texto_4_url;
-                  console.log('Tem Motivador 4?', hasMotivator4);
-                  
-                  return null;
-                })()}
-                
-                {(tema.motivator4_url || tema.motivator4_file_path || tema.imagem_texto_4_url) && (
-                  <div>
-                    <h4 className="font-bold text-purple-800 mb-2">TEXTO IV</h4>
-                    <div className="p-4 bg-gray-50 rounded border">
-                      <img 
-                        src={tema.motivator4_url || tema.motivator4_file_path || tema.imagem_texto_4_url || ''}
-                        alt="Charge/Infográfico — Texto Motivador IV" 
-                        className="w-full max-w-lg mx-auto rounded"
-                        onError={(e) => {
-                          console.error('Erro ao carregar imagem do Texto IV');
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'block';
-                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm8gYW8gY2FycmVnYXIgaW1hZ2VtPC90ZXh0Pjwvc3ZnPg==';
-                        }}
-                        onLoad={() => console.log('Imagem do Texto IV carregada com sucesso')}
-                      />
-                    </div>
+                {/* FORÇAR TEXTO IV - TESTE */}
+                <div>
+                  <h4 className="font-bold text-purple-800 mb-2">TEXTO IV (TESTE FORÇADO)</h4>
+                  <div className="p-4 bg-gray-50 rounded border">
+                    <img 
+                      src="https://arvoreagua.org/wp-content/uploads/2021/06/crise-climatica.png"
+                      alt="Charge/Infográfico — Texto Motivador IV" 
+                      className="w-full max-w-lg mx-auto rounded"
+                      onError={(e) => {
+                        console.error('Erro ao carregar imagem do Texto IV FORÇADO');
+                      }}
+                      onLoad={() => console.log('Imagem do Texto IV FORÇADO carregada com sucesso')}
+                    />
                   </div>
-                )}
+                </div>
               </div>
             </CardContent>
           </Card>
