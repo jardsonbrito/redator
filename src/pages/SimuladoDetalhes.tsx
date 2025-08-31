@@ -46,6 +46,8 @@ export default function SimuladoDetalhes() {
             texto_2,
             texto_3,
             imagem_texto_4_url,
+            motivator4_url,
+            motivator4_source,
             cabecalho_enem
           )
         `)
@@ -268,12 +270,12 @@ export default function SimuladoDetalhes() {
                   </div>
                 )}
 
-                {tema.imagem_texto_4_url && (
+                {(tema.motivator4_url || tema.imagem_texto_4_url) && (
                   <div>
                     <h4 className="font-bold text-purple-800 mb-2">TEXTO IV</h4>
                     <div className="p-4 bg-gray-50 rounded border">
                       <img 
-                        src={tema.imagem_texto_4_url} 
+                        src={tema.motivator4_url || tema.imagem_texto_4_url} 
                         alt="Texto motivador IV" 
                         className="w-full max-w-lg mx-auto rounded"
                       />
