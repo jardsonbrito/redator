@@ -280,21 +280,40 @@ export default function SimuladoDetalhes() {
                   </div>
                 )}
 
-                {/* FORÇAR TEXTO IV - TESTE */}
-                <div>
-                  <h4 className="font-bold text-purple-800 mb-2">TEXTO IV (TESTE FORÇADO)</h4>
-                  <div className="p-4 bg-gray-50 rounded border">
-                    <img 
-                      src="https://arvoreagua.org/wp-content/uploads/2021/06/crise-climatica.png"
-                      alt="Charge/Infográfico — Texto Motivador IV" 
-                      className="w-full max-w-lg mx-auto rounded"
-                      onError={(e) => {
-                        console.error('Erro ao carregar imagem do Texto IV FORÇADO');
-                      }}
-                      onLoad={() => console.log('Imagem do Texto IV FORÇADO carregada com sucesso')}
-                    />
-                  </div>
-                </div>
+                {/* TEXTO IV - RENDERIZAÇÃO GARANTIDA */}
+                {(() => {
+                  const motivatorIVUrl = getTemaMotivatorIVUrl(tema);
+                  console.log('=== DEBUG TEXTO IV ===');
+                  console.log('motivator4_url:', tema.motivator4_url);
+                  console.log('motivator4_file_path:', tema.motivator4_file_path);
+                  console.log('motivator4_source:', tema.motivator4_source);
+                  console.log('imagem_texto_4_url:', tema.imagem_texto_4_url);
+                  console.log('URL final calculada:', motivatorIVUrl);
+                  
+                  // Se há qualquer URL disponível, renderizar o Texto IV
+                  const finalUrl = motivatorIVUrl || tema.imagem_texto_4_url || tema.motivator4_url;
+                  
+                  if (finalUrl) {
+                    return (
+                      <div>
+                        <h4 className="font-bold text-purple-800 mb-2">TEXTO IV</h4>
+                        <div className="p-4 bg-gray-50 rounded border">
+                          <img 
+                            src={finalUrl}
+                            alt="Charge/Infográfico — Texto Motivador IV" 
+                            className="w-full max-w-lg mx-auto rounded"
+                            onError={(e) => {
+                              console.error('Erro ao carregar Texto IV:', finalUrl);
+                            }}
+                            onLoad={() => console.log('Texto IV carregado:', finalUrl)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return null;
+                })()}
               </div>
             </CardContent>
           </Card>
