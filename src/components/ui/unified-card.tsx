@@ -48,7 +48,7 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
     <article className="w-full" aria-label={item.ariaLabel || item.title} role="article">
       <Card className="rounded-2xl border shadow-sm bg-card transition-shadow hover:shadow-md">
         <CardContent className="p-4 lg:p-6">
-          <div className="grid lg:grid-cols-[280px_minmax(0,1fr)] items-start gap-4 lg:gap-6">
+          <div className="flex flex-col gap-4">
             {/* Thumb - 16:9 aspect ratio */}
             <div className="relative w-full aspect-video overflow-hidden rounded-xl bg-muted transition-transform hover:scale-[1.02] group">
               <img
@@ -121,12 +121,12 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
 
               {/* CTA (Corretor/Aluno only) */}
               {showCta && (
-                <div className="mt-4 flex flex-col lg:flex-row gap-3 lg:justify-end">
+                <div className="mt-4 flex flex-col gap-3">
                   {item.cta && (
                     <Button
                       onClick={item.cta.onClick}
                       aria-label={item.cta.ariaLabel || item.cta.label}
-                      className="w-full lg:w-auto"
+                      className="w-full"
                       size="lg"
                     >
                       {item.cta.label}
@@ -137,7 +137,7 @@ export function UnifiedCard({ variant, item }: UnifiedCardProps) {
                       variant="outline"
                       onClick={item.secondaryCta.onClick}
                       aria-label={item.secondaryCta.ariaLabel || item.secondaryCta.label}
-                      className="w-full lg:w-auto"
+                      className="w-full"
                       size="lg"
                     >
                       {item.secondaryCta.label}
@@ -157,7 +157,7 @@ export function UnifiedCardSkeleton() {
   return (
     <Card className="rounded-2xl border shadow-sm bg-card">
       <CardContent className="p-4 lg:p-6">
-        <div className="grid lg:grid-cols-[280px_minmax(0,1fr)] items-start gap-4 lg:gap-6">
+        <div className="flex flex-col gap-4">
           <Skeleton className="w-full aspect-video rounded-xl" />
           <div className="space-y-4">
             <div className="flex gap-2">
