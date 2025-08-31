@@ -222,10 +222,18 @@ export default function SimuladoDetalhes() {
           </CardHeader>
         </Card>
 
-        {/* Conteúdo do Tema - SOMENTE SE SIMULADO ESTIVER EM PROGRESSO OU ENCERRADO */}
-        {(simuladoDisponivel || simuladoEncerrado) && tema && (
-          <Card className="mb-6">
-            <CardContent className="p-6">
+        {/* Conteúdo do Tema - SEMPRE MOSTRAR TESTE */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            {/* TESTE FORÇADO ANTES DE TUDO */}
+            <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded">
+              <h3 className="font-bold text-red-800 mb-2">TESTE TEXTO IV FORÇADO</h3>
+              <img 
+                src="https://arvoreagua.org/wp-content/uploads/2021/06/crise-climatica.png"
+                alt="Texto Motivador IV" 
+                className="w-full max-w-lg mx-auto rounded"
+              />
+            </div>
               {/* Cabeçalho ENEM */}
               {tema.cabecalho_enem && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
@@ -290,7 +298,6 @@ export default function SimuladoDetalhes() {
               </div>
             </CardContent>
           </Card>
-        )}
 
         {/* Formulário de Envio - SOMENTE SE SIMULADO ESTIVER EM PROGRESSO */}
         {simuladoDisponivel && (
