@@ -41,9 +41,8 @@ const GamificationCard: React.FC = () => {
     try {
       setLoading(true);
       
-      // Para visitantes, só mostrar jogos que permitem visitante
-      // Para alunos com turma, mostrar jogos da turma ou que permitem visitante
-      let query = supabase
+      // Buscar jogos publicados
+      let gamesQuery = supabase
         .from('games')
         .select(`
           *,
@@ -51,13 +50,16 @@ const GamificationCard: React.FC = () => {
         `)
         .eq('status', 'published');
       
+      // Aplicar filtro baseado na turma do aluno
       if (!studentData.turma || studentData.turma === 'Visitante') {
-        query = query.eq('allow_visitor', true);
+        // Visitantes só veem jogos que permitem visitante
+        gamesQuery = gamesQuery.eq('allow_visitor', true);
       } else {
-        query = query.or(`turmas_autorizadas.cs.{${studentData.turma}},allow_visitor.eq.true`);
+        // Alunos veem jogos da sua turma OU que permitem visitante
+        gamesQuery = gamesQuery.or(`turmas_autorizadas.cs.{${studentData.turma}},allow_visitor.eq.true`);
       }
       
-      const { data: gamesData, error: gamesError } = await query
+      const { data: gamesData, error: gamesError } = await gamesQuery
         .order('created_at', { ascending: true });
 
       if (gamesError) throw gamesError;
