@@ -14,7 +14,7 @@ const CorretorAulas = () => {
         .from('aulas')
         .select(`
           *,
-          modulos!inner(nome)
+          modulos(nome)
         `)
         .eq('ativo', true)
         .order('criado_em', { ascending: false });
