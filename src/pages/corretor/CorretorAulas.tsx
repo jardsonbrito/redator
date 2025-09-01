@@ -93,7 +93,7 @@ const CorretorAulas = () => {
                   {modulo}
                 </h2>
                 
-                <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {aulasGrupo.map((aula) => {
                     const coverUrl = resolveAulaCover(aula);
                     const badges = [{ label: aula.modulo, tone: 'primary' as const }];
