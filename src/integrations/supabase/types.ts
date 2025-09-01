@@ -540,6 +540,7 @@ export type Database = {
           email: string
           id: string
           nome_completo: string
+          visivel_no_formulario: boolean
         }
         Insert: {
           ativo?: boolean
@@ -548,6 +549,7 @@ export type Database = {
           email: string
           id?: string
           nome_completo: string
+          visivel_no_formulario?: boolean
         }
         Update: {
           ativo?: boolean
@@ -556,6 +558,7 @@ export type Database = {
           email?: string
           id?: string
           nome_completo?: string
+          visivel_no_formulario?: boolean
         }
         Relationships: []
       }

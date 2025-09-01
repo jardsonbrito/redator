@@ -41,6 +41,7 @@ export const CorretorSelector = ({
         .from('corretores')
         .select('id, nome_completo, email')
         .eq('ativo', true)
+        .eq('visivel_no_formulario', true)
         .order('nome_completo');
 
       if (error) throw error;
