@@ -105,15 +105,15 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
       if (error) throw error;
 
       toast({
-        title: "Visibilidade atualizada!",
-        description: `Corretor ${corretor.visivel_no_formulario ? 'removido do' : 'adicionado ao'} formulário de envio.`,
+        title: "Disponibilidade atualizada!",
+        description: `Corretor agora está ${corretor.visivel_no_formulario ? 'indisponível' : 'disponível'} para seleção.`,
       });
 
       fetchCorretores();
     } catch (error: any) {
       console.error("Erro ao alterar visibilidade:", error);
       toast({
-        title: "Erro ao alterar visibilidade",
+        title: "Erro ao alterar disponibilidade",
         description: error.message || "Ocorreu um erro inesperado.",
         variant: "destructive"
       });
@@ -173,7 +173,7 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                       {corretor.ativo ? "Ativo" : "Inativo"}
                     </Badge>
                     <Badge variant={corretor.visivel_no_formulario ? "default" : "outline"}>
-                      {corretor.visivel_no_formulario ? "Visível no formulário" : "Oculto no formulário"}
+                      {corretor.visivel_no_formulario ? "Disponível" : "Indisponível"}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{corretor.email}</p>
@@ -213,12 +213,12 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                         {corretor.visivel_no_formulario ? (
                           <>
                             <EyeOff className="w-4 h-4 mr-2" />
-                            Ocultar no formulário
+                            Indisponível
                           </>
                         ) : (
                           <>
                             <Eye className="w-4 h-4 mr-2" />
-                            Mostrar no formulário
+                            Disponível
                           </>
                         )}
                       </DropdownMenuItem>
