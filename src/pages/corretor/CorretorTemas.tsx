@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { BookOpen, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
-import { BookOpen } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState } from "react";
-import { resolveCover } from "@/utils/coverUtils";
+import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 
 const CorretorTemas = () => {
   const [selectedTema, setSelectedTema] = useState<any>(null);
@@ -35,9 +35,33 @@ const CorretorTemas = () => {
             <p className="text-gray-600">Visualização dos temas disponíveis</p>
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <UnifiedCardSkeleton />
-            <UnifiedCardSkeleton />
-            <UnifiedCardSkeleton />
+            <div className="space-y-3">
+              <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
+              <div className="px-4 space-y-3">
+                <div className="h-5 w-20 bg-muted rounded animate-pulse" />
+                <div className="h-6 w-full bg-muted rounded animate-pulse" />
+                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                <div className="h-9 w-full bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
+              <div className="px-4 space-y-3">
+                <div className="h-5 w-20 bg-muted rounded animate-pulse" />
+                <div className="h-6 w-full bg-muted rounded animate-pulse" />
+                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                <div className="h-9 w-full bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
+              <div className="px-4 space-y-3">
+                <div className="h-5 w-20 bg-muted rounded animate-pulse" />
+                <div className="h-6 w-full bg-muted rounded animate-pulse" />
+                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                <div className="h-9 w-full bg-muted rounded animate-pulse" />
+              </div>
+            </div>
           </div>
         </div>
       </CorretorLayout>
@@ -76,28 +100,61 @@ const CorretorTemas = () => {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {temas?.map((tema) => {
-              const coverUrl = resolveCover(tema.cover_file_path, tema.cover_url);
-              const badges = tema.eixo_tematico ? [{ label: tema.eixo_tematico, tone: 'primary' as const }] : [];
-              
-              return (
-                <UnifiedCard
-                  key={tema.id}
-                  variant="corretor"
-                  item={{
-                    coverUrl,
-                    title: tema.frase_tematica,
-                    badges,
-                    cta: {
-                      label: 'Ver Completo',
-                      onClick: () => setSelectedTema(tema),
-                      ariaLabel: `Ver tema completo: ${tema.frase_tematica}`
-                    },
-                    ariaLabel: `Tema: ${tema.frase_tematica}`
-                  }}
-                />
-              );
-            })}
+            {temas?.map((tema) => (
+              <Card key={tema.id} className="hover:shadow-lg transition-shadow border-redator-accent/20">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg font-bold text-redator-primary line-clamp-3 mb-3">
+                        {tema.frase_tematica}
+                      </CardTitle>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className="bg-redator-accent text-white">
+                          {tema.eixo_tematico}
+                        </Badge>
+                        {tema.publicado_em && (
+                          <span 
+                            className="inline-block px-2 py-0.5 text-[11px] sm:text-xs font-medium text-violet-700 bg-violet-50 border border-violet-100 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                            aria-label={`Data de publicação: ${new Date(tema.publicado_em).toLocaleDateString('pt-BR', { 
+                              day: '2-digit', 
+                              month: 'long', 
+                              year: 'numeric' 
+                            })}`}
+                          >
+                            Publicado em {new Date(tema.publicado_em).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="aspect-video overflow-hidden rounded-md">
+                      <img 
+                        src={getTemaCoverUrl(tema)} 
+                        alt={`Capa do tema: ${tema.frase_tematica}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="pt-2">
+                      <Button 
+                        className="w-full bg-redator-primary hover:bg-redator-primary/90"
+                        onClick={() => setSelectedTema(tema)}
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Ver Tema Completo
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
 

@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { FileText, Download, Library } from "lucide-react";
+import { Library } from "lucide-react";
+import { StudentBibliotecaCard } from "@/components/shared/StudentBibliotecaCard";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 
 const CorretorBiblioteca = () => {
@@ -31,8 +31,12 @@ const CorretorBiblioteca = () => {
   if (isLoading) {
     return (
       <CorretorLayout>
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Biblioteca</h1>
+            <p className="text-gray-600">Materiais disponíveis para consulta</p>
+          </div>
+          <div className="text-center">Carregando materiais...</div>
         </div>
       </CorretorLayout>
     );
@@ -58,6 +62,11 @@ const CorretorBiblioteca = () => {
     return acc;
   }, {} as Record<string, any[]>) || {};
 
+  const handleViewPdf = async (materialId: string, arquivoUrl: string, titulo: string, categoria: string) => {
+    // Corretor tem acesso a tudo, apenas abrir o arquivo
+    window.open(arquivoUrl, '_blank');
+  };
+
   return (
     <CorretorLayout>
       <div className="space-y-6">
@@ -79,48 +88,46 @@ const CorretorBiblioteca = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {Object.entries(materiaisPorCategoria).map(([categoria, materiaisGrupo]) => (
-              <div key={categoria}>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  {categoria}
-                </h2>
+              <div key={categoria} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-2xl font-bold text-redator-primary">
+                    {categoria}
+                  </h3>
+                  <Badge variant="outline" className="text-sm">
+                    {materiaisGrupo.length} material(is)
+                  </Badge>
+                </div>
                 
                 <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
-                  {materiaisGrupo.map((material) => (
-                    <Card key={material.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-lg mb-2 flex items-center gap-2">
-                              <FileText className="w-5 h-5 text-gray-600" />
-                              {material.titulo}
-                            </CardTitle>
-                            
-                            {material.descricao && (
-                              <p className="text-gray-600 mb-3">{material.descricao}</p>
-                            )}
-                            
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">{material.categorias?.nome}</Badge>
-                              <span className="text-sm text-gray-500">
-                                {material.arquivo_nome}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(material.arquivo_url, '_blank')}
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Baixar PDF
-                          </Button>
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  ))}
+                  {materiaisGrupo.map((material) => {
+                    const isLivroDigital = categoria.toLowerCase().includes('livro digital');
+                    
+                    // Corretor sempre tem acesso
+                    const podeAcessar = true;
+                    
+                    return (
+                      <StudentBibliotecaCard
+                        key={material.id}
+                        title={material.titulo}
+                        description={material.descricao}
+                        coverUrl={material.thumbnail_url}
+                        coverAlt={`Capa do material ${material.titulo}`}
+                        categoria={material.categorias?.nome || 'Sem categoria'}
+                        publishedAt={material.published_at}
+                        unpublishedAt={material.unpublished_at}
+                        isLivroDigital={isLivroDigital}
+                        podeAcessar={podeAcessar}
+                        onViewPdf={() => handleViewPdf(
+                          material.id,
+                          material.arquivo_url, 
+                          material.titulo,
+                          categoria
+                        )}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}

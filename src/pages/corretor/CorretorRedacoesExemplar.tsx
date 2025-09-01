@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
+import { ExemplarCard } from "@/components/ExemplarCard";
 import { BookOpen, User, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
@@ -63,9 +63,17 @@ const CorretorRedacoesExemplar = () => {
             <p className="text-gray-600">Redações modelo cadastradas pelo administrador</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <UnifiedCardSkeleton />
-            <UnifiedCardSkeleton />
-            <UnifiedCardSkeleton />
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
+                <div className="px-4 space-y-3">
+                  <div className="h-5 w-20 bg-muted rounded animate-pulse" />
+                  <div className="h-6 w-full bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                  <div className="h-9 w-full bg-muted rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </CorretorLayout>
@@ -104,46 +112,18 @@ const CorretorRedacoesExemplar = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {redacoesExemplares?.map((redacao: any) => {
-              // Usar capa real da redação exemplar
-              const coverUrl = resolveExemplarCover(redacao);
-              const badges: Array<{ label: string; tone: 'primary' | 'neutral' | 'success' | 'warning' }> = [
-                { label: 'Redação Modelo', tone: 'warning' }
-              ];
-              
-              if (redacao.eixo_tematico) {
-                badges.push({ label: redacao.eixo_tematico, tone: 'primary' });
-              }
-
-              // Parse da data se existir  
-              const dataFormatada = redacao.data_envio 
-                ? format(new Date(redacao.data_envio), "dd/MM/yyyy", { locale: ptBR })
-                : null;
-
-              const meta = [
-                { icon: User, text: 'Professor' },
-                ...(dataFormatada ? [{ icon: Calendar, text: dataFormatada }] : [])
-              ];
-
-              return (
-                <UnifiedCard
-                  key={redacao.id}
-                  variant="corretor"
-                  item={{
-                    coverUrl,
-                    title: redacao.frase_tematica || 'Redação Exemplar',
-                    badges,
-                    meta,
-                    cta: {
-                      label: 'Ver Redação',
-                      onClick: () => setSelectedRedacao(redacao),
-                      ariaLabel: `Ver redação exemplar: ${redacao.frase_tematica}`
-                    },
-                    ariaLabel: `Redação exemplar: ${redacao.frase_tematica}`
-                  }}
-                />
-              );
-            })}
+            {redacoesExemplares?.map((redacao: any) => (
+              <ExemplarCard
+                key={redacao.id}
+                id={redacao.id}
+                titulo={redacao.frase_tematica}
+                eixo={redacao.eixo_tematico}
+                autorNome="Professor"
+                capaUrl={redacao.imagem_url || redacao.pdf_url}
+                onViewRedacao={() => setSelectedRedacao(redacao)}
+                variant="student"
+              />
+            ))}
           </div>
         )}
 
