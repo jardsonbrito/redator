@@ -109,25 +109,34 @@ const MinhasRedacoesList = () => {
   });
 
   const { data: redacoes = [], isLoading, error } = useQuery({
-    queryKey: ['minhas-redacoes', studentData?.email, userType, 'visitor-essays'],
+    queryKey: ['minhas-redacoes', studentData?.email, visitanteData?.email, userType, 'visitor-essays'],
     queryFn: async () => {
       console.log('🔍 Iniciando busca de redações - userType:', userType);
       
       if (userType === 'visitante') {
-        console.log('👤 Buscando TODAS as redações de visitantes (visualização pública)');
+        // Para visitantes, buscar apenas redações do próprio email
+        const emailVisitante = visitanteData?.email?.toLowerCase().trim();
+        
+        if (!emailVisitante) {
+          console.log('❌ Email do visitante não encontrado:', visitanteData);
+          return [];
+        }
+        
+        console.log('👤 Buscando redações específicas do visitante:', emailVisitante);
         
         const { data: redacoesVisitantes, error: errorVisitantes } = await supabase
           .from('redacoes_enviadas')
           .select('*')
           .eq('turma', 'visitante')
+          .ilike('email_aluno', emailVisitante)
           .order('data_envio', { ascending: false });
           
         if (errorVisitantes) {
-          console.error('❌ Erro ao buscar redações de visitantes:', errorVisitantes);
+          console.error('❌ Erro ao buscar redações do visitante:', errorVisitantes);
           throw errorVisitantes;
         }
         
-        console.log('✅ Redações de visitantes encontradas:', redacoesVisitantes?.length || 0);
+        console.log('✅ Redações do visitante encontradas:', redacoesVisitantes?.length || 0);
         console.log('📋 Dados das redações:', redacoesVisitantes);
         
         // Processar redações de visitantes com tipo correto
@@ -139,7 +148,7 @@ const MinhasRedacoesList = () => {
           status: item.status || 'aguardando'
         } as RedacaoTurma)) || [];
         
-        console.log('✅ Redações formatadas para visitantes:', redacoesFormatadas);
+        console.log('✅ Redações formatadas para o visitante:', redacoesFormatadas);
         return redacoesFormatadas;
       }
       

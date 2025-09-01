@@ -257,9 +257,27 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       tipo: "visitante"
     };
 
+    let sessionId = null;
+
     try {
-      // Verificação automática de contas duplicadas e merge para visitantes também
       const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Criar/atualizar sessão de visitante no banco de dados
+      console.log('📝 Criando/atualizando sessão de visitante no banco...');
+      const { data: sessaoResult, error: sessaoError } = await supabase.rpc('gerenciar_sessao_visitante', {
+        p_email_visitante: email.trim().toLowerCase(),
+        p_nome_visitante: nome.trim()
+      });
+
+      if (sessaoError) {
+        console.warn('⚠️ Erro ao gerenciar sessão de visitante:', sessaoError);
+      } else if (sessaoResult && sessaoResult.success) {
+        sessionId = sessaoResult.session_id;
+        console.log('✅ Sessão de visitante gerenciada com sucesso:', sessaoResult.action);
+        console.log('🔑 Session ID:', sessionId);
+      }
+
+      // Verificação automática de contas duplicadas e merge para visitantes também
       const { data: mergeResult } = await supabase.rpc('auto_merge_student_accounts', {
         student_email: email.trim().toLowerCase()
       });
@@ -268,12 +286,17 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
         console.log('✅ Redações anteriores reconectadas automaticamente para visitante:', mergeResult.total_redacoes_merged);
       }
     } catch (error) {
-      console.warn('⚠️ Erro na verificação automática de merge para visitante:', error);
+      console.warn('⚠️ Erro na gestão de sessão/merge para visitante:', error);
       // Não bloquear o login se a verificação falhar
     }
 
-    // Garantir persistência com múltiplas estratégias
-    localStorage.setItem("visitanteData", JSON.stringify(visitanteInfo));
+    // Garantir persistência com múltiplas estratégias, incluindo session_id
+    const visitanteCompleteInfo = {
+      ...visitanteInfo,
+      sessionId: sessionId
+    };
+    
+    localStorage.setItem("visitanteData", JSON.stringify(visitanteCompleteInfo));
     localStorage.setItem("userType", "visitante");
     localStorage.setItem("alunoTurma", "visitante");
     localStorage.setItem("loginTimestamp", new Date().toISOString());
@@ -284,7 +307,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       userType: "visitante",
       turma: "visitante",
       nomeUsuario: nome,
-      visitanteInfo: visitanteInfo
+      visitanteInfo: visitanteCompleteInfo
     });
   };
 

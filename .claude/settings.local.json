@@ -11,7 +11,10 @@
       "Bash(curl:*)",
       "mcp__supabase__get_anon_key",
       "mcp__supabase__get_logs",
-      "mcp__supabase__list_edge_functions"
+      "mcp__supabase__list_edge_functions",
+      "mcp__supabase__list_projects",
+      "Bash(supabase functions deploy:*)",
+      "mcp__supabase__get_project_url"
     ]
   },
   "enableAllProjectMcpServers": true,
