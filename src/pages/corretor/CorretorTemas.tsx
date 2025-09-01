@@ -104,17 +104,17 @@ const CorretorTemas = () => {
               <Card key={tema.id} className="hover:shadow-lg transition-shadow border-redator-accent/20">
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-bold text-redator-primary line-clamp-3 mb-3">
+                     <div className="flex-1">
+                      <CardTitle className="text-sm font-semibold text-redator-primary line-clamp-2 mb-2">
                         {tema.frase_tematica}
                       </CardTitle>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge className="bg-redator-accent text-white">
+                        <Badge className="bg-redator-accent text-white text-xs">
                           {tema.eixo_tematico}
                         </Badge>
                         {tema.publicado_em && (
                           <span 
-                            className="inline-block px-2 py-0.5 text-[11px] sm:text-xs font-medium text-violet-700 bg-violet-50 border border-violet-100 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                            className="inline-block px-2 py-0.5 text-[10px] font-medium text-violet-700 bg-violet-50 border border-violet-100 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
                             aria-label={`Data de publicação: ${new Date(tema.publicado_em).toLocaleDateString('pt-BR', { 
                               day: '2-digit', 
                               month: 'long', 
