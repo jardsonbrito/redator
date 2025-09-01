@@ -210,90 +210,92 @@ export const MuralAvisos = ({ turmaCode }: MuralAvisosProps) => {
           <span className="text-xl font-bold">Mural de Avisos</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 p-6">
-        {avisos.map(aviso => (
-          <Card 
-            key={aviso.id} 
-            className={`${
-              aviso.prioridade === 'destaque' 
-                ? 'border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-950/20' 
-                : ''
-            }`}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg flex items-center gap-2">
+      <CardContent className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {avisos.map(aviso => (
+            <Card 
+              key={aviso.id} 
+              className={`h-fit ${
+                aviso.prioridade === 'destaque' 
+                  ? 'border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-950/20' 
+                  : ''
+              }`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      {aviso.prioridade === 'destaque' && (
+                        <AlertTriangle className="w-5 h-5 text-orange-500" />
+                      )}
+                      {aviso.titulo}
+                    </CardTitle>
                     {aviso.prioridade === 'destaque' && (
-                      <AlertTriangle className="w-5 h-5 text-orange-500" />
+                      <Badge variant="secondary" className="mt-2 bg-orange-100 text-orange-800">
+                        Destaque
+                      </Badge>
                     )}
-                    {aviso.titulo}
-                  </CardTitle>
-                  {aviso.prioridade === 'destaque' && (
-                    <Badge variant="secondary" className="mt-2 bg-orange-100 text-orange-800">
-                      Destaque
-                    </Badge>
-                  )}
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(aviso.criado_em).toLocaleDateString('pt-BR')}
+                  </span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {new Date(aviso.criado_em).toLocaleDateString('pt-BR')}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {aviso.descricao}
-              </div>
-              
-              {aviso.imagem_url && (
-                <div className="mt-3">
-                  <img 
-                    src={aviso.imagem_url} 
-                    alt="Imagem do aviso" 
-                    className="max-w-full h-auto rounded-lg border" 
-                  />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {aviso.descricao}
                 </div>
-              )}
-              
-              <div className="flex flex-col sm:flex-row gap-2 pt-3">
-                {aviso.link_externo && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => window.open(aviso.link_externo, '_blank')}
-                    className="w-full sm:w-auto"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Acessar Link
-                  </Button>
+                
+                {aviso.imagem_url && (
+                  <div className="mt-3">
+                    <img 
+                      src={aviso.imagem_url} 
+                      alt="Imagem do aviso" 
+                      className="max-w-full h-auto rounded-lg border" 
+                    />
+                  </div>
                 )}
                 
-                {jaLeu(aviso.id) ? (
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="w-full sm:w-auto bg-green-600 hover:bg-green-600 cursor-default"
-                    disabled
-                  >
-                    <Check className="w-4 h-4 mr-2" />
-                    Leitura confirmada
-                  </Button>
-                ) : (
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="w-full sm:w-auto bg-purple-700 hover:bg-purple-800"
-                    onClick={() => handleConfirmarLeitura(aviso.id)}
-                    disabled={confirmingReading === aviso.id}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    {confirmingReading === aviso.id ? "Confirmando..." : "Confirmar Leitura"}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="flex flex-col sm:flex-row gap-2 pt-3">
+                  {aviso.link_externo && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.open(aviso.link_externo, '_blank')}
+                      className="w-full sm:w-auto"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Acessar Link
+                    </Button>
+                  )}
+                  
+                  {jaLeu(aviso.id) ? (
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="w-full sm:w-auto bg-green-600 hover:bg-green-600 cursor-default"
+                      disabled
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Leitura confirmada
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="w-full sm:w-auto bg-purple-700 hover:bg-purple-800"
+                      onClick={() => handleConfirmarLeitura(aviso.id)}
+                      disabled={confirmingReading === aviso.id}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      {confirmingReading === aviso.id ? "Confirmando..." : "Confirmar Leitura"}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
