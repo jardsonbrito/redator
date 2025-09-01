@@ -62,7 +62,7 @@ const CorretorRedacoesExemplar = () => {
             <h1 className="text-2xl font-bold text-gray-900">Redações Exemplares</h1>
             <p className="text-gray-600">Redações modelo cadastradas pelo administrador</p>
           </div>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
@@ -103,7 +103,7 @@ const CorretorRedacoesExemplar = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {redacoesExemplares?.map((redacao: any) => {
               // Usar capa real da redação exemplar
               const coverUrl = resolveExemplarCover(redacao);

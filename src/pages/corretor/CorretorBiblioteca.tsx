@@ -86,7 +86,7 @@ const CorretorBiblioteca = () => {
                   {categoria}
                 </h2>
                 
-                <div className="grid gap-4">
+                <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
                   {materiaisGrupo.map((material) => (
                     <Card key={material.id} className="hover:shadow-md transition-shadow">
                       <CardHeader>

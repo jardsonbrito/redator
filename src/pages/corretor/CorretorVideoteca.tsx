@@ -78,7 +78,7 @@ const CorretorVideoteca = () => {
                   {categoria}
                 </h2>
                 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {videosGrupo.map((video) => (
                     <Card key={video.id} className="hover:shadow-md transition-shadow">
                       <CardHeader>
