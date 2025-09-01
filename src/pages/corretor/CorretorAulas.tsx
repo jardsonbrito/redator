@@ -35,7 +35,7 @@ const CorretorAulas = () => {
             <h1 className="text-2xl font-bold text-gray-900">Aulas</h1>
             <p className="text-gray-600">Aulas disponíveis para consulta</p>
           </div>
-          <div className="space-y-4">
+          <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
@@ -93,7 +93,7 @@ const CorretorAulas = () => {
                   {modulo}
                 </h2>
                 
-                <div className="space-y-4">
+                <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
                   {aulasGrupo.map((aula) => {
                     const coverUrl = resolveAulaCover(aula);
                     const badges = [{ label: aula.modulo, tone: 'primary' as const }];

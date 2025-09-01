@@ -34,7 +34,7 @@ const CorretorTemas = () => {
             <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
             <p className="text-gray-600">Visualização dos temas disponíveis</p>
           </div>
-          <div className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
@@ -62,44 +62,44 @@ const CorretorTemas = () => {
           <p className="text-gray-600">Visualização dos temas disponíveis</p>
         </div>
 
-        <div className="space-y-4">
-          {temas?.map((tema) => {
-            const coverUrl = resolveCover(tema.cover_file_path, tema.cover_url);
-            const badges = tema.eixo_tematico ? [{ label: tema.eixo_tematico, tone: 'primary' as const }] : [];
-            
-            return (
-              <UnifiedCard
-                key={tema.id}
-                variant="corretor"
-                item={{
-                  coverUrl,
-                  title: tema.frase_tematica,
-                  badges,
-                  cta: {
-                    label: 'Ver Completo',
-                    onClick: () => setSelectedTema(tema),
-                    ariaLabel: `Ver tema completo: ${tema.frase_tematica}`
-                  },
-                  ariaLabel: `Tema: ${tema.frase_tematica}`
-                }}
-              />
-            );
-          })}
-
-          {(!temas || temas.length === 0) && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                  Nenhum tema disponível
-                </h3>
-                <p className="text-gray-500">
-                  Os temas aparecerão aqui quando forem publicados.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {(!temas || temas.length === 0) ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                Nenhum tema disponível
+              </h3>
+              <p className="text-gray-500">
+                Os temas aparecerão aqui quando forem publicados.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {temas?.map((tema) => {
+              const coverUrl = resolveCover(tema.cover_file_path, tema.cover_url);
+              const badges = tema.eixo_tematico ? [{ label: tema.eixo_tematico, tone: 'primary' as const }] : [];
+              
+              return (
+                <UnifiedCard
+                  key={tema.id}
+                  variant="corretor"
+                  item={{
+                    coverUrl,
+                    title: tema.frase_tematica,
+                    badges,
+                    cta: {
+                      label: 'Ver Completo',
+                      onClick: () => setSelectedTema(tema),
+                      ariaLabel: `Ver tema completo: ${tema.frase_tematica}`
+                    },
+                    ariaLabel: `Tema: ${tema.frase_tematica}`
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
 
         {/* Modal para visualização do tema */}
         <Dialog open={!!selectedTema} onOpenChange={() => setSelectedTema(null)}>

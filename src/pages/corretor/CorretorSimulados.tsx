@@ -33,7 +33,7 @@ const CorretorSimulados = () => {
             <h1 className="text-2xl font-bold text-gray-900">Simulados</h1>
             <p className="text-gray-600">Simulados finalizados disponíveis para consulta</p>
           </div>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
             <UnifiedCardSkeleton />
@@ -61,62 +61,62 @@ const CorretorSimulados = () => {
           <p className="text-gray-600">Simulados finalizados disponíveis para consulta</p>
         </div>
 
-        <div className="space-y-4">
-          {simulados?.map((simulado) => {
-            const coverUrl = resolveSimuladoCover(simulado);
-            const dataInicio = new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-            const dataFim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
-            
-            const badges: Array<{ label: string; tone: 'primary' | 'neutral' | 'success' | 'warning' }> = [];
-            badges.push({ label: 'Finalizado', tone: 'neutral' });
-            
-            if (simulado.tema?.eixo_tematico) {
-              badges.push({ label: simulado.tema.eixo_tematico, tone: 'primary' });
-            }
+        {(!simulados || simulados.length === 0) ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <ClipboardCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                Nenhum simulado finalizado
+              </h3>
+              <p className="text-gray-500">
+                Os simulados já realizados aparecerão aqui.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {simulados?.map((simulado) => {
+              const coverUrl = resolveSimuladoCover(simulado);
+              const dataInicio = new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+              const dataFim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
+              
+              const badges: Array<{ label: string; tone: 'primary' | 'neutral' | 'success' | 'warning' }> = [];
+              badges.push({ label: 'Finalizado', tone: 'neutral' });
+              
+              if (simulado.tema?.eixo_tematico) {
+                badges.push({ label: simulado.tema.eixo_tematico, tone: 'primary' });
+              }
 
-            const meta = [
-              { icon: Calendar, text: formatarData(dataInicio, dataFim) },
-              { icon: Clock, text: formatarHorario(dataInicio, dataFim) }
-            ];
+              const meta = [
+                { icon: Calendar, text: formatarData(dataInicio, dataFim) },
+                { icon: Clock, text: formatarHorario(dataInicio, dataFim) }
+              ];
 
-            return (
-              <UnifiedCard
-                key={simulado.id}
-                variant="corretor"
-                item={{
-                  coverUrl,
-                  title: simulado.titulo,
-                  subtitle: simulado.tema?.frase_tematica || simulado.frase_tematica,
-                  badges,
-                  meta,
-                  cta: {
-                    label: 'Ver detalhes',
-                    onClick: () => {
-                      // Navegar para detalhes do simulado
-                      window.open(`/simulados/${simulado.id}`, '_blank');
+              return (
+                <UnifiedCard
+                  key={simulado.id}
+                  variant="corretor"
+                  item={{
+                    coverUrl,
+                    title: simulado.titulo,
+                    subtitle: simulado.tema?.frase_tematica || simulado.frase_tematica,
+                    badges,
+                    meta,
+                    cta: {
+                      label: 'Ver detalhes',
+                      onClick: () => {
+                        // Navegar para detalhes do simulado
+                        window.open(`/simulados/${simulado.id}`, '_blank');
+                      },
+                      ariaLabel: `Ver detalhes do simulado ${simulado.titulo}`
                     },
-                    ariaLabel: `Ver detalhes do simulado ${simulado.titulo}`
-                  },
-                  ariaLabel: `Simulado: ${simulado.titulo}`
-                }}
-              />
-            );
-          })}
-
-          {(!simulados || simulados.length === 0) && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <ClipboardCheck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                  Nenhum simulado finalizado
-                </h3>
-                <p className="text-gray-500">
-                  Os simulados já realizados aparecerão aqui.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                    ariaLabel: `Simulado: ${simulado.titulo}`
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
     </CorretorLayout>
   );
