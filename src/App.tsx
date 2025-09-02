@@ -59,6 +59,7 @@ import { ProfessorExercicios } from "./pages/professor/ProfessorExercicios";
 import { ProfessorSimulados } from "./pages/professor/ProfessorSimulados";
 import { ProfessorSalasVirtuais } from "./pages/professor/ProfessorSalasVirtuais";
 import { ProfessorAvisos } from "./pages/professor/ProfessorAvisos";
+import { ProfessorVisitantes } from "./pages/professor/ProfessorVisitantes";
 import CadastroAluno from "./pages/CadastroAluno";
 import AtualizarEmail from "./pages/AtualizarEmail";
 import AjudaRapida from "./pages/AjudaRapida";
@@ -66,8 +67,10 @@ import CorretorAjudaRapida from "./pages/corretor/CorretorAjudaRapida";
 import CorretorTemaDetalhes from "./pages/corretor/CorretorTemaDetalhes";
 import CorretorLousas from "./pages/corretor/CorretorLousas";
 import CorretorLousaDetalhes from "./pages/corretor/CorretorLousaDetalhes";
+import CorretorVisitantes from "./pages/corretor/CorretorVisitantes";
 import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 import LousaRespostasPage from "./pages/admin/LousaRespostas";
+import VisitantesAdmin from "./pages/admin/VisitantesAdmin";
 import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
 import RedacaoManuscrita from "./pages/RedacaoManuscrita";
@@ -124,6 +127,7 @@ function App() {
                   <Route path="/admin/simulados" element={<SimuladosAdmin />} />
                   <Route path="/admin/exercicios" element={<ExerciciosAdmin />} />
                   <Route path="/admin/corretores" element={<CorretoresAdmin />} />
+                  <Route path="/admin/visitantes" element={<VisitantesAdmin />} />
                   <Route path="/admin/exportacao" element={<Exportacao />} />
                   <Route path="/admin/ajuda-rapida" element={<AjudaRapidaAdmin />} />
                   <Route path="/admin/gamificacao" element={<GamificacaoAdmin />} />
@@ -144,6 +148,7 @@ function App() {
                   <Route path="/corretor/ajuda-rapida" element={<CorretorAjudaRapida />} />
                   <Route path="/corretor/lousas" element={<CorretorLousas />} />
                   <Route path="/corretor/lousas/:id" element={<CorretorLousaDetalhes />} />
+                  <Route path="/corretor/visitantes" element={<CorretorVisitantes />} />
                   
                   {/* Rotas do Professor */}
                   <Route path="/professor/login" element={<ProfessorLogin />} />
@@ -186,6 +191,11 @@ function App() {
                   <Route path="/professor/avisos" element={
                     <ProfessorProtectedRoute>
                       <ProfessorAvisos />
+                    </ProfessorProtectedRoute>
+                  } />
+                  <Route path="/professor/visitantes" element={
+                    <ProfessorProtectedRoute>
+                      <ProfessorVisitantes />
                     </ProfessorProtectedRoute>
                   } />
                   <Route path="/professor/temas" element={
