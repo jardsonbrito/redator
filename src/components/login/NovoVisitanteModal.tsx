@@ -29,6 +29,15 @@ export const NovoVisitanteModal = ({ isOpen, email, onComplete, loading }: NovoV
       return;
     }
 
+    if (!whatsapp.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Por favor, digite seu WhatsApp.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       console.log('📝 Criando novo visitante:', { nome: nome.trim(), email, whatsapp: whatsapp.trim() });
@@ -106,7 +115,7 @@ export const NovoVisitanteModal = ({ isOpen, email, onComplete, loading }: NovoV
 
           <div>
             <Label htmlFor="visitor-whatsapp" className="text-redator-primary font-medium">
-              WhatsApp (Opcional)
+              WhatsApp *
             </Label>
             <div className="relative">
               <Input
@@ -121,7 +130,7 @@ export const NovoVisitanteModal = ({ isOpen, email, onComplete, loading }: NovoV
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             </div>
             <p className="text-xs text-redator-accent mt-1">
-              Para contato sobre novidades e turmas oficiais
+              Necessário para contato sobre novidades e turmas oficiais
             </p>
           </div>
 
