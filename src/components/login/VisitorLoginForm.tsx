@@ -1,87 +1,99 @@
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Mail, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { EmailLoginStep } from "./EmailLoginStep";
+import { NovoVisitanteModal } from "./NovoVisitanteModal";
 
 interface VisitorLoginFormProps {
-  onLogin: (data: { nome: string; email: string }) => void;
+  onLogin: (data: { nome: string; email: string; whatsapp?: string }) => void;
   loading: boolean;
 }
 
+interface UserData {
+  encontrado: boolean;
+  tipo: 'aluno' | 'visitante' | 'professor' | 'corretor' | 'admin' | 'novo' | 'erro';
+  dados?: any;
+  erro?: string;
+}
+
 export const VisitorLoginForm = ({ onLogin, loading }: VisitorLoginFormProps) => {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<'email' | 'novo_visitante'>('email');
+  const [emailVerificado, setEmailVerificado] = useState("");
+  const [showModal, setShowModal] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = () => {
-    if (!nome.trim() || !email.trim()) {
+  const handleEmailVerified = async (email: string, userData: UserData) => {
+    console.log('📧 Email verificado:', email, userData);
+
+    if (userData.tipo === 'erro') {
       toast({
-        title: "Preencha todos os campos",
-        description: "Nome e e-mail são obrigatórios.",
+        title: "Erro na verificação",
+        description: userData.erro || "Ocorreu um erro inesperado.",
         variant: "destructive"
       });
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({
-        title: "E-mail inválido",
-        description: "Por favor, insira um e-mail válido.",
-        variant: "destructive"
-      });
+    if (!userData.encontrado || userData.tipo === 'novo') {
+      // Novo visitante - mostrar modal
+      console.log('👤 Novo visitante detectado');
+      setEmailVerificado(email);
+      setShowModal(true);
       return;
     }
 
-    onLogin({ nome: nome.trim(), email: email.trim() });
+    // Usuário encontrado - fazer login direto
+    if (userData.tipo === 'visitante') {
+      console.log('✅ Visitante existente encontrado:', userData.dados);
+      onLogin({ 
+        nome: userData.dados.nome, 
+        email: userData.dados.email
+      });
+    } else if (userData.tipo === 'aluno') {
+      console.log('🎓 Aluno encontrado, mas precisa usar login de aluno');
+      toast({
+        title: "Aluno detectado!",
+        description: `Olá ${userData.dados.nome}! Para acessar como aluno, use a opção "Aluno" e selecione sua turma: ${userData.dados.turma}.`,
+        variant: "default"
+      });
+      return;
+    } else {
+      // Outros tipos (professor, corretor, admin)
+      toast({
+        title: `${userData.tipo} detectado!`,
+        description: `Olá ${userData.dados.nome}! Use a opção "${userData.tipo}" para fazer login.`,
+        variant: "default"
+      });
+    }
+  };
+
+  const handleNovoVisitanteComplete = (data: { nome: string; email: string; whatsapp?: string }) => {
+    console.log('✨ Novo visitante criado:', data);
+    setShowModal(false);
+    
+    // Fazer login com os dados do novo visitante
+    onLogin({ 
+      nome: data.nome, 
+      email: data.email,
+      whatsapp: data.whatsapp 
+    });
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="visitor-name" className="text-redator-primary font-medium">
-          Nome Completo
-        </Label>
-        <div className="relative">
-          <Input
-            id="visitor-name"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Digite seu nome completo"
-            className="mt-1 border-redator-accent/30 pl-10"
-          />
-          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-        </div>
-      </div>
-      
-      <div>
-        <Label htmlFor="visitor-email" className="text-redator-primary font-medium">
-          E-mail
-        </Label>
-        <div className="relative">
-          <Input
-            id="visitor-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Digite seu e-mail"
-            className="mt-1 border-redator-accent/30 pl-10"
-            onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-          />
-          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-        </div>
-      </div>
+    <>
+      {step === 'email' && (
+        <EmailLoginStep 
+          onEmailVerified={handleEmailVerified}
+          loading={loading}
+        />
+      )}
 
-      <Button 
-        onClick={handleSubmit}
-        disabled={loading}
-        className="w-full bg-redator-primary hover:bg-redator-primary/90 text-white h-12"
-      >
-        {loading ? 'Entrando...' : 'Entrar'}
-      </Button>
-    </div>
+      <NovoVisitanteModal
+        isOpen={showModal}
+        email={emailVerificado}
+        onComplete={handleNovoVisitanteComplete}
+        loading={loading}
+      />
+    </>
   );
 };

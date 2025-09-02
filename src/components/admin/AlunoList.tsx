@@ -8,7 +8,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search, UserX, UserCheck, Users } from "lucide-react";
+import { Edit, Trash2, Search, UserX, UserCheck, Users, Info } from "lucide-react";
+import { VisitanteInfoModal } from "./VisitanteInfoModal";
+import { MigrarVisitanteModal } from "./MigrarVisitanteModal";
 
 interface Aluno {
   id: string;
@@ -21,6 +23,7 @@ interface Aluno {
   ultimo_acesso?: string;
   total_redacoes?: number;
   session_id?: string;
+  whatsapp?: string;
 }
 
 interface AlunoListProps {
@@ -33,6 +36,10 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTurma, setActiveTurma] = useState("todos");
+  const [selectedVisitante, setSelectedVisitante] = useState<Aluno | null>(null);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [visitanteParaMigrar, setVisitanteParaMigrar] = useState<Aluno | null>(null);
+  const [isMigrarModalOpen, setIsMigrarModalOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchAlunos = async () => {
@@ -40,48 +47,67 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     try {
       const todosUsuarios: Aluno[] = [];
 
-      // Buscar alunos tradicionais
-      const { data: alunosData, error: alunosError } = await supabase
-        .from("profiles")
-        .select("id, nome, email, turma, created_at, ativo")
-        .eq("user_type", "aluno")
-        .eq("is_authenticated_student", true)
-        .order("nome", { ascending: true });
+      // Buscar alunos tradicionais e visitantes em paralelo
+      const [
+        { data: alunosData, error: alunosError },
+        { data: visitantesData, error: visitantesError },
+        { data: todasRedacoes, error: redacoesError }
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, nome, email, turma, created_at, ativo")
+          .eq("user_type", "aluno")
+          .eq("is_authenticated_student", true)
+          .order("nome", { ascending: true }),
+        
+        supabase
+          .from("visitante_sessoes")
+          .select("*")
+          .order("nome_visitante", { ascending: true }),
+        
+        // Buscar TODAS as redações de uma vez
+        supabase
+          .from('redacoes_enviadas')
+          .select('email_aluno, turma')
+      ]);
 
       if (alunosError) throw alunosError;
+      if (redacoesError) throw redacoesError;
 
-      // Buscar contagem de redações para cada aluno
+      // Criar mapa de contagem de redações por email (otimização)
+      const redacoesPorEmail = new Map<string, number>();
+      
+      if (todasRedacoes) {
+        todasRedacoes.forEach(redacao => {
+          const email = redacao.email_aluno.toLowerCase();
+          redacoesPorEmail.set(email, (redacoesPorEmail.get(email) || 0) + 1);
+        });
+      }
+
+      // Processar alunos
       if (alunosData) {
-        for (const aluno of alunosData) {
-          const { data: redacoes } = await supabase
-            .from('redacoes_enviadas')
-            .select('id', { count: 'exact' })
-            .ilike('email_aluno', aluno.email);
+        alunosData.forEach(aluno => {
+          const emailLower = aluno.email.toLowerCase();
+          const totalRedacoes = redacoesPorEmail.get(emailLower) || 0;
           
           todosUsuarios.push({
             ...aluno,
             tipo: 'aluno',
-            total_redacoes: redacoes?.length || 0
+            total_redacoes: totalRedacoes
           });
-        }
+        });
       }
 
-      // Buscar visitantes
-      const { data: visitantesData, error: visitantesError } = await supabase
-        .from("visitante_sessoes")
-        .select("*")
-        .order("nome_visitante", { ascending: true });
-
+      // Processar visitantes
       if (visitantesError) {
         console.warn("Erro ao buscar visitantes:", visitantesError);
       } else if (visitantesData) {
-        // Buscar contagem de redações para cada visitante
-        for (const visitante of visitantesData) {
-          const { data: redacoes } = await supabase
-            .from('redacoes_enviadas')
-            .select('id', { count: 'exact' })
-            .eq('turma', 'visitante')
-            .ilike('email_aluno', visitante.email_visitante);
+        visitantesData.forEach(visitante => {
+          const emailLower = visitante.email_visitante.toLowerCase();
+          // Para visitantes, contar apenas redações com turma='visitante'
+          const redacoesVisitante = todasRedacoes?.filter(r => 
+            r.turma === 'visitante' && r.email_aluno.toLowerCase() === emailLower
+          ).length || 0;
           
           todosUsuarios.push({
             id: visitante.id,
@@ -93,9 +119,10 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
             tipo: 'visitante',
             ultimo_acesso: visitante.ultimo_acesso,
             session_id: visitante.session_id,
-            total_redacoes: redacoes?.length || 0
+            total_redacoes: redacoesVisitante,
+            whatsapp: visitante.whatsapp
           });
-        }
+        });
       }
 
       // Ordenar: visitantes engajados primeiro, depois alunos por nome
@@ -232,6 +259,21 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     }
   };
 
+  const handleShowVisitanteInfo = (visitante: Aluno) => {
+    setSelectedVisitante(visitante);
+    setIsInfoModalOpen(true);
+  };
+
+  const handleShowMigrarModal = (visitante: Aluno) => {
+    setVisitanteParaMigrar(visitante);
+    setIsMigrarModalOpen(true);
+  };
+
+  const handleMigracaoSuccess = () => {
+    // Recarregar a lista após migração bem-sucedida
+    fetchAlunos();
+  };
+
   const getTurmaColor = (turma: string) => {
     const colors = {
       "visitante": "bg-orange-100 text-orange-800",
@@ -312,6 +354,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
               onToggleStatus={handleToggleStatus}
               getTurmaColor={getTurmaColor}
               getTipoBadge={getTipoBadge}
+              onShowVisitanteInfo={handleShowVisitanteInfo}
+              onShowMigrarModal={handleShowMigrarModal}
             />
           </TabsContent>
 
@@ -326,11 +370,35 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                 onToggleStatus={handleToggleStatus}
                 getTurmaColor={getTurmaColor}
                 getTipoBadge={getTipoBadge}
+                onShowVisitanteInfo={handleShowVisitanteInfo}
+                onShowMigrarModal={handleShowMigrarModal}
               />
             </TabsContent>
           ))}
         </Tabs>
       </CardContent>
+
+      {/* Modal de Informações do Visitante */}
+      <VisitanteInfoModal
+        visitante={selectedVisitante}
+        isOpen={isInfoModalOpen}
+        onClose={() => {
+          setIsInfoModalOpen(false);
+          setSelectedVisitante(null);
+        }}
+        onMigrar={handleShowMigrarModal}
+      />
+
+      {/* Modal de Migração do Visitante */}
+      <MigrarVisitanteModal
+        visitante={visitanteParaMigrar}
+        isOpen={isMigrarModalOpen}
+        onClose={() => {
+          setIsMigrarModalOpen(false);
+          setVisitanteParaMigrar(null);
+        }}
+        onSuccess={handleMigracaoSuccess}
+      />
     </Card>
   );
 };
@@ -345,6 +413,8 @@ interface AlunoTableProps {
   onToggleStatus: (aluno: Aluno) => void;
   getTurmaColor: (turma: string) => string;
   getTipoBadge: (usuario: Aluno) => React.ReactNode;
+  onShowVisitanteInfo: (visitante: Aluno) => void;
+  onShowMigrarModal: (visitante: Aluno) => void;
 }
 
 const AlunoTable = ({ 
@@ -355,7 +425,9 @@ const AlunoTable = ({
   onDelete, 
   onToggleStatus, 
   getTurmaColor,
-  getTipoBadge 
+  getTipoBadge,
+  onShowVisitanteInfo,
+  onShowMigrarModal
 }: AlunoTableProps) => {
   if (loading) {
     return (
@@ -437,15 +509,16 @@ const AlunoTable = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(`mailto:${aluno.email}?subject=Convite%20para%20turma%20oficial&body=Olá%20${aluno.nome},%0A%0AVimos%20que%20você%20enviou%20${aluno.total_redacoes}%20redação(ões)%20como%20visitante.%20Gostaria%20de%20fazer%20parte%20de%20uma%20turma%20oficial?`, '_blank')}
-                        className="text-orange-600 hover:text-orange-700 text-xs h-6 px-2"
+                        onClick={() => onShowVisitanteInfo(aluno)}
+                        className="text-green-600 hover:text-green-700 text-xs h-6 px-2"
                       >
-                        Convidar
+                        <Info className="w-3 h-3 mr-1" />
+                        Info
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => alert(`Funcionalidade em desenvolvimento.\n\nPara migrar este visitante:\n- Email: ${aluno.email}\n- Nome: ${aluno.nome}\n- Redações: ${aluno.total_redacoes}`)}
+                        onClick={() => onShowMigrarModal(aluno)}
                         className="text-blue-600 hover:text-blue-700 text-xs h-6 px-2"
                       >
                         Migrar

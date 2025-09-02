@@ -16,7 +16,7 @@ interface StudentAuthContextType {
     };
   };
   loginAsStudent: (turma: string, nome: string, email: string) => Promise<void>;
-  loginAsVisitante: (nome: string, email: string) => Promise<void>;
+  loginAsVisitante: (nome: string, email: string, whatsapp?: string) => Promise<void>;
   logoutStudent: () => void;
 }
 
@@ -76,6 +76,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
             userType: "visitante",
             turma: "visitante",
             nomeUsuario: dados.nome,
+            email: dados.email, // ✅ ADICIONAR EMAIL AQUI
             visitanteInfo: dados
           });
           console.log('✅ Sessão de visitante restaurada persistentemente');
@@ -249,7 +250,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     });
   };
 
-  const loginAsVisitante = async (nome: string, email: string) => {
+  const loginAsVisitante = async (nome: string, email: string, whatsapp?: string) => {
     console.log('🔐 Login como visitante - nome:', nome, 'email:', email);
     const visitanteInfo = {
       nome: nome.trim(),
@@ -262,10 +263,22 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Simplificar - não usar função inexistente
-      console.log('📝 Salvando dados de visitante localmente...');
-      sessionId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      console.log('🔑 Session ID gerado:', sessionId);
+      // Salvar sessão de visitante no banco usando a função RPC
+      console.log('💾 Salvando sessão de visitante no banco...');
+      const { data: sessaoResult, error: sessaoError } = await supabase.rpc('gerenciar_sessao_visitante', {
+        p_email_visitante: email.trim().toLowerCase(),
+        p_nome_visitante: nome.trim(),
+        p_whatsapp: whatsapp?.trim() || null
+      });
+
+      if (sessaoError) {
+        console.warn('⚠️ Erro ao salvar sessão no banco:', sessaoError);
+        // Gerar session_id local como fallback
+        sessionId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      } else if (sessaoResult && sessaoResult.success) {
+        sessionId = sessaoResult.session_id;
+        console.log('✅ Sessão salva no banco:', sessaoResult.action, 'Session ID:', sessionId);
+      }
 
       // Verificação automática de contas duplicadas e merge para visitantes também
       const { data: mergeResult } = await supabase.rpc('auto_merge_student_accounts', {
@@ -277,7 +290,8 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       }
     } catch (error) {
       console.warn('⚠️ Erro na gestão de sessão/merge para visitante:', error);
-      // Não bloquear o login se a verificação falhar
+      // Gerar session_id local como fallback
+      sessionId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
     // Garantir persistência com múltiplas estratégias, incluindo session_id
@@ -297,6 +311,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       userType: "visitante",
       turma: "visitante",
       nomeUsuario: nome,
+      email: email.toLowerCase(), // ✅ ADICIONAR EMAIL AQUI TAMBÉM
       visitanteInfo: visitanteCompleteInfo
     });
   };

@@ -52,37 +52,96 @@ const VisitantesAdmin = () => {
   
   const { toast } = useToast();
 
-  // Buscar estatísticas gerais
+  // Buscar estatísticas reais de visitantes
   const { data: estatisticas, isLoading: loadingStats } = useQuery({
     queryKey: ['estatisticas-visitantes'],
     queryFn: async (): Promise<EstatisticasVisitantes> => {
-      console.log('📊 Simulando estatísticas de visitantes...');
+      console.log('📊 Buscando estatísticas reais de visitantes...');
       
-      // Como a função não existe, simular dados básicos
-      const mockStats: EstatisticasVisitantes = {
-        total_visitantes: 0,
-        total_redacoes_visitantes: 0,
-        visitantes_ativos_30_dias: 0,
-        visitantes_ultima_semana: 0
+      // Buscar total de visitantes na tabela visitante_sessoes
+      const { count: totalVisitantes } = await supabase
+        .from('visitante_sessoes')
+        .select('id', { count: 'exact', head: true });
+      
+      // Buscar visitantes ativos nos últimos 30 dias
+      const dataLimite30 = new Date();
+      dataLimite30.setDate(dataLimite30.getDate() - 30);
+      const { count: visitantesAtivos30 } = await supabase
+        .from('visitante_sessoes')
+        .select('id', { count: 'exact', head: true })
+        .gte('ultimo_acesso', dataLimite30.toISOString());
+      
+      // Buscar visitantes ativos nos últimos 7 dias
+      const dataLimite7 = new Date();
+      dataLimite7.setDate(dataLimite7.getDate() - 7);
+      const { count: visitantesAtivos7 } = await supabase
+        .from('visitante_sessoes')
+        .select('id', { count: 'exact', head: true })
+        .gte('ultimo_acesso', dataLimite7.toISOString());
+      
+      // Buscar total de redações de visitantes
+      const { count: totalRedacoesVisitantes } = await supabase
+        .from('redacoes_enviadas')
+        .select('id', { count: 'exact', head: true })
+        .eq('turma', 'visitante');
+      
+      const stats: EstatisticasVisitantes = {
+        total_visitantes: totalVisitantes || 0,
+        total_redacoes_visitantes: totalRedacoesVisitantes || 0,
+        visitantes_ativos_30_dias: visitantesAtivos30 || 0,
+        visitantes_ultima_semana: visitantesAtivos7 || 0,
+        gerado_em: new Date().toISOString()
       };
       
-      console.log('✅ Estatísticas simuladas:', mockStats);
-      return mockStats;
+      console.log('✅ Estatísticas reais obtidas:', stats);
+      return stats;
     },
     refetchInterval: 60000 // Atualizar a cada minuto
   });
 
-  // Simular busca de sessões de visitantes (tabela não existe)
+  // Buscar sessões reais de visitantes
   const { data: visitantes = [], isLoading: loadingVisitantes } = useQuery({
     queryKey: ['visitantes-sessoes', sortBy, filterActive],
     queryFn: async (): Promise<VisitanteSession[]> => {
-      console.log('👥 Simulando busca de sessões de visitantes...');
+      console.log('👥 Buscando sessões reais de visitantes...');
       
-      // Como a tabela visitante_sessoes não existe, retornar array vazio
-      const mockSessions: VisitanteSession[] = [];
+      let query = supabase.from('visitante_sessoes').select('*');
       
-      console.log('✅ Sessões simuladas:', mockSessions);
-      return mockSessions;
+      // Aplicar filtro de status ativo
+      if (filterActive !== null) {
+        query = query.eq('ativo', filterActive);
+      }
+      
+      // Aplicar ordenação
+      const isAscending = sortBy.startsWith('+');
+      const field = isAscending ? sortBy.substring(1) : sortBy;
+      query = query.order(field, { ascending: isAscending });
+      
+      const { data: sessoes, error } = await query;
+      
+      if (error) {
+        console.error('Erro ao buscar visitantes:', error);
+        throw error;
+      }
+      
+      // Para cada visitante, buscar contagem de redações
+      const visitantesComRedacoes: VisitanteSession[] = [];
+      
+      for (const sessao of sessoes || []) {
+        const { count: totalRedacoes } = await supabase
+          .from('redacoes_enviadas')
+          .select('id', { count: 'exact', head: true })
+          .eq('turma', 'visitante')
+          .ilike('email_aluno', sessao.email_visitante);
+        
+        visitantesComRedacoes.push({
+          ...sessao,
+          total_redacoes: totalRedacoes || 0
+        });
+      }
+      
+      console.log('✅ Sessões reais obtidas:', visitantesComRedacoes.length);
+      return visitantesComRedacoes;
     },
     refetchInterval: 30000 // Atualizar a cada 30 segundos
   });
@@ -114,18 +173,54 @@ const VisitantesAdmin = () => {
     }
 
     try {
-      console.log('🔄 Simulando migração de visitante:', selectedVisitante.email_visitante);
+      console.log('🔄 Migrando visitante real:', selectedVisitante.email_visitante);
       
-      // Como a função não existe, simular comportamento
+      // Criar perfil de aluno
+      const { data: newUser, error: userError } = await supabase.auth.signUp({
+        email: selectedVisitante.email_visitante,
+        password: 'tempPassword123!', // Senha temporária
+        options: {
+          data: {
+            nome: selectedVisitante.nome_visitante,
+            user_type: 'aluno',
+            turma: selectedTurma,
+            is_authenticated_student: true
+          }
+        }
+      });
+      
+      if (userError) throw userError;
+      
+      // Atualizar redações do visitante para a nova turma
+      const { error: redacoesError } = await supabase
+        .from('redacoes_enviadas')
+        .update({ turma: selectedTurma })
+        .eq('turma', 'visitante')
+        .ilike('email_aluno', selectedVisitante.email_visitante);
+      
+      if (redacoesError) throw redacoesError;
+      
+      // Marcar sessão de visitante como inativa (migrada)
+      const { error: sessaoError } = await supabase
+        .from('visitante_sessoes')
+        .update({ ativo: false })
+        .eq('id', selectedVisitante.id);
+      
+      if (sessaoError) throw sessaoError;
+      
       toast({
-        title: "Funcionalidade em desenvolvimento",
-        description: "A migração de visitantes ainda não está implementada",
+        title: "Migração concluída",
+        description: `${selectedVisitante.nome_visitante} foi migrado para ${selectedTurma} com sucesso!`,
         variant: "default"
       });
       
-      // Fechar diálogos
+      // Fechar diálogos e recarregar dados
       setShowMigrationDialog(false);
       setSelectedVisitante(null);
+      
+      // Recarregar query de visitantes
+      // queryClient.invalidateQueries(['visitantes-sessoes']);
+      
     } catch (error: any) {
       console.error('❌ Erro na migração:', error);
       toast({
@@ -274,6 +369,9 @@ const VisitantesAdmin = () => {
         <Card>
           <CardHeader>
             <CardTitle>Sessões de Visitantes ({visitantes.length})</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Visitantes que acessaram a plataforma e podem ser convertidos em alunos oficiais
+            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

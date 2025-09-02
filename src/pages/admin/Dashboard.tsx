@@ -17,7 +17,7 @@ interface DashboardMetrics {
   corretoresAtivos: number;
 }
 
-const TURMAS = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'];
+const TURMAS = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E', 'Visitante'];
 
 export const Dashboard = () => {
   const { toast } = useToast();
@@ -52,7 +52,16 @@ export const Dashboard = () => {
         .eq('ativo', true);
 
       if (selectedTurma) {
-        alunosQuery = alunosQuery.eq('turma', selectedTurma);
+        if (selectedTurma === 'Visitante') {
+          // Para visitantes, contar sessões ativas da tabela visitante_sessoes
+          const { count: visitantesCount } = await supabase
+            .from('visitante_sessoes')
+            .select('id', { count: 'exact', head: true })
+            .eq('ativo', true);
+          setMetrics(prev => ({ ...prev, totalAlunos: visitantesCount || 0 }));
+        } else {
+          alunosQuery = alunosQuery.eq('turma', selectedTurma);
+        }
       }
 
       const { count: totalAlunos } = await alunosQuery;
@@ -86,7 +95,11 @@ export const Dashboard = () => {
 
       if (selectedTurma) {
         redacoesPromises.forEach(promise => {
-          promise.eq('turma', selectedTurma);
+          if (selectedTurma === 'Visitante') {
+            promise.eq('turma', 'visitante');
+          } else {
+            promise.eq('turma', selectedTurma);
+          }
         });
       }
 

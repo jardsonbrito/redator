@@ -24,21 +24,27 @@ export const MeuDesempenho = () => {
     queryFn: async (): Promise<DesempenhoData> => {
       // Lógica para visitantes
       if (isVisitante) {
-        console.log('📊 Buscando desempenho para VISITANTES (todas as redações de visitante)');
+        const emailVisitante = studentData.email?.toLowerCase().trim();
+        console.log('📊 Buscando desempenho para VISITANTE específico:', emailVisitante);
+        
+        if (!emailVisitante) {
+          return { totalEnviadas: 0, maiorNota: null, menorNota: null };
+        }
         
         const { data: redacoesVisitantes, error } = await supabase
           .from('redacoes_enviadas')
           .select('nota_total')
-          .eq('turma', 'visitante');
+          .eq('turma', 'visitante')
+          .ilike('email_aluno', emailVisitante);
           
         if (error) {
-          console.error('Erro ao buscar redações de visitantes:', error);
+          console.error('Erro ao buscar redações do visitante:', error);
           return { totalEnviadas: 0, maiorNota: null, menorNota: null };
         }
         
         const todasNotas = redacoesVisitantes?.map(r => r.nota_total).filter(nota => nota !== null && nota !== undefined) || [];
         
-        console.log(`📊 Encontradas ${redacoesVisitantes?.length || 0} redações de visitantes:`, todasNotas);
+        console.log(`📊 Encontradas ${redacoesVisitantes?.length || 0} redações para o visitante ${emailVisitante}:`, todasNotas);
         
         return {
           totalEnviadas: redacoesVisitantes?.length || 0,

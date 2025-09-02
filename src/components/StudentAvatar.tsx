@@ -44,8 +44,8 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
           }
         }
         
-        // 2. Se não encontrou por user.id, tentar por email (aluno) usando query direta
-        if (!profileData && studentData.email) {
+        // 2. Se não encontrou por user.id, tentar por email (apenas para alunos, não visitantes)
+        if (!profileData && studentData.email && studentData.userType !== 'visitante') {
           console.log('🔍 Carregando avatar - busca por email:', studentData.email.toLowerCase());
           
           const { data: directData, error: directError } = await supabase
@@ -65,6 +65,8 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
           } else {
             console.log('❌ Avatar - nenhum perfil encontrado para email:', studentData.email.toLowerCase());
           }
+        } else if (studentData.userType === 'visitante') {
+          console.log('👥 Visitante detectado - usando avatar padrão sem busca no banco');
         }
         
         // 3. Fallback para user.email se disponível

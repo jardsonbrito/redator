@@ -87,7 +87,7 @@ const Welcome = () => {
         });
       } else if (profileType === "visitante") {
         console.log('✅ WELCOME - Login bem-sucedido para visitante:', data.nome);
-        await loginAsVisitante(data.nome, data.email);
+        await loginAsVisitante(data.nome, data.email, data.whatsapp);
         toast({
           title: "Bem-vindo, visitante!",
           description: `Olá, ${data.nome}! Acesso liberado.`
