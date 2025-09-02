@@ -62,7 +62,7 @@ export const VisitanteInfoModal = ({ visitante, isOpen, onClose, onMigrar }: Vis
                 <Badge variant={visitante.ativo ? "default" : "secondary"} className="text-xs">
                   {visitante.ativo ? "Ativo" : "Inativo"}
                 </Badge>
-                <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
                   Visitante
                 </Badge>
               </div>

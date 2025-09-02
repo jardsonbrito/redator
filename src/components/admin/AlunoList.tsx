@@ -276,7 +276,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
 
   const getTurmaColor = (turma: string) => {
     const colors = {
-      "visitante": "bg-orange-100 text-orange-800",
+      "visitante": "bg-teal-100 text-teal-800",        // Teal único para visitante
       "Turma A": "bg-blue-100 text-blue-800",
       "Turma B": "bg-green-100 text-green-800", 
       "Turma C": "bg-purple-100 text-purple-800",
@@ -470,7 +470,7 @@ const AlunoTable = ({
                 {aluno.email}
               </TableCell>
               <TableCell className="p-2">
-                <div className={`text-xs px-2 py-1 rounded text-center font-medium ${aluno.tipo === 'visitante' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                <div className={`text-xs px-2 py-1 rounded text-center font-medium ${aluno.tipo === 'visitante' ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-800'}`}>
                   {aluno.tipo === 'visitante' ? 'Visitante' : 'Aluno'}
                 </div>
               </TableCell>

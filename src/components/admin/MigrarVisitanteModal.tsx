@@ -105,7 +105,7 @@ export const MigrarVisitanteModal = ({ visitante, isOpen, onClose, onSuccess }: 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-blue-900">{visitante.nome}</h3>
-                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
                   Visitante
                 </Badge>
               </div>
