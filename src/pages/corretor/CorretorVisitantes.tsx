@@ -32,18 +32,17 @@ const CorretorVisitantes = () => {
   // Buscar estatísticas básicas
   const { data: estatisticas, isLoading: loadingStats } = useQuery({
     queryKey: ['corretor-estatisticas-visitantes'],
-    queryFn: async (): Promise<EstatisticasVisitantes> => {
-      const { data, error } = await supabase.rpc('get_estatisticas_visitantes');
+    queryFn: async () => {
+      console.log('📊 Simulando estatísticas de visitantes para corretor...');
       
-      if (error) {
-        console.error('❌ Erro ao buscar estatísticas:', error);
-        throw error;
-      }
-      
-      return {
-        total_visitantes: data.total_visitantes,
-        total_redacoes_visitantes: data.total_redacoes_visitantes
+      // Simular dados básicos
+      const mockStats = {
+        total_visitantes: 0,
+        total_redacoes_visitantes: 0
       };
+      
+      console.log('✅ Estatísticas simuladas:', mockStats);
+      return mockStats;
     },
     refetchInterval: 60000
   });

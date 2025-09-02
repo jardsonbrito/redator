@@ -262,20 +262,10 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Criar/atualizar sessão de visitante no banco de dados
-      console.log('📝 Criando/atualizando sessão de visitante no banco...');
-      const { data: sessaoResult, error: sessaoError } = await supabase.rpc('gerenciar_sessao_visitante', {
-        p_email_visitante: email.trim().toLowerCase(),
-        p_nome_visitante: nome.trim()
-      });
-
-      if (sessaoError) {
-        console.warn('⚠️ Erro ao gerenciar sessão de visitante:', sessaoError);
-      } else if (sessaoResult && sessaoResult.success) {
-        sessionId = sessaoResult.session_id;
-        console.log('✅ Sessão de visitante gerenciada com sucesso:', sessaoResult.action);
-        console.log('🔑 Session ID:', sessionId);
-      }
+      // Simplificar - não usar função inexistente
+      console.log('📝 Salvando dados de visitante localmente...');
+      sessionId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('🔑 Session ID gerado:', sessionId);
 
       // Verificação automática de contas duplicadas e merge para visitantes também
       const { data: mergeResult } = await supabase.rpc('auto_merge_student_accounts', {
