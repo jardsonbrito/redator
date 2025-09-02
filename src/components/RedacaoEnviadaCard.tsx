@@ -23,6 +23,17 @@ interface RedacaoEnviadaCardProps {
     nota_c4?: number | null;
     nota_c5?: number | null;
     nota_total?: number | null;
+    // Notas específicas por corretor para simulados
+    nota_c1_corretor_1?: number | null;
+    nota_c2_corretor_1?: number | null;
+    nota_c3_corretor_1?: number | null;
+    nota_c4_corretor_1?: number | null;
+    nota_c5_corretor_1?: number | null;
+    nota_c1_corretor_2?: number | null;
+    nota_c2_corretor_2?: number | null;
+    nota_c3_corretor_2?: number | null;
+    nota_c4_corretor_2?: number | null;
+    nota_c5_corretor_2?: number | null;
     comentario_admin?: string | null;
     corrigida: boolean;
     data_correcao?: string | null;
@@ -59,6 +70,34 @@ export const RedacaoEnviadaCard = ({
 }: RedacaoEnviadaCardProps) => {
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
+
+  // Função para verificar se deve mostrar as notas
+  // Para simulados, só mostra quando ambas as correções estiverem finalizadas
+  const shouldShowScores = (redacao: any) => {
+    if (redacao.tipo_envio === 'simulado') {
+      // Para simulados, precisamos verificar se AMBAS as correções foram finalizadas
+      // Verificamos se há notas de TODOS os corretores para TODAS as competências
+      const temTodasNotasCorretor1 = [1, 2, 3, 4, 5].every(comp => {
+        const nota = redacao[`nota_c${comp}_corretor_1`];
+        return nota !== null && nota !== undefined;
+      });
+      
+      const temTodasNotasCorretor2 = [1, 2, 3, 4, 5].every(comp => {
+        const nota = redacao[`nota_c${comp}_corretor_2`];
+        return nota !== null && nota !== undefined;
+      });
+      
+      // Verificar se ambos corretores têm relatórios pedagógicos preenchidos
+      const temRelatorioCorretor1 = redacao.elogios_pontos_atencao_corretor_1 && redacao.elogios_pontos_atencao_corretor_1.trim();
+      const temRelatorioCorretor2 = redacao.elogios_pontos_atencao_corretor_2 && redacao.elogios_pontos_atencao_corretor_2.trim();
+      
+      // Para simulados, só mostra se AMBAS as correções estão COMPLETAMENTE finalizadas
+      return temTodasNotasCorretor1 && temTodasNotasCorretor2 && temRelatorioCorretor1 && temRelatorioCorretor2;
+    }
+    
+    // Para outros tipos de redação (regular, exercício, visitante), usar lógica atual
+    return true;
+  };
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -200,8 +239,8 @@ export const RedacaoEnviadaCard = ({
         </CardContent>
       </Card>
 
-          {/* Vista Pedagógica - só exibir se correção foi FINALIZADA (não apenas salva incompleta) */}
-      {redacao.corrigida && (
+        {/* Vista Pedagógica - só exibir se correção foi FINALIZADA e para simulados apenas quando ambas as correções estiverem concluídas */}
+      {redacao.corrigida && shouldShowScores(redacao) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

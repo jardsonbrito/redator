@@ -11,7 +11,7 @@ import {
   Download,
   HelpCircle,
   Trophy,
-  ChalkboardTeacher,
+  Presentation,
   BarChart3
 } from 'lucide-react';
 
