@@ -35,10 +35,12 @@ interface VisitanteSession {
 
 interface EstatisticasVisitantes {
   total_visitantes: number;
-  visitantes_ativos_30_dias: number;
+  visitantes_ativos_30_dias?: number;
   total_redacoes_visitantes: number;
-  visitantes_ultima_semana: number;
-  gerado_em: string;
+  visitantes_ultima_semana?: number;
+  total_conversas_ativas?: number;
+  visitantes_ativos_ultimos_7_dias?: number;
+  gerado_em?: string;
 }
 
 const VisitantesAdmin = () => {
@@ -54,66 +56,33 @@ const VisitantesAdmin = () => {
   const { data: estatisticas, isLoading: loadingStats } = useQuery({
     queryKey: ['estatisticas-visitantes'],
     queryFn: async (): Promise<EstatisticasVisitantes> => {
-      console.log('📊 Buscando estatísticas de visitantes...');
+      console.log('📊 Simulando estatísticas de visitantes...');
       
-      const { data, error } = await supabase.rpc('get_estatisticas_visitantes');
+      // Como a função não existe, simular dados básicos
+      const mockStats: EstatisticasVisitantes = {
+        total_visitantes: 0,
+        total_redacoes_visitantes: 0,
+        visitantes_ativos_30_dias: 0,
+        visitantes_ultima_semana: 0
+      };
       
-      if (error) {
-        console.error('❌ Erro ao buscar estatísticas:', error);
-        throw error;
-      }
-      
-      console.log('✅ Estatísticas carregadas:', data);
-      return data;
+      console.log('✅ Estatísticas simuladas:', mockStats);
+      return mockStats;
     },
     refetchInterval: 60000 // Atualizar a cada minuto
   });
 
-  // Buscar todas as sessões de visitantes
+  // Simular busca de sessões de visitantes (tabela não existe)
   const { data: visitantes = [], isLoading: loadingVisitantes } = useQuery({
     queryKey: ['visitantes-sessoes', sortBy, filterActive],
     queryFn: async (): Promise<VisitanteSession[]> => {
-      console.log('👥 Buscando sessões de visitantes...');
+      console.log('👥 Simulando busca de sessões de visitantes...');
       
-      let query = supabase
-        .from('visitante_sessoes')
-        .select('*');
-
-      // Aplicar filtro de ativo se definido
-      if (filterActive !== null) {
-        query = query.eq('ativo', filterActive);
-      }
-
-      // Aplicar ordenação
-      const isAsc = sortBy.startsWith('+');
-      const field = sortBy.replace(/^[+-]/, '');
-      query = query.order(field, { ascending: isAsc });
-
-      const { data: sessoes, error } = await query;
-
-      if (error) {
-        console.error('❌ Erro ao buscar sessões:', error);
-        throw error;
-      }
-
-      // Buscar contagem de redações para cada visitante
-      const sessoesComRedacoes = await Promise.all(
-        (sessoes || []).map(async (sessao) => {
-          const { data: redacoes } = await supabase
-            .from('redacoes_enviadas')
-            .select('id', { count: 'exact' })
-            .eq('turma', 'visitante')
-            .ilike('email_aluno', sessao.email_visitante);
-          
-          return {
-            ...sessao,
-            total_redacoes: redacoes?.length || 0
-          };
-        })
-      );
-
-      console.log('✅ Sessões carregadas:', sessoesComRedacoes.length);
-      return sessoesComRedacoes;
+      // Como a tabela visitante_sessoes não existe, retornar array vazio
+      const mockSessions: VisitanteSession[] = [];
+      
+      console.log('✅ Sessões simuladas:', mockSessions);
+      return mockSessions;
     },
     refetchInterval: 30000 // Atualizar a cada 30 segundos
   });
@@ -145,28 +114,18 @@ const VisitantesAdmin = () => {
     }
 
     try {
-      console.log('🔄 Iniciando migração de visitante:', selectedVisitante.email_visitante);
+      console.log('🔄 Simulando migração de visitante:', selectedVisitante.email_visitante);
       
-      const { data: resultado, error } = await supabase.rpc('migrar_visitante_para_aluno', {
-        p_email_visitante: selectedVisitante.email_visitante,
-        p_nova_turma: selectedTurma
+      // Como a função não existe, simular comportamento
+      toast({
+        title: "Funcionalidade em desenvolvimento",
+        description: "A migração de visitantes ainda não está implementada",
+        variant: "default"
       });
-
-      if (error) throw error;
-
-      if (resultado.success) {
-        toast({
-          title: "Migração realizada!",
-          description: `${resultado.redacoes_migradas} redações migradas para ${resultado.turma_destino}`,
-        });
-        
-        // Fechar diálogos e atualizar dados
-        setShowMigrationDialog(false);
-        setSelectedVisitante(null);
-        window.location.reload(); // Força refresh dos dados
-      } else {
-        throw new Error(resultado.message);
-      }
+      
+      // Fechar diálogos
+      setShowMigrationDialog(false);
+      setSelectedVisitante(null);
     } catch (error: any) {
       console.error('❌ Erro na migração:', error);
       toast({

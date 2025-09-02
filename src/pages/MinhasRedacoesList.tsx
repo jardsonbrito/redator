@@ -62,6 +62,38 @@ interface RedacaoTurma {
   correcao_arquivo_url_corretor_2?: string | null;
 }
 
+// Função para verificar se deve mostrar as notas
+// Para simulados, só mostra quando ambas as correções estiverem finalizadas
+const shouldShowScores = (redacao: RedacaoTurma) => {
+  if (redacao.tipo_envio === 'simulado') {
+    // Para simulados, precisamos verificar se AMBAS as correções foram finalizadas
+    // Primeiro buscamos a redação original para ter acesso aos dados completos
+    const originalId = redacao.original_id || redacao.id;
+    
+    // Se não temos dados completos dos dois corretores, não mostramos
+    // Verificamos através dos campos específicos de cada corretor
+    const temTodasNotasCorretor1 = [1, 2, 3, 4, 5].every(comp => {
+      const nota = (redacao as any)[`c${comp}_corretor_1`];
+      return nota !== null && nota !== undefined;
+    });
+    
+    const temTodasNotasCorretor2 = [1, 2, 3, 4, 5].every(comp => {
+      const nota = (redacao as any)[`c${comp}_corretor_2`];
+      return nota !== null && nota !== undefined;
+    });
+    
+    // Verificar se ambos corretores têm relatórios pedagógicos preenchidos
+    const temRelatorioCorretor1 = redacao.elogios_pontos_atencao_corretor_1 && redacao.elogios_pontos_atencao_corretor_1.trim();
+    const temRelatorioCorretor2 = redacao.elogios_pontos_atencao_corretor_2 && redacao.elogios_pontos_atencao_corretor_2.trim();
+    
+    // Para simulados, só mostra se AMBAS as correções estão COMPLETAMENTE finalizadas
+    return temTodasNotasCorretor1 && temTodasNotasCorretor2 && temRelatorioCorretor1 && temRelatorioCorretor2;
+  }
+  
+  // Para outros tipos de redação (regular, exercício, visitante), usar lógica atual
+  return true;
+};
+
 const MinhasRedacoesList = () => {
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoTurma | null>(null);
   const [emailInput, setEmailInput] = useState("");
@@ -919,7 +951,7 @@ const MinhasRedacoesList = () => {
                        )}
 
                       {/* Exibir notas por competência se a correção foi finalizada */}
-                      {redacao.corrigida && (redacao.nota_c1 || redacao.nota_c2 || redacao.nota_c3 || redacao.nota_c4 || redacao.nota_c5) && (
+                      {redacao.corrigida && shouldShowScores(redacao) && (redacao.nota_c1 || redacao.nota_c2 || redacao.nota_c3 || redacao.nota_c4 || redacao.nota_c5) && (
                         <div className="text-sm text-muted-foreground mt-2 mb-1">
                           <span className="font-medium">
                             C1: {redacao.nota_c1 || '-'} | C2: {redacao.nota_c2 || '-'} | C3: {redacao.nota_c3 || '-'} | C4: {redacao.nota_c4 || '-'} | C5: {redacao.nota_c5 || '-'} | Nota: {redacao.nota_total || '-'}

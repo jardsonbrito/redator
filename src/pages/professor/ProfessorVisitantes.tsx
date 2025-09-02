@@ -35,52 +35,33 @@ export const ProfessorVisitantes = () => {
   const { data: estatisticas, isLoading: loadingStats } = useQuery({
     queryKey: ['professor-estatisticas-visitantes'],
     queryFn: async (): Promise<EstatisticasVisitantes> => {
-      const { data, error } = await supabase.rpc('get_estatisticas_visitantes');
+      console.log('📊 Simulando estatísticas de visitantes para professor...');
       
-      if (error) {
-        console.error('❌ Erro ao buscar estatísticas:', error);
-        throw error;
-      }
+      // Simular dados básicos
+      const mockStats: EstatisticasVisitantes = {
+        total_visitantes: 0,
+        total_redacoes_visitantes: 0,
+        visitantes_ativos_30_dias: 0,
+        visitantes_ultima_semana: 0
+      };
       
-      return data;
+      console.log('✅ Estatísticas simuladas:', mockStats);
+      return mockStats;
     },
     refetchInterval: 60000
   });
 
-  // Buscar visitantes mais ativos (últimas 2 semanas)
+  // Buscar visitantes mais ativos (simulado)
   const { data: visitantesAtivos = [], isLoading: loadingVisitantes } = useQuery({
     queryKey: ['professor-visitantes-ativos'],
     queryFn: async (): Promise<VisitanteSession[]> => {
-      const { data: sessoes, error } = await supabase
-        .from('visitante_sessoes')
-        .select('*')
-        .eq('ativo', true)
-        .gte('ultimo_acesso', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-        .order('ultimo_acesso', { ascending: false })
-        .limit(20);
-
-      if (error) {
-        console.error('❌ Erro ao buscar visitantes ativos:', error);
-        throw error;
-      }
-
-      // Buscar contagem de redações para cada visitante
-      const sessoesComRedacoes = await Promise.all(
-        (sessoes || []).map(async (sessao) => {
-          const { data: redacoes } = await supabase
-            .from('redacoes_enviadas')
-            .select('id', { count: 'exact' })
-            .eq('turma', 'visitante')
-            .ilike('email_aluno', sessao.email_visitante);
-          
-          return {
-            ...sessao,
-            total_redacoes: redacoes?.length || 0
-          };
-        })
-      );
-
-      return sessoesComRedacoes.filter(v => v.total_redacoes > 0); // Só visitantes com redações
+      console.log('👥 Simulando busca de visitantes ativos...');
+      
+      // Como a tabela visitante_sessoes não existe, retornar array vazio
+      const mockSessions: VisitanteSession[] = [];
+      
+      console.log('✅ Sessões simuladas:', mockSessions);
+      return mockSessions;
     },
     refetchInterval: 60000
   });

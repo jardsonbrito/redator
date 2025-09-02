@@ -14,6 +14,29 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { useToast } from "@/hooks/use-toast";
 
+// Função para verificar se deve mostrar as notas
+// Para simulados, só mostra quando ambas as correções estiverem finalizadas
+const shouldShowScores = (redacao: any) => {
+  // Para simulados, precisamos verificar se AMBAS as correções foram finalizadas
+  // Verificamos se há notas de TODOS os corretores para TODAS as competências
+  const temTodasNotasCorretor1 = [1, 2, 3, 4, 5].every(comp => {
+    const nota = redacao[`nota_c${comp}_corretor_1`];
+    return nota !== null && nota !== undefined;
+  });
+  
+  const temTodasNotasCorretor2 = [1, 2, 3, 4, 5].every(comp => {
+    const nota = redacao[`nota_c${comp}_corretor_2`];
+    return nota !== null && nota !== undefined;
+  });
+  
+  // Verificar se ambos corretores têm relatórios pedagógicos preenchidos
+  const temRelatorioCorretor1 = redacao.elogios_pontos_atencao_corretor_1 && redacao.elogios_pontos_atencao_corretor_1.trim();
+  const temRelatorioCorretor2 = redacao.elogios_pontos_atencao_corretor_2 && redacao.elogios_pontos_atencao_corretor_2.trim();
+  
+  // Para simulados, só mostra se AMBAS as correções estão COMPLETAMENTE finalizadas
+  return temTodasNotasCorretor1 && temTodasNotasCorretor2 && temRelatorioCorretor1 && temRelatorioCorretor2;
+};
+
 const MeusSimulados = () => {
   const { toast } = useToast();
   const [emailVerificacao, setEmailVerificacao] = useState<{[key: string]: string}>({});
@@ -237,9 +260,11 @@ const MeusSimulados = () => {
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Corrigida
                         </Badge>
-                        <Badge variant="outline">
-                          Nota: {redacao.nota_total}
-                        </Badge>
+                        {shouldShowScores(redacao) && (
+                          <Badge variant="outline">
+                            Nota: {redacao.nota_total}
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
@@ -306,28 +331,30 @@ const MeusSimulados = () => {
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-5 gap-4 mb-4">
-                            <div className="text-center">
-                              <Label className="text-xs">C1</Label>
-                              <div className="font-bold text-lg text-redator-primary">{redacao.nota_c1}</div>
+                          {shouldShowScores(redacao) && (
+                            <div className="grid grid-cols-5 gap-4 mb-4">
+                              <div className="text-center">
+                                <Label className="text-xs">C1</Label>
+                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c1}</div>
+                              </div>
+                              <div className="text-center">
+                                <Label className="text-xs">C2</Label>
+                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c2}</div>
+                              </div>
+                              <div className="text-center">
+                                <Label className="text-xs">C3</Label>
+                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c3}</div>
+                              </div>
+                              <div className="text-center">
+                                <Label className="text-xs">C4</Label>
+                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c4}</div>
+                              </div>
+                              <div className="text-center">
+                                <Label className="text-xs">C5</Label>
+                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c5}</div>
+                              </div>
                             </div>
-                            <div className="text-center">
-                              <Label className="text-xs">C2</Label>
-                              <div className="font-bold text-lg text-redator-primary">{redacao.nota_c2}</div>
-                            </div>
-                            <div className="text-center">
-                              <Label className="text-xs">C3</Label>
-                              <div className="font-bold text-lg text-redator-primary">{redacao.nota_c3}</div>
-                            </div>
-                            <div className="text-center">
-                              <Label className="text-xs">C4</Label>
-                              <div className="font-bold text-lg text-redator-primary">{redacao.nota_c4}</div>
-                            </div>
-                            <div className="text-center">
-                              <Label className="text-xs">C5</Label>
-                              <div className="font-bold text-lg text-redator-primary">{redacao.nota_c5}</div>
-                            </div>
-                          </div>
+                          )}
                           
                           {redacao.comentario_pedagogico && (
                             <div>
