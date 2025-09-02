@@ -8,7 +8,7 @@ import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
 import { TemaModal } from "./TemaModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithSpellcheck } from "@/components/ui/textarea-with-spellcheck";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
@@ -662,7 +662,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               <label className="text-sm font-medium text-foreground">
                 Motivo
               </label>
-              <Textarea
+              <TextareaWithSpellcheck
                 placeholder="Explique o motivo da devolução"
                 value={motivoDevolucao}
                 onChange={(e) => setMotivoDevolucao(e.target.value)}

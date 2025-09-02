@@ -5,14 +5,16 @@ import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { GraduationCap, Plus, ArrowLeft, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AlunoFormProfessor } from "@/components/professor/AlunoFormProfessor";
+import { AlunoListProfessor } from "@/components/professor/AlunoListProfessor";
 
 export const ProfessorAlunos = () => {
   const { professor } = useProfessorAuth();
   const [showForm, setShowForm] = useState(false);
+  const [refreshList, setRefreshList] = useState(false);
 
   const handleSuccess = () => {
     setShowForm(false);
-    // Aqui você pode adicionar lógica para recarregar a lista de alunos
+    setRefreshList(prev => !prev); // Trigger refresh
   };
 
   return (
@@ -33,10 +35,10 @@ export const ProfessorAlunos = () => {
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <GraduationCap className="w-8 h-8 text-primary" />
                   </div>
-                  Alunos
+                  Alunos e Visitantes
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                  Gerencie seus alunos - Professor: <strong>{professor?.nome_completo}</strong>
+                  Monitore alunos oficiais e visitantes engajados - Professor: <strong>{professor?.nome_completo}</strong>
                 </p>
               </div>
             </div>
@@ -60,32 +62,46 @@ export const ProfessorAlunos = () => {
               onCancel={() => setShowForm(false)} 
             />
           ) : (
-            /* Empty State */
-            <Card className="bg-white/80 backdrop-blur-sm border border-primary/10">
-              <CardHeader className="text-center">
-                <CardTitle className="text-primary">Nenhum aluno cadastrado</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center space-y-4">
-                <p className="text-muted-foreground">
-                  Você ainda não cadastrou nenhum aluno. Primeiro crie uma turma, depois cadastre seus alunos.
-                </p>
-                <div className="flex gap-2 justify-center">
-                  <Link to="/professor/turmas">
-                    <Button variant="outline">
-                      <Users className="w-4 h-4 mr-2" />
-                      Criar Turma Primeiro
-                    </Button>
-                  </Link>
-                  <Button 
-                    className="bg-primary hover:bg-primary/90" 
-                    onClick={() => setShowForm(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Cadastrar Aluno
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <>
+              {/* Lista de Alunos e Visitantes */}
+              <AlunoListProfessor refresh={refreshList} />
+              
+              {/* Card informativo */}
+              <Card className="bg-blue-50/80 backdrop-blur-sm border border-blue-200">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-blue-800 mb-2">
+                        Monitore Visitantes Engajados
+                      </h3>
+                      <p className="text-sm text-blue-700 mb-3">
+                        Visitantes que enviaram redações aparecem aqui como potenciais alunos. 
+                        Use o botão "Detalhes" para ver mais informações e enviar convites.
+                      </p>
+                      <div className="flex gap-2">
+                        <Link to="/professor/turmas">
+                          <Button variant="outline" size="sm" className="border-blue-200 hover:bg-blue-100">
+                            <Users className="w-4 h-4 mr-2" />
+                            Gerenciar Turmas
+                          </Button>
+                        </Link>
+                        <Button 
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => setShowForm(true)}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Cadastrar Novo Aluno
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
       </main>

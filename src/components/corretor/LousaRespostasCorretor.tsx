@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { TextareaWithSpellcheck } from '@/components/ui/textarea-with-spellcheck';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
@@ -309,7 +309,7 @@ export function LousaRespostasCorretor({ lousa }: LousaRespostasCorretorProps) {
                       <FormItem>
                         <FormLabel>Comentário do Professor *</FormLabel>
                         <FormControl>
-                          <Textarea 
+                          <TextareaWithSpellcheck 
                             placeholder="Digite seu feedback para o aluno..."
                             className="min-h-[100px]"
                             {...field} 

@@ -7,7 +7,7 @@ import { DateTimePicker } from '@/components/ui/datetime-picker-custom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { TextareaWithSpellcheck } from '@/components/ui/textarea-with-spellcheck';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -183,7 +183,7 @@ export default function CorretorLousaForm({ onSuccess, editData }: CorretorLousa
                 <FormItem>
                   <FormLabel>Enunciado *</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <TextareaWithSpellcheck 
                       placeholder="Descreva aqui o exercício que os alunos devem realizar..."
                       className="min-h-[120px]"
                       {...field} 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithSpellcheck } from "@/components/ui/textarea-with-spellcheck";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
@@ -49,7 +49,7 @@ export const RelatorioPedagogicoModal = ({
             <strong>Tema:</strong> {fraseTematica}
           </div>
           
-          <Textarea
+          <TextareaWithSpellcheck
             value={localValue}
             onChange={(e) => setLocalValue(e.target.value)}
             placeholder="Digite aqui seu relatório pedagógico completo para o aluno..."

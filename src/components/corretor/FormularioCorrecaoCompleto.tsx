@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithSpellcheck } from "@/components/ui/textarea-with-spellcheck";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -696,7 +696,7 @@ export const FormularioCorrecaoCompleto = ({
           <CardTitle className="text-base">Relatório pedagógico de correção</CardTitle>
         </CardHeader>
         <CardContent>
-          <Textarea
+          <TextareaWithSpellcheck
             value={relatorioPedagogico}
             onChange={(e) => setRelatorioPedagogico(e.target.value)}
             placeholder="Digite aqui seu relatório pedagógico completo para o aluno..."
