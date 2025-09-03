@@ -96,8 +96,8 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           const cardColor = getCardColor(index, item.title);
           const isBlocked = item.resourceType && isBlockedResource(item.resourceType);
           
-          // Verificar se é o card "Enviar Redação — Tema Livre" e se está desabilitado
-          const isFreeTopicCard = item.title === "Enviar Redação — Tema Livre";
+          // Verificar se é o card de tema livre (aluno ou visitante) e se está desabilitado
+          const isFreeTopicCard = item.title.includes("Tema Livre");
           const isFreeTopicDisabled = isFreeTopicCard && settings && settings.free_topic_enabled === false;
           
           
@@ -127,10 +127,10 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                     </div>
                   </div>
                 ) : isFreeTopicDisabled ? (
-                  <div className="group relative flex flex-col items-center justify-center p-6 bg-gray-200 rounded-2xl shadow-lg opacity-50 min-h-[120px] cursor-not-allowed">
-                    {/* Ícone normal mas com cor acinzentada para tema livre desabilitado */}
+                  <div className="group relative flex flex-col items-center justify-center p-6 bg-gray-200 rounded-2xl shadow-lg opacity-60 min-h-[120px] cursor-not-allowed">
+                    {/* Ícone de cadeado para tema livre desabilitado */}
                     <div className="mb-3">
-                      <item.icon className="w-8 h-8 text-gray-500" />
+                      <Lock className="w-8 h-8 text-gray-500" />
                     </div>
                     
                     {/* Título do card com cor acinzentada */}
