@@ -63,6 +63,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         supabase
           .from("visitante_sessoes")
           .select("*")
+          .eq("ativo", true)
           .order("nome_visitante", { ascending: true }),
         
         // Buscar TODAS as redações de uma vez
