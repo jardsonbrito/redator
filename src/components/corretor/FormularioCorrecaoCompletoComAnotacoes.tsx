@@ -568,6 +568,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               imagemUrl={redacao.redacao_manuscrita_url}
               redacaoId={redacao.id}
               corretorId={corretorId}
+              ehCorretor1={redacao.eh_corretor_1}
+              ehCorretor2={redacao.eh_corretor_2}
+              statusMinhaCorrecao={redacao.status_minha_correcao}
             />
           </CardContent>
         </Card>

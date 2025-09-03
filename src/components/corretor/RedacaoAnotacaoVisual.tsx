@@ -153,6 +153,9 @@ interface RedacaoAnotacaoVisualProps {
   redacaoId: string;
   corretorId: string;
   readonly?: boolean;
+  ehCorretor1?: boolean;
+  ehCorretor2?: boolean;
+  statusMinhaCorrecao?: string;
 }
 
 interface RedacaoAnotacaoVisualRef {
@@ -173,7 +176,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   imagemUrl,
   redacaoId,
   corretorId,
-  readonly = false
+  readonly = false,
+  ehCorretor1 = false,
+  ehCorretor2 = false,
+  statusMinhaCorrecao = 'pendente'
 }, ref) => {
   const { toast } = useToast();
   const imageRef = useRef<HTMLImageElement>(null);
@@ -362,9 +368,20 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
-  // Carregar anotações do banco - apenas do corretor atual
+  // Carregar anotações do banco - baseado no status da correção
   const carregarAnotacoes = async () => {
     try {
+      // Determinar se deve carregar marcações baseado no status:
+      // - Se o status é 'corrigida', carregar as marcações deste corretor
+      // - Se o status é 'pendente', 'em_correcao' ou 'incompleta', não carregar marcações de outros corretores
+      const deveCarregarMarcacoes = statusMinhaCorrecao === 'corrigida' || statusMinhaCorrecao === 'em_correcao' || statusMinhaCorrecao === 'incompleta';
+      
+      if (!deveCarregarMarcacoes) {
+        console.log('🚫 Redação pendente para este corretor - não carregar marcações existentes');
+        setAnotacoes([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('marcacoes_visuais')
         .select('*')
