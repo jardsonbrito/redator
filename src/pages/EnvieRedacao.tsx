@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Home, Send, Upload, X, Camera, Edit3, Lock } from "lucide-react";
-import { Link, useSearchParams, Navigate } from "react-router-dom";
+import { Link, useSearchParams, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnemForm } from "@/components/RedacaoEnemForm";
@@ -19,6 +19,7 @@ import { CreditDisplay } from "@/components/CreditDisplay";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
   const [fraseTematica, setFraseTematica] = useState("");
@@ -316,6 +317,11 @@ const EnvieRedacao = () => {
       setRedacaoTexto("");
       setSelectedCorretores([]);
       handleRemoveRedacaoManuscrita();
+
+      // Redirecionar para a home após envio bem-sucedido
+      setTimeout(() => {
+        navigate('/app');
+      }, 1500);
 
     } catch (error) {
       console.error('Erro ao enviar redação:', error);

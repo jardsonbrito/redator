@@ -178,10 +178,10 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
 
       // Mostrar notificação verde de sucesso com informações dos créditos
       toast({
-        title: "✅ Créditos Debitados com Sucesso!",
-        description: `Redação enviada para correção! • Créditos anteriores: ${oldCredits} • Créditos utilizados: -${amount} • Saldo atual: ${newCredits}`,
+        title: "✅ Redação Enviada!",
+        description: `${amount} crédito(s) utilizado(s) • Saldo: ${newCredits}`,
         className: "border-green-200 bg-green-50 text-green-900",
-        duration: 6000
+        duration: 4000
       });
 
       return true;
