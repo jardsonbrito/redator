@@ -227,12 +227,18 @@ export const RedacaoEnviadaCard = ({
               <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
             </div>
             
-            {/* Nome do corretor - exibir apenas se atribuído */}
+            {/* Nome do corretor e nota - exibir apenas se atribuído */}
             {redacao.corretor && (
               <div className="flex items-center gap-2 text-sm">
                 <User className="w-4 h-4 text-primary shrink-0" />
                 <span className="font-medium">Corretor:</span>
                 <span className="text-xs sm:text-sm">{redacao.corretor}</span>
+                {/* Mostrar nota do corretor se disponível */}
+                {redacao.nota_total !== null && redacao.nota_total !== undefined && (
+                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-300">
+                    {redacao.nota_total} pontos
+                  </Badge>
+                )}
               </div>
             )}
           </div>

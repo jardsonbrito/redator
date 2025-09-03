@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { useToast } from "@/hooks/use-toast";
+import { RedacaoAnotacaoVisual } from "@/components/corretor/RedacaoAnotacaoVisual";
 
 // Função para verificar se deve mostrar as notas
 // Para simulados, só mostra quando ambas as correções estiverem finalizadas
@@ -20,12 +21,12 @@ const shouldShowScores = (redacao: any) => {
   // Para simulados, precisamos verificar se AMBAS as correções foram finalizadas
   // Verificamos se há notas de TODOS os corretores para TODAS as competências
   const temTodasNotasCorretor1 = [1, 2, 3, 4, 5].every(comp => {
-    const nota = redacao[`nota_c${comp}_corretor_1`];
+    const nota = redacao[`c${comp}_corretor_1`];
     return nota !== null && nota !== undefined;
   });
   
   const temTodasNotasCorretor2 = [1, 2, 3, 4, 5].every(comp => {
-    const nota = redacao[`nota_c${comp}_corretor_2`];
+    const nota = redacao[`c${comp}_corretor_2`];
     return nota !== null && nota !== undefined;
   });
   
@@ -332,28 +333,83 @@ const MeusSimulados = () => {
                           </div>
                           
                           {shouldShowScores(redacao) && (
-                            <div className="grid grid-cols-5 gap-4 mb-4">
-                              <div className="text-center">
-                                <Label className="text-xs">C1</Label>
-                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c1}</div>
+                            <>
+                              {/* Exibir as duas correções separadas */}
+                              <div className="space-y-6">
+                                {/* Correção do Corretor 1 */}
+                                {redacao.c1_corretor_1 !== null && (
+                                  <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                                    <h4 className="font-semibold text-green-800 mb-3">
+                                      Corretor 1
+                                    </h4>
+                                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+                                      {[1, 2, 3, 4, 5].map(comp => (
+                                        <div key={`c1-${comp}`} className="text-center">
+                                          <Label className="text-xs">C{comp}</Label>
+                                          <div className="font-bold text-lg text-green-700">
+                                            {redacao[`c${comp}_corretor_1`] || '-'}
+                                          </div>
+                                        </div>
+                                      ))}
+                                      <div className="text-center">
+                                        <Label className="text-xs">Final</Label>
+                                        <div className="font-bold text-lg text-green-700">
+                                          {redacao.nota_final_corretor_1 || '-'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {redacao.elogios_pontos_atencao_corretor_1 && (
+                                      <div className="bg-white p-3 rounded border border-green-200">
+                                        <Label className="text-xs font-medium text-green-800">Feedback:</Label>
+                                        <p className="text-sm mt-1 text-gray-700">{redacao.elogios_pontos_atencao_corretor_1}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Correção do Corretor 2 */}
+                                {redacao.c1_corretor_2 !== null && (
+                                  <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                                    <h4 className="font-semibold text-blue-800 mb-3">
+                                      Corretor 2
+                                    </h4>
+                                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+                                      {[1, 2, 3, 4, 5].map(comp => (
+                                        <div key={`c2-${comp}`} className="text-center">
+                                          <Label className="text-xs">C{comp}</Label>
+                                          <div className="font-bold text-lg text-blue-700">
+                                            {redacao[`c${comp}_corretor_2`] || '-'}
+                                          </div>
+                                        </div>
+                                      ))}
+                                      <div className="text-center">
+                                        <Label className="text-xs">Final</Label>
+                                        <div className="font-bold text-lg text-blue-700">
+                                          {redacao.nota_final_corretor_2 || '-'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {redacao.elogios_pontos_atencao_corretor_2 && (
+                                      <div className="bg-white p-3 rounded border border-blue-200">
+                                        <Label className="text-xs font-medium text-blue-800">Feedback:</Label>
+                                        <p className="text-sm mt-1 text-gray-700">{redacao.elogios_pontos_atencao_corretor_2}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Média Final Consolidada */}
+                                <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                                  <h4 className="font-semibold text-purple-800 mb-3">Média Final do Simulado</h4>
+                                  <div className="text-center">
+                                    <div className="text-3xl font-bold text-purple-700">
+                                      {redacao.nota_total || '-'}
+                                    </div>
+                                    <div className="text-sm text-purple-600">pontos</div>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-center">
-                                <Label className="text-xs">C2</Label>
-                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c2}</div>
-                              </div>
-                              <div className="text-center">
-                                <Label className="text-xs">C3</Label>
-                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c3}</div>
-                              </div>
-                              <div className="text-center">
-                                <Label className="text-xs">C4</Label>
-                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c4}</div>
-                              </div>
-                              <div className="text-center">
-                                <Label className="text-xs">C5</Label>
-                                <div className="font-bold text-lg text-redator-primary">{redacao.nota_c5}</div>
-                              </div>
-                            </div>
+                            </>
                           )}
                           
                           {redacao.comentario_pedagogico && (
@@ -384,9 +440,24 @@ const MeusSimulados = () => {
                             <div className="bg-gray-50 p-4 rounded mb-4">
                               <h3 className="font-bold text-redator-primary mb-2">{redacao.simulados.frase_tematica}</h3>
                             </div>
-                            <div className="bg-white p-4 border rounded whitespace-pre-wrap">
-                              {redacao.texto}
-                            </div>
+                            
+                            {/* Exibir redação manuscrita com marcações se houver */}
+                            {redacao.redacao_manuscrita_url ? (
+                              <div className="space-y-4">
+                                <RedacaoAnotacaoVisual
+                                  imagemUrl={redacao.redacao_manuscrita_url}
+                                  redacaoId={redacao.id}
+                                  corretorId="aluno-readonly"
+                                  readonly
+                                  statusMinhaCorrecao="corrigida"
+                                />
+                              </div>
+                            ) : (
+                              /* Texto da redação digital */
+                              <div className="bg-white p-4 border rounded whitespace-pre-wrap">
+                                {redacao.texto}
+                              </div>
+                            )}
                           </div>
                         </DialogContent>
                       </Dialog>
