@@ -67,7 +67,9 @@ const MeusSimulados = () => {
         .from('redacoes_simulado')
         .select(`
           *,
-          simulados!inner(titulo, frase_tematica, turmas_autorizadas)
+          simulados!inner(titulo, frase_tematica, turmas_autorizadas),
+          corretor1:corretores!corretor_id_1(id, nome_completo),
+          corretor2:corretores!corretor_id_2(id, nome_completo)
         `)
         .eq('corrigida', true)
         .order('data_envio', { ascending: false });
@@ -82,6 +84,8 @@ const MeusSimulados = () => {
       const { data, error } = await query;
       
       if (error) throw error;
+      
+      console.log('🔍 Dados dos simulados carregados:', data);
       return data;
     }
   });
@@ -265,6 +269,36 @@ const MeusSimulados = () => {
                           <Badge variant="outline">
                             Nota: {redacao.nota_total}
                           </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Mostrar corretores e suas notas */}
+                      <div className="space-y-2 mb-4">
+                        {redacao.corretor1 && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <User className="w-4 h-4 text-green-600" />
+                            <span className="font-medium">{redacao.corretor1.nome_completo}:</span>
+                            {redacao.nota_final_corretor_1 ? (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                                {redacao.nota_final_corretor_1} pontos
+                              </Badge>
+                            ) : (
+                              <span className="text-orange-600 text-xs">Aguardando correção</span>
+                            )}
+                          </div>
+                        )}
+                        {redacao.corretor2 && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <User className="w-4 h-4 text-blue-600" />
+                            <span className="font-medium">{redacao.corretor2.nome_completo}:</span>
+                            {redacao.nota_final_corretor_2 ? (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                                {redacao.nota_final_corretor_2} pontos
+                              </Badge>
+                            ) : (
+                              <span className="text-orange-600 text-xs">Aguardando correção</span>
+                            )}
+                          </div>
                         )}
                       </div>
                       
