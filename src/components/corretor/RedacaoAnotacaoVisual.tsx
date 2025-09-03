@@ -379,6 +379,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         ehCorretor2
       });
 
+      // Verificar se corretorId está disponível
+      if (!corretorId || corretorId.trim() === '') {
+        console.log('⏳ CorretorId ainda não disponível, aguardando...');
+        return;
+      }
+
       // Lógica corrigida: sempre carregar marcações para redações já corrigidas
       // Só bloquear para status "pendente" onde o corretor ainda não fez sua correção
       const deveBloquearCarregamento = statusMinhaCorrecao === 'pendente';
@@ -759,10 +765,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     };
   }, [imageDimensions, readonly]);
 
-  // Carregar anotações quando o componente monta
+  // Carregar anotações quando o componente monta ou corretorId muda
   useEffect(() => {
-    carregarAnotacoes();
-  }, [redacaoId]);
+    if (corretorId && corretorId.trim() !== '') {
+      carregarAnotacoes();
+    }
+  }, [redacaoId, corretorId]);
 
   // Atualizar anotações quando mudarem
   useEffect(() => {
