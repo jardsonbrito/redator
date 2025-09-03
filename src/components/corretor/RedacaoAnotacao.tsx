@@ -64,7 +64,7 @@ export const RedacaoAnotacao = ({
   const [editandoMarcacao, setEditandoMarcacao] = useState<MarcacaoVisual | null>(null);
   const { toast } = useToast();
 
-  // Carregar marcações existentes
+  // Carregar marcações existentes - apenas do corretor atual
   const carregarMarcacoes = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -72,6 +72,7 @@ export const RedacaoAnotacao = ({
         .select('*')
         .eq('redacao_id', redacaoId)
         .eq('tabela_origem', tabelaOrigem)
+        .eq('corretor_id', corretorId) // Filtrar apenas marcações do corretor atual
         .order('ordem_criacao', { ascending: true });
 
       if (error) throw error;

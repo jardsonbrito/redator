@@ -362,7 +362,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     }
   };
 
-  // Carregar anotações do banco
+  // Carregar anotações do banco - apenas do corretor atual
   const carregarAnotacoes = async () => {
     try {
       const { data, error } = await supabase
@@ -370,6 +370,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         .select('*')
         .eq('redacao_id', redacaoId)
         .eq('tabela_origem', 'redacoes_enviadas') // TODO: make this dynamic based on redacao type
+        .eq('corretor_id', corretorId) // Filtrar apenas marcações do corretor atual
         .order('criado_em', { ascending: true }); // Ordenar pela data real de criação
 
       if (error) {
@@ -971,12 +972,13 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     if (!shouldClear) return;
 
     try {
-      // Remover do banco de dados
+      // Remover do banco de dados - apenas marcações do corretor atual
       const { error } = await supabase
         .from('marcacoes_visuais')
         .delete()
         .eq('redacao_id', redacaoId)
-        .eq('tabela_origem', 'redacoes_enviadas');
+        .eq('tabela_origem', 'redacoes_enviadas')
+        .eq('corretor_id', corretorId);
       
       if (error) throw error;
 
