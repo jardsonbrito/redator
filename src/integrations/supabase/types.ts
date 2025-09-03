@@ -2665,6 +2665,45 @@ export type Database = {
         }
         Relationships: []
       }
+      visitante_sessoes: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          email_visitante: string
+          id: string
+          nome_visitante: string
+          primeiro_acesso: string | null
+          session_id: string
+          ultimo_acesso: string | null
+          updated_at: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email_visitante: string
+          id?: string
+          nome_visitante: string
+          primeiro_acesso?: string | null
+          session_id?: string
+          ultimo_acesso?: string | null
+          updated_at?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email_visitante?: string
+          id?: string
+          nome_visitante?: string
+          primeiro_acesso?: string | null
+          session_id?: string
+          ultimo_acesso?: string | null
+          updated_at?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       aulas_front: {
@@ -2924,6 +2963,10 @@ export type Database = {
         Args: { corretor_email: string; lousa_id: string }
         Returns: Json
       }
+      descobrir_usuario_por_email: {
+        Args: { p_email: string }
+        Returns: Json
+      }
       detect_duplicate_students: {
         Args: { student_email: string }
         Returns: {
@@ -2945,6 +2988,16 @@ export type Database = {
           material_id: string
           user_turma?: string
         }
+        Returns: Json
+      }
+      gerenciar_sessao_visitante: {
+        Args:
+          | { p_email_visitante: string; p_nome_visitante: string }
+          | {
+              p_email_visitante: string
+              p_nome_visitante: string
+              p_whatsapp?: string
+            }
         Returns: Json
       }
       get_accessible_aulas: {
@@ -3016,6 +3069,10 @@ export type Database = {
       get_credits_by_email: {
         Args: { user_email: string }
         Returns: number
+      }
+      get_estatisticas_visitantes: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_lousa_respostas_corretor: {
         Args: { corretor_email: string; lousa_id_param: string }
@@ -3349,6 +3406,16 @@ export type Database = {
       }
       merge_student_redacoes: {
         Args: { source_student_id: string; target_student_id: string }
+        Returns: Json
+      }
+      migrar_visitante_para_aluno: {
+        Args:
+          | {
+              p_email_visitante: string
+              p_nome_visitante: string
+              p_turma_destino?: string
+            }
+          | { p_email_visitante: string; p_nova_turma: string }
         Returns: Json
       }
       recusar_aluno: {
