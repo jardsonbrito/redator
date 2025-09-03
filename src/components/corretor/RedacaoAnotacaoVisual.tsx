@@ -371,12 +371,21 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   // Carregar anotações do banco - baseado no status da correção
   const carregarAnotacoes = async () => {
     try {
-      // Determinar se deve carregar marcações baseado no status:
-      // - Se o status é 'corrigida', carregar as marcações deste corretor
-      // - Se o status é 'pendente', 'em_correcao' ou 'incompleta', não carregar marcações de outros corretores
-      const deveCarregarMarcacoes = statusMinhaCorrecao === 'corrigida' || statusMinhaCorrecao === 'em_correcao' || statusMinhaCorrecao === 'incompleta';
+      console.log('🔍 DEBUG - Carregando anotações:', {
+        redacaoId,
+        corretorId,
+        statusMinhaCorrecao,
+        ehCorretor1,
+        ehCorretor2
+      });
+
+      // Lógica corrigida: sempre carregar marcações para redações já corrigidas
+      // Só bloquear para status "pendente" onde o corretor ainda não fez sua correção
+      const deveBloquearCarregamento = statusMinhaCorrecao === 'pendente';
       
-      if (!deveCarregarMarcacoes) {
+      console.log('🔍 DEBUG - Deve bloquear carregamento?', deveBloquearCarregamento, 'Status:', statusMinhaCorrecao);
+
+      if (deveBloquearCarregamento) {
         console.log('🚫 Redação pendente para este corretor - não carregar marcações existentes');
         setAnotacoes([]);
         return;
@@ -391,11 +400,11 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         .order('criado_em', { ascending: true }); // Ordenar pela data real de criação
 
       if (error) {
-        console.error('Erro ao carregar anotações:', error);
+        console.error('❌ Erro ao carregar anotações:', error);
         return;
       }
 
-      console.log('Anotações carregadas:', data);
+      console.log('✅ Anotações carregadas do banco:', data?.length || 0, 'anotações para corretor', corretorId);
       
       // Carregar anotações sem numeração
       setAnotacoes(data || []);
