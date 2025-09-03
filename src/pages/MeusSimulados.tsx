@@ -21,12 +21,12 @@ const shouldShowScores = (redacao: any) => {
   // Para simulados, precisamos verificar se AMBAS as correções foram finalizadas
   // Verificamos se há notas de TODOS os corretores para TODAS as competências
   const temTodasNotasCorretor1 = [1, 2, 3, 4, 5].every(comp => {
-    const nota = redacao[`c${comp}_corretor_1`];
+    const nota = redacao[`nota_c${comp}_corretor_1`];
     return nota !== null && nota !== undefined;
   });
   
   const temTodasNotasCorretor2 = [1, 2, 3, 4, 5].every(comp => {
-    const nota = redacao[`c${comp}_corretor_2`];
+    const nota = redacao[`nota_c${comp}_corretor_2`];
     return nota !== null && nota !== undefined;
   });
   
@@ -265,7 +265,7 @@ const MeusSimulados = () => {
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Corrigida
                         </Badge>
-                        {shouldShowScores(redacao) && (
+                        {shouldShowScores(redacao) && redacao.nota_total && (
                           <Badge variant="outline">
                             Nota: {redacao.nota_total}
                           </Badge>
@@ -278,9 +278,9 @@ const MeusSimulados = () => {
                           <div className="flex items-center gap-2 text-sm">
                             <User className="w-4 h-4 text-green-600" />
                             <span className="font-medium">{redacao.corretor1.nome_completo}:</span>
-                            {redacao.nota_final_corretor_1 ? (
+                            {redacao.nota_total_corretor_1 ? (
                               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                                {redacao.nota_final_corretor_1} pontos
+                                {redacao.nota_total_corretor_1} pontos
                               </Badge>
                             ) : (
                               <span className="text-orange-600 text-xs">Aguardando correção</span>
@@ -291,9 +291,9 @@ const MeusSimulados = () => {
                           <div className="flex items-center gap-2 text-sm">
                             <User className="w-4 h-4 text-blue-600" />
                             <span className="font-medium">{redacao.corretor2.nome_completo}:</span>
-                            {redacao.nota_final_corretor_2 ? (
+                            {redacao.nota_total_corretor_2 ? (
                               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                                {redacao.nota_final_corretor_2} pontos
+                                {redacao.nota_total_corretor_2} pontos
                               </Badge>
                             ) : (
                               <span className="text-orange-600 text-xs">Aguardando correção</span>
@@ -381,14 +381,14 @@ const MeusSimulados = () => {
                                         <div key={`c1-${comp}`} className="text-center">
                                           <Label className="text-xs">C{comp}</Label>
                                           <div className="font-bold text-lg text-green-700">
-                                            {redacao[`c${comp}_corretor_1`] || '-'}
+                                            {redacao[`nota_c${comp}_corretor_1`] || '-'}
                                           </div>
                                         </div>
                                       ))}
                                       <div className="text-center">
                                         <Label className="text-xs">Final</Label>
                                         <div className="font-bold text-lg text-green-700">
-                                          {redacao.nota_final_corretor_1 || '-'}
+                                          {redacao.nota_total_corretor_1 || '-'}
                                         </div>
                                       </div>
                                     </div>
@@ -412,14 +412,14 @@ const MeusSimulados = () => {
                                         <div key={`c2-${comp}`} className="text-center">
                                           <Label className="text-xs">C{comp}</Label>
                                           <div className="font-bold text-lg text-blue-700">
-                                            {redacao[`c${comp}_corretor_2`] || '-'}
+                                            {redacao[`nota_c${comp}_corretor_2`] || '-'}
                                           </div>
                                         </div>
                                       ))}
                                       <div className="text-center">
                                         <Label className="text-xs">Final</Label>
                                         <div className="font-bold text-lg text-blue-700">
-                                          {redacao.nota_final_corretor_2 || '-'}
+                                          {redacao.nota_total_corretor_2 || '-'}
                                         </div>
                                       </div>
                                     </div>

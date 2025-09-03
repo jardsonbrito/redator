@@ -289,7 +289,7 @@ const MinhasRedacoesList = () => {
             // Se há corretor 1, adicionar entrada (sempre que há corretor atribuído)
             if (item.corretor_id_1) {
               const statusCorretor1 = item.status_corretor_1 || 'pendente';
-              const hasNotas1 = item.c1_corretor_1 || item.c2_corretor_1 || item.c3_corretor_1 || item.c4_corretor_1 || item.c5_corretor_1;
+              const hasNotas1 = item.nota_c1_corretor_1 || item.nota_c2_corretor_1 || item.nota_c3_corretor_1 || item.nota_c4_corretor_1 || item.nota_c5_corretor_1;
               
               todasRedacoes.push({
                 ...item,
@@ -308,12 +308,12 @@ const MinhasRedacoesList = () => {
                 corretor: nomes_corretores[item.corretor_id_1] || 'Corretor 1',
                 corretor_numero: 1,
                 // Notas específicas do corretor 1
-                nota_c1: item.c1_corretor_1,
-                nota_c2: item.c2_corretor_1,
-                nota_c3: item.c3_corretor_1,
-                nota_c4: item.c4_corretor_1,
-                nota_c5: item.c5_corretor_1,
-                nota_total: item.nota_final_corretor_1,
+                nota_c1: item.nota_c1_corretor_1,
+                nota_c2: item.nota_c2_corretor_1,
+                nota_c3: item.nota_c3_corretor_1,
+                nota_c4: item.nota_c4_corretor_1,
+                nota_c5: item.nota_c5_corretor_1,
+                nota_total: item.nota_total_corretor_1,
                 // Comentários do corretor 1
                 comentario_c1_corretor_1: item.comentario_c1_corretor_1,
                 comentario_c2_corretor_1: item.comentario_c2_corretor_1,
@@ -330,7 +330,7 @@ const MinhasRedacoesList = () => {
             // Se há corretor 2, adicionar entrada (sempre que há corretor atribuído)
             if (item.corretor_id_2) {
               const statusCorretor2 = item.status_corretor_2 || 'pendente';
-              const hasNotas2 = item.c1_corretor_2 || item.c2_corretor_2 || item.c3_corretor_2 || item.c4_corretor_2 || item.c5_corretor_2;
+              const hasNotas2 = item.nota_c1_corretor_2 || item.nota_c2_corretor_2 || item.nota_c3_corretor_2 || item.nota_c4_corretor_2 || item.nota_c5_corretor_2;
               
               todasRedacoes.push({
                 ...item,
@@ -349,12 +349,12 @@ const MinhasRedacoesList = () => {
                 corretor: nomes_corretores[item.corretor_id_2] || 'Corretor 2',
                 corretor_numero: 2,
                 // Notas específicas do corretor 2
-                nota_c1: item.c1_corretor_2,
-                nota_c2: item.c2_corretor_2,
-                nota_c3: item.c3_corretor_2,
-                nota_c4: item.c4_corretor_2,
-                nota_c5: item.c5_corretor_2,
-                nota_total: item.nota_final_corretor_2,
+                nota_c1: item.nota_c1_corretor_2,
+                nota_c2: item.nota_c2_corretor_2,
+                nota_c3: item.nota_c3_corretor_2,
+                nota_c4: item.nota_c4_corretor_2,
+                nota_c5: item.nota_c5_corretor_2,
+                nota_total: item.nota_total_corretor_2,
                 // Comentários do corretor 2
                 comentario_c1_corretor_2: item.comentario_c1_corretor_2,
                 comentario_c2_corretor_2: item.comentario_c2_corretor_2,
