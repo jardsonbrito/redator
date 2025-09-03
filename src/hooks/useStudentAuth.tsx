@@ -275,9 +275,9 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
         console.warn('⚠️ Erro ao salvar sessão no banco:', sessaoError);
         // Gerar session_id local como fallback
         sessionId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      } else if (sessaoResult && sessaoResult.success) {
-        sessionId = sessaoResult.session_id;
-        console.log('✅ Sessão salva no banco:', sessaoResult.action, 'Session ID:', sessionId);
+      } else if (sessaoResult && typeof sessaoResult === 'object' && 'success' in sessaoResult && sessaoResult.success) {
+        sessionId = (sessaoResult as any).session_id;
+        console.log('✅ Sessão salva no banco:', (sessaoResult as any).action, 'Session ID:', sessionId);
       }
 
       // Verificação automática de contas duplicadas e merge para visitantes também

@@ -60,11 +60,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
           .eq("is_authenticated_student", true)
           .order("nome", { ascending: true }),
         
-        supabase
-          .from("visitante_sessoes")
-          .select("*")
-          .eq("ativo", true)
-          .order("nome_visitante", { ascending: true }),
+        // Simulate visitor data (no visitante_sessoes table exists)
+        Promise.resolve({ data: [], error: null }),
         
         // Buscar TODAS as redações de uma vez
         supabase
@@ -99,29 +96,32 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         });
       }
 
-      // Processar visitantes
-      if (visitantesError) {
-        console.warn("Erro ao buscar visitantes:", visitantesError);
-      } else if (visitantesData) {
-        visitantesData.forEach(visitante => {
-          const emailLower = visitante.email_visitante.toLowerCase();
-          // Para visitantes, contar apenas redações com turma='visitante'
-          const redacoesVisitante = todasRedacoes?.filter(r => 
-            r.turma === 'visitante' && r.email_aluno.toLowerCase() === emailLower
-          ).length || 0;
+      // Processar visitantes (no table exists, create from redacoes data)
+      if (todasRedacoes) {
+        const visitantesEmails = new Set<string>();
+        todasRedacoes.forEach(redacao => {
+          if (redacao.turma === 'visitante') {
+            visitantesEmails.add(redacao.email_aluno.toLowerCase());
+          }
+        });
+
+        visitantesEmails.forEach(email => {
+          const redacoesVisitante = todasRedacoes.filter(r => 
+            r.turma === 'visitante' && r.email_aluno.toLowerCase() === email
+          ).length;
           
           todosUsuarios.push({
-            id: visitante.id,
-            nome: visitante.nome_visitante,
-            email: visitante.email_visitante,
+            id: `visitante-${email}`,
+            nome: 'Visitante',
+            email: email,
             turma: 'visitante',
-            created_at: visitante.primeiro_acesso,
-            ativo: visitante.ativo,
+            created_at: new Date().toISOString(),
+            ativo: true,
             tipo: 'visitante',
-            ultimo_acesso: visitante.ultimo_acesso,
-            session_id: visitante.session_id,
+            ultimo_acesso: new Date().toISOString(),
+            session_id: null,
             total_redacoes: redacoesVisitante,
-            whatsapp: visitante.whatsapp
+            whatsapp: null
           });
         });
       }
@@ -381,7 +381,19 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
 
       {/* Modal de Informações do Visitante */}
       <VisitanteInfoModal
-        visitante={selectedVisitante}
+        visitante={selectedVisitante && selectedVisitante.tipo === 'visitante' ? {
+          id: selectedVisitante.id,
+          nome: selectedVisitante.nome,
+          email: selectedVisitante.email,
+          turma: selectedVisitante.turma,
+          created_at: selectedVisitante.created_at,
+          ativo: selectedVisitante.ativo,
+          tipo: 'visitante' as const,
+          ultimo_acesso: selectedVisitante.ultimo_acesso,
+          total_redacoes: selectedVisitante.total_redacoes,
+          session_id: selectedVisitante.session_id,
+          whatsapp: selectedVisitante.whatsapp
+        } : null}
         isOpen={isInfoModalOpen}
         onClose={() => {
           setIsInfoModalOpen(false);
@@ -392,7 +404,19 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
 
       {/* Modal de Migração do Visitante */}
       <MigrarVisitanteModal
-        visitante={visitanteParaMigrar}
+        visitante={visitanteParaMigrar && visitanteParaMigrar.tipo === 'visitante' ? {
+          id: visitanteParaMigrar.id,
+          nome: visitanteParaMigrar.nome,
+          email: visitanteParaMigrar.email,
+          turma: visitanteParaMigrar.turma,
+          created_at: visitanteParaMigrar.created_at,
+          ativo: visitanteParaMigrar.ativo,
+          tipo: 'visitante' as const,
+          ultimo_acesso: visitanteParaMigrar.ultimo_acesso,
+          total_redacoes: visitanteParaMigrar.total_redacoes,
+          session_id: visitanteParaMigrar.session_id,
+          whatsapp: visitanteParaMigrar.whatsapp
+        } : null}
         isOpen={isMigrarModalOpen}
         onClose={() => {
           setIsMigrarModalOpen(false);

@@ -188,16 +188,16 @@ const AlunosAdmin = () => {
 
       if (error) throw error;
 
-      if (resultado.success) {
+      if (typeof resultado === 'object' && resultado && 'success' in resultado && (resultado as any).success) {
         toast({
           title: "Migração realizada!",
-          description: `${resultado.redacoes_migradas} redações migradas para ${resultado.turma_destino}`,
+          description: `${(resultado as any).redacoes_migradas || 0} redações migradas para ${(resultado as any).turma_destino}`,
         });
         
         setSelectedAluno(null);
         window.location.reload();
       } else {
-        throw new Error(resultado.message);
+        throw new Error(typeof resultado === 'object' && resultado && 'message' in resultado ? (resultado as any).message : 'Erro na migração');
       }
     } catch (error: any) {
       console.error('❌ Erro na migração:', error);

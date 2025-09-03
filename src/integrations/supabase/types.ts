@@ -3139,6 +3139,8 @@ export type Database = {
       get_redacoes_corretor_detalhadas: {
         Args: { corretor_email: string }
         Returns: {
+          corretor_id_1: string
+          corretor_id_2: string
           data_envio: string
           eh_corretor_1: boolean
           eh_corretor_2: boolean
@@ -3147,11 +3149,8 @@ export type Database = {
           id: string
           nome_aluno: string
           redacao_manuscrita_url: string
-          render_image_url: string
-          render_status: string
           status_minha_correcao: string
           texto: string
-          thumb_url: string
           tipo_redacao: string
           turma: string
         }[]
