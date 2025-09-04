@@ -16,6 +16,7 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 interface Redacao {
   id: string;
+  original_id?: string; // Para simulados que têm ID modificado
   frase_tematica: string;
   redacao_manuscrita_url: string | null;
   data_envio: string;
@@ -33,6 +34,7 @@ interface Redacao {
   email_aluno?: string | null;
   // Relatórios/áudios
   corretor_numero?: number;
+  corretor_id_real?: string; // ID real do corretor para buscar anotações
   audio_url?: string | null;
   audio_url_corretor_1?: string | null;
   audio_url_corretor_2?: string | null;
@@ -54,13 +56,78 @@ export default function RedacaoManuscrita() {
     queryKey: ["redacao-manuscrita", id],
     enabled: !!id,
     queryFn: async (): Promise<Redacao | null> => {
-      const { data, error } = await supabase
-        .from("redacoes_enviadas")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (error) throw error;
-      return (data as unknown) as Redacao;
+      // Verificar se é um ID de simulado (se termina com -corretor1 ou -corretor2)
+      const isSimuladoId = id?.includes('-corretor');
+      let originalId = id;
+      let corretorNumero = null;
+      
+      if (isSimuladoId) {
+        // Extrair ID original e número do corretor
+        if (id?.endsWith('-corretor1')) {
+          originalId = id.replace('-corretor1', '');
+          corretorNumero = 1;
+        } else if (id?.endsWith('-corretor2')) {
+          originalId = id.replace('-corretor2', '');
+          corretorNumero = 2;
+        }
+        
+        // Buscar em redacoes_simulado
+        const { data, error } = await supabase
+          .from("redacoes_simulado")
+          .select("*, simulados(frase_tematica)")
+          .eq("id", originalId)
+          .single();
+          
+        if (error) throw error;
+        
+        // Mapear dados do simulado para estrutura esperada
+        console.log('🔍 DEBUG - Dados do simulado do banco:', data);
+        console.log('🔍 DEBUG - Corretor número:', corretorNumero);
+        
+        const notasCalculadas = {
+          nota_c1: corretorNumero === 1 ? data.c1_corretor_1 : data.c1_corretor_2,
+          nota_c2: corretorNumero === 1 ? data.c2_corretor_1 : data.c2_corretor_2,
+          nota_c3: corretorNumero === 1 ? data.c3_corretor_1 : data.c3_corretor_2,
+          nota_c4: corretorNumero === 1 ? data.c4_corretor_1 : data.c4_corretor_2,
+          nota_c5: corretorNumero === 1 ? data.c5_corretor_1 : data.c5_corretor_2,
+          nota_total: corretorNumero === 1 ? data.nota_final_corretor_1 : data.nota_final_corretor_2,
+        };
+        
+        console.log('🔍 DEBUG - Notas calculadas:', notasCalculadas);
+        
+        return {
+          ...data,
+          original_id: originalId, // Manter ID original para buscar anotações
+          frase_tematica: data.simulados?.frase_tematica || 'Simulado',
+          redacao_manuscrita_url: data.redacao_manuscrita_url,
+          tipo_envio: 'simulado',
+          corretor_numero: corretorNumero,
+          // Mapear notas baseado no corretor
+          ...notasCalculadas,
+          // Mapear comentários/áudios baseado no corretor
+          elogios_pontos_atencao_corretor_1: corretorNumero === 1 ? data.elogios_pontos_atencao_corretor_1 : null,
+          elogios_pontos_atencao_corretor_2: corretorNumero === 2 ? data.elogios_pontos_atencao_corretor_2 : null,
+          audio_url: corretorNumero === 1 ? data.audio_url_corretor_1 : data.audio_url_corretor_2,
+          audio_url_corretor_1: data.audio_url_corretor_1,
+          audio_url_corretor_2: data.audio_url_corretor_2,
+          // IDs reais dos corretores para buscar anotações
+          corretor_id_real: corretorNumero === 1 ? data.corretor_id_1 : data.corretor_id_2
+        } as Redacao;
+      } else {
+        // Buscar em redacoes_enviadas (lógica original)
+        const { data, error } = await supabase
+          .from("redacoes_enviadas")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (error) throw error;
+        
+        // Mapear corretor_id_real para redações regulares
+        return {
+          ...data,
+          corretor_id_real: data.corretor_id_1 || data.corretor_id_2
+        } as Redacao;
+      }
     },
   });
 
@@ -152,14 +219,18 @@ export default function RedacaoManuscrita() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {[1,2,3,4,5].map((c) => (
-                <div key={c} className="text-center">
-                  <div className="bg-white border border-primary/20 rounded-lg p-3">
-                    <div className="text-xs text-primary/80 font-medium mb-1">C{c}</div>
-                    <div className="text-lg font-bold text-primary">{(redacao as any)?.[`nota_c${c}`] ?? '-'}</div>
+              {[1,2,3,4,5].map((c) => {
+                const notaValue = (redacao as any)?.[`nota_c${c}`];
+                console.log(`🔍 DEBUG - Nota C${c}:`, notaValue, 'Redação:', redacao);
+                return (
+                  <div key={c} className="text-center">
+                    <div className="bg-white border border-primary/20 rounded-lg p-3">
+                      <div className="text-xs text-primary/80 font-medium mb-1">C{c}</div>
+                      <div className="text-lg font-bold text-primary">{notaValue ?? '-'}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="text-center">
                 <div className="bg-primary text-white rounded-lg p-3">
                   <div className="text-xs font-medium mb-1">Média Final</div>
@@ -198,9 +269,13 @@ export default function RedacaoManuscrita() {
             {redacao?.redacao_manuscrita_url ? (
               <RedacaoAnotacaoVisual
                 imagemUrl={redacao.redacao_manuscrita_url}
-                redacaoId={redacao.id}
-                corretorId="aluno-readonly"
+                redacaoId={redacao.original_id || redacao.id}
+                corretorId={redacao.corretor_id_real || "aluno-readonly"}
                 readonly
+                tipoTabela={redacao.tipo_envio === 'simulado' ? 'redacoes_simulado' : 
+                           redacao.tipo_envio === 'exercicio' ? 'redacoes_exercicio' : 
+                           'redacoes_enviadas'}
+                statusMinhaCorrecao="corrigida"
               />
             ) : (
               <p className="text-sm text-muted-foreground">Imagem não disponível.</p>

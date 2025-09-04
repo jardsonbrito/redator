@@ -71,23 +71,19 @@ const shouldShowScores = (redacao: RedacaoTurma) => {
     const originalId = redacao.original_id || redacao.id;
     
     // Se não temos dados completos dos dois corretores, não mostramos
-    // Verificamos através dos campos específicos de cada corretor
+    // Para simulados, verificar se as notas já foram mapeadas corretamente
     const temTodasNotasCorretor1 = [1, 2, 3, 4, 5].every(comp => {
-      const nota = (redacao as any)[`c${comp}_corretor_1`];
+      const nota = (redacao as any)[`nota_c${comp}`];
       return nota !== null && nota !== undefined;
     });
     
-    const temTodasNotasCorretor2 = [1, 2, 3, 4, 5].every(comp => {
-      const nota = (redacao as any)[`c${comp}_corretor_2`];
-      return nota !== null && nota !== undefined;
-    });
+    // Se é uma redação específica de um corretor, só precisa verificar se tem todas as notas
+    if (redacao.corretor_numero) {
+      return temTodasNotasCorretor1;
+    }
     
-    // Verificar se ambos corretores têm relatórios pedagógicos preenchidos
-    const temRelatorioCorretor1 = redacao.elogios_pontos_atencao_corretor_1 && redacao.elogios_pontos_atencao_corretor_1.trim();
-    const temRelatorioCorretor2 = redacao.elogios_pontos_atencao_corretor_2 && redacao.elogios_pontos_atencao_corretor_2.trim();
-    
-    // Para simulados, só mostra se AMBAS as correções estão COMPLETAMENTE finalizadas
-    return temTodasNotasCorretor1 && temTodasNotasCorretor2 && temRelatorioCorretor1 && temRelatorioCorretor2;
+    // Se não tem corretor número específico, é uma redação original - não mostrar notas ainda
+    return false;
   }
   
   // Para outros tipos de redação (regular, exercício, visitante), usar lógica atual
@@ -221,13 +217,10 @@ const MinhasRedacoesList = () => {
           console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
         }
 
-        // Buscar redações de exercício com join para obter título
+        // Buscar redações de exercício (sem join por enquanto - tabela vazia)
         const { data: redacoesExercicio, error: errorExercicio } = await supabase
           .from('redacoes_exercicio')
-          .select(`
-            *,
-            exercicios(titulo)
-          `)
+          .select('*')
           .ilike('email_aluno', emailBusca);
 
         if (errorExercicio) {
@@ -289,7 +282,7 @@ const MinhasRedacoesList = () => {
             // Se há corretor 1, adicionar entrada (sempre que há corretor atribuído)
             if (item.corretor_id_1) {
               const statusCorretor1 = item.status_corretor_1 || 'pendente';
-              const hasNotas1 = item.nota_c1_corretor_1 || item.nota_c2_corretor_1 || item.nota_c3_corretor_1 || item.nota_c4_corretor_1 || item.nota_c5_corretor_1;
+              const hasNotas1 = item.c1_corretor_1 || item.c2_corretor_1 || item.c3_corretor_1 || item.c4_corretor_1 || item.c5_corretor_1;
               
               todasRedacoes.push({
                 ...item,
@@ -308,12 +301,12 @@ const MinhasRedacoesList = () => {
                 corretor: nomes_corretores[item.corretor_id_1] || 'Corretor 1',
                 corretor_numero: 1,
                 // Notas específicas do corretor 1
-                nota_c1: item.nota_c1_corretor_1,
-                nota_c2: item.nota_c2_corretor_1,
-                nota_c3: item.nota_c3_corretor_1,
-                nota_c4: item.nota_c4_corretor_1,
-                nota_c5: item.nota_c5_corretor_1,
-                nota_total: item.nota_total_corretor_1,
+                nota_c1: item.c1_corretor_1,
+                nota_c2: item.c2_corretor_1,
+                nota_c3: item.c3_corretor_1,
+                nota_c4: item.c4_corretor_1,
+                nota_c5: item.c5_corretor_1,
+                nota_total: item.nota_final_corretor_1,
                 // Comentários do corretor 1
                 comentario_c1_corretor_1: item.comentario_c1_corretor_1,
                 comentario_c2_corretor_1: item.comentario_c2_corretor_1,
@@ -330,7 +323,7 @@ const MinhasRedacoesList = () => {
             // Se há corretor 2, adicionar entrada (sempre que há corretor atribuído)
             if (item.corretor_id_2) {
               const statusCorretor2 = item.status_corretor_2 || 'pendente';
-              const hasNotas2 = item.nota_c1_corretor_2 || item.nota_c2_corretor_2 || item.nota_c3_corretor_2 || item.nota_c4_corretor_2 || item.nota_c5_corretor_2;
+              const hasNotas2 = item.c1_corretor_2 || item.c2_corretor_2 || item.c3_corretor_2 || item.c4_corretor_2 || item.c5_corretor_2;
               
               todasRedacoes.push({
                 ...item,
@@ -349,12 +342,12 @@ const MinhasRedacoesList = () => {
                 corretor: nomes_corretores[item.corretor_id_2] || 'Corretor 2',
                 corretor_numero: 2,
                 // Notas específicas do corretor 2
-                nota_c1: item.nota_c1_corretor_2,
-                nota_c2: item.nota_c2_corretor_2,
-                nota_c3: item.nota_c3_corretor_2,
-                nota_c4: item.nota_c4_corretor_2,
-                nota_c5: item.nota_c5_corretor_2,
-                nota_total: item.nota_total_corretor_2,
+                nota_c1: item.c1_corretor_2,
+                nota_c2: item.c2_corretor_2,
+                nota_c3: item.c3_corretor_2,
+                nota_c4: item.c4_corretor_2,
+                nota_c5: item.c5_corretor_2,
+                nota_total: item.nota_final_corretor_2,
                 // Comentários do corretor 2
                 comentario_c1_corretor_2: item.comentario_c1_corretor_2,
                 comentario_c2_corretor_2: item.comentario_c2_corretor_2,
@@ -394,7 +387,7 @@ const MinhasRedacoesList = () => {
             todasRedacoes.push({
               ...item,
               id: item.id,
-              frase_tematica: item.exercicios?.titulo || 'Exercício',
+              frase_tematica: 'Exercício',
               redacao_texto: item.redacao_texto || '',
               tipo_envio: 'exercicio',
               status: item.corrigida ? 'corrigida' : 'aguardando',

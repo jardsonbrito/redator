@@ -15,7 +15,8 @@
       "mcp__supabase__list_projects",
       "Bash(supabase functions deploy:*)",
       "mcp__supabase__get_project_url",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(git pull:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

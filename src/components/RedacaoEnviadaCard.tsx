@@ -62,6 +62,8 @@ interface RedacaoEnviadaCardProps {
     audio_url?: string | null;
     audio_url_corretor_1?: string | null;
     audio_url_corretor_2?: string | null;
+    corretor_id_1?: string | null;
+    corretor_id_2?: string | null;
   };
 }
 
@@ -365,7 +367,7 @@ export const RedacaoEnviadaCard = ({
                     <RedacaoAnotacaoVisual
                       imagemUrl={redacao.redacao_manuscrita_url as string}
                       redacaoId={redacao.id}
-                      corretorId="aluno-readonly"
+                      corretorId={redacao.corretor_id_1 || redacao.corretor_id_2 || null}
                       readonly
                     />
                   </div>

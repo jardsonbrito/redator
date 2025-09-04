@@ -151,11 +151,12 @@ interface AnotacaoVisual {
 interface RedacaoAnotacaoVisualProps {
   imagemUrl: string;
   redacaoId: string;
-  corretorId: string;
+  corretorId: string | null;
   readonly?: boolean;
   ehCorretor1?: boolean;
   ehCorretor2?: boolean;
   statusMinhaCorrecao?: string;
+  tipoTabela?: 'redacoes_enviadas' | 'redacoes_simulado' | 'redacoes_exercicio';
 }
 
 interface RedacaoAnotacaoVisualRef {
@@ -179,7 +180,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   readonly = false,
   ehCorretor1 = false,
   ehCorretor2 = false,
-  statusMinhaCorrecao = 'pendente'
+  statusMinhaCorrecao = 'pendente',
+  tipoTabela = 'redacoes_enviadas'
 }, ref) => {
   const { toast } = useToast();
   const imageRef = useRef<HTMLImageElement>(null);
@@ -381,7 +383,9 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
       // Verificar se corretorId está disponível
       if (!corretorId || corretorId.trim() === '') {
-        console.log('⏳ CorretorId ainda não disponível, aguardando...');
+        console.log('⏳ CorretorId não disponível, carregando anotações gerais...');
+        // Para casos onde não há corretor específico, não carregar anotações
+        setAnotacoesVisuais([]);
         return;
       }
 
@@ -397,11 +401,19 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         return;
       }
 
-      const { data, error } = await supabase
+      console.log('🔍 DEBUG - Query parameters:', {
+        redacaoId,
+        tipoTabela,
+        corretorId,
+        table: 'marcacoes_visuais'
+      });
+
+      // Primeira tentativa: buscar com o tipo de tabela correto
+      let { data, error } = await supabase
         .from('marcacoes_visuais')
         .select('*')
         .eq('redacao_id', redacaoId)
-        .eq('tabela_origem', 'redacoes_enviadas') // TODO: make this dynamic based on redacao type
+        .eq('tabela_origem', tipoTabela) // Usar tipo de tabela passado como prop
         .eq('corretor_id', corretorId) // Filtrar apenas marcações do corretor atual
         .order('criado_em', { ascending: true }); // Ordenar pela data real de criação
 
@@ -410,7 +422,61 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         return;
       }
 
+      // Se não encontrou e é simulado, tentar buscar como 'redacoes_enviadas' (fallback para dados antigos)
+      if (data?.length === 0 && tipoTabela === 'redacoes_simulado') {
+        console.log('🔄 Tentativa fallback: buscando anotações salvas como redacoes_enviadas');
+        const fallbackResult = await supabase
+          .from('marcacoes_visuais')
+          .select('*')
+          .eq('redacao_id', redacaoId)
+          .eq('tabela_origem', 'redacoes_enviadas') // Fallback para dados antigos
+          .eq('corretor_id', corretorId)
+          .order('criado_em', { ascending: true });
+
+        if (!fallbackResult.error && fallbackResult.data) {
+          data = fallbackResult.data;
+          console.log('✅ Anotações encontradas via fallback:', data.length);
+        }
+      }
+
       console.log('✅ Anotações carregadas do banco:', data?.length || 0, 'anotações para corretor', corretorId);
+      
+      // Debug adicional: verificar se existem anotações para esta redação sem filtrar por corretor
+      if (data?.length === 0) {
+        // Verificar na tabela atual
+        const { data: allAnnotations } = await supabase
+          .from('marcacoes_visuais')
+          .select('*')
+          .eq('redacao_id', redacaoId)
+          .eq('tabela_origem', tipoTabela);
+        
+        console.log('🔍 DEBUG - Todas as anotações desta redação:', allAnnotations?.length || 0);
+        if (allAnnotations && allAnnotations.length > 0) {
+          console.log('🔍 DEBUG - Corretores com anotações:', [...new Set(allAnnotations.map(a => a.corretor_id))]);
+        }
+        
+        // Verificar se existem anotações com qualquer tabela_origem
+        const { data: allTables } = await supabase
+          .from('marcacoes_visuais')
+          .select('*')
+          .eq('redacao_id', redacaoId);
+        
+        console.log('🔍 DEBUG - Anotações com qualquer tabela_origem:', allTables?.length || 0);
+        if (allTables && allTables.length > 0) {
+          console.log('🔍 DEBUG - Tabelas encontradas:', [...new Set(allTables.map(a => a.tabela_origem))]);
+        }
+        
+        // Verificar se existem com ID sem sufixo (-corretor1, -corretor2)
+        const idOriginal = redacaoId.replace('-corretor1', '').replace('-corretor2', '');
+        if (idOriginal !== redacaoId) {
+          const { data: originalAnnotations } = await supabase
+            .from('marcacoes_visuais')
+            .select('*')
+            .eq('redacao_id', idOriginal);
+          
+          console.log('🔍 DEBUG - Anotações com ID original:', originalAnnotations?.length || 0, 'ID:', idOriginal);
+        }
+      }
       
       // Carregar anotações sem numeração
       setAnotacoes(data || []);
@@ -887,7 +953,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
           competencia: competenciaFinal,
           cor_marcacao: CORES_COMPETENCIAS[competenciaFinal as keyof typeof CORES_COMPETENCIAS].cor,
           comentario: comentarioTemp.trim(),
-          tabela_origem: 'redacoes_enviadas',
+          tabela_origem: tipoTabela,
           x_start: bounds.x,
           y_start: bounds.y,
           x_end: bounds.x + bounds.width,
@@ -1011,7 +1077,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         .from('marcacoes_visuais')
         .delete()
         .eq('redacao_id', redacaoId)
-        .eq('tabela_origem', 'redacoes_enviadas')
+        .eq('tabela_origem', tipoTabela)
         .eq('corretor_id', corretorId);
       
       if (error) throw error;
