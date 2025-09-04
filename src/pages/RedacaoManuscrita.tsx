@@ -97,6 +97,7 @@ export default function RedacaoManuscrita() {
         
         return {
           ...data,
+          status: 'corrigida', // Adicionar status obrigatório
           original_id: originalId, // Manter ID original para buscar anotações
           frase_tematica: data.simulados?.frase_tematica || 'Simulado',
           redacao_manuscrita_url: data.redacao_manuscrita_url,

@@ -148,18 +148,16 @@ export default function Temas() {
                         <Badge className="bg-redator-accent text-white">
                           {tema.eixo_tematico}
                         </Badge>
-                        {tema.published_at && (
-                          <span 
-                            className="inline-block px-2 py-0.5 text-[11px] sm:text-xs font-medium text-violet-700 bg-violet-50 border border-violet-100 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-                            aria-label={`Data de publicação: ${new Date(tema.published_at).toLocaleDateString('pt-BR', { 
-                              day: '2-digit', 
-                              month: 'long', 
-                              year: 'numeric' 
-                            })}`}
-                          >
-                            Publicado em {new Date(tema.published_at).toLocaleDateString('pt-BR')}
-                          </span>
-                        )}
+                        <span 
+                          className="inline-block px-2 py-0.5 text-[11px] sm:text-xs font-medium text-violet-700 bg-violet-50 border border-violet-100 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                          aria-label={`Data de publicação: ${tema.published_at ? new Date(tema.published_at).toLocaleDateString('pt-BR', { 
+                            day: '2-digit', 
+                            month: 'long', 
+                            year: 'numeric' 
+                          }) : 'Data não disponível'}`}
+                        >
+                          Publicado em {tema.published_at ? new Date(tema.published_at).toLocaleDateString('pt-BR') : 'Data não disponível'}
+                        </span>
                       </div>
                     </div>
                   </div>

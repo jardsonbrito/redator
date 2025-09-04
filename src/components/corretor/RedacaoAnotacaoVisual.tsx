@@ -385,7 +385,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       if (!corretorId || corretorId.trim() === '') {
         console.log('⏳ CorretorId não disponível, carregando anotações gerais...');
         // Para casos onde não há corretor específico, não carregar anotações
-        setAnotacoesVisuais([]);
         return;
       }
 

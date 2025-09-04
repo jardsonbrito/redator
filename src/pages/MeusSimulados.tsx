@@ -278,9 +278,9 @@ const MeusSimulados = () => {
                           <div className="flex items-center gap-2 text-sm">
                             <User className="w-4 h-4 text-green-600" />
                             <span className="font-medium">{redacao.corretor1.nome_completo}:</span>
-                            {redacao.nota_total_corretor_1 ? (
+                            {redacao.nota_final_corretor_1 ? (
                               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                                {redacao.nota_total_corretor_1} pontos
+                                {redacao.nota_final_corretor_1} pontos
                               </Badge>
                             ) : (
                               <span className="text-orange-600 text-xs">Aguardando correção</span>
@@ -291,9 +291,9 @@ const MeusSimulados = () => {
                           <div className="flex items-center gap-2 text-sm">
                             <User className="w-4 h-4 text-blue-600" />
                             <span className="font-medium">{redacao.corretor2.nome_completo}:</span>
-                            {redacao.nota_total_corretor_2 ? (
+                            {redacao.nota_final_corretor_2 ? (
                               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                                {redacao.nota_total_corretor_2} pontos
+                                {redacao.nota_final_corretor_2} pontos
                               </Badge>
                             ) : (
                               <span className="text-orange-600 text-xs">Aguardando correção</span>
@@ -388,7 +388,7 @@ const MeusSimulados = () => {
                                       <div className="text-center">
                                         <Label className="text-xs">Final</Label>
                                         <div className="font-bold text-lg text-green-700">
-                                          {redacao.nota_total_corretor_1 || '-'}
+                                          {redacao.nota_final_corretor_1 || '-'}
                                         </div>
                                       </div>
                                     </div>
@@ -419,7 +419,7 @@ const MeusSimulados = () => {
                                       <div className="text-center">
                                         <Label className="text-xs">Final</Label>
                                         <div className="font-bold text-lg text-blue-700">
-                                          {redacao.nota_total_corretor_2 || '-'}
+                                          {redacao.nota_final_corretor_2 || '-'}
                                         </div>
                                       </div>
                                     </div>
