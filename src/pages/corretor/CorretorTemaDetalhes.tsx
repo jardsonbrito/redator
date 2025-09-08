@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
+import { renderTextWithParagraphs } from '@/utils/textUtils';
 
 // Type extension para incluir o campo imagem_texto_4_url
 type TemaWithImage = {
@@ -118,9 +119,9 @@ const CorretorTemaDetalhes = () => {
               {tema.texto_1 && (
                 <div className="bg-white rounded-lg p-6 border border-muted">
                   <h3 className="font-semibold text-foreground mb-3">Texto Motivador I</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {tema.texto_1}
-                  </p>
+                  <div className="text-muted-foreground leading-relaxed">
+                    {renderTextWithParagraphs(tema.texto_1)}
+                  </div>
                 </div>
               )}
 
@@ -128,9 +129,9 @@ const CorretorTemaDetalhes = () => {
               {tema.texto_2 && (
                 <div className="bg-white rounded-lg p-6 border border-muted">
                   <h3 className="font-semibold text-foreground mb-3">Texto Motivador II</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {tema.texto_2}
-                  </p>
+                  <div className="text-muted-foreground leading-relaxed">
+                    {renderTextWithParagraphs(tema.texto_2)}
+                  </div>
                 </div>
               )}
 
@@ -138,9 +139,9 @@ const CorretorTemaDetalhes = () => {
               {tema.texto_3 && (
                 <div className="bg-white rounded-lg p-6 border border-muted">
                   <h3 className="font-semibold text-foreground mb-3">Texto Motivador III</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {tema.texto_3}
-                  </p>
+                  <div className="text-muted-foreground leading-relaxed">
+                    {renderTextWithParagraphs(tema.texto_3)}
+                  </div>
                 </div>
               )}
             </div>

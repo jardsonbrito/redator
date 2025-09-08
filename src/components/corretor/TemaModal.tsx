@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { renderTextWithParagraphs } from '@/utils/textUtils';
 
 interface TemaModalProps {
   isOpen: boolean;
@@ -76,21 +77,21 @@ export const TemaModal = ({ isOpen, onClose, tema }: TemaModalProps) => {
           {tema.texto_1 && (
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold mb-2">Texto Motivador I</h3>
-              <p className="text-gray-700">{tema.texto_1}</p>
+              <div className="text-gray-700">{renderTextWithParagraphs(tema.texto_1)}</div>
             </div>
           )}
 
           {tema.texto_2 && (
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold mb-2">Texto Motivador II</h3>
-              <p className="text-gray-700">{tema.texto_2}</p>
+              <div className="text-gray-700">{renderTextWithParagraphs(tema.texto_2)}</div>
             </div>
           )}
 
           {tema.texto_3 && (
             <div className="border rounded-lg p-4">
               <h3 className="font-semibold mb-2">Texto Motivador III</h3>
-              <p className="text-gray-700">{tema.texto_3}</p>
+              <div className="text-gray-700">{renderTextWithParagraphs(tema.texto_3)}</div>
             </div>
           )}
         </div>

@@ -20,6 +20,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditDisplay } from "@/components/CreditDisplay";
+import { renderTextWithParagraphs } from '@/utils/textUtils';
 
 const SimuladoParticipacao = () => {
   const { id } = useParams();
@@ -425,30 +426,27 @@ const SimuladoParticipacao = () => {
                   {simulado.temas.texto_1 && (
                     <div className="bg-white rounded-lg p-6 border border-gray-200">
                       <h4 className="font-semibold text-primary mb-3">Texto Motivador I</h4>
-                      <div 
-                        className="text-gray-700 leading-relaxed text-sm prose prose-sm max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block"
-                        dangerouslySetInnerHTML={{ __html: simulado.temas.texto_1 }}
-                      />
+                      <div className="text-gray-700 leading-relaxed text-sm">
+                        {renderTextWithParagraphs(simulado.temas.texto_1)}
+                      </div>
                     </div>
                   )}
 
                   {simulado.temas.texto_2 && (
                     <div className="bg-white rounded-lg p-6 border border-gray-200">
                       <h4 className="font-semibold text-primary mb-3">Texto Motivador II</h4>
-                      <div 
-                        className="text-gray-700 leading-relaxed text-sm prose prose-sm max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block"
-                        dangerouslySetInnerHTML={{ __html: simulado.temas.texto_2 }}
-                      />
+                      <div className="text-gray-700 leading-relaxed text-sm">
+                        {renderTextWithParagraphs(simulado.temas.texto_2)}
+                      </div>
                     </div>
                   )}
 
                   {simulado.temas.texto_3 && (
                     <div className="bg-white rounded-lg p-6 border border-gray-200">
                       <h4 className="font-semibold text-primary mb-3">Texto Motivador III</h4>
-                      <div 
-                        className="text-gray-700 leading-relaxed text-sm prose prose-sm max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block"
-                        dangerouslySetInnerHTML={{ __html: simulado.temas.texto_3 }}
-                      />
+                      <div className="text-gray-700 leading-relaxed text-sm">
+                        {renderTextWithParagraphs(simulado.temas.texto_3)}
+                      </div>
                     </div>
                   )}
                 </CardContent>

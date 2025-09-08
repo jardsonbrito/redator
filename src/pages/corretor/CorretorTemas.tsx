@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState } from "react";
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
+import { renderTextWithParagraphs } from '@/utils/textUtils';
 
 const CorretorTemas = () => {
   const [selectedTema, setSelectedTema] = useState<any>(null);
@@ -194,21 +195,21 @@ const CorretorTemas = () => {
               {selectedTema?.texto_1 && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador I</h3>
-                  <p className="text-gray-700">{selectedTema.texto_1}</p>
+                  <div className="text-gray-700">{renderTextWithParagraphs(selectedTema.texto_1)}</div>
                 </div>
               )}
 
               {selectedTema?.texto_2 && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador II</h3>
-                  <p className="text-gray-700">{selectedTema.texto_2}</p>
+                  <div className="text-gray-700">{renderTextWithParagraphs(selectedTema.texto_2)}</div>
                 </div>
               )}
 
               {selectedTema?.texto_3 && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador III</h3>
-                  <p className="text-gray-700">{selectedTema.texto_3}</p>
+                  <div className="text-gray-700">{renderTextWithParagraphs(selectedTema.texto_3)}</div>
                 </div>
               )}
             </div>

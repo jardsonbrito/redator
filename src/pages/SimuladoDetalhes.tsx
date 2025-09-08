@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
+import { renderTextWithParagraphs } from '@/utils/textUtils';
 
 export default function SimuladoDetalhes() {
   const { id } = useParams();
@@ -257,7 +258,7 @@ export default function SimuladoDetalhes() {
                   <div>
                     <h4 className="font-bold text-purple-800 mb-2">TEXTO I</h4>
                     <div className="p-4 bg-gray-50 rounded border text-sm leading-relaxed">
-                      {tema.texto_1}
+                      {renderTextWithParagraphs(tema.texto_1)}
                     </div>
                   </div>
                 )}
@@ -266,7 +267,7 @@ export default function SimuladoDetalhes() {
                   <div>
                     <h4 className="font-bold text-purple-800 mb-2">TEXTO II</h4>
                     <div className="p-4 bg-gray-50 rounded border text-sm leading-relaxed">
-                      {tema.texto_2}
+                      {renderTextWithParagraphs(tema.texto_2)}
                     </div>
                   </div>
                 )}
@@ -275,7 +276,7 @@ export default function SimuladoDetalhes() {
                   <div>
                     <h4 className="font-bold text-purple-800 mb-2">TEXTO III</h4>
                     <div className="p-4 bg-gray-50 rounded border text-sm leading-relaxed">
-                      {tema.texto_3}
+                      {renderTextWithParagraphs(tema.texto_3)}
                     </div>
                   </div>
                 )}

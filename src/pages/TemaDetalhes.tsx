@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getTemaCoverUrl, getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { renderTextWithParagraphs } from '@/utils/textUtils';
 
 // Type extension para incluir os campos novos e legado
 type TemaWithImage = {
@@ -196,9 +197,9 @@ const TemaDetalhes = () => {
               {tema.texto_1 && (
                 <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
                   <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador I</h3>
-                  <p className="text-redator-accent leading-relaxed">
-                    {tema.texto_1}
-                  </p>
+                  <div className="text-redator-accent leading-relaxed">
+                    {renderTextWithParagraphs(tema.texto_1)}
+                  </div>
                 </div>
               )}
 
@@ -206,9 +207,9 @@ const TemaDetalhes = () => {
               {tema.texto_2 && (
                 <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
                   <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador II</h3>
-                  <p className="text-redator-accent leading-relaxed">
-                    {tema.texto_2}
-                  </p>
+                  <div className="text-redator-accent leading-relaxed">
+                    {renderTextWithParagraphs(tema.texto_2)}
+                  </div>
                 </div>
               )}
 
@@ -216,9 +217,9 @@ const TemaDetalhes = () => {
               {tema.texto_3 && (
                 <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
                   <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador III</h3>
-                  <p className="text-redator-accent leading-relaxed">
-                    {tema.texto_3}
-                  </p>
+                  <div className="text-redator-accent leading-relaxed">
+                    {renderTextWithParagraphs(tema.texto_3)}
+                  </div>
                 </div>
               )}
 

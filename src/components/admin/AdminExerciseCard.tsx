@@ -1,9 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, Eye, Power } from "lucide-react";
+import { Edit2, Trash2, Eye, Power, Clock, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
 
 interface Exercicio {
   id: string;
@@ -105,6 +106,32 @@ export const AdminExerciseCard = ({
                     <Badge variant={exercicio.ativo ? "default" : "secondary"}>
                       {exercicio.ativo ? "Ativo" : "Inativo"}
                     </Badge>
+                    
+                    {/* Badge de status do período */}
+                    {(() => {
+                      const availability = getExerciseAvailability(exercicio);
+                      if (availability.status === 'encerrado') {
+                        return (
+                          <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-200">
+                            ⏰ Encerrado
+                          </Badge>
+                        );
+                      } else if (availability.status === 'agendado') {
+                        return (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+                            📅 Agendado
+                          </Badge>
+                        );
+                      } else if (availability.status === 'disponivel' && (exercicio.data_inicio || exercicio.data_fim)) {
+                        return (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                            ✅ Disponível
+                          </Badge>
+                        );
+                      }
+                      return null;
+                    })()}
+                    
                     <Badge variant={kindBadge.variant}>
                       {kindBadge.label}
                     </Badge>
@@ -171,6 +198,39 @@ export const AdminExerciseCard = ({
                         {turma}
                       </Badge>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Period Information */}
+              {(exercicio.data_inicio || exercicio.data_fim) && (
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-4 h-4" />
+                      <strong>Período:</strong>
+                    </div>
+                    <div className="ml-6 text-xs">
+                      {formatExercisePeriod(
+                        exercicio.data_inicio,
+                        exercicio.hora_inicio,
+                        exercicio.data_fim,
+                        exercicio.hora_fim
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Status do exercício */}
+                  <div className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      <span className="italic">
+                        {(() => {
+                          const availability = getExerciseAvailability(exercicio);
+                          return availability.message || 'Status indisponível';
+                        })()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
