@@ -138,10 +138,10 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                       {item.title}
                     </h3>
                     
-                    {/* Badge de desabilitado */}
+                    {/* Badge de indisponível */}
                     <div className="absolute top-2 right-2">
                       <div className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full">
-                        Desabilitado
+                        Indisponível
                       </div>
                     </div>
                   </div>
@@ -182,7 +182,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                   {isBlocked 
                     ? "Recurso bloqueado para Turma E" 
                     : isFreeTopicDisabled 
-                    ? "Tema Livre temporariamente desabilitado pelo administrador"
+                    ? "Tema Livre temporariamente indisponível"
                     : item.tooltip
                   }
                 </p>

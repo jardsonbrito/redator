@@ -19,13 +19,15 @@ interface CorretorSelectorProps {
   onCorretoresChange: (corretores: string[]) => void;
   isSimulado?: boolean;
   required?: boolean;
+  maxCorretores?: number; // Limite máximo de corretores
 }
 
 export const CorretorSelector = ({ 
   selectedCorretores, 
   onCorretoresChange, 
   isSimulado = false,
-  required = false 
+  required = false,
+  maxCorretores
 }: CorretorSelectorProps) => {
   const [corretores, setCorretores] = useState<Corretor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,11 +64,15 @@ export const CorretorSelector = ({
     let newSelected = [...selectedCorretores];
 
     if (checked) {
-      // Para simulados, manter limite de 2
-      if (isSimulado && newSelected.length >= 2) {
+      // Definir limite baseado nas props
+      const limite = isSimulado ? 2 : (maxCorretores || 2);
+      
+      if (newSelected.length >= limite) {
+        const tipoEnvio = isSimulado ? "Simulados" : "Envios regulares";
+        const limiteTexto = limite === 1 ? "apenas 1 corretor" : `exatamente ${limite} corretores`;
         toast({
           title: "Limite excedido",
-          description: "Simulados requerem exatamente 2 corretores.",
+          description: `${tipoEnvio} podem selecionar ${limiteTexto}.`,
           variant: "destructive"
         });
         return;
@@ -80,10 +86,14 @@ export const CorretorSelector = ({
   };
 
   const handleSelectAll = (checked: boolean) => {
-    if (isSimulado) {
+    const limite = maxCorretores || 2;
+    
+    if (isSimulado || limite === 1) {
+      const tipoEnvio = isSimulado ? "simulados" : "envios regulares";
+      const limiteTexto = limite === 1 ? "apenas 1 corretor" : `exatamente ${limite} corretores`;
       toast({
-        title: "Não disponível para simulados",
-        description: "Simulados requerem exatamente 2 corretores.",
+        title: "Não disponível",
+        description: `${tipoEnvio} requerem ${limiteTexto}.`,
         variant: "destructive"
       });
       return;
@@ -121,17 +131,21 @@ export const CorretorSelector = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isSimulado && (
+        {(isSimulado || maxCorretores === 1) && (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Simulado:</strong> É obrigatório selecionar exatamente 2 corretores.
+              {isSimulado ? (
+                <><strong>Simulado:</strong> É obrigatório selecionar exatamente 2 corretores.</>
+              ) : maxCorretores === 1 ? (
+                <><strong>Envio regular:</strong> É obrigatório selecionar apenas 1 corretor.</>
+              ) : null}
             </AlertDescription>
           </Alert>
         )}
 
         <div className="space-y-3">
-          {!isSimulado && (
+          {!isSimulado && maxCorretores !== 1 && (
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="select-all-corretores"
@@ -177,10 +191,15 @@ export const CorretorSelector = ({
         </div>
 
         <div className="text-xs text-muted-foreground">
-          <p>Corretores selecionados: {selectedCorretores.length}/{corretores.length}</p>
+          <p>Corretores selecionados: {selectedCorretores.length}/{maxCorretores || corretores.length}</p>
           {isSimulado && selectedCorretores.length !== 2 && (
             <p className="text-red-500 mt-1">
               ⚠️ Simulados requerem exatamente 2 corretores
+            </p>
+          )}
+          {maxCorretores === 1 && selectedCorretores.length !== 1 && (
+            <p className="text-red-500 mt-1">
+              ⚠️ Envios regulares requerem exatamente 1 corretor
             </p>
           )}
         </div>

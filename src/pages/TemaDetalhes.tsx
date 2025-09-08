@@ -73,6 +73,30 @@ const TemaDetalhes = () => {
     enabled: !!id
   });
 
+  // Query para verificar se o usuário já enviou uma redação sobre este tema
+  const { data: redacaoEnviada } = useQuery({
+    queryKey: ['redacao-enviada', tema?.frase_tematica, studentData.email],
+    queryFn: async () => {
+      if (!tema?.frase_tematica || !studentData.email) return null;
+      
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, data_envio')
+        .eq('frase_tematica', tema.frase_tematica)
+        .eq('email_aluno', studentData.email)
+        .order('data_envio', { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking for existing redacao:', error);
+        return null;
+      }
+      
+      return data && data.length > 0 ? data[0] : null;
+    },
+    enabled: !!tema?.frase_tematica && !!studentData.email
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
@@ -128,9 +152,21 @@ const TemaDetalhes = () => {
         <Card className="border-redator-accent/20">
           <CardContent className="p-8">
             {/* 1. Frase Temática */}
-            <h1 className="text-2xl font-bold text-redator-primary mb-8 leading-tight">
-              {tema.frase_tematica}
-            </h1>
+            <div className="flex flex-col gap-4 mb-8">
+              <h1 className="text-2xl font-bold text-redator-primary leading-tight">
+                {tema.frase_tematica}
+              </h1>
+              {redacaoEnviada && (
+                <div className="flex items-center gap-2">
+                  <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full border border-green-200">
+                    ✓ Já enviado
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    Enviado em {new Date(redacaoEnviada.data_envio).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              )}
+            </div>
 
             <div className="space-y-6">
               {/* 2. Cover Image */}
@@ -187,12 +223,22 @@ const TemaDetalhes = () => {
               )}
 
               {/* 7. Texto Motivador IV (Image) */}
-              {getTemaMotivatorIVUrl(tema) && (
+              {getTemaMotivatorIVUrl({
+                motivator4_source: tema.motivator4_source,
+                motivator4_url: tema.motivator4_url,
+                motivator4_file_path: tema.motivator4_file_path,
+                imagem_texto_4_url: tema.imagem_texto_4_url
+              }) && (
                 <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
                   <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador IV</h3>
                   <div className="rounded-lg overflow-hidden">
                     <img 
-                      src={getTemaMotivatorIVUrl(tema)!}
+                      src={getTemaMotivatorIVUrl({
+                        motivator4_source: tema.motivator4_source,
+                        motivator4_url: tema.motivator4_url,
+                        motivator4_file_path: tema.motivator4_file_path,
+                        imagem_texto_4_url: tema.imagem_texto_4_url
+                      })!}
                       alt="Charge/Infográfico — Texto Motivador IV"
                       className="w-full h-auto"
                       onError={(e) => {

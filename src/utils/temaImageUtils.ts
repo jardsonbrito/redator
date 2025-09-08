@@ -46,9 +46,10 @@ export function getTemaMotivatorIVUrl(tema: {
   motivator4_source?: string | null;
   motivator4_url?: string | null;
   motivator4_file_path?: string | null;
+  imagem_texto_4_url?: string | null;
 }): string | null {
-  // Only show if motivator4 is explicitly set (not 'none')
-  if (tema.motivator4_source === 'none' || !tema.motivator4_source) {
+  // Only hide if explicitly set to 'none'
+  if (tema.motivator4_source === 'none') {
     return null;
   }
 
@@ -63,6 +64,11 @@ export function getTemaMotivatorIVUrl(tema: {
   // URL field
   if (tema.motivator4_url) {
     return tema.motivator4_url;
+  }
+
+  // Fallback to legacy field for backward compatibility
+  if (tema.imagem_texto_4_url) {
+    return tema.imagem_texto_4_url;
   }
 
   return null;

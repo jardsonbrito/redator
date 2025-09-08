@@ -195,17 +195,17 @@ const EnvieRedacao = () => {
 
     if (selectedCorretores.length === 0) {
       toast({
-        title: "Selecione pelo menos um corretor",
-        description: "É necessário selecionar pelo menos um corretor para sua redação.",
+        title: "Selecione um corretor",
+        description: "É necessário selecionar exatamente um corretor para sua redação.",
         variant: "destructive",
       });
       return;
     }
 
-    if (selectedCorretores.length > 2) {
+    if (selectedCorretores.length > 1) {
       toast({
         title: "Limite de corretores excedido",
-        description: "Você pode selecionar no máximo 2 corretores.",
+        description: "Envios regulares podem selecionar apenas 1 corretor.",
         variant: "destructive",
       });
       return;
@@ -434,6 +434,7 @@ const EnvieRedacao = () => {
                         onCorretoresChange={setSelectedCorretores}
                         isSimulado={false}
                         required={true}
+                        maxCorretores={1}
                       />
                     </div>
                     
