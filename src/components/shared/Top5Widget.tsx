@@ -67,27 +67,55 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   
   const turmaAtivaLetter = variant === "admin" && selectedTurmaAdmin !== "geral" ? selectedTurmaAdmin : null;
 
-  // Buscar notas 1000 para "Galeria de Honra" (sempre global, mas filtra por mês apenas se tipo for "regular")
+  // Buscar notas 1000 para "Galeria de Honra" (filtra por turma para alunos, global para admin)
   const { data: galeria1000 } = useQuery({
-    queryKey: ['galeria-honra-1000', selectedType, selectedMonth],
+    queryKey: ['galeria-honra-1000', selectedType, selectedMonth, variant, turmaAtivaLetter, studentData?.turma],
     queryFn: async () => {
-      // Buscar nas três tabelas: redacoes_enviadas, redacoes_simulado, redacoes_exercicio
+      // Determinar filtro de turma baseado no tipo de usuário
+      let turmaFilter: string | null = null;
+      
+      if (variant === "admin") {
+        // Admin: usa seletor de turma ou mostra geral
+        turmaFilter = turmaAtivaLetter;
+      } else if (variant === "student" && studentData?.turma) {
+        // Aluno: filtra apenas sua turma
+        const turmaLetter = extractTurmaLetter(studentData.turma);
+        turmaFilter = turmaLetter !== 'N/A' ? turmaLetter : null;
+      }
+      // Visitantes: sem filtro (turmaFilter = null)
+      
+      // Construir queries com filtros condicionais
+      let enviadasQuery = supabase
+        .from('redacoes_enviadas')
+        .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
+        .eq('nota_total', 1000);
+        
+      let simuladoQuery = supabase
+        .from('redacoes_simulado')
+        .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
+        .eq('nota_total', 1000);
+        
+      let exercicioQuery = supabase
+        .from('redacoes_exercicio')
+        .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
+        .eq('nota_total', 1000);
+      
+      // Aplicar filtros de turma se necessário
+      if (turmaFilter) {
+        const turmaForEnviadas = getTurmaForTable(turmaFilter, 'redacoes_enviadas');
+        const turmaForSimulado = getTurmaForTable(turmaFilter, 'redacoes_simulado');
+        const turmaForExercicio = getTurmaForTable(turmaFilter, 'redacoes_exercicio');
+        
+        enviadasQuery = enviadasQuery.eq('turma', turmaForEnviadas);
+        simuladoQuery = simuladoQuery.eq('turma', turmaForSimulado);
+        exercicioQuery = exercicioQuery.eq('turma', turmaForExercicio);
+      }
+      
+      // Executar queries
       const [enviadasRes, simuladoRes, exercicioRes] = await Promise.all([
-        supabase
-          .from('redacoes_enviadas')
-          .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
-          .eq('nota_total', 1000)
-          .order('data_envio', { ascending: false }),
-        supabase
-          .from('redacoes_simulado')
-          .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
-          .eq('nota_total', 1000)
-          .order('data_envio', { ascending: false }),
-        supabase
-          .from('redacoes_exercicio')
-          .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
-          .eq('nota_total', 1000)
-          .order('data_envio', { ascending: false })
+        enviadasQuery.order('data_envio', { ascending: false }),
+        simuladoQuery.order('data_envio', { ascending: false }),
+        exercicioQuery.order('data_envio', { ascending: false })
       ]);
 
       const todasNotas1000 = [
@@ -98,6 +126,9 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
       console.log(`🎯 Galeria de Honra - Total inicial: ${todasNotas1000.length}`, {
         selectedMonth,
+        variant,
+        turmaFilter,
+        studentTurma: studentData?.turma,
         enviadasCount: enviadasRes.data?.length || 0,
         simuladoCount: simuladoRes.data?.length || 0,
         exercicioCount: exercicioRes.data?.length || 0
@@ -451,7 +482,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
             </div>
             <div className="flex-1">
               <CardTitle className={styles.majorNoteTitle}>
-                🏆 Galeria de Honra — 1000 pontos
+                Galeria de Honra
                 {selectedType === "regular" && selectedMonth && (
                   <span className="text-sm font-normal text-muted-foreground ml-2">
                     ({selectedMonth})
@@ -470,7 +501,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                   </div>
                   <div className={`${styles.majorNoteNames} mt-2 space-y-1`}>
                     {galeria1000.alunos.slice(0, 5).map((aluno, index) => (
-                      <div key={index} className="flex justify-between items-center">
+                      <div key={index} className="flex items-center">
                         <span>
                           {aluno.nome_aluno}
                           {variant === "admin" && aluno.turma && (
@@ -485,9 +516,6 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                             })()
                           )}
                         </span>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(aluno.data_envio).toLocaleDateString('pt-BR')}
-                        </span>
                       </div>
                     ))}
                     {galeria1000.total > 5 && (
@@ -500,8 +528,8 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
               ) : (
                 <p className="text-muted-foreground mt-2">
                   {selectedType === "regular" && selectedMonth 
-                    ? `Ainda não há alunos que alcançaram 1000 pontos em ${selectedMonth}.`
-                    : "Ainda não há alunos que alcançaram a nota máxima de 1000 pontos."
+                    ? `Nenhum aluno na Galeria de Honra em ${selectedMonth}.`
+                    : "Nenhum aluno na Galeria de Honra ainda."
                   }
                   <br />
                   <span className="text-sm">
