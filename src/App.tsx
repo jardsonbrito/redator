@@ -71,6 +71,7 @@ import CorretorVisitantes from "./pages/corretor/CorretorVisitantes";
 import { AjudaRapidaAdmin } from "./pages/admin/AjudaRapidaAdmin";
 import LousaRespostasPage from "./pages/admin/LousaRespostas";
 import VisitantesAdmin from "./pages/admin/VisitantesAdmin";
+import Top5Admin from "./pages/admin/Top5Admin";
 import AulasAoVivo from "./pages/AulasAoVivo";
 import SalasVirtuais from "./pages/SalasVirtuais";
 import RedacaoManuscrita from "./pages/RedacaoManuscrita";
@@ -131,6 +132,7 @@ function App() {
                   <Route path="/admin/exportacao" element={<Exportacao />} />
                   <Route path="/admin/ajuda-rapida" element={<AjudaRapidaAdmin />} />
                   <Route path="/admin/gamificacao" element={<GamificacaoAdmin />} />
+                  <Route path="/admin/top5" element={<Top5Admin />} />
                   <Route path="/admin/lousa/:lousaId/respostas" element={<LousaRespostasPage />} />
                   
                   {/* Rotas do Corretor */}

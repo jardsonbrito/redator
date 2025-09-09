@@ -24,7 +24,8 @@ import {
   Settings,
   ShieldCheck,
   Presentation,
-  Gamepad2
+  Gamepad2,
+  Award
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,6 +98,9 @@ import { AdminList } from "@/components/admin/AdminList";
 // Import avatar component
 import { AdminAvatar } from "@/components/admin/AdminAvatar";
 
+// Import TOP 5 component
+import { Top5Widget } from "@/components/shared/Top5Widget";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
@@ -137,7 +141,8 @@ const Admin = () => {
     { id: "exportacao", label: "Exportação", icon: Download },
     { id: "gamificacao", label: "Gamificação", icon: Gamepad2 },
     { id: "configuracoes", label: "Configurações", icon: Settings },
-    { id: "administradores", label: "Administradores", icon: ShieldCheck }
+    { id: "administradores", label: "Administradores", icon: ShieldCheck },
+    { id: "top5", label: "TOP 5", icon: Award }
   ];
 
   // Verificar parâmetros de query string para definir view inicial
@@ -532,6 +537,14 @@ const Admin = () => {
       case "gamificacao":
         navigate('/admin/gamificacao');
         return null;
+
+      case "top5":
+        return (
+          <div className="space-y-6">
+            <h3 className="text-2xl font-bold">TOP 5 - Rankings</h3>
+            <Top5Widget variant="admin" showHeader={false} />
+          </div>
+        );
       
       default:
         return (

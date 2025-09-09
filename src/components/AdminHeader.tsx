@@ -12,7 +12,8 @@ import {
   HelpCircle,
   Trophy,
   Presentation,
-  BarChart3
+  BarChart3,
+  Award
 } from 'lucide-react';
 
 export const AdminHeader = () => {
@@ -27,6 +28,7 @@ export const AdminHeader = () => {
     { path: '/admin/corretores', label: 'Corretores', icon: UserCheck },
     { path: '/admin/visitantes', label: 'Visitantes', icon: Users },
     { path: '/admin/exportacao', label: 'Exportação', icon: Download },
+    { path: '/admin/top5', label: 'TOP 5', icon: Award },
     { path: '/admin/ajuda-rapida', label: 'Ajuda Rápida', icon: HelpCircle },
     { path: '/admin/gamificacao', label: 'Gamificação', icon: Trophy },
   ];
