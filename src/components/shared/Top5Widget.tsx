@@ -67,9 +67,9 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   
   const turmaAtivaLetter = variant === "admin" && selectedTurmaAdmin !== "geral" ? selectedTurmaAdmin : null;
 
-  // Buscar notas 1000 para "Galeria de Honra" (sempre global, mas filtra por mês)
+  // Buscar notas 1000 para "Galeria de Honra" (sempre global, mas filtra por mês apenas se tipo for "regular")
   const { data: galeria1000 } = useQuery({
-    queryKey: ['galeria-honra-1000', selectedMonth],
+    queryKey: ['galeria-honra-1000', selectedType, selectedMonth],
     queryFn: async () => {
       // Buscar nas três tabelas: redacoes_enviadas, redacoes_simulado, redacoes_exercicio
       const [enviadasRes, simuladoRes, exercicioRes] = await Promise.all([
@@ -96,13 +96,20 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         ...(exercicioRes.data || [])
       ];
 
+      console.log(`🎯 Galeria de Honra - Total inicial: ${todasNotas1000.length}`, {
+        selectedMonth,
+        enviadasCount: enviadasRes.data?.length || 0,
+        simuladoCount: simuladoRes.data?.length || 0,
+        exercicioCount: exercicioRes.data?.length || 0
+      });
+
       if (todasNotas1000.length === 0) return null;
 
       // A turma já vem diretamente das queries acima
       let notasComTurma = todasNotas1000;
       
-      // Filtrar por mês se selecionado
-      if (selectedMonth) {
+      // Filtrar por mês se selecionado E tipo for "regular" (mesma lógica do ranking)
+      if (selectedType === "regular" && selectedMonth) {
         notasComTurma = notasComTurma.filter(nota => {
           const dataRedacao = new Date(nota.data_envio);
           const mesRedacao = dataRedacao.toLocaleDateString('pt-BR', { 
@@ -110,8 +117,14 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
             year: 'numeric' 
           });
           const mesCapitalizado = mesRedacao.charAt(0).toUpperCase() + mesRedacao.slice(1);
+          console.log(`📅 Filtro mês: ${selectedMonth} vs ${mesCapitalizado}`, { 
+            data: nota.data_envio, 
+            match: mesCapitalizado === selectedMonth 
+          });
           return mesCapitalizado === selectedMonth;
         });
+        
+        console.log(`🔍 Após filtro por mês: ${notasComTurma.length} registros`);
       }
       
       // Agrupar por aluno (só a mais recente de cada)
@@ -425,108 +438,85 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   return (
     <div className="space-y-6">
       {/* Galeria de Honra - 1000 pontos */}
-      {galeria1000 && galeria1000.total > 0 && (
-        <Card className={styles.majorNoteCard}>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                {variant === "student" && (
-                  <div className={styles.majorNoteIcon}></div>
-                )}
-                <div className={styles.majorNoteIconBg}>
-                  <Crown className="w-8 h-8 text-white" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <CardTitle className={styles.majorNoteTitle}>
-                  🏆 Galeria de Honra — 1000 pontos
-                  {selectedMonth && (
-                    <span className="text-sm font-normal text-muted-foreground ml-2">
-                      ({selectedMonth})
-                    </span>
-                  )}
-                </CardTitle>
-                <div className="mt-2">
-                  <span className={styles.majorNoteValue}>1000</span>
-                  <span className="text-lg text-muted-foreground ml-2">pontos</span>
-                  <span className="text-sm text-muted-foreground ml-3">
-                    ({galeria1000.total} {galeria1000.total === 1 ? 'aluno' : 'alunos'})
-                  </span>
-                </div>
-                <div className={`${styles.majorNoteNames} mt-2 space-y-1`}>
-                  {galeria1000.alunos.slice(0, 5).map((aluno, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <span>
-                        {aluno.nome_aluno}
-                        {variant === "admin" && aluno.turma && (
-                          (() => {
-                            const turmaLetter = extractTurmaLetter(aluno.turma);
-                            const colors = getTurmaColors(turmaLetter);
-                            return (
-                              <span className={`ml-2 px-2 py-1 ${colors.bg} ${colors.text} ${colors.border} border text-xs rounded font-medium`}>
-                                Turma {turmaLetter}
-                              </span>
-                            );
-                          })()
-                        )}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(aluno.data_envio).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                  ))}
-                  {galeria1000.total > 5 && (
-                    <div className="text-sm text-muted-foreground">
-                      ... e mais {galeria1000.total - 5} {galeria1000.total - 5 === 1 ? 'aluno' : 'alunos'}
-                    </div>
-                  )}
-                </div>
+      <Card className={styles.majorNoteCard}>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              {variant === "student" && (
+                <div className={styles.majorNoteIcon}></div>
+              )}
+              <div className={styles.majorNoteIconBg}>
+                <Crown className={`w-8 h-8 text-white ${!galeria1000 || galeria1000.total === 0 ? 'opacity-50' : ''}`} />
               </div>
             </div>
-          </CardHeader>
-        </Card>
-      )}
-      
-      {/* Fallback quando não há notas 1000 */}
-      {(!galeria1000 || galeria1000.total === 0) && (
-        <Card className={styles.majorNoteCard}>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                {variant === "student" && (
-                  <div className={styles.majorNoteIcon}></div>
+            <div className="flex-1">
+              <CardTitle className={styles.majorNoteTitle}>
+                🏆 Galeria de Honra — 1000 pontos
+                {selectedType === "regular" && selectedMonth && (
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    ({selectedMonth})
+                  </span>
                 )}
-                <div className={styles.majorNoteIconBg}>
-                  <Crown className="w-8 h-8 text-white opacity-50" />
-                </div>
-              </div>
-              <div>
-                <CardTitle className={styles.majorNoteTitle}>
-                  🏆 Galeria de Honra — 1000 pontos
-                  {selectedMonth && (
-                    <span className="text-sm font-normal text-muted-foreground ml-2">
-                      ({selectedMonth})
+              </CardTitle>
+              
+              {galeria1000 && galeria1000.total > 0 ? (
+                <>
+                  <div className="mt-2">
+                    <span className={styles.majorNoteValue}>1000</span>
+                    <span className="text-lg text-muted-foreground ml-2">pontos</span>
+                    <span className="text-sm text-muted-foreground ml-3">
+                      ({galeria1000.total} {galeria1000.total === 1 ? 'aluno' : 'alunos'})
                     </span>
-                  )}
-                </CardTitle>
+                  </div>
+                  <div className={`${styles.majorNoteNames} mt-2 space-y-1`}>
+                    {galeria1000.alunos.slice(0, 5).map((aluno, index) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span>
+                          {aluno.nome_aluno}
+                          {variant === "admin" && aluno.turma && (
+                            (() => {
+                              const turmaLetter = extractTurmaLetter(aluno.turma);
+                              const colors = getTurmaColors(turmaLetter);
+                              return (
+                                <span className={`ml-2 px-2 py-1 ${colors.bg} ${colors.text} ${colors.border} border text-xs rounded font-medium`}>
+                                  Turma {turmaLetter}
+                                </span>
+                              );
+                            })()
+                          )}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(aluno.data_envio).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    ))}
+                    {galeria1000.total > 5 && (
+                      <div className="text-sm text-muted-foreground">
+                        ... e mais {galeria1000.total - 5} {galeria1000.total - 5 === 1 ? 'aluno' : 'alunos'}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
                 <p className="text-muted-foreground mt-2">
-                  {selectedMonth 
+                  {selectedType === "regular" && selectedMonth 
                     ? `Ainda não há alunos que alcançaram 1000 pontos em ${selectedMonth}.`
                     : "Ainda não há alunos que alcançaram a nota máxima de 1000 pontos."
                   }
                   <br />
                   <span className="text-sm">
-                    {selectedMonth 
+                    {selectedType === "regular" && selectedMonth 
                       ? "Tente outros meses ou seja o primeiro neste período! 🎯"
                       : "Seja o primeiro a conquistar esse marco histórico! 🎯"
                     }
                   </span>
                 </p>
-              </div>
+              )}
             </div>
-          </CardHeader>
-        </Card>
-      )}
+          </div>
+        </CardHeader>
+      </Card>
+
 
       {/* Filtros e Ranking */}
       <Card className={styles.container}>
