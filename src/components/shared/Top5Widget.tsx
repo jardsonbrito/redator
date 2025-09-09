@@ -221,11 +221,30 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
   // Buscar ranking baseado no tipo selecionado
   const { data: ranking } = useQuery({
-    queryKey: ['ranking', selectedType, selectedSimulado, selectedMonth, turmaAtivaLetter],
+    queryKey: ['ranking', selectedType, selectedSimulado, selectedMonth, turmaAtivaLetter, variant, studentData?.turma],
     queryFn: async () => {
-      let processedData = [];
+      // Determinar filtro de turma para o ranking baseado no tipo de usuário
+      let rankingTurmaFilter: string | null = null;
       
-      // Não precisamos mais buscar emails separadamente pois todas as tabelas têm o campo turma
+      if (variant === "admin") {
+        // Admin: usa seletor de turma ou mostra geral
+        rankingTurmaFilter = turmaAtivaLetter;
+      } else if (variant === "student" && studentData?.turma) {
+        // Aluno: filtra apenas sua turma
+        const turmaLetter = extractTurmaLetter(studentData.turma);
+        rankingTurmaFilter = turmaLetter !== 'N/A' ? turmaLetter : null;
+        
+        console.log(`👨‍🎓 Student Ranking Filter:`, {
+          email: studentData.email,
+          turmaBruta: studentData.turma,
+          turmaLetter: turmaLetter,
+          rankingTurmaFilter: rankingTurmaFilter,
+          selectedType: selectedType
+        });
+      }
+      // Visitantes: sem filtro (rankingTurmaFilter = null)
+      
+      let processedData = [];
       
       if (selectedType === "simulado") {
         // Para simulados, buscar dados diretamente da tabela redacoes_simulado
@@ -242,10 +261,15 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           .not('nota_total', 'is', null)
           .eq('corrigida', true);
         
-        // Filtrar por turma se necessário
-        if (turmaAtivaLetter) {
-          const turmaForSimulado = getTurmaForTable(turmaAtivaLetter, 'redacoes_simulado');
+        // Filtrar por turma se necessário (admin, aluno ou visitante)
+        if (rankingTurmaFilter) {
+          const turmaForSimulado = getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado');
           query = query.eq('turma', turmaForSimulado);
+          
+          console.log(`🎯 Simulado Query Filter:`, {
+            turmaLetter: rankingTurmaFilter,
+            turmaFormatted: turmaForSimulado
+          });
         }
         
         const { data, error } = await query.order('nota_total', { ascending: false });
@@ -253,6 +277,34 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         if (error) throw error;
         
         let filteredData = data || [];
+        
+        // Debug para verificar resultados do filtro de simulado
+        if (variant === "student" && rankingTurmaFilter) {
+          console.log(`📊 Simulado Results for Turma ${rankingTurmaFilter}:`, {
+            totalFound: filteredData.length,
+            expectedTurma: getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado'),
+            students: filteredData.slice(0, 15).map(item => ({
+              nome: item.nome_aluno,
+              email: item.email_aluno,
+              turma: item.turma,
+              nota: item.nota_total,
+              isCorrectTurma: item.turma === getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado')
+            }))
+          });
+          
+          // Verificar se há estudantes de turmas incorretas
+          const wrongTurmaStudents = filteredData.filter(item => 
+            item.turma !== getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado')
+          );
+          
+          if (wrongTurmaStudents.length > 0) {
+            console.log(`❌ WRONG TURMA STUDENTS FOUND:`, wrongTurmaStudents.map(item => ({
+              nome: item.nome_aluno,
+              turmaFound: item.turma,
+              turmaExpected: getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado')
+            })));
+          }
+        }
         
         // Filtrar por simulado específico se selecionado
         if (selectedSimulado && simulados) {
@@ -287,10 +339,16 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           query = query.eq('tipo_envio', 'avulsa');
         }
         
-        // Filtrar por turma se necessário
-        if (turmaAtivaLetter) {
-          const turmaForEnviadas = getTurmaForTable(turmaAtivaLetter, 'redacoes_enviadas');
+        // Filtrar por turma se necessário (admin, aluno ou visitante)
+        if (rankingTurmaFilter) {
+          const turmaForEnviadas = getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas');
           query = query.eq('turma', turmaForEnviadas);
+          
+          console.log(`🎯 Regular/Avulsa Query Filter:`, {
+            selectedType: selectedType,
+            turmaLetter: rankingTurmaFilter,
+            turmaFormatted: turmaForEnviadas
+          });
         }
         
         const { data, error } = await query.order('nota_total', { ascending: false });
@@ -298,6 +356,34 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         if (error) throw error;
         
         let filteredData = data || [];
+        
+        // Debug para verificar resultados do filtro de regular/avulsa
+        if (variant === "student" && rankingTurmaFilter) {
+          console.log(`📊 ${selectedType} Results for Turma ${rankingTurmaFilter}:`, {
+            totalFound: filteredData.length,
+            expectedTurma: getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas'),
+            students: filteredData.slice(0, 15).map(item => ({
+              nome: item.nome_aluno,
+              email: item.email_aluno,
+              turma: item.turma,
+              nota: item.nota_total,
+              isCorrectTurma: item.turma === getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas')
+            }))
+          });
+          
+          // Verificar se há estudantes de turmas incorretas
+          const wrongTurmaStudents = filteredData.filter(item => 
+            item.turma !== getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas')
+          );
+          
+          if (wrongTurmaStudents.length > 0) {
+            console.log(`❌ WRONG TURMA STUDENTS FOUND in ${selectedType}:`, wrongTurmaStudents.map(item => ({
+              nome: item.nome_aluno,
+              turmaFound: item.turma,
+              turmaExpected: getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas')
+            })));
+          }
+        }
         
         // Filtrar por mês se for tipo "regular" e um mês estiver selecionado
         if (selectedType === "regular" && selectedMonth) {
@@ -409,6 +495,20 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         });
       });
       
+      // Debug final para verificar o que está sendo retornado
+      if (variant === "student" && rankingTurmaFilter) {
+        console.log(`🎯 FINAL RANKING RESULTS for Student (Turma ${rankingTurmaFilter}):`, {
+          totalResults: rankingComPosicao.length,
+          results: rankingComPosicao.map(item => ({
+            posicao: item.posicao,
+            nome: item.nome_aluno,
+            turma: item.turma,
+            nota: item.nota_total,
+            turmaExtracted: extractTurmaLetter(item.turma || '')
+          }))
+        });
+      }
+
       return rankingComPosicao;
     }
   });
@@ -700,16 +800,6 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                           })()
                         )}
                       </div>
-                      {item.simulado_titulo && (
-                        <div className="text-sm text-muted-foreground">
-                          {item.simulado_titulo}
-                        </div>
-                      )}
-                      {item.data_envio && (
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(item.data_envio).toLocaleDateString('pt-BR')}
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div className="text-right">
