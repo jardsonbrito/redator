@@ -44,11 +44,6 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
               <span className="hidden sm:inline font-semibold text-lg">Início</span>
             </Link>
             
-            {/* Título da página no centro */}
-            {pageTitle && (
-              <h1 className="text-xl font-bold text-primary-foreground">{pageTitle}</h1>
-            )}
-            
             <div className="flex items-center gap-4">
               {/* Perfil do usuário com avatar clicável, nome e turma */}
               <div className="flex items-center gap-3">

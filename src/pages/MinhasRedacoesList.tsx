@@ -10,8 +10,10 @@ import { Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
+import { ModalRevisualizacaoRedacao } from "@/components/ModalRevisualizacaoRedacao";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
+import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
 // Email validation será importada dinamicamente
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -115,9 +117,14 @@ const MinhasRedacoesList = () => {
   const [showModalDevolucao, setShowModalDevolucao] = useState(false);
   const [redacaoDevolvida, setRedacaoDevolvida] = useState<RedacaoTurma | null>(null);
   
+  // Estados para modal de revisualização (quando já está ciente)
+  const [showModalRevisualizacao, setShowModalRevisualizacao] = useState(false);
+  const [redacaoRevisualizacao, setRedacaoRevisualizacao] = useState<RedacaoTurma | null>(null);
+  
   const itemsPerPage = 10;
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isRedacaoVisualizada } = useVisualizacoesRealtime();
 
   // Obter dados do usuário do localStorage
   const studentDataStr = localStorage.getItem('alunoData');
@@ -422,6 +429,146 @@ const MinhasRedacoesList = () => {
     refetchOnWindowFocus: true
   });
 
+  // Função para buscar justificativa da devolução
+  const buscarJustificativaDevolucao = async (redacao: RedacaoTurma) => {
+    console.log('🔍 Buscando justificativa para redação devolvida:', redacao);
+    
+    let justificativa = 'Motivo não especificado';
+    
+    try {
+      console.log('🔍 Buscando justificativa para redação:', {
+        id: redacao.id,
+        original_id: redacao.original_id,
+        tipo_envio: redacao.tipo_envio
+      });
+
+      if (redacao.tipo_envio === 'simulado') {
+        const searchId = redacao.original_id || redacao.id;
+        console.log('🔍 Buscando simulado com ID:', searchId);
+        
+        const { data, error } = await supabase
+          .from('redacoes_simulado')
+          .select('justificativa_devolucao, elogios_pontos_atencao_corretor_1, elogios_pontos_atencao_corretor_2')
+          .eq('id', searchId)
+          .single();
+        
+        console.log('🔍 Resultado simulado:', { data, error });
+        
+        if (!error && data) {
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        } else {
+          console.error('❌ Erro ao buscar simulado:', error);
+        }
+      } else if (redacao.tipo_envio === 'exercicio') {
+        const searchId = redacao.original_id || redacao.id;
+        console.log('🔍 Buscando exercício com ID:', searchId);
+        
+        const { data, error } = await supabase
+          .from('redacoes_exercicio')
+          .select('justificativa_devolucao, elogios_pontos_atencao_corretor_1, elogios_pontos_atencao_corretor_2')
+          .eq('id', searchId)
+          .single();
+        
+        console.log('🔍 Resultado exercício:', { data, error });
+        
+        if (!error && data) {
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        } else {
+          console.error('❌ Erro ao buscar exercício:', error);
+        }
+      } else {
+        // Redação regular
+        console.log('🔍 Buscando redação regular com ID:', redacao.id);
+        
+        const { data, error } = await supabase
+          .from('redacoes_enviadas')
+          .select('justificativa_devolucao, elogios_pontos_atencao_corretor_1, elogios_pontos_atencao_corretor_2')
+          .eq('id', redacao.id)
+          .single();
+        
+        console.log('🔍 Resultado redação regular:', { data, error });
+        
+        if (!error && data) {
+          console.log('🔍 Dados da redação regular:', data);
+          justificativa = data.justificativa_devolucao || 
+                          data.elogios_pontos_atencao_corretor_1 || 
+                          data.elogios_pontos_atencao_corretor_2 || 
+                          'Motivo não especificado';
+        } else {
+          console.error('❌ Erro ao buscar redação regular:', error);
+        }
+      }
+      
+      console.log('📝 Justificativa encontrada (bruta):', justificativa);
+      
+      // Limpar formatação desnecessária da justificativa
+      const justificativaLimpa = justificativa
+        .replace('Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n', '')
+        .replace(/^\s*"?\s*/, '') // Remove aspas iniciais e espaços
+        .replace(/\s*"?\s*$/, '') // Remove aspas finais e espaços
+        .trim();
+      
+      console.log('📝 Justificativa limpa:', justificativaLimpa);
+      justificativa = justificativaLimpa;
+      
+      // Verificar se já foi visualizada para passar para o modal
+      const jaFoiVisualizada = studentData?.email && isRedacaoVisualizada(
+        redacao.original_id || redacao.id, 
+        studentData.email
+      );
+      
+      // Criar redação com justificativa para o modal
+      const redacaoComJustificativa = {
+        ...redacao,
+        justificativa_devolucao: justificativa,
+        ja_visualizada: jaFoiVisualizada
+      };
+      
+      // Usar modal apropriado baseado no status
+      if (jaFoiVisualizada) {
+        // Já foi visualizada - usar modal de revisualização
+        setRedacaoRevisualizacao(redacaoComJustificativa);
+        setShowModalRevisualizacao(true);
+      } else {
+        // Primeira visualização - usar modal normal
+        setRedacaoDevolvida(redacaoComJustificativa);
+        setShowModalDevolucao(true);
+      }
+      
+    } catch (error) {
+      console.error('Erro ao buscar justificativa:', error);
+      // Verificar se já foi visualizada mesmo em caso de erro
+      const jaFoiVisualizada = studentData?.email && isRedacaoVisualizada(
+        redacao.original_id || redacao.id, 
+        studentData.email
+      );
+      
+      // Abrir modal mesmo sem justificativa
+      const redacaoComErro = { 
+        ...redacao, 
+        justificativa_devolucao: 'Erro ao carregar motivo',
+        ja_visualizada: jaFoiVisualizada
+      };
+      
+      // Usar modal apropriado baseado no status
+      if (jaFoiVisualizada) {
+        // Já foi visualizada - usar modal de revisualização
+        setRedacaoRevisualizacao(redacaoComErro);
+        setShowModalRevisualizacao(true);
+      } else {
+        // Primeira visualização - usar modal normal
+        setRedacaoDevolvida(redacaoComErro);
+        setShowModalDevolucao(true);
+      }
+    }
+  };
+
   const handleViewRedacao = async (redacao: RedacaoTurma) => {
     console.log('🔍 Iniciando visualização da redação:', redacao.id, 'Status:', redacao.status);
     
@@ -429,15 +576,20 @@ const MinhasRedacoesList = () => {
     if (redacao.status === 'devolvida') {
       console.log('🔔 Redação devolvida detectada - abrindo modal de devolução');
       
-      // Para redações manuscritas devolvidas, usar modal novo
-      if (redacao.redacao_manuscrita_url) {
-        setRedacaoDevolvida(redacao);
-        setShowModalDevolucao(true);
-        return;
+      // Verificar se já foi visualizada
+      const foiVisualizada = studentData?.email && isRedacaoVisualizada(
+        redacao.original_id || redacao.id, 
+        studentData.email
+      );
+      
+      if (foiVisualizada) {
+        console.log('✓ Redação já foi visualizada, abrindo modal apenas para leitura');
       }
       
-      // Para redações digitadas devolvidas, usar o modal antigo
-      await handleRedacaoDevolvida(redacao);
+      console.log('🔴 MinhasRedacoes: Abrindo modal novo para redação devolvida:', redacao);
+      
+      // Buscar justificativa da devolução antes de abrir o modal
+      await buscarJustificativaDevolucao(redacao);
       return;
     }
     
@@ -576,6 +728,10 @@ const MinhasRedacoesList = () => {
   // FUNÇÃO PARA TRATAR REDAÇÃO DEVOLVIDA
   const handleRedacaoDevolvida = async (redacao: RedacaoTurma) => {
     console.log('🔄 Processando redação devolvida:', redacao);
+    
+    // Verificar se já foi visualizada (está ciente)
+    const jaFoiVisualizada = isRedacaoVisualizada(redacao.id, studentData?.email || '');
+    console.log('🔍 Status de visualização:', { jaFoiVisualizada });
     
     try {
       // Buscar informações da devolução e corretor
@@ -755,6 +911,15 @@ const MinhasRedacoesList = () => {
       }
       
       console.log('✅ Redação marcada como visualizada:', data);
+      
+      // Debug: Verificar se o registro foi realmente inserido
+      const { data: verificacao } = await supabase
+        .from('redacao_devolucao_visualizacoes')
+        .select('*')
+        .eq('redacao_id', redacaoId)
+        .eq('email_aluno', (studentData?.email || '').toLowerCase().trim());
+      
+      console.log('🔍 Verificação na tabela MinhasRedacoesList:', verificacao);
       
       toast({
         title: "Marcado como ciente",
@@ -949,12 +1114,23 @@ const MinhasRedacoesList = () => {
                           {getTipoEnvioLabel(redacao.tipo_envio)}
                         </Badge>
                         
-                        {/* TAG DEVOLVIDA - SEMPRE EXIBIR SE STATUS FOR DEVOLVIDA */}
-                        {redacao.status === 'devolvida' && (
-                          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                            Devolvida
-                          </Badge>
-                        )}
+                        {/* TAG DEVOLVIDA/CIENTE - SEMPRE EXIBIR SE STATUS FOR DEVOLVIDA */}
+                        {redacao.status === 'devolvida' && (() => {
+                          const foiVisualizada = studentData?.email && isRedacaoVisualizada(
+                            redacao.original_id || redacao.id, 
+                            studentData.email
+                          );
+                          
+                          return foiVisualizada ? (
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              Ciente
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                              Devolvida
+                            </Badge>
+                          );
+                        })()}
                         
                         {redacao.status === 'corrigida' && (
                           <Badge variant="default">
@@ -996,9 +1172,18 @@ const MinhasRedacoesList = () => {
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {redacao.status === 'devolvida' ? (
-                        <span className="text-red-600 font-medium">Clique para ver o motivo →</span>
-                      ) : redacao.corrigida ? (
+                      {redacao.status === 'devolvida' ? (() => {
+                        const foiVisualizada = studentData?.email && isRedacaoVisualizada(
+                          redacao.original_id || redacao.id, 
+                          studentData.email
+                        );
+                        
+                        return foiVisualizada ? (
+                          <span className="text-green-600 font-medium">Clique para rever motivo</span>
+                        ) : (
+                          <span className="text-red-600 font-medium">Clique para ver o motivo →</span>
+                        );
+                      })() : redacao.corrigida ? (
                         <span>Ver detalhes →</span>
                       ) : (
                         <span>Ver redação →</span>
@@ -1151,7 +1336,14 @@ const MinhasRedacoesList = () => {
         )}
 
         {/* Modal de devolução novo para manuscritas */}
-        {redacaoDevolvida && showModalDevolucao && studentData?.email && (
+        {redacaoDevolvida && showModalDevolucao && studentData?.email && (() => {
+          console.log('🔴 MinhasRedacoes: Renderizando modal com props:', {
+            redacaoDevolvida,
+            showModalDevolucao,
+            email: studentData?.email
+          });
+          return true;
+        })() && (
           <ModalDevolucaoRedacao
             isOpen={showModalDevolucao}
             onClose={() => {
@@ -1159,14 +1351,37 @@ const MinhasRedacoesList = () => {
               setRedacaoDevolvida(null);
             }}
             redacao={{
-              id: redacaoDevolvida.id,
+              id: redacaoDevolvida.original_id || redacaoDevolvida.id,
               frase_tematica: redacaoDevolvida.frase_tematica,
-              tabela_origem: 'redacoes_enviadas',
+              tabela_origem: (() => {
+                switch (redacaoDevolvida.tipo_envio) {
+                  case 'simulado': return 'redacoes_simulado';
+                  case 'exercicio': return 'redacoes_exercicio';
+                  default: return 'redacoes_enviadas';
+                }
+              })(),
               justificativa_devolucao: (redacaoDevolvida as any).justificativa_devolucao || 'Motivo não especificado',
               data_envio: redacaoDevolvida.data_envio
             }}
             emailAluno={studentData.email}
             corretorNome="Corretor"
+          />
+        )}
+
+        {/* Modal de revisualização para redações já cientes */}
+        {redacaoRevisualizacao && showModalRevisualizacao && (
+          <ModalRevisualizacaoRedacao
+            isOpen={showModalRevisualizacao}
+            onClose={() => {
+              setShowModalRevisualizacao(false);
+              setRedacaoRevisualizacao(null);
+            }}
+            redacao={{
+              id: redacaoRevisualizacao.original_id || redacaoRevisualizacao.id,
+              frase_tematica: redacaoRevisualizacao.frase_tematica,
+              justificativa_devolucao: (redacaoRevisualizacao as any).justificativa_devolucao || 'Motivo não especificado',
+              data_envio: redacaoRevisualizacao.data_envio
+            }}
           />
         )}
       </main>

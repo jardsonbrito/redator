@@ -13,6 +13,14 @@ export function useVisualizacaoRedacao() {
   const { toast } = useToast();
 
   const registrarVisualizacao = async (dados: RegistroVisualizacao) => {
+    console.log('🟢 Hook: Função registrarVisualizacao chamada com:', dados);
+    
+    // Validar dados básicos
+    if (!dados.redacao_id || !dados.email_aluno || !dados.tabela_origem) {
+      console.error('❌ Dados inválidos para registro:', dados);
+      return { success: false, error: 'Dados inválidos' };
+    }
+    
     setIsRegistrando(true);
     
     try {
@@ -44,6 +52,17 @@ export function useVisualizacaoRedacao() {
       });
 
       console.log('📝 Resposta da RPC:', { data, error });
+      
+      // Debug: Verificar se o registro foi realmente inserido
+      if (!error) {
+        const { data: verificacao } = await supabase
+          .from('redacao_devolucao_visualizacoes')
+          .select('*')
+          .eq('redacao_id', dados.redacao_id)
+          .eq('email_aluno', dados.email_aluno.toLowerCase().trim());
+        
+        console.log('🔍 Verificação na tabela:', verificacao);
+      }
 
       if (error) {
         console.error('❌ Erro ao registrar visualização:', error);

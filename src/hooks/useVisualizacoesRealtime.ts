@@ -26,9 +26,11 @@ export function useVisualizacoesRealtime() {
         if (data) {
           const map = new Map();
           data.forEach(item => {
-            map.set(`${item.redacao_id}-${item.email_aluno}`, {
+            const emailNormalizado = item.email_aluno.toLowerCase().trim();
+            const key = `${item.redacao_id}-${emailNormalizado}`;
+            map.set(key, {
               redacao_id: item.redacao_id,
-              email_aluno: item.email_aluno,
+              email_aluno: emailNormalizado,
               visualizado_em: item.visualizado_em
             });
           });
@@ -54,17 +56,22 @@ export function useVisualizacoesRealtime() {
         },
         (payload) => {
           console.log('📡 Nova visualização via realtime:', payload.new);
-          const key = `${payload.new.redacao_id}-${payload.new.email_aluno}`;
-          console.log('🔑 Chave da visualização:', key);
+          const emailNormalizado = payload.new.email_aluno.toLowerCase().trim();
+          const key = `${payload.new.redacao_id}-${emailNormalizado}`;
+          console.log('🔑 Chave da visualização:', key, {
+            emailOriginal: payload.new.email_aluno,
+            emailNormalizado
+          });
           
           setVisualizacoes(prev => {
             const newMap = new Map(prev);
             newMap.set(key, {
               redacao_id: payload.new.redacao_id,
-              email_aluno: payload.new.email_aluno,
+              email_aluno: emailNormalizado,
               visualizado_em: payload.new.visualizado_em
             });
             console.log('📋 Total de visualizações após update:', newMap.size);
+            console.log('📋 Todas as chaves após update:', [...newMap.keys()]);
             return newMap;
           });
         }
@@ -77,11 +84,26 @@ export function useVisualizacoesRealtime() {
   }, []);
 
   const isRedacaoVisualizada = (redacaoId: string, emailAluno: string): boolean => {
-    return visualizacoes.has(`${redacaoId}-${emailAluno}`);
+    // Normalizar email como fazemos no registro
+    const emailNormalizado = emailAluno.toLowerCase().trim();
+    const chave = `${redacaoId}-${emailNormalizado}`;
+    const temVisualizacao = visualizacoes.has(chave);
+    
+    console.log(`🔍 Verificando visualização para chave "${chave}":`, {
+      redacaoId,
+      emailOriginal: emailAluno,
+      emailNormalizado,
+      temVisualizacao,
+      totalVisualizacoes: visualizacoes.size,
+      todasChaves: [...visualizacoes.keys()]
+    });
+    
+    return temVisualizacao;
   };
 
   const getVisualizacao = (redacaoId: string, emailAluno: string): Visualizacao | undefined => {
-    return visualizacoes.get(`${redacaoId}-${emailAluno}`);
+    const emailNormalizado = emailAluno.toLowerCase().trim();
+    return visualizacoes.get(`${redacaoId}-${emailNormalizado}`);
   };
 
   return {

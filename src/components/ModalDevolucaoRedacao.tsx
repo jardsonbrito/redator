@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -13,6 +13,7 @@ interface ModalDevolucaoProps {
     tabela_origem: string;
     justificativa_devolucao?: string;
     data_envio: string;
+    ja_visualizada?: boolean;
   };
   emailAluno: string;
   corretorNome?: string;
@@ -26,22 +27,62 @@ export function ModalDevolucaoRedacao({
   corretorNome = "Corretor"
 }: ModalDevolucaoProps) {
   const { registrarVisualizacao, isRegistrando } = useVisualizacaoRedacao();
-  const [jaVisualizou, setJaVisualizou] = useState(false);
+  const [jaVisualizou, setJaVisualizou] = useState(redacao.ja_visualizada || false);
+
+  // Atualizar estado quando as props mudarem
+  useEffect(() => {
+    setJaVisualizou(redacao.ja_visualizada || false);
+  }, [redacao.ja_visualizada]);
+
+  console.log('🟡 Modal: Props recebidas:', {
+    isOpen,
+    redacao,
+    emailAluno,
+    corretorNome,
+    isRegistrando,
+    justificativa_devolucao: redacao.justificativa_devolucao,
+    ja_visualizada: redacao.ja_visualizada,
+    jaVisualizou
+  });
 
   const handleEntendi = async () => {
-    const resultado = await registrarVisualizacao({
+    // Se já foi visualizada, apenas fechar o modal
+    if (redacao.ja_visualizada) {
+      console.log('🟡 Modal: Redação já foi visualizada, apenas fechando modal');
+      onClose();
+      return;
+    }
+    
+    console.log('🟡 Modal: Iniciando handleEntendi', {
       redacao_id: redacao.id,
       tabela_origem: redacao.tabela_origem,
       email_aluno: emailAluno
     });
-
-    if (resultado.success) {
-      setJaVisualizou(true);
+    
+    try {
+      const resultado = await registrarVisualizacao({
+        redacao_id: redacao.id,
+        tabela_origem: redacao.tabela_origem,
+        email_aluno: emailAluno
+      });
       
-      // Fechar modal após 2s para dar tempo do usuário ver o feedback
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+      console.log('🟡 Modal: Resultado do registro:', resultado);
+
+      if (resultado.success) {
+        console.log('🟡 Modal: Sucesso! Marcando como visualizado');
+        setJaVisualizou(true);
+        
+        // Fechar modal após 2s para dar tempo do usuário ver o feedback
+        setTimeout(() => {
+          console.log('🟡 Modal: Fechando modal');
+          onClose();
+          // Não recarregar a página - o sistema realtime vai atualizar
+        }, 2000);
+      } else {
+        console.error('🟡 Modal: Falha no registro:', resultado);
+      }
+    } catch (error) {
+      console.error('🟡 Modal: Erro no handleEntendi:', error);
     }
   };
 
@@ -52,6 +93,8 @@ export function ModalDevolucaoRedacao({
       year: 'numeric'
     });
   };
+
+  console.log('🟡 Modal: Renderizando modal com isOpen:', isOpen);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -75,9 +118,7 @@ export function ModalDevolucaoRedacao({
               <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
               <div className="space-y-3">
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Segundo {corretorNome.toLowerCase().endsWith('a') ? 'a corretora' : 'o corretor'}{' '}
-                  <span className="font-semibold">{corretorNome}</span>, sua redação foi devolvida 
-                  com base na seguinte justificativa:
+                  Sua redação foi devolvida pelo corretor com a seguinte justificativa:
                 </p>
                 
                 <div className="bg-white dark:bg-gray-800 p-4 rounded border-l-4 border-yellow-400">
@@ -99,17 +140,36 @@ export function ModalDevolucaoRedacao({
             </p>
           </div>
           
+          {/* Mensagem de sucesso */}
+          {jaVisualizou && (
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 text-center">
+              <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300">
+                <CheckCircle2 className="w-5 h-5" />
+                <span className="font-semibold">Marcado como ciente com sucesso!</span>
+              </div>
+              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                O corretor foi notificado que você visualizou a devolução.
+              </p>
+            </div>
+          )}
+          
           <div className="flex justify-center pt-2">
             <Button 
-              onClick={handleEntendi}
-              disabled={isRegistrando || jaVisualizou}
+              onClick={(e) => {
+                console.log('🟡 Modal: Botão clicado!', e);
+                console.log('🟡 Modal: Estado antes do clique:', { isRegistrando, jaVisualizou });
+                e.preventDefault();
+                e.stopPropagation();
+                handleEntendi();
+              }}
+              disabled={isRegistrando}
               className={`
                 px-8 py-3 text-base font-medium transition-all
                 ${jaVisualizou 
-                  ? 'bg-green-600 hover:bg-green-600 cursor-not-allowed' 
+                  ? 'bg-primary hover:bg-primary/90' 
                   : isRegistrando
-                    ? 'bg-blue-400 hover:bg-blue-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-primary/50 hover:bg-primary/50 cursor-not-allowed'
+                    : 'bg-primary hover:bg-primary/90'
                 }
               `}
             >
