@@ -15,6 +15,7 @@ import { getExerciseAvailability } from "@/utils/exerciseUtils";
 import { useNavigate, Link } from "react-router-dom";
 import { format, isWithinInterval, parse, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 interface Exercicio {
   id: string;
   titulo: string;
@@ -48,6 +49,9 @@ const Exercicios = () => {
   } = useStudentAuth();
   const navigate = useNavigate();
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
+  
+  // Configurar título da página
+  usePageTitle('Exercícios');
   const [filteredExercicios, setFilteredExercicios] = useState<Exercicio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");

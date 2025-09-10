@@ -11,8 +11,12 @@ import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 import { useTemasFilters } from '@/hooks/useTemasFilters';
 import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
 import { MultiSelectDropdown } from "@/components/filters/MultiSelectDropdown";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 export default function Temas() {
+  // Configurar título da página
+  usePageTitle('Temas');
+  
   // Usar o hook de filtros
   const {
     temas,

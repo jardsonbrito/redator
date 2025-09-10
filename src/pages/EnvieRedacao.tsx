@@ -16,10 +16,37 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditDisplay } from "@/components/CreditDisplay";
+import { useBreadcrumbs, usePageTitle } from "@/hooks/useBreadcrumbs";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  
+  // Configurar breadcrumbs e título
+  const fonte = searchParams.get('fonte');
+  const tema = searchParams.get('tema');
+  
+  if (fonte === 'tema' && tema) {
+    useBreadcrumbs([
+      { label: 'Início', href: '/app' },
+      { label: 'Temas', href: '/temas' },
+      { label: 'Enviar Redação' }
+    ]);
+  } else if (fonte === 'exercicio') {
+    useBreadcrumbs([
+      { label: 'Início', href: '/app' },
+      { label: 'Exercícios', href: '/exercicios' },
+      { label: 'Enviar Redação' }
+    ]);
+  } else {
+    useBreadcrumbs([
+      { label: 'Início', href: '/app' },
+      { label: 'Enviar Redação' }
+    ]);
+  }
+  
+  usePageTitle('Enviar Redação');
+  
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
   const [fraseTematica, setFraseTematica] = useState("");

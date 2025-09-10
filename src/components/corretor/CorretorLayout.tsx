@@ -8,6 +8,8 @@ import { LogOut, User, Home, BookOpen, Video, Library, FileText, Trophy, Menu, X
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
+import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
+import { CorretorNavigationProvider } from "@/hooks/useCorretorNavigationContext";
 
 interface CorretorLayoutProps {
   children: React.ReactNode;
@@ -51,7 +53,8 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <CorretorNavigationProvider>
+      <div className="min-h-screen bg-background">
       {/* Header - Responsivo */}
       <header className="border-b bg-white shadow-sm">
         <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
@@ -104,6 +107,11 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
               {!isMobile && <span>Sair</span>}
             </Button>
           </div>
+        </div>
+        
+        {/* Breadcrumbs */}
+        <div className="px-3 sm:px-6 py-2 border-b bg-muted/30">
+          <BreadcrumbNavigation basePath="/corretor" />
         </div>
       </header>
 
@@ -161,6 +169,7 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
           {children}
         </main>
       </div>
-    </div>
+      </div>
+    </CorretorNavigationProvider>
   );
 };

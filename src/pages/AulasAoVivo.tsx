@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/aula-virtual/StatusBadge";
 import { getMyAttendanceStatus, registrarEntrada, AttendanceStatus } from "@/utils/attendanceHelpers";
 import { AulaStatusBadge } from "@/components/aula-virtual/AulaStatusBadge";
 import { AulaAoVivoCardRefatorado } from "@/components/aula-virtual/AulaAoVivoCardRefatorado";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 interface AulaAoVivo {
   id: string;
@@ -37,6 +38,9 @@ interface AttendanceRecord {
 }
 
 const AulasAoVivo = () => {
+  // Configurar título da página
+  usePageTitle('Aulas ao Vivo');
+  
   const { studentData } = useStudentAuth();
   const [aulas, setAulas] = useState<AulaAoVivo[]>([]);
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});

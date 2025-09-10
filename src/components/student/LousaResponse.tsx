@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
+import { useNavigationContext } from '@/hooks/useNavigationContext';
 
 interface Lousa {
   id: string;
@@ -43,6 +44,20 @@ export default function LousaResponse() {
   const [resposta, setResposta] = useState<LousaResposta | null>(null);
   const [conteudo, setConteudo] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  const { setBreadcrumbs, setPageTitle } = useNavigationContext();
+
+  // Configurar breadcrumbs e título quando a lousa for carregada
+  useEffect(() => {
+    if (lousa?.titulo) {
+      setBreadcrumbs([
+        { label: 'Início', href: '/app' },
+        { label: 'Lousa Interativa', href: '/lousa' },
+        { label: lousa.titulo }
+      ]);
+      setPageTitle(lousa.titulo);
+    }
+  }, [lousa?.titulo, setBreadcrumbs, setPageTitle]);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 

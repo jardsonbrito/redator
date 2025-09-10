@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoStatus";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
@@ -24,6 +25,9 @@ dayjs.extend(timezone);
 const TZ = 'America/Fortaleza';
 
 const Simulados = () => {
+  // Configurar título da página
+  usePageTitle('Simulados');
+  
   const { studentData } = useStudentAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

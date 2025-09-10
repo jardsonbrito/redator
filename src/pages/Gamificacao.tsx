@@ -2,8 +2,12 @@ import React from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { StudentHeader } from "@/components/StudentHeader";
 import GamificationCard from "@/components/student/GamificationCard";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 const Gamificacao = () => {
+  // Configurar título da página
+  usePageTitle('Gamificação');
+  
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">

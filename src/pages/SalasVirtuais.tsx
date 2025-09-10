@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Video, Calendar, Clock } from "lucide-react";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 const SalasVirtuais = () => {
+  // Configurar título da página
+  usePageTitle('Salas Virtuais');
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5 p-6">
       <div className="max-w-4xl mx-auto space-y-6">

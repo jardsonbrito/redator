@@ -21,8 +21,12 @@ import { StudentBibliotecaCard } from "@/components/shared/StudentBibliotecaCard
 import { useToast } from "@/hooks/use-toast";
 import { useBibliotecaData } from "@/hooks/useBibliotecaData";
 import { verificarPermissaoMaterial, type MaterialBiblioteca } from "@/utils/bibliotecaPermissions";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 const Biblioteca = () => {
+  // Configurar título da página
+  usePageTitle('Biblioteca');
+  
   const { toast } = useToast();
   const [busca, setBusca] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");

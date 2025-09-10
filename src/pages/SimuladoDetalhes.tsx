@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,12 +17,17 @@ import { Link } from "react-router-dom";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 import { renderTextWithParagraphs } from '@/utils/textUtils';
+import { StudentHeader } from "@/components/StudentHeader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useNavigationContext } from "@/hooks/useNavigationContext";
 
 export default function SimuladoDetalhes() {
   const { id } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { studentData } = useStudentAuth();
+  const { setBreadcrumbs, setPageTitle } = useNavigationContext();
 
   const [formData, setFormData] = useState({
     nome_aluno: '',
@@ -62,6 +67,18 @@ export default function SimuladoDetalhes() {
     },
     enabled: !!id
   });
+
+  // Configurar breadcrumbs e título quando o simulado for carregado
+  useEffect(() => {
+    if (simulado?.titulo) {
+      setBreadcrumbs([
+        { label: 'Início', href: '/app' },
+        { label: 'Simulados', href: '/simulados' },
+        { label: simulado.titulo }
+      ]);
+      setPageTitle(simulado.titulo);
+    }
+  }, [simulado?.titulo, setBreadcrumbs, setPageTitle]);
 
   // Mutation para enviar redação
   const enviarRedacao = useMutation({
@@ -177,19 +194,10 @@ export default function SimuladoDetalhes() {
   const palavrasTexto = formData.texto.trim().split(/\s+/).filter(palavra => palavra.length > 0).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-redator-accent/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/app" className="flex items-center gap-2 text-redator-primary hover:text-redator-accent transition-colors">
-              <Home className="w-5 h-5" />
-              <span>Início</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-redator-primary">Simulado</h1>
-          </div>
-        </div>
-      </header>
+    <ProtectedRoute>
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+          <StudentHeader pageTitle={simulado?.titulo || "Simulado"} />
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header do Simulado */}
@@ -417,7 +425,9 @@ export default function SimuladoDetalhes() {
             </CardContent>
           </Card>
         )}
-      </div>
-    </div>
+        </div>
+        </div>
+      </TooltipProvider>
+    </ProtectedRoute>
   );
 }

@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Play, CheckCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useRecordedLessonViews } from "@/hooks/useRecordedLessonViews";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
@@ -16,6 +17,9 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const Videoteca = () => {
+  // Configurar título da página
+  usePageTitle('Videoteca');
+  
   const { 
     markAsWatched, 
     isWatched, 

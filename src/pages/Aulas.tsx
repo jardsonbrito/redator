@@ -12,6 +12,7 @@ import { Search, CheckCircle } from "lucide-react";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone, type UnifiedCardItem } from "@/components/ui/unified-card";
 import { resolveAulaCover } from "@/utils/coverUtils";
 import { useToast } from "@/hooks/use-toast";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 interface Aula {
   id: string;
@@ -37,6 +38,9 @@ interface Aula {
 }
 
 const Aulas = () => {
+  // Configurar título da página
+  usePageTitle('Aulas');
+  
   const { studentData } = useStudentAuth();
   const { markAsWatched, isWatched } = useRecordedLessonViews();
   const [aulas, setAulas] = useState<Aula[]>([]);

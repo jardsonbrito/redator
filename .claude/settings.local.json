@@ -17,7 +17,9 @@
       "mcp__supabase__get_project_url",
       "Bash(npm run dev:*)",
       "Bash(git pull:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 10 npm run dev)"
     ]
   },
   "enableAllProjectMcpServers": true,

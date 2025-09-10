@@ -21,6 +21,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import { renderTextWithParagraphs } from '@/utils/textUtils';
+import { useNavigationContext } from "@/hooks/useNavigationContext";
 
 const SimuladoParticipacao = () => {
   const { id } = useParams();
@@ -90,6 +91,20 @@ const SimuladoParticipacao = () => {
     },
     enabled: !!id
   });
+
+  const { setBreadcrumbs, setPageTitle } = useNavigationContext();
+
+  // Configurar breadcrumbs e título quando o simulado for carregado
+  useEffect(() => {
+    if (simulado?.frase_tematica) {
+      setBreadcrumbs([
+        { label: 'Início', href: '/app' },
+        { label: 'Simulados', href: '/simulados' },
+        { label: simulado.frase_tematica }
+      ]);
+      setPageTitle(simulado.frase_tematica);
+    }
+  }, [simulado?.frase_tematica, setBreadcrumbs, setPageTitle]);
 
   const handleRedacaoManuscritaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

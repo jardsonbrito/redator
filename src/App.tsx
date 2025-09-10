@@ -25,6 +25,7 @@ import LousaResponse from "./components/student/LousaResponse";
 import SimuladoParticipacao from "./pages/SimuladoParticipacao";
 import { AuthProvider } from "./hooks/useAuth";
 import { StudentAuthProvider } from "./hooks/useStudentAuth";
+import { NavigationProvider } from "./hooks/useNavigationContext";
 import { Toaster } from "@/components/ui/toaster"
 import { Dashboard } from "./pages/admin/Dashboard";
 import { Avisos } from "./pages/admin/Avisos";
@@ -85,8 +86,9 @@ function App() {
         <CorretorAuthProvider>
           <StudentAuthProvider>
             <Router>
-              <div className="min-h-screen bg-background">
-                <Toaster />
+              <NavigationProvider>
+                <div className="min-h-screen bg-background">
+                  <Toaster />
                 <Routes>
                   {/* Rotas Públicas */}
                   <Route path="/" element={<Welcome />} />
@@ -221,7 +223,8 @@ function App() {
                     </ProfessorProtectedRoute>
                   } />
                 </Routes>
-              </div>
+                </div>
+              </NavigationProvider>
             </Router>
           </StudentAuthProvider>
         </CorretorAuthProvider>

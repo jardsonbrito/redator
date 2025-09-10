@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 
 interface StudentHeaderProps {
   pageTitle?: string;
@@ -29,64 +30,67 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   };
 
   return (
-    <header className="bg-primary shadow-lg sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex items-center justify-between">
-          <Link 
-            to="/app" 
-            className="flex items-center gap-3 text-primary-foreground hover:text-secondary transition-colors duration-200"
-          >
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <Home className="w-5 h-5" />
-            </div>
-            <span className="hidden sm:inline font-semibold text-lg">Início</span>
-          </Link>
-          
-          {/* Título da página no centro */}
-          {pageTitle && (
-            <h1 className="text-xl font-bold text-primary-foreground">{pageTitle}</h1>
-          )}
-          
-          <div className="flex items-center gap-4">
-            {/* Perfil do usuário com avatar clicável, nome e turma */}
-            <div className="flex items-center gap-3">
-              <StudentAvatar size="sm" showUpload={true} />
-              <div className="hidden sm:flex flex-col">
-                <span className="text-primary-foreground font-medium text-sm">
-                  {studentData.nomeUsuario || 'Usuário'}
-                </span>
-                {studentData.userType === "aluno" && studentData.turma && (
-                  <span className="text-primary-foreground/70 text-xs">
-                    {studentData.turma}
-                  </span>
-                )}
+    <>
+      <header className="bg-primary shadow-lg sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <Link 
+              to="/app" 
+              className="flex items-center gap-3 text-primary-foreground hover:text-secondary transition-colors duration-200"
+            >
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                <Home className="w-5 h-5" />
               </div>
-            </div>
+              <span className="hidden sm:inline font-semibold text-lg">Início</span>
+            </Link>
             
-            {/* Link para Professor apenas se for admin autenticado */}
-            {user && isAdmin && (
-              <Link 
-                to="/admin" 
-                className="flex items-center gap-2 bg-secondary/20 text-primary-foreground px-3 py-2 rounded-xl hover:bg-secondary/30 transition-colors duration-200 text-sm font-medium"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Admin</span>
-              </Link>
+            {/* Título da página no centro */}
+            {pageTitle && (
+              <h1 className="text-xl font-bold text-primary-foreground">{pageTitle}</h1>
             )}
             
-            {/* Botão Sair */}
-            <Button 
-              onClick={handleLogout}
-              variant="outline" 
-              size="sm"
-              className="flex items-center gap-2 border-secondary/30 text-primary-foreground hover:bg-secondary/20 hover:border-secondary/50 rounded-xl px-3 py-2 font-medium transition-colors duration-200 bg-transparent"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sair</span>
-            </Button>
+            <div className="flex items-center gap-4">
+              {/* Perfil do usuário com avatar clicável, nome e turma */}
+              <div className="flex items-center gap-3">
+                <StudentAvatar size="sm" showUpload={true} />
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-primary-foreground font-medium text-sm">
+                    {studentData.nomeUsuario || 'Usuário'}
+                  </span>
+                  {studentData.userType === "aluno" && studentData.turma && (
+                    <span className="text-primary-foreground/70 text-xs">
+                      {studentData.turma}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Link para Professor apenas se for admin autenticado */}
+              {user && isAdmin && (
+                <Link 
+                  to="/admin" 
+                  className="flex items-center gap-2 bg-secondary/20 text-primary-foreground px-3 py-2 rounded-xl hover:bg-secondary/30 transition-colors duration-200 text-sm font-medium"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Link>
+              )}
+              
+              {/* Botão Sair */}
+              <Button 
+                onClick={handleLogout}
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2 border-secondary/30 text-primary-foreground hover:bg-secondary/20 hover:border-secondary/50 rounded-xl px-3 py-2 font-medium transition-colors duration-200 bg-transparent"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+      <BreadcrumbNavigation />
+    </>
   );
 };

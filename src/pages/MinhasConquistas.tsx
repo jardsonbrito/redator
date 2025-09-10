@@ -6,6 +6,7 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { StudentHeader } from "@/components/StudentHeader";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { ptBR } from "date-fns/locale";
@@ -29,6 +30,9 @@ function classificarTipo(redacao: any): 'regular' | 'simulado' {
 }
 
 export const MinhasConquistas = () => {
+  // Configurar título da página
+  usePageTitle('Minhas Conquistas');
+  
   const { studentData } = useStudentAuth();
   const { toast } = useToast();
   const [monthlyActivities, setMonthlyActivities] = useState<MonthlyActivity[]>([]);

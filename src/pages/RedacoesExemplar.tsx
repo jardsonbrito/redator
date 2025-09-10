@@ -11,8 +11,12 @@ import { useRedacoesExemplarFilters } from "@/hooks/useRedacoesExemplarFilters";
 import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
 import { MultiSelectDropdown } from "@/components/filters/MultiSelectDropdown";
 import { ExemplarCard } from "@/components/ExemplarCard";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 const RedacoesExemplar = () => {
+  // Configurar título da página
+  usePageTitle('Redações Exemplar');
+  
   const [selectedRedacao, setSelectedRedacao] = useState<any>(null);
 
   // Usar o hook de filtros

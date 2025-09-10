@@ -2,8 +2,12 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Top5Widget } from "@/components/shared/Top5Widget";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 const Top5 = () => {
+  // Configurar título da página
+  usePageTitle('TOP 5');
+  
   return (
     <ProtectedRoute>
       <TooltipProvider>

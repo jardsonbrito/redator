@@ -13,6 +13,7 @@ import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
 import { useToast } from "@/hooks/use-toast";
 import { downloadRedacaoManuscritaCorrigida } from "@/utils/redacaoDownload";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useBreadcrumbs, usePageTitle } from "@/hooks/useBreadcrumbs";
 
 interface Redacao {
   id: string;
@@ -51,6 +52,15 @@ export default function RedacaoManuscrita() {
   const { toast } = useToast();
   const [showModalDevolucao, setShowModalDevolucao] = useState(false);
   const { studentData } = useStudentAuth();
+  
+  // Configurar breadcrumbs e título
+  useBreadcrumbs([
+    { label: 'Início', href: '/app' },
+    { label: 'Minhas Redações', href: '/minhas-redacoes' },
+    { label: 'Detalhes da Redação' }
+  ]);
+  
+  usePageTitle('Redação Manuscrita');
 
   const { data: redacao, isLoading } = useQuery({
     queryKey: ["redacao-manuscrita", id],

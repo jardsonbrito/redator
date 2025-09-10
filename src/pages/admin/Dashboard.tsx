@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { startOfMonth, endOfMonth, setMonth, setYear } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { useAdminPageTitle } from "@/hooks/useAdminNavigationContext";
 
 interface DashboardMetrics {
   totalAlunos: number;
@@ -24,6 +26,9 @@ export const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedTurma, setSelectedTurma] = useState<string>('');
+  
+  // Configurar título da página
+  useAdminPageTitle('Dashboard');
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalAlunos: 0,
     redacoesEnviadas: 0,
@@ -152,8 +157,9 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
+    <AdminLayout>
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
       
       {/* Card Ajuda Rápida */}
       <AjudaRapidaAdminCard />
@@ -303,6 +309,7 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };

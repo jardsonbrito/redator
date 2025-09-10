@@ -1,4 +1,5 @@
 
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Home, Edit } from "lucide-react";
@@ -7,10 +8,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { StudentHeader } from "@/components/StudentHeader";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getTemaCoverUrl, getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { renderTextWithParagraphs } from '@/utils/textUtils';
+import { useNavigationContext } from "@/hooks/useNavigationContext";
 
 // Type extension para incluir os campos novos e legado
 type TemaWithImage = {
@@ -74,6 +77,20 @@ const TemaDetalhes = () => {
     enabled: !!id
   });
 
+  const { setBreadcrumbs, setPageTitle } = useNavigationContext();
+
+  // Configurar breadcrumbs e título quando o tema for carregado
+  useEffect(() => {
+    if (tema?.frase_tematica) {
+      setBreadcrumbs([
+        { label: 'Início', href: '/app' },
+        { label: 'Temas', href: '/temas' },
+        { label: tema.frase_tematica }
+      ]);
+      setPageTitle(tema.frase_tematica);
+    }
+  }, [tema?.frase_tematica, setBreadcrumbs, setPageTitle]);
+
   // Query para verificar se o usuário já enviou uma redação sobre este tema
   const { data: redacaoEnviada } = useQuery({
     queryKey: ['redacao-enviada', tema?.frase_tematica, studentData.email],
@@ -124,29 +141,7 @@ const TemaDetalhes = () => {
     <ProtectedRoute>
       <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-          {/* Header */}
-          <header className="bg-white shadow-sm border-b border-redator-accent/20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/app" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors">
-                <Home className="w-5 h-5" />
-                <span>Início</span>
-              </Link>
-              <div>
-                {tema.eixo_tematico && (
-                  <span className="text-sm font-medium text-white bg-redator-accent px-2 py-1 rounded">
-                    {tema.eixo_tematico}
-                  </span>
-                )}
-              </div>
-            </div>
-            <Link to="/" className="hover:opacity-80 transition-opacity">
-              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-8 w-auto max-w-[120px] object-contain" />
-            </Link>
-          </div>
-        </div>
-      </header>
+          <StudentHeader pageTitle={tema?.frase_tematica || "Tema"} />
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

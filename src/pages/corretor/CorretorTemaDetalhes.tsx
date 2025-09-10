@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -6,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { renderTextWithParagraphs } from '@/utils/textUtils';
+import { useCorretorNavigationContext } from "@/hooks/useCorretorNavigationContext";
 
 // Type extension para incluir o campo imagem_texto_4_url
 type TemaWithImage = {
@@ -21,6 +23,7 @@ type TemaWithImage = {
 
 const CorretorTemaDetalhes = () => {
   const { id } = useParams();
+  const { setBreadcrumbs, setPageTitle } = useCorretorNavigationContext();
   
   const { data: tema, isLoading, error } = useQuery({
     queryKey: ['corretor-tema', id],
@@ -42,6 +45,18 @@ const CorretorTemaDetalhes = () => {
     },
     enabled: !!id
   });
+
+  // Configurar breadcrumbs e título quando o tema for carregado
+  useEffect(() => {
+    if (tema?.frase_tematica) {
+      setBreadcrumbs([
+        { label: 'Dashboard', href: '/corretor' },
+        { label: 'Temas', href: '/corretor/temas' },
+        { label: tema.frase_tematica }
+      ]);
+      setPageTitle(tema.frase_tematica);
+    }
+  }, [tema?.frase_tematica, setBreadcrumbs, setPageTitle]);
 
   if (isLoading) {
     return (

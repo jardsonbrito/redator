@@ -7,6 +7,7 @@ import { useStudentAuth } from '@/hooks/useStudentAuth';
 import { StudentHeader } from '@/components/StudentHeader';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { usePageTitle } from '@/hooks/useBreadcrumbs';
 import LousaCard from './LousaCard';
 
 interface Lousa {
@@ -27,6 +28,9 @@ interface Lousa {
 }
 
 export default function AlunoLousaList() {
+  // Configurar título da página
+  usePageTitle('Lousa Interativa');
+  
   const [lousas, setLousas] = useState<Lousa[]>([]);
   const [loading, setLoading] = useState(true);
   const { studentData: student } = useStudentAuth();

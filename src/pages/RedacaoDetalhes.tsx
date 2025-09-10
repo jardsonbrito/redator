@@ -1,12 +1,18 @@
 
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Home, Lightbulb } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { StudentHeader } from "@/components/StudentHeader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useNavigationContext } from "@/hooks/useNavigationContext";
 
 const RedacaoDetalhes = () => {
   const { id } = useParams();
+  const { setBreadcrumbs, setPageTitle } = useNavigationContext();
   
   const { data: redacao, isLoading, error } = useQuery({
     queryKey: ['redacao', id],
@@ -28,6 +34,18 @@ const RedacaoDetalhes = () => {
     },
     enabled: !!id
   });
+
+  // Configurar breadcrumbs e título quando a redação for carregada
+  useEffect(() => {
+    if (redacao?.frase_tematica) {
+      setBreadcrumbs([
+        { label: 'Início', href: '/app' },
+        { label: 'Biblioteca', href: '/biblioteca' },
+        { label: redacao.frase_tematica }
+      ]);
+      setPageTitle(redacao.frase_tematica);
+    }
+  }, [redacao?.frase_tematica, setBreadcrumbs, setPageTitle]);
 
   if (isLoading) {
     return (
@@ -53,30 +71,10 @@ const RedacaoDetalhes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-redator-accent/20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-4 w-full sm:w-auto">
-              <Link to="/app" className="flex items-center gap-2 text-redator-accent hover:text-redator-primary transition-colors mt-1">
-                <Home className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-sm sm:text-base">Início</span>
-              </Link>
-              <div>
-                {redacao.eixo_tematico && (
-                  <span className="text-xs sm:text-sm font-medium text-white bg-redator-primary px-2 py-1 rounded">
-                    {redacao.eixo_tematico}
-                  </span>
-                )}
-              </div>
-            </div>
-            <Link to="/" className="hover:opacity-80 transition-opacity w-full sm:w-auto flex justify-center sm:justify-end">
-              <img src="/lovable-uploads/e8f3c7a9-a9bb-43ac-ba3d-e625d15834d8.png" alt="App do Redator - Voltar para Home" className="h-6 sm:h-8 w-auto max-w-[100px] sm:max-w-[120px] object-contain" />
-            </Link>
-          </div>
-        </div>
-      </header>
+    <ProtectedRoute>
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+          <StudentHeader pageTitle={redacao?.frase_tematica || "Redação Exemplar"} />
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
@@ -109,7 +107,9 @@ const RedacaoDetalhes = () => {
           </CardContent>
         </Card>
       </main>
-    </div>
+        </div>
+      </TooltipProvider>
+    </ProtectedRoute>
   );
 };
 

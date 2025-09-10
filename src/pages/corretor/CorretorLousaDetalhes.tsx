@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,10 +6,12 @@ import { CorretorLayout } from '@/components/corretor/CorretorLayout';
 import { LousaRespostasCorretor } from '@/components/corretor/LousaRespostasCorretor';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCorretorNavigationContext } from '@/hooks/useCorretorNavigationContext';
 
 export default function CorretorLousaDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { setBreadcrumbs, setPageTitle } = useCorretorNavigationContext();
 
   const { data: lousa, isLoading } = useQuery({
     queryKey: ['lousa', id],
@@ -27,6 +29,18 @@ export default function CorretorLousaDetalhes() {
     },
     enabled: !!id
   });
+
+  // Configurar breadcrumbs e título quando a lousa for carregada
+  useEffect(() => {
+    if (lousa?.titulo) {
+      setBreadcrumbs([
+        { label: 'Dashboard', href: '/corretor' },
+        { label: 'Lousas', href: '/corretor/lousas' },
+        { label: lousa.titulo }
+      ]);
+      setPageTitle(lousa.titulo);
+    }
+  }, [lousa?.titulo, setBreadcrumbs, setPageTitle]);
 
   if (isLoading) {
     return (

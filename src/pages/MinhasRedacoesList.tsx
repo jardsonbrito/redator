@@ -11,6 +11,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
 import { useToast } from "@/hooks/use-toast";
+import { usePageTitle } from "@/hooks/useBreadcrumbs";
 // Email validation será importada dinamicamente
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +92,9 @@ const shouldShowScores = (redacao: RedacaoTurma) => {
 };
 
 const MinhasRedacoesList = () => {
+  // Configurar título da página
+  usePageTitle('Minhas Redações');
+  
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoTurma | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -727,19 +731,50 @@ const MinhasRedacoesList = () => {
       const tabelaOrigem = tabelaOrigemMap[selectedRedacao?.tipo_envio as keyof typeof tabelaOrigemMap] || 'redacoes_enviadas';
       const redacaoId = selectedRedacao.original_id || selectedRedacao.id;
       
+      console.log('🔄 Marcando redação como visualizada:', {
+        redacaoId,
+        tabelaOrigem,
+        email: (studentData?.email || '').toLowerCase().trim()
+      });
+      
       // Marcar como visualizada
-      await supabase.rpc('marcar_redacao_devolvida_como_visualizada', {
+      const { data, error } = await supabase.rpc('marcar_redacao_devolvida_como_visualizada', {
         redacao_id_param: redacaoId,
         tabela_origem_param: tabelaOrigem,
         email_aluno_param: (studentData?.email || '').toLowerCase().trim()
+      });
+      
+      if (error) {
+        console.error('❌ Erro ao marcar como visualizada:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível marcar como ciente. Tente novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('✅ Redação marcada como visualizada:', data);
+      
+      toast({
+        title: "Marcado como ciente",
+        description: "Redação marcada como ciente com sucesso.",
       });
       
       setShowDevolutionDialog(false);
       setSelectedRedacao(null);
       setDevolutionInfo(null);
       
+      // Recarregar a lista para atualizar o status
+      window.location.reload();
+      
     } catch (error) {
-      console.error('Erro ao marcar como visualizada:', error);
+      console.error('💥 Erro inesperado ao marcar como visualizada:', error);
+      toast({
+        title: "Erro inesperado",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -960,11 +995,15 @@ const MinhasRedacoesList = () => {
                       </p>
                     </div>
                     
-                     {redacao.corrigida && (
-                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                         <span>Ver detalhes →</span>
-                       </div>
-                     )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      {redacao.status === 'devolvida' ? (
+                        <span className="text-red-600 font-medium">Clique para ver o motivo →</span>
+                      ) : redacao.corrigida ? (
+                        <span>Ver detalhes →</span>
+                      ) : (
+                        <span>Ver redação →</span>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
