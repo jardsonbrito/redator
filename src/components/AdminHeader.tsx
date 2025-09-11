@@ -13,7 +13,8 @@ import {
   Trophy,
   Presentation,
   BarChart3,
-  Award
+  Award,
+  BookOpen
 } from 'lucide-react';
 
 export const AdminHeader = () => {
@@ -25,6 +26,7 @@ export const AdminHeader = () => {
     { path: '/admin/redacoes', label: 'Redações', icon: FileText },
     { path: '/admin/simulados', label: 'Simulados', icon: PlaySquare },
     { path: '/admin/exercicios', label: 'Exercícios', icon: Dumbbell },
+    { path: '/admin/diario', label: 'Diário Online', icon: BookOpen },
     { path: '/admin/corretores', label: 'Corretores', icon: UserCheck },
     { path: '/admin/visitantes', label: 'Visitantes', icon: Users },
     { path: '/admin/exportacao', label: 'Exportação', icon: Download },

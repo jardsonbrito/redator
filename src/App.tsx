@@ -78,6 +78,7 @@ import SalasVirtuais from "./pages/SalasVirtuais";
 import RedacaoManuscrita from "./pages/RedacaoManuscrita";
 import MinhasConquistas from "./pages/MinhasConquistas";
 import Gamificacao from "./pages/Gamificacao";
+import DiarioOnline from "./pages/DiarioOnline";
 
 function App() {
   return (
@@ -121,6 +122,7 @@ function App() {
                   <Route path="/ajuda-rapida" element={<AjudaRapida />} />
                   <Route path="/minhas-conquistas" element={<MinhasConquistas />} />
                   <Route path="/gamificacao" element={<Gamificacao />} />
+                  <Route path="/diario-online" element={<DiarioOnline />} />
 
                   {/* Rotas do Admin */}
                   <Route path="/admin" element={<Admin />} />

@@ -25,7 +25,8 @@ import {
   ShieldCheck,
   Presentation,
   Gamepad2,
-  Award
+  Award,
+  Calendar
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,6 +102,11 @@ import { AdminAvatar } from "@/components/admin/AdminAvatar";
 // Import TOP 5 component
 import { Top5Widget } from "@/components/shared/Top5Widget";
 
+// Import diário components
+import GestaoEtapas from "@/pages/admin/GestaoEtapas";
+import RegistroAulas from "@/pages/admin/RegistroAulas";
+import ResumoTurma from "@/pages/admin/ResumoTurma";
+
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
@@ -127,6 +133,7 @@ const Admin = () => {
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
     { id: "simulados", label: "Simulados", icon: ClipboardCheck },
     { id: "exercicios", label: "Exercícios", icon: NotebookPen },
+    { id: "diario", label: "Diário Online", icon: Calendar },
     { id: "lousa", label: "Lousa", icon: Presentation },
     { id: "salas-virtuais", label: "Aula ao Vivo", icon: Video },
     { id: "aulas", label: "Aulas Gravadas", icon: GraduationCap },
@@ -315,6 +322,26 @@ const Admin = () => {
             </TabsContent>
             <TabsContent value="create">
               <ExercicioForm />
+            </TabsContent>
+          </Tabs>
+        );
+
+      case "diario":
+        return (
+          <Tabs defaultValue="etapas" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="etapas">Gestão de Etapas</TabsTrigger>
+              <TabsTrigger value="aulas">Registro de Aulas</TabsTrigger>
+              <TabsTrigger value="resumo">Resumo da Turma</TabsTrigger>
+            </TabsList>
+            <TabsContent value="etapas" className="space-y-6">
+              <GestaoEtapas />
+            </TabsContent>
+            <TabsContent value="aulas" className="space-y-6">
+              <RegistroAulas />
+            </TabsContent>
+            <TabsContent value="resumo" className="space-y-6">
+              <ResumoTurma />
             </TabsContent>
           </Tabs>
         );
