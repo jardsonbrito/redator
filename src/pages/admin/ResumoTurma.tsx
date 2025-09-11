@@ -22,6 +22,7 @@ export default function ResumoTurma() {
     if (!resumo) return;
 
     const headers = [
+      'Nome do Aluno',
       'Email do Aluno',
       'Frequência (%)',
       'Participação (%)',
@@ -34,6 +35,7 @@ export default function ResumoTurma() {
     ];
 
     const rows = resumo.alunos.map((aluno: ResumoAlunoTurma) => [
+      aluno.aluno_nome,
       aluno.aluno_email,
       aluno.dados.frequencia.percentual_frequencia,
       aluno.dados.participacao.percentual_participacao,
@@ -238,7 +240,20 @@ export default function ResumoTurma() {
           </CardHeader>
           <CardContent>
             {loadingResumo ? (
-              <div className="text-center py-8">Carregando dados...</div>
+              <div className="text-center py-12">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <div className="space-y-2">
+                    <div className="text-lg font-semibold">Processando dados da turma...</div>
+                    <div className="text-sm text-muted-foreground">
+                      Calculando frequência, participação, redações e simulados
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Isso pode levar alguns segundos devido ao volume de dados
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : !resumo || resumo.alunos.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
@@ -264,7 +279,7 @@ export default function ResumoTurma() {
                       <TableRow key={aluno.aluno_email}>
                         <TableCell className="font-medium">
                           <div>
-                            <div>{aluno.aluno_email.split('@')[0]}</div>
+                            <div className="font-semibold">{aluno.aluno_nome}</div>
                             <div className="text-xs text-muted-foreground">
                               {aluno.aluno_email}
                             </div>

@@ -32,7 +32,8 @@ export function useEtapas(turma?: string) {
       return data as EtapaEstudo[];
     },
     enabled: true,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 10 * 60 * 1000, // 10 minutos (cache agressivo)
+    gcTime: 15 * 60 * 1000, // Manter em cache por 15 minutos
   });
 }
 
@@ -457,33 +458,91 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           console.log('⚠️ Erro ao buscar simulados:', error);
         }
 
-        // Buscar exercícios do período da etapa
+        // Buscar exercícios do período da etapa (redacoes_exercicio + radar_dados)
         let exerciciosData = { total_exercicios: 0 };
         try {
-          const { data: exercicios, error: exerciciosError } = await supabase
+          // Buscar redações de exercícios
+          const { data: redacoesExercicio, error: exerciciosError } = await supabase
             .from('redacoes_exercicio')
-            .select('id')
-            .eq('aluno_email', alunoEmail)
+            .select('id, data_envio')
+            .eq('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
             .lt('data_envio', etapa.data_fim + 'T23:59:59')
             .is('devolvida_por', null); // Não devolvidas
 
-          if (!exerciciosError && exercicios) {
-            exerciciosData = {
-              total_exercicios: exercicios.length
-            };
+          // Buscar dados do radar (exercícios importados)
+          const { data: radarExercicios, error: radarError } = await supabase
+            .from('radar_dados')
+            .select('id, data_realizacao')
+            .ilike('email_aluno', alunoEmail)
+            .gte('data_realizacao', etapa.data_inicio)
+            .lte('data_realizacao', etapa.data_fim);
+
+          let totalExercicios = 0;
+          
+          if (!exerciciosError && redacoesExercicio) {
+            totalExercicios += redacoesExercicio.length;
+            console.log(`📝 Redações exercício de ${alunoEmail}:`, redacoesExercicio.length);
           }
+          
+          if (!radarError && radarExercicios) {
+            totalExercicios += radarExercicios.length;
+            console.log(`📊 Radar exercícios de ${alunoEmail}:`, radarExercicios.length);
+          }
+
+          exerciciosData = {
+            total_exercicios: totalExercicios
+          };
+          
+          console.log(`✅ Total exercícios da etapa ${etapa.nome} para ${alunoEmail}:`, exerciciosData.total_exercicios);
+          
         } catch (error) {
           console.log('⚠️ Erro ao buscar exercícios:', error);
         }
 
         // Calcular média final (pode ser customizada conforme critério da escola)
-        const mediaFinal = (
-          (frequenciaData.percentual_frequencia * 0.2) +
-          (participacaoData.percentual_participacao * 0.2) +
-          (redacoesData.nota_media * 0.4) +
-          (simuladosData.nota_media * 0.2)
-        ) / 10;
+        // Converter tudo para escala 0-10
+        const frequencia10 = frequenciaData.percentual_frequencia / 10; // 85% -> 8.5
+        const participacao10 = participacaoData.percentual_participacao / 10; // 75% -> 7.5
+        const redacoes10 = redacoesData.nota_media / 100; // 800 -> 8.0
+        const simulados10 = simuladosData.nota_media / 100; // 900 -> 9.0
+        
+          // Logs simplificados para melhor performance
+        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: F${frequenciaData.percentual_frequencia}% P${participacaoData.percentual_participacao}% R${redacoesData.nota_media} S${simuladosData.nota_media}`);
+        
+        // Verificar se não há aulas (frequência e participação = 0)
+        const semAulas = frequenciaData.total_aulas === 0;
+        let mediaFinal;
+        
+        if (semAulas) {
+          // Se não há aulas, calcular média apenas com redações e simulados
+          console.log(`  ⚠️ Sem aulas registradas - calculando média apenas com atividades`);
+          
+          if (redacoesData.total_redacoes > 0 && simuladosData.total_simulados > 0) {
+            // Com redações e simulados: 70% redações + 30% simulados
+            mediaFinal = (redacoes10 * 0.7) + (simulados10 * 0.3);
+          } else if (redacoesData.total_redacoes > 0) {
+            // Apenas redações: 100% redações
+            mediaFinal = redacoes10;
+          } else if (simuladosData.total_simulados > 0) {
+            // Apenas simulados: 100% simulados  
+            mediaFinal = simulados10;
+          } else {
+            // Sem atividades: média 0
+            mediaFinal = 0;
+          }
+          
+          console.log(`  🎓 MÉDIA SEM AULAS: ${mediaFinal.toFixed(2)}`);
+        } else {
+          // Cálculo normal com todas as componentes
+          mediaFinal = (
+            (frequencia10 * 0.2) +
+            (participacao10 * 0.2) +
+            (redacoes10 * 0.4) +
+            (simulados10 * 0.2)
+          );
+          console.log(`  🏆 MÉDIA COMPLETA: ${mediaFinal.toFixed(2)}`);
+        }
 
         diarioData.push({
           etapa_numero: etapa.numero,
@@ -495,14 +554,15 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           redacoes: redacoesData,
           simulados: simuladosData,
           exercicios: exerciciosData,
-          media_final: Math.max(0, Math.min(10, mediaFinal * 10)) // Garantir que fica entre 0 e 10
+          media_final: Math.max(0, Math.min(10, mediaFinal)) // Garantir que fica entre 0 e 10
         });
       }
       
       return diarioData;
     },
     enabled: !!alunoEmail && !!turma,
-    staleTime: 3 * 60 * 1000, // 3 minutos
+    staleTime: 10 * 60 * 1000, // 10 minutos (cache agressivo)
+    gcTime: 15 * 60 * 1000, // Manter em cache por 15 minutos (cache maior para performance)
   });
 }
 
@@ -582,28 +642,73 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
       let totalSimulados = 0;
       let totalExercicios = 0;
 
+      // Otimização: Buscar todas as atividades em paralelo primeiro
+      console.log(`🚀 Buscando dados de ${alunos.length} alunos em lote...`);
+      const emailsAlunos = alunos.map(a => a.email);
+      
+      const [redacoesTodas, simuladosTodos, exerciciosTodos, radarTodos] = await Promise.all([
+        supabase
+          .from('redacoes_enviadas')
+          .select('email_aluno, nota_total')
+          .in('email_aluno', emailsAlunos)
+          .gte('data_envio', etapas.data_inicio)
+          .lte('data_envio', etapas.data_fim)
+          .is('devolvida_por', null),
+          
+        supabase
+          .from('redacoes_simulado')
+          .select('email_aluno, nota_total')
+          .in('email_aluno', emailsAlunos)
+          .gte('data_envio', etapas.data_inicio)
+          .lte('data_envio', etapas.data_fim)
+          .is('devolvida_por', null),
+          
+        supabase
+          .from('redacoes_exercicio')
+          .select('email_aluno')
+          .in('email_aluno', emailsAlunos)
+          .gte('data_envio', etapas.data_inicio)
+          .lte('data_envio', etapas.data_fim),
+          
+        supabase
+          .from('radar_dados')
+          .select('email_aluno')
+          .filter('email_aluno', 'in', `(${emailsAlunos.map(e => `"${e}"`).join(',')})`)
+          .gte('data_realizacao', etapas.data_inicio)
+          .lte('data_realizacao', etapas.data_fim)
+      ]);
+
+      console.log(`📊 Dados carregados em lote!`);
+
+      // Buscar aulas desta etapa UMA VEZ SÓ
+      const { data: aulas } = await supabase
+        .from('aulas_diario')
+        .select('id')
+        .eq('turma', turma)
+        .eq('etapa_id', etapas.id);
+
+      const aulaIds = aulas?.map(a => a.id) || [];
+      
+      // Buscar TODAS as presenças de UMA VEZ para todos os alunos
+      const { data: todasPresencas } = await supabase
+        .from('presenca_participacao_diario')
+        .select('aluno_email, presente, participou')
+        .in('aluno_email', emailsAlunos)
+        .in('aula_id', aulaIds);
+
+      console.log(`🎯 Dados de presença carregados: ${todasPresencas?.length || 0} registros`);
+
       for (const aluno of alunos) {
-        // Buscar aulas desta etapa
-        const { data: aulas } = await supabase
-          .from('aulas_diario')
-          .select('id')
-          .eq('turma', turma)
-          .eq('etapa_id', etapas.id);
+        let frequenciaData = { total_aulas: aulaIds.length, aulas_presentes: 0, percentual_frequencia: 0 };
+        let participacaoData = { total_aulas: aulaIds.length, aulas_participou: 0, percentual_participacao: 0 };
 
-        const aulaIds = aulas?.map(a => a.id) || [];
-        let frequenciaData = { total_aulas: 0, aulas_presentes: 0, percentual_frequencia: 0 };
-        let participacaoData = { total_aulas: 0, aulas_participou: 0, percentual_participacao: 0 };
-
+        // Filtrar presenças deste aluno dos dados já carregados
+        const presencasAluno = todasPresencas?.filter(p => p.aluno_email === aluno.email) || [];
+        
         if (aulaIds.length > 0) {
-          const { data: presencas } = await supabase
-            .from('presenca_participacao_diario')
-            .select('presente, participou')
-            .eq('aluno_email', aluno.email)
-            .in('aula_id', aulaIds);
-
           const totalAulas = aulaIds.length;
-          const aulasPresentes = presencas?.filter(p => p.presente).length || 0;
-          const aulasParticipou = presencas?.filter(p => p.participou).length || 0;
+          const aulasPresentes = presencasAluno.filter(p => p.presente).length;
+          const aulasParticipou = presencasAluno.filter(p => p.participou).length;
 
           frequenciaData = {
             total_aulas: totalAulas,
@@ -618,29 +723,29 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           };
         }
 
-        // Buscar redações do período da etapa com abordagem simplificada
+        // Buscar redações do período da etapa com campos corretos
         let redacoesData = { total_redacoes: 0, nota_media: 0 };
         try {
-          // Buscar sem filtros de turma, apenas por aluno e período
           const { data: redacoes, error: redacoesError } = await supabase
             .from('redacoes_enviadas')
-            .select('nota, status')
-            .eq('aluno_email', aluno.email)
+            .select('nota_total, status, devolvida_por')
+            .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
             .lte('data_envio', etapas.data_fim);
 
           if (!redacoesError && redacoes) {
             const redacoesValidas = redacoes.filter(r => 
               r.status !== 'devolvida' && 
-              r.nota !== null && 
-              r.nota !== undefined && 
-              r.nota > 0
+              r.devolvida_por === null &&
+              r.nota_total !== null && 
+              r.nota_total !== undefined && 
+              r.nota_total > 0
             );
             
             redacoesData = {
               total_redacoes: redacoesValidas.length,
               nota_media: redacoesValidas.length > 0 
-                ? redacoesValidas.reduce((acc, r) => acc + r.nota, 0) / redacoesValidas.length 
+                ? redacoesValidas.reduce((acc, r) => acc + r.nota_total, 0) / redacoesValidas.length 
                 : 0
             };
             
@@ -652,27 +757,28 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           console.log('⚠️ Erro ao buscar redações:', aluno.email, error);
         }
 
-        // Buscar simulados do período da etapa 
+        // Buscar simulados do período da etapa com campos corretos
         let simuladosData = { total_simulados: 0, nota_media: 0 };
         try {
           const { data: simulados, error: simuladosError } = await supabase
             .from('redacoes_simulado')
-            .select('nota')
-            .eq('aluno_email', aluno.email)
+            .select('nota_total, devolvida_por')
+            .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
             .lte('data_envio', etapas.data_fim);
 
           if (!simuladosError && simulados) {
             const simuladosComNota = simulados.filter(s => 
-              s.nota !== null && 
-              s.nota !== undefined && 
-              s.nota > 0
+              s.devolvida_por === null &&
+              s.nota_total !== null && 
+              s.nota_total !== undefined && 
+              s.nota_total > 0
             );
             
             simuladosData = {
               total_simulados: simuladosComNota.length,
               nota_media: simuladosComNota.length > 0 
-                ? simuladosComNota.reduce((acc, s) => acc + s.nota, 0) / simuladosComNota.length 
+                ? simuladosComNota.reduce((acc, s) => acc + s.nota_total, 0) / simuladosComNota.length 
                 : 0
             };
             
@@ -684,25 +790,42 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           console.log('⚠️ Erro ao buscar simulados:', aluno.email, error);
         }
 
-        // Buscar exercícios do período da etapa
+        // Buscar exercícios do período da etapa (redacoes_exercicio + radar_dados)
         let exerciciosData = { total_exercicios: 0 };
         try {
-          const { data: exercicios, error: exerciciosError } = await supabase
+          // Buscar redações de exercícios
+          const { data: redacoesExercicio, error: exerciciosError } = await supabase
             .from('redacoes_exercicio')
             .select('id')
-            .eq('aluno_email', aluno.email)
+            .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
             .lte('data_envio', etapas.data_fim);
 
-          if (!exerciciosError && exercicios) {
-            exerciciosData = {
-              total_exercicios: exercicios.length
-            };
-            
-            console.log(`✅ Exercícios de ${aluno.email}: ${exerciciosData.total_exercicios}`);
-          } else {
-            console.log(`❌ Erro exercícios ${aluno.email}:`, exerciciosError?.message);
+          // Buscar dados do radar (exercícios importados)
+          const { data: radarExercicios, error: radarError } = await supabase
+            .from('radar_dados')
+            .select('id')
+            .ilike('email_aluno', aluno.email)
+            .gte('data_realizacao', etapas.data_inicio)
+            .lte('data_realizacao', etapas.data_fim);
+
+          let totalExercicios = 0;
+          
+          if (!exerciciosError && redacoesExercicio) {
+            totalExercicios += redacoesExercicio.length;
+            // Log simplificado
           }
+          
+          if (!radarError && radarExercicios) {
+            totalExercicios += radarExercicios.length;
+            // Log simplificado
+          }
+
+          exerciciosData = {
+            total_exercicios: totalExercicios
+          };
+            
+          console.log(`✅ Total exercícios de ${aluno.email}: ${exerciciosData.total_exercicios}`);
         } catch (error) {
           console.log('⚠️ Erro ao buscar exercícios:', aluno.email, error);
         }
@@ -710,12 +833,40 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
         console.log(`📊 Resumo para ${aluno.email} - Período: ${etapas.data_inicio} a ${etapas.data_fim}`);
 
         // Calcular média final
-        const mediaFinal = (
-          (frequenciaData.percentual_frequencia * 0.2) +
-          (participacaoData.percentual_participacao * 0.2) +
-          (redacoesData.nota_media * 0.4) +
-          (simuladosData.nota_media * 0.2)
-        ) / 10;
+        // Converter tudo para escala 0-10
+        const frequencia10 = frequenciaData.percentual_frequencia / 10; // 85% -> 8.5
+        const participacao10 = participacaoData.percentual_participacao / 10; // 75% -> 7.5
+        const redacoes10 = redacoesData.nota_media / 100; // 800 -> 8.0
+        const simulados10 = simuladosData.nota_media / 100; // 900 -> 9.0
+        
+        // Verificar se não há aulas (frequência e participação = 0)
+        const semAulas = frequenciaData.total_aulas === 0;
+        let mediaFinal;
+        
+        if (semAulas) {
+          // Se não há aulas, calcular média apenas com redações e simulados
+          if (redacoesData.total_redacoes > 0 && simuladosData.total_simulados > 0) {
+            // Com redações e simulados: 70% redações + 30% simulados
+            mediaFinal = (redacoes10 * 0.7) + (simulados10 * 0.3);
+          } else if (redacoesData.total_redacoes > 0) {
+            // Apenas redações: 100% redações
+            mediaFinal = redacoes10;
+          } else if (simuladosData.total_simulados > 0) {
+            // Apenas simulados: 100% simulados  
+            mediaFinal = simulados10;
+          } else {
+            // Sem atividades: média 0
+            mediaFinal = 0;
+          }
+        } else {
+          // Cálculo normal com todas as componentes
+          mediaFinal = (
+            (frequencia10 * 0.2) +
+            (participacao10 * 0.2) +
+            (redacoes10 * 0.4) +
+            (simulados10 * 0.2)
+          );
+        }
 
         const dadosAluno = {
           frequencia: frequenciaData,
@@ -723,7 +874,7 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           redacoes: redacoesData,
           simulados: simuladosData,
           exercicios: exerciciosData,
-          media_final: Math.max(0, Math.min(10, mediaFinal * 10))
+          media_final: Math.max(0, Math.min(10, mediaFinal))
         };
 
         resumoAlunos.push({
@@ -758,7 +909,8 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
       };
     },
     enabled: !!turma && !!etapaNumero,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 10 * 60 * 1000, // 10 minutos (cache agressivo)
+    gcTime: 15 * 60 * 1000, // Manter em cache por 15 minutos
   });
 }
 

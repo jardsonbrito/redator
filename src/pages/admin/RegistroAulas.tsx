@@ -247,7 +247,7 @@ export default function RegistroAulas() {
                             className="flex items-center gap-1"
                           >
                             <CheckSquare className="w-3 h-3" />
-                            Presença
+                            Dados
                           </Button>
                           <Button
                             variant="outline"

@@ -78,6 +78,7 @@ export interface DiarioEtapa {
 
 export interface ResumoAlunoTurma {
   aluno_email: string;
+  aluno_nome: string;
   dados: DiarioEtapa;
 }
 

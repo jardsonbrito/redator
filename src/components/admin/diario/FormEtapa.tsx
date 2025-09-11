@@ -70,15 +70,8 @@ export function FormEtapa({ turma, etapa, onSave, onCancel }: FormEtapaProps) {
 
   const watchedDataInicio = watch('data_inicio');
 
-  // Sugerir data de fim baseada na data de início (período de 2 meses)
-  useEffect(() => {
-    if (watchedDataInicio && !etapa) {
-      const dataInicio = new Date(watchedDataInicio);
-      const dataFim = new Date(dataInicio);
-      dataFim.setMonth(dataFim.getMonth() + 2);
-      setValue('data_fim', dataFim.toISOString().split('T')[0]);
-    }
-  }, [watchedDataInicio, setValue, etapa]);
+  // A data de fim deve ser definida manualmente pelo professor
+  // Não há duração fixa para as etapas - pode ser 2, 3 ou mais meses
 
   return (
     <div className="container mx-auto p-6 max-w-2xl">
@@ -185,13 +178,26 @@ export function FormEtapa({ turma, etapa, onSave, onCancel }: FormEtapaProps) {
               </div>
             </div>
 
+            {/* Dica sobre duração flexível */}
+            <div className="text-sm text-muted-foreground bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-2">
+                <span className="text-amber-600 dark:text-amber-400 mt-0.5">💡</span>
+                <div>
+                  <strong className="text-amber-900 dark:text-amber-100">Duração totalmente flexível:</strong>
+                  <span className="text-amber-800 dark:text-amber-200 ml-1">
+                    Configure o período que funcionar melhor para sua escola - pode ser 2, 3, 4 meses ou qualquer outra duração.
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Informações sobre a etapa */}
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
               <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
                 Sobre as Etapas
               </h4>
               <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• Cada etapa corresponde a um período de aproximadamente 2 meses</li>
+                <li>• Cada etapa pode ter duração flexível (2, 3 ou mais meses)</li>
                 <li>• O sistema considera apenas atividades dentro do período da etapa</li>
                 <li>• Aulas serão automaticamente vinculadas à etapa baseada na data</li>
                 <li>• Não pode haver sobreposição de períodos para a mesma turma</li>

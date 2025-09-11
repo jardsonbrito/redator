@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Calendar, Users, Trash2 } from 'lucide-react';
-import { useEtapas, useTurmasDisponiveis, useEtapaDeleteMutation } from '@/hooks/useDiario';
+import { Plus, Edit, Calendar, Users, Trash2, Database } from 'lucide-react';
+import { useEtapas, useTurmasDisponiveis, useEtapaDeleteMutation, useLimparDadosTesteMutation } from '@/hooks/useDiario';
 import { FormEtapa } from '@/components/admin/diario/FormEtapa';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -17,6 +17,7 @@ export default function GestaoEtapas() {
   const { data: turmas, isLoading: loadingTurmas } = useTurmasDisponiveis();
   const { data: etapas, isLoading: loadingEtapas } = useEtapas(selectedTurma);
   const deleteEtapaMutation = useEtapaDeleteMutation();
+  const limparDadosMutation = useLimparDadosTesteMutation();
 
   const handleCreateEtapa = () => {
     setEditingEtapa(null);
@@ -36,6 +37,20 @@ export default function GestaoEtapas() {
   const handleDeleteEtapa = async (etapa: EtapaEstudo) => {
     if (window.confirm(`Tem certeza que deseja excluir a etapa "${etapa.nome}"?\n\nEsta ação não pode ser desfeita e irá remover todos os dados relacionados.`)) {
       await deleteEtapaMutation.mutateAsync(etapa.id);
+    }
+  };
+
+  const handleLimparDadosTeste = async () => {
+    if (window.confirm(
+      'ATENÇÃO: Esta ação irá excluir TODOS os dados de teste do sistema:\n\n' +
+      '• Todas as etapas configuradas\n' +
+      '• Todas as aulas registradas\n' +
+      '• Todos os registros de presença/participação\n\n' +
+      'Esta ação é IRREVERSÍVEL. Tem certeza que deseja continuar?'
+    )) {
+      if (window.confirm('Confirme novamente: Deseja realmente excluir TODOS os dados de teste?')) {
+        await limparDadosMutation.mutateAsync();
+      }
     }
   };
 
@@ -77,14 +92,25 @@ export default function GestaoEtapas() {
             Configure os períodos das etapas de estudo para cada turma
           </p>
         </div>
-        <Button 
-          onClick={handleCreateEtapa}
-          disabled={!selectedTurma}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Nova Etapa
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={handleLimparDadosTeste}
+            variant="destructive"
+            className="flex items-center gap-2"
+            disabled={limparDadosMutation.isPending}
+          >
+            <Database className="w-4 h-4" />
+            {limparDadosMutation.isPending ? 'Limpando...' : 'Limpar Dados de Teste'}
+          </Button>
+          <Button 
+            onClick={handleCreateEtapa}
+            disabled={!selectedTurma}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Etapa
+          </Button>
+        </div>
       </div>
 
       {/* Seletor de Turma */}
