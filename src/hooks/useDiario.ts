@@ -398,10 +398,84 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           };
         }
 
-        // Por enquanto, usar dados mockados até resolver os problemas de RLS/permissões
-        const redacoesData = { total_redacoes: 0, nota_media: 0 };
-        const simuladosData = { total_simulados: 0, nota_media: 0 };
-        const exerciciosData = { total_exercicios: 0 };
+        // Buscar redações do período da etapa
+        let redacoesData = { total_redacoes: 0, nota_media: 0 };
+        try {
+          const { data: redacoes, error: redacoesError } = await supabase
+            .from('redacoes_enviadas')
+            .select('nota, status')
+            .eq('aluno_email', alunoEmail)
+            .gte('data_envio', etapa.data_inicio)
+            .lt('data_envio', etapa.data_fim + 'T23:59:59');
+
+          if (!redacoesError && redacoes) {
+            // Filtrar redações válidas (não devolvidas e com nota)
+            const redacoesValidas = redacoes.filter(r => 
+              r.status !== 'devolvida' && 
+              r.nota !== null && 
+              r.nota !== undefined && 
+              r.nota > 0
+            );
+            
+            redacoesData = {
+              total_redacoes: redacoesValidas.length,
+              nota_media: redacoesValidas.length > 0 
+                ? redacoesValidas.reduce((acc, r) => acc + r.nota, 0) / redacoesValidas.length 
+                : 0
+            };
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar redações:', error);
+        }
+
+        // Buscar simulados do período da etapa
+        let simuladosData = { total_simulados: 0, nota_media: 0 };
+        try {
+          const { data: simulados, error: simuladosError } = await supabase
+            .from('redacoes_simulado')
+            .select('nota')
+            .eq('aluno_email', alunoEmail)
+            .gte('data_envio', etapa.data_inicio)
+            .lt('data_envio', etapa.data_fim + 'T23:59:59')
+            .is('devolvida_por', null); // Não devolvidas
+
+          if (!simuladosError && simulados) {
+            const simuladosComNota = simulados.filter(s => 
+              s.nota !== null && 
+              s.nota !== undefined && 
+              s.nota > 0
+            );
+            
+            simuladosData = {
+              total_simulados: simuladosComNota.length,
+              nota_media: simuladosComNota.length > 0 
+                ? simuladosComNota.reduce((acc, s) => acc + s.nota, 0) / simuladosComNota.length 
+                : 0
+            };
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar simulados:', error);
+        }
+
+        // Buscar exercícios do período da etapa
+        let exerciciosData = { total_exercicios: 0 };
+        try {
+          const { data: exercicios, error: exerciciosError } = await supabase
+            .from('redacoes_exercicio')
+            .select('id')
+            .eq('aluno_email', alunoEmail)
+            .gte('data_envio', etapa.data_inicio)
+            .lt('data_envio', etapa.data_fim + 'T23:59:59')
+            .is('devolvida_por', null); // Não devolvidas
+
+          if (!exerciciosError && exercicios) {
+            exerciciosData = {
+              total_exercicios: exercicios.length
+            };
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar exercícios:', error);
+        }
 
         // Calcular média final (pode ser customizada conforme critério da escola)
         const mediaFinal = (
