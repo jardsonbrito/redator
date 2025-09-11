@@ -147,7 +147,7 @@ export default function ResumoTurma() {
                 </SelectTrigger>
                 <SelectContent>
                   {etapas?.map((etapa) => (
-                    <SelectItem key={etapa.numero} value={etapa.numero.toString()}>
+                    <SelectItem key={etapa.id} value={etapa.numero.toString()}>
                       {etapa.nome}
                     </SelectItem>
                   ))}
