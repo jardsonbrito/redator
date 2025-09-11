@@ -324,15 +324,135 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
   return useQuery({
     queryKey: ['diario_aluno', alunoEmail, turma, etapaNumero],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc('obter_diario_etapa', {
-          p_aluno_email: alunoEmail,
-          p_turma: turma,
-          p_etapa_numero: etapaNumero || null
-        });
+      // Primeiro, vamos buscar as etapas para esta turma
+      const { data: etapas, error: etapasError } = await supabase
+        .from('etapas_estudo')
+        .select('*')
+        .eq('turma', turma)
+        .eq('ativo', true)
+        .order('numero');
       
-      if (error) throw error;
-      return data as DiarioEtapa[];
+      if (etapasError) throw etapasError;
+      
+      if (!etapas || etapas.length === 0) {
+        return [];
+      }
+
+      // Para cada etapa, vamos buscar os dados do aluno
+      const diarioData: DiarioEtapa[] = [];
+      
+      for (const etapa of etapas) {
+        // Se foi especificada uma etapa específica, filtrar
+        if (etapaNumero && etapa.numero !== etapaNumero) {
+          continue;
+        }
+
+        // Buscar aulas desta etapa
+        const { data: aulas } = await supabase
+          .from('aulas_diario')
+          .select('id')
+          .eq('turma', turma)
+          .eq('etapa_id', etapa.id);
+
+        // Buscar presença do aluno nessas aulas
+        const aulaIds = aulas?.map(a => a.id) || [];
+        let frequenciaData = { total_aulas: 0, aulas_presentes: 0, percentual_frequencia: 0 };
+        let participacaoData = { total_aulas: 0, aulas_participou: 0, percentual_participacao: 0 };
+
+        if (aulaIds.length > 0) {
+          const { data: presencas } = await supabase
+            .from('presenca_participacao_diario')
+            .select('presente, participou')
+            .eq('aluno_email', alunoEmail)
+            .in('aula_id', aulaIds);
+
+          const totalAulas = aulaIds.length;
+          const aulasPresentes = presencas?.filter(p => p.presente).length || 0;
+          const aulasParticipou = presencas?.filter(p => p.participou).length || 0;
+
+          frequenciaData = {
+            total_aulas: totalAulas,
+            aulas_presentes: aulasPresentes,
+            percentual_frequencia: totalAulas > 0 ? (aulasPresentes / totalAulas) * 100 : 0
+          };
+
+          participacaoData = {
+            total_aulas: totalAulas,
+            aulas_participou: aulasParticipou,
+            percentual_participacao: totalAulas > 0 ? (aulasParticipou / totalAulas) * 100 : 0
+          };
+        }
+
+        // Buscar redações do período da etapa
+        const { data: redacoes } = await supabase
+          .from('redacoes_enviadas')
+          .select('nota')
+          .eq('aluno_email', alunoEmail)
+          .eq('turma', turma)
+          .gte('data_envio', etapa.data_inicio)
+          .lte('data_envio', etapa.data_fim)
+          .not('nota', 'is', null);
+
+        const redacoesData = {
+          total_redacoes: redacoes?.length || 0,
+          nota_media: redacoes && redacoes.length > 0 
+            ? redacoes.reduce((acc, r) => acc + (r.nota || 0), 0) / redacoes.length 
+            : 0
+        };
+
+        // Buscar simulados do período da etapa
+        const { data: simulados } = await supabase
+          .from('redacoes_simulado')
+          .select('nota')
+          .eq('aluno_email', alunoEmail)
+          .eq('turma', turma)
+          .gte('data_envio', etapa.data_inicio)
+          .lte('data_envio', etapa.data_fim)
+          .not('nota', 'is', null);
+
+        const simuladosData = {
+          total_simulados: simulados?.length || 0,
+          nota_media: simulados && simulados.length > 0 
+            ? simulados.reduce((acc, s) => acc + (s.nota || 0), 0) / simulados.length 
+            : 0
+        };
+
+        // Buscar exercícios do período da etapa
+        const { data: exercicios } = await supabase
+          .from('redacoes_exercicio')
+          .select('id')
+          .eq('aluno_email', alunoEmail)
+          .eq('turma', turma)
+          .gte('data_envio', etapa.data_inicio)
+          .lte('data_envio', etapa.data_fim);
+
+        const exerciciosData = {
+          total_exercicios: exercicios?.length || 0
+        };
+
+        // Calcular média final (pode ser customizada conforme critério da escola)
+        const mediaFinal = (
+          (frequenciaData.percentual_frequencia * 0.2) +
+          (participacaoData.percentual_participacao * 0.2) +
+          (redacoesData.nota_media * 0.4) +
+          (simuladosData.nota_media * 0.2)
+        ) / 10;
+
+        diarioData.push({
+          etapa_numero: etapa.numero,
+          etapa_nome: etapa.nome,
+          data_inicio: etapa.data_inicio,
+          data_fim: etapa.data_fim,
+          frequencia: frequenciaData,
+          participacao: participacaoData,
+          redacoes: redacoesData,
+          simulados: simuladosData,
+          exercicios: exerciciosData,
+          media_final: Math.max(0, Math.min(10, mediaFinal * 10)) // Garantir que fica entre 0 e 10
+        });
+      }
+      
+      return diarioData;
     },
     enabled: !!alunoEmail && !!turma,
     staleTime: 3 * 60 * 1000, // 3 minutos
@@ -432,6 +552,11 @@ export function useTurmasDisponiveis() {
         'LRC2025': 'Turma C',
         'LRD2025': 'Turma D',
         'LRE2025': 'Turma E',
+        'Turma A': 'Turma A',
+        'Turma B': 'Turma B',
+        'Turma C': 'Turma C',
+        'Turma D': 'Turma D',
+        'Turma E': 'Turma E',
         'visitante': 'Visitantes'
       };
       
