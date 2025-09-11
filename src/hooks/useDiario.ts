@@ -511,14 +511,165 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
   return useQuery({
     queryKey: ['resumo_turma', turma, etapaNumero],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc('obter_resumo_turma_etapa', {
-          p_turma: turma,
-          p_etapa_numero: etapaNumero
+      if (!turma || !etapaNumero) {
+        return null;
+      }
+
+      // Mapeamento de turmas (igual ao useDiarioAluno)
+      const turmaParaCodigo = (turmaAluno: string): string[] => {
+        const mapeamento: { [key: string]: string[] } = {
+          'Turma A': ['Turma A', 'LRA2025'],
+          'Turma B': ['Turma B', 'LRB2025'],
+          'Turma C': ['Turma C', 'LRC2025'],
+          'Turma D': ['Turma D', 'LRD2025'],
+          'Turma E': ['Turma E', 'LRE2025'],
+          'visitante': ['visitante']
+        };
+        return mapeamento[turmaAluno] || [turmaAluno];
+      };
+
+      const codigosTurma = turmaParaCodigo(turma);
+
+      // Buscar a etapa específica
+      const { data: etapas, error: etapasError } = await supabase
+        .from('etapas_estudo')
+        .select('*')
+        .in('turma', codigosTurma)
+        .eq('numero', etapaNumero)
+        .eq('ativo', true)
+        .single();
+
+      if (etapasError || !etapas) {
+        console.log('⚠️ Etapa não encontrada:', etapasError);
+        return null;
+      }
+
+      // Buscar todos os alunos dessa turma
+      const { data: alunos, error: alunosError } = await supabase
+        .from('profiles')
+        .select('email, nome')
+        .eq('user_type', 'aluno')
+        .eq('turma', turma)
+        .eq('ativo', true);
+
+      if (alunosError) {
+        console.log('⚠️ Erro ao buscar alunos:', alunosError);
+        return null;
+      }
+
+      if (!alunos || alunos.length === 0) {
+        return {
+          etapa: etapas,
+          alunos: [],
+          estatisticas: {
+            totalAlunos: 0,
+            frequenciaMedia: 0,
+            participacaoMedia: 0,
+            mediaFinalMedia: 0,
+            totalRedacoes: 0,
+            totalSimulados: 0,
+            totalExercicios: 0
+          }
+        };
+      }
+
+      // Para cada aluno, buscar dados de diário
+      const resumoAlunos = [];
+      let totalFrequencia = 0;
+      let totalParticipacao = 0;
+      let totalMediaFinal = 0;
+      let totalRedacoes = 0;
+      let totalSimulados = 0;
+      let totalExercicios = 0;
+
+      for (const aluno of alunos) {
+        // Buscar aulas desta etapa
+        const { data: aulas } = await supabase
+          .from('aulas_diario')
+          .select('id')
+          .eq('turma', turma)
+          .eq('etapa_id', etapas.id);
+
+        const aulaIds = aulas?.map(a => a.id) || [];
+        let frequenciaData = { total_aulas: 0, aulas_presentes: 0, percentual_frequencia: 0 };
+        let participacaoData = { total_aulas: 0, aulas_participou: 0, percentual_participacao: 0 };
+
+        if (aulaIds.length > 0) {
+          const { data: presencas } = await supabase
+            .from('presenca_participacao_diario')
+            .select('presente, participou')
+            .eq('aluno_email', aluno.email)
+            .in('aula_id', aulaIds);
+
+          const totalAulas = aulaIds.length;
+          const aulasPresentes = presencas?.filter(p => p.presente).length || 0;
+          const aulasParticipou = presencas?.filter(p => p.participou).length || 0;
+
+          frequenciaData = {
+            total_aulas: totalAulas,
+            aulas_presentes: aulasPresentes,
+            percentual_frequencia: totalAulas > 0 ? (aulasPresentes / totalAulas) * 100 : 0
+          };
+
+          participacaoData = {
+            total_aulas: totalAulas,
+            aulas_participou: aulasParticipou,
+            percentual_participacao: totalAulas > 0 ? (aulasParticipou / totalAulas) * 100 : 0
+          };
+        }
+
+        // Dados de redações/simulados/exercícios (simplificado por enquanto)
+        const redacoesData = { total_redacoes: 0, nota_media: 0 };
+        const simuladosData = { total_simulados: 0, nota_media: 0 };
+        const exerciciosData = { total_exercicios: 0 };
+
+        // Calcular média final
+        const mediaFinal = (
+          (frequenciaData.percentual_frequencia * 0.2) +
+          (participacaoData.percentual_participacao * 0.2) +
+          (redacoesData.nota_media * 0.4) +
+          (simuladosData.nota_media * 0.2)
+        ) / 10;
+
+        const dadosAluno = {
+          frequencia: frequenciaData,
+          participacao: participacaoData,
+          redacoes: redacoesData,
+          simulados: simuladosData,
+          exercicios: exerciciosData,
+          media_final: Math.max(0, Math.min(10, mediaFinal * 10))
+        };
+
+        resumoAlunos.push({
+          aluno_email: aluno.email,
+          aluno_nome: aluno.nome,
+          dados: dadosAluno
         });
+
+        // Acumular para estatísticas gerais
+        totalFrequencia += frequenciaData.percentual_frequencia;
+        totalParticipacao += participacaoData.percentual_participacao;
+        totalMediaFinal += dadosAluno.media_final;
+        totalRedacoes += redacoesData.total_redacoes;
+        totalSimulados += simuladosData.total_simulados;
+        totalExercicios += exerciciosData.total_exercicios;
+      }
+
+      const totalAlunos = alunos.length;
       
-      if (error) throw error;
-      return data as ResumoTurmaEtapa;
+      return {
+        etapa: etapas,
+        alunos: resumoAlunos,
+        estatisticas: {
+          totalAlunos,
+          frequenciaMedia: totalAlunos > 0 ? totalFrequencia / totalAlunos : 0,
+          participacaoMedia: totalAlunos > 0 ? totalParticipacao / totalAlunos : 0,
+          mediaFinalMedia: totalAlunos > 0 ? totalMediaFinal / totalAlunos : 0,
+          totalRedacoes,
+          totalSimulados,
+          totalExercicios
+        }
+      };
     },
     enabled: !!turma && !!etapaNumero,
     staleTime: 5 * 60 * 1000, // 5 minutos
