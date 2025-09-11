@@ -522,7 +522,7 @@ export function useTurmasDisponiveis() {
       // Turmas fixas que sempre devem aparecer
       const turmasFixas = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E', 'visitante'];
       
-      // Combinar turmas fixas com as encontradas nas redações
+      // Combinar turmas fixas com as encontradas nas redações, removendo duplicatas
       const todasTurmas = [...new Set([...turmasFixas, ...turmasComRedacoes])];
       
       // Mapeamento de códigos para nomes amigáveis
@@ -540,11 +540,19 @@ export function useTurmasDisponiveis() {
         'visitante': 'Visitantes'
       };
       
-      // Retornar objetos com código e nome amigável, ordenados
-      return todasTurmas.sort().map(codigo => ({
+      // Primeiro mapear para nomes amigáveis, depois remover duplicatas finais
+      const turmasComNomes = todasTurmas.map(codigo => ({
         codigo,
         nome: turmasMap[codigo] || codigo
       }));
+      
+      // Remover duplicatas baseado no nome final e manter ordem
+      const turmasUnicas = turmasComNomes.filter((turma, index, array) => 
+        array.findIndex(t => t.nome === turma.nome) === index
+      );
+      
+      // Ordenar por nome
+      return turmasUnicas.sort((a, b) => a.nome.localeCompare(b.nome));
     },
     staleTime: 10 * 60 * 1000, // 10 minutos
   });
