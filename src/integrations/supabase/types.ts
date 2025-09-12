@@ -1634,6 +1634,7 @@ export type Database = {
         Row: {
           aluno_id: string | null
           audio_url: string | null
+          autor: string | null
           comentario_c1: string | null
           comentario_c2: string | null
           comentario_c3: string | null
@@ -1660,6 +1661,7 @@ export type Database = {
         Insert: {
           aluno_id?: string | null
           audio_url?: string | null
+          autor?: string | null
           comentario_c1?: string | null
           comentario_c2?: string | null
           comentario_c3?: string | null
@@ -1686,6 +1688,7 @@ export type Database = {
         Update: {
           aluno_id?: string | null
           audio_url?: string | null
+          autor?: string | null
           comentario_c1?: string | null
           comentario_c2?: string | null
           comentario_c3?: string | null

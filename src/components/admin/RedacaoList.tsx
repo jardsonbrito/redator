@@ -34,7 +34,7 @@ export const RedacaoList = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes')
-        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita')
+        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor')
         .order('data_envio', { ascending: false });
       
       if (error) throw error;
@@ -175,6 +175,7 @@ export const RedacaoList = () => {
                   module: 'exemplares',
                   coverUrl: resolveCover(undefined, redacao.pdf_url as string | null),
                   title: redacao.frase_tematica || 'Redação Exemplar',
+                  subtitle: redacao.autor ? `Por: ${redacao.autor}` : undefined,
                   badges: redacao.eixo_tematico
                     ? [{ label: redacao.eixo_tematico as string, tone: 'primary' }]
                     : [],

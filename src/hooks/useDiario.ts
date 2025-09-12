@@ -404,8 +404,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
         try {
           const { data: redacoes, error: redacoesError } = await supabase
             .from('redacoes_enviadas')
-            .select('nota, status')
-            .eq('aluno_email', alunoEmail)
+            .select('nota_total, status')
+            .ilike('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
             .lt('data_envio', etapa.data_fim + 'T23:59:59');
 
@@ -413,15 +413,15 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             // Filtrar redações válidas (não devolvidas e com nota)
             const redacoesValidas = redacoes.filter(r => 
               r.status !== 'devolvida' && 
-              r.nota !== null && 
-              r.nota !== undefined && 
-              r.nota > 0
+              r.nota_total !== null && 
+              r.nota_total !== undefined && 
+              r.nota_total > 0
             );
             
             redacoesData = {
               total_redacoes: redacoesValidas.length,
               nota_media: redacoesValidas.length > 0 
-                ? redacoesValidas.reduce((acc, r) => acc + r.nota, 0) / redacoesValidas.length 
+                ? redacoesValidas.reduce((acc, r) => acc + r.nota_total, 0) / redacoesValidas.length 
                 : 0
             };
           }
@@ -434,23 +434,23 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
         try {
           const { data: simulados, error: simuladosError } = await supabase
             .from('redacoes_simulado')
-            .select('nota')
-            .eq('aluno_email', alunoEmail)
+            .select('nota_total')
+            .ilike('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
             .lt('data_envio', etapa.data_fim + 'T23:59:59')
             .is('devolvida_por', null); // Não devolvidas
 
           if (!simuladosError && simulados) {
             const simuladosComNota = simulados.filter(s => 
-              s.nota !== null && 
-              s.nota !== undefined && 
-              s.nota > 0
+              s.nota_total !== null && 
+              s.nota_total !== undefined && 
+              s.nota_total > 0
             );
             
             simuladosData = {
               total_simulados: simuladosComNota.length,
               nota_media: simuladosComNota.length > 0 
-                ? simuladosComNota.reduce((acc, s) => acc + s.nota, 0) / simuladosComNota.length 
+                ? simuladosComNota.reduce((acc, s) => acc + s.nota_total, 0) / simuladosComNota.length 
                 : 0
             };
           }

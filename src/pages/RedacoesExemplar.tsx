@@ -184,7 +184,7 @@ const RedacoesExemplar = () => {
                     id={redacao.id}
                     titulo={redacao.frase_tematica}
                     eixo={redacao.eixo_tematico}
-                    autorNome="Jardson Brito"
+                    autorNome={redacao.autor || "Jardson Brito"}
                     capaUrl={redacao.imagem_url || redacao.pdf_url}
                     onViewRedacao={() => setSelectedRedacao(redacao)}
                     variant="student"

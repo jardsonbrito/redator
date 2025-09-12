@@ -118,7 +118,7 @@ const CorretorRedacoesExemplar = () => {
                 id={redacao.id}
                 titulo={redacao.frase_tematica}
                 eixo={redacao.eixo_tematico}
-                autorNome="Professor"
+                autorNome={redacao.autor || "Professor"}
                 capaUrl={redacao.imagem_url || redacao.pdf_url}
                 onViewRedacao={() => setSelectedRedacao(redacao)}
                 variant="student"

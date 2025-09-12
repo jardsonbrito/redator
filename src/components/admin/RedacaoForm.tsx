@@ -18,7 +18,8 @@ export const RedacaoForm = () => {
     eixo_tematico: '',
     conteudo: '',
     pdf_url: '',
-    dica_de_escrita: ''
+    dica_de_escrita: '',
+    autor: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,7 +40,8 @@ export const RedacaoForm = () => {
           data_envio: new Date().toISOString(),
           // Campos específicos para metadados da redação exemplar
           frase_tematica: formData.frase_tematica.trim(),
-          eixo_tematico: formData.eixo_tematico.trim()
+          eixo_tematico: formData.eixo_tematico.trim(),
+          autor: formData.autor.trim() || null
         }])
         .select('*')
         .single();
@@ -68,7 +70,8 @@ export const RedacaoForm = () => {
         eixo_tematico: '', 
         conteudo: '',
         pdf_url: '',
-        dica_de_escrita: ''
+        dica_de_escrita: '',
+        autor: ''
       });
 
     } catch (error: any) {
@@ -110,6 +113,19 @@ export const RedacaoForm = () => {
         />
         <p className="text-sm text-gray-600 mt-1">
           Categoria temática que será exibida como subtítulo nos cards.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="autor">Autor da Redação</Label>
+        <Input
+          id="autor"
+          value={formData.autor}
+          onChange={(e) => setFormData({...formData, autor: e.target.value})}
+          placeholder="Ex: João Silva, Maria Santos"
+        />
+        <p className="text-sm text-gray-600 mt-1">
+          Nome do autor da redação exemplar que será exibido nos cards.
         </p>
       </div>
 

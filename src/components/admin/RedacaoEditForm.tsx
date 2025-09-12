@@ -26,7 +26,8 @@ export const RedacaoEditForm = ({ redacaoId, onCancel, onSuccess }: RedacaoEditF
     eixo_tematico: '',
     conteudo: '',
     pdf_url: '',
-    dica_de_escrita: ''
+    dica_de_escrita: '',
+    autor: ''
   });
 
   useEffect(() => {
@@ -45,7 +46,8 @@ export const RedacaoEditForm = ({ redacaoId, onCancel, onSuccess }: RedacaoEditF
           eixo_tematico: data.eixo_tematico || '',
           conteudo: data.conteudo || '',
           pdf_url: data.pdf_url || '',
-          dica_de_escrita: data.dica_de_escrita || ''
+          dica_de_escrita: data.dica_de_escrita || '',
+          autor: data.autor || ''
         });
       } catch (error: any) {
         toast({
@@ -74,6 +76,7 @@ export const RedacaoEditForm = ({ redacaoId, onCancel, onSuccess }: RedacaoEditF
           conteudo: formData.conteudo.trim(),
           pdf_url: formData.pdf_url.trim() || null,
           dica_de_escrita: formData.dica_de_escrita.trim() || null,
+          autor: formData.autor.trim() || null,
         })
         .eq('id', redacaoId);
 
@@ -136,6 +139,16 @@ export const RedacaoEditForm = ({ redacaoId, onCancel, onSuccess }: RedacaoEditF
             onChange={(e) => setFormData({...formData, eixo_tematico: e.target.value})}
             placeholder="Ex: Educação, Meio Ambiente, Tecnologia"
             required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="autor">Autor da Redação</Label>
+          <Input
+            id="autor"
+            value={formData.autor}
+            onChange={(e) => setFormData({...formData, autor: e.target.value})}
+            placeholder="Ex: João Silva, Maria Santos"
           />
         </div>
 
