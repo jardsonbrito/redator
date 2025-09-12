@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save, Calendar } from 'lucide-react';
 import { useEtapaMutation, useTurmasDisponiveis } from '@/hooks/useDiario';
+import { formatDateForDatabase, formatDateFromDatabase } from '@/utils/dateUtils';
 import { NUMEROS_ETAPAS, NOMES_ETAPAS } from '@/types/diario';
 import type { FormEtapaProps } from '@/types/diario';
 
@@ -43,8 +44,8 @@ export function FormEtapa({ turma, etapa, onSave, onCancel }: FormEtapaProps) {
     defaultValues: {
       nome: etapa?.nome || NOMES_ETAPAS[0],
       numero: etapa?.numero || 1,
-      data_inicio: etapa?.data_inicio || '',
-      data_fim: etapa?.data_fim || '',
+      data_inicio: etapa?.data_inicio ? formatDateFromDatabase(etapa.data_inicio) : '',
+      data_fim: etapa?.data_fim ? formatDateFromDatabase(etapa.data_fim) : '',
       turma: turma || etapa?.turma || '',
     }
   });
@@ -60,6 +61,8 @@ export function FormEtapa({ turma, etapa, onSave, onCancel }: FormEtapaProps) {
     try {
       await etapaMutation.mutateAsync({
         ...data,
+        data_inicio: formatDateForDatabase(data.data_inicio),
+        data_fim: formatDateForDatabase(data.data_fim),
         ...(etapa?.id && { id: etapa.id })
       });
       onSave(data);
@@ -178,31 +181,6 @@ export function FormEtapa({ turma, etapa, onSave, onCancel }: FormEtapaProps) {
               </div>
             </div>
 
-            {/* Dica sobre duração flexível */}
-            <div className="text-sm text-muted-foreground bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-              <div className="flex items-start gap-2">
-                <span className="text-amber-600 dark:text-amber-400 mt-0.5">💡</span>
-                <div>
-                  <strong className="text-amber-900 dark:text-amber-100">Duração totalmente flexível:</strong>
-                  <span className="text-amber-800 dark:text-amber-200 ml-1">
-                    Configure o período que funcionar melhor para sua escola - pode ser 2, 3, 4 meses ou qualquer outra duração.
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Informações sobre a etapa */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                Sobre as Etapas
-              </h4>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• Cada etapa pode ter duração flexível (2, 3 ou mais meses)</li>
-                <li>• O sistema considera apenas atividades dentro do período da etapa</li>
-                <li>• Aulas serão automaticamente vinculadas à etapa baseada na data</li>
-                <li>• Não pode haver sobreposição de períodos para a mesma turma</li>
-              </ul>
-            </div>
 
             {/* Botões de Ação */}
             <div className="flex gap-3 pt-4">

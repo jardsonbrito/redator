@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,11 +12,21 @@ import type { ResumoAlunoTurma } from '@/types/diario';
 
 export default function ResumoTurma() {
   const [selectedTurma, setSelectedTurma] = useState<string>('');
-  const [selectedEtapa, setSelectedEtapa] = useState<number>(1);
+  const [selectedEtapa, setSelectedEtapa] = useState<number | null>(null);
   
   const { data: turmas, isLoading: loadingTurmas } = useTurmasDisponiveis();
   const { data: etapas } = useEtapas(selectedTurma);
-  const { data: resumo, isLoading: loadingResumo } = useResumoTurma(selectedTurma, selectedEtapa);
+  const { data: resumo, isLoading: loadingResumo } = useResumoTurma(selectedTurma, selectedEtapa || 0);
+
+  // Selecionar automaticamente a primeira etapa disponível quando turma mudar
+  useEffect(() => {
+    if (etapas && etapas.length > 0) {
+      const primeiraEtapa = etapas.sort((a, b) => a.numero - b.numero)[0];
+      setSelectedEtapa(primeiraEtapa.numero);
+    } else {
+      setSelectedEtapa(null);
+    }
+  }, [etapas]);
 
   const exportarCSV = () => {
     if (!resumo) return;
@@ -140,12 +150,16 @@ export default function ResumoTurma() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Etapa</label>
               <Select 
-                value={selectedEtapa.toString()} 
+                value={selectedEtapa?.toString() || ""} 
                 onValueChange={(value) => setSelectedEtapa(parseInt(value))}
-                disabled={!selectedTurma}
+                disabled={!selectedTurma || !etapas || etapas.length === 0}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma etapa" />
+                  <SelectValue placeholder={
+                    !selectedTurma ? "Primeiro selecione uma turma" 
+                    : !etapas || etapas.length === 0 ? "Nenhuma etapa disponível"
+                    : "Selecione uma etapa"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
                   {etapas?.map((etapa) => (
@@ -255,10 +269,23 @@ export default function ResumoTurma() {
                 </div>
               </div>
             ) : !resumo || resumo.alunos.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Nenhum dado encontrado para esta turma e etapa
-                </p>
+              <div className="text-center py-8 space-y-3">
+                <div className="text-muted-foreground">
+                  {!selectedTurma ? (
+                    "Selecione uma turma para ver os dados dos alunos"
+                  ) : !selectedEtapa ? (
+                    "Selecione uma etapa para ver os dados dos alunos"  
+                  ) : (
+                    <>
+                      <p className="mb-2">Nenhum aluno encontrado para:</p>
+                      <p className="font-medium">Turma: {turmas?.find(t => t.codigo === selectedTurma)?.nome || selectedTurma}</p>
+                      <p className="font-medium">Etapa: {etapas?.find(e => e.numero === selectedEtapa)?.nome || `Etapa ${selectedEtapa}`}</p>
+                      <p className="text-xs mt-2">
+                        Verifique se há alunos cadastrados nesta turma e se a etapa foi criada corretamente.
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">

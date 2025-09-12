@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save, BookOpen } from 'lucide-react';
 import { useAulaMutation, useTurmasDisponiveis } from '@/hooks/useDiario';
+import { formatDateForDatabase, getTodayLocalDate, formatDateFromDatabase } from '@/utils/dateUtils';
 import type { FormAulaProps } from '@/types/diario';
 
 const aulaSchema = z.object({
@@ -34,7 +35,7 @@ export function FormAula({ turma, aula, onSave, onCancel }: FormAulaProps) {
     resolver: zodResolver(aulaSchema),
     defaultValues: {
       turma: turma || aula?.turma || '',
-      data_aula: aula?.data_aula || new Date().toISOString().split('T')[0],
+      data_aula: aula?.data_aula ? formatDateFromDatabase(aula.data_aula) : getTodayLocalDate(),
       conteudo_ministrado: aula?.conteudo_ministrado || '',
       observacoes: aula?.observacoes || '',
     }
@@ -44,6 +45,7 @@ export function FormAula({ turma, aula, onSave, onCancel }: FormAulaProps) {
     try {
       await aulaMutation.mutateAsync({
         ...data,
+        data_aula: formatDateForDatabase(data.data_aula),
         ...(aula?.id && { id: aula.id }),
         professor_email: 'admin@redator.com' // TODO: Pegar email do usuário logado
       });
@@ -140,17 +142,6 @@ export function FormAula({ turma, aula, onSave, onCancel }: FormAulaProps) {
               )}
             </div>
 
-            {/* Informações sobre detecção automática */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                Detecção Automática de Etapa
-              </h4>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• O sistema automaticamente vincula a aula à etapa correta baseada na data</li>
-                <li>• Certifique-se de que a data está dentro do período de uma etapa configurada</li>
-                <li>• Após salvar, você poderá registrar a presença dos alunos</li>
-              </ul>
-            </div>
 
             {/* Botões de Ação */}
             <div className="flex gap-3 pt-4">

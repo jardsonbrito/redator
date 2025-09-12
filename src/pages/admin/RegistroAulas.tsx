@@ -8,6 +8,7 @@ import { FormAula } from '@/components/admin/diario/FormAula';
 import { ControlePresenca } from '@/components/admin/diario/ControlePresenca';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDateForDisplay, parseDateSafely } from '@/utils/dateUtils';
 import type { AulaDiario } from '@/types/diario';
 
 export default function RegistroAulas() {
@@ -48,14 +49,11 @@ export default function RegistroAulas() {
   };
 
   const handleDeleteAula = async (aula: AulaDiario) => {
-    if (window.confirm(`Tem certeza que deseja excluir a aula do dia ${formatDate(aula.data_aula)}?\n\nEsta ação não pode ser desfeita e irá remover todos os registros de presença relacionados.`)) {
+    if (window.confirm(`Tem certeza que deseja excluir a aula do dia ${formatDateForDisplay(aula.data_aula)}?\n\nEsta ação não pode ser desfeita e irá remover todos os registros de presença relacionados.`)) {
       await deleteAulaMutation.mutateAsync(aula.id);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: ptBR });
-  };
 
   const getEtapaBadge = (aula: any) => {
     if (aula.etapas_estudo) {
@@ -150,8 +148,8 @@ export default function RegistroAulas() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {etapas.map((etapa) => {
                 const hoje = new Date();
-                const inicio = new Date(etapa.data_inicio);
-                const fim = new Date(etapa.data_fim);
+                const inicio = parseDateSafely(etapa.data_inicio);
+                const fim = parseDateSafely(etapa.data_fim);
                 const isAtiva = hoje >= inicio && hoje <= fim;
                 
                 return (
@@ -163,7 +161,7 @@ export default function RegistroAulas() {
                   >
                     <div className="font-medium">{etapa.nome}</div>
                     <div className="text-sm text-muted-foreground">
-                      {formatDate(etapa.data_inicio)} - {formatDate(etapa.data_fim)}
+                      {formatDateForDisplay(etapa.data_inicio)} - {formatDateForDisplay(etapa.data_fim)}
                     </div>
                     {isAtiva && (
                       <Badge variant="default" className="mt-1 text-xs">
@@ -209,7 +207,7 @@ export default function RegistroAulas() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-3">
                             <h3 className="font-semibold text-lg">
-                              {formatDate(aula.data_aula)}
+                              {formatDateForDisplay(aula.data_aula)}
                             </h3>
                             {getEtapaBadge(aula)}
                           </div>

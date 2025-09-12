@@ -7,6 +7,7 @@ import { useEtapas, useTurmasDisponiveis, useEtapaDeleteMutation } from '@/hooks
 import { FormEtapa } from '@/components/admin/diario/FormEtapa';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDateForDisplay, parseDateSafely } from '@/utils/dateUtils';
 import type { EtapaEstudo } from '@/types/diario';
 
 export default function GestaoEtapas() {
@@ -39,14 +40,11 @@ export default function GestaoEtapas() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: ptBR });
-  };
-
   const getStatusBadge = (etapa: EtapaEstudo) => {
     const hoje = new Date();
-    const inicio = new Date(etapa.data_inicio);
-    const fim = new Date(etapa.data_fim);
+    // Usar função utilitária para corrigir timezone das datas
+    const inicio = parseDateSafely(etapa.data_inicio);
+    const fim = parseDateSafely(etapa.data_fim);
 
     if (hoje < inicio) {
       return <Badge variant="secondary">Futura</Badge>;
@@ -153,7 +151,7 @@ export default function GestaoEtapas() {
                       <div className="space-y-1">
                         <div className="text-sm text-muted-foreground">Período</div>
                         <div className="text-sm font-medium">
-                          {formatDate(etapa.data_inicio)} até {formatDate(etapa.data_fim)}
+                          {formatDateForDisplay(etapa.data_inicio)} até {formatDateForDisplay(etapa.data_fim)}
                         </div>
                       </div>
                       

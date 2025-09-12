@@ -325,26 +325,11 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
   return useQuery({
     queryKey: ['diario_aluno', alunoEmail, turma, etapaNumero],
     queryFn: async () => {
-      // Mapeamento de turmas de aluno para códigos de etapa
-      const turmaParaCodigo = (turmaAluno: string): string[] => {
-        const mapeamento: { [key: string]: string[] } = {
-          'Turma A': ['Turma A', 'LRA2025'],
-          'Turma B': ['Turma B', 'LRB2025'],
-          'Turma C': ['Turma C', 'LRC2025'],
-          'Turma D': ['Turma D', 'LRD2025'],
-          'Turma E': ['Turma E', 'LRE2025'],
-          'visitante': ['visitante']
-        };
-        return mapeamento[turmaAluno] || [turmaAluno];
-      };
-
-      const codigosTurma = turmaParaCodigo(turma);
-      
-      // Buscar etapas para qualquer um dos códigos possíveis
+      // Buscar etapas da turma
       const { data: etapas, error: etapasError } = await supabase
         .from('etapas_estudo')
         .select('*')
-        .in('turma', codigosTurma)
+        .eq('turma', turma)
         .eq('ativo', true)
         .order('numero');
       
@@ -575,29 +560,15 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
         return null;
       }
 
-      // Mapeamento de turmas (igual ao useDiarioAluno)
-      const turmaParaCodigo = (turmaAluno: string): string[] => {
-        const mapeamento: { [key: string]: string[] } = {
-          'Turma A': ['Turma A', 'LRA2025'],
-          'Turma B': ['Turma B', 'LRB2025'],
-          'Turma C': ['Turma C', 'LRC2025'],
-          'Turma D': ['Turma D', 'LRD2025'],
-          'Turma E': ['Turma E', 'LRE2025'],
-          'visitante': ['visitante']
-        };
-        return mapeamento[turmaAluno] || [turmaAluno];
-      };
-
-      const codigosTurma = turmaParaCodigo(turma);
-
       // Buscar a etapa específica
       const { data: etapas, error: etapasError } = await supabase
         .from('etapas_estudo')
         .select('*')
-        .in('turma', codigosTurma)
+        .eq('turma', turma)
         .eq('numero', etapaNumero)
         .eq('ativo', true)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (etapasError || !etapas) {
         console.log('⚠️ Etapa não encontrada:', etapasError);
