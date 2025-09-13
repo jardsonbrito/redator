@@ -355,10 +355,15 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           .eq('turma', turma)
           .eq('etapa_id', etapa.id);
 
-        // Buscar presença do aluno nessas aulas
+        // Buscar presença do aluno nessas aulas do diário
         const aulaIds = aulas?.map(a => a.id) || [];
         let frequenciaData = { total_aulas: 0, aulas_presentes: 0, percentual_frequencia: 0 };
         let participacaoData = { total_aulas: 0, aulas_participou: 0, percentual_participacao: 0 };
+
+        // Contar presenças nas aulas do diário
+        let totalAulasDiario = 0;
+        let aulasPresentes = 0;
+        let aulasParticipou = 0;
 
         if (aulaIds.length > 0) {
           const { data: presencas } = await supabase
@@ -367,22 +372,58 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             .eq('aluno_email', alunoEmail)
             .in('aula_id', aulaIds);
 
-          const totalAulas = aulaIds.length;
-          const aulasPresentes = presencas?.filter(p => p.presente).length || 0;
-          const aulasParticipou = presencas?.filter(p => p.participou).length || 0;
-
-          frequenciaData = {
-            total_aulas: totalAulas,
-            aulas_presentes: aulasPresentes,
-            percentual_frequencia: totalAulas > 0 ? (aulasPresentes / totalAulas) * 100 : 0
-          };
-
-          participacaoData = {
-            total_aulas: totalAulas,
-            aulas_participou: aulasParticipou,
-            percentual_participacao: totalAulas > 0 ? (aulasParticipou / totalAulas) * 100 : 0
-          };
+          totalAulasDiario = aulaIds.length;
+          aulasPresentes = presencas?.filter(p => p.presente).length || 0;
+          aulasParticipou = presencas?.filter(p => p.participou).length || 0;
         }
+
+        // Buscar presença nas aulas virtuais da mesma etapa/período
+        let totalAulasVirtuais = 0;
+        let presencasVirtuais = 0;
+
+        try {
+          // Buscar aulas virtuais do período da etapa para a turma do aluno
+          const { data: aulasVirtuais } = await supabase
+            .from('aulas_virtuais')
+            .select('id')
+            .eq('ativo', true)
+            .gte('data_aula', etapa.data_inicio)
+            .lt('data_aula', etapa.data_fim + 'T23:59:59')
+            .or(`turmas_autorizadas.cs.{"${turma}"},turmas_autorizadas.cs.{"Todas"}`);
+
+          if (aulasVirtuais && aulasVirtuais.length > 0) {
+            totalAulasVirtuais = aulasVirtuais.length;
+            
+            // Buscar presenças nas aulas virtuais (entrada registrada = presente)
+            const { data: presencasAulasVirtuais } = await supabase
+              .from('presenca_aulas')
+              .select('entrada_at')
+              .eq('email_aluno', alunoEmail.toLowerCase())
+              .in('aula_id', aulasVirtuais.map(a => a.id))
+              .not('entrada_at', 'is', null);
+
+            presencasVirtuais = presencasAulasVirtuais?.length || 0;
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar aulas virtuais:', error);
+        }
+
+        // Combinar dados do diário + aulas virtuais
+        const totalAulasCompleto = totalAulasDiario + totalAulasVirtuais;
+        const totalPresencasCompleto = aulasPresentes + presencasVirtuais;
+
+        frequenciaData = {
+          total_aulas: totalAulasCompleto,
+          aulas_presentes: totalPresencasCompleto,
+          percentual_frequencia: totalAulasCompleto > 0 ? (totalPresencasCompleto / totalAulasCompleto) * 100 : 0
+        };
+
+        // Para participação, considerar apenas aulas do diário (aulas virtuais não têm campo participação)
+        participacaoData = {
+          total_aulas: totalAulasDiario,
+          aulas_participou: aulasParticipou,
+          percentual_participacao: totalAulasDiario > 0 ? (aulasParticipou / totalAulasDiario) * 100 : 0
+        };
 
         // Buscar redações do período da etapa
         let redacoesData = { total_redacoes: 0, nota_media: 0 };
@@ -669,30 +710,57 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
 
       console.log(`🎯 Dados de presença carregados: ${todasPresencas?.length || 0} registros`);
 
+      // Buscar aulas virtuais do período da etapa para esta turma (UMA VEZ SÓ)
+      const { data: aulasVirtuais } = await supabase
+        .from('aulas_virtuais')
+        .select('id')
+        .eq('ativo', true)
+        .gte('data_aula', etapas.data_inicio)
+        .lt('data_aula', etapas.data_fim + 'T23:59:59')
+        .or(`turmas_autorizadas.cs.{"${turma}"},turmas_autorizadas.cs.{"Todas"}`);
+
+      const aulasVirtuaisIds = aulasVirtuais?.map(a => a.id) || [];
+      
+      // Buscar TODAS as presenças nas aulas virtuais para todos os alunos (UMA VEZ SÓ)
+      const { data: todasPresencasVirtuais } = aulasVirtuaisIds.length > 0 ? await supabase
+        .from('presenca_aulas')
+        .select('email_aluno, entrada_at')
+        .filter('email_aluno', 'in', `(${emailsAlunos.map(e => `"${e.toLowerCase()}"`).join(',')})`)
+        .in('aula_id', aulasVirtuaisIds)
+        .not('entrada_at', 'is', null) : { data: [] };
+
+      console.log(`🎯 Dados de presença virtual carregados: ${todasPresencasVirtuais?.length || 0} registros`);
+
       for (const aluno of alunos) {
-        let frequenciaData = { total_aulas: aulaIds.length, aulas_presentes: 0, percentual_frequencia: 0 };
-        let participacaoData = { total_aulas: aulaIds.length, aulas_participou: 0, percentual_participacao: 0 };
-
-        // Filtrar presenças deste aluno dos dados já carregados
+        // Contar presenças nas aulas do diário
         const presencasAluno = todasPresencas?.filter(p => p.aluno_email === aluno.email) || [];
-        
-        if (aulaIds.length > 0) {
-          const totalAulas = aulaIds.length;
-          const aulasPresentes = presencasAluno.filter(p => p.presente).length;
-          const aulasParticipou = presencasAluno.filter(p => p.participou).length;
+        const totalAulasDiario = aulaIds.length;
+        const aulasPresentes = presencasAluno.filter(p => p.presente).length;
+        const aulasParticipou = presencasAluno.filter(p => p.participou).length;
 
-          frequenciaData = {
-            total_aulas: totalAulas,
-            aulas_presentes: aulasPresentes,
-            percentual_frequencia: totalAulas > 0 ? (aulasPresentes / totalAulas) * 100 : 0
-          };
+        // Contar presenças nas aulas virtuais para este aluno
+        const presencasVirtuaisAluno = todasPresencasVirtuais?.filter(p => 
+          p.email_aluno === aluno.email.toLowerCase()
+        ) || [];
+        const totalAulasVirtuais = aulasVirtuaisIds.length;
+        const presencasVirtuais = presencasVirtuaisAluno.length;
 
-          participacaoData = {
-            total_aulas: totalAulas,
-            aulas_participou: aulasParticipou,
-            percentual_participacao: totalAulas > 0 ? (aulasParticipou / totalAulas) * 100 : 0
-          };
-        }
+        // Combinar dados do diário + aulas virtuais
+        const totalAulasCompleto = totalAulasDiario + totalAulasVirtuais;
+        const totalPresencasCompleto = aulasPresentes + presencasVirtuais;
+
+        const frequenciaData = {
+          total_aulas: totalAulasCompleto,
+          aulas_presentes: totalPresencasCompleto,
+          percentual_frequencia: totalAulasCompleto > 0 ? (totalPresencasCompleto / totalAulasCompleto) * 100 : 0
+        };
+
+        // Para participação, considerar apenas aulas do diário (aulas virtuais não têm participação)
+        const participacaoData = {
+          total_aulas: totalAulasDiario,
+          aulas_participou: aulasParticipou,
+          percentual_participacao: totalAulasDiario > 0 ? (aulasParticipou / totalAulasDiario) * 100 : 0
+        };
 
         // Buscar redações do período da etapa com campos corretos
         let redacoesData = { total_redacoes: 0, nota_media: 0 };

@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Video, Calendar, Clock, ExternalLink, LogIn, LogOut, Users } from "lucide-react";
 import { computeStatus } from "@/utils/aulaStatus";
-import { usePresenca } from "@/components/aula-virtual/usePresenca";
+import { usePresencaComToken } from "@/hooks/usePresencaComToken";
 
 interface AulaVirtual {
   id: string;
@@ -29,9 +29,9 @@ interface AulaVirtual {
 
 interface RegistroPresenca {
   aula_id: string;
-  aluno_id: string;
-  entrada_at: string | null;
-  saida_at: string | null;
+  entrada_registrada: boolean;
+  saida_registrada: boolean;
+  duracao_minutos?: number;
 }
 
 const SalaVirtual = () => {
@@ -48,7 +48,7 @@ const SalaVirtual = () => {
     registrarPresenca,
     jaRegistrou,
     openPresencaDialog
-  } = usePresenca(registrosPresenca, setRegistrosPresenca);
+  } = usePresencaComToken();
 
   const fetchAulas = async () => {
     try {
