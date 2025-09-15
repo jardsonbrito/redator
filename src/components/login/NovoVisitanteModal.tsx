@@ -10,10 +10,11 @@ interface NovoVisitanteModalProps {
   isOpen: boolean;
   email: string;
   onComplete: (data: { nome: string; email: string; whatsapp?: string }) => void;
+  onClose: () => void;
   loading: boolean;
 }
 
-export const NovoVisitanteModal = ({ isOpen, email, onComplete, loading }: NovoVisitanteModalProps) => {
+export const NovoVisitanteModal = ({ isOpen, email, onComplete, onClose, loading }: NovoVisitanteModalProps) => {
   const [nome, setNome] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [saving, setSaving] = useState(false);
@@ -79,7 +80,7 @@ export const NovoVisitanteModal = ({ isOpen, email, onComplete, loading }: NovoV
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center text-redator-primary">

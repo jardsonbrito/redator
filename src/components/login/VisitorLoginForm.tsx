@@ -100,6 +100,7 @@ export const VisitorLoginForm = ({ onLogin, loading }: VisitorLoginFormProps) =>
         isOpen={showModal}
         email={emailVerificado}
         onComplete={handleNovoVisitanteComplete}
+        onClose={() => setShowModal(false)}
         loading={loading}
       />
     </>
