@@ -53,46 +53,40 @@ export const EmailLoginStep = ({ onEmailVerified, loading }: EmailLoginStepProps
 
       console.log('✅ Resultado da verificação - usuário existe:', studentExists);
       
-      // Se o usuário existe, precisamos buscar os dados dele
+      // Sempre buscar dados de visitante, independente de ser aluno ou não
       let userData = null;
-      if (studentExists) {
-        // Buscar dados do visitante em sessões passadas
-        try {
-          const { data: sessaoData } = await supabase
-            .from('visitante_sessoes')
-            .select('nome_visitante, email_visitante')
-            .eq('email_visitante', email.trim().toLowerCase())
-            .eq('ativo', true)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      
+      // Buscar dados do visitante em sessões passadas
+      try {
+        const { data: sessaoData } = await supabase
+          .from('visitante_sessoes')
+          .select('nome_visitante, email_visitante')
+          .eq('email_visitante', email.trim().toLowerCase())
+          .eq('ativo', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-          if (sessaoData) {
-            userData = {
-              encontrado: true,
-              tipo: 'visitante' as const,
-              dados: {
-                nome: sessaoData.nome_visitante,
-                email: sessaoData.email_visitante
-              }
-            };
-          } else {
-            // Usuário existe mas não encontrou dados de visitante - tratar como novo
-            userData = {
-              encontrado: false,
-              tipo: 'novo' as const
-            };
-          }
-        } catch (searchError) {
-          console.warn('⚠️ Erro ao buscar dados do visitante:', searchError);
-          // Em caso de erro, tratar como novo visitante
+        if (sessaoData) {
+          console.log('✅ Visitante existente encontrado:', sessaoData);
+          userData = {
+            encontrado: true,
+            tipo: 'visitante' as const,
+            dados: {
+              nome: sessaoData.nome_visitante,
+              email: sessaoData.email_visitante
+            }
+          };
+        } else {
+          console.log('👤 Dados de visitante não encontrados - novo visitante');
           userData = {
             encontrado: false,
             tipo: 'novo' as const
           };
         }
-      } else {
-        // Usuário não existe - novo visitante
+      } catch (searchError) {
+        console.warn('⚠️ Erro ao buscar dados do visitante:', searchError);
+        // Em caso de erro, tratar como novo visitante
         userData = {
           encontrado: false,
           tipo: 'novo' as const
