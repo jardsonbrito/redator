@@ -70,6 +70,12 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       } else if (userType === "visitante" && visitanteData) {
         try {
           const dados = JSON.parse(visitanteData);
+          
+          // Verificar se os dados necessários existem
+          if (!dados || !dados.email || !dados.nome) {
+            throw new Error('Dados de visitante incompletos');
+          }
+          
           setIsStudentLoggedIn(true);
           setStudentData({
             id: dados.email, // usar email como ID para visitantes
@@ -275,9 +281,13 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
         console.warn('⚠️ Erro ao salvar sessão no banco:', sessaoError);
         // Gerar session_id local como fallback
         sessionId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      } else if (sessaoResult && typeof sessaoResult === 'object' && 'success' in sessaoResult && sessaoResult.success) {
+      } else if (sessaoResult && typeof sessaoResult === 'object' && sessaoResult !== null && 'success' in sessaoResult && sessaoResult.success) {
         sessionId = (sessaoResult as any).session_id;
         console.log('✅ Sessão salva no banco:', (sessaoResult as any).action, 'Session ID:', sessionId);
+      } else {
+        console.warn('⚠️ Resposta inesperada da função RPC:', sessaoResult);
+        // Gerar session_id local como fallback
+        sessionId = `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       }
 
       // Verificação automática de contas duplicadas e merge para visitantes também
@@ -285,7 +295,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
         student_email: email.trim().toLowerCase()
       });
       
-      if (mergeResult && typeof mergeResult === 'object' && 'auto_merged' in mergeResult && mergeResult.auto_merged) {
+      if (mergeResult && typeof mergeResult === 'object' && mergeResult !== null && 'auto_merged' in mergeResult && mergeResult.auto_merged) {
         console.log('✅ Redações anteriores reconectadas automaticamente para visitante:', mergeResult.total_redacoes_merged);
       }
     } catch (error) {
