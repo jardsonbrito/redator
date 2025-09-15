@@ -22,8 +22,16 @@ export const VisitorLoginForm = ({ onLogin, loading }: VisitorLoginFormProps) =>
   const [showModal, setShowModal] = useState(false);
   const { toast } = useToast();
 
-  const handleEmailVerified = async (email: string, userData: UserData) => {
+  const handleEmailVerified = async (email: string, userData: UserData | null) => {
     console.log('📧 Email verificado:', email, userData);
+
+    // Se userData é null, tratar como novo visitante
+    if (!userData) {
+      console.log('👤 Dados não encontrados - novo visitante');
+      setEmailVerificado(email);
+      setShowModal(true);
+      return;
+    }
 
     if (userData.tipo === 'erro') {
       toast({
