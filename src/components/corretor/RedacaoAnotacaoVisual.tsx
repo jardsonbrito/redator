@@ -395,14 +395,26 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         return;
       }
 
-      // Lógica corrigida: sempre carregar marcações para redações já corrigidas
-      // Só bloquear para status "pendente" onde o corretor ainda não fez sua correção
-      const deveBloquearCarregamento = statusMinhaCorrecao === 'pendente';
+      // Verificar se já existem anotações salvas por este corretor
+      const { data: existingAnnotations } = await supabase
+        .from('marcacoes_visuais')
+        .select('id')
+        .eq('redacao_id', redacaoId)
+        .eq('corretor_id', corretorId)
+        .limit(1);
+
+      // Lógica corrigida: só bloquear se status for "pendente" E não houver anotações já salvas
+      const temAnotacoesSalvas = (existingAnnotations && existingAnnotations.length > 0);
+      const deveBloquearCarregamento = statusMinhaCorrecao === 'pendente' && !temAnotacoesSalvas;
       
-      console.log('🔍 DEBUG - Deve bloquear carregamento?', deveBloquearCarregamento, 'Status:', statusMinhaCorrecao);
+      console.log('🔍 DEBUG - Análise de carregamento:', {
+        statusMinhaCorrecao,
+        temAnotacoesSalvas,
+        deveBloquearCarregamento
+      });
 
       if (deveBloquearCarregamento) {
-        console.log('🚫 Redação pendente para este corretor - não carregar marcações existentes');
+        console.log('🚫 Redação pendente sem anotações - não carregar marcações');
         setAnotacoes([]);
         return;
       }
@@ -486,6 +498,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       
       // Carregar anotações sem numeração
       setAnotacoes(data || []);
+      console.log('✅ Anotações definidas no estado:', data?.length || 0, 'anotações');
       
       // Definir próximo número sequencial para novas anotações
       const maiorNumero = Math.max(0, ...(data?.map(a => a.numero_sequencial || 0) || []));
