@@ -199,32 +199,32 @@ export default function RegistroAulas() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {aulas.map((aula) => (
                   <Card key={aula.id} className="border-l-4 border-l-blue-500">
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
+                      <div className="space-y-3">
                         <div className="space-y-2">
-                          <div className="flex items-center gap-3">
-                            <h3 className="font-semibold text-lg">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-base">
                               {formatDateForDisplay(aula.data_aula)}
                             </h3>
                             {getEtapaBadge(aula)}
                           </div>
-                          
+
                           <div className="space-y-1">
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
+                            <p className="font-medium text-gray-900 dark:text-gray-100 text-sm line-clamp-2">
                               {aula.conteudo_ministrado}
                             </p>
                             {aula.observacoes && (
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-xs text-muted-foreground line-clamp-2">
                                 <strong>Observações:</strong> {aula.observacoes}
                               </p>
                             )}
                           </div>
-                          
+
                           <div className="text-xs text-muted-foreground">
-                            Registrado em: {format(new Date(aula.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                            {format(new Date(aula.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                           </div>
                         </div>
 
@@ -233,7 +233,7 @@ export default function RegistroAulas() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleEditAula(aula)}
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 text-xs"
                           >
                             <Edit className="w-3 h-3" />
                             Editar
@@ -242,7 +242,7 @@ export default function RegistroAulas() {
                             variant="default"
                             size="sm"
                             onClick={() => handleOpenPresenca(aula)}
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 text-xs"
                           >
                             <CheckSquare className="w-3 h-3" />
                             Dados
@@ -251,7 +251,7 @@ export default function RegistroAulas() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteAula(aula)}
-                            className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
                             disabled={deleteAulaMutation.isPending}
                           >
                             <Trash2 className="w-3 h-3" />
