@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock } from 'lucide-react';
 import { computeSimuladoStatus } from '@/utils/simuladoStatus';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -91,87 +93,69 @@ export const SimuladoAgendadoCard = ({ simulado, onStatusChange }: SimuladoAgend
   }
 
   return (
-    <div className="w-full bg-white rounded-3xl shadow-lg overflow-hidden">
-      {/* Layout mobile: faixa horizontal no topo */}
-      <div className="block md:hidden">
-        <div className="bg-primary text-primary-foreground px-6 py-4 flex items-center justify-between">
-          <span className="text-sm font-medium">Faltam:</span>
-          <div className="flex items-center gap-2 text-2xl font-bold" aria-live="polite">
-            <span className="tabular-nums">{timeLeft.days}d</span>
-            <span className="tabular-nums">{timeLeft.hours}h</span>
-            <span className="tabular-nums">{timeLeft.minutes}m</span>
-          </div>
-        </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-3">
-              {simulado.titulo}
-            </h2>
-            <span 
-              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary"
-              aria-label="Status: Agendado"
-            >
-              Agendado
-            </span>
-          </div>
-          
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" aria-hidden="true" />
-              <span>Início: {formatarDataHora(dataInicio)}</span>
+    <article className="w-full" aria-label={`Simulado: ${simulado.titulo}`} role="article">
+      <Card className="rounded-2xl border shadow-sm bg-card transition-shadow hover:shadow-md">
+        <CardContent className="p-4 lg:p-6">
+          <div className="flex flex-col gap-4">
+            {/* Timer ocupando exatamente o mesmo espaço que a imagem (aspect-video 16:9) */}
+            <div className="relative w-full aspect-video overflow-hidden rounded-xl bg-primary transition-transform hover:scale-[1.02] group">
+              <div className="absolute inset-0 h-full w-full bg-primary text-primary-foreground flex flex-col items-center justify-center px-4">
+                <span className="text-sm font-medium mb-4">Faltam:</span>
+                <div className="flex items-center justify-center gap-3 lg:gap-4" aria-live="polite">
+                  <div className="text-center">
+                    <div className="text-3xl lg:text-4xl font-bold tabular-nums leading-none">
+                      {timeLeft.days}
+                    </div>
+                    <div className="text-xs opacity-80 mt-1">dias</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl lg:text-4xl font-bold tabular-nums leading-none">
+                      {timeLeft.hours}
+                    </div>
+                    <div className="text-xs opacity-80 mt-1">horas</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl lg:text-4xl font-bold tabular-nums leading-none">
+                      {timeLeft.minutes}
+                    </div>
+                    <div className="text-xs opacity-80 mt-1">min</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" aria-hidden="true" />
-              <span>Fim: {formatarDataHora(dataFim)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Layout desktop: grid com faixa lateral */}
-      <div className="hidden md:grid md:grid-cols-[1fr_0.3fr] min-h-[200px]">
-        {/* Conteúdo principal */}
-        <div className="p-8 lg:p-10 flex flex-col justify-center space-y-6">
-          <div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4 leading-tight">
-              {simulado.titulo}
-            </h2>
-            <span 
-              className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-primary/10 text-primary"
-              aria-label="Status: Agendado"
-            >
-              Agendado
-            </span>
-          </div>
-          
-          <div className="space-y-4 text-base text-muted-foreground">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5" aria-hidden="true" />
-              <span>Início: {formatarDataHora(dataInicio)}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5" aria-hidden="true" />
-              <span>Fim: {formatarDataHora(dataFim)}</span>
-            </div>
-          </div>
-        </div>
+            {/* Info - replicando exatamente o UnifiedCard */}
+            <div className="flex flex-col gap-3">
+              {/* Badge */}
+              <div className="flex flex-wrap items-center gap-2" aria-label="marcadores">
+                <Badge
+                  variant="secondary"
+                  className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium leading-tight"
+                >
+                  Agendado
+                </Badge>
+              </div>
 
-        {/* Faixa lateral roxa */}
-        <div className="bg-primary text-primary-foreground rounded-r-3xl flex flex-col items-center justify-center px-4 py-8">
-          <span className="text-lg font-medium mb-4">Faltam:</span>
-          <div className="text-center space-y-2" aria-live="polite">
-            <div className="text-5xl lg:text-6xl font-bold tabular-nums">
-              {timeLeft.days}d
-            </div>
-            <div className="text-5xl lg:text-6xl font-bold tabular-nums">
-              {timeLeft.hours}h
-            </div>
-            <div className="text-5xl lg:text-6xl font-bold tabular-nums">
-              {timeLeft.minutes}m
+              {/* Título */}
+              <h3 className="text-xl lg:text-2xl font-semibold leading-tight line-clamp-2">
+                {simulado.titulo}
+              </h3>
+
+              {/* Meta - informações de data/hora */}
+              <ul className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
+                <li className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4" aria-hidden="true" />
+                  <span>Início: {formatarDataHora(dataInicio)}</span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  <span>Fim: {formatarDataHora(dataFim)}</span>
+                </li>
+              </ul>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </article>
   );
 };
