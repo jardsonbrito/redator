@@ -347,7 +347,14 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
     if (imageRef.current) {
       const { naturalWidth, naturalHeight } = imageRef.current;
       setImageDimensions({ width: naturalWidth, height: naturalHeight });
-      console.log('Dimensões da imagem carregadas:', { width: naturalWidth, height: naturalHeight });
+      console.log('🖼️ Dimensões da imagem carregadas:', { 
+        width: naturalWidth, 
+        height: naturalHeight,
+        src: imageRef.current.src 
+      });
+      
+      // Log adicional para debug
+      console.log('🔍 Estado atual das anotações:', anotacoes.length, 'anotações carregadas');
     }
   };
 
@@ -512,16 +519,31 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       annotoriousRef.current.clearAnnotations();
 
       // Converter anotações do banco para formato Annotorious
-      const annotoriousAnnotations = anotacoes.map((anotacao, index) => {
-        const x = (anotacao.x_start / anotacao.imagem_largura) * 100;
-        const y = (anotacao.y_start / anotacao.imagem_altura) * 100;
-        const w = ((anotacao.x_end - anotacao.x_start) / anotacao.imagem_largura) * 100;
-        const h = ((anotacao.y_end - anotacao.y_start) / anotacao.imagem_altura) * 100;
+      // CORREÇÃO: Usar dimensões atuais da imagem, não as salvas no banco
+      const annotoriousAnnotations = anotacoes
+        .filter(anotacao => {
+          // Filtrar anotações com coordenadas inválidas
+          const isValid = anotacao.x_start >= 0 && 
+                          anotacao.y_start >= 0 && 
+                          anotacao.x_end > anotacao.x_start && 
+                          anotacao.y_end > anotacao.y_start;
+          if (!isValid) {
+            console.warn('⚠️ Anotação com coordenadas inválidas filtrada:', anotacao.id);
+          }
+          return isValid;
+        })
+        .map((anotacao, index) => {
+        const x = (anotacao.x_start / imageDimensions.width) * 100;
+        const y = (anotacao.y_start / imageDimensions.height) * 100;
+        const w = ((anotacao.x_end - anotacao.x_start) / imageDimensions.width) * 100;
+        const h = ((anotacao.y_end - anotacao.y_start) / imageDimensions.height) * 100;
 
         console.log(`📍 Anotação ${index + 1}:`, {
           original: { x: anotacao.x_start, y: anotacao.y_start, w: anotacao.x_end - anotacao.x_start, h: anotacao.y_end - anotacao.y_start },
           converted: { x, y, w, h },
-          competencia: anotacao.competencia
+          competencia: anotacao.competencia,
+          dimensoes_banco: { w: anotacao.imagem_largura, h: anotacao.imagem_altura },
+          dimensoes_atual: { w: imageDimensions.width, h: imageDimensions.height }
         });
 
         return {
@@ -555,6 +577,15 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         // Verificar se as anotações foram aplicadas
         const appliedAnnotations = annotoriousRef.current.getAnnotations();
         console.log('🔍 Anotações atualmente no Annotorious:', appliedAnnotations.length);
+        
+        // Log das primeiras anotações aplicadas para debug
+        appliedAnnotations.slice(0, 2).forEach((annotation, idx) => {
+          console.log(`🎯 Anotação aplicada ${idx + 1}:`, {
+            id: annotation.id,
+            selector: annotation.target?.selector?.value,
+            body: annotation.body?.[0]?.value
+          });
+        });
 
       } catch (error) {
         console.error('❌ Erro ao aplicar anotações:', error);
@@ -921,10 +952,10 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         throw new Error('Coordenadas da anotação não encontradas');
       }
 
-      // Verificar se corretorId é um UUID válido
-      if (!corretorId || corretorId === '1' || corretorId === '2' || corretorId.length < 10) {
+      // Verificar se corretorId existe (validação mais flexível)
+      if (!corretorId || corretorId.trim() === '') {
         console.error('corretorId inválido recebido:', corretorId);
-        throw new Error('ID do corretor deve ser um UUID válido. Recebido: ' + corretorId);
+        throw new Error('ID do corretor é obrigatório. Recebido: ' + corretorId);
       }
 
       if (editandoAnotacao?.id) {
