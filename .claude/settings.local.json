@@ -22,7 +22,8 @@
       "Bash(timeout 10 npm run dev)",
       "Bash(npx kill-port:*)",
       "Bash(npx supabase:*)",
-      "mcp__supabase__generate_typescript_types"
+      "mcp__supabase__generate_typescript_types",
+      "Bash(npm install)"
     ]
   },
   "enableAllProjectMcpServers": true,
