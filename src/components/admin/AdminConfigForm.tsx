@@ -9,6 +9,7 @@ import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { AppSettingsForm } from './AppSettingsForm';
 import { CreditManagement } from './CreditManagement';
 import { SubscriptionManagementClean } from './SubscriptionManagementClean';
+import { DatabaseInitializer } from '../DatabaseInitializer';
 import { Mail, Key, User, Clock, AlertTriangle, Settings, CreditCard, Crown } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -326,7 +327,9 @@ export const AdminConfigForm = () => {
         </TabsContent>
 
         <TabsContent value="subscriptions">
-          <SubscriptionManagementClean />
+          <DatabaseInitializer>
+            <SubscriptionManagementClean />
+          </DatabaseInitializer>
         </TabsContent>
       </Tabs>
     </div>

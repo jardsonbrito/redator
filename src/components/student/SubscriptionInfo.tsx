@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useSubscriptionRobust } from '@/hooks/useSubscriptionRobust';
 import { Calendar, CreditCard, Crown, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatDateSafe } from '@/utils/dateUtils';
@@ -11,7 +11,7 @@ interface SubscriptionInfoProps {
 }
 
 export const SubscriptionInfo = ({ userEmail }: SubscriptionInfoProps) => {
-  const { data: subscription, isLoading } = useSubscription(userEmail);
+  const { data: subscription, isLoading } = useSubscriptionRobust(userEmail);
 
   // Removida função local - usando formatDateSafe importada
 
