@@ -24,7 +24,8 @@
       "Bash(npx supabase:*)",
       "mcp__supabase__generate_typescript_types",
       "Bash(npm install)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(npm run preview:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

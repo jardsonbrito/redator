@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StudentHeader } from '@/components/StudentHeader';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { SubscriptionInfo } from '@/components/student/SubscriptionInfo';
 import { BookOpen, TrendingUp, Calendar, BarChart3, FileText, Trophy, CheckCircle } from 'lucide-react';
 import { useDiarioAluno } from '@/hooks/useDiario';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
@@ -127,6 +128,9 @@ const DiarioOnline = () => {
             </Card>
           ) : (
             <>
+              {/* Informações de Assinatura */}
+              <SubscriptionInfo userEmail={studentData.email} />
+
               {/* Resumo Geral */}
               <Card>
                 <CardHeader>

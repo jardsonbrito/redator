@@ -46,6 +46,7 @@ import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 import { ProfessorAuthProvider } from "./hooks/useProfessorAuth";
 import { ProfessorProtectedRoute } from "./components/ProfessorProtectedRoute";
+import { ProtectedStudentRoute } from "./components/ProtectedStudentRoute";
 import { ProfessorLogin } from "./pages/ProfessorLogin";
 import { ProfessorDashboard } from "./pages/ProfessorDashboard";
 import { TrocarSenhaProfessor } from "./pages/TrocarSenhaProfessor";
@@ -99,30 +100,30 @@ function App() {
                   <Route path="/cadastro-aluno" element={<CadastroAluno />} />
                   <Route path="/atualizar-email" element={<AtualizarEmail />} />
 
-                  <Route path="/app" element={<Index />} />
-                  <Route path="/temas" element={<Temas />} />
-                  <Route path="/temas/:id" element={<TemaDetalhes />} />
-                  <Route path="/simulados" element={<Simulados />} />
+                  <Route path="/app" element={<ProtectedStudentRoute><Index /></ProtectedStudentRoute>} />
+                  <Route path="/temas" element={<ProtectedStudentRoute><Temas /></ProtectedStudentRoute>} />
+                  <Route path="/temas/:id" element={<ProtectedStudentRoute><TemaDetalhes /></ProtectedStudentRoute>} />
+                  <Route path="/simulados" element={<ProtectedStudentRoute><Simulados /></ProtectedStudentRoute>} />
                   {/* Corrigindo as rotas do simulado - ambas devem funcionar */}
-                  <Route path="/simulado/:id" element={<SimuladoParticipacao />} />
-                  <Route path="/simulados/:id" element={<SimuladoParticipacao />} />
-                  <Route path="/exercicios" element={<Exercicios />} />
-                  <Route path="/envie-redacao" element={<EnvieRedacao />} />
-                  <Route path="/minhas-redacoes" element={<MinhasRedacoesList />} />
-                  <Route path="/redacoes/manuscrita/:id" element={<RedacaoManuscrita />} />
-                  <Route path="/aulas" element={<Aulas />} />
-                  <Route path="/aulas-ao-vivo" element={<AulasAoVivo />} />
-                  <Route path="/salas-virtuais" element={<SalasVirtuais />} />
-                  <Route path="/videoteca" element={<Videoteca />} />
-                  <Route path="/biblioteca" element={<Biblioteca />} />
-                  <Route path="/redacoes" element={<RedacoesExemplar />} />
-                  <Route path="/top5" element={<Top5 />} />
-                  <Route path="/lousa" element={<AlunoLousaList />} />
-                  <Route path="/lousa/:id" element={<LousaResponse />} />
-                  <Route path="/ajuda-rapida" element={<AjudaRapida />} />
-                  <Route path="/minhas-conquistas" element={<MinhasConquistas />} />
-                  <Route path="/gamificacao" element={<Gamificacao />} />
-                  <Route path="/diario-online" element={<DiarioOnline />} />
+                  <Route path="/simulado/:id" element={<ProtectedStudentRoute><SimuladoParticipacao /></ProtectedStudentRoute>} />
+                  <Route path="/simulados/:id" element={<ProtectedStudentRoute><SimuladoParticipacao /></ProtectedStudentRoute>} />
+                  <Route path="/exercicios" element={<ProtectedStudentRoute><Exercicios /></ProtectedStudentRoute>} />
+                  <Route path="/envie-redacao" element={<ProtectedStudentRoute><EnvieRedacao /></ProtectedStudentRoute>} />
+                  <Route path="/minhas-redacoes" element={<ProtectedStudentRoute><MinhasRedacoesList /></ProtectedStudentRoute>} />
+                  <Route path="/redacoes/manuscrita/:id" element={<ProtectedStudentRoute><RedacaoManuscrita /></ProtectedStudentRoute>} />
+                  <Route path="/aulas" element={<ProtectedStudentRoute><Aulas /></ProtectedStudentRoute>} />
+                  <Route path="/aulas-ao-vivo" element={<ProtectedStudentRoute><AulasAoVivo /></ProtectedStudentRoute>} />
+                  <Route path="/salas-virtuais" element={<ProtectedStudentRoute><SalasVirtuais /></ProtectedStudentRoute>} />
+                  <Route path="/videoteca" element={<ProtectedStudentRoute><Videoteca /></ProtectedStudentRoute>} />
+                  <Route path="/biblioteca" element={<ProtectedStudentRoute><Biblioteca /></ProtectedStudentRoute>} />
+                  <Route path="/redacoes" element={<ProtectedStudentRoute><RedacoesExemplar /></ProtectedStudentRoute>} />
+                  <Route path="/top5" element={<ProtectedStudentRoute><Top5 /></ProtectedStudentRoute>} />
+                  <Route path="/lousa" element={<ProtectedStudentRoute><AlunoLousaList /></ProtectedStudentRoute>} />
+                  <Route path="/lousa/:id" element={<ProtectedStudentRoute><LousaResponse /></ProtectedStudentRoute>} />
+                  <Route path="/ajuda-rapida" element={<ProtectedStudentRoute><AjudaRapida /></ProtectedStudentRoute>} />
+                  <Route path="/minhas-conquistas" element={<ProtectedStudentRoute><MinhasConquistas /></ProtectedStudentRoute>} />
+                  <Route path="/gamificacao" element={<ProtectedStudentRoute><Gamificacao /></ProtectedStudentRoute>} />
+                  <Route path="/diario-online" element={<ProtectedStudentRoute><DiarioOnline /></ProtectedStudentRoute>} />
 
                   {/* Rotas do Admin */}
                   <Route path="/admin" element={<Admin />} />

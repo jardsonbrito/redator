@@ -8,7 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { AppSettingsForm } from './AppSettingsForm';
 import { CreditManagement } from './CreditManagement';
-import { Mail, Key, User, Clock, AlertTriangle, Settings, CreditCard } from 'lucide-react';
+import { SubscriptionManagement } from './SubscriptionManagement';
+import { SimpleSubscriptionTest } from './SimpleSubscriptionTest';
+import { SubscriptionTestBasic } from './SubscriptionTestBasic';
+import { DirectSubscriptionTest } from './DirectSubscriptionTest';
+import { SubscriptionManagementSimple } from './SubscriptionManagementSimple';
+import { SubscriptionManagementClean } from './SubscriptionManagementClean';
+import { Mail, Key, User, Clock, AlertTriangle, Settings, CreditCard, Crown } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AdminUser {
@@ -21,6 +27,15 @@ interface AdminUser {
 }
 
 export const AdminConfigForm = () => {
+  console.log('🔧 AdminConfigForm rendered');
+
+  // MODO DEBUG: Desabilitado após testes
+  const isDebugMode = false;
+  if (isDebugMode) {
+    console.log('🚨 MODO DEBUG: Retornando componente de teste direto');
+    return <DirectSubscriptionTest />;
+  }
+
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   
@@ -125,7 +140,7 @@ export const AdminConfigForm = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="account" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="account" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Conta
@@ -137,6 +152,10 @@ export const AdminConfigForm = () => {
           <TabsTrigger value="credits" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
             Créditos
+          </TabsTrigger>
+          <TabsTrigger value="subscriptions" className="flex items-center gap-2">
+            <Crown className="h-4 w-4" />
+            Assinatura
           </TabsTrigger>
         </TabsList>
 
@@ -317,6 +336,10 @@ export const AdminConfigForm = () => {
 
         <TabsContent value="credits">
           <CreditManagement />
+        </TabsContent>
+
+        <TabsContent value="subscriptions">
+          <SubscriptionManagementClean />
         </TabsContent>
       </Tabs>
     </div>
