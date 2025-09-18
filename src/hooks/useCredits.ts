@@ -9,6 +9,7 @@ interface UseCreditsReturn {
   refreshCredits: () => Promise<void>;
   consumeCredits: (amount: number, reason?: string) => Promise<boolean>;
   checkSufficientCredits: (amount: number) => boolean;
+  addCredits: (amount: number) => void;
 }
 
 export const useCredits = (userEmail?: string): UseCreditsReturn => {
@@ -16,6 +17,10 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const addCredits = (amount: number) => {
+    setCredits(prev => prev + amount);
+  };
 
   const loadCredits = async () => {
     console.log('🔍 useCredits.loadCredits - INICIANDO');
@@ -219,6 +224,7 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
     error,
     refreshCredits,
     consumeCredits,
-    checkSufficientCredits
+    checkSufficientCredits,
+    addCredits
   };
 };

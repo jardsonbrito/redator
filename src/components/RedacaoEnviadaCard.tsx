@@ -3,12 +3,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download, Volume2 } from "lucide-react";
+import { CalendarDays, User, Mail, GraduationCap, FileText, Star, MessageSquare, Clock, Download, Volume2, X, AlertTriangle } from "lucide-react";
 import { RedacaoAnotacaoVisual } from "./corretor/RedacaoAnotacaoVisual";
 import { AudioPlayerAluno } from "./AudioPlayerAluno";
 import { useToast } from "@/hooks/use-toast";
 import { downloadRedacaoManuscritaCorrigida } from "@/utils/redacaoDownload";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useCancelRedacao } from "@/hooks/useCancelRedacao";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface RedacaoEnviadaCardProps {
   redacao: {
@@ -64,14 +76,24 @@ interface RedacaoEnviadaCardProps {
     audio_url_corretor_2?: string | null;
     corretor_id_1?: string | null;
     corretor_id_2?: string | null;
+    // Campos da tabela real
+    c1_corretor_1?: number | null;
+    c1_corretor_2?: number | null;
   };
+  onRedacaoCanceled?: () => void;
 }
 
 export const RedacaoEnviadaCard = ({
-  redacao
+  redacao,
+  onRedacaoCanceled
 }: RedacaoEnviadaCardProps) => {
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
+  const { cancelRedacao, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
+    onSuccess: () => {
+      onRedacaoCanceled?.();
+    }
+  });
 
   // Função para verificar se deve mostrar as notas
   // Para simulados, só mostra quando ambas as correções estiverem finalizadas
@@ -216,6 +238,60 @@ export const RedacaoEnviadaCard = ({
               <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
                 {getTipoEnvioLabel(redacao.tipo_envio)}
               </Badge>
+
+              {/* Botão de cancelamento */}
+              {canCancelRedacao(redacao) && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 border-red-200 hover:bg-red-50 text-xs"
+                      disabled={cancelLoading}
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Cancelar envio
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-orange-500" />
+                        Cancelar envio da redação
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <p>Tem certeza que deseja cancelar o envio desta redação?</p>
+                        <p className="font-medium">
+                          <strong>Tema:</strong> {redacao.frase_tematica}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>Tipo:</strong> {getTipoEnvioLabel(redacao.tipo_envio)}
+                        </p>
+                        {getCreditosACancelar(redacao.tipo_envio) > 0 && (
+                          <div className="bg-green-50 border border-green-200 rounded p-3 mt-3">
+                            <p className="text-green-800 text-sm">
+                              ✅ <strong>{getCreditosACancelar(redacao.tipo_envio)} crédito(s)</strong> serão devolvidos à sua conta.
+                            </p>
+                          </div>
+                        )}
+                        <p className="text-red-600 text-sm mt-3">
+                          ⚠️ Esta ação não pode ser desfeita. A redação será removida permanentemente.
+                        </p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => cancelRedacao(redacao.id, redacao.email_aluno)}
+                        className="bg-red-600 hover:bg-red-700"
+                        disabled={cancelLoading}
+                      >
+                        {cancelLoading ? "Cancelando..." : "Sim, cancelar envio"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
         </CardHeader>

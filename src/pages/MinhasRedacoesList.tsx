@@ -6,7 +6,7 @@ import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, AlertCircle, X, AlertTriangle } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
@@ -14,6 +14,18 @@ import { ModalRevisualizacaoRedacao } from "@/components/ModalRevisualizacaoReda
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
+import { useCancelRedacao } from "@/hooks/useCancelRedacao";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 // Email validation será importada dinamicamente
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +137,24 @@ const MinhasRedacoesList = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isRedacaoVisualizada } = useVisualizacoesRealtime();
+
+  // Hook para cancelamento de redações
+  const { cancelRedacao, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
+    onSuccess: () => {
+      // Recarregar a lista após cancelamento
+      window.location.reload();
+    }
+  });
+
+  // Debug apenas em desenvolvimento
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔧 MinhasRedacoesList - Hook de cancelamento inicializado:', {
+      cancelRedacao: !!cancelRedacao,
+      canCancelRedacao: !!canCancelRedacao,
+      getCreditosACancelar: !!getCreditosACancelar,
+      cancelLoading
+    });
+  }
 
   // Obter dados do usuário do localStorage
   const studentDataStr = localStorage.getItem('alunoData');
@@ -1098,10 +1128,9 @@ const MinhasRedacoesList = () => {
         {!isLoading && !error && currentRedacoes.length > 0 && (
           <div className="space-y-4">
             {currentRedacoes.map((redacao) => (
-              <Card 
-                key={redacao.id} 
-                className="cursor-pointer transition-all hover:shadow-md hover:scale-[1.01]"
-                onClick={() => handleViewRedacao(redacao)}
+              <Card
+                key={redacao.id}
+                className="transition-all hover:shadow-md hover:scale-[1.01]"
               >
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1143,8 +1172,73 @@ const MinhasRedacoesList = () => {
                           </Badge>
                         )}
                       </div>
-                      
-                       <h3 className="font-semibold text-foreground mb-1 line-clamp-2">
+
+                      {/* Botão de cancelamento */}
+                      {(() => {
+                        const podeCancel = canCancelRedacao(redacao);
+                        // Debug apenas em desenvolvimento
+                        if (process.env.NODE_ENV === 'development') {
+                          console.log(`🔍 Redação ${redacao.id}: pode cancelar = ${podeCancel}`);
+                        }
+                        return podeCancel;
+                      })() && (
+                        <div className="mb-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 border-red-200 hover:bg-red-50 text-xs"
+                                disabled={cancelLoading}
+                                onClick={(e) => e.stopPropagation()} // Evitar propagação do click do card
+                              >
+                                <X className="w-3 h-3 mr-1" />
+                                Cancelar envio
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="flex items-center gap-2">
+                                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                                  Cancelar envio da redação
+                                </AlertDialogTitle>
+                                <AlertDialogDescription className="space-y-2">
+                                  <p>Tem certeza que deseja cancelar o envio desta redação?</p>
+                                  <p className="font-medium">
+                                    <strong>Tema:</strong> {redacao.frase_tematica}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    <strong>Tipo:</strong> {getTipoEnvioLabel(redacao.tipo_envio)}
+                                  </p>
+                                  {getCreditosACancelar(redacao.tipo_envio) > 0 && (
+                                    <div className="bg-green-50 border border-green-200 rounded p-3 mt-3">
+                                      <p className="text-green-800 text-sm">
+                                        ✅ <strong>{getCreditosACancelar(redacao.tipo_envio)} crédito(s)</strong> serão devolvidos à sua conta.
+                                      </p>
+                                    </div>
+                                  )}
+                                  <p className="text-red-600 text-sm mt-3">
+                                    ⚠️ Esta ação não pode ser desfeita. A redação será removida permanentemente.
+                                  </p>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => cancelRedacao(redacao.id, redacao.email_aluno)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                  disabled={cancelLoading}
+                                >
+                                  {cancelLoading ? "Cancelando..." : "Sim, cancelar envio"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+
+
+                       <h3 className="font-semibold text-foreground mb-1 line-clamp-2 cursor-pointer" onClick={() => handleViewRedacao(redacao)}>
                         {redacao.frase_tematica}
                        </h3>
                        

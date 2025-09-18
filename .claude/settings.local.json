@@ -23,7 +23,8 @@
       "Bash(npx kill-port:*)",
       "Bash(npx supabase:*)",
       "mcp__supabase__generate_typescript_types",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(npm run lint)"
     ]
   },
   "enableAllProjectMcpServers": true,

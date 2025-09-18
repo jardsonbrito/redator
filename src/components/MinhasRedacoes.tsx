@@ -11,6 +11,19 @@ import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
 import { getStatusColor, getStatusLabel } from "@/utils/redacaoUtils";
 import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
+import { useCancelRedacao } from "@/hooks/useCancelRedacao";
+import { X, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type RedacaoTurma = {
   id: string;
@@ -70,6 +83,20 @@ export const MinhasRedacoes = () => {
   const [showDevolutionDialog, setShowDevolutionDialog] = useState(false);
   const [devolutionInfo, setDevolutionInfo] = useState<{ corretor: string; justificativa: string; tema: string; dataEnvio: string } | null>(null);
   const { toast } = useToast();
+
+  // Hook para cancelamento de redações
+  const { cancelRedacao, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
+    onSuccess: () => {
+      refetch();
+    }
+  });
+
+  console.log('🔧 MinhasRedacoes - Hook de cancelamento inicializado:', {
+    cancelRedacao: !!cancelRedacao,
+    canCancelRedacao: !!canCancelRedacao,
+    getCreditosACancelar: !!getCreditosACancelar,
+    cancelLoading
+  });
 
   // Recupera dados do usuário com validação aprimorada
   const userType = localStorage.getItem("userType");
@@ -1028,10 +1055,77 @@ export const MinhasRedacoes = () => {
                     
                   </div>
 
-                   <Button 
-                     variant="outline" 
+                   {/* Botão de cancelamento na lista principal */}
+                   {(() => {
+                     const podeCancel = canCancelRedacao(redacao);
+                     console.log(`🔍 Redação ${redacao.id}: pode cancelar = ${podeCancel}`);
+                     return podeCancel;
+                   })() && (
+                     <AlertDialog>
+                       <AlertDialogTrigger asChild>
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           className="w-full text-red-600 border-red-200 hover:bg-red-50 text-xs mb-2"
+                           disabled={cancelLoading}
+                         >
+                           <X className="w-3 h-3 mr-1" />
+                           Cancelar envio
+                         </Button>
+                       </AlertDialogTrigger>
+                       <AlertDialogContent>
+                         <AlertDialogHeader>
+                           <AlertDialogTitle className="flex items-center gap-2">
+                             <AlertTriangle className="w-5 h-5 text-orange-500" />
+                             Cancelar envio da redação
+                           </AlertDialogTitle>
+                           <AlertDialogDescription className="space-y-2">
+                             <p>Tem certeza que deseja cancelar o envio desta redação?</p>
+                             <p className="font-medium">
+                               <strong>Tema:</strong> {redacao.frase_tematica}
+                             </p>
+                             <p className="text-sm text-gray-600">
+                               <strong>Tipo:</strong> {getTipoEnvioLabel(redacao.tipo_envio)}
+                             </p>
+                             {getCreditosACancelar(redacao.tipo_envio) > 0 && (
+                               <div className="bg-green-50 border border-green-200 rounded p-3 mt-3">
+                                 <p className="text-green-800 text-sm">
+                                   ✅ <strong>{getCreditosACancelar(redacao.tipo_envio)} crédito(s)</strong> serão devolvidos à sua conta.
+                                 </p>
+                               </div>
+                             )}
+                             <p className="text-red-600 text-sm mt-3">
+                               ⚠️ Esta ação não pode ser desfeita. A redação será removida permanentemente.
+                             </p>
+                           </AlertDialogDescription>
+                         </AlertDialogHeader>
+                         <AlertDialogFooter>
+                           <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
+                           <AlertDialogAction
+                             onClick={() => cancelRedacao(redacao.id, redacao.email_aluno)}
+                             className="bg-red-600 hover:bg-red-700"
+                             disabled={cancelLoading}
+                           >
+                             {cancelLoading ? "Cancelando..." : "Sim, cancelar envio"}
+                           </AlertDialogAction>
+                         </AlertDialogFooter>
+                       </AlertDialogContent>
+                     </AlertDialog>
+                   )}
+
+                   {/* TESTE: Botão sempre visível para debug */}
+                   <Button
+                     variant="outline"
                      size="sm"
-                     className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500 mt-2"
+                     className="w-full text-blue-600 border-blue-200 hover:bg-blue-50 text-xs mb-2"
+                   >
+                     🔧 TESTE - Cancelamento (sempre visível)
+                   </Button>
+
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-500"
                      onClick={() => handleViewRedacao(redacao)}
                    >
                      <Shield className="w-3 h-3 mr-1" />
@@ -1137,7 +1231,7 @@ export const MinhasRedacoes = () => {
                 </p>
               </div>
               
-              <RedacaoEnviadaCard 
+              <RedacaoEnviadaCard
                 redacao={{
                   id: authenticatedRedacao.id,
                   frase_tematica: authenticatedRedacao.frase_tematica,
@@ -1174,6 +1268,13 @@ export const MinhasRedacoes = () => {
                   // URLs de correções externas
                   correcao_arquivo_url_corretor_1: authenticatedRedacao.correcao_arquivo_url_corretor_1,
                   correcao_arquivo_url_corretor_2: authenticatedRedacao.correcao_arquivo_url_corretor_2,
+                  // Campos da tabela real
+                  c1_corretor_1: authenticatedRedacao.nota_c1, // Mapear para compatibilidade
+                  c1_corretor_2: null,
+                }}
+                onRedacaoCanceled={() => {
+                  refetch();
+                  resetAuthenticationState();
                 }}
               />
             </div>
