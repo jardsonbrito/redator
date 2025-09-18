@@ -14,6 +14,7 @@ import { SubscriptionTestBasic } from './SubscriptionTestBasic';
 import { DirectSubscriptionTest } from './DirectSubscriptionTest';
 import { SubscriptionManagementSimple } from './SubscriptionManagementSimple';
 import { SubscriptionManagementClean } from './SubscriptionManagementClean';
+import { SubscriptionDebugger } from './SubscriptionDebugger';
 import { Mail, Key, User, Clock, AlertTriangle, Settings, CreditCard, Crown } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -339,7 +340,10 @@ export const AdminConfigForm = () => {
         </TabsContent>
 
         <TabsContent value="subscriptions">
-          <SubscriptionManagementClean />
+          <div className="space-y-6">
+            <SubscriptionDebugger />
+            <SubscriptionManagementClean />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
