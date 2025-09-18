@@ -8,13 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdminConfig } from '@/hooks/useAdminConfig';
 import { AppSettingsForm } from './AppSettingsForm';
 import { CreditManagement } from './CreditManagement';
-import { SubscriptionManagement } from './SubscriptionManagement';
-import { SimpleSubscriptionTest } from './SimpleSubscriptionTest';
-import { SubscriptionTestBasic } from './SubscriptionTestBasic';
-import { DirectSubscriptionTest } from './DirectSubscriptionTest';
-import { SubscriptionManagementSimple } from './SubscriptionManagementSimple';
 import { SubscriptionManagementClean } from './SubscriptionManagementClean';
-import { SubscriptionDebugger } from './SubscriptionDebugger';
 import { Mail, Key, User, Clock, AlertTriangle, Settings, CreditCard, Crown } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -28,14 +22,6 @@ interface AdminUser {
 }
 
 export const AdminConfigForm = () => {
-  console.log('🔧 AdminConfigForm rendered');
-
-  // MODO DEBUG: Desabilitado após testes
-  const isDebugMode = false;
-  if (isDebugMode) {
-    console.log('🚨 MODO DEBUG: Retornando componente de teste direto');
-    return <DirectSubscriptionTest />;
-  }
 
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
   const [loadingAdmin, setLoadingAdmin] = useState(true);
@@ -340,10 +326,7 @@ export const AdminConfigForm = () => {
         </TabsContent>
 
         <TabsContent value="subscriptions">
-          <div className="space-y-6">
-            <SubscriptionDebugger />
-            <SubscriptionManagementClean />
-          </div>
+          <SubscriptionManagementClean />
         </TabsContent>
       </Tabs>
     </div>

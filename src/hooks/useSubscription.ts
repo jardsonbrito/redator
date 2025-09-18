@@ -27,8 +27,6 @@ export const useSubscription = (userEmail: string) => {
       }
 
       try {
-        console.log('🔍 [useSubscription] Iniciando busca para email:', userEmail);
-
         // Buscar dados do perfil do usuário (incluindo créditos)
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -36,10 +34,8 @@ export const useSubscription = (userEmail: string) => {
           .eq('email', userEmail)
           .single();
 
-        console.log('🔍 [useSubscription] Resultado do profile:', { profile, profileError });
-
         if (profileError || !profile) {
-          console.error('❌ [useSubscription] Erro ao buscar perfil:', profileError);
+          console.error('Erro ao buscar perfil:', profileError);
           return {
             plano: null,
             data_inscricao: null,
@@ -50,8 +46,6 @@ export const useSubscription = (userEmail: string) => {
           };
         }
 
-        console.log('🔍 [useSubscription] Profile encontrado, buscando assinatura para aluno_id:', profile.id);
-
         // Buscar assinatura ativa
         const { data: assinatura, error: assinaturaError } = await supabase
           .from('assinaturas')
@@ -61,13 +55,10 @@ export const useSubscription = (userEmail: string) => {
           .limit(1)
           .single();
 
-        console.log('🔍 [useSubscription] Resultado da assinatura:', { assinatura, assinaturaError });
-
         const creditos = profile.creditos || 0;
 
         // Se não tem assinatura
         if (assinaturaError || !assinatura) {
-          console.log('❌ [useSubscription] Assinatura não encontrada:', { assinaturaError, assinatura });
           return {
             plano: null,
             data_inscricao: null,
@@ -82,7 +73,7 @@ export const useSubscription = (userEmail: string) => {
         const diasRestantes = getDaysUntilExpiration(assinatura.data_validade);
         const status: 'Ativo' | 'Vencido' = isDateActiveOrFuture(assinatura.data_validade) ? 'Ativo' : 'Vencido';
 
-        const result = {
+        return {
           plano: assinatura.plano,
           data_inscricao: assinatura.data_inscricao,
           data_validade: assinatura.data_validade,
@@ -90,10 +81,6 @@ export const useSubscription = (userEmail: string) => {
           dias_restantes: Math.max(0, diasRestantes),
           creditos
         };
-
-        console.log('✅ [useSubscription] Assinatura encontrada e processada:', result);
-
-        return result;
 
       } catch (error) {
         console.error('Erro ao buscar dados de assinatura:', error);
