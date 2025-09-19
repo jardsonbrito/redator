@@ -128,7 +128,7 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
     supabase.auth.signOut();
     
     // Redirecionar para a página de login
-    window.location.href = '/professor/login';
+    window.location.href = '/login';
   };
 
   const isProfessor = professor?.role === 'professor';

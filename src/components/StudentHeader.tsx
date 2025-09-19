@@ -26,7 +26,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
       title: "Sessão encerrada",
       description: "Você foi desconectado com sucesso.",
     });
-    navigate('/', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   return (

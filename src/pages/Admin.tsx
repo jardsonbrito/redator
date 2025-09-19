@@ -5,13 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
-  BookOpen, 
-  FileText, 
+  BookOpen,
+  FileText,
   Video,
   ClipboardCheck,
   Send,
   LogOut,
-  Home,
   File,
   GraduationCap,
   NotebookPen,
@@ -177,6 +176,7 @@ const Admin = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     signOut();
+    navigate('/login', { replace: true });
   };
 
 
@@ -626,16 +626,11 @@ const Admin = () => {
       <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-6">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-6 min-w-0 flex-1">
-              <Link to="/app" className="flex items-center gap-1 sm:gap-2 bg-primary/10 hover:bg-primary/20 px-2 sm:px-3 py-1 sm:py-2 rounded-lg transition-all duration-300 text-primary hover:text-primary font-medium shrink-0">
-                <Home className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline text-sm">Voltar ao App</span>
-              </Link>
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex items-center justify-center flex-1">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-2 h-2 bg-primary rounded-full animate-pulse shrink-0"></div>
-                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
-                  <span className="sm:hidden">Admin</span>
-                  <span className="hidden sm:inline">Painel Administrativo</span>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent text-center">
+                  Painel Administrativo
                 </h1>
               </div>
             </div>
