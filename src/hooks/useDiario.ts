@@ -1,15 +1,34 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { 
-  EtapaEstudo, 
-  AulaDiario, 
-  PresencaParticipacao, 
-  DiarioEtapa, 
+import type {
+  EtapaEstudo,
+  AulaDiario,
+  PresencaParticipacao,
+  DiarioEtapa,
   ResumoTurmaEtapa,
   FormEtapaData,
   FormAulaData
 } from '@/types/diario';
+
+// Funções auxiliares para nova lógica de cálculo da média final
+const converterPercentualParaNota = (percentual: number): number => {
+  return percentual / 10; // 90% -> 9.0
+};
+
+const converterNota1000ParaNota10 = (nota: number): number => {
+  return nota / 100; // 800 -> 8.0
+};
+
+const calcularNovaMediaFinal = (
+  frequencia: number,
+  participacao: number,
+  redacoes: number,
+  lousas: number,
+  simulados: number
+): number => {
+  return (frequencia + participacao + redacoes + lousas + simulados) / 5;
+};
 
 // Hook para gerenciar etapas
 export function useEtapas(turma?: string) {
@@ -484,6 +503,32 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           console.log('⚠️ Erro ao buscar simulados:', error);
         }
 
+        // Buscar lousas do período da etapa
+        let lousasData = { total_lousas: 0, nota_media: 0 };
+        try {
+          const { data: lousas, error: lousasError } = await supabase
+            .from('lousa_resposta')
+            .select('nota')
+            .eq('email_aluno', alunoEmail)
+            .gte('submitted_at', etapa.data_inicio)
+            .lt('submitted_at', etapa.data_fim + 'T23:59:59')
+            .not('nota', 'is', null)
+            .gt('nota', 0);
+
+          if (!lousasError && lousas) {
+            const notasLousas = lousas.map(l => l.nota).filter(nota => nota !== null && nota > 0);
+
+            lousasData = {
+              total_lousas: notasLousas.length,
+              nota_media: notasLousas.length > 0
+                ? notasLousas.reduce((acc, nota) => acc + nota, 0) / notasLousas.length
+                : 0
+            };
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar lousas:', error);
+        }
+
         // Buscar exercícios do período da etapa (redacoes_exercicio + radar_dados)
         let exerciciosData = { total_exercicios: 0 };
         try {
@@ -526,49 +571,29 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           console.log('⚠️ Erro ao buscar exercícios:', error);
         }
 
-        // Calcular média final (pode ser customizada conforme critério da escola)
-        // Converter tudo para escala 0-10
-        const frequencia10 = frequenciaData.percentual_frequencia / 10; // 85% -> 8.5
-        const participacao10 = participacaoData.percentual_participacao / 10; // 75% -> 7.5
-        const redacoes10 = redacoesData.nota_media / 100; // 800 -> 8.0
-        const simulados10 = simuladosData.nota_media / 100; // 900 -> 9.0
-        
-          // Logs simplificados para melhor performance
-        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: F${frequenciaData.percentual_frequencia}% P${participacaoData.percentual_participacao}% R${redacoesData.nota_media} S${simuladosData.nota_media}`);
-        
-        // Verificar se não há aulas (frequência e participação = 0)
-        const semAulas = frequenciaData.total_aulas === 0;
-        let mediaFinal;
-        
-        if (semAulas) {
-          // Se não há aulas, calcular média apenas com redações e simulados
-          console.log(`  ⚠️ Sem aulas registradas - calculando média apenas com atividades`);
-          
-          if (redacoesData.total_redacoes > 0 && simuladosData.total_simulados > 0) {
-            // Com redações e simulados: 70% redações + 30% simulados
-            mediaFinal = (redacoes10 * 0.7) + (simulados10 * 0.3);
-          } else if (redacoesData.total_redacoes > 0) {
-            // Apenas redações: 100% redações
-            mediaFinal = redacoes10;
-          } else if (simuladosData.total_simulados > 0) {
-            // Apenas simulados: 100% simulados  
-            mediaFinal = simulados10;
-          } else {
-            // Sem atividades: média 0
-            mediaFinal = 0;
-          }
-          
-          console.log(`  🎓 MÉDIA SEM AULAS: ${mediaFinal.toFixed(2)}`);
-        } else {
-          // Cálculo normal com todas as componentes
-          mediaFinal = (
-            (frequencia10 * 0.2) +
-            (participacao10 * 0.2) +
-            (redacoes10 * 0.4) +
-            (simulados10 * 0.2)
-          );
-          console.log(`  🏆 MÉDIA COMPLETA: ${mediaFinal.toFixed(2)}`);
-        }
+        // NOVA LÓGICA: Calcular média final com 5 critérios fixos
+        // Converter percentuais para notas 0-10
+        const frequenciaNota = converterPercentualParaNota(frequenciaData.percentual_frequencia);
+        const participacaoNota = converterPercentualParaNota(participacaoData.percentual_participacao);
+
+        // Converter notas 0-1000 para 0-10
+        const redacoesNota = converterNota1000ParaNota10(redacoesData.nota_media);
+        const simuladosNota = converterNota1000ParaNota10(simuladosData.nota_media);
+
+        // Converter notas das lousas (já estão em escala 0-10)
+        const lousasNota = lousasData.nota_media;
+
+        // Calcular média final sempre dividindo por 5 (mesmo que algum critério seja 0)
+        const mediaFinal = calcularNovaMediaFinal(
+          frequenciaNota,
+          participacaoNota,
+          redacoesNota,
+          lousasNota,
+          simuladosNota
+        );
+
+        // Logs simplificados para melhor performance
+        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: F${frequenciaNota.toFixed(1)} P${participacaoNota.toFixed(1)} R${redacoesNota.toFixed(1)} L${lousasNota.toFixed(1)} S${simuladosNota.toFixed(1)} = ${mediaFinal.toFixed(1)}`);
 
         diarioData.push({
           etapa_numero: etapa.numero,
@@ -580,6 +605,7 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           redacoes: redacoesData,
           simulados: simuladosData,
           exercicios: exerciciosData,
+          lousas: lousasData,
           media_final: Math.max(0, Math.min(10, mediaFinal)) // Garantir que fica entre 0 e 10
         });
       }
@@ -829,6 +855,32 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           console.log('⚠️ Erro ao buscar simulados:', aluno.email, error);
         }
 
+        // Buscar lousas do período da etapa
+        let lousasData = { total_lousas: 0, nota_media: 0 };
+        try {
+          const { data: lousas, error: lousasError } = await supabase
+            .from('lousa_resposta')
+            .select('nota')
+            .eq('email_aluno', aluno.email)
+            .gte('submitted_at', etapas.data_inicio)
+            .lt('submitted_at', etapas.data_fim + 'T23:59:59')
+            .not('nota', 'is', null)
+            .gt('nota', 0);
+
+          if (!lousasError && lousas) {
+            const notasLousas = lousas.map(l => l.nota).filter(nota => nota !== null && nota > 0);
+
+            lousasData = {
+              total_lousas: notasLousas.length,
+              nota_media: notasLousas.length > 0
+                ? notasLousas.reduce((acc, nota) => acc + nota, 0) / notasLousas.length
+                : 0
+            };
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar lousas:', aluno.email, error);
+        }
+
         // Buscar exercícios do período da etapa (redacoes_exercicio + radar_dados)
         let exerciciosData = { total_exercicios: 0 };
         try {
@@ -871,41 +923,26 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
 
         console.log(`📊 Resumo para ${aluno.email} - Período: ${etapas.data_inicio} a ${etapas.data_fim}`);
 
-        // Calcular média final
-        // Converter tudo para escala 0-10
-        const frequencia10 = frequenciaData.percentual_frequencia / 10; // 85% -> 8.5
-        const participacao10 = participacaoData.percentual_participacao / 10; // 75% -> 7.5
-        const redacoes10 = redacoesData.nota_media / 100; // 800 -> 8.0
-        const simulados10 = simuladosData.nota_media / 100; // 900 -> 9.0
-        
-        // Verificar se não há aulas (frequência e participação = 0)
-        const semAulas = frequenciaData.total_aulas === 0;
-        let mediaFinal;
-        
-        if (semAulas) {
-          // Se não há aulas, calcular média apenas com redações e simulados
-          if (redacoesData.total_redacoes > 0 && simuladosData.total_simulados > 0) {
-            // Com redações e simulados: 70% redações + 30% simulados
-            mediaFinal = (redacoes10 * 0.7) + (simulados10 * 0.3);
-          } else if (redacoesData.total_redacoes > 0) {
-            // Apenas redações: 100% redações
-            mediaFinal = redacoes10;
-          } else if (simuladosData.total_simulados > 0) {
-            // Apenas simulados: 100% simulados  
-            mediaFinal = simulados10;
-          } else {
-            // Sem atividades: média 0
-            mediaFinal = 0;
-          }
-        } else {
-          // Cálculo normal com todas as componentes
-          mediaFinal = (
-            (frequencia10 * 0.2) +
-            (participacao10 * 0.2) +
-            (redacoes10 * 0.4) +
-            (simulados10 * 0.2)
-          );
-        }
+        // NOVA LÓGICA: Calcular média final com 5 critérios fixos
+        // Converter percentuais para notas 0-10
+        const frequenciaNota = converterPercentualParaNota(frequenciaData.percentual_frequencia);
+        const participacaoNota = converterPercentualParaNota(participacaoData.percentual_participacao);
+
+        // Converter notas 0-1000 para 0-10
+        const redacoesNota = converterNota1000ParaNota10(redacoesData.nota_media);
+        const simuladosNota = converterNota1000ParaNota10(simuladosData.nota_media);
+
+        // Converter notas das lousas (já estão em escala 0-10)
+        const lousasNota = lousasData.nota_media;
+
+        // Calcular média final sempre dividindo por 5 (mesmo que algum critério seja 0)
+        const mediaFinal = calcularNovaMediaFinal(
+          frequenciaNota,
+          participacaoNota,
+          redacoesNota,
+          lousasNota,
+          simuladosNota
+        );
 
         const dadosAluno = {
           frequencia: frequenciaData,
@@ -913,6 +950,7 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           redacoes: redacoesData,
           simulados: simuladosData,
           exercicios: exerciciosData,
+          lousas: lousasData,
           media_final: Math.max(0, Math.min(10, mediaFinal))
         };
 

@@ -624,24 +624,25 @@ const Admin = () => {
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
       {/* Header */}
       <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <Link to="/app" className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 px-3 py-2 rounded-lg transition-all duration-300 text-primary hover:text-primary font-medium">
-                <Home className="w-5 h-5" />
-                <span>Voltar ao App</span>
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-6 min-w-0 flex-1">
+              <Link to="/app" className="flex items-center gap-1 sm:gap-2 bg-primary/10 hover:bg-primary/20 px-2 sm:px-3 py-1 sm:py-2 rounded-lg transition-all duration-300 text-primary hover:text-primary font-medium shrink-0">
+                <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline text-sm">Voltar ao App</span>
               </Link>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  Painel Administrativo
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse shrink-0"></div>
+                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
+                  <span className="sm:hidden">Admin</span>
+                  <span className="hidden sm:inline">Painel Administrativo</span>
                 </h1>
               </div>
             </div>
-            
-            <div className="flex items-center gap-4">
+
+            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               {/* Perfil do administrador com avatar, nome e função */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <AdminAvatar size="sm" showUpload={true} />
                 <div className="hidden sm:flex flex-col">
                   <span className="text-foreground font-medium text-sm">
@@ -652,15 +653,15 @@ const Admin = () => {
                   </span>
                 </div>
               </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
+
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleLogout}
-                className="border-primary/20 hover:bg-primary hover:text-white transition-all duration-300"
+                className="border-primary/20 hover:bg-primary hover:text-white transition-all duration-300 px-2 sm:px-3"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
+                <LogOut className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sair</span>
               </Button>
             </div>
           </div>

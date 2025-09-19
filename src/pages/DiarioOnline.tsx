@@ -46,6 +46,15 @@ const DiarioOnline = () => {
   const formatPercentual = (valor: number) => `${valor.toFixed(1)}%`;
   const formatNota = (valor: number) => valor > 0 ? valor.toFixed(1) : '-';
 
+  // Funções auxiliares para nova lógica de cálculo da média final
+  const converterPercentualParaNota = (percentual: number): number => {
+    return percentual / 10; // 90% -> 9.0
+  };
+
+  const converterNota1000ParaNota10 = (nota: number): number => {
+    return nota / 100; // 800 -> 8.0
+  };
+
   const getStatusBadge = (percentual: number, tipo: 'frequencia' | 'participacao') => {
     const limite = tipo === 'frequencia' ? 75 : 50;
     
@@ -232,76 +241,60 @@ const DiarioOnline = () => {
                       </CardHeader>
                     </Card>
 
-                    {/* Métricas da Etapa */}
+                    {/* Métricas da Etapa - 5 Critérios Convertidos */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* Frequência */}
+                      {/* 1. Frequência (convertida para 0-10) */}
                       {renderCardMetrica(
                         'Frequência',
-                        formatPercentual(etapaSelecionada.frequencia.percentual_frequencia),
-                        `${etapaSelecionada.frequencia.aulas_presentes}/${etapaSelecionada.frequencia.total_aulas} aulas`,
+                        converterPercentualParaNota(etapaSelecionada.frequencia.percentual_frequencia).toFixed(1),
+                        `${formatPercentual(etapaSelecionada.frequencia.percentual_frequencia)} → Nota 0-10`,
                         <CheckCircle className="w-4 h-4 text-green-600" />,
                         getStatusBadge(etapaSelecionada.frequencia.percentual_frequencia, 'frequencia')
                       )}
 
-                      {/* Participação */}
+                      {/* 2. Participação (convertida para 0-10) */}
                       {renderCardMetrica(
                         'Participação',
-                        formatPercentual(etapaSelecionada.participacao.percentual_participacao),
-                        `${etapaSelecionada.participacao.aulas_participou}/${etapaSelecionada.participacao.total_aulas} aulas`,
+                        converterPercentualParaNota(etapaSelecionada.participacao.percentual_participacao).toFixed(1),
+                        `${formatPercentual(etapaSelecionada.participacao.percentual_participacao)} → Nota 0-10`,
                         <BookOpen className="w-4 h-4 text-blue-600" />,
                         getStatusBadge(etapaSelecionada.participacao.percentual_participacao, 'participacao')
                       )}
 
-                      {/* Redações */}
+                      {/* 3. Redações (convertida para 0-10) */}
                       {renderCardMetrica(
                         'Redações',
-                        etapaSelecionada.redacoes.total_redacoes,
-                        `Média: ${formatNota(etapaSelecionada.redacoes.nota_media)}`,
+                        converterNota1000ParaNota10(etapaSelecionada.redacoes.nota_media).toFixed(1),
+                        `${etapaSelecionada.redacoes.total_redacoes} redações → Nota 0-10`,
                         <FileText className="w-4 h-4 text-purple-600" />
                       )}
 
-                      {/* Simulados */}
+                      {/* 4. Lousas (já em escala 0-10) */}
                       {renderCardMetrica(
-                        'Simulados',
-                        etapaSelecionada.simulados.total_simulados,
-                        `Média: ${formatNota(etapaSelecionada.simulados.nota_media)}`,
-                        <Trophy className="w-4 h-4 text-orange-600" />
+                        'Lousas',
+                        etapaSelecionada.lousas?.nota_media?.toFixed(1) || '0.0',
+                        `${etapaSelecionada.lousas?.total_lousas || 0} lousas → Nota 0-10`,
+                        <BookOpen className="w-4 h-4 text-indigo-600" />
                       )}
 
-                      {/* Exercícios */}
+                      {/* 5. Simulados (convertida para 0-10) */}
                       {renderCardMetrica(
-                        'Exercícios',
-                        etapaSelecionada.exercicios.total_exercicios,
-                        'Concluídos',
-                        <BookOpen className="w-4 h-4 text-green-600" />
+                        'Simulados',
+                        converterNota1000ParaNota10(etapaSelecionada.simulados.nota_media).toFixed(1),
+                        `${etapaSelecionada.simulados.total_simulados} simulados → Nota 0-10`,
+                        <Trophy className="w-4 h-4 text-orange-600" />
                       )}
 
                       {/* Média Final da Etapa */}
                       {renderCardMetrica(
                         'Média Final',
                         etapaSelecionada.media_final.toFixed(1),
-                        'Escala 0-10',
+                        'Média dos 5 critérios ÷ 5',
                         <TrendingUp className="w-4 h-4 text-primary" />,
                         <Badge className="text-lg">{etapaSelecionada.media_final >= 7 ? '✓' : '!'}</Badge>
                       )}
                     </div>
 
-                    {/* Dicas e Informações */}
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                            Como interpretar seus dados
-                          </h4>
-                          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                            <li>• <strong>Frequência:</strong> Mínimo recomendado de 75% de presença</li>
-                            <li>• <strong>Participação:</strong> Mínimo recomendado de 50% de participação ativa</li>
-                            <li>• <strong>Redações e Simulados:</strong> Quanto mais praticar, melhor será seu desempenho</li>
-                            <li>• <strong>Média Final:</strong> Calculada automaticamente com base em todos os critérios</li>
-                          </ul>
-                        </div>
-                      </CardContent>
-                    </Card>
                   </div>
                 );
               })()}

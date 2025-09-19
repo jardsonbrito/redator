@@ -934,7 +934,6 @@ export const MinhasRedacoes = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-8">
-          <FileText className="w-16 h-16 text-redator-accent/50 mx-auto mb-4" />
           <p className="text-redator-accent mb-4 text-lg font-medium">
             {userType === "visitante" ? 
               "📋 Nenhuma redação de visitante foi enviada até o momento." :

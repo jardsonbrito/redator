@@ -62,6 +62,11 @@ export interface DadosExercicios {
   total_exercicios: number;
 }
 
+export interface DadosLousas {
+  total_lousas: number;
+  nota_media: number;
+}
+
 export interface DiarioEtapa {
   etapa_id: string;
   etapa_nome: string;
@@ -73,6 +78,7 @@ export interface DiarioEtapa {
   redacoes: DadosRedacoes;
   simulados: DadosSimulados;
   exercicios: DadosExercicios;
+  lousas: DadosLousas;
   media_final: number;
 }
 
