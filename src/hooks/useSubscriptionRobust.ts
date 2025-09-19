@@ -54,7 +54,7 @@ export const useSubscriptionRobust = (userEmail: string) => {
       }
 
       try {
-        console.log('🔍 Buscando assinatura para email:', userEmail);
+        // Buscar assinatura para o email do usuário
 
         // 1. Tentar usar a função RPC otimizada primeiro
         const { data: subscriptionData, error: rpcError } = await supabase
@@ -62,7 +62,6 @@ export const useSubscriptionRobust = (userEmail: string) => {
 
         if (!rpcError && subscriptionData && subscriptionData.length > 0) {
           const sub = subscriptionData[0];
-          console.log('✅ Assinatura encontrada via RPC:', sub);
 
           return {
             plano: sub.plano as 'Liderança' | 'Lapidação' | 'Largada',
@@ -74,14 +73,11 @@ export const useSubscriptionRobust = (userEmail: string) => {
           };
         }
 
-        console.log('⚠️ Função RPC não encontrou dados ou falhou:', rpcError?.message);
-
         // 2. Fallback: buscar perfil e assinatura separadamente
         const { data: profileData, error: profileRpcError } = await supabase
           .rpc('get_profile_by_email', { user_email: userEmail });
 
         if (profileRpcError || !profileData || profileData.length === 0) {
-          console.warn('⚠️ Perfil não encontrado para email:', userEmail);
           return {
             plano: null,
             data_inscricao: null,
@@ -93,7 +89,6 @@ export const useSubscriptionRobust = (userEmail: string) => {
         }
 
         const profile = profileData[0];
-        console.log('✅ Perfil encontrado:', profile);
 
         // 3. Buscar assinatura diretamente na tabela
         const { data: assinatura, error: assinaturaError } = await supabase
@@ -104,13 +99,8 @@ export const useSubscriptionRobust = (userEmail: string) => {
           .limit(1)
           .maybeSingle();
 
-        if (assinaturaError) {
-          console.error('❌ Erro ao buscar assinatura:', assinaturaError);
-        }
-
         // Se não tem assinatura
         if (!assinatura) {
-          console.log('ℹ️ Nenhuma assinatura encontrada para o aluno');
           return {
             plano: null,
             data_inscricao: null,
@@ -125,12 +115,6 @@ export const useSubscriptionRobust = (userEmail: string) => {
         const diasRestantes = getDaysUntilExpiration(assinatura.data_validade);
         const status: 'Ativo' | 'Vencido' = isDateActiveOrFuture(assinatura.data_validade) ? 'Ativo' : 'Vencido';
 
-        console.log('✅ Assinatura encontrada:', {
-          plano: assinatura.plano,
-          status,
-          dias_restantes: diasRestantes
-        });
-
         return {
           plano: assinatura.plano as 'Liderança' | 'Lapidação' | 'Largada',
           data_inscricao: assinatura.data_inscricao,
@@ -141,7 +125,6 @@ export const useSubscriptionRobust = (userEmail: string) => {
         };
 
       } catch (error) {
-        console.error('❌ Erro geral ao buscar dados de assinatura:', error);
 
         // Fallback final: tentar buscar pelo menos os créditos do perfil
         try {
@@ -157,7 +140,6 @@ export const useSubscriptionRobust = (userEmail: string) => {
             creditos: profileData?.[0]?.creditos || 0
           };
         } catch (fallbackError) {
-          console.error('❌ Erro no fallback:', fallbackError);
           return {
             plano: null,
             data_inscricao: null,
