@@ -11,7 +11,13 @@ interface SubscriptionInfoProps {
 }
 
 export const SubscriptionInfo = ({ userEmail }: SubscriptionInfoProps) => {
-  const { data: subscription, isLoading } = useSubscriptionRobust(userEmail);
+  const { data: subscription, isLoading, error } = useSubscriptionRobust(userEmail);
+
+  // Debug: mostrar dados no console
+  console.log('🔍 SubscriptionInfo - userEmail:', userEmail);
+  console.log('🔍 SubscriptionInfo - subscription:', subscription);
+  console.log('🔍 SubscriptionInfo - isLoading:', isLoading);
+  console.log('🔍 SubscriptionInfo - error:', error);
 
   // Removida função local - usando formatDateSafe importada
 

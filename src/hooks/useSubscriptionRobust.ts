@@ -54,39 +54,34 @@ export const useSubscriptionRobust = (userEmail: string) => {
       }
 
       try {
-        // 1. Verificar se a tabela assinaturas existe
-        const tableExists = await checkAssinaturasTableExists();
+        console.log('🔍 Buscando assinatura para email:', userEmail);
 
-        if (!tableExists) {
-          console.warn('⚠️ Tabela assinaturas não existe. Tentando criar...');
-          await createAssinaturasTableIfNeeded();
+        // 1. Tentar usar a função RPC otimizada primeiro
+        const { data: subscriptionData, error: rpcError } = await supabase
+          .rpc('get_subscription_by_email', { student_email: userEmail });
 
-          // Fallback: retornar sem assinatura se a tabela não existir
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('creditos')
-            .eq('email', userEmail)
-            .single();
+        if (!rpcError && subscriptionData && subscriptionData.length > 0) {
+          const sub = subscriptionData[0];
+          console.log('✅ Assinatura encontrada via RPC:', sub);
 
           return {
-            plano: null,
-            data_inscricao: null,
-            data_validade: null,
-            status: 'Sem Assinatura',
-            dias_restantes: 0,
-            creditos: profile?.creditos || 0
+            plano: sub.plano as 'Liderança' | 'Lapidação' | 'Largada',
+            data_inscricao: sub.data_inscricao,
+            data_validade: sub.data_validade,
+            status: sub.status as 'Ativo' | 'Vencido',
+            dias_restantes: sub.dias_restantes,
+            creditos: sub.creditos
           };
         }
 
-        // 2. Buscar dados do perfil do usuário (incluindo créditos)
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, creditos')
-          .eq('email', userEmail)
-          .single();
+        console.log('⚠️ Função RPC não encontrou dados ou falhou:', rpcError?.message);
 
-        if (profileError || !profile) {
-          console.error('Erro ao buscar perfil:', profileError);
+        // 2. Fallback: buscar perfil e assinatura separadamente
+        const { data: profileData, error: profileRpcError } = await supabase
+          .rpc('get_profile_by_email', { user_email: userEmail });
+
+        if (profileRpcError || !profileData || profileData.length === 0) {
+          console.warn('⚠️ Perfil não encontrado para email:', userEmail);
           return {
             plano: null,
             data_inscricao: null,
@@ -97,26 +92,32 @@ export const useSubscriptionRobust = (userEmail: string) => {
           };
         }
 
-        // 3. Buscar assinatura ativa
+        const profile = profileData[0];
+        console.log('✅ Perfil encontrado:', profile);
+
+        // 3. Buscar assinatura diretamente na tabela
         const { data: assinatura, error: assinaturaError } = await supabase
           .from('assinaturas')
           .select('plano, data_inscricao, data_validade')
           .eq('aluno_id', profile.id)
           .order('data_validade', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        const creditos = profile.creditos || 0;
+        if (assinaturaError) {
+          console.error('❌ Erro ao buscar assinatura:', assinaturaError);
+        }
 
         // Se não tem assinatura
-        if (assinaturaError || !assinatura) {
+        if (!assinatura) {
+          console.log('ℹ️ Nenhuma assinatura encontrada para o aluno');
           return {
             plano: null,
             data_inscricao: null,
             data_validade: null,
             status: 'Sem Assinatura',
             dias_restantes: 0,
-            creditos
+            creditos: profile.creditos
           };
         }
 
@@ -124,25 +125,28 @@ export const useSubscriptionRobust = (userEmail: string) => {
         const diasRestantes = getDaysUntilExpiration(assinatura.data_validade);
         const status: 'Ativo' | 'Vencido' = isDateActiveOrFuture(assinatura.data_validade) ? 'Ativo' : 'Vencido';
 
-        return {
+        console.log('✅ Assinatura encontrada:', {
           plano: assinatura.plano,
+          status,
+          dias_restantes: diasRestantes
+        });
+
+        return {
+          plano: assinatura.plano as 'Liderança' | 'Lapidação' | 'Largada',
           data_inscricao: assinatura.data_inscricao,
           data_validade: assinatura.data_validade,
           status,
           dias_restantes: Math.max(0, diasRestantes),
-          creditos
+          creditos: profile.creditos
         };
 
       } catch (error) {
-        console.error('Erro geral ao buscar dados de assinatura:', error);
+        console.error('❌ Erro geral ao buscar dados de assinatura:', error);
 
-        // Fallback: tentar buscar pelo menos os créditos do perfil
+        // Fallback final: tentar buscar pelo menos os créditos do perfil
         try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('creditos')
-            .eq('email', userEmail)
-            .single();
+          const { data: profileData } = await supabase
+            .rpc('get_profile_by_email', { user_email: userEmail });
 
           return {
             plano: null,
@@ -150,9 +154,10 @@ export const useSubscriptionRobust = (userEmail: string) => {
             data_validade: null,
             status: 'Sem Assinatura',
             dias_restantes: 0,
-            creditos: profile?.creditos || 0
+            creditos: profileData?.[0]?.creditos || 0
           };
         } catch (fallbackError) {
+          console.error('❌ Erro no fallback:', fallbackError);
           return {
             plano: null,
             data_inscricao: null,
@@ -164,9 +169,18 @@ export const useSubscriptionRobust = (userEmail: string) => {
         }
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 1 * 60 * 1000, // 1 minuto para facilitar testes
     enabled: !!userEmail,
-    retry: 3, // Tentar 3 vezes em caso de erro
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000) // Backoff exponencial
+    retry: (failureCount, error) => {
+      // Se a tabela não existe, não tentar novamente
+      if (error && error.toString().includes('relation "assinaturas" does not exist')) {
+        return false;
+      }
+      // Máximo de 2 tentativas para outros erros
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Backoff exponencial
+    refetchOnWindowFocus: true, // Recarregar quando a janela ganha foco
+    refetchOnMount: true // Sempre recarregar quando o componente monta
   });
 };

@@ -11,6 +11,17 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      retry: (failureCount, error) => {
+        // Não tentar novamente em caso de erro de autenticação
+        if (error && typeof error === 'object' && 'status' in error) {
+          if (error.status === 401 || error.status === 403) {
+            return false;
+          }
+        }
+        // Máximo de 3 tentativas para outros erros
+        return failureCount < 3;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
   },
 });
