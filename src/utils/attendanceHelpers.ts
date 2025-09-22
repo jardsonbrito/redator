@@ -52,14 +52,18 @@ export async function getMyAttendanceStatus(sessionId: string): Promise<Attendan
     console.log('🔍 Verificando presença para:', studentEmail, 'na aula:', sessionId);
 
     // Buscar presença na tabela correta usando email e aula_id
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('presenca_aulas')
       .select('status, entrada_at, saida_at')
       .eq('aula_id', sessionId)
       .eq('email_aluno', studentEmail.toLowerCase())
       .maybeSingle();
 
-    console.log('📊 Resultado da consulta de presença:', data);
+    console.log('📊 Resultado da consulta de presença:', { data, error });
+
+    if (error) {
+      console.error('❌ Erro ao buscar presença:', error);
+    }
 
     // Se existe registro de presença, verificar se tem entrada e/ou saída
     if (data && data.entrada_at) {
@@ -82,6 +86,8 @@ export async function getMyAttendanceStatus(sessionId: string): Promise<Attendan
 
 export async function registrarEntrada(sessionId: string): Promise<void> {
   try {
+    console.log('🚀 Iniciando registro de entrada para aula:', sessionId);
+
     // Primeiro, vamos verificar se o usuário está autenticado corretamente
     let studentEmail: string | null = null;
 
@@ -115,19 +121,57 @@ export async function registrarEntrada(sessionId: string): Promise<void> {
 
     console.log('🔄 Registrando entrada para:', studentEmail, 'na aula:', sessionId);
 
+    // Teste de conectividade da tabela
+    const { data: testData, error: testError } = await supabase
+      .from('presenca_aulas')
+      .select('count')
+      .limit(1);
+
+    console.log('🔗 Teste de conectividade da tabela:', { testData, testError });
+
+    // Verificar se já existe registro
+    const { data: existingRecord } = await supabase
+      .from('presenca_aulas')
+      .select('*')
+      .eq('aula_id', sessionId)
+      .eq('email_aluno', studentEmail.toLowerCase())
+      .single();
+
+    console.log('📋 Registro existente:', existingRecord);
+
     // Usar inserção direta na tabela ao invés da RPC
     const agora = new Date().toISOString();
 
-    const { error } = await supabase
-      .from('presenca_aulas')
-      .upsert({
-        aula_id: sessionId,
-        email_aluno: studentEmail.toLowerCase(),
-        status: 'presente',
-        entrada_at: agora
-      }, {
-        onConflict: 'aula_id,email_aluno'
-      });
+    const recordData = {
+      aula_id: sessionId,
+      email_aluno: studentEmail.toLowerCase(),
+      status: 'presente',
+      entrada_at: agora
+    };
+
+    console.log('📝 Dados a serem inseridos:', recordData);
+
+    let result;
+    if (existingRecord) {
+      // Atualizar registro existente
+      result = await supabase
+        .from('presenca_aulas')
+        .update({
+          status: 'presente',
+          entrada_at: agora
+        })
+        .eq('aula_id', sessionId)
+        .eq('email_aluno', studentEmail.toLowerCase());
+    } else {
+      // Inserir novo registro
+      result = await supabase
+        .from('presenca_aulas')
+        .insert(recordData);
+    }
+
+    const { error, data } = result;
+
+    console.log('📊 Resultado da operação:', { error, data });
 
     if (error) {
       console.error('Erro ao inserir presença:', error);
