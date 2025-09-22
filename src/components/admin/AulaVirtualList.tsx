@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Video } from "lucide-react";
 import { FrequenciaModal } from "./FrequenciaModal";
-import { AdminAulaVirtualCard } from "./AdminAulaVirtualCard";
+import { AulaCardPadrao } from '@/components/shared/AulaCardPadrao';
+import { computeStatus } from "@/utils/aulaStatus";
 
 interface AulaVirtual {
   id: string;
@@ -47,7 +48,26 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
         .order('data_aula', { ascending: false });
 
       if (error) throw error;
-      setAulas(data || []);
+
+      // Ordenar aulas: primeiro as que estão ao vivo, depois por data (mais recente primeiro)
+      const aulasOrdenadas = (data || []).sort((a, b) => {
+        const statusA = getStatusAula(a);
+        const statusB = getStatusAula(b);
+
+        // Prioridade: ao vivo > agendada > encerrada
+        const prioridade = { 'ao_vivo': 3, 'agendada': 2, 'encerrada': 1 };
+        const prioridadeA = prioridade[statusA as keyof typeof prioridade] || 0;
+        const prioridadeB = prioridade[statusB as keyof typeof prioridade] || 0;
+
+        if (prioridadeA !== prioridadeB) {
+          return prioridadeB - prioridadeA; // Ordem decrescente de prioridade
+        }
+
+        // Se têm a mesma prioridade, ordenar por data (mais recente primeiro)
+        return new Date(b.data_aula).getTime() - new Date(a.data_aula).getTime();
+      });
+
+      setAulas(aulasOrdenadas);
     } catch (error: any) {
       console.error('Erro ao buscar aulas virtuais:', error);
       toast.error('Erro ao carregar aulas virtuais');
@@ -106,6 +126,25 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
     });
   };
 
+  const getStatusAula = (aula: AulaVirtual) => {
+    try {
+      if (!aula.eh_aula_ao_vivo || !aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
+        return 'encerrada';
+      }
+
+      const status = computeStatus({
+        data_aula: aula.data_aula,
+        horario_inicio: aula.horario_inicio,
+        horario_fim: aula.horario_fim
+      });
+
+      return status;
+    } catch (error) {
+      console.error('Erro ao calcular status da aula:', error);
+      return 'encerrada';
+    }
+  };
+
   useEffect(() => {
     fetchAulas();
   }, [refresh]);
@@ -144,13 +183,17 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {aulas.map((aula) => (
-                <AdminAulaVirtualCard
+                <AulaCardPadrao
                   key={aula.id}
                   aula={aula}
-                  onEdit={onEdit}
-                  onToggleStatus={toggleAulaStatus}
-                  onDelete={deleteAula}
-                  onOpenFrequencia={openFrequenciaModal}
+                  perfil="admin"
+                  actions={{
+                    onEntrarAula: () => window.open(aula.link_meet, '_blank'),
+                    onFrequencia: () => openFrequenciaModal(aula),
+                    onEditar: () => onEdit && onEdit(aula),
+                    onDesativar: () => toggleAulaStatus(aula.id, aula.ativo),
+                    onExcluir: () => deleteAula(aula.id)
+                  }}
                 />
               ))}
             </div>

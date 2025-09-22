@@ -8,12 +8,10 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { toast } from "sonner";
 import { formatInTimeZone } from 'date-fns-tz';
-import { computeStatus } from "@/utils/aulaStatus";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
-import { StatusBadge } from "@/components/aula-virtual/StatusBadge";
 import { getMyAttendanceStatus, registrarEntrada, AttendanceStatus } from "@/utils/attendanceHelpers";
-import { AulaStatusBadge } from "@/components/aula-virtual/AulaStatusBadge";
-import { AulaAoVivoCardRefatorado } from "@/components/aula-virtual/AulaAoVivoCardRefatorado";
+import { computeStatus } from "@/utils/aulaStatus";
+import { AulaCardPadrao } from "@/components/shared/AulaCardPadrao";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 interface AulaAoVivo {
@@ -57,7 +55,7 @@ const AulasAoVivo = () => {
         .select('*')
         .eq('ativo', true)
         .eq('eh_aula_ao_vivo', true)
-        .order('data_aula', { ascending: true });
+        .order('data_aula', { ascending: false });
 
       if (aulasError) {
         throw aulasError;
@@ -85,7 +83,25 @@ const AulasAoVivo = () => {
         return false;
       });
 
-      setAulas(aulasAutorizadas);
+      // Ordenar aulas: primeiro as que estão ao vivo, depois por data (mais recente primeiro)
+      const aulasOrdenadas = aulasAutorizadas.sort((a, b) => {
+        const statusA = getStatusAula(a);
+        const statusB = getStatusAula(b);
+
+        // Prioridade: ao vivo > agendada > encerrada
+        const prioridade = { 'ao_vivo': 3, 'agendada': 2, 'encerrada': 1 };
+        const prioridadeA = prioridade[statusA as keyof typeof prioridade] || 0;
+        const prioridadeB = prioridade[statusB as keyof typeof prioridade] || 0;
+
+        if (prioridadeA !== prioridadeB) {
+          return prioridadeB - prioridadeA; // Ordem decrescente de prioridade
+        }
+
+        // Se têm a mesma prioridade, ordenar por data (mais recente primeiro)
+        return new Date(b.data_aula).getTime() - new Date(a.data_aula).getTime();
+      });
+
+      setAulas(aulasOrdenadas);
 
       // Buscar status de presença para cada aula autorizada
       for (const aula of aulasAutorizadas) {
@@ -147,31 +163,20 @@ const AulasAoVivo = () => {
 
   const getStatusAula = (aula: AulaAoVivo) => {
     try {
-      // Validação rigorosa dos dados
       if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
-        console.warn('❌ Dados da aula incompletos:', aula);
-        return 'indefinido';
+        return 'encerrada';
       }
 
-      console.log('🎯 Processando aula:', {
-        titulo: aula.titulo,
+      const status = computeStatus({
         data_aula: aula.data_aula,
         horario_inicio: aula.horario_inicio,
         horario_fim: aula.horario_fim
       });
-      
-      const status = computeStatus({
-        data_aula: aula.data_aula, // Passa direto, computeStatus vai normalizar
-        horario_inicio: aula.horario_inicio,
-        horario_fim: aula.horario_fim
-      });
 
-      console.log(`🚀 Status final para "${aula.titulo}": ${status}`);
-      
       return status;
     } catch (error) {
-      console.error('❌ Erro em getStatusAula:', error, aula);
-      return 'indefinido';
+      console.error('Erro ao calcular status da aula:', error);
+      return 'encerrada';
     }
   };
 
@@ -220,30 +225,26 @@ const AulasAoVivo = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {aulas.map((aula) => {
-                const status = getStatusAula(aula);
                 const attendanceStatus = attendanceMap[aula.id] || 'ausente';
 
                 console.log('🎯 Renderizando aula:', aula.titulo);
                 console.log('   - ID da aula:', aula.id);
-                console.log('   - Status calculado:', status);
                 console.log('   - Attendance Map:', attendanceMap);
                 console.log('   - Attendance Status:', attendanceStatus);
 
-                // Usar status calculado dinamicamente (não o campo do banco)
-                let normalizedStatus: 'agendada' | 'ao_vivo' | 'encerrada' = 
-                  status === 'indefinido' ? 'encerrada' : status;
-                
                 return (
-                  <AulaAoVivoCardRefatorado
+                  <AulaCardPadrao
                     key={aula.id}
                     aula={aula}
-                    status={normalizedStatus}
+                    perfil="aluno"
                     attendanceStatus={attendanceStatus}
-                    turmaCode={studentData.turma || "Visitante"}
-                    onEntrada={handleRegistrarEntrada}
                     loadingOperation={loadingOperations[aula.id]}
+                    actions={{
+                      onEntrarAula: () => window.open(aula.link_meet, '_blank'),
+                      onRegistrarEntrada: () => handleRegistrarEntrada(aula.id)
+                    }}
                   />
                 );
               })}
