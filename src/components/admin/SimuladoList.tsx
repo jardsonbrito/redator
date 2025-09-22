@@ -2,17 +2,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Trash2, Users, Calendar, Clock, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale/pt-BR";
-import { computeSimuladoStatus, getAdminStatusInfo } from "@/utils/simuladoStatus";
 import { SimuladoForm } from "./SimuladoForm";
-import { AdminCard, AdminCardSkeleton, type BadgeTone } from "@/components/admin/AdminCard";
-import { resolveCover } from "@/utils/coverUtils";
+import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
 import { trackAdminEvent } from "@/utils/telemetry";
 
 const SimuladoList = () => {
@@ -76,10 +70,6 @@ const SimuladoList = () => {
     }
   });
 
-  const getStatusSimulado = (simulado: any) => {
-    const status = computeSimuladoStatus(simulado);
-    return getAdminStatusInfo(status);
-  };
 
   const handleEdit = (simulado: any) => {
     setSimuladoEditando(simulado);
@@ -96,12 +86,62 @@ const SimuladoList = () => {
     setShowForm(false);
   };
 
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'ativo' ? false : true;
+
+      const { error } = await supabase
+        .from('simulados')
+        .update({ ativo: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
+
+      toast({
+        title: "✅ Status alterado",
+        description: `Simulado ${newStatus ? 'ativado' : 'desativado'} com sucesso.`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "❌ Erro",
+        description: error.message || "Erro ao alterar status do simulado.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <AdminCardSkeleton />
-        <AdminCardSkeleton />
-        <AdminCardSkeleton />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+            <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+            <div className="p-4 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-8 bg-gray-200 rounded w-full"></div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+            <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+            <div className="p-4 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-8 bg-gray-200 rounded w-full"></div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+            <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+            <div className="p-4 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-8 bg-gray-200 rounded w-full"></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -134,42 +174,19 @@ const SimuladoList = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
-          {simulados.map((simulado) => {
-            const statusInfo = getStatusSimulado(simulado);
-            const tema = simulado.tema as any | null;
-            const coverUrl = tema ? resolveCover(tema.cover_file_path, tema.cover_url) : resolveCover(undefined, undefined);
-            const subtitle = (tema?.frase_tematica as string) || simulado.frase_tematica;
-            const tone: BadgeTone = statusInfo.status === 'Ativo' ? 'success' : 'neutral';
-            const badges: { label: string; tone?: BadgeTone }[] = [];
-            if (tema?.eixo_tematico) badges.push({ label: tema.eixo_tematico as string, tone: 'primary' });
-            badges.push({ label: statusInfo.status, tone });
-            if (Array.isArray(simulado.turmas_autorizadas) && simulado.turmas_autorizadas.length > 0) {
-              simulado.turmas_autorizadas.forEach((t: string) => badges.push({ label: t === 'visitante' ? 'Visitantes' : t, tone: 'neutral' }));
-            }
-
-            return (
-              <AdminCard
-                key={simulado.id}
-                item={{
-                  id: simulado.id,
-                  module: 'simulados',
-                  coverUrl,
-                  title: simulado.titulo,
-                  subtitle,
-                  badges,
-                  meta: [
-                    { icon: Calendar, text: `Início: ${format(new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}` },
-                    { icon: Clock, text: `Fim: ${format(new Date(`${simulado.data_fim}T${simulado.hora_fim}`), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}` },
-                  ],
-                  actions: [
-                    { icon: Edit, label: 'Editar', onClick: () => handleEdit(simulado) },
-                    { icon: Trash2, label: 'Excluir', onClick: () => deletarSimulado.mutate(simulado.id), tone: 'danger' },
-                  ],
-                }}
-              />
-            );
-          })}
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {simulados.map((simulado) => (
+            <SimuladoCardPadrao
+              key={simulado.id}
+              simulado={simulado}
+              perfil="admin"
+              actions={{
+                onEditar: (id) => handleEdit(simulado),
+                onToggleStatus: (id, currentStatus) => handleToggleStatus(id, currentStatus),
+                onExcluir: (id) => deletarSimulado.mutate(id)
+              }}
+            />
+          ))}
         </div>
       )}
     </div>

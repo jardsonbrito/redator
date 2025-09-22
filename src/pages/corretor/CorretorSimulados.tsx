@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { UnifiedCard, UnifiedCardSkeleton } from "@/components/ui/unified-card";
-import { ClipboardCheck, Calendar, Clock } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
-import { resolveSimuladoCover, formatarData, formatarHorario } from "@/utils/coverUtils";
+import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
 
 const CorretorSimulados = () => {
   const { data: simulados, isLoading, error } = useQuery({
@@ -34,9 +33,30 @@ const CorretorSimulados = () => {
             <p className="text-gray-600">Simulados finalizados disponíveis para consulta</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <UnifiedCardSkeleton />
-            <UnifiedCardSkeleton />
-            <UnifiedCardSkeleton />
+            <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+              <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+              <div className="p-4 space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-8 bg-gray-200 rounded w-full"></div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+              <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+              <div className="p-4 space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-8 bg-gray-200 rounded w-full"></div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+              <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+              <div className="p-4 space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-8 bg-gray-200 rounded w-full"></div>
+              </div>
+            </div>
           </div>
         </div>
       </CorretorLayout>
@@ -75,46 +95,16 @@ const CorretorSimulados = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {simulados?.map((simulado) => {
-              const coverUrl = resolveSimuladoCover(simulado);
-              const dataInicio = new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`);
-              const dataFim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
-              
-              const badges: Array<{ label: string; tone: 'primary' | 'neutral' | 'success' | 'warning' }> = [];
-              badges.push({ label: 'Finalizado', tone: 'neutral' });
-              
-              if (simulado.tema?.eixo_tematico) {
-                badges.push({ label: simulado.tema.eixo_tematico, tone: 'primary' });
-              }
-
-              const meta = [
-                { icon: Calendar, text: formatarData(dataInicio, dataFim) },
-                { icon: Clock, text: formatarHorario(dataInicio, dataFim) }
-              ];
-
-              return (
-                <UnifiedCard
-                  key={simulado.id}
-                  variant="corretor"
-                  item={{
-                    coverUrl,
-                    title: simulado.titulo,
-                    subtitle: simulado.tema?.frase_tematica || simulado.frase_tematica,
-                    badges,
-                    meta,
-                    cta: {
-                      label: 'Ver detalhes',
-                      onClick: () => {
-                        // Navegar para detalhes do simulado
-                        window.open(`/simulados/${simulado.id}`, '_blank');
-                      },
-                      ariaLabel: `Ver detalhes do simulado ${simulado.titulo}`
-                    },
-                    ariaLabel: `Simulado: ${simulado.titulo}`
-                  }}
-                />
-              );
-            })}
+            {simulados?.map((simulado) => (
+              <SimuladoCardPadrao
+                key={simulado.id}
+                simulado={simulado}
+                perfil="corretor"
+                actions={{
+                  onVerDetalhes: (id) => window.location.href = `/corretor/simulados/${id}/redacoes`
+                }}
+              />
+            ))}
           </div>
         )}
       </div>

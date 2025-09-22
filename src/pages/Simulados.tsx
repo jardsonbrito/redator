@@ -10,10 +10,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
-import { resolveSimuladoCover } from "@/utils/coverUtils";
-import { SimuladoCountdown } from "@/components/SimuladoCountdown";
-import { SimuladoAgendadoCard } from "@/components/SimuladoAgendadoCard";
+import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
 import { useSimuladoSubmission } from "@/hooks/useSimuladoSubmission";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -117,52 +114,42 @@ const getStatusSimulado = (simulado: any) => {
   return getSimuladoStatusInfo(status, simulado);
 };
 
-// Componente para card de simulado com verificação de submissão
-const SimuladoCardWithSubmission = ({ 
-  simulado, 
-  info, 
-  coverUrl, 
-  subtitle, 
-  badges, 
-  meta, 
-  onNavigate 
-}: {
-  simulado: any;
-  info: any;
-  coverUrl?: string;
-  subtitle?: string;
-  badges: { label: string; tone?: BadgeTone }[];
-  meta: any[];
-  onNavigate: () => void;
-}) => {
+// Componente wrapper para usar o hook de submissão
+const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; navigate: any }) => {
   const { data: submissionData } = useSimuladoSubmission(simulado.id);
-  
-  // Se o aluno já enviou, adicionar badge "Enviado" e desabilitar botão
-  const finalBadges = submissionData?.hasSubmitted 
-    ? [...badges, { label: 'Enviado', tone: 'secondary' as BadgeTone }]
-    : badges;
-    
-  const ctaButton = info.isActive && !submissionData?.hasSubmitted ? {
-    label: 'Abrir',
-    onClick: onNavigate,
-    ariaLabel: `Abrir simulado ${simulado.titulo}`
-  } : undefined;
+
+  // Determinar status de submissão para exibir badge correto
+  let submissionStatus: 'ENVIADO' | 'AUSENTE' | undefined;
+  if (computeSimuladoStatus(simulado) === 'encerrado') {
+    submissionStatus = submissionData?.hasSubmitted ? 'ENVIADO' : 'AUSENTE';
+  }
+
+  const simuladoWithSubmission = {
+    ...simulado,
+    hasSubmitted: submissionData?.hasSubmitted,
+    submissionStatus
+  };
 
   return (
-    <UnifiedCard
-      variant="aluno"
-      item={{
-        coverUrl,
-        title: simulado.titulo,
-        subtitle,
-        badges: finalBadges,
-        meta: meta.length > 0 ? meta : undefined,
-        cta: ctaButton,
-        ariaLabel: `Simulado: ${simulado.titulo}`
+    <SimuladoCardPadrao
+      simulado={simuladoWithSubmission}
+      perfil="aluno"
+      actions={{
+        onVerSimulado: (id) => {
+          // Se o simulado está ativo, permitir participação
+          const status = computeSimuladoStatus(simulado);
+          if (status === 'ativo') {
+            navigate(`/simulados/${id}`);
+          } else if (status === 'encerrado' && simuladoWithSubmission.submissionStatus === 'ENVIADO') {
+            // Se o simulado já foi enviado, ir direto para a página de redação corrigida
+            navigate(`/simulados/${id}/redacao-corrigida`);
+          }
+        }
       }}
     />
   );
 };
+
 
 if (isLoading) {
   return (
@@ -172,9 +159,30 @@ if (isLoading) {
           <StudentHeader pageTitle="Simulados" />
           <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <UnifiedCardSkeleton />
-              <UnifiedCardSkeleton />
-              <UnifiedCardSkeleton />
+              <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+                <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-full"></div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+                <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-full"></div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl shadow-md h-80 animate-pulse">
+                <div className="w-full h-40 bg-gray-200 rounded-t-xl"></div>
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-full"></div>
+                </div>
+              </div>
             </div>
           </main>
         </div>
@@ -205,73 +213,13 @@ if (isLoading) {
   </Card>
 ) : (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {simulados.map((simulado: any) => {
-      const info = getStatusSimulado(simulado);
-      const status = computeSimuladoStatus(simulado);
-      const isAgendado = status === 'agendado';
-      const tema = simulado.tema as any | null;
-      
-      // Para simulado agendado, usar uma imagem placeholder ou nenhuma capa
-      const coverUrl = isAgendado ? undefined : resolveSimuladoCover(simulado);
-      
-      // Para simulado agendado, não mostrar subtitle (frase_tematica)
-      const subtitle = isAgendado ? undefined : (tema?.frase_tematica as string) || undefined;
-      
-      // Para badges, se for agendado dar destaque visual especial
-      const badges: { label: string; tone?: BadgeTone }[] = [];
-      if (!isAgendado && tema?.eixo_tematico) {
-        badges.push({ label: tema.eixo_tematico as string, tone: 'primary' });
-      }
-      
-      // Badge com destaque para agendado
-      if (isAgendado) {
-        badges.push({ label: info.label, tone: 'primary' }); // Azul/lilás suave
-      } else {
-        badges.push({ label: info.label, tone: info.tone });
-      }
-
-      // Formatação correta de datas no timezone de Fortaleza
-      const meta = [];
-      if (simulado.data_inicio && simulado.hora_inicio) {
-        const dataInicio = dayjs.tz(`${simulado.data_inicio} ${simulado.hora_inicio}`, 'YYYY-MM-DD HH:mm', TZ);
-        meta.push({
-          icon: Calendar,
-          text: `Início: ${dataInicio.format('DD/MM/YYYY')} às ${dataInicio.format('HH')}h`
-        });
-      }
-      if (simulado.data_fim && simulado.hora_fim) {
-        const dataFim = dayjs.tz(`${simulado.data_fim} ${simulado.hora_fim}`, 'YYYY-MM-DD HH:mm', TZ);
-        meta.push({
-          icon: Clock,
-          text: `Fim: ${dataFim.format('DD/MM/YYYY')} às ${dataFim.format('HH')}h`
-        });
-      }
-
-      // Para simulados agendados, renderizar layout especial
-      if (isAgendado) {
-        return (
-          <SimuladoAgendadoCard
-            key={simulado.id}
-            simulado={simulado}
-            onStatusChange={() => queryClient.invalidateQueries({ queryKey: ['simulados', turmaCode] })}
-          />
-        );
-      }
-
-      // Para simulados em andamento e encerrados, usar UnifiedCard normal
-      return (
-        <SimuladoCardWithSubmission
-          key={simulado.id}
-          simulado={simulado}
-          info={info}
-          coverUrl={coverUrl}
-          subtitle={subtitle}
-          badges={badges}
-          meta={meta}
-          onNavigate={() => navigate(`/simulados/${simulado.id}`)}
-        />
-      );
-    })}
+    {simulados.map((simulado: any) => (
+      <SimuladoWithSubmissionWrapper
+        key={simulado.id}
+        simulado={simulado}
+        navigate={navigate}
+      />
+    ))}
   </div>
 )}
       </main>

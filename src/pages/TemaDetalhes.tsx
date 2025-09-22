@@ -248,29 +248,22 @@ const TemaDetalhes = () => {
               
               {/* Botão para escrever redação - para alunos e visitantes */}
               {canWriteRedacao && (
-                <div className="bg-redator-primary/5 rounded-lg p-6 border border-redator-primary/20 text-center">
-                  <h3 className="font-semibold text-redator-primary mb-3">
-                    Gostou do tema? Pratique agora mesmo!
-                  </h3>
-                  <p className="text-redator-accent mb-4 text-sm">
-                    Escreva uma redação sobre este tema e receba correção personalizada.
-                  </p>
+                <div className="mt-8 pt-6 border-t border-gray-200 bg-gray-50/50 rounded-lg p-6 shadow-sm text-center">
                   <Button
                     onClick={handleEscreverRedacao}
                     disabled={!todayAllowsSubmission}
-                    className={`px-6 py-3 ${
-                      todayAllowsSubmission 
-                        ? 'bg-redator-primary hover:bg-redator-primary/90 text-white' 
+                    className={`w-full sm:w-auto px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      todayAllowsSubmission
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md'
                         : 'bg-gray-400 text-gray-600 cursor-not-allowed'
                     }`}
-                    size="lg"
                   >
-                    <Edit className="w-5 h-5 mr-2" />
-                    ✍️ Escreva sobre este tema
+                    <Edit className="w-4 h-4 mr-2" />
+                    Escreva sobre este tema
                   </Button>
-                  
+
                   {!todayAllowsSubmission && (
-                    <p className="text-xs text-gray-500 mt-2 text-center">
+                    <p className="text-xs text-gray-500 mt-3 text-center">
                       Envios por tema não estão liberados hoje. Dias permitidos: {daysAllowedText}
                     </p>
                   )}

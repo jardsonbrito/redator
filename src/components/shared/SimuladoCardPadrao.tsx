@@ -1,0 +1,387 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar, Clock, Edit, Eye, EyeOff, Trash2, AlertTriangle, MoreVertical } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { computeSimuladoStatus } from '@/utils/simuladoStatus';
+import { resolveSimuladoCover } from '@/utils/coverUtils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import duration from 'dayjs/plugin/duration';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(duration);
+
+const TZ = 'America/Fortaleza';
+
+export interface SimuladoCardData {
+  id: string;
+  titulo: string;
+  data_inicio: string;
+  hora_inicio: string;
+  data_fim: string;
+  hora_fim: string;
+  ativo?: boolean;
+  turmas_autorizadas?: string[];
+  permite_visitante?: boolean;
+  tema?: {
+    id: string;
+    frase_tematica: string;
+    eixo_tematico: string;
+    cover_file_path?: string;
+    cover_url?: string;
+  } | null;
+  // Para controle de envio do aluno
+  hasSubmitted?: boolean;
+  submissionStatus?: 'ENVIADO' | 'AUSENTE';
+}
+
+interface SimuladoCardActions {
+  onEditar?: (id: string) => void;
+  onToggleStatus?: (id: string, currentStatus: string) => void;
+  onExcluir?: (id: string) => void;
+  onVerSimulado?: (id: string) => void;
+  onVerDetalhes?: (id: string) => void;
+}
+
+interface SimuladoCardProps {
+  simulado: SimuladoCardData;
+  perfil: 'admin' | 'aluno' | 'corretor';
+  actions: SimuladoCardActions;
+  className?: string;
+}
+
+// Componente Timer para simulados agendados
+const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(null);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = dayjs.tz(dayjs(), TZ);
+      const target = dayjs.tz(targetDate, 'YYYY-MM-DD HH:mm', TZ);
+
+      const diff = target.diff(now);
+
+      if (diff <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0 });
+        return;
+      }
+
+      const durationObj = dayjs.duration(diff);
+      setTimeLeft({
+        days: durationObj.days(),
+        hours: durationObj.hours(),
+        minutes: durationObj.minutes()
+      });
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 30000); // Atualiza a cada 30 segundos
+
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  if (!timeLeft) return null;
+
+  return (
+    <div className="w-full h-40 flex items-center justify-center bg-gradient-to-r from-purple-600 to-blue-500 rounded-lg text-white">
+      <div className="text-center">
+        <p className="text-sm font-medium mb-3 opacity-90">Faltam:</p>
+        <div className="flex items-center justify-center gap-4">
+          <div className="text-center">
+            <div className="text-2xl md:text-3xl font-bold tabular-nums leading-none">
+              {timeLeft.days}
+            </div>
+            <div className="text-xs opacity-80 mt-1">dias</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl md:text-3xl font-bold tabular-nums leading-none">
+              {timeLeft.hours}
+            </div>
+            <div className="text-xs opacity-80 mt-1">horas</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl md:text-3xl font-bold tabular-nums leading-none">
+              {timeLeft.minutes}
+            </div>
+            <div className="text-xs opacity-80 mt-1">min</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const getStatusInfo = (simulado: SimuladoCardData) => {
+  const status = computeSimuladoStatus(simulado);
+
+  switch (status) {
+    case 'agendado':
+      return { label: 'Agendado', bgColor: 'bg-yellow-500' };
+    case 'ativo':
+      return { label: 'Em andamento', bgColor: 'bg-green-600' };
+    case 'encerrado':
+      if (simulado.submissionStatus === 'ENVIADO') {
+        return { label: 'Enviado', bgColor: 'bg-blue-600' };
+      } else if (simulado.submissionStatus === 'AUSENTE') {
+        return { label: 'Ausente', bgColor: 'bg-red-600' };
+      }
+      return { label: 'Finalizado', bgColor: 'bg-gray-600' };
+    default:
+      return { label: 'Inativo', bgColor: 'bg-gray-400' };
+  }
+};
+
+const getFormattedDates = (simulado: SimuladoCardData) => {
+  try {
+    const dataInicio = new Date(`${simulado.data_inicio}T${simulado.hora_inicio}`);
+    const dataFim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
+
+    return {
+      inicio: format(dataInicio, "dd/MM/yyyy 'às' HH'h'", { locale: ptBR }),
+      fim: format(dataFim, "dd/MM/yyyy 'às' HH'h'", { locale: ptBR })
+    };
+  } catch {
+    return { inicio: 'Data inválida', fim: 'Data inválida' };
+  }
+};
+
+export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }: SimuladoCardProps) => {
+  const status = computeSimuladoStatus(simulado);
+  const statusInfo = getStatusInfo(simulado);
+  const dates = getFormattedDates(simulado);
+  const isAgendado = status === 'agendado';
+  const isAtivo = status === 'ativo';
+  const isEncerrado = status === 'encerrado';
+
+  // Determinar se o card é clicável
+  const isClickable = (perfil === 'aluno' && isAtivo) ||
+                     (perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO') ||
+                     (perfil === 'corretor' && isEncerrado);
+
+  const handleCardClick = () => {
+    if (!isClickable) return;
+
+    if (perfil === 'aluno' && isAtivo) {
+      actions.onVerSimulado?.(simulado.id);
+    } else if (perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO') {
+      // Ver redação enviada
+      actions.onVerSimulado?.(simulado.id);
+    } else if (perfil === 'corretor' && isEncerrado) {
+      actions.onVerDetalhes?.(simulado.id);
+    }
+  };
+
+  const handleExcluir = () => {
+    if (actions.onExcluir) {
+      actions.onExcluir(simulado.id);
+    }
+  };
+
+  return (
+    <Card className={`bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border-gray-200 flex flex-col h-full ${isClickable ? 'cursor-pointer' : ''} ${className}`}>
+      {/* Imagem/Timer + badges */}
+      <div className="relative" onClick={isClickable ? handleCardClick : undefined}>
+        {isAgendado ? (
+          // Timer para simulados agendados
+          <CountdownTimer targetDate={`${simulado.data_inicio} ${simulado.hora_inicio}`} />
+        ) : (
+          // Imagem normal para outros status
+          <div className="w-full h-40 overflow-hidden">
+            <img
+              src={resolveSimuladoCover(simulado) || '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png'}
+              alt={`Capa do simulado: ${simulado.titulo}`}
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
+              }}
+            />
+          </div>
+        )}
+
+        {/* Badge do eixo temático - não mostrar quando agendado para alunos */}
+        {simulado.tema?.eixo_tematico && !(isAgendado && perfil === 'aluno') && (
+          <Badge className="absolute top-2 left-2 bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 shadow-sm">
+            {simulado.tema.eixo_tematico}
+          </Badge>
+        )}
+
+        {/* Badge de status */}
+        <Badge className={`absolute top-2 right-2 text-white text-xs px-2 py-1 shadow-sm ${statusInfo.bgColor}`}>
+          {statusInfo.label}
+        </Badge>
+      </div>
+
+      {/* Conteúdo */}
+      <div className="p-4 flex-1 flex flex-col" onClick={isClickable ? handleCardClick : undefined}>
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 line-clamp-2 mb-2 leading-tight">
+          {simulado.titulo}
+        </h3>
+
+        {simulado.tema?.frase_tematica && (
+          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+            {simulado.tema.frase_tematica}
+          </p>
+        )}
+
+        {/* Meta info - datas */}
+        <div className="text-xs text-gray-500 space-y-1 mb-4">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            <span>Início: {dates.inicio}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            <span>Fim: {dates.fim}</span>
+          </div>
+        </div>
+
+        <div className="flex-1"></div>
+      </div>
+
+      {/* Rodapé condicional */}
+      {(perfil === 'admin' || !isAgendado) && (
+        <div className="px-4 py-3 border-t border-gray-100 mt-auto">
+          {perfil === 'admin' ? (
+            <div className="flex items-center justify-between">
+              {/* Turmas à esquerda */}
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                <span>👥</span>
+                <span className="hidden sm:inline">
+                  {simulado.turmas_autorizadas?.join(', ') || 'Sem turmas'}
+                </span>
+                <span className="sm:hidden">
+                  {simulado.turmas_autorizadas?.length || 0} turma(s)
+                </span>
+              </div>
+
+              {/* Menu de ações */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-2 h-8 w-8 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <MoreVertical className="h-4 w-4 text-gray-600" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
+                  <DropdownMenuItem
+                    onClick={() => actions.onEditar?.(simulado.id)}
+                    className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => actions.onToggleStatus?.(simulado.id, simulado.ativo ? 'ativo' : 'inativo')}
+                    className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    {simulado.ativo ? (
+                      <>
+                        <EyeOff className="h-4 w-4 mr-2" />
+                        Desativar
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Ativar
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem
+                        onSelect={(e) => e.preventDefault()}
+                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="max-w-md mx-4 rounded-lg">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-red-500" />
+                          Confirmar Exclusão
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir este simulado? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                        <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleExcluir}
+                          className="w-full sm:w-auto bg-red-600 hover:bg-red-700 transition-colors"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            // Botão para alunos e corretores (quando aplicável)
+            <>
+              {perfil === 'aluno' && isAtivo && !simulado.hasSubmitted && (
+                <Button
+                  onClick={handleCardClick}
+                  className="w-full bg-purple-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Participar do Simulado
+                </Button>
+              )}
+              {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO' && (
+                <Button
+                  onClick={handleCardClick}
+                  className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Ver Minha Redação
+                </Button>
+              )}
+              {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'AUSENTE' && (
+                <div className="text-center text-sm text-gray-500 py-2">
+                  Você não enviou sua redação para este simulado
+                </div>
+              )}
+              {perfil === 'corretor' && isEncerrado && (
+                <Button
+                  onClick={handleCardClick}
+                  className="w-full bg-purple-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Ver Redações
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+};

@@ -1,25 +1,8 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Calendar, Clock, CheckCircle, X as ClearIcon, Ban } from 'lucide-react';
-import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
-import { CompactIconButton } from '@/components/ui/compact-icon-button';
+import { X as ClearIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -28,11 +11,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TemaForm } from './TemaForm';
-import { AdminUniformCard, type BadgeType } from './AdminUniformCard';
-import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 import { useAdminTemasFilters } from '@/hooks/useAdminTemasFilters';
 import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
 import { supabase } from '@/integrations/supabase/client';
+import { TemaCardPadrao } from "@/components/shared/TemaCard";
 
 export const TemaList = () => {
   const { toast } = useToast();
@@ -58,102 +40,7 @@ export const TemaList = () => {
     await queryClient.invalidateQueries({ queryKey: ['admin-temas-all'] });
   };
 
-  const getThemeStatus = (tema: any): {
-    type: 'published' | 'scheduled' | 'overdue' | 'draft';
-    label: string;
-    variant: 'default' | 'destructive' | 'secondary' | 'outline';
-  } => {
-    const now = new Date();
-    const scheduledDate = tema.scheduled_publish_at ? new Date(tema.scheduled_publish_at) : null;
-    
-    if (tema.status === 'publicado') {
-      return { 
-        type: 'published' as const, 
-        label: 'Publicado', 
-        variant: 'default' as const,
-      };
-    }
-    
-    if (scheduledDate && scheduledDate > now) {
-      return { 
-        type: 'scheduled' as const, 
-        label: `Agendado para ${format(scheduledDate, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 
-        variant: 'secondary' as const,
-      };
-    }
-    
-    if (scheduledDate && scheduledDate <= now) {
-      return { 
-        type: 'overdue' as const, 
-        label: 'Publicação pendente', 
-        variant: 'destructive' as const,
-      };
-    }
-    
-    return { 
-      type: 'draft' as const, 
-      label: 'Rascunho', 
-      variant: 'secondary' as const
-    };
-  };
 
-  const publishNow = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('temas')
-        .update({
-          status: 'publicado',
-          published_at: new Date().toISOString(),
-          scheduled_publish_at: null,
-          scheduled_by: null
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      await queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
-
-      toast({
-        title: "✅ Tema publicado",
-        description: "O tema foi publicado imediatamente.",
-      });
-
-    } catch (error: any) {
-      toast({
-        title: "❌ Erro",
-        description: error.message || "Erro ao publicar tema.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const cancelScheduling = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('temas')
-        .update({
-          scheduled_publish_at: null,
-          scheduled_by: null
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      await queryClient.invalidateQueries({ queryKey: ['admin-temas'] });
-
-      toast({
-        title: "✅ Agendamento cancelado",
-        description: "O agendamento de publicação foi removido.",
-      });
-
-    } catch (error: any) {
-      toast({
-        title: "❌ Erro",
-        description: error.message || "Erro ao cancelar agendamento.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const toggleStatus = async (id: string, currentStatus: string) => {
     try {
@@ -357,110 +244,19 @@ export const TemaList = () => {
       </div>
       
       {temas && temas.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-          {temas.map((tema) => {
-            const status = getThemeStatus(tema);
-            
-            // Preparar badges
-            const badges: BadgeType[] = [
-              {
-                label: tema.eixo_tematico,
-                variant: 'outline' as const
-              },
-              {
-                label: status.label,
-                variant: status.variant,
-                icon: status.type === 'published' ? <CheckCircle className="w-3 h-3" /> :
-                      status.type === 'scheduled' ? <Clock className="w-3 h-3" /> :
-                      status.type === 'overdue' ? <AlertTriangle className="w-3 h-3" /> : undefined
-              }
-            ];
-
-            if (tema.needs_media_update) {
-              badges.push({
-                label: 'Pendente de mídia',
-                variant: 'destructive' as const
-              });
-            }
-
-            // Preparar ações
-            const actions = (
-              <>
-                <CompactIconButton
-                  icon={ACTION_ICON.editar}
-                  label="Editar tema"
-                  intent="neutral"
-                  onClick={() => setEditingId(tema.id)}
-                />
-                
-                <CompactIconButton
-                  icon={tema.status === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
-                  label={tema.status === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
-                  intent={tema.status === 'publicado' ? 'attention' : 'positive'}
-                  onClick={() => toggleStatus(tema.id, tema.status)}
-                />
-                
-                {status.type === 'scheduled' && (
-                  <CompactIconButton
-                    icon={Ban}
-                    label="Cancelar agendamento"
-                    intent="attention"
-                    onClick={() => cancelScheduling(tema.id)}
-                  />
-                )}
-                
-                {status.type === 'overdue' && (
-                  <CompactIconButton
-                    icon={ACTION_ICON.publicar}
-                    label="Publicar agora"
-                    intent="positive"
-                    onClick={() => publishNow(tema.id)}
-                  />
-                )}
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <CompactIconButton
-                      icon={ACTION_ICON.excluir}
-                      label="Excluir tema"
-                      intent="danger"
-                    />
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-md mx-4">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-red-500" />
-                        Confirmar Exclusão
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja excluir este tema? Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                      <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                      <AlertDialogAction 
-                        onClick={() => handleDelete(tema.id)}
-                        className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </>
-            );
-
-            return (
-              <AdminUniformCard
-                key={tema.id}
-                title={tema.frase_tematica}
-                coverUrl={getTemaCoverUrl(tema)}
-                coverAlt={`Capa do tema: ${tema.frase_tematica}`}
-                badges={badges}
-                actions={actions}
-              />
-            );
-          })}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {temas.map((tema) => (
+            <TemaCardPadrao
+              key={tema.id}
+              tema={tema}
+              perfil="admin"
+              actions={{
+                onEditar: (id) => setEditingId(id),
+                onToggleStatus: (id, currentStatus) => toggleStatus(id, currentStatus),
+                onExcluir: (id) => handleDelete(id)
+              }}
+            />
+          ))}
         </div>
       ) : (
         <div className="text-center py-8">

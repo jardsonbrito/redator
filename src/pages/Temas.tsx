@@ -1,13 +1,12 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText, X as ClearIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { FileText, X as ClearIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { TemaCardPadrao } from "@/components/shared/TemaCard";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 import { useTemasFilters } from '@/hooks/useTemasFilters';
 import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
 import { MultiSelectDropdown } from "@/components/filters/MultiSelectDropdown";
@@ -16,7 +15,8 @@ import { usePageTitle } from "@/hooks/useBreadcrumbs";
 export default function Temas() {
   // Configurar título da página
   usePageTitle('Temas');
-  
+  const navigate = useNavigate();
+
   // Usar o hook de filtros
   const {
     temas,
@@ -141,56 +141,14 @@ export default function Temas() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {temas.map((tema) => (
-              <Card key={tema.id} className="hover:shadow-lg transition-shadow border-redator-accent/20">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-bold text-redator-primary line-clamp-3 mb-3">
-                        {tema.frase_tematica}
-                      </CardTitle>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge className="bg-redator-accent text-white">
-                          {tema.eixo_tematico}
-                        </Badge>
-                        <span 
-                          className="inline-block px-2 py-0.5 text-[11px] sm:text-xs font-medium text-violet-700 bg-violet-50 border border-violet-100 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-                          aria-label={`Data de publicação: ${tema.published_at ? new Date(tema.published_at).toLocaleDateString('pt-BR', { 
-                            day: '2-digit', 
-                            month: 'long', 
-                            year: 'numeric' 
-                          }) : 'Data não disponível'}`}
-                        >
-                          Publicado em {tema.published_at ? new Date(tema.published_at).toLocaleDateString('pt-BR') : 'Data não disponível'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="aspect-video overflow-hidden rounded-md">
-                      <img 
-                        src={getTemaCoverUrl(tema)} 
-                        alt={`Capa do tema: ${tema.frase_tematica}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
-                        }}
-                      />
-                    </div>
-                    
-                    <div className="pt-2">
-                      <Link to={`/temas/${tema.id}`}>
-                        <Button className="w-full bg-redator-primary hover:bg-redator-primary/90">
-                          <FileText className="w-4 h-4 mr-2" />
-                          Ver Tema Completo
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <TemaCardPadrao
+                key={tema.id}
+                tema={tema}
+                perfil="aluno"
+                actions={{
+                  onVerTema: (id) => navigate(`/temas/${id}`)
+                }}
+              />
             ))}
           </div>
         )}

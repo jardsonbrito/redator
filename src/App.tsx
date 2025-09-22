@@ -38,6 +38,7 @@ import CorretorHome from "./pages/CorretorHome";
 import CorretorRedacoes from "./pages/corretor/CorretorRedacoes";
 import CorretorTemas from "./pages/corretor/CorretorTemas";
 import CorretorSimulados from "./pages/corretor/CorretorSimulados";
+import CorretorSimuladoRedacoes from "./pages/corretor/CorretorSimuladoRedacoes";
 import CorretorAulas from "./pages/corretor/CorretorAulas";
 import CorretorVideoteca from "./pages/corretor/CorretorVideoteca";
 import CorretorBiblioteca from "./pages/corretor/CorretorBiblioteca";
@@ -80,6 +81,7 @@ import RedacaoManuscrita from "./pages/RedacaoManuscrita";
 import MinhasConquistas from "./pages/MinhasConquistas";
 import Gamificacao from "./pages/Gamificacao";
 import DiarioOnline from "./pages/DiarioOnline";
+import SimuladoRedacaoCorrigida from "./pages/SimuladoRedacaoCorrigida";
 
 function App() {
   return (
@@ -107,6 +109,7 @@ function App() {
                   {/* Corrigindo as rotas do simulado - ambas devem funcionar */}
                   <Route path="/simulado/:id" element={<ProtectedStudentRoute><SimuladoParticipacao /></ProtectedStudentRoute>} />
                   <Route path="/simulados/:id" element={<ProtectedStudentRoute><SimuladoParticipacao /></ProtectedStudentRoute>} />
+                  <Route path="/simulados/:simuladoId/redacao-corrigida" element={<ProtectedStudentRoute><SimuladoRedacaoCorrigida /></ProtectedStudentRoute>} />
                   <Route path="/exercicios" element={<ProtectedStudentRoute><Exercicios /></ProtectedStudentRoute>} />
                   <Route path="/envie-redacao" element={<ProtectedStudentRoute><EnvieRedacao /></ProtectedStudentRoute>} />
                   <Route path="/minhas-redacoes" element={<ProtectedStudentRoute><MinhasRedacoesList /></ProtectedStudentRoute>} />
@@ -147,6 +150,7 @@ function App() {
                   <Route path="/corretor/temas" element={<CorretorTemas />} />
                   <Route path="/corretor/temas/:id" element={<CorretorTemaDetalhes />} />
                   <Route path="/corretor/simulados" element={<CorretorSimulados />} />
+                  <Route path="/corretor/simulados/:simuladoId/redacoes" element={<CorretorSimuladoRedacoes />} />
                   <Route path="/corretor/aulas" element={<CorretorAulas />} />
                   <Route path="/corretor/videoteca" element={<CorretorVideoteca />} />
                   <Route path="/corretor/biblioteca" element={<CorretorBiblioteca />} />

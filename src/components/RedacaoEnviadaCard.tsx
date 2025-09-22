@@ -442,9 +442,53 @@ export const RedacaoEnviadaCard = ({
                   <div className="space-y-4">
                     <RedacaoAnotacaoVisual
                       imagemUrl={redacao.redacao_manuscrita_url as string}
-                      redacaoId={redacao.id}
-                      corretorId={redacao.corretor_id_1 || redacao.corretor_id_2 || null}
+                      redacaoId={(() => {
+                        const finalId = redacao.original_id || redacao.id.replace('-corretor1', '').replace('-corretor2', '');
+                        console.log('🔍 DEBUG - RedacaoEnviadaCard - redacaoId:', {
+                          originalId: redacao.original_id,
+                          currentId: redacao.id,
+                          finalId,
+                          tipoEnvio: redacao.tipo_envio
+                        });
+                        console.log('🔍 DEBUG - RESULTADO FINAL:', JSON.stringify({
+                          redacaoId: finalId,
+                          corretorNumero: redacao.corretor_numero,
+                          status: redacao.status,
+                          corrigida: redacao.corrigida,
+                          statusCalculado: redacao.corrigida ? 'corrigida' : redacao.status === 'corrigida' ? 'corrigida' : 'pendente'
+                        }));
+                        return finalId;
+                      })()}
+                      corretorId={(() => {
+                        const finalCorretorId = redacao.tipo_envio === 'simulado'
+                          ? (redacao.corretor_numero === 1
+                              ? redacao.corretor_id_1
+                              : redacao.corretor_numero === 2
+                                ? redacao.corretor_id_2
+                                : null)
+                          : (redacao.corretor_id_real || redacao.corretor_id_1 || redacao.corretor_id_2 || null);
+
+                        console.log('🔍 DEBUG - RedacaoEnviadaCard - corretorId:', JSON.stringify({
+                          tipoEnvio: redacao.tipo_envio,
+                          corretorNumero: redacao.corretor_numero,
+                          corretor_id_1: redacao.corretor_id_1,
+                          corretor_id_2: redacao.corretor_id_2,
+                          corretor_id_real: redacao.corretor_id_real,
+                          finalCorretorId
+                        }));
+                        return finalCorretorId;
+                      })()}
                       readonly
+                      ehCorretor1={redacao.tipo_envio === 'simulado' && redacao.corretor_numero === 1}
+                      ehCorretor2={redacao.tipo_envio === 'simulado' && redacao.corretor_numero === 2}
+                      tipoTabela={
+                        redacao.tipo_envio === 'simulado' ? 'redacoes_simulado' :
+                        redacao.tipo_envio === 'exercicio' ? 'redacoes_exercicio' :
+                        'redacoes_enviadas'
+                      }
+                      statusMinhaCorrecao={
+                        redacao.corrigida ? 'corrigida' : redacao.status === 'corrigida' ? 'corrigida' : 'pendente'
+                      }
                     />
                   </div>
                 );

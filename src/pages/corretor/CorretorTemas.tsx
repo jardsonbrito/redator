@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { BookOpen, FileText } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState } from "react";
-import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 import { renderTextWithParagraphs } from '@/utils/textUtils';
+import { TemaCardPadrao } from "@/components/shared/TemaCard";
 
 const CorretorTemas = () => {
   const [selectedTema, setSelectedTema] = useState<any>(null);
@@ -102,59 +101,14 @@ const CorretorTemas = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {temas?.map((tema) => (
-              <Card key={tema.id} className="hover:shadow-lg transition-shadow border-redator-accent/20">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                     <div className="flex-1">
-                      <CardTitle className="text-sm font-semibold text-redator-primary line-clamp-2 mb-2">
-                        {tema.frase_tematica}
-                      </CardTitle>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge className="bg-redator-accent text-white text-xs">
-                          {tema.eixo_tematico}
-                        </Badge>
-                        {tema.publicado_em && (
-                          <span 
-                            className="inline-block px-2 py-0.5 text-[10px] font-medium text-violet-700 bg-violet-50 border border-violet-100 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-                            aria-label={`Data de publicação: ${new Date(tema.publicado_em).toLocaleDateString('pt-BR', { 
-                              day: '2-digit', 
-                              month: 'long', 
-                              year: 'numeric' 
-                            })}`}
-                          >
-                            Publicado em {new Date(tema.publicado_em).toLocaleDateString('pt-BR')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="aspect-video overflow-hidden rounded-md">
-                      <img 
-                        src={getTemaCoverUrl(tema)} 
-                        alt={`Capa do tema: ${tema.frase_tematica}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
-                        }}
-                      />
-                    </div>
-                    
-                    <div className="pt-2">
-                      <Button 
-                        className="w-full bg-redator-primary hover:bg-redator-primary/90"
-                        onClick={() => setSelectedTema(tema)}
-                      >
-                        <FileText className="w-4 h-4 mr-2" />
-                        Ver Tema Completo
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <TemaCardPadrao
+                key={tema.id}
+                tema={tema}
+                perfil="corretor"
+                actions={{
+                  onVerTema: () => setSelectedTema(tema)
+                }}
+              />
             ))}
           </div>
         )}
