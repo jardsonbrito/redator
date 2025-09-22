@@ -91,7 +91,19 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
   const getAttendanceBadge = () => {
     if (perfil !== 'aluno' || !aula.eh_aula_ao_vivo) return null;
 
-    // Só mostrar badge de presença para aulas encerradas
+    // Para aulas ao vivo ou agendadas, mostrar se entrada foi registrada
+    if (status === 'ao_vivo' || status === 'agendada') {
+      if (attendanceStatus === 'presente') {
+        return (
+          <Badge variant="default" className="text-xs bg-green-600 text-white">
+            ✓ Entrada Registrada
+          </Badge>
+        );
+      }
+      return null; // Não mostrar badge "ausente" durante aula ativa
+    }
+
+    // Para aulas encerradas, mostrar status final
     if (status === 'encerrada') {
       return (
         <Badge variant={attendanceStatus === 'presente' ? 'default' : 'secondary'} className="text-xs">
@@ -260,27 +272,40 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   {getButtonText()}
                 </Button>
 
-                {/* Botão de registrar entrada - apenas para aulas ao vivo e quando ausente */}
-                {aula.eh_aula_ao_vivo && attendanceStatus === 'ausente' && status !== 'encerrada' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => actions?.onRegistrarEntrada?.(aula.id)}
-                    disabled={loadingOperation}
-                    className="w-full"
-                  >
-                    {loadingOperation ? (
-                      <>
-                        <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-                        Registrando...
-                      </>
+                {/* Botão de registrar entrada ou status de entrada registrada */}
+                {aula.eh_aula_ao_vivo && status !== 'encerrada' && (
+                  <>
+                    {attendanceStatus === 'ausente' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => actions?.onRegistrarEntrada?.(aula.id)}
+                        disabled={loadingOperation}
+                        className="w-full"
+                      >
+                        {loadingOperation ? (
+                          <>
+                            <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                            Registrando...
+                          </>
+                        ) : (
+                          <>
+                            <LogIn className="w-4 h-4 mr-2" />
+                            Registrar Entrada
+                          </>
+                        )}
+                      </Button>
                     ) : (
-                      <>
-                        <LogIn className="w-4 h-4 mr-2" />
-                        Registrar Entrada
-                      </>
+                      <div className="w-full p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                        <div className="flex items-center justify-center gap-2 text-green-700 font-medium">
+                          <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                          </div>
+                          Sua entrada foi registrada com sucesso!
+                        </div>
+                      </div>
                     )}
-                  </Button>
+                  </>
                 )}
               </div>
             )}
