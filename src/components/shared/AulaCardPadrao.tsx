@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, Users, MoreHorizontal, Video, ExternalLink, LogIn, BarChart3, Edit, Power, PowerOff, Trash2 } from 'lucide-react';
+import { Clock, Users, MoreHorizontal, Video, ExternalLink, LogIn, LogOut, BarChart3, Edit, Power, PowerOff, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,7 @@ interface AulaCardData {
 interface AulaCardActions {
   onEntrarAula?: (id: string) => void;
   onRegistrarEntrada?: (id: string) => void;
+  onRegistrarSaida?: (id: string) => void;
   onFrequencia?: (id: string) => void;
   onEditar?: (id: string) => void;
   onDesativar?: (id: string) => void;
@@ -43,7 +44,7 @@ interface AulaCardPadraoProps {
   aula: AulaCardData;
   perfil: 'aluno' | 'admin';
   actions?: AulaCardActions;
-  attendanceStatus?: 'presente' | 'ausente';
+  attendanceStatus?: 'presente' | 'ausente' | 'entrada_registrada' | 'saida_registrada';
   loadingOperation?: boolean;
 }
 
@@ -91,12 +92,18 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
   const getAttendanceBadge = () => {
     if (perfil !== 'aluno' || !aula.eh_aula_ao_vivo) return null;
 
-    // Para aulas ao vivo ou agendadas, mostrar se entrada foi registrada
+    // Para aulas ao vivo ou agendadas, mostrar se entrada/saída foi registrada
     if (status === 'ao_vivo' || status === 'agendada') {
-      if (attendanceStatus === 'presente') {
+      if (attendanceStatus === 'entrada_registrada') {
         return (
           <Badge variant="default" className="text-xs bg-green-600 text-white">
             ✓ Entrada Registrada
+          </Badge>
+        );
+      } else if (attendanceStatus === 'saida_registrada') {
+        return (
+          <Badge variant="default" className="text-xs bg-blue-600 text-white">
+            ✓ Entrada e Saída Registradas
           </Badge>
         );
       }
@@ -105,9 +112,10 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
 
     // Para aulas encerradas, mostrar status final
     if (status === 'encerrada') {
+      const isPresent = attendanceStatus === 'entrada_registrada' || attendanceStatus === 'saida_registrada' || attendanceStatus === 'presente';
       return (
-        <Badge variant={attendanceStatus === 'presente' ? 'default' : 'secondary'} className="text-xs">
-          {attendanceStatus === 'presente' ? 'Presente' : 'Ausente'}
+        <Badge variant={isPresent ? 'default' : 'secondary'} className="text-xs">
+          {isPresent ? 'Presente' : 'Ausente'}
         </Badge>
       );
     }
@@ -272,7 +280,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   {getButtonText()}
                 </Button>
 
-                {/* Botão de registrar entrada ou status de entrada registrada */}
+                {/* Botões de entrada/saída ou status */}
                 {aula.eh_aula_ao_vivo && status !== 'encerrada' && (
                   <>
                     {attendanceStatus === 'ausente' ? (
@@ -295,16 +303,46 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                           </>
                         )}
                       </Button>
-                    ) : (
-                      <div className="w-full p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-                        <div className="flex items-center justify-center gap-2 text-green-700 font-medium">
-                          <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
+                    ) : attendanceStatus === 'entrada_registrada' ? (
+                      <div className="space-y-2">
+                        <div className="w-full p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                          <div className="flex items-center justify-center gap-2 text-green-700 font-medium">
+                            <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs">✓</span>
+                            </div>
+                            Entrada registrada com sucesso!
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => actions?.onRegistrarSaida?.(aula.id)}
+                          disabled={loadingOperation}
+                          className="w-full"
+                        >
+                          {loadingOperation ? (
+                            <>
+                              <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                              Registrando...
+                            </>
+                          ) : (
+                            <>
+                              <LogOut className="w-4 h-4 mr-2" />
+                              Registrar Saída
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ) : attendanceStatus === 'saida_registrada' ? (
+                      <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                        <div className="flex items-center justify-center gap-2 text-blue-700 font-medium">
+                          <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
                             <span className="text-white text-xs">✓</span>
                           </div>
-                          Sua entrada foi registrada com sucesso!
+                          Entrada e saída registradas!
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </>
                 )}
               </div>

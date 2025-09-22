@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AttendanceStatus = 'presente' | 'ausente';
+export type AttendanceStatus = 'presente' | 'ausente' | 'entrada_registrada' | 'saida_registrada';
 
 export async function getMyAttendanceStatus(sessionId: string): Promise<AttendanceStatus> {
   try {
@@ -61,10 +61,15 @@ export async function getMyAttendanceStatus(sessionId: string): Promise<Attendan
 
     console.log('📊 Resultado da consulta de presença:', data);
 
-    // Se existe registro de presença e tem entrada, consideramos presente
+    // Se existe registro de presença, verificar se tem entrada e/ou saída
     if (data && data.entrada_at) {
-      console.log('✅ Aluno presente!');
-      return 'presente';
+      if (data.saida_at) {
+        console.log('✅ Aluno com entrada e saída registradas!');
+        return 'saida_registrada';
+      } else {
+        console.log('✅ Aluno com entrada registrada!');
+        return 'entrada_registrada';
+      }
     }
 
     console.log('❌ Aluno ausente ou sem registro');
@@ -132,6 +137,64 @@ export async function registrarEntrada(sessionId: string): Promise<void> {
     console.log('✅ Entrada registrada com sucesso!');
   } catch (error) {
     console.error('Error registering attendance:', error);
+    throw error;
+  }
+}
+
+export async function registrarSaida(sessionId: string): Promise<void> {
+  try {
+    // Primeiro, vamos verificar se o usuário está autenticado corretamente
+    let studentEmail: string | null = null;
+
+    // Tentar buscar email do contexto de estudante (localStorage)
+    const userType = localStorage.getItem("userType");
+    if (userType === "aluno") {
+      const alunoData = localStorage.getItem("alunoData");
+      if (alunoData) {
+        try {
+          const dados = JSON.parse(alunoData);
+          studentEmail = dados.email;
+        } catch (e) {
+          console.error('Erro ao parsear dados do aluno:', e);
+        }
+      }
+    } else if (userType === "visitante") {
+      const visitanteData = localStorage.getItem("visitanteData");
+      if (visitanteData) {
+        try {
+          const dados = JSON.parse(visitanteData);
+          studentEmail = dados.email;
+        } catch (e) {
+          console.error('Erro ao parsear dados do visitante:', e);
+        }
+      }
+    }
+
+    if (!studentEmail) {
+      throw new Error('Usuário não identificado. Faça login novamente.');
+    }
+
+    console.log('🔄 Registrando saída para:', studentEmail, 'na aula:', sessionId);
+
+    // Atualizar registro de presença com horário de saída
+    const agora = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('presenca_aulas')
+      .update({
+        saida_at: agora
+      })
+      .eq('aula_id', sessionId)
+      .eq('email_aluno', studentEmail.toLowerCase());
+
+    if (error) {
+      console.error('Erro ao registrar saída:', error);
+      throw new Error(`Erro ao registrar saída: ${error.message}`);
+    }
+
+    console.log('✅ Saída registrada com sucesso!');
+  } catch (error) {
+    console.error('Error registering exit:', error);
     throw error;
   }
 }

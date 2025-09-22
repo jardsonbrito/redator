@@ -9,7 +9,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { toast } from "sonner";
 import { formatInTimeZone } from 'date-fns-tz';
 import { SkeletonCard } from "@/components/ui/skeleton-card";
-import { getMyAttendanceStatus, registrarEntrada, AttendanceStatus } from "@/utils/attendanceHelpers";
+import { getMyAttendanceStatus, registrarEntrada, registrarSaida, AttendanceStatus } from "@/utils/attendanceHelpers";
 import { computeStatus } from "@/utils/aulaStatus";
 import { AulaCardPadrao } from "@/components/shared/AulaCardPadrao";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
@@ -140,7 +140,7 @@ const AulasAoVivo = () => {
       // Update local state optimistically
       setAttendanceMap(prev => ({
         ...prev,
-        [sessionId]: 'presente'
+        [sessionId]: 'entrada_registrada'
       }));
       
       const hora = formatInTimeZone(new Date(), 'America/Sao_Paulo', 'HH:mm');
@@ -165,6 +165,46 @@ const AulasAoVivo = () => {
         toast.error('Erro de autenticação. Faça login novamente.');
       } else {
         toast.error(`Erro ao registrar entrada: ${error.message}`);
+      }
+    } finally {
+      setLoadingOperations(prev => ({ ...prev, [sessionId]: false }));
+    }
+  };
+
+  const handleRegistrarSaida = async (sessionId: string) => {
+    if (loadingOperations[sessionId]) return;
+
+    setLoadingOperations(prev => ({ ...prev, [sessionId]: true }));
+
+    try {
+      await registrarSaida(sessionId);
+
+      // Update local state optimistically
+      setAttendanceMap(prev => ({
+        ...prev,
+        [sessionId]: 'saida_registrada'
+      }));
+
+      const hora = formatInTimeZone(new Date(), 'America/Sao_Paulo', 'HH:mm');
+      toast.success(`Saída registrada às ${hora}`);
+
+      // Refresh status from database
+      setTimeout(() => fetchAttendanceStatus(sessionId), 500);
+    } catch (error: any) {
+      console.error('Error registering exit:', error);
+
+      // Log detalhado do erro para debug
+      console.error('Erro completo:', {
+        message: error.message,
+        details: error,
+        sessionId,
+        loadingOperations: loadingOperations[sessionId]
+      });
+
+      if (error.message.includes('não identificado')) {
+        toast.error('Erro de autenticação. Faça login novamente.');
+      } else {
+        toast.error(`Erro ao registrar saída: ${error.message}`);
       }
     } finally {
       setLoadingOperations(prev => ({ ...prev, [sessionId]: false }));
@@ -253,7 +293,8 @@ const AulasAoVivo = () => {
                     loadingOperation={loadingOperations[aula.id]}
                     actions={{
                       onEntrarAula: () => window.open(aula.link_meet, '_blank'),
-                      onRegistrarEntrada: () => handleRegistrarEntrada(aula.id)
+                      onRegistrarEntrada: () => handleRegistrarEntrada(aula.id),
+                      onRegistrarSaida: () => handleRegistrarSaida(aula.id)
                     }}
                   />
                 );
