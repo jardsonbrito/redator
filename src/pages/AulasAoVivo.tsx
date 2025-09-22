@@ -150,11 +150,21 @@ const AulasAoVivo = () => {
       setTimeout(() => fetchAttendanceStatus(sessionId), 500);
     } catch (error: any) {
       console.error('Error registering attendance:', error);
-      
+
+      // Log detalhado do erro para debug
+      console.error('Erro completo:', {
+        message: error.message,
+        details: error,
+        sessionId,
+        loadingOperations: loadingOperations[sessionId]
+      });
+
       if (error.message.includes('Fora do horário')) {
         toast.error('Só é possível registrar presença durante o horário da aula (10min antes até 15min após)');
+      } else if (error.message.includes('não identificado')) {
+        toast.error('Erro de autenticação. Faça login novamente.');
       } else {
-        toast.error('Erro ao registrar entrada. Tente novamente.');
+        toast.error(`Erro ao registrar entrada: ${error.message}`);
       }
     } finally {
       setLoadingOperations(prev => ({ ...prev, [sessionId]: false }));

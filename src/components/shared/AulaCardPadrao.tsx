@@ -91,11 +91,16 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
   const getAttendanceBadge = () => {
     if (perfil !== 'aluno' || !aula.eh_aula_ao_vivo) return null;
 
-    return (
-      <Badge variant={attendanceStatus === 'presente' ? 'default' : 'secondary'} className="text-xs">
-        {attendanceStatus === 'presente' ? 'Presente' : 'Ausente'}
-      </Badge>
-    );
+    // Só mostrar badge de presença para aulas encerradas
+    if (status === 'encerrada') {
+      return (
+        <Badge variant={attendanceStatus === 'presente' ? 'default' : 'secondary'} className="text-xs">
+          {attendanceStatus === 'presente' ? 'Presente' : 'Ausente'}
+        </Badge>
+      );
+    }
+
+    return null;
   };
 
   const formatDateTime = () => {

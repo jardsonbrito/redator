@@ -77,22 +77,59 @@ export async function getMyAttendanceStatus(sessionId: string): Promise<Attendan
 
 export async function registrarEntrada(sessionId: string): Promise<void> {
   try {
-    const { data, error } = await supabase.rpc('registrar_entrada_email', { 
-      p_aula_id: sessionId 
-    });
-    
-    if (error) throw error;
-    
-    // Verificar resposta da função
-    if (data === 'usuario_nao_autenticado') {
-      throw new Error('Usuário não autenticado');
-    } else if (data === 'entrada_ja_registrada') {
-      throw new Error('Entrada já registrada');
-    } else if (data === 'erro_interno') {
-      throw new Error('Erro interno do sistema');
-    } else if (data !== 'entrada_ok') {
-      throw new Error('Erro desconhecido');
+    // Primeiro, vamos verificar se o usuário está autenticado corretamente
+    let studentEmail: string | null = null;
+
+    // Tentar buscar email do contexto de estudante (localStorage)
+    const userType = localStorage.getItem("userType");
+    if (userType === "aluno") {
+      const alunoData = localStorage.getItem("alunoData");
+      if (alunoData) {
+        try {
+          const dados = JSON.parse(alunoData);
+          studentEmail = dados.email;
+        } catch (e) {
+          console.error('Erro ao parsear dados do aluno:', e);
+        }
+      }
+    } else if (userType === "visitante") {
+      const visitanteData = localStorage.getItem("visitanteData");
+      if (visitanteData) {
+        try {
+          const dados = JSON.parse(visitanteData);
+          studentEmail = dados.email;
+        } catch (e) {
+          console.error('Erro ao parsear dados do visitante:', e);
+        }
+      }
     }
+
+    if (!studentEmail) {
+      throw new Error('Usuário não identificado. Faça login novamente.');
+    }
+
+    console.log('🔄 Registrando entrada para:', studentEmail, 'na aula:', sessionId);
+
+    // Usar inserção direta na tabela ao invés da RPC
+    const agora = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('presenca_aulas')
+      .upsert({
+        aula_id: sessionId,
+        email_aluno: studentEmail.toLowerCase(),
+        status: 'presente',
+        entrada_at: agora
+      }, {
+        onConflict: 'aula_id,email_aluno'
+      });
+
+    if (error) {
+      console.error('Erro ao inserir presença:', error);
+      throw new Error(`Erro ao registrar presença: ${error.message}`);
+    }
+
+    console.log('✅ Entrada registrada com sucesso!');
   } catch (error) {
     console.error('Error registering attendance:', error);
     throw error;
