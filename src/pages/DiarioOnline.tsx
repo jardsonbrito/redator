@@ -154,7 +154,7 @@ const DiarioOnline = () => {
                       <div className="text-2xl font-bold text-primary">
                         {calcularMediaGeral().toFixed(1)}
                       </div>
-                      <div className="text-sm text-muted-foreground">Média Final</div>
+                      <div className="text-sm text-muted-foreground">Nota Geral</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">
@@ -285,9 +285,9 @@ const DiarioOnline = () => {
                         <Trophy className="w-4 h-4 text-orange-600" />
                       )}
 
-                      {/* Média Final da Etapa */}
+                      {/* Nota da Etapa */}
                       {renderCardMetrica(
-                        'Média Final',
+                        'Nota da Etapa',
                         etapaSelecionada.media_final.toFixed(1),
                         'Média dos 5 critérios ÷ 5',
                         <TrendingUp className="w-4 h-4 text-primary" />,

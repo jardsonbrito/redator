@@ -41,7 +41,7 @@ export default function ResumoTurma() {
       'Simulados',
       'Nota Média Simulados',
       'Exercícios',
-      'Média Final'
+      'Nota Final'
     ];
 
     const rows = resumo.alunos.map((aluno: ResumoAlunoTurma) => [
@@ -198,7 +198,7 @@ export default function ResumoTurma() {
               <div className="text-2xl font-bold text-purple-600">
                 {estatisticas.mediaFinalMedia.toFixed(1)}
               </div>
-              <div className="text-sm text-muted-foreground">Média Final</div>
+              <div className="text-sm text-muted-foreground">Nota Final</div>
             </CardContent>
           </Card>
           <Card>
@@ -298,7 +298,7 @@ export default function ResumoTurma() {
                       <TableHead className="text-center">Redações</TableHead>
                       <TableHead className="text-center">Simulados</TableHead>
                       <TableHead className="text-center">Exercícios</TableHead>
-                      <TableHead className="text-center">Média Final</TableHead>
+                      <TableHead className="text-center">Nota Final</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

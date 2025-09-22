@@ -8,7 +8,7 @@ import { StudentHeader } from '@/components/StudentHeader';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { usePageTitle } from '@/hooks/useBreadcrumbs';
-import LousaCard from './LousaCard';
+import { LousaCardPadrao } from '@/components/shared/LousaCardPadrao';
 
 interface Lousa {
   id: string;
@@ -136,10 +136,16 @@ export default function AlunoLousaList() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {lousas.map((lousa) => (
-                  <LousaCard
+                  <LousaCardPadrao
                     key={lousa.id}
-                    lousa={lousa}
-                    onClick={() => handleLousaClick(lousa)}
+                    lousa={{
+                      ...lousa,
+                      ativo: lousa.ativo !== false
+                    }}
+                    perfil="aluno"
+                    actions={{
+                      onResponder: () => handleLousaClick(lousa)
+                    }}
                   />
                 ))}
               </div>

@@ -96,29 +96,18 @@ export const RedacaoEnviadaCard = ({
   });
 
   // Função para verificar se deve mostrar as notas
-  // Para simulados, só mostra quando ambas as correções estiverem finalizadas
   const shouldShowScores = (redacao: any) => {
     if (redacao.tipo_envio === 'simulado') {
-      // Para simulados, precisamos verificar se AMBAS as correções foram finalizadas
-      // Verificamos se há notas de TODOS os corretores para TODAS as competências
-      const temTodasNotasCorretor1 = [1, 2, 3, 4, 5].every(comp => {
-        const nota = redacao[`nota_c${comp}_corretor_1`];
+      // Para simulados, verificar se há notas nos campos genéricos (que já chegam mapeados corretamente)
+      const temTodasNotas = [1, 2, 3, 4, 5].every(comp => {
+        const nota = redacao[`nota_c${comp}`];
         return nota !== null && nota !== undefined;
       });
-      
-      const temTodasNotasCorretor2 = [1, 2, 3, 4, 5].every(comp => {
-        const nota = redacao[`nota_c${comp}_corretor_2`];
-        return nota !== null && nota !== undefined;
-      });
-      
-      // Verificar se ambos corretores têm relatórios pedagógicos preenchidos
-      const temRelatorioCorretor1 = redacao.elogios_pontos_atencao_corretor_1 && redacao.elogios_pontos_atencao_corretor_1.trim();
-      const temRelatorioCorretor2 = redacao.elogios_pontos_atencao_corretor_2 && redacao.elogios_pontos_atencao_corretor_2.trim();
-      
-      // Para simulados, só mostra se AMBAS as correções estão COMPLETAMENTE finalizadas
-      return temTodasNotasCorretor1 && temTodasNotasCorretor2 && temRelatorioCorretor1 && temRelatorioCorretor2;
+
+      // Se não tem todas as notas genéricas, verificar se há nota_total
+      return temTodasNotas || (redacao.nota_total !== null && redacao.nota_total !== undefined);
     }
-    
+
     // Para outros tipos de redação (regular, exercício, visitante), usar lógica atual
     return true;
   };
@@ -235,9 +224,12 @@ export const RedacaoEnviadaCard = ({
                   Em correção
                 </Badge>
               )}
-              <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
-                {getTipoEnvioLabel(redacao.tipo_envio)}
-              </Badge>
+              {/* Mostrar badge do tipo apenas se NÃO for simulado */}
+              {redacao.tipo_envio !== 'simulado' && (
+                <Badge className={`${getTipoEnvioColor(redacao.tipo_envio)} text-xs`}>
+                  {getTipoEnvioLabel(redacao.tipo_envio)}
+                </Badge>
+              )}
 
               {/* Botão de cancelamento */}
               {canCancelRedacao(redacao) && (
@@ -298,12 +290,14 @@ export const RedacaoEnviadaCard = ({
         
         <CardContent className="pt-0">
           <div className="space-y-2">
-            {/* Data de envio */}
-            <div className="flex items-center gap-2 text-sm">
-              <CalendarDays className="w-4 h-4 text-primary shrink-0" />
-              <span className="font-medium">Enviado:</span>
-              <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
-            </div>
+            {/* Data de envio - não mostrar para simulados */}
+            {redacao.tipo_envio !== 'simulado' && (
+              <div className="flex items-center gap-2 text-sm">
+                <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+                <span className="font-medium">Enviado:</span>
+                <span className="text-xs sm:text-sm">{formatDate(redacao.data_envio)}</span>
+              </div>
+            )}
             
             {/* Nome do corretor e nota - exibir apenas se atribuído */}
             {redacao.corretor && (
@@ -311,8 +305,8 @@ export const RedacaoEnviadaCard = ({
                 <User className="w-4 h-4 text-primary shrink-0" />
                 <span className="font-medium">Corretor:</span>
                 <span className="text-xs sm:text-sm">{redacao.corretor}</span>
-                {/* Mostrar nota do corretor se disponível */}
-                {redacao.nota_total !== null && redacao.nota_total !== undefined && (
+                {/* Mostrar nota do corretor se disponível - não mostrar para simulados */}
+                {redacao.nota_total !== null && redacao.nota_total !== undefined && redacao.tipo_envio !== 'simulado' && (
                   <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-300">
                     {redacao.nota_total} pontos
                   </Badge>
@@ -327,50 +321,118 @@ export const RedacaoEnviadaCard = ({
       {redacao.corrigida && shouldShowScores(redacao) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex flex-col sm:flex-row gap-2">
-                {redacao.data_correcao && (
-                  <div className="flex items-center gap-2 text-sm text-primary/80">
-                    <Clock className="w-4 h-4" />
-                    Corrigido em: {formatDate(redacao.data_correcao)}
-                  </div>
-                )}
-              </div>
-            </div>
+            <CardTitle className="text-lg text-primary">
+              Vista Pedagógica
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-6">
             {/* Média por competência - formato ajustado conforme prompt técnico */}
             <div>
-              <h3 className="font-semibold text-primary mb-4">Média por Competência</h3>
+              <h3 className="font-semibold text-primary mb-4">
+                {redacao.tipo_envio === 'simulado' ? 'Pontuação por Competência' : 'Média por Competência'}
+              </h3>
               
-              {/* Grid horizontal das competências C1-C5 + Nota Final */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                {[1, 2, 3, 4, 5].map(comp => {
-                  const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
-                  return (
-                    <div key={comp} className="text-center">
-                      <div className="bg-white border border-primary/20 rounded-lg p-3">
-                        <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
-                        <div className="text-lg font-bold text-primary">
-                          {nota !== null ? nota : '-'}
+              {redacao.tipo_envio === 'simulado' ? (
+                /* Grid de competências para simulados com estilo solicitado */
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                  {[1, 2, 3, 4, 5].map(comp => {
+                    // Para simulados, os dados já chegam mapeados corretamente nos campos genéricos
+                    const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
+
+                    return (
+                      <div key={comp} className="text-center">
+                        <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 shadow-sm">
+                          <div className="text-xs text-gray-600 font-medium mb-1">C{comp}</div>
+                          <div className="text-lg font-bold text-gray-800">
+                            {nota !== null ? nota : '-'}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-                
-                {/* Média Final */}
-                <div className="text-center">
-                  <div className="bg-primary text-white rounded-lg p-3">
-                    <div className="text-xs font-medium mb-1">Média Final</div>
-                    <div className="text-lg font-bold">
-                      {redacao.nota_total !== null ? redacao.nota_total : '-'}
+                    );
+                  })}
+
+                  {/* Nota final com fundo roxo */}
+                  <div className="text-center">
+                    <div className="bg-purple-600 text-white rounded-lg p-3 shadow-sm">
+                      <div className="text-xs font-medium mb-1">Nota</div>
+                      <div className="text-lg font-bold">
+                        {redacao.nota_total !== null ? redacao.nota_total : '-'}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* Grid horizontal para outros tipos de redação */
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                  {[1, 2, 3, 4, 5].map(comp => {
+                    const nota = redacao[`nota_c${comp}` as keyof typeof redacao] as number | null;
+                    return (
+                      <div key={comp} className="text-center">
+                        <div className="bg-white border border-primary/20 rounded-lg p-3">
+                          <div className="text-xs text-primary/80 font-medium mb-1">C{comp}</div>
+                          <div className="text-lg font-bold text-primary">
+                            {nota !== null ? nota : '-'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Nota */}
+                  <div className="text-center">
+                    <div className="bg-primary text-white rounded-lg p-3">
+                      <div className="text-xs font-medium mb-1">Nota</div>
+                      <div className="text-lg font-bold">
+                        {redacao.nota_total !== null ? redacao.nota_total : '-'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Bloco de comentários por competência - apenas para simulados */}
+            {redacao.tipo_envio === 'simulado' && comentariosPedagogicos.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-primary/20">
+                <h3 className="font-semibold text-primary mb-4">Comentários por Competência</h3>
+                <div className="space-y-4">
+                  {comentariosPedagogicos.map((item) => (
+                    <div key={item.competencia} className="bg-white border border-primary/20 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="bg-primary/10 text-primary rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                          C{item.competencia}
+                        </div>
+                        <h4 className="font-medium text-primary">Competência {item.competencia}</h4>
+                      </div>
+
+                      {/* Mostrar comentários de ambos os corretores se existirem */}
+                      {item.comentario1 && (
+                        <div className="mb-3">
+                          <div className="text-xs text-gray-600 font-medium mb-1">
+                            {redacao.corretor_numero === 1 ? 'Seu corretor:' : 'Corretor 1:'}
+                          </div>
+                          <p className="text-sm text-gray-800 leading-relaxed bg-gray-50 p-3 rounded border-l-4 border-blue-400">
+                            {item.comentario1}
+                          </p>
+                        </div>
+                      )}
+
+                      {item.comentario2 && (
+                        <div>
+                          <div className="text-xs text-gray-600 font-medium mb-1">
+                            {redacao.corretor_numero === 2 ? 'Seu corretor:' : 'Corretor 2:'}
+                          </div>
+                          <p className="text-sm text-gray-800 leading-relaxed bg-gray-50 p-3 rounded border-l-4 border-green-400">
+                            {item.comentario2}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Player de áudio do corretor - logo após as notas */}
             {/* Lógica: só exibe áudio se este card corresponder ao corretor que gravou */}

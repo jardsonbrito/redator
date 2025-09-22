@@ -55,6 +55,8 @@ export interface SimuladoCardData {
   // Para controle de envio do aluno
   hasSubmitted?: boolean;
   submissionStatus?: 'ENVIADO' | 'AUSENTE';
+  // Nota média do aluno no simulado
+  notaMedia?: number | null;
 }
 
 interface SimuladoCardActions {
@@ -105,27 +107,27 @@ const CountdownTimer = ({ targetDate }: { targetDate: string }) => {
   if (!timeLeft) return null;
 
   return (
-    <div className="w-full h-40 flex items-center justify-center bg-gradient-to-r from-purple-600 to-blue-500 rounded-lg text-white">
-      <div className="text-center">
-        <p className="text-sm font-medium mb-3 opacity-90">Faltam:</p>
-        <div className="flex items-center justify-center gap-4">
-          <div className="text-center">
-            <div className="text-2xl md:text-3xl font-bold tabular-nums leading-none">
+    <div className="w-full h-40 flex items-center justify-center bg-gradient-to-br from-purple-600 via-purple-700 to-blue-600 rounded-lg text-white shadow-lg">
+      <div className="text-center px-4">
+        <p className="text-sm font-medium mb-4 opacity-90 tracking-wide">Faltam para o início:</p>
+        <div className="flex items-center justify-center gap-3 sm:gap-4">
+          <div className="text-center bg-white/10 rounded-xl px-3 py-2 backdrop-blur-sm">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold tabular-nums leading-none">
               {timeLeft.days}
             </div>
-            <div className="text-xs opacity-80 mt-1">dias</div>
+            <div className="text-xs opacity-80 mt-1 font-medium">dias</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl md:text-3xl font-bold tabular-nums leading-none">
+          <div className="text-center bg-white/10 rounded-xl px-3 py-2 backdrop-blur-sm">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold tabular-nums leading-none">
               {timeLeft.hours}
             </div>
-            <div className="text-xs opacity-80 mt-1">horas</div>
+            <div className="text-xs opacity-80 mt-1 font-medium">horas</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl md:text-3xl font-bold tabular-nums leading-none">
+          <div className="text-center bg-white/10 rounded-xl px-3 py-2 backdrop-blur-sm">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold tabular-nums leading-none">
               {timeLeft.minutes}
             </div>
-            <div className="text-xs opacity-80 mt-1">min</div>
+            <div className="text-xs opacity-80 mt-1 font-medium">min</div>
           </div>
         </div>
       </div>
@@ -143,7 +145,7 @@ const getStatusInfo = (simulado: SimuladoCardData) => {
       return { label: 'Em andamento', bgColor: 'bg-green-600' };
     case 'encerrado':
       if (simulado.submissionStatus === 'ENVIADO') {
-        return { label: 'Enviado', bgColor: 'bg-blue-600' };
+        return { label: 'Presente', bgColor: 'bg-blue-600' };
       } else if (simulado.submissionStatus === 'AUSENTE') {
         return { label: 'Ausente', bgColor: 'bg-red-600' };
       }
@@ -175,9 +177,8 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
   const isAtivo = status === 'ativo';
   const isEncerrado = status === 'encerrado';
 
-  // Determinar se o card é clicável
+  // Determinar se o card é clicável (remover clicabilidade para alunos que já enviaram redação)
   const isClickable = (perfil === 'aluno' && isAtivo) ||
-                     (perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO') ||
                      (perfil === 'corretor' && isEncerrado);
 
   const handleCardClick = () => {
@@ -185,12 +186,14 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
 
     if (perfil === 'aluno' && isAtivo) {
       actions.onVerSimulado?.(simulado.id);
-    } else if (perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO') {
-      // Ver redação enviada
-      actions.onVerSimulado?.(simulado.id);
     } else if (perfil === 'corretor' && isEncerrado) {
       actions.onVerDetalhes?.(simulado.id);
     }
+  };
+
+  const handleVerRedacao = () => {
+    // Função específica para o botão "Ver Minha Redação"
+    actions.onVerSimulado?.(simulado.id);
   };
 
   const handleExcluir = () => {
@@ -240,7 +243,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
           {simulado.titulo}
         </h3>
 
-        {simulado.tema?.frase_tematica && (
+        {simulado.tema?.frase_tematica && !isAgendado && (
           <p className="text-sm text-gray-600 line-clamp-2 mb-2">
             {simulado.tema.frase_tematica}
           </p>
@@ -257,6 +260,20 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
             <span>Fim: {dates.fim}</span>
           </div>
         </div>
+
+        {/* Nota média para alunos que participaram */}
+        {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO' && simulado.notaMedia !== null && (
+          <div className="mb-3">
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-3">
+              <div className="text-center">
+                <div className="text-xs text-purple-600 font-medium mb-1">Sua Nota</div>
+                <div className="text-xl font-bold text-purple-700">
+                  {simulado.notaMedia?.toFixed(1)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1"></div>
       </div>
@@ -359,7 +376,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
               )}
               {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO' && (
                 <Button
-                  onClick={handleCardClick}
+                  onClick={handleVerRedacao}
                   className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   Ver Minha Redação

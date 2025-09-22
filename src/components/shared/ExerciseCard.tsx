@@ -5,8 +5,7 @@ import { useState, ReactNode } from "react";
 
 const PLACEHOLDER = "/placeholders/aula-cover.png";
 
-export type ExerciseStatus = "agendado" | "disponivel" | "encerrado";
-export type ExerciseKind = "google_forms" | "frase_tematica";
+import { ExerciseStatus, ExerciseKind } from "@/types/exercise";
 
 interface ExerciseCardProps {
   coverUrl?: string;

@@ -15,6 +15,7 @@ import { ptBR } from 'date-fns/locale';
 import { useCorretorAuth } from '@/hooks/useCorretorAuth';
 import { useToast } from '@/hooks/use-toast';
 import CorretorLousaForm from '@/components/corretor/CorretorLousaForm';
+import { LousaCardPadrao } from '@/components/shared/LousaCardPadrao';
 
 interface Lousa {
   id: string;
@@ -23,8 +24,10 @@ interface Lousa {
   status: string;
   created_at: string;
   turmas: string[];
+  capa_url?: string | null;
   respostas_count?: number;
   respostas_corrigidas?: number;
+  respostas_pendentes?: number;
 }
 
 export default function CorretorLousas() {
@@ -71,10 +74,18 @@ export default function CorretorLousas() {
             .eq('lousa_id', lousa.id)
             .not('nota', 'is', null);
 
+          // Contar respostas pendentes (não corrigidas)
+          const { count: respostasPendentes } = await supabase
+            .from('lousa_resposta')
+            .select('id', { count: 'exact', head: true })
+            .eq('lousa_id', lousa.id)
+            .is('nota', null);
+
           return {
             ...lousa,
             respostas_count: totalRespostas || 0,
-            respostas_corrigidas: respostasCorrigidas || 0
+            respostas_corrigidas: respostasCorrigidas || 0,
+            respostas_pendentes: respostasPendentes || 0
           };
         })
       );
@@ -221,82 +232,25 @@ export default function CorretorLousas() {
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {lousas?.map((lousa) => (
-                  <Card key={lousa.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg line-clamp-2">{lousa.titulo}</CardTitle>
-                          <div className="flex items-center gap-2">
-                            {getStatusBadge(lousa.status)}
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditLousa(lousa)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            {lousa.status === 'active' && (
-                              <DropdownMenuItem onClick={() => setEndingLousaId(lousa.id)}>
-                                <StopCircle className="mr-2 h-4 w-4" />
-                                Encerrar
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
-                              onClick={() => setDeletingLousaId(lousa.id)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Deletar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-sm text-muted-foreground line-clamp-3">
-                        {lousa.enunciado}
-                      </p>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="w-4 h-4" />
-                          Criada em {format(new Date(lousa.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Users className="w-4 h-4" />
-                          Turmas: {lousa.turmas.join(', ')}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-muted-foreground">
-                            Respostas: {lousa.respostas_count || 0}
-                          </span>
-                          <span className="text-green-600">
-                            Corrigidas: {lousa.respostas_corrigidas || 0}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 pt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => navigate(`/corretor/lousas/${lousa.id}`)}
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Ver Respostas
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <LousaCardPadrao
+                    key={lousa.id}
+                    lousa={{
+                      ...lousa,
+                      inicio_em: null, // Corretor não precisa ver datas específicas
+                      fim_em: null,
+                      ativo: lousa.status === 'active'
+                    }}
+                    perfil="corretor"
+                    actions={{
+                      onVerRespostas: (id) => navigate(`/corretor/lousas/${id}`),
+                      onEditar: (id) => {
+                        const lousa = lousas?.find(l => l.id === id);
+                        if (lousa) handleEditLousa(lousa);
+                      },
+                      onEncerrar: (id) => setEndingLousaId(id),
+                      onDeletar: (id) => setDeletingLousaId(id)
+                    }}
+                  />
                 ))}
               </div>
             )}

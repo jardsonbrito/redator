@@ -1,7 +1,14 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, Eye, Power, Clock, Calendar } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Edit, Trash2, Eye, Power, MoreHorizontal, Calendar, Users } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
@@ -62,225 +69,123 @@ export const AdminExerciseCard = ({
     }
   };
 
-  const getKindBadge = () => {
-    switch (exercicio.tipo) {
-      case 'Google Forms':
-        return { label: 'Google Forms', variant: 'secondary' as const };
-      case 'Redação com Frase Temática':
-        return { label: 'Redação com Frase Temática', variant: 'outline' as const };
+  const getStatusBadge = () => {
+    if (!exercicio.ativo) {
+      return <Badge className="bg-gray-100 text-gray-700 text-xs font-medium">Rascunho</Badge>;
+    }
+
+    const availability = getExerciseAvailability(exercicio);
+    switch (availability.status) {
+      case 'agendado':
+        return <Badge className="bg-blue-100 text-blue-700 text-xs font-medium">Agendado</Badge>;
+      case 'disponivel':
+      case 'encerrado':
+        return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Publicado</Badge>;
       default:
-        return { label: exercicio.tipo, variant: 'secondary' as const };
+        return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Publicado</Badge>;
     }
   };
 
-  const kindBadge = getKindBadge();
-
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-0">
-        <div className="flex flex-col sm:flex-row">
-          {/* Cover Image */}
-          <div className="w-full sm:w-48 h-48 sm:h-auto bg-muted relative overflow-hidden flex-shrink-0">
-            <img
-              src={getCoverImage()}
-              alt={exercicio.titulo}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = "/placeholders/aula-cover.png";
-              }}
-            />
-          </div>
+    <Card className="overflow-hidden shadow-md rounded-2xl border border-gray-200 bg-white">
+      {/* Capa - Always on top with 16:9 ratio */}
+      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200">
+        <img
+          src={getCoverImage()}
+          alt={`Capa do exercício: ${exercicio.titulo}`}
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          onError={(e) => {
+            e.currentTarget.src = "/placeholders/aula-cover.png";
+          }}
+          loading="lazy"
+        />
+      </div>
 
-          {/* Content */}
-          <div className="flex-1 p-4 sm:p-6">
-            <div className="space-y-4">
-              {/* Header with title and status */}
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg sm:text-xl font-semibold text-foreground leading-tight line-clamp-2 mb-2">
-                    {exercicio.titulo}
-                  </h3>
-                  
-                  {/* Badges */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge variant={exercicio.ativo ? "default" : "secondary"}>
-                      {exercicio.ativo ? "Ativo" : "Inativo"}
-                    </Badge>
-                    
-                    {/* Badge de status do período */}
-                    {(() => {
-                      const availability = getExerciseAvailability(exercicio);
-                      if (availability.status === 'encerrado') {
-                        return (
-                          <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-200">
-                            ⏰ Encerrado
-                          </Badge>
-                        );
-                      } else if (availability.status === 'agendado') {
-                        return (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
-                            📅 Agendado
-                          </Badge>
-                        );
-                      } else if (availability.status === 'disponivel' && (exercicio.data_inicio || exercicio.data_fim)) {
-                        return (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                            ✅ Disponível
-                          </Badge>
-                        );
-                      }
-                      return null;
-                    })()}
-                    
-                    <Badge variant={kindBadge.variant}>
-                      {kindBadge.label}
-                    </Badge>
-                    {exercicio.temas?.eixo_tematico && (
-                      <Badge variant="outline">
-                        {exercicio.temas.eixo_tematico}
-                      </Badge>
-                    )}
-                    {exercicio.permite_visitante && (
-                      <Badge variant="outline">Abre Embutido</Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Desktop Actions */}
-                <div className="hidden sm:flex gap-2 flex-shrink-0">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => onEdit(exercicio)}
-                  >
-                    <Edit2 className="w-4 h-4" />
+      {/* Content */}
+      <div className="p-6">
+        <div className="space-y-4">
+          {/* Cabeçalho */}
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-900 leading-tight mb-1">
+                {exercicio.titulo}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {exercicio.tipo}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {getStatusBadge()}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant={exercicio.ativo ? "secondary" : "default"}
-                    size="sm"
-                    onClick={() => onToggleActive(exercicio)}
-                  >
-                    <Power className="w-4 h-4" />
-                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onEdit(exercicio)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Editar exercício
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onToggleActive(exercicio)}>
+                    <Power className="mr-2 h-4 w-4" />
+                    {exercicio.ativo ? 'Marcar como rascunho' : 'Publicar exercício'}
+                  </DropdownMenuItem>
                   {exercicio.link_forms && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open(exercicio.link_forms, '_blank')}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                    <DropdownMenuItem onClick={() => window.open(exercicio.link_forms, '_blank')}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Visualizar exercício
+                    </DropdownMenuItem>
                   )}
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => onDelete(exercicio)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Theme info */}
-              {exercicio.temas?.frase_tematica && (
-                <div className="text-sm text-muted-foreground">
-                  <strong>Tema:</strong> {exercicio.temas.frase_tematica}
-                </div>
-              )}
-
-              {/* Authorized classes */}
-              {exercicio.turmas_autorizadas && exercicio.turmas_autorizadas.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Turmas Autorizadas:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {exercicio.turmas_autorizadas.map((turma, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {turma}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Period Information */}
-              {(exercicio.data_inicio || exercicio.data_fim) && (
-                <div className="space-y-2">
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-4 h-4" />
-                      <strong>Período:</strong>
-                    </div>
-                    <div className="ml-6 text-xs">
-                      {formatExercisePeriod(
-                        exercicio.data_inicio,
-                        exercicio.hora_inicio,
-                        exercicio.data_fim,
-                        exercicio.hora_fim
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Status do exercício */}
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span className="italic">
-                        {(() => {
-                          const availability = getExerciseAvailability(exercicio);
-                          return availability.message || 'Status indisponível';
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Creation date */}
-              <div className="text-sm text-muted-foreground">
-                <strong>Criado em:</strong> {formatCreationDate(exercicio.criado_em)}
-              </div>
-
-              {/* Mobile Actions */}
-              <div className="flex sm:hidden gap-2 pt-2 border-t">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => onEdit(exercicio)}
-                >
-                  <Edit2 className="w-4 h-4 mr-1" />
-                  Editar
-                </Button>
-                <Button 
-                  variant={exercicio.ativo ? "secondary" : "default"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => onToggleActive(exercicio)}
-                >
-                  <Power className="w-4 h-4 mr-1" />
-                  {exercicio.ativo ? "Desativar" : "Ativar"}
-                </Button>
-                {exercicio.link_forms && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => window.open(exercicio.link_forms, '_blank')}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                )}
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => onDelete(exercicio)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onDelete(exercicio)} className="text-red-600">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir exercício
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
+
+          {/* Informações extras */}
+          <div className="text-sm text-gray-600 space-y-2">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span>Criado em: {formatCreationDate(exercicio.criado_em)}</span>
+            </div>
+            {exercicio.updated_at && (
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>Modificado em: {formatCreationDate(exercicio.updated_at)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Turmas associadas */}
+          {exercicio.turmas_autorizadas && exercicio.turmas_autorizadas.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Turmas associadas:</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {exercicio.turmas_autorizadas.map((turma, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                    {turma}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tema vinculado */}
+          {exercicio.temas?.frase_tematica && (
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Tema vinculado:</span> {exercicio.temas.frase_tematica}
+            </div>
+          )}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 };

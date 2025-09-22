@@ -244,7 +244,7 @@ export default function RedacaoManuscrita() {
               })}
               <div className="text-center">
                 <div className="bg-primary text-white rounded-lg p-3">
-                  <div className="text-xs font-medium mb-1">Média Final</div>
+                  <div className="text-xs font-medium mb-1">Nota</div>
                   <div className="text-lg font-bold">{redacao?.nota_total ?? '-'}</div>
                 </div>
               </div>

@@ -71,16 +71,16 @@ export function ExerciseCard({
 
   const getStatusBadge = () => {
     if (!exercise.ativo) {
-      return <Badge variant="secondary" className="bg-gray-100 text-gray-600">Inativo</Badge>;
+      return <Badge className="bg-gray-100 text-gray-700 text-xs font-medium">Inativo</Badge>;
     }
-    
+
     switch (availability.status) {
       case 'agendado':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-700">📅 Agendado</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-700 text-xs font-medium">Pendente</Badge>;
       case 'disponivel':
-        return <Badge variant="secondary" className="bg-green-100 text-green-700">✅ Disponível</Badge>;
+        return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Disponível</Badge>;
       case 'encerrado':
-        return <Badge variant="secondary" className="bg-red-100 text-red-700">⏰ Encerrado</Badge>;
+        return <Badge className="bg-purple-100 text-purple-700 text-xs font-medium">Concluído</Badge>;
       default:
         return null;
     }
@@ -97,9 +97,9 @@ export function ExerciseCard({
 
 
   return (
-    <Card className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 bg-white border border-gray-200 rounded-2xl ${isDisabled ? 'opacity-60' : ''}`} role="listitem">
+    <Card className="overflow-hidden shadow-md rounded-2xl border border-gray-200 bg-white" role="listitem">
       {/* Capa - Always on top with 16:9 ratio */}
-      <div className="aspect-[16/9] overflow-hidden rounded-t-2xl bg-gradient-to-br from-purple-100 to-purple-200">
+      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200">
         <img
           src={imageSources && imageSources[currentImageIndex] ? imageSources[currentImageIndex] : '/placeholders/aula-cover.png'}
           alt={`Capa do exercício: ${exercise.titulo}`}
@@ -110,110 +110,85 @@ export function ExerciseCard({
       </div>
 
       {/* Content */}
-      <div className="p-4 md:p-5">
-        <div className="space-y-3">
-          {/* Title and Desktop Admin Actions */}
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="font-semibold text-lg text-gray-900 leading-tight line-clamp-2 flex-1">
-              {exercise.titulo}
-            </h3>
-            
-            {/* Desktop Admin Actions */}
-            {isAdmin && showActions && (
-              <div className="hidden lg:flex items-center gap-2">
-                {onEdit && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => onEdit(exercise)}
-                    title="Editar"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </Button>
-                )}
-                {exercise.link_forms && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => window.open(exercise.link_forms, '_blank')}
-                    title="Abrir Formulário"
-                  >
-                    <FileText className="w-4 h-4" />
-                  </Button>
-                )}
-                {onToggleStatus && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="px-3 py-1 text-xs"
-                    onClick={() => onToggleStatus(exercise.id, exercise.ativo || false)}
-                  >
-                    {exercise.ativo ? 'Desativar' : 'Ativar'}
-                  </Button>
-                )}
-                {onDelete && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => onDelete(exercise.id)}
-                    title="Excluir"
-                  >
-                    ×
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="p-6">
+        <div className="space-y-4">
+          {/* Cabeçalho */}
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-gray-900 leading-tight mb-1">
+                {exercise.titulo}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {exercise.tipo}
+              </p>
+            </div>
             {getStatusBadge()}
-            <Badge variant="outline" className="text-xs font-medium">
-              {exercise.tipo}
-            </Badge>
-            {exercise.temas && (
-              <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                {exercise.temas.eixo_tematico}
-              </Badge>
+          </div>
+
+          {/* Informações extras */}
+          <div className="text-sm text-gray-600 space-y-1">
+            <p className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Tempo estimado: 15 min
+            </p>
+            {availability.status === 'encerrado' && (
+              <p className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Concluído em: {exercise.data_fim ? new Date(`${exercise.data_fim}T${exercise.hora_fim || '23:59'}`).toLocaleDateString('pt-BR') : 'Data não disponível'}
+              </p>
             )}
           </div>
 
-          {/* Period Information */}
-          {availability.message && (
-            <div className="text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span className="italic">{availability.message}</span>
-              </div>
+          {/* Admin actions para desktop */}
+          {isAdmin && showActions && (
+            <div className="hidden lg:flex items-center gap-2">
+              {onEdit && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => onEdit(exercise)}
+                  title="Editar"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </Button>
+              )}
+              {exercise.link_forms && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => window.open(exercise.link_forms, '_blank')}
+                  title="Abrir Formulário"
+                >
+                  <FileText className="w-4 h-4" />
+                </Button>
+              )}
+              {onToggleStatus && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="px-3 py-1 text-xs"
+                  onClick={() => onToggleStatus(exercise.id, exercise.ativo || false)}
+                >
+                  {exercise.ativo ? 'Desativar' : 'Ativar'}
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => onDelete(exercise.id)}
+                  title="Excluir"
+                >
+                  ×
+                </Button>
+              )}
             </div>
           )}
 
-          {/* Authorized Classes */}
-          {exercise.turmas_autorizadas && exercise.turmas_autorizadas.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-500" />
-              <div className="flex flex-wrap gap-1">
-                {exercise.turmas_autorizadas.slice(0, 4).map((turma) => (
-                  <span
-                    key={turma}
-                    className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium"
-                  >
-                    {turma}
-                  </span>
-                ))}
-                {exercise.turmas_autorizadas.length > 4 && (
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
-                    +{exercise.turmas_autorizadas.length - 4}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
+          {/* Ação */}
           {showActions && (
             <div className="pt-2">
               {isAdmin ? (
@@ -236,18 +211,18 @@ export function ExerciseCard({
                     </Button>
                   )}
                   {onToggleStatus && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => onToggleStatus(exercise.id, exercise.ativo || false)}
                     >
                       {exercise.ativo ? 'Desativar' : 'Ativar'}
                     </Button>
                   )}
                   {onDelete && (
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={() => onDelete(exercise.id)}
                     >
                       Excluir
@@ -255,32 +230,27 @@ export function ExerciseCard({
                   )}
                 </div>
               ) : (
-                /* Student Actions - Full width button */
-                availability.status === 'agendado' ? (
-                  <Button variant="outline" size="sm" disabled className="w-full">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Agendado
-                  </Button>
-                ) : availability.status === 'encerrado' ? (
-                  <Button variant="outline" size="sm" disabled className="w-full">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Encerrado
-                  </Button>
-                ) : (
+                /* Student Actions */
+                availability.status === 'disponivel' ? (
                   onAction && (
-                    <Button 
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                      size="sm" 
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
                       onClick={() => onAction(exercise)}
                       disabled={isDisabled}
                     >
-                      {exercise.tipo === 'Google Forms' ? (
-                        <><ExternalLink className="w-4 h-4 mr-2" /> Abrir Formulário</>
-                      ) : (
-                        <><FileText className="w-4 h-4 mr-2" /> Escrever Redação</>
-                      )}
+                      Iniciar
                     </Button>
                   )
+                ) : availability.status === 'encerrado' ? (
+                  <Button variant="outline" disabled className="w-full">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Concluído
+                  </Button>
+                ) : (
+                  <Button variant="outline" disabled className="w-full">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Pendente
+                  </Button>
                 )
               )}
             </div>

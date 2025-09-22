@@ -280,7 +280,7 @@ const MeusSimulados = () => {
                             <span className="font-medium">{redacao.corretor1.nome_completo}:</span>
                             {redacao.nota_final_corretor_1 ? (
                               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                                {redacao.nota_final_corretor_1} pontos
+                                {redacao.nota_final_corretor_1}
                               </Badge>
                             ) : (
                               <span className="text-orange-600 text-xs">Aguardando correção</span>
@@ -293,7 +293,7 @@ const MeusSimulados = () => {
                             <span className="font-medium">{redacao.corretor2.nome_completo}:</span>
                             {redacao.nota_final_corretor_2 ? (
                               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                                {redacao.nota_final_corretor_2} pontos
+                                {redacao.nota_final_corretor_2}
                               </Badge>
                             ) : (
                               <span className="text-orange-600 text-xs">Aguardando correção</span>
@@ -432,14 +432,13 @@ const MeusSimulados = () => {
                                   </div>
                                 )}
 
-                                {/* Média Final Consolidada */}
+                                {/* Nota Consolidada */}
                                 <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
-                                  <h4 className="font-semibold text-purple-800 mb-3">Média Final do Simulado</h4>
+                                  <h4 className="font-semibold text-purple-800 mb-3">Nota do Simulado</h4>
                                   <div className="text-center">
                                     <div className="text-3xl font-bold text-purple-700">
                                       {redacao.nota_total || '-'}
                                     </div>
-                                    <div className="text-sm text-purple-600">pontos</div>
                                   </div>
                                 </div>
                               </div>

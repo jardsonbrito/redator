@@ -245,28 +245,8 @@ const MinhasRedacoesList = () => {
           throw errorRegulares;
         }
 
-        // Buscar redações de simulado com join para obter frase temática
-        const { data: redacoesSimulado, error: errorSimulado } = await supabase
-          .from('redacoes_simulado')
-          .select(`
-            *,
-            simulados(frase_tematica)
-          `)
-          .ilike('email_aluno', emailBusca);
-
-        if (errorSimulado) {
-          console.error('❌ Erro ao buscar redações de simulado:', errorSimulado);
-        }
-
-        // Buscar redações de exercício (sem join por enquanto - tabela vazia)
-        const { data: redacoesExercicio, error: errorExercicio } = await supabase
-          .from('redacoes_exercicio')
-          .select('*')
-          .ilike('email_aluno', emailBusca);
-
-        if (errorExercicio) {
-          console.error('❌ Erro ao buscar redações de exercício:', errorExercicio);
-        }
+        // MINHAS REDAÇÕES: Exibir apenas redações regulares, excluindo simulados e exercícios
+        // As redações de simulados devem aparecer apenas na seção "Simulados"
 
         // Processar e combinar resultados
         const todasRedacoes: RedacaoTurma[] = [];
@@ -293,153 +273,11 @@ const MinhasRedacoesList = () => {
           });
         }
 
-        // Adicionar redações de simulado (duplicar por corretor)
-        if (redacoesSimulado && redacoesSimulado.length > 0) {
-          console.log('✅ Processando', redacoesSimulado.length, 'redações de simulado');
-          
-          // Buscar nomes dos corretores para usar nas redações
-          const idsCorretores: string[] = [];
-          redacoesSimulado.forEach((item: any) => {
-            if (item.corretor_id_1) idsCorretores.push(item.corretor_id_1);
-            if (item.corretor_id_2) idsCorretores.push(item.corretor_id_2);
-          });
+        // SIMULADOS: Redações de simulados agora aparecem exclusivamente na seção "Simulados"
+        // Não incluir redações de simulado em "Minhas Redações"
 
-          let nomes_corretores: Record<string, string> = {};
-          if (idsCorretores.length > 0) {
-            const { data: corretores } = await supabase
-              .from('corretores')
-              .select('id, nome_completo')
-              .in('id', idsCorretores);
-            
-            if (corretores) {
-              nomes_corretores = corretores.reduce((acc, corretor) => {
-                acc[corretor.id] = corretor.nome_completo;
-                return acc;
-              }, {} as Record<string, string>);
-            }
-          }
-
-          redacoesSimulado.forEach((item: any) => {
-            // Se há corretor 1, adicionar entrada (sempre que há corretor atribuído)
-            if (item.corretor_id_1) {
-              const statusCorretor1 = item.status_corretor_1 || 'pendente';
-              const hasNotas1 = item.c1_corretor_1 || item.c2_corretor_1 || item.c3_corretor_1 || item.c4_corretor_1 || item.c5_corretor_1;
-              
-              todasRedacoes.push({
-                ...item,
-                id: `${item.id}-corretor1`, // ID único para cada entrada
-                original_id: item.id, // Manter ID original para busca
-                frase_tematica: item.simulados?.frase_tematica || 'Simulado',
-                redacao_texto: item.texto || '',
-                tipo_envio: 'simulado',
-                status: statusCorretor1 === 'corrigida' ? 'corrigida' : hasNotas1 ? 'em_andamento' : 'aguardando',
-                corrigida: statusCorretor1 === 'corrigida',
-                nome_aluno: item.nome_aluno || '',
-                email_aluno: item.email_aluno || '',
-                turma: item.turma || '',
-                data_envio: item.data_envio,
-                data_correcao: item.data_correcao,
-                corretor: nomes_corretores[item.corretor_id_1] || 'Corretor 1',
-                corretor_numero: 1,
-                // Notas específicas do corretor 1
-                nota_c1: item.c1_corretor_1,
-                nota_c2: item.c2_corretor_1,
-                nota_c3: item.c3_corretor_1,
-                nota_c4: item.c4_corretor_1,
-                nota_c5: item.c5_corretor_1,
-                nota_total: item.nota_final_corretor_1,
-                // Comentários do corretor 1
-                comentario_c1_corretor_1: item.comentario_c1_corretor_1,
-                comentario_c2_corretor_1: item.comentario_c2_corretor_1,
-                comentario_c3_corretor_1: item.comentario_c3_corretor_1,
-                comentario_c4_corretor_1: item.comentario_c4_corretor_1,
-                comentario_c5_corretor_1: item.comentario_c5_corretor_1,
-                elogios_pontos_atencao_corretor_1: item.elogios_pontos_atencao_corretor_1,
-                correcao_arquivo_url_corretor_1: item.correcao_arquivo_url_corretor_1,
-                // Audio específico do corretor 1
-                audio_url: item.audio_url_corretor_1
-              } as RedacaoTurma);
-            }
-
-            // Se há corretor 2, adicionar entrada (sempre que há corretor atribuído)
-            if (item.corretor_id_2) {
-              const statusCorretor2 = item.status_corretor_2 || 'pendente';
-              const hasNotas2 = item.c1_corretor_2 || item.c2_corretor_2 || item.c3_corretor_2 || item.c4_corretor_2 || item.c5_corretor_2;
-              
-              todasRedacoes.push({
-                ...item,
-                id: `${item.id}-corretor2`, // ID único para cada entrada
-                original_id: item.id, // Manter ID original para busca
-                frase_tematica: item.simulados?.frase_tematica || 'Simulado',
-                redacao_texto: item.texto || '',
-                tipo_envio: 'simulado',
-                status: statusCorretor2 === 'corrigida' ? 'corrigida' : hasNotas2 ? 'em_andamento' : 'aguardando',
-                corrigida: statusCorretor2 === 'corrigida',
-                nome_aluno: item.nome_aluno || '',
-                email_aluno: item.email_aluno || '',
-                turma: item.turma || '',
-                data_envio: item.data_envio,
-                data_correcao: item.data_correcao,
-                corretor: nomes_corretores[item.corretor_id_2] || 'Corretor 2',
-                corretor_numero: 2,
-                // Notas específicas do corretor 2
-                nota_c1: item.c1_corretor_2,
-                nota_c2: item.c2_corretor_2,
-                nota_c3: item.c3_corretor_2,
-                nota_c4: item.c4_corretor_2,
-                nota_c5: item.c5_corretor_2,
-                nota_total: item.nota_final_corretor_2,
-                // Comentários do corretor 2
-                comentario_c1_corretor_2: item.comentario_c1_corretor_2,
-                comentario_c2_corretor_2: item.comentario_c2_corretor_2,
-                comentario_c3_corretor_2: item.comentario_c3_corretor_2,
-                comentario_c4_corretor_2: item.comentario_c4_corretor_2,
-                comentario_c5_corretor_2: item.comentario_c5_corretor_2,
-                elogios_pontos_atencao_corretor_2: item.elogios_pontos_atencao_corretor_2,
-                correcao_arquivo_url_corretor_2: item.correcao_arquivo_url_corretor_2,
-                // Audio específico do corretor 2
-                audio_url: item.audio_url_corretor_2
-              } as RedacaoTurma);
-            }
-
-            // Se não há corretores definidos, manter entrada única
-            if (!item.corretor_id_1 && !item.corretor_id_2) {
-              todasRedacoes.push({
-                ...item,
-                id: item.id,
-                frase_tematica: item.simulados?.frase_tematica || 'Simulado',
-                redacao_texto: item.texto || '',
-                tipo_envio: 'simulado',
-                status: item.corrigida ? 'corrigida' : 'aguardando',
-                corrigida: !!item.corrigida,
-                nome_aluno: item.nome_aluno || '',
-                email_aluno: item.email_aluno || '',
-                turma: item.turma || '',
-                data_envio: item.data_envio
-              } as RedacaoTurma);
-            }
-          });
-        }
-
-        // Adicionar redações de exercício
-        if (redacoesExercicio && redacoesExercicio.length > 0) {
-          console.log('✅ Processando', redacoesExercicio.length, 'redações de exercício');
-          redacoesExercicio.forEach((item: any) => {
-            todasRedacoes.push({
-              ...item,
-              id: item.id,
-              frase_tematica: 'Exercício',
-              redacao_texto: item.redacao_texto || '',
-              tipo_envio: 'exercicio',
-              status: item.corrigida ? 'corrigida' : 'aguardando',
-              corrigida: !!item.corrigida,
-              nome_aluno: item.nome_aluno || '',
-              email_aluno: item.email_aluno || '',
-              turma: item.turma || '',
-              data_envio: item.data_envio
-            } as RedacaoTurma);
-          });
-        }
+        // EXERCÍCIOS: Redações de exercícios também ficam exclusivas em suas respectivas seções
+        // Não incluir redações de exercício em "Minhas Redações"
 
         // Ordenar por data de envio (mais recente primeiro)
         const redacoesOrdenadas = todasRedacoes.sort((a, b) => 
@@ -472,67 +310,25 @@ const MinhasRedacoesList = () => {
         tipo_envio: redacao.tipo_envio
       });
 
-      if (redacao.tipo_envio === 'simulado') {
-        const searchId = redacao.original_id || redacao.id;
-        console.log('🔍 Buscando simulado com ID:', searchId);
-        
-        const { data, error } = await supabase
-          .from('redacoes_simulado')
-          .select('justificativa_devolucao, elogios_pontos_atencao_corretor_1, elogios_pontos_atencao_corretor_2')
-          .eq('id', searchId)
-          .single();
-        
-        console.log('🔍 Resultado simulado:', { data, error });
-        
-        if (!error && data) {
-          justificativa = data.justificativa_devolucao || 
-                          data.elogios_pontos_atencao_corretor_1 || 
-                          data.elogios_pontos_atencao_corretor_2 || 
-                          'Motivo não especificado';
-        } else {
-          console.error('❌ Erro ao buscar simulado:', error);
-        }
-      } else if (redacao.tipo_envio === 'exercicio') {
-        const searchId = redacao.original_id || redacao.id;
-        console.log('🔍 Buscando exercício com ID:', searchId);
-        
-        const { data, error } = await supabase
-          .from('redacoes_exercicio')
-          .select('justificativa_devolucao, elogios_pontos_atencao_corretor_1, elogios_pontos_atencao_corretor_2')
-          .eq('id', searchId)
-          .single();
-        
-        console.log('🔍 Resultado exercício:', { data, error });
-        
-        if (!error && data) {
-          justificativa = data.justificativa_devolucao || 
-                          data.elogios_pontos_atencao_corretor_1 || 
-                          data.elogios_pontos_atencao_corretor_2 || 
-                          'Motivo não especificado';
-        } else {
-          console.error('❌ Erro ao buscar exercício:', error);
-        }
+      // Buscar justificativa apenas para redações regulares (simulados e exercícios não estão mais nesta página)
+      console.log('🔍 Buscando redação regular com ID:', redacao.id);
+
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('justificativa_devolucao, elogios_pontos_atencao_corretor_1, elogios_pontos_atencao_corretor_2')
+        .eq('id', redacao.id)
+        .single();
+
+      console.log('🔍 Resultado redação regular:', { data, error });
+
+      if (!error && data) {
+        console.log('🔍 Dados da redação regular:', data);
+        justificativa = data.justificativa_devolucao ||
+                        data.elogios_pontos_atencao_corretor_1 ||
+                        data.elogios_pontos_atencao_corretor_2 ||
+                        'Motivo não especificado';
       } else {
-        // Redação regular
-        console.log('🔍 Buscando redação regular com ID:', redacao.id);
-        
-        const { data, error } = await supabase
-          .from('redacoes_enviadas')
-          .select('justificativa_devolucao, elogios_pontos_atencao_corretor_1, elogios_pontos_atencao_corretor_2')
-          .eq('id', redacao.id)
-          .single();
-        
-        console.log('🔍 Resultado redação regular:', { data, error });
-        
-        if (!error && data) {
-          console.log('🔍 Dados da redação regular:', data);
-          justificativa = data.justificativa_devolucao || 
-                          data.elogios_pontos_atencao_corretor_1 || 
-                          data.elogios_pontos_atencao_corretor_2 || 
-                          'Motivo não especificado';
-        } else {
-          console.error('❌ Erro ao buscar redação regular:', error);
-        }
+        console.error('❌ Erro ao buscar redação regular:', error);
       }
       
       console.log('📝 Justificativa encontrada (bruta):', justificativa);
@@ -686,32 +482,14 @@ const MinhasRedacoesList = () => {
         let redacaoCompleta = null;
         let error = null;
         
-        if (selectedRedacao.tipo_envio === 'simulado') {
-          const searchId = selectedRedacao.original_id || selectedRedacao.id;
-          const { data, error: err } = await supabase
-            .from('redacoes_simulado')
-            .select('*')
-            .eq('id', searchId)
-            .single();
-          redacaoCompleta = data;
-          error = err;
-        } else if (selectedRedacao.tipo_envio === 'exercicio') {
-          const { data, error: err } = await supabase
-            .from('redacoes_exercicio')
-            .select('*')
-            .eq('id', selectedRedacao.id)
-            .single();
-          redacaoCompleta = data;
-          error = err;
-        } else {
-          const { data, error: err } = await supabase
-            .from('redacoes_enviadas')
-            .select('*')
-            .eq('id', selectedRedacao.id)
-            .single();
-          redacaoCompleta = data;
-          error = err;
-        }
+        // Buscar redação completa apenas de redacoes_enviadas
+        const { data, error: err } = await supabase
+          .from('redacoes_enviadas')
+          .select('*')
+          .eq('id', selectedRedacao.id)
+          .single();
+        redacaoCompleta = data;
+        error = err;
 
         if (error) {
           console.error('❌ Erro ao buscar redação completa:', error);
@@ -768,79 +546,29 @@ const MinhasRedacoesList = () => {
       let devolutionData;
       let justificativa = 'Motivo não especificado';
       
-      if (redacao.tipo_envio === 'simulado') {
-        const searchId = redacao.original_id || redacao.id;
-        const { data, error } = await supabase
-          .from('redacoes_simulado')
-          .select(`
-            justificativa_devolucao,
-            elogios_pontos_atencao_corretor_1,
-            elogios_pontos_atencao_corretor_2,
-            data_envio,
-            devolvida_por,
-            corretor_id_1,
-            corretores!devolvida_por(nome_completo)
-          `)
-          .eq('id', searchId)
-          .single();
-        
-        if (error) {
-          console.error('Erro ao buscar dados do simulado:', error);
-        } else {
-          devolutionData = data;
-          justificativa = data.justificativa_devolucao || 
-                          data.elogios_pontos_atencao_corretor_1 || 
-                          data.elogios_pontos_atencao_corretor_2 || 
-                          'Motivo não especificado';
-        }
-      } else if (redacao.tipo_envio === 'exercicio') {
-        const { data, error } = await supabase
-          .from('redacoes_exercicio')
-          .select(`
-            justificativa_devolucao,
-            elogios_pontos_atencao_corretor_1,
-            elogios_pontos_atencao_corretor_2,
-            data_envio,
-            devolvida_por,
-            corretor_id_1,
-            corretores!devolvida_por(nome_completo)
-          `)
-          .eq('id', redacao.id)
-          .single();
-        
-        if (error) {
-          console.error('Erro ao buscar dados do exercício:', error);
-        } else {
-          devolutionData = data;
-          justificativa = data.justificativa_devolucao || 
-                          data.elogios_pontos_atencao_corretor_1 || 
-                          data.elogios_pontos_atencao_corretor_2 || 
-                          'Motivo não especificado';
-        }
+      // Buscar dados da devolução apenas para redações regulares
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select(`
+          justificativa_devolucao,
+          elogios_pontos_atencao_corretor_1,
+          elogios_pontos_atencao_corretor_2,
+          data_envio,
+          devolvida_por,
+          corretor_id_1,
+          corretores!devolvida_por(nome_completo)
+        `)
+        .eq('id', redacao.id)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar dados da redação regular:', error);
       } else {
-        const { data, error } = await supabase
-          .from('redacoes_enviadas')
-          .select(`
-            justificativa_devolucao,
-            elogios_pontos_atencao_corretor_1,
-            elogios_pontos_atencao_corretor_2,
-            data_envio,
-            devolvida_por,
-            corretor_id_1,
-            corretores!devolvida_por(nome_completo)
-          `)
-          .eq('id', redacao.id)
-          .single();
-        
-        if (error) {
-          console.error('Erro ao buscar dados da redação regular:', error);
-        } else {
-          devolutionData = data;
-          justificativa = data.justificativa_devolucao || 
-                          data.elogios_pontos_atencao_corretor_1 || 
-                          data.elogios_pontos_atencao_corretor_2 || 
-                          'Motivo não especificado';
-        }
+        devolutionData = data;
+        justificativa = data.justificativa_devolucao ||
+                        data.elogios_pontos_atencao_corretor_1 ||
+                        data.elogios_pontos_atencao_corretor_2 ||
+                        'Motivo não especificado';
       }
 
       if (devolutionData) {
@@ -907,14 +635,8 @@ const MinhasRedacoesList = () => {
     if (!selectedRedacao) return;
     
     try {
-      // Determinar tabela origem baseada no tipo de redação
-      const tabelaOrigemMap = {
-        'simulado': 'redacoes_simulado',
-        'exercicio': 'redacoes_exercicio',
-        'regular': 'redacoes_enviadas'
-      };
-      
-      const tabelaOrigem = tabelaOrigemMap[selectedRedacao?.tipo_envio as keyof typeof tabelaOrigemMap] || 'redacoes_enviadas';
+      // Para redações regulares, usar sempre a tabela redacoes_enviadas
+      const tabelaOrigem = 'redacoes_enviadas';
       const redacaoId = selectedRedacao.original_id || selectedRedacao.id;
       
       console.log('🔄 Marcando redação como visualizada:', {
@@ -1447,13 +1169,7 @@ const MinhasRedacoesList = () => {
             redacao={{
               id: redacaoDevolvida.original_id || redacaoDevolvida.id,
               frase_tematica: redacaoDevolvida.frase_tematica,
-              tabela_origem: (() => {
-                switch (redacaoDevolvida.tipo_envio) {
-                  case 'simulado': return 'redacoes_simulado';
-                  case 'exercicio': return 'redacoes_exercicio';
-                  default: return 'redacoes_enviadas';
-                }
-              })(),
+              tabela_origem: 'redacoes_enviadas',
               justificativa_devolucao: (redacaoDevolvida as any).justificativa_devolucao || 'Motivo não especificado',
               data_envio: redacaoDevolvida.data_envio
             }}

@@ -1,4 +1,4 @@
-import { ExerciseStatus, ExerciseKind } from "@/components/shared/ExerciseCard";
+import { ExerciseStatus, ExerciseKind } from "@/types/exercise";
 
 const PLACEHOLDER = "/placeholders/aula-cover.png";
 

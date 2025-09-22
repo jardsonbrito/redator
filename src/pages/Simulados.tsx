@@ -117,6 +117,7 @@ const getStatusSimulado = (simulado: any) => {
 // Componente wrapper para usar o hook de submissão
 const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; navigate: any }) => {
   const { data: submissionData } = useSimuladoSubmission(simulado.id);
+  const { studentData } = useStudentAuth();
 
   // Determinar status de submissão para exibir badge correto
   let submissionStatus: 'ENVIADO' | 'AUSENTE' | undefined;
@@ -124,10 +125,43 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
     submissionStatus = submissionData?.hasSubmitted ? 'ENVIADO' : 'AUSENTE';
   }
 
+  // Buscar nota média se o simulado estiver encerrado e o aluno tiver enviado
+  const { data: notaData } = useQuery({
+    queryKey: ['simulado-nota', simulado.id, studentData.email],
+    queryFn: async () => {
+      if (submissionStatus !== 'ENVIADO') return null;
+
+      const { data, error } = await supabase
+        .from('redacoes_simulado')
+        .select('nota_final_corretor_1, nota_final_corretor_2')
+        .eq('id_simulado', simulado.id)
+        .ilike('email_aluno', studentData.email.toLowerCase().trim())
+        .single();
+
+      if (error || !data) return null;
+
+      // Calcular média das duas correções (se ambas existirem)
+      const nota1 = data.nota_final_corretor_1;
+      const nota2 = data.nota_final_corretor_2;
+
+      if (nota1 !== null && nota2 !== null) {
+        return (nota1 + nota2) / 2;
+      } else if (nota1 !== null) {
+        return nota1;
+      } else if (nota2 !== null) {
+        return nota2;
+      }
+
+      return null;
+    },
+    enabled: !!studentData.email && submissionStatus === 'ENVIADO'
+  });
+
   const simuladoWithSubmission = {
     ...simulado,
     hasSubmitted: submissionData?.hasSubmitted,
-    submissionStatus
+    submissionStatus,
+    notaMedia: notaData
   };
 
   return (
