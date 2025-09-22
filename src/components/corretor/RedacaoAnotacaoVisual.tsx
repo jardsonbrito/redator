@@ -380,15 +380,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   // Carregar anotações do banco - baseado no status da correção
   const carregarAnotacoes = async () => {
     try {
-      console.log('🔍 DEBUG - Carregando anotações:', JSON.stringify({
-        redacaoId,
-        corretorId,
-        tipoTabela,
-        statusMinhaCorrecao,
-        ehCorretor1,
-        ehCorretor2,
-        timestamp: new Date().toISOString()
-      }));
 
       // Verificar se corretorId está disponível
       if (!corretorId || corretorId.trim() === '') {
@@ -409,25 +400,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
       const temAnotacoesSalvas = (existingAnnotations && existingAnnotations.length > 0);
       const deveBloquearCarregamento = statusMinhaCorrecao === 'pendente' && !temAnotacoesSalvas;
       
-      console.log('🔍 DEBUG - Análise de carregamento:', JSON.stringify({
-        statusMinhaCorrecao,
-        temAnotacoesSalvas,
-        deveBloquearCarregamento,
-        existingAnnotationsCount: existingAnnotations?.length || 0
-      }));
 
       if (deveBloquearCarregamento) {
         console.log('🚫 Redação pendente sem anotações - não carregar marcações');
         setAnotacoes([]);
         return;
       }
-
-      console.log('🔍 DEBUG - Query parameters:', {
-        redacaoId,
-        tipoTabela,
-        corretorId,
-        table: 'marcacoes_visuais'
-      });
 
       // Primeira tentativa: buscar com o tipo de tabela correto
       let { data, error } = await supabase
@@ -437,12 +415,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         .eq('tabela_origem', tipoTabela) // Usar tipo de tabela passado como prop
         .eq('corretor_id', corretorId) // Filtrar apenas marcações do corretor atual
         .order('criado_em', { ascending: true }); // Ordenar pela data real de criação
-
-      console.log('🔍 DEBUG - Query realizada:', {
-        query: `SELECT * FROM marcacoes_visuais WHERE redacao_id = '${redacaoId}' AND tabela_origem = '${tipoTabela}' AND corretor_id = '${corretorId}'`,
-        resultCount: data?.length || 0,
-        error: error?.message || null
-      });
 
       if (error) {
         console.error('❌ Erro ao carregar anotações:', error);
@@ -466,8 +438,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         }
       }
 
-      console.log('✅ Anotações carregadas do banco:', data?.length || 0, 'anotações para corretor', corretorId);
-
       // IMPORTANTE: Verificar se as anotações retornadas são realmente do corretor correto
       if (data && data.length > 0) {
         const anotacoesIncorretas = data.filter(a => a.corretor_id !== corretorId);
@@ -476,56 +446,15 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             corretorEsperado: corretorId,
             anotacoesIncorretas: anotacoesIncorretas.map(a => ({ id: a.id, corretor_id: a.corretor_id }))
           });
-        } else {
-          console.log('✅ Todas as anotações pertencem ao corretor correto');
         }
       }
 
-      // Debug adicional: verificar se existem anotações para esta redação sem filtrar por corretor
-      if (data?.length === 0) {
-        console.log('🔍 DEBUG - Nenhuma anotação encontrada. Verificando se há anotações de outros corretores...');
-        // Verificar na tabela atual
-        const { data: allAnnotations } = await supabase
-          .from('marcacoes_visuais')
-          .select('*')
-          .eq('redacao_id', redacaoId)
-          .eq('tabela_origem', tipoTabela);
-        
-        console.log('🔍 DEBUG - Todas as anotações desta redação:', allAnnotations?.length || 0);
-        if (allAnnotations && allAnnotations.length > 0) {
-          console.log('🔍 DEBUG - Corretores com anotações:', [...new Set(allAnnotations.map(a => a.corretor_id))]);
-        }
-        
-        // Verificar se existem anotações com qualquer tabela_origem
-        const { data: allTables } = await supabase
-          .from('marcacoes_visuais')
-          .select('*')
-          .eq('redacao_id', redacaoId);
-        
-        console.log('🔍 DEBUG - Anotações com qualquer tabela_origem:', allTables?.length || 0);
-        if (allTables && allTables.length > 0) {
-          console.log('🔍 DEBUG - Tabelas encontradas:', [...new Set(allTables.map(a => a.tabela_origem))]);
-        }
-        
-        // Verificar se existem com ID sem sufixo (-corretor1, -corretor2)
-        const idOriginal = redacaoId.replace('-corretor1', '').replace('-corretor2', '');
-        if (idOriginal !== redacaoId) {
-          const { data: originalAnnotations } = await supabase
-            .from('marcacoes_visuais')
-            .select('*')
-            .eq('redacao_id', idOriginal);
-          
-          console.log('🔍 DEBUG - Anotações com ID original:', originalAnnotations?.length || 0, 'ID:', idOriginal);
-        }
-      }
       
       // Carregar anotações sem numeração
       setAnotacoes(data || []);
-      console.log('✅ Anotações definidas no estado:', data?.length || 0, 'anotações');
 
       // Se não há anotações, garantir que o Annotorious também está limpo
       if ((data?.length || 0) === 0 && annotoriousRef.current) {
-        console.log('🧹 Garantindo limpeza do Annotorious para corretor sem marcações');
         annotoriousRef.current.clearAnnotations();
       }
       
@@ -542,24 +471,17 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   // Carregar anotações e aplicar no Annotorious
   const carregarEAplicarAnotacoes = () => {
     if (!annotoriousRef.current || !imageDimensions.width || !imageDimensions.height) {
-      console.log('❌ Não pode aplicar anotações:', {
-        annotorious: !!annotoriousRef.current,
-        imageDimensions
-      });
       return;
     }
 
     // SEMPRE limpar anotações existentes primeiro
-    console.log('🧹 Limpando anotações existentes no Annotorious');
     annotoriousRef.current.clearAnnotations();
 
     if (anotacoes.length === 0) {
-      console.log('📝 Nenhuma anotação para aplicar - redação limpa mantida');
       return;
     }
 
     try {
-      console.log('🔄 Iniciando aplicação de', anotacoes.length, 'anotações');
 
       // Converter anotações do banco para formato Annotorious
       // CORREÇÃO: Usar dimensões atuais da imagem, não as salvas no banco
@@ -580,14 +502,6 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         const y = (anotacao.y_start / imageDimensions.height) * 100;
         const w = ((anotacao.x_end - anotacao.x_start) / imageDimensions.width) * 100;
         const h = ((anotacao.y_end - anotacao.y_start) / imageDimensions.height) * 100;
-
-        console.log(`📍 Anotação ${index + 1}:`, {
-          original: { x: anotacao.x_start, y: anotacao.y_start, w: anotacao.x_end - anotacao.x_start, h: anotacao.y_end - anotacao.y_start },
-          converted: { x, y, w, h },
-          competencia: anotacao.competencia,
-          dimensoes_banco: { w: anotacao.imagem_largura, h: anotacao.imagem_altura },
-          dimensoes_atual: { w: imageDimensions.width, h: imageDimensions.height }
-        });
 
         return {
           id: anotacao.id,
@@ -610,36 +524,19 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         };
       });
 
-      console.log('✅ Anotações convertidas para Annotorious:', annotoriousAnnotations.length);
-
       // Usar setAnnotations para aplicar todas de uma vez
       try {
         annotoriousRef.current.setAnnotations(annotoriousAnnotations);
-        console.log(`✅ ${annotoriousAnnotations.length} anotações aplicadas com sucesso`);
-        
-        // Verificar se as anotações foram aplicadas
-        const appliedAnnotations = annotoriousRef.current.getAnnotations();
-        console.log('🔍 Anotações atualmente no Annotorious:', appliedAnnotations.length);
-        
-        // Log das primeiras anotações aplicadas para debug
-        appliedAnnotations.slice(0, 2).forEach((annotation, idx) => {
-          console.log(`🎯 Anotação aplicada ${idx + 1}:`, {
-            id: annotation.id,
-            selector: annotation.target?.selector?.value,
-            body: annotation.body?.[0]?.value
-          });
-        });
 
       } catch (error) {
         console.error('❌ Erro ao aplicar anotações:', error);
         
         // Fallback: tentar adicionar uma por uma
-        annotoriousAnnotations.forEach((annotation, index) => {
+        annotoriousAnnotations.forEach((annotation) => {
           try {
             annotoriousRef.current.addAnnotation(annotation);
-            console.log(`✅ Anotação ${index + 1} adicionada individualmente`);
           } catch (err) {
-            console.error(`❌ Erro na anotação ${index + 1}:`, err);
+            console.error('❌ Erro ao adicionar anotação:', err);
           }
         });
       }
@@ -907,10 +804,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   // Carregar anotações quando o componente monta ou corretorId muda
   useEffect(() => {
     if (corretorId && corretorId.trim() !== '') {
-      console.log('🔄 Mudança de corretor detectada, recarregando anotações para:', corretorId);
       carregarAnotacoes();
     } else {
-      console.log('🧹 CorretorId vazio, limpando anotações');
       setAnotacoes([]);
       if (annotoriousRef.current) {
         annotoriousRef.current.clearAnnotations();

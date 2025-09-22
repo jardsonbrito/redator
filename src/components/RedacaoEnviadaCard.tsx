@@ -444,19 +444,6 @@ export const RedacaoEnviadaCard = ({
                       imagemUrl={redacao.redacao_manuscrita_url as string}
                       redacaoId={(() => {
                         const finalId = redacao.original_id || redacao.id.replace('-corretor1', '').replace('-corretor2', '');
-                        console.log('🔍 DEBUG - RedacaoEnviadaCard - redacaoId:', {
-                          originalId: redacao.original_id,
-                          currentId: redacao.id,
-                          finalId,
-                          tipoEnvio: redacao.tipo_envio
-                        });
-                        console.log('🔍 DEBUG - RESULTADO FINAL:', JSON.stringify({
-                          redacaoId: finalId,
-                          corretorNumero: redacao.corretor_numero,
-                          status: redacao.status,
-                          corrigida: redacao.corrigida,
-                          statusCalculado: redacao.corrigida ? 'corrigida' : redacao.status === 'corrigida' ? 'corrigida' : 'pendente'
-                        }));
                         return finalId;
                       })()}
                       corretorId={(() => {
@@ -468,14 +455,6 @@ export const RedacaoEnviadaCard = ({
                                 : null)
                           : (redacao.corretor_id_real || redacao.corretor_id_1 || redacao.corretor_id_2 || null);
 
-                        console.log('🔍 DEBUG - RedacaoEnviadaCard - corretorId:', JSON.stringify({
-                          tipoEnvio: redacao.tipo_envio,
-                          corretorNumero: redacao.corretor_numero,
-                          corretor_id_1: redacao.corretor_id_1,
-                          corretor_id_2: redacao.corretor_id_2,
-                          corretor_id_real: redacao.corretor_id_real,
-                          finalCorretorId
-                        }));
                         return finalCorretorId;
                       })()}
                       readonly
