@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Download, Search, Calendar, Grid, List, Eye, EyeOff } from 'lucide-react';
-import { AdminUniformCard, BadgeType } from './AdminUniformCard';
-import { CompactIconButton } from '@/components/ui/compact-icon-button';
+import { Search, Calendar, Grid, List } from 'lucide-react';
+import { BibliotecaCardPadrao, BibliotecaCardData } from '@/components/shared/BibliotecaCardPadrao';
 import { BibliotecaForm } from './BibliotecaForm';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -173,11 +172,11 @@ export const BibliotecaList = () => {
     }
   });
 
-  const handleDownload = async (arquivoUrl: string, arquivoNome: string) => {
+  const handleDownloadAdmin = async (material: BibliotecaCardData) => {
     try {
       const { data, error } = await supabase.storage
         .from('biblioteca-pdfs')
-        .download(arquivoUrl);
+        .download(material.arquivo_url || '');
 
       if (error) {
         throw new Error(`Erro no download: ${error.message}`);
@@ -186,7 +185,7 @@ export const BibliotecaList = () => {
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = arquivoNome;
+      a.download = material.arquivo_nome || 'documento.pdf';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -199,6 +198,19 @@ export const BibliotecaList = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handlePublicar = async (materialId: string) => {
+    await toggleStatusMutation.mutateAsync({ id: materialId, novoStatus: 'publicado' });
+  };
+
+  const handleDespublicar = async (materialId: string) => {
+    await toggleStatusMutation.mutateAsync({ id: materialId, novoStatus: 'rascunho' });
+  };
+
+  const handleInativar = async (materialId: string) => {
+    // Implementar lógica de inativar se necessário
+    await toggleStatusMutation.mutateAsync({ id: materialId, novoStatus: 'rascunho' });
   };
 
   const handleEdit = (material: any) => {
@@ -343,126 +355,37 @@ export const BibliotecaList = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {materiaisCategoria.map((material) => {
-                      // Calcular status baseado em datas
-                      const now = new Date();
-                      const publishedAt = material.published_at ? new Date(material.published_at) : null;
-                      const unpublishedAt = material.unpublished_at ? new Date(material.unpublished_at) : null;
-                      
-                      let statusInfo: { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } = { label: 'Rascunho', variant: 'secondary' };
-                      if (material.status === 'publicado') {
-                        if (unpublishedAt && now >= unpublishedAt) {
-                          statusInfo = { label: 'Despublicado', variant: 'destructive' };
-                        } else if (!publishedAt || now >= publishedAt) {
-                          statusInfo = { label: 'Publicado', variant: 'default' };
-                        } else {
-                          statusInfo = { label: 'Agendado', variant: 'secondary' };
-                        }
-                      }
 
-                      // Preparar badges
-                      const badges: BadgeType[] = [
-                        {
-                          label: material.categorias?.nome || 'Sem categoria',
-                          variant: 'outline'
-                        },
-                        {
-                          label: statusInfo.label,
-                          variant: statusInfo.variant
-                        },
-                        {
-                          label: format(new Date(material.published_at || material.criado_em), "dd/MM/yyyy", { locale: ptBR }),
-                          variant: 'outline'
-                        }
-                      ];
-
-                      // Badge de público
-                      const hasVisitantes = material.permite_visitante;
-                      const numTurmas = material.turmas_autorizadas?.length || 0;
-                      
-                      if (hasVisitantes && numTurmas > 0) {
-                        badges.push({
-                          label: `${numTurmas} turma(s) + Visitantes`,
-                          variant: 'outline'
-                        });
-                      } else if (hasVisitantes) {
-                        badges.push({
-                          label: 'Visitantes',
-                          variant: 'outline'
-                        });
-                      } else if (numTurmas > 0) {
-                        badges.push({
-                          label: `${numTurmas} turma(s)`,
-                          variant: 'outline'
-                        });
-                      }
-
-                      // Preparar ações
-                      const actions = (
-                        <>
-                          <CompactIconButton
-                            icon={Edit}
-                            label="Editar material"
-                            intent="neutral"
-                            onClick={() => handleEdit(material)}
-                          />
-                          
-                          <CompactIconButton
-                            icon={material.status === 'publicado' ? EyeOff : Eye}
-                            label={material.status === 'publicado' ? 'Tornar rascunho' : 'Publicar'}
-                            intent="attention"
-                            onClick={() => toggleStatusMutation.mutate({
-                              id: material.id,
-                              novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
-                            })}
-                          />
-
-                          <CompactIconButton
-                            icon={Download}
-                            label="Baixar material"
-                            intent="positive"
-                            onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
-                          />
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <CompactIconButton
-                                icon={Trash2}
-                                label="Excluir material"
-                                intent="danger"
-                              />
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir este material? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteMutation.mutate(material.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </>
-                      );
+                      const materialData: BibliotecaCardData = {
+                        id: material.id,
+                        titulo: material.titulo,
+                        subtitulo: material.descricao,
+                        competencia: material.competencia,
+                        categoria: material.categorias?.nome,
+                        status: material.status as 'publicado' | 'rascunho',
+                        unpublished_at: material.unpublished_at,
+                        thumbnail_url: material.thumbnail_url,
+                        arquivo_url: material.arquivo_url,
+                        arquivo_nome: material.arquivo_nome,
+                        turmas_autorizadas: material.turmas_autorizadas,
+                        permite_visitante: material.permite_visitante
+                      };
 
                       return (
-                        <AdminUniformCard
+                        <BibliotecaCardPadrao
                           key={material.id}
-                          title={material.titulo}
-                          coverUrl={material.thumbnail_url || undefined}
-                          coverAlt={`Thumbnail do material ${material.titulo}`}
-                          badges={badges}
-                          actions={actions}
-                          metaInfo={material.descricao?.substring(0, 100) + (material.descricao && material.descricao.length > 100 ? '...' : '')}
+                          material={materialData}
+                          perfil="admin"
+                          actions={{
+                            onEditar: () => handleEdit(material),
+                            onExcluir: (id) => deleteMutation.mutate(id),
+                            onPublicar: handlePublicar,
+                            onDespublicar: handleDespublicar,
+                            onInativar: handleInativar,
+                            onDownloadAdmin: handleDownloadAdmin
+                          }}
                         />
                       );
                     })}
@@ -473,126 +396,37 @@ export const BibliotecaList = () => {
           })}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {materiais.map((material) => {
-            // Calcular status baseado em datas - seguindo modelo da imagem
-            const now = new Date();
-            const publishedAt = material.published_at ? new Date(material.published_at) : null;
-            const unpublishedAt = material.unpublished_at ? new Date(material.unpublished_at) : null;
-            
-            let statusInfo: { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } = { label: 'Rascunho', variant: 'secondary' };
-            if (material.status === 'publicado') {
-              if (unpublishedAt && now >= unpublishedAt) {
-                statusInfo = { label: 'Despublicado', variant: 'destructive' };
-              } else if (!publishedAt || now >= publishedAt) {
-                statusInfo = { label: 'Publicado', variant: 'default' };
-              } else {
-                statusInfo = { label: 'Agendado', variant: 'secondary' };
-              }
-            }
 
-            // Preparar badges seguindo exatamente o modelo da imagem
-            const badges: BadgeType[] = [
-              {
-                label: material.categorias?.nome || 'Sem categoria',
-                variant: 'outline'
-              },
-              {
-                label: statusInfo.label,
-                variant: statusInfo.variant
-              },
-              {
-                label: format(new Date(material.published_at || material.criado_em), "dd/MM/yyyy", { locale: ptBR }),
-                variant: 'outline'
-              }
-            ];
-
-            // Badge de público - seguindo exatamente o modelo da imagem
-            const hasVisitantes = material.permite_visitante;
-            const numTurmas = material.turmas_autorizadas?.length || 0;
-            
-            if (hasVisitantes && numTurmas > 0) {
-              badges.push({
-                label: `${numTurmas} turma(s) + Visitantes`,
-                variant: 'outline'
-              });
-            } else if (hasVisitantes) {
-              badges.push({
-                label: 'Visitantes',
-                variant: 'outline'
-              });
-            } else if (numTurmas > 0) {
-              badges.push({
-                label: `${numTurmas} turma(s)`,
-                variant: 'outline'
-              });
-            }
-
-            // Preparar ações seguindo cores da imagem
-            const actions = (
-              <>
-                <CompactIconButton
-                  icon={Edit}
-                  label="Editar material"
-                  intent="neutral"
-                  onClick={() => handleEdit(material)}
-                />
-                
-                <CompactIconButton
-                  icon={material.status === 'publicado' ? EyeOff : Eye}
-                  label={material.status === 'publicado' ? 'Tornar rascunho' : 'Publicar'}
-                  intent="attention"
-                  onClick={() => toggleStatusMutation.mutate({
-                    id: material.id,
-                    novoStatus: material.status === 'publicado' ? 'rascunho' : 'publicado'
-                  })}
-                />
-
-                <CompactIconButton
-                  icon={Download}
-                  label="Baixar material"
-                  intent="positive"
-                  onClick={() => handleDownload(material.arquivo_url, material.arquivo_nome)}
-                />
-
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <CompactIconButton
-                      icon={Trash2}
-                      label="Excluir material"
-                      intent="danger"
-                    />
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja excluir este material? Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => deleteMutation.mutate(material.id)}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </>
-            );
+            const materialData: BibliotecaCardData = {
+              id: material.id,
+              titulo: material.titulo,
+              subtitulo: material.descricao,
+              competencia: material.competencia,
+              categoria: material.categorias?.nome,
+              status: material.status as 'publicado' | 'rascunho',
+              unpublished_at: material.unpublished_at,
+              thumbnail_url: material.thumbnail_url,
+              arquivo_url: material.arquivo_url,
+              arquivo_nome: material.arquivo_nome,
+              turmas_autorizadas: material.turmas_autorizadas,
+              permite_visitante: material.permite_visitante
+            };
 
             return (
-              <AdminUniformCard
+              <BibliotecaCardPadrao
                 key={material.id}
-                title={material.titulo}
-                coverUrl={material.thumbnail_url || undefined}
-                coverAlt={`Thumbnail do material ${material.titulo}`}
-                badges={badges}
-                actions={actions}
-                metaInfo={material.descricao?.substring(0, 100) + (material.descricao && material.descricao.length > 100 ? '...' : '')}
+                material={materialData}
+                perfil="admin"
+                actions={{
+                  onEditar: () => handleEdit(material),
+                  onExcluir: (id) => deleteMutation.mutate(id),
+                  onPublicar: handlePublicar,
+                  onDespublicar: handleDespublicar,
+                  onInativar: handleInativar,
+                  onDownloadAdmin: handleDownloadAdmin
+                }}
               />
             );
           })}

@@ -17,7 +17,7 @@ import { useState } from "react";
 import { PDFViewer } from "@/components/admin/PDFViewer";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
 import { LockedResourceCard } from "@/components/LockedResourceCard";
-import { StudentBibliotecaCard } from "@/components/shared/StudentBibliotecaCard";
+import { BibliotecaCardPadrao, BibliotecaCardData } from "@/components/shared/BibliotecaCardPadrao";
 import { useToast } from "@/hooks/use-toast";
 import { useBibliotecaData } from "@/hooks/useBibliotecaData";
 import { verificarPermissaoMaterial, type MaterialBiblioteca } from "@/utils/bibliotecaPermissions";
@@ -303,31 +303,40 @@ const Biblioteca = () => {
                     </Badge>
                   </div>
                   
-                  <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                       {materiaisCategoria.map((material) => {
                         const isLivroDigital = categoriaEscolhida?.nome.toLowerCase().includes('livro digital');
                         
                         // Usar a lógica centralizada de permissões
                         const podeAcessar = verificarPermissaoMaterial(material as MaterialBiblioteca, usuario);
                         
+                        const materialData: BibliotecaCardData = {
+                          id: material.id,
+                          titulo: material.titulo,
+                          subtitulo: material.descricao,
+                          competencia: material.competencia,
+                          categoria: material.categorias?.nome,
+                          unpublished_at: material.unpublished_at,
+                          thumbnail_url: material.thumbnail_url,
+                          arquivo_url: material.arquivo_url,
+                          arquivo_nome: material.arquivo_nome
+                        };
+
+                        if (!podeAcessar) return null;
+
                         return (
-                          <StudentBibliotecaCard
+                          <BibliotecaCardPadrao
                             key={material.id}
-                            title={material.titulo}
-                            description={material.descricao}
-                            coverUrl={material.thumbnail_url}
-                            coverAlt={`Capa do material ${material.titulo}`}
-                            categoria={material.categorias?.nome || 'Sem categoria'}
-                            publishedAt={material.published_at}
-                            unpublishedAt={material.unpublished_at}
-                            isLivroDigital={isLivroDigital}
-                            podeAcessar={podeAcessar}
-                            onViewPdf={() => handleViewPdf(
-                              material.id,
-                              material.arquivo_url, 
-                              material.titulo,
-                              categoriaEscolhida?.nome || ''
-                            )}
+                            material={materialData}
+                            perfil="aluno"
+                            actions={{
+                              onBaixar: () => handleViewPdf(
+                                material.id,
+                                material.arquivo_url,
+                                material.titulo,
+                                categoriaEscolhida?.nome || ''
+                              )
+                            }}
                           />
                         );
                       })}
@@ -337,59 +346,42 @@ const Biblioteca = () => {
             })()}
           </div>
         ) : (
-          // Quando "Todas as categorias" está selecionado, mostrar apenas categorias com materiais
-          <div className="space-y-8">
-            {categorias
-              .filter((categoria) => {
-                const materiaisCategoria = materiaisAgrupados[categoria.nome] || [];
-                return materiaisCategoria.length > 0;
-              })
-              .map((categoria) => {
-                const materiaisCategoria = materiaisAgrupados[categoria.nome] || [];
-                
-                return (
-                  <div key={categoria.id} className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-2xl font-bold text-redator-primary">
-                        {categoria.nome}
-                      </h3>
-                      <Badge variant="outline" className="text-sm">
-                        {materiaisCategoria.length} material(is)
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-2">
-                      {materiaisCategoria.map((material) => {
-                        const isLivroDigital = categoria.nome.toLowerCase().includes('livro digital');
-                        
-                        // Usar a lógica centralizada de permissões
-                        const podeAcessar = verificarPermissaoMaterial(material as MaterialBiblioteca, usuario);
-                        
-                        return (
-                          <StudentBibliotecaCard
-                            key={material.id}
-                            title={material.titulo}
-                            description={material.descricao}
-                            coverUrl={material.thumbnail_url}
-                            coverAlt={`Capa do material ${material.titulo}`}
-                            categoria={material.categorias?.nome || 'Sem categoria'}
-                            publishedAt={material.published_at}
-                            unpublishedAt={material.unpublished_at}
-                            isLivroDigital={isLivroDigital}
-                            podeAcessar={podeAcessar}
-                            onViewPdf={() => handleViewPdf(
-                              material.id,
-                              material.arquivo_url, 
-                              material.titulo,
-                              categoria.nome
-                            )}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+          // Quando "Todas as categorias" está selecionado, mostrar na ordem original
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {materiais?.map((material) => {
+              // Usar a lógica centralizada de permissões
+              const podeAcessar = verificarPermissaoMaterial(material as MaterialBiblioteca, usuario);
+
+              if (!podeAcessar) return null;
+
+              const materialData: BibliotecaCardData = {
+                id: material.id,
+                titulo: material.titulo,
+                subtitulo: material.descricao,
+                competencia: material.competencia,
+                categoria: material.categorias?.nome,
+                unpublished_at: material.unpublished_at,
+                thumbnail_url: material.thumbnail_url,
+                arquivo_url: material.arquivo_url,
+                arquivo_nome: material.arquivo_nome
+              };
+
+              return (
+                <BibliotecaCardPadrao
+                  key={material.id}
+                  material={materialData}
+                  perfil="aluno"
+                  actions={{
+                    onBaixar: () => handleViewPdf(
+                      material.id,
+                      material.arquivo_url,
+                      material.titulo,
+                      material.categorias?.nome || ''
+                    )
+                  }}
+                />
+              );
+            })}
           </div>
         )}
         </main>

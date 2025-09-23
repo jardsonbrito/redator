@@ -125,29 +125,44 @@ const Admin = () => {
   const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
   const [mostrarPopupAprovacao, setMostrarPopupAprovacao] = useState(false);
 
-  // Definir menuItems antes dos useEffects
+  // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
+    // Linha 1: Conteúdo Pedagógico Principal
     { id: "temas", label: "Temas", icon: BookOpen },
     { id: "redacoes", label: "Redações Exemplares", icon: FileText },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
-    { id: "simulados", label: "Simulados", icon: ClipboardCheck },
-    { id: "exercicios", label: "Exercícios", icon: NotebookPen },
+
+    // Linha 2: Atividades e Avaliações
     { id: "diario", label: "Diário Online", icon: Calendar },
+    { id: "exercicios", label: "Exercícios", icon: NotebookPen },
+    { id: "simulados", label: "Simulados", icon: ClipboardCheck },
+
+    // Linha 3: Ferramentas de Ensino
     { id: "lousa", label: "Lousa", icon: Presentation },
     { id: "salas-virtuais", label: "Aula ao Vivo", icon: Video },
     { id: "aulas", label: "Aulas Gravadas", icon: GraduationCap },
-    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
-    { id: "videos", label: "Vídeos", icon: Video },
+
+    // Linha 4: Recursos e Comunicação
+    { id: "videos", label: "Videoteca", icon: Video },
     { id: "biblioteca", label: "Biblioteca", icon: File },
+    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
+
+    // Linha 5: Análise e Engajamento
     { id: "radar", label: "Radar", icon: Radar },
+    { id: "gamificacao", label: "Gamificação", icon: Gamepad2 },
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: MessageSquare },
+
+    // Linha 6: Gestão de Usuários
     { id: "alunos", label: "Alunos", icon: Users },
     { id: "corretores", label: "Corretores", icon: UserCheck },
     { id: "professores", label: "Professores", icon: GraduationCap },
-    { id: "exportacao", label: "Exportação", icon: Download },
-    { id: "gamificacao", label: "Gamificação", icon: Gamepad2 },
-    { id: "configuracoes", label: "Configurações", icon: Settings },
+
+    // Linha 7: Administração Avançada
     { id: "administradores", label: "Administradores", icon: ShieldCheck },
+    { id: "exportacao", label: "Exportação", icon: Download },
+    { id: "configuracoes", label: "Configurações", icon: Settings },
+
+    // Linha 8: Motivacional
     { id: "top5", label: "TOP 5", icon: Award }
   ];
 
