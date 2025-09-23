@@ -200,28 +200,23 @@ const Admin = () => {
       // Temas
       const { data: temas } = await supabase
         .from('temas')
-        .select('status')
-        .neq('status', 'inativo');
+        .select('*');
 
-      const temasPublicados = temas?.filter(t => t.status === 'publicado').length || 0;
-      const temasProgramados = temas?.filter(t => t.status === 'programado').length || 0;
+      const totalTemas = temas?.length || 0;
       data.temas = {
-        info: `${temasPublicados} publicados`,
-        badge: temasProgramados > 0 ? `${temasProgramados} programados` : undefined,
-        badgeVariant: "secondary"
+        info: `${totalTemas} disponíveis`,
+        badge: undefined
       };
 
-      // Redações Exemplares
+      // Redações Exemplares - tabela 'redacoes' (todas são publicadas)
       const { data: redacoes } = await supabase
         .from('redacoes')
-        .select('status');
+        .select('id');
 
-      const redacoesPublicadas = redacoes?.filter(r => r.status === 'publicado').length || 0;
-      const redacoesProgramadas = redacoes?.filter(r => r.status === 'programado').length || 0;
+      const totalRedacoes = redacoes?.length || 0;
       data.redacoes = {
-        info: `${redacoesPublicadas} publicadas`,
-        badge: redacoesProgramadas > 0 ? `${redacoesProgramadas} programadas` : undefined,
-        badgeVariant: "secondary"
+        info: `${totalRedacoes} disponíveis`,
+        badge: undefined
       };
 
       // Redações Enviadas
@@ -277,17 +272,84 @@ const Admin = () => {
         badgeVariant: naoRespondidas > 0 ? "destructive" : undefined
       };
 
-      // Cards sem dados específicos - usar informações genéricas
+      // Biblioteca - verificar materiais da biblioteca
+      const { data: biblioteca } = await supabase
+        .from('biblioteca_materiais')
+        .select('status')
+        .eq('status', 'publicado');
+
+      const totalBiblioteca = biblioteca?.length || 0;
+      data.biblioteca = {
+        info: `${totalBiblioteca} materiais`,
+        badge: undefined
+      };
+
+      // Vídeos - verificar vídeos da videoteca
+      const { data: videos } = await supabase
+        .from('videos')
+        .select('id');
+
+      const totalVideos = videos?.length || 0;
+      data.videos = {
+        info: `${totalVideos} vídeos`,
+        badge: undefined
+      };
+
+      // Aulas gravadas
+      const { data: aulas } = await supabase
+        .from('aulas')
+        .select('id');
+
+      const totalAulas = aulas?.length || 0;
+      data.aulas = {
+        info: `${totalAulas} aulas`,
+        badge: undefined
+      };
+
+      // Exercícios
+      const { data: exercicios } = await supabase
+        .from('exercicios')
+        .select('id');
+
+      const totalExercicios = exercicios?.length || 0;
+      data.exercicios = {
+        info: `${totalExercicios} exercícios`,
+        badge: undefined
+      };
+
+      // Simulados
+      const { data: simulados } = await supabase
+        .from('simulados')
+        .select('id');
+
+      const totalSimulados = simulados?.length || 0;
+      data.simulados = {
+        info: `${totalSimulados} simulados`,
+        badge: undefined
+      };
+
+      // Avisos ativos
+      const { data: avisos } = await supabase
+        .from('avisos')
+        .select('id')
+        .eq('ativo', true);
+
+      const totalAvisos = avisos?.length || 0;
+      data.avisos = {
+        info: `${totalAvisos} ativos`,
+        badge: undefined
+      };
+
+      // Cards sem dados específicos
       const defaultCards = [
-        "diario", "exercicios", "simulados", "lousa", "salas-virtuais",
-        "aulas", "videos", "biblioteca", "avisos", "radar", "gamificacao",
+        "diario", "lousa", "salas-virtuais", "radar", "gamificacao",
         "professores", "administradores", "exportacao", "configuracoes", "top5"
       ];
 
       defaultCards.forEach(cardId => {
         if (!data[cardId]) {
           data[cardId] = {
-            info: "Clique para acessar",
+            info: "Sistema",
             badge: undefined
           };
         }

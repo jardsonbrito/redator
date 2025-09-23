@@ -22,31 +22,18 @@ export const ModernAdminCard = ({
   onClick,
   colorIndex
 }: ModernAdminCardProps) => {
-  // Paleta harmonizada baseada nos cards do aluno (tons roxos/lilás com gradientes)
+  // Paleta baseada nas cores do projeto (primary, secondary, accent) seguindo o padrão dos cards do aluno
   const getCardStyle = (index: number) => {
     const styles = [
-      { bg: "bg-gradient-to-br from-purple-600 to-purple-400", text: "text-white", hover: "hover:from-purple-700 hover:to-purple-500" },
-      { bg: "bg-gradient-to-br from-violet-600 to-violet-400", text: "text-white", hover: "hover:from-violet-700 hover:to-violet-500" },
-      { bg: "bg-gradient-to-br from-indigo-600 to-indigo-400", text: "text-white", hover: "hover:from-indigo-700 hover:to-indigo-500" },
-      { bg: "bg-gradient-to-br from-blue-600 to-blue-400", text: "text-white", hover: "hover:from-blue-700 hover:to-blue-500" },
-      { bg: "bg-gradient-to-br from-cyan-600 to-cyan-400", text: "text-white", hover: "hover:from-cyan-700 hover:to-cyan-500" },
-      { bg: "bg-gradient-to-br from-teal-600 to-teal-400", text: "text-white", hover: "hover:from-teal-700 hover:to-teal-500" },
-      { bg: "bg-gradient-to-br from-emerald-600 to-emerald-400", text: "text-white", hover: "hover:from-emerald-700 hover:to-emerald-500" },
-      { bg: "bg-gradient-to-br from-green-600 to-green-400", text: "text-white", hover: "hover:from-green-700 hover:to-green-500" },
-      { bg: "bg-gradient-to-br from-lime-600 to-lime-400", text: "text-white", hover: "hover:from-lime-700 hover:to-lime-500" },
-      { bg: "bg-gradient-to-br from-yellow-600 to-yellow-400", text: "text-white", hover: "hover:from-yellow-700 hover:to-yellow-500" },
-      { bg: "bg-gradient-to-br from-orange-600 to-orange-400", text: "text-white", hover: "hover:from-orange-700 hover:to-orange-500" },
-      { bg: "bg-gradient-to-br from-red-600 to-red-400", text: "text-white", hover: "hover:from-red-700 hover:to-red-500" },
-      { bg: "bg-gradient-to-br from-pink-600 to-pink-400", text: "text-white", hover: "hover:from-pink-700 hover:to-pink-500" },
-      { bg: "bg-gradient-to-br from-rose-600 to-rose-400", text: "text-white", hover: "hover:from-rose-700 hover:to-rose-500" },
-      { bg: "bg-gradient-to-br from-fuchsia-600 to-fuchsia-400", text: "text-white", hover: "hover:from-fuchsia-700 hover:to-fuchsia-500" },
-      { bg: "bg-gradient-to-br from-purple-500 to-pink-500", text: "text-white", hover: "hover:from-purple-600 hover:to-pink-600" },
-      { bg: "bg-gradient-to-br from-blue-500 to-cyan-500", text: "text-white", hover: "hover:from-blue-600 hover:to-cyan-600" },
-      { bg: "bg-gradient-to-br from-green-500 to-teal-500", text: "text-white", hover: "hover:from-green-600 hover:to-teal-600" },
-      { bg: "bg-gradient-to-br from-orange-500 to-red-500", text: "text-white", hover: "hover:from-orange-600 hover:to-red-600" },
-      { bg: "bg-gradient-to-br from-violet-500 to-purple-500", text: "text-white", hover: "hover:from-violet-600 hover:to-purple-600" },
-      { bg: "bg-gradient-to-br from-indigo-500 to-blue-500", text: "text-white", hover: "hover:from-indigo-600 hover:to-blue-600" },
-      { bg: "bg-gradient-to-br from-slate-600 to-slate-400", text: "text-white", hover: "hover:from-slate-700 hover:to-slate-500" },
+      // Baseado em bg-secondary/60, bg-primary/20, bg-accent/40, etc. com gradientes
+      { bg: "bg-gradient-to-br from-secondary/70 to-secondary/50", text: "text-primary", hover: "hover:from-secondary/80 hover:to-secondary/60" },
+      { bg: "bg-gradient-to-br from-primary/30 to-primary/20", text: "text-primary", hover: "hover:from-primary/40 hover:to-primary/30" },
+      { bg: "bg-gradient-to-br from-accent/50 to-accent/30", text: "text-white", hover: "hover:from-accent/60 hover:to-accent/40" },
+      { bg: "bg-gradient-to-br from-secondary/80 to-secondary/60", text: "text-primary", hover: "hover:from-secondary/90 hover:to-secondary/70" },
+      { bg: "bg-gradient-to-br from-primary/40 to-primary/30", text: "text-white", hover: "hover:from-primary/50 hover:to-primary/40" },
+      { bg: "bg-gradient-to-br from-accent/60 to-accent/40", text: "text-white", hover: "hover:from-accent/70 hover:to-accent/50" },
+      { bg: "bg-gradient-to-br from-secondary/50 to-secondary/30", text: "text-primary", hover: "hover:from-secondary/60 hover:to-secondary/40" },
+      { bg: "bg-gradient-to-br from-primary/50 to-primary/40", text: "text-white", hover: "hover:from-primary/60 hover:to-primary/50" },
     ];
     return styles[index % styles.length];
   };
