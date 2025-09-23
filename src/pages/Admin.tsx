@@ -197,26 +197,34 @@ const Admin = () => {
     try {
       const data: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
 
-      // Temas
+      // Temas - disponíveis e agendados
       const { data: temas } = await supabase
         .from('temas')
         .select('*');
 
+      // Se não há campo de agendamento, considera todos como disponíveis
       const totalTemas = temas?.length || 0;
+      const temasDisponiveis = temas?.filter(t => !t.data_agendamento || new Date(t.data_agendamento) <= new Date()).length || totalTemas;
+      const temasAgendados = temas?.filter(t => t.data_agendamento && new Date(t.data_agendamento) > new Date()).length || 0;
+
       data.temas = {
-        info: `${totalTemas} disponíveis`,
-        badge: undefined
+        info: `${temasDisponiveis} disponíveis`,
+        badge: temasAgendados > 0 ? `${temasAgendados} agendados` : undefined
       };
 
-      // Redações Exemplares - tabela 'redacoes' (todas são publicadas)
+      // Redações Exemplares - disponíveis e agendadas
       const { data: redacoes } = await supabase
         .from('redacoes')
-        .select('id');
+        .select('*');
 
+      // Se não há campo de agendamento, considera todas como disponíveis
       const totalRedacoes = redacoes?.length || 0;
+      const redacoesDisponiveis = redacoes?.filter(r => !r.data_agendamento || new Date(r.data_agendamento) <= new Date()).length || totalRedacoes;
+      const redacoesAgendadas = redacoes?.filter(r => r.data_agendamento && new Date(r.data_agendamento) > new Date()).length || 0;
+
       data.redacoes = {
-        info: `${totalRedacoes} disponíveis`,
-        badge: undefined
+        info: `${redacoesDisponiveis} disponíveis`,
+        badge: redacoesAgendadas > 0 ? `${redacoesAgendadas} agendadas` : undefined
       };
 
       // Redações Enviadas
@@ -306,25 +314,29 @@ const Admin = () => {
         badge: undefined
       };
 
-      // Exercícios
+      // Exercícios - apenas ativos com turmas
       const { data: exercicios } = await supabase
         .from('exercicios')
-        .select('id');
+        .select('ativo, turmas_permitidas')
+        .eq('ativo', true);
 
-      const totalExercicios = exercicios?.length || 0;
+      const exerciciosAtivos = exercicios?.length || 0;
+      const turmasUnicas = [...new Set(exercicios?.flatMap(e => e.turmas_permitidas || []) || [])];
+
       data.exercicios = {
-        info: `${totalExercicios} exercícios`,
-        badge: undefined
+        info: `${exerciciosAtivos} ativos`,
+        badge: turmasUnicas.length > 0 ? `${turmasUnicas.length} turmas` : undefined
       };
 
-      // Simulados
+      // Simulados - apenas agendados (futuros)
       const { data: simulados } = await supabase
         .from('simulados')
-        .select('id');
+        .select('data_simulado');
 
-      const totalSimulados = simulados?.length || 0;
+      const simuladosAgendados = simulados?.filter(s => s.data_simulado && new Date(s.data_simulado) > new Date()).length || 0;
+
       data.simulados = {
-        info: `${totalSimulados} simulados`,
+        info: `${simuladosAgendados} agendados`,
         badge: undefined
       };
 
@@ -340,20 +352,101 @@ const Admin = () => {
         badge: undefined
       };
 
+      // Diário Online - quantidade de turmas ativas
+      const { data: turmasData } = await supabase
+        .from('profiles')
+        .select('turma')
+        .eq('user_type', 'aluno')
+        .eq('ativo', true);
+
+      const turmasAtivas = [...new Set(turmasData?.map(t => t.turma).filter(Boolean) || [])].length;
+      data.diario = {
+        info: `${turmasAtivas} turmas ativas`,
+        badge: undefined
+      };
+
+      // Lousa - quantidade de lousas ativas com turmas
+      try {
+        const { data: lousas } = await supabase
+          .from('lousas')
+          .select('ativo, turma')
+          .eq('ativo', true);
+
+        const lousasAtivas = lousas?.length || 0;
+        const turmasLousa = [...new Set(lousas?.map(l => l.turma).filter(Boolean) || [])];
+
+        data.lousa = {
+          info: `${lousasAtivas} ativas`,
+          badge: turmasLousa.length > 0 ? `${turmasLousa.length} turmas` : undefined
+        };
+      } catch (lousaError) {
+        data.lousa = {
+          info: "0 ativas",
+          badge: undefined
+        };
+      }
+
+      // Aulas ao Vivo - aulas agendadas com turmas
+      try {
+        const { data: aulasAoVivo } = await supabase
+          .from('aulas_ao_vivo')
+          .select('data_aula, turma')
+          .gte('data_aula', new Date().toISOString());
+
+        const aulasAgendadas = aulasAoVivo?.length || 0;
+        const turmasAulas = [...new Set(aulasAoVivo?.map(a => a.turma).filter(Boolean) || [])];
+
+        data["aulas-ao-vivo"] = {
+          info: `${aulasAgendadas} agendadas`,
+          badge: turmasAulas.length > 0 ? `${turmasAulas.length} turmas` : undefined
+        };
+      } catch (aulasError) {
+        data["aulas-ao-vivo"] = {
+          info: "0 agendadas",
+          badge: undefined
+        };
+      }
+
+      // Gamificação - jogos ativos
+      try {
+        const { data: jogos } = await supabase
+          .from('jogos')
+          .select('ativo')
+          .eq('ativo', true);
+
+        const jogosAtivos = jogos?.length || 0;
+        data.gamificacao = {
+          info: `${jogosAtivos} jogos ativos`,
+          badge: undefined
+        };
+      } catch (jogosError) {
+        data.gamificacao = {
+          info: "0 jogos ativos",
+          badge: undefined
+        };
+      }
+
       // Cards sem dados específicos
-      const defaultCards = [
-        "diario", "lousa", "salas-virtuais", "radar", "gamificacao",
-        "professores", "administradores", "exportacao", "configuracoes", "top5"
+      const cardsVazios = [
+        "radar", "professores", "administradores", "exportacao", "configuracoes", "top5"
       ];
 
-      defaultCards.forEach(cardId => {
+      cardsVazios.forEach(cardId => {
         if (!data[cardId]) {
           data[cardId] = {
-            info: "Sistema",
+            info: "",
             badge: undefined
           };
         }
       });
+
+      // Salas Virtuais mantém o padrão "Sistema"
+      if (!data["salas-virtuais"]) {
+        data["salas-virtuais"] = {
+          info: "Sistema",
+          badge: undefined
+        };
+      }
 
       setCardData(data);
     } catch (error) {
