@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,12 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Crown, Edit2, History, Calendar } from 'lucide-react';
+import { Crown, Edit2, History, Calendar, MoreVertical, Trash2, Settings2 } from 'lucide-react';
 import { formatDateSafe, isDateActiveOrFuture, formatDateTimeSafe } from '@/utils/dateUtils';
 
 interface Student {
@@ -25,7 +27,7 @@ interface Student {
 interface Subscription {
   id: string;
   aluno_id: string;
-  plano: 'Liderança' | 'Lapidação' | 'Largada';
+  plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
   data_inscricao: string;
   data_validade: string;
   status: 'Ativo' | 'Vencido';
@@ -40,10 +42,12 @@ interface SubscriptionHistory {
 }
 
 const TURMAS = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'];
-const PLANOS = ['Liderança', 'Lapidação', 'Largada'] as const;
+const PLANOS = ['Liderança', 'Lapidação', 'Largada', 'Bolsista'] as const;
 
 export const SubscriptionManagementClean = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [students, setStudents] = useState<Student[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [selectedTurma, setSelectedTurma] = useState<string>('');
@@ -60,6 +64,14 @@ export const SubscriptionManagementClean = () => {
     data_validade: '',
     reason: ''
   });
+
+  // Verificar parâmetro turma da URL
+  useEffect(() => {
+    const turmaParam = searchParams.get('turma');
+    if (turmaParam && TURMAS.includes(decodeURIComponent(turmaParam))) {
+      setSelectedTurma(decodeURIComponent(turmaParam));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (selectedTurma) {
@@ -201,6 +213,38 @@ export const SubscriptionManagementClean = () => {
     }
   };
 
+  const deleteSubscription = async (subscriptionId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta assinatura?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('assinaturas')
+        .delete()
+        .eq('id', subscriptionId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Assinatura excluída com sucesso",
+      });
+
+      loadStudentsAndSubscriptions();
+    } catch (error) {
+      console.error('Erro ao excluir assinatura:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir assinatura",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadSubscriptionHistory = async (studentId: string) => {
     try {
       const { data, error } = await supabase
@@ -238,7 +282,8 @@ export const SubscriptionManagementClean = () => {
     const colors = {
       'Liderança': 'bg-purple-100 text-purple-800',
       'Lapidação': 'bg-blue-100 text-blue-800',
-      'Largada': 'bg-orange-100 text-orange-800'
+      'Largada': 'bg-orange-100 text-orange-800',
+      'Bolsista': 'bg-green-100 text-green-800'
     };
     return <Badge className={colors[plano as keyof typeof colors]}>{plano}</Badge>;
   };
@@ -324,17 +369,63 @@ export const SubscriptionManagementClean = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            {/* Botão Editar/Criar */}
-                            <Dialog open={editDialogOpen && selectedStudent?.id === student.id} onOpenChange={setEditDialogOpen}>
-                              <DialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => openEditDialog(student)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
+                            {/* Menu de três pontos */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline">
+                                  <MoreVertical className="h-4 w-4" />
                                 </Button>
-                              </DialogTrigger>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <Dialog open={editDialogOpen && selectedStudent?.id === student.id} onOpenChange={setEditDialogOpen}>
+                                  <DialogTrigger asChild>
+                                    <DropdownMenuItem
+                                      onSelect={(e) => {
+                                        e.preventDefault();
+                                        openEditDialog(student);
+                                      }}
+                                    >
+                                      <Edit2 className="h-4 w-4 mr-2" />
+                                      {subscription ? 'Editar' : 'Criar'}
+                                    </DropdownMenuItem>
+                                  </DialogTrigger>
+
+                                  {subscription && (
+                                    <DropdownMenuItem
+                                      onClick={() => deleteSubscription(subscription.id)}
+                                      className="text-red-600"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Excluir
+                                    </DropdownMenuItem>
+                                  )}
+
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      navigate(`/admin/customize-student-plan/${student.id}`);
+                                    }}
+                                  >
+                                    <Settings2 className="h-4 w-4 mr-2" />
+                                    Personalizar Plano
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuItem
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                      setSelectedStudent(student);
+                                      loadSubscriptionHistory(student.id);
+                                      setHistoryDialogOpen(true);
+                                    }}
+                                  >
+                                    <History className="h-4 w-4 mr-2" />
+                                    Histórico
+                                  </DropdownMenuItem>
+                                </Dialog>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            {/* Dialog de edição fora do dropdown */}
+                            <Dialog open={editDialogOpen && selectedStudent?.id === student.id} onOpenChange={setEditDialogOpen}>
                               <DialogContent>
                                 <DialogHeader>
                                   <DialogTitle>
@@ -347,7 +438,7 @@ export const SubscriptionManagementClean = () => {
                                       <Label>Plano *</Label>
                                       <Select
                                         value={editForm.plano}
-                                        onValueChange={(value: 'Liderança' | 'Lapidação' | 'Largada') =>
+                                        onValueChange={(value: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista') =>
                                           setEditForm(prev => ({ ...prev, plano: value }))
                                         }
                                       >
@@ -413,57 +504,6 @@ export const SubscriptionManagementClean = () => {
                               </DialogContent>
                             </Dialog>
 
-                            {/* Botão Histórico */}
-                            <Dialog open={historyDialogOpen && selectedStudent?.id === student.id} onOpenChange={setHistoryDialogOpen}>
-                              <DialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedStudent(student);
-                                    loadSubscriptionHistory(student.id);
-                                  }}
-                                >
-                                  <History className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-2xl">
-                                <DialogHeader>
-                                  <DialogTitle>Histórico de Assinaturas - {student.nome}</DialogTitle>
-                                </DialogHeader>
-                                <div className="max-h-96 overflow-y-auto">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Data</TableHead>
-                                        <TableHead>Alteração</TableHead>
-                                        <TableHead>Responsável</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {subscriptionHistory.map((history) => (
-                                        <TableRow key={history.id}>
-                                          <TableCell>
-                                            {formatDateTimeSafe(history.data_alteracao)}
-                                          </TableCell>
-                                          <TableCell>{history.alteracao}</TableCell>
-                                          <TableCell>
-                                            <Badge variant="outline">
-                                              {history.admin_responsavel}
-                                            </Badge>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                  {subscriptionHistory.length === 0 && (
-                                    <p className="text-center text-muted-foreground py-4">
-                                      Nenhum histórico encontrado
-                                    </p>
-                                  )}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -481,6 +521,46 @@ export const SubscriptionManagementClean = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog de Histórico */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Histórico de Assinaturas - {selectedStudent?.nome}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-96 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Alteração</TableHead>
+                  <TableHead>Responsável</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {subscriptionHistory.map((history) => (
+                  <TableRow key={history.id}>
+                    <TableCell>
+                      {formatDateTimeSafe(history.data_alteracao)}
+                    </TableCell>
+                    <TableCell>{history.alteracao}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {history.admin_responsavel}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {subscriptionHistory.length === 0 && (
+              <p className="text-center text-muted-foreground py-4">
+                Nenhum histórico encontrado
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -65,16 +65,21 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({ clas
                         {isFirst && <Home className="w-4 h-4" />}
                         {crumb.label}
                       </BreadcrumbPage>
-                    ) : (
+                    ) : crumb.href ? (
                       <BreadcrumbLink asChild>
-                        <Link 
-                          to={crumb.href || '#'} 
+                        <Link
+                          to={crumb.href}
                           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {isFirst && <Home className="w-4 h-4" />}
                           {crumb.label}
                         </Link>
                       </BreadcrumbLink>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        {isFirst && <Home className="w-4 h-4" />}
+                        {crumb.label}
+                      </span>
                     )}
                   </BreadcrumbItem>
                   {!isLast && <BreadcrumbSeparator />}

@@ -6,7 +6,7 @@ const CREATE_ASSINATURAS_TABLE = `
 CREATE TABLE IF NOT EXISTS public.assinaturas (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     aluno_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    plano TEXT NOT NULL CHECK (plano IN ('Liderança', 'Lapidação', 'Largada')),
+    plano TEXT NOT NULL CHECK (plano IN ('Liderança', 'Lapidação', 'Largada', 'Bolsista')),
     data_inscricao DATE NOT NULL DEFAULT CURRENT_DATE,
     data_validade DATE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -34,6 +34,49 @@ CREATE POLICY "Usuários podem ver suas próprias assinaturas" ON public.assinat
 
 DROP POLICY IF EXISTS "Admins podem gerenciar assinaturas" ON public.assinaturas;
 CREATE POLICY "Admins podem gerenciar assinaturas" ON public.assinaturas
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.user_type = 'admin'
+        )
+    );
+`;
+
+// SQL para criar a tabela plan_overrides se não existir
+const CREATE_PLAN_OVERRIDES_TABLE = `
+-- Criar tabela plan_overrides se não existir
+CREATE TABLE IF NOT EXISTS public.plan_overrides (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    student_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    functionality TEXT NOT NULL,
+    enabled BOOLEAN NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(student_id, functionality)
+);
+
+-- Criar índices para performance
+CREATE INDEX IF NOT EXISTS idx_plan_overrides_student_id ON public.plan_overrides(student_id);
+CREATE INDEX IF NOT EXISTS idx_plan_overrides_functionality ON public.plan_overrides(functionality);
+
+-- Habilitar RLS
+ALTER TABLE public.plan_overrides ENABLE ROW LEVEL SECURITY;
+
+-- Criar policies básicas
+DROP POLICY IF EXISTS "Usuários podem ver seus próprios overrides" ON public.plan_overrides;
+CREATE POLICY "Usuários podem ver seus próprios overrides" ON public.plan_overrides
+    FOR SELECT USING (
+        student_id = auth.uid() OR
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.user_type IN ('admin', 'professor', 'corretor')
+        )
+    );
+
+DROP POLICY IF EXISTS "Admins podem gerenciar overrides" ON public.plan_overrides;
+CREATE POLICY "Admins podem gerenciar overrides" ON public.plan_overrides
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM profiles
@@ -101,6 +144,17 @@ export const initializeDatabase = async (): Promise<boolean> => {
       console.log('✅ Tabela assinaturas criada/verificada com sucesso');
     }
 
+    // Executar criação da tabela plan_overrides
+    const { error: overridesError } = await supabase.rpc('exec_sql', {
+      sql: CREATE_PLAN_OVERRIDES_TABLE
+    });
+
+    if (overridesError) {
+      console.error('❌ Erro ao criar tabela plan_overrides:', overridesError);
+    } else {
+      console.log('✅ Tabela plan_overrides criada/verificada com sucesso');
+    }
+
     // Executar criação da tabela subscription_history
     const { error: historyError } = await supabase.rpc('exec_sql', {
       sql: CREATE_SUBSCRIPTION_HISTORY_TABLE
@@ -123,10 +177,12 @@ export const initializeDatabase = async (): Promise<boolean> => {
 export const checkTablesExist = async (): Promise<{
   assinaturas: boolean;
   subscription_history: boolean;
+  plan_overrides: boolean;
 }> => {
   const results = {
     assinaturas: false,
-    subscription_history: false
+    subscription_history: false,
+    plan_overrides: false
   };
 
   try {
@@ -145,6 +201,14 @@ export const checkTablesExist = async (): Promise<{
       .limit(1);
 
     results.subscription_history = !historyError;
+
+    // Verificar tabela plan_overrides
+    const { error: overridesError } = await supabase
+      .from('plan_overrides')
+      .select('count', { count: 'exact' })
+      .limit(1);
+
+    results.plan_overrides = !overridesError;
 
   } catch (error) {
     console.error('Erro ao verificar tabelas:', error);

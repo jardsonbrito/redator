@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,9 +24,10 @@ interface AdminUser {
 }
 
 export const AdminConfigForm = () => {
-
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
   const [loadingAdmin, setLoadingAdmin] = useState(true);
+  const [activeTab, setActiveTab] = useState('account');
   
   // Estados para alteração de email
   const [newEmail, setNewEmail] = useState('');
@@ -41,6 +43,14 @@ export const AdminConfigForm = () => {
   useEffect(() => {
     loadCurrentAdmin();
   }, []);
+
+  // Verificar parâmetro subtab para definir aba ativa
+  useEffect(() => {
+    const subtab = searchParams.get('subtab');
+    if (subtab && ['account', 'submissions', 'credits', 'subscriptions'].includes(subtab)) {
+      setActiveTab(subtab);
+    }
+  }, [searchParams]);
 
   const loadCurrentAdmin = async () => {
     setLoadingAdmin(true);
@@ -127,7 +137,7 @@ export const AdminConfigForm = () => {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="account" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="account" className="flex items-center gap-2">
             <User className="h-4 w-4" />

@@ -1,6 +1,7 @@
 
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { LogOut, Settings } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
+import { useSubscription } from "@/hooks/useSubscription";
 
 interface StudentHeaderProps {
   pageTitle?: string;
@@ -19,6 +21,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { data: subscription } = useSubscription(studentData.emailUsuario || '');
 
   const handleLogout = () => {
     logoutStudent();
@@ -41,6 +44,18 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
             >
               <span className="font-bold text-xl">App do Redator</span>
             </Link>
+
+            {/* Plano do aluno no centro */}
+            {subscription?.plano && (
+              <div className="flex-1 flex justify-center">
+                <Badge
+                  variant="secondary"
+                  className="bg-secondary/20 text-primary-foreground px-3 py-1 text-sm font-medium"
+                >
+                  {subscription.plano === 'Bolsista' ? 'Bolsista' : `Plano ${subscription.plano}`}
+                </Badge>
+              </div>
+            )}
 
             {/* Controles do usuário à direita */}
             <div className="flex items-center gap-4">

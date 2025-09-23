@@ -26,6 +26,7 @@ import SimuladoParticipacao from "./pages/SimuladoParticipacao";
 import { AuthProvider } from "./hooks/useAuth";
 import { StudentAuthProvider } from "./hooks/useStudentAuth";
 import { NavigationProvider } from "./hooks/useNavigationContext";
+import { AdminNavigationProvider } from "./hooks/useAdminNavigationContext";
 import { Toaster } from "@/components/ui/toaster"
 import { Dashboard } from "./pages/admin/Dashboard";
 import { Avisos } from "./pages/admin/Avisos";
@@ -84,6 +85,9 @@ import MinhasConquistas from "./pages/MinhasConquistas";
 import Gamificacao from "./pages/Gamificacao";
 import DiarioOnline from "./pages/DiarioOnline";
 import SimuladoRedacaoCorrigida from "./pages/SimuladoRedacaoCorrigida";
+import { CustomizePlanSimple } from "./pages/admin/CustomizePlanSimple";
+import { CustomizePlanByName } from "./pages/admin/CustomizePlanByName";
+import { CustomizeStudentPlan } from "./pages/admin/CustomizeStudentPlan";
 
 function App() {
   return (
@@ -93,6 +97,7 @@ function App() {
           <StudentAuthProvider>
             <Router>
               <NavigationProvider>
+                <AdminNavigationProvider>
                 <div className="min-h-screen bg-background">
                   <Toaster />
                 <Routes>
@@ -145,6 +150,9 @@ function App() {
                   <Route path="/admin/gamificacao" element={<GamificacaoAdmin />} />
                   <Route path="/admin/top5" element={<Top5Admin />} />
                   <Route path="/admin/lousa/:lousaId/respostas" element={<LousaRespostasPage />} />
+                  <Route path="/admin/customize-plan/:turmaId" element={<CustomizePlanSimple />} />
+                  <Route path="/admin/customize-plan-by-name/:turmaNome" element={<CustomizePlanByName />} />
+                  <Route path="/admin/customize-student-plan/:studentId" element={<CustomizeStudentPlan />} />
                   
                   {/* Rotas do Corretor */}
                   <Route path="/corretor/login" element={<CorretorLogin />} />
@@ -235,6 +243,7 @@ function App() {
                   } />
                 </Routes>
                 </div>
+                </AdminNavigationProvider>
               </NavigationProvider>
             </Router>
           </StudentAuthProvider>

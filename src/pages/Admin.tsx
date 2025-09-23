@@ -742,12 +742,6 @@ const Admin = () => {
       case "configuracoes":
         return (
           <div className="space-y-6">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Configurações do Administrador</h3>
-              <p className="text-sm text-muted-foreground">
-                Gerencie suas credenciais de acesso e configurações de segurança.
-              </p>
-            </div>
             <AdminConfigForm />
           </div>
         );

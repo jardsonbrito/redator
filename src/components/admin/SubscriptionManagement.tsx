@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Crown, CheckCircle, AlertTriangle, Edit2, Save, X } from 'lucide-react';
+import { Calendar, Crown, CheckCircle, AlertTriangle, Edit2, Save, X, MoreVertical, Trash2, Settings2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface SubscriptionData {
   id: string;
-  plano: 'Liderança' | 'Lapidação' | 'Largada';
+  plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
   data_inscricao: string;
   data_validade: string;
   status: 'Ativo' | 'Vencido';
@@ -43,6 +45,7 @@ export const SubscriptionManagement = () => {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Buscar alunos disponíveis
   const { data: alunos = [], isLoading: isLoadingAlunos, error: alunosError } = useQuery({
@@ -171,6 +174,32 @@ export const SubscriptionManagement = () => {
     }
   });
 
+  // Deletar assinatura
+  const deleteSubscriptionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('assinaturas')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions'] });
+      toast({
+        title: "Assinatura excluída",
+        description: "Assinatura excluída com sucesso.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir assinatura",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Atualizar assinatura
   const updateSubscriptionMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: any }) => {
@@ -254,7 +283,8 @@ export const SubscriptionManagement = () => {
     const colors = {
       'Liderança': 'bg-purple-100 text-purple-800',
       'Lapidação': 'bg-blue-100 text-blue-800',
-      'Largada': 'bg-orange-100 text-orange-800'
+      'Largada': 'bg-orange-100 text-orange-800',
+      'Bolsista': 'bg-green-100 text-green-800'
     };
 
     return <Badge className={colors[plano as keyof typeof colors]}>{plano}</Badge>;
@@ -328,7 +358,7 @@ export const SubscriptionManagement = () => {
             {selectedAluno && (
               <div className="flex gap-2">
                 {/* Botões para criar nova assinatura para o aluno selecionado */}
-                {['Liderança', 'Lapidação', 'Largada'].map((plano) => (
+                {['Liderança', 'Lapidação', 'Largada', 'Bolsista'].map((plano) => (
                   <Button
                     key={plano}
                     size="sm"
@@ -409,6 +439,7 @@ export const SubscriptionManagement = () => {
                               <SelectItem value="Liderança">Liderança</SelectItem>
                               <SelectItem value="Lapidação">Lapidação</SelectItem>
                               <SelectItem value="Largada">Largada</SelectItem>
+                              <SelectItem value="Bolsista">Bolsista</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -458,14 +489,60 @@ export const SubscriptionManagement = () => {
                       </div>
 
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStartEdit(subscription)}
-                        >
-                          <Edit2 className="w-4 h-4 mr-1" />
-                          Editar
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleStartEdit(subscription)}>
+                              <Edit2 className="w-4 h-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => deleteSubscriptionMutation.mutate(subscription.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                // Buscar turma do aluno para navegação
+                                const aluno = alunos.find(a => a.id === subscription.aluno_id);
+                                if (aluno?.turma) {
+                                  // Buscar ID da turma
+                                  supabase
+                                    .from('turmas')
+                                    .select('id')
+                                    .eq('nome', aluno.turma)
+                                    .single()
+                                    .then(({ data, error }) => {
+                                      if (error || !data) {
+                                        toast({
+                                          title: "Erro",
+                                          description: "Turma não encontrada",
+                                          variant: "destructive"
+                                        });
+                                        return;
+                                      }
+                                      navigate(`/admin/customize-plan/${data.id}`);
+                                    });
+                                } else {
+                                  toast({
+                                    title: "Erro",
+                                    description: "Aluno não possui turma definida",
+                                    variant: "destructive"
+                                  });
+                                }
+                              }}
+                            >
+                              <Settings2 className="w-4 h-4 mr-2" />
+                              Personalizar Plano
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   )}
