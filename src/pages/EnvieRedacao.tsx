@@ -17,6 +17,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useCredits } from "@/hooks/useCredits";
 import { CreditDisplay } from "@/components/CreditDisplay";
 import { useBreadcrumbs, usePageTitle } from "@/hooks/useBreadcrumbs";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 const EnvieRedacao = () => {
   const [searchParams] = useSearchParams();
@@ -60,6 +62,8 @@ const EnvieRedacao = () => {
   const [canSubmit, setCanSubmit] = useState(false);
   const { toast } = useToast();
   const { settings, loading: settingsLoading } = useAppSettings();
+  const { studentData } = useStudentAuth();
+  const { isFeatureEnabled } = usePlanFeatures(studentData.email);
 
   // Determinar quantos créditos são necessários
   const requiredCredits = selectedCorretores.length === 2 ? 2 : 1;
@@ -364,6 +368,11 @@ const EnvieRedacao = () => {
 
   // Se é acesso por tema livre e está desabilitado, redirecionar
   if (!settingsLoading && isFreeTopicDisabled) {
+    return <Navigate to="/app" replace />;
+  }
+
+  // Se a funcionalidade está desabilitada pelo plano, redirecionar
+  if (!isFeatureEnabled('enviar_tema_livre')) {
     return <Navigate to="/app" replace />;
   }
 

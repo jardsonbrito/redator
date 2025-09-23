@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { Calendar, Clock } from 'lucide-react';
 
 export const RedacaoForm = () => {
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,9 @@ export const RedacaoForm = () => {
     conteudo: '',
     pdf_url: '',
     dica_de_escrita: '',
-    autor: ''
+    autor: '',
+    agendar_publicacao: false,
+    data_agendamento: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,7 +45,10 @@ export const RedacaoForm = () => {
           // Campos específicos para metadados da redação exemplar
           frase_tematica: formData.frase_tematica.trim(),
           eixo_tematico: formData.eixo_tematico.trim(),
-          autor: formData.autor.trim() || null
+          autor: formData.autor.trim() || null,
+          // Campo de agendamento
+          data_agendamento: formData.agendar_publicacao && formData.data_agendamento ?
+            new Date(formData.data_agendamento).toISOString() : null
         }])
         .select('*')
         .single();
@@ -67,11 +74,13 @@ export const RedacaoForm = () => {
       // Limpar formulário
       setFormData({
         frase_tematica: '',
-        eixo_tematico: '', 
+        eixo_tematico: '',
         conteudo: '',
         pdf_url: '',
         dica_de_escrita: '',
-        autor: ''
+        autor: '',
+        agendar_publicacao: false,
+        data_agendamento: ''
       });
 
     } catch (error: any) {

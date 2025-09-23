@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedFeatureRoute } from "@/components/ProtectedFeatureRoute";
 import { StudentHeader } from "@/components/StudentHeader";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
@@ -109,9 +110,10 @@ const Videoteca = () => {
 
   return (
     <ProtectedRoute>
-      <TooltipProvider>
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-          <StudentHeader pageTitle="Videoteca" />
+      <ProtectedFeatureRoute feature="videoteca" featureName="Videoteca">
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+            <StudentHeader pageTitle="Videoteca" />
 
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             {videos && videos.length > 0 ? (
@@ -169,6 +171,7 @@ const Videoteca = () => {
           </main>
         </div>
       </TooltipProvider>
+      </ProtectedFeatureRoute>
     </ProtectedRoute>
   );
 };

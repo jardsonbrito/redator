@@ -10,6 +10,7 @@ import { useNewContentTags } from "@/hooks/useNewContentTags";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 
 interface MenuItem {
   title: string;
@@ -35,6 +36,9 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
   const { buscarMensagensNaoLidasAluno } = useAjudaRapida();
   const { studentData } = useStudentAuth();
   const { settings } = useAppSettings();
+  const { isFeatureEnabled, debugInfo, overrides, subscription } = usePlanFeatures(studentData.email);
+
+  // Estado do hook de planos (logs removidos para produção)
 
   useEffect(() => {
     if (studentData.email) {
@@ -73,6 +77,33 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
     setShowUnlockModal(true);
   };
 
+  // Mapeamento de títulos dos cards para nomes das funcionalidades
+  const getFunctionalityName = (title: string): string => {
+    const mapping: Record<string, string> = {
+      'Temas': 'temas',
+      'Redações Exemplares': 'redacoes_exemplares',
+      'Exercícios': 'exercicios',
+      'Enviar Redação — Tema Livre': 'enviar_tema_livre',
+      'Enviar Redação – Tema Livre': 'enviar_tema_livre',
+      'Enviar Redação Avulsa – Tema Livre': 'enviar_tema_livre',
+      'Biblioteca': 'biblioteca',
+      'Lousa': 'lousa',
+      'Videoteca': 'videoteca',
+      'Aulas': 'aulas_gravadas',
+      'Aulas Gravadas': 'aulas_gravadas',
+      'Aulas ao Vivo': 'aulas_ao_vivo',
+      'Ajuda Rápida': 'ajuda_rapida', // Não controlada por plano
+      'Minhas Redações': 'minhas_redacoes', // Não controlada por plano
+      'Minhas Conquistas': 'minhas_conquistas',
+      'Simulados': 'simulados',
+      // Funcionalidades que estavam faltando no mapeamento:
+      'Top 5': 'top_5',
+      'Diário Online': 'diario_online',
+      'Gamificação': 'gamificacao'
+    };
+    return mapping[title] || '';
+  };
+
   // Paleta harmonizada baseada em tons roxos/lilás
   const getCardColor = (index: number, title: string) => {
     const colors = [
@@ -95,10 +126,20 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
         {visibleMenuItems.map((item, index) => {
           const cardColor = getCardColor(index, item.title);
           const isBlocked = item.resourceType && isBlockedResource(item.resourceType);
-          
+
           // Verificar se é o card de tema livre (aluno ou visitante) e se está desabilitado
           const isFreeTopicCard = item.title.includes("Tema Livre");
           const isFreeTopicDisabled = isFreeTopicCard && settings && settings.free_topic_enabled === false;
+
+          // Verificar se a funcionalidade está desabilitada pelo plano/override
+          const functionalityName = getFunctionalityName(item.title);
+          const isPlanFeatureDisabled = functionalityName && !isFeatureEnabled(functionalityName);
+
+          // Funcionalidades que sempre devem estar disponíveis (não controladas por plano)
+          const alwaysAvailableFeatures = ['ajuda_rapida', 'minhas_redacoes'];
+          const isAlwaysAvailable = alwaysAvailableFeatures.includes(functionalityName || '');
+
+          // Verificação de funcionalidades (logs de debug removidos para produção)
           
           
           return (
@@ -126,18 +167,18 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                       </div>
                     </div>
                   </div>
-                ) : isFreeTopicDisabled ? (
+                ) : isFreeTopicDisabled || (!isAlwaysAvailable && isPlanFeatureDisabled) ? (
                   <div className="group relative flex flex-col items-center justify-center p-6 bg-gray-200 rounded-2xl shadow-lg opacity-60 min-h-[120px] cursor-not-allowed">
-                    {/* Ícone de cadeado para tema livre desabilitado */}
+                    {/* Ícone de cadeado para funcionalidade desabilitada */}
                     <div className="mb-3">
                       <Lock className="w-8 h-8 text-gray-500" />
                     </div>
-                    
+
                     {/* Título do card com cor acinzentada */}
                     <h3 className="text-sm font-bold text-gray-600 text-center leading-tight">
                       {item.title}
                     </h3>
-                    
+
                     {/* Badge de indisponível */}
                     <div className="absolute top-2 right-2">
                       <div className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full">
@@ -179,10 +220,12 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs text-center p-3 bg-white border border-gray-200 shadow-lg rounded-xl">
                 <p className="text-xs font-medium text-gray-700">
-                  {isBlocked 
-                    ? "Recurso bloqueado para Turma E" 
-                    : isFreeTopicDisabled 
+                  {isBlocked
+                    ? "Recurso bloqueado para Turma E"
+                    : isFreeTopicDisabled
                     ? "Tema Livre temporariamente indisponível"
+                    : (!isAlwaysAvailable && isPlanFeatureDisabled)
+                    ? "Funcionalidade não disponível no seu plano atual"
                     : item.tooltip
                   }
                 </p>

@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale/pt-BR";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedFeatureRoute } from "@/components/ProtectedFeatureRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { PDFViewer } from "@/components/admin/PDFViewer";
@@ -223,9 +224,10 @@ const Biblioteca = () => {
 
   return (
     <ProtectedRoute>
-      <TooltipProvider>
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-          <StudentHeader pageTitle="Biblioteca" />
+      <ProtectedFeatureRoute feature="biblioteca" featureName="Biblioteca">
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+            <StudentHeader pageTitle="Biblioteca" />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
@@ -395,6 +397,7 @@ const Biblioteca = () => {
           title={selectedPdf.title}
         />
       </TooltipProvider>
+      </ProtectedFeatureRoute>
     </ProtectedRoute>
   );
 };

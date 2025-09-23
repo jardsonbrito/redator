@@ -75,51 +75,84 @@ const DEFAULT_PLAN_FEATURES = {
 export const usePlanFeatures = (userEmail: string) => {
   const { data: subscription } = useSubscription(userEmail);
 
-  // Buscar overrides do aluno
+  // Buscar overrides do aluno usando RPC
   const { data: overrides = [] } = useQuery({
     queryKey: ['student-plan-overrides', userEmail],
     queryFn: async () => {
-      if (!userEmail || !subscription?.plano) return [];
+      if (!userEmail) return [];
 
       // Primeiro buscar o ID do aluno
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
         .eq('email', userEmail)
+        .eq('user_type', 'aluno')
         .single();
 
       if (profileError || !profile) return [];
 
-      // Buscar overrides
-      const { data, error } = await supabase
-        .from('plan_overrides')
-        .select('functionality, enabled')
-        .eq('student_id', profile.id);
+      // Buscar overrides usando RPC para contornar RLS
 
-      if (error) throw error;
+      let { data, error } = await supabase
+        .rpc('get_student_plan_overrides', {
+          student_uuid: profile.id
+        });
+
+      // Se a função RPC não existir, tentar buscar diretamente da tabela
+      if (error && (error.code === '42883' || error.message?.includes('does not exist'))) {
+        const { data: directData, error: directError } = await supabase
+          .from('plan_overrides')
+          .select('*')
+          .eq('student_id', profile.id);
+
+        if (directError) {
+          // Se a tabela não existir, retornar array vazio em vez de falhar
+          if (directError.code === '42P01' || directError.message?.includes('does not exist')) {
+            return [];
+          }
+          return [];
+        }
+
+        data = directData;
+        error = null;
+      } else if (error) {
+        return [];
+      }
+
       return data || [];
     },
-    enabled: !!userEmail && !!subscription?.plano,
+    enabled: !!userEmail,
     staleTime: 5 * 60 * 1000 // 5 minutos
   });
 
   const isFeatureEnabled = (functionality: string): boolean => {
-    if (!subscription?.plano) return false;
+    if (!subscription?.plano) {
+      return false;
+    }
 
     // Verificar se há override
     const override = overrides.find(o => o.functionality === functionality);
-    if (override !== undefined) {
+    if (override) {
       return override.enabled;
     }
 
     // Usar padrão do plano
-    return DEFAULT_PLAN_FEATURES[subscription.plano]?.[functionality] ?? false;
+    const defaultValue = DEFAULT_PLAN_FEATURES[subscription.plano]?.[functionality] ?? false;
+    return defaultValue;
   };
 
   return {
     subscription,
     isFeatureEnabled,
     planFeatures: subscription?.plano ? DEFAULT_PLAN_FEATURES[subscription.plano] : null,
-    overrides
+    overrides,
+    // Debug info
+    isLoading: !subscription,
+    debugInfo: {
+      userEmail: userEmail.slice(0, 10) + '...',
+      hasSubscription: !!subscription,
+      plano: subscription?.plano,
+      overridesCount: overrides.length
+    }
   };
 };

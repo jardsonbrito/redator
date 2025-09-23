@@ -8,6 +8,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useRecordedLessonViews } from "@/hooks/useRecordedLessonViews";
 import { supabase } from "@/integrations/supabase/client";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { Navigate } from "react-router-dom";
 import { Search, CheckCircle } from "lucide-react";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone, type UnifiedCardItem } from "@/components/ui/unified-card";
 import { resolveAulaCover } from "@/utils/coverUtils";
@@ -44,6 +46,7 @@ const Aulas = () => {
   
   const { studentData } = useStudentAuth();
   const { markAsWatched, isWatched } = useRecordedLessonViews();
+  const { isFeatureEnabled } = usePlanFeatures(studentData.email);
   const [aulas, setAulas] = useState<Aula[]>([]);
   const [filteredAulas, setFilteredAulas] = useState<Aula[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -238,6 +241,11 @@ const Aulas = () => {
       });
     }
   };
+
+  // Se a funcionalidade está desabilitada pelo plano, redirecionar
+  if (!isFeatureEnabled('aulas_gravadas')) {
+    return <Navigate to="/app" replace />;
+  }
 
   if (isLoading) {
     return (

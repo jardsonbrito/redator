@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { usePlanOverrides } from '@/hooks/usePlanOverrides';
 import { ArrowLeft, User, Settings2, RotateCcw, Home } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ModernAdminHeader } from '@/components/admin/ModernAdminHeader';
@@ -20,73 +21,6 @@ interface Student {
   plano: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista' | null;
 }
 
-// Definir funcionalidades padrão por plano (igual ao CustomizePlanByName)
-const DEFAULT_PLAN_FEATURES = {
-  'Largada': {
-    'temas': true,
-    'enviar_tema_livre': false,
-    'exercicios': false,
-    'simulados': false,
-    'lousa': false,
-    'biblioteca': false,
-    'redacoes_exemplares': false,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Lapidação': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Liderança': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': true,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  },
-  'Bolsista': {
-    'temas': true,
-    'enviar_tema_livre': true,
-    'exercicios': true,
-    'simulados': true,
-    'lousa': true,
-    'biblioteca': true,
-    'redacoes_exemplares': true,
-    'aulas_ao_vivo': false,
-    'videoteca': true,
-    'aulas_gravadas': true,
-    'diario_online': true,
-    'gamificacao': true,
-    'top_5': true,
-    'minhas_conquistas': true
-  }
-};
 
 const FUNCTIONALITY_LABELS = {
   'temas': 'Temas',
@@ -112,8 +46,19 @@ export const CustomizeStudentPlan = () => {
   const navigate = useNavigate();
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
+
+  // Usar o hook de plan overrides
+  const {
+    overrides,
+    isFunctionalityEnabled,
+    updateFunctionalityOverride,
+    resetAllOverrides,
+    hasCustomizations
+  } = usePlanOverrides({
+    studentId: studentId || '',
+    plano: student?.plano || null
+  });
 
   const { setBreadcrumbs } = useAdminNavigationContext();
 
@@ -135,17 +80,6 @@ export const CustomizeStudentPlan = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  // Verificar se a tabela plan_overrides existe
-  const checkPlanOverridesTable = async () => {
-    try {
-      await supabase.from('plan_overrides').select('count', { count: 'exact' }).limit(1);
-      return true;
-    } catch (error) {
-      console.warn('Tabela plan_overrides não existe ainda:', error);
-      return false;
-    }
   };
 
   // Buscar dados do aluno
@@ -193,23 +127,6 @@ export const CustomizeStudentPlan = () => {
 
       setStudent(processedStudent);
 
-      // Tentar buscar overrides se a tabela existir
-      const tableExists = await checkPlanOverridesTable();
-      if (tableExists) {
-        const { data: existingOverrides, error: overridesError } = await supabase
-          .from('plan_overrides')
-          .select('*')
-          .eq('student_id', studentId);
-
-        if (!overridesError && existingOverrides) {
-          const organized: Record<string, boolean> = {};
-          existingOverrides.forEach((override: any) => {
-            organized[override.functionality] = override.enabled;
-          });
-          setOverrides(organized);
-        }
-      }
-
     } catch (error) {
       console.error('Erro ao carregar dados do aluno:', error);
       toast({
@@ -238,58 +155,24 @@ export const CustomizeStudentPlan = () => {
       return;
     }
 
-    const defaultValue = DEFAULT_PLAN_FEATURES[student.plano][functionality];
-    const currentValue = overrides[functionality] ?? defaultValue;
+    const currentValue = isFunctionalityEnabled(functionality);
     const newValue = !currentValue;
 
     // Mostrar indicador de salvamento
     setSavingStates(prev => ({ ...prev, [functionality]: true }));
 
-    // Atualizar estado local imediatamente
-    setOverrides(prev => ({
-      ...prev,
-      [functionality]: newValue
-    }));
-
-    // Tentar salvar no banco (se a tabela existir)
     try {
-      const tableExists = await checkPlanOverridesTable();
-      if (tableExists) {
-        const { error } = await supabase
-          .from('plan_overrides')
-          .upsert({
-            student_id: studentId,
-            functionality,
-            enabled: newValue
-          });
+      // Usar o hook para atualizar
+      const success = await updateFunctionalityOverride(functionality, newValue);
 
-        if (error) {
-          console.error('Erro ao salvar override:', error);
-          toast({
-            title: "⚠️ Configuração Aplicada",
-            description: `${FUNCTIONALITY_LABELS[functionality]} foi ${newValue ? 'ativado' : 'desativado'} localmente.`,
-            variant: "default"
-          });
-        } else {
-          toast({
-            title: "✅ Salvo Automaticamente",
-            description: `${FUNCTIONALITY_LABELS[functionality]} foi ${newValue ? 'ativado' : 'desativado'} com sucesso!`,
-          });
-        }
-      } else {
+      if (success) {
         toast({
-          title: "⚠️ Aplicado Localmente",
-          description: `${FUNCTIONALITY_LABELS[functionality]} foi ${newValue ? 'ativado' : 'desativado'} apenas nesta sessão.`,
-          variant: "default"
+          title: "✅ Salvo Automaticamente",
+          description: `${FUNCTIONALITY_LABELS[functionality]} foi ${newValue ? 'ativado' : 'desativado'} com sucesso!`,
         });
       }
     } catch (error) {
-      console.error('Erro ao verificar/salvar:', error);
-      toast({
-        title: "⚠️ Aplicado Localmente",
-        description: `${FUNCTIONALITY_LABELS[functionality]} foi ${newValue ? 'ativado' : 'desativado'} apenas nesta sessão.`,
-        variant: "default"
-      });
+      console.error('Erro ao salvar:', error);
     } finally {
       // Remover indicador de salvamento após 500ms
       setTimeout(() => {
@@ -298,45 +181,12 @@ export const CustomizeStudentPlan = () => {
     }
   };
 
-  const getFunctionalityStatus = (functionality: string) => {
-    if (!student?.plano) return false;
-
-    const defaultValue = DEFAULT_PLAN_FEATURES[student.plano][functionality];
-    return overrides[functionality] ?? defaultValue;
-  };
-
-  const hasCustomizations = () => {
-    return Object.keys(overrides).length > 0;
-  };
-
-  const resetStudent = () => {
-    // Limpar overrides locais
-    setOverrides({});
-
-    // Tentar deletar do banco (se a tabela existir)
-    checkPlanOverridesTable().then(exists => {
-      if (exists) {
-        supabase
-          .from('plan_overrides')
-          .delete()
-          .eq('student_id', studentId)
-          .then(({ error }) => {
-            if (error) {
-              console.error('Erro ao resetar no banco:', error);
-            } else {
-              toast({
-                title: "Resetado",
-                description: "Aluno voltou ao padrão do plano",
-              });
-            }
-          });
-      } else {
-        toast({
-          title: "Resetado",
-          description: "Aluno voltou ao padrão do plano (local)",
-        });
-      }
-    });
+  const resetStudent = async () => {
+    try {
+      await resetAllOverrides();
+    } catch (error) {
+      console.error('Erro inesperado ao resetar:', error);
+    }
   };
 
   if (loading) {
@@ -443,7 +293,7 @@ export const CustomizeStudentPlan = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {Object.entries(FUNCTIONALITY_LABELS).map(([key, label]) => {
-                    const isEnabled = getFunctionalityStatus(key);
+                    const isEnabled = isFunctionalityEnabled(key);
                     const isCustom = overrides[key] !== undefined;
                     const isSaving = savingStates[key];
 
