@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, MessageCircle, Phone } from 'lucide-react';
 
 interface ExpiredSubscriptionModalProps {
@@ -31,16 +30,9 @@ export const ExpiredSubscriptionModal = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Sua assinatura venceu.</strong> Entre em contato com o administrador da plataforma para renovação.
-            </AlertDescription>
-          </Alert>
-
           <div className="text-center space-y-4">
             <p className="text-sm text-muted-foreground">
-              Para renovar sua assinatura e continuar usando a plataforma, entre em contato conosco:
+              Entre em contato com o administrador para renovar sua assinatura.
             </p>
 
             {/* Botão WhatsApp */}
@@ -65,7 +57,7 @@ export const ExpiredSubscriptionModal = ({
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Nossa equipe está disponível para ajudar você a renovar sua assinatura e continuar seus estudos.
+              Nossa equipe está à disposição para ajudar na renovação e garantir a continuidade dos seus estudos.
             </p>
           </div>
         </div>
