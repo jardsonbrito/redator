@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Edit, Trash2 } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
 import { useToast } from '@/hooks/use-toast';
-import { AdminCard, AdminCardSkeleton } from '@/components/admin/AdminCard';
-import { resolveCover } from '@/utils/coverUtils';
+import { RedacaoExemplarCardPadrao } from '@/components/shared/RedacaoExemplarCardPadrao';
 import { trackAdminEvent } from '@/utils/telemetry';
 import {
   AlertDialog,
@@ -142,10 +141,21 @@ export const RedacaoList = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <AdminCardSkeleton />
-        <AdminCardSkeleton />
-        <AdminCardSkeleton />
+      <div className="space-y-6">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="overflow-hidden">
+              <div className="aspect-[16/9] bg-gray-200 animate-pulse"></div>
+              <div className="p-6 space-y-3">
+                <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                <div className="flex gap-2">
+                  <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -166,23 +176,24 @@ export const RedacaoList = () => {
       
       {redacoes && redacoes.length > 0 ? (
         <>
-          <div className="grid gap-4 md:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {redacoes.map((redacao) => (
-              <AdminCard
+              <RedacaoExemplarCardPadrao
                 key={redacao.id}
-                item={{
+                redacao={{
                   id: redacao.id,
-                  module: 'exemplares',
-                  coverUrl: resolveCover(undefined, redacao.pdf_url as string | null),
-                  title: redacao.frase_tematica || 'Redação Exemplar',
-                  subtitle: redacao.autor ? `Por: ${redacao.autor}` : undefined,
-                  badges: redacao.eixo_tematico
-                    ? [{ label: redacao.eixo_tematico as string, tone: 'primary' }]
-                    : [],
-                  actions: [
-                    { icon: Edit, label: 'Editar', onClick: () => setEditingId(redacao.id) },
-                    { icon: Trash2, label: 'Excluir', tone: 'danger', onClick: () => setDeleteId(redacao.id) },
-                  ],
+                  frase_tematica: redacao.frase_tematica || 'Redação Exemplar',
+                  eixo_tematico: redacao.eixo_tematico,
+                  conteudo: redacao.conteudo,
+                  data_envio: redacao.data_envio,
+                  autor: redacao.autor,
+                  pdf_url: redacao.pdf_url,
+                  dica_de_escrita: redacao.dica_de_escrita
+                }}
+                perfil="admin"
+                actions={{
+                  onEditar: () => setEditingId(redacao.id),
+                  onExcluir: () => setDeleteId(redacao.id)
                 }}
               />
             ))}

@@ -44,13 +44,27 @@ const SimuladoList = () => {
     }
   }, [simulados]);
 
+  const handleDeleteSimulado = (id: string) => {
+    // Buscar o simulado para mostrar informações na confirmação
+    const simulado = simulados?.find(s => s.id === id);
+    const nomeSimulado = simulado?.titulo || 'este simulado';
+
+    const confirmDelete = window.confirm(
+      `Tem certeza que deseja excluir "${nomeSimulado}"?\n\nEsta ação não pode ser desfeita e todas as redações relacionadas a este simulado serão afetadas.`
+    );
+
+    if (confirmDelete) {
+      deletarSimulado.mutate(id);
+    }
+  };
+
   const deletarSimulado = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('simulados')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -183,7 +197,7 @@ const SimuladoList = () => {
               actions={{
                 onEditar: (id) => handleEdit(simulado),
                 onToggleStatus: (id, currentStatus) => handleToggleStatus(id, currentStatus),
-                onExcluir: (id) => deletarSimulado.mutate(id)
+                onExcluir: (id) => handleDeleteSimulado(id)
               }}
             />
           ))}

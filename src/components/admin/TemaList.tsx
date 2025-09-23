@@ -81,7 +81,24 @@ export const TemaList = () => {
   const handleDelete = async (id: string) => {
     try {
       console.log('🗑️ Iniciando exclusão do tema com ID:', id);
-      
+
+      // Buscar informações do tema para mostrar na confirmação
+      const { data: tema, error: temaError } = await supabase
+        .from('temas')
+        .select('frase_tematica')
+        .eq('id', id)
+        .single();
+
+      const tituloTema = tema?.frase_tematica || 'este tema';
+
+      const confirmDelete = window.confirm(
+        `Tem certeza que deseja excluir "${tituloTema}"?\n\nEsta ação não pode ser desfeita e todas as redações relacionadas a este tema serão afetadas.`
+      );
+
+      if (!confirmDelete) {
+        return; // Usuário cancelou a exclusão
+      }
+
       // Verificar autenticação do usuário
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {

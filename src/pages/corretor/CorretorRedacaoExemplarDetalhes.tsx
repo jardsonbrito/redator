@@ -1,0 +1,184 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, User, Calendar } from "lucide-react";
+import { CorretorLayout } from "@/components/corretor/CorretorLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { dicaToHTML } from "@/utils/dicaToHTML";
+
+const CorretorRedacaoExemplarDetalhes = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [redacao, setRedacao] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchRedacao();
+    }
+  }, [id]);
+
+  const fetchRedacao = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase
+        .from('redacoes')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      setRedacao(data);
+    } catch (err: any) {
+      console.error('Erro ao buscar redação:', err);
+      setError(err.message || 'Erro ao carregar redação');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <CorretorLayout>
+        <div className="space-y-6">
+          <div className="h-8 bg-muted rounded animate-pulse"></div>
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="h-6 bg-muted rounded animate-pulse"></div>
+                <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
+                <div className="h-32 bg-muted rounded animate-pulse"></div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </CorretorLayout>
+    );
+  }
+
+  if (error || !redacao) {
+    return (
+      <CorretorLayout>
+        <Card>
+          <CardContent className="text-center py-12">
+            <p className="text-red-600 mb-4">
+              {error || "Redação não encontrada"}
+            </p>
+            <Button onClick={() => navigate(-1)} variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+          </CardContent>
+        </Card>
+      </CorretorLayout>
+    );
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, 'dd/MM/yyyy', { locale: ptBR });
+    } catch {
+      return 'Data não disponível';
+    }
+  };
+
+  return (
+    <CorretorLayout>
+      <div className="space-y-6">
+        {/* Botão Voltar */}
+        <Button onClick={() => navigate(-1)} variant="outline">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar para Exemplares
+        </Button>
+
+        {/* Card Principal */}
+        <Card>
+          <CardHeader className="border-b">
+            <div className="space-y-4">
+              {/* Título */}
+              <CardTitle className="text-2xl font-bold text-gray-900">
+                {redacao.frase_tematica}
+              </CardTitle>
+
+              {/* Meta informações */}
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                {/* Autor */}
+                {redacao.autor && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span>Por: {redacao.autor}</span>
+                  </div>
+                )}
+
+                {/* Data */}
+                {redacao.data_envio && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Criado em: {formatDate(redacao.data_envio)}</span>
+                  </div>
+                )}
+
+                {/* Badge do eixo temático */}
+                {redacao.eixo_tematico && (
+                  <Badge className="bg-purple-100 text-purple-700">
+                    {redacao.eixo_tematico}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-6">
+            <div className="space-y-6">
+              {/* Imagem se disponível */}
+              {redacao.imagem_url && (
+                <div className="rounded-lg overflow-hidden">
+                  <img
+                    src={redacao.imagem_url}
+                    alt="Imagem da redação"
+                    className="w-full h-auto max-h-64 object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Texto da redação */}
+              <div>
+                <h3 className="font-semibold text-lg text-gray-800 mb-4">Redação Exemplar</h3>
+                <div className="prose max-w-none">
+                  <div className="whitespace-pre-wrap font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-6 bg-gray-50">
+                    {redacao.conteudo || redacao.texto}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dica de escrita se disponível */}
+              {redacao.dica_de_escrita && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <h4 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                    <span>💡</span> Dica de Escrita
+                  </h4>
+                  <div
+                    className="text-sm text-yellow-700 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0"
+                    dangerouslySetInnerHTML={{ __html: dicaToHTML(redacao.dica_de_escrita) }}
+                  />
+                </div>
+              )}
+
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </CorretorLayout>
+  );
+};
+
+export default CorretorRedacaoExemplarDetalhes;

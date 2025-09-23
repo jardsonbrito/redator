@@ -2,24 +2,9 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, ExternalLink } from 'lucide-react';
-import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
-import { CompactIconButton } from '@/components/ui/compact-icon-button';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { VideoForm } from './VideoForm';
-import { AdminUniformCard, type BadgeType } from './AdminUniformCard';
+import { VideotecaCardPadrao, VideotecaVideoData } from '@/components/shared/VideotecaCardPadrao';
 
 export const VideoList = () => {
   const { toast } = useToast();
@@ -142,15 +127,12 @@ export const VideoList = () => {
     );
   }
 
-  // Função para toggle de status
-  const handleToggleStatus = async (video: any) => {
+  const handlePublicar = async (videoId: string) => {
     try {
-      const newStatus = video.status_publicacao === 'publicado' ? 'rascunho' : 'publicado';
-      
       const { error } = await supabase
         .from('videos')
-        .update({ status_publicacao: newStatus })
-        .eq('id', video.id);
+        .update({ status_publicacao: 'publicado' })
+        .eq('id', videoId);
 
       if (error) throw error;
 
@@ -160,16 +142,48 @@ export const VideoList = () => {
       ]);
 
       toast({
-        title: "✅ Status atualizado!",
-        description: `Vídeo ${newStatus === 'publicado' ? 'publicado' : 'marcado como rascunho'}.`,
+        title: "✅ Vídeo publicado!",
+        description: "O vídeo foi publicado com sucesso.",
       });
     } catch (error: any) {
       toast({
         title: "❌ Erro",
-        description: "Erro ao alterar status: " + error.message,
+        description: "Erro ao publicar vídeo: " + error.message,
         variant: "destructive",
       });
     }
+  };
+
+  const handleDespublicar = async (videoId: string) => {
+    try {
+      const { error } = await supabase
+        .from('videos')
+        .update({ status_publicacao: 'rascunho' })
+        .eq('id', videoId);
+
+      if (error) throw error;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-videos'] }),
+        queryClient.invalidateQueries({ queryKey: ['videos'] }),
+      ]);
+
+      toast({
+        title: "✅ Vídeo despublicado!",
+        description: "O vídeo foi marcado como rascunho.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "❌ Erro",
+        description: "Erro ao despublicar vídeo: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditar = (video: any) => {
+    setEditingId(video.id);
+    setEditingVideo(video);
   };
 
   return (
@@ -177,95 +191,45 @@ export const VideoList = () => {
       <h3 className="text-lg font-semibold text-redator-primary">Vídeos Cadastrados</h3>
       
       {videos && videos.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {videos.map((video) => {
-            const thumbnailUrl = video.thumbnail_url || 
-              (video.video_id && video.platform === 'youtube' 
-                ? `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`
-                : null);
-            
-            // Preparar badges
-            const badges: BadgeType[] = [];
-            
-            if (video.eixo_tematico) {
-              badges.push({
-                label: video.eixo_tematico,
-                variant: 'outline' as const
-              });
-            }
-            
-            badges.push({
-              label: video.status_publicacao === 'publicado' ? 'Publicado' : 'Rascunho',
-              variant: video.status_publicacao === 'publicado' ? 'default' : 'secondary'
-            });
-            
-            if (video.platform) {
-              badges.push({
-                label: video.platform === 'youtube' ? 'YouTube' : 'Instagram',
-                variant: video.platform === 'youtube' ? 'destructive' : 'default'
-              });
+            // Determinar thumbnail
+            let thumbnailUrl = video.thumbnail_url;
+            if (!thumbnailUrl && video.video_id && video.platform === 'youtube') {
+              thumbnailUrl = `https://i.ytimg.com/vi/${video.video_id}/hqdefault.jpg`;
             }
 
-            // Preparar ações
-            const actions = (
-              <>
-                <CompactIconButton
-                  icon={ACTION_ICON.editar}
-                  label="Editar vídeo"
-                  intent="neutral"
-                  onClick={() => {
-                    setEditingId(video.id);
-                    setEditingVideo(video);
-                  }}
-                />
+            // Determinar URL do vídeo
+            let videoUrl = video.video_url_original || video.youtube_url;
 
-                <CompactIconButton
-                  icon={video.status_publicacao === 'publicado' ? ACTION_ICON.rascunho : ACTION_ICON.publicar}
-                  label={video.status_publicacao === 'publicado' ? 'Tornar Rascunho' : 'Publicar'}
-                  intent={video.status_publicacao === 'publicado' ? 'attention' : 'positive'}
-                  onClick={() => handleToggleStatus(video)}
-                />
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <CompactIconButton
-                      icon={ACTION_ICON.excluir}
-                      label="Excluir vídeo"
-                      intent="danger"
-                    />
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-md mx-4">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-red-500" />
-                        Confirmar Exclusão
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja excluir este vídeo? Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                      <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                      <AlertDialogAction 
-                        onClick={() => handleDelete(video.id)}
-                        className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </>
-            );
+            // Determinar se é novo baseado na data (últimos 7 dias)
+            const isNovo = video.created_at ?
+              (new Date().getTime() - new Date(video.created_at).getTime()) < (7 * 24 * 60 * 60 * 1000) :
+              false;
+
+            const videoData: VideotecaVideoData = {
+              id: video.id,
+              titulo: video.titulo || 'Vídeo',
+              url: videoUrl,
+              eixo_tematico: video.eixo_tematico || video.categoria,
+              plataforma: video.platform || 'youtube',
+              data_publicacao: video.created_at,
+              publicado: video.status_publicacao === 'publicado',
+              thumbnail_url: thumbnailUrl,
+              is_novo: isNovo
+            };
 
             return (
-              <AdminUniformCard
+              <VideotecaCardPadrao
                 key={video.id}
-                title={video.titulo}
-                coverUrl={thumbnailUrl || undefined}
-                coverAlt={`Thumbnail do vídeo: ${video.titulo}`}
-                badges={badges}
-                actions={actions}
+                video={videoData}
+                perfil="admin"
+                actions={{
+                  onEditar: () => handleEditar(video),
+                  onExcluir: handleDelete,
+                  onPublicar: handlePublicar,
+                  onDespublicar: handleDespublicar
+                }}
               />
             );
           })}

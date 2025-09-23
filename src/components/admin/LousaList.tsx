@@ -142,6 +142,18 @@ export default function LousaList() {
   };
 
   const handleDeleteLousa = async (id: string) => {
+    // Buscar informações da lousa para mostrar na confirmação
+    const lousa = lousas.find(l => l.id === id);
+    const tituloLousa = lousa?.titulo || 'esta lousa';
+
+    const confirmDelete = window.confirm(
+      `Tem certeza que deseja excluir "${tituloLousa}"?\n\nEsta ação não pode ser desfeita e todas as respostas dos alunos serão perdidas permanentemente.`
+    );
+
+    if (!confirmDelete) {
+      return; // Usuário cancelou a exclusão
+    }
+
     try {
       const { error } = await supabase
         .from('lousa')

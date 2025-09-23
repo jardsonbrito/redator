@@ -8,8 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Trash2, ExternalLink, FileText, Edit, Search, Calendar, Grid, List } from "lucide-react";
 import { AulaForm } from "./AulaForm";
-import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone } from "@/components/ui/unified-card";
-import { resolveAulaCover } from "@/utils/coverUtils";
+import { AulaGravadaCardPadrao } from "@/components/shared/AulaGravadaCardPadrao";
 
 interface Modulo {
   id?: string;
@@ -221,10 +220,35 @@ export const SimpleAulaList = () => {
 
 if (isLoading) {
     return (
-      <div className="space-y-4">
-        <UnifiedCardSkeleton />
-        <UnifiedCardSkeleton />
-        <UnifiedCardSkeleton />
+      <div className="space-y-6">
+        {/* Filtros skeleton */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cards skeleton */}
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="overflow-hidden">
+              <div className="aspect-[16/9] bg-gray-200 animate-pulse"></div>
+              <div className="p-6 space-y-3">
+                <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                <div className="flex gap-2">
+                  <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
+                  <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -344,57 +368,21 @@ if (isLoading) {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {aulasModulo.map((aula) => {
-                      const coverUrl = resolveAulaCover(aula);
-            const badges: { label: string; tone?: BadgeTone }[] = [];
-                      const moduloNomes: { [key: string]: string } = {
-                        'e951e007-2e33-4491-9cde-883ffc691f24': 'Competência 1',
-                        '62c8f686-b03a-4175-8bb2-1812e7d46128': 'Competência 2',
-                        '17bc8189-a4ee-4c5a-a604-f188c2699188': 'Competência 3',
-                        '65c74163-0e9a-4d16-b142-ef4eade26c13': 'Competência 4',
-                        '40b054c6-0df4-4b63-99ba-0fe9f315ef3c': 'Competência 5',
-                        '1ef05609-c5ed-418e-90ee-4968f29ebfd9': 'Redatoria',
-                        'b14dd9be-a203-45df-97b7-ae592f5c60ed': 'Aula ao vivo'
-                      };
-                      if ((aula as any).modulo_id && moduloNomes[(aula as any).modulo_id]) {
-                        badges.push({ label: moduloNomes[(aula as any).modulo_id], tone: 'primary' });
-            }
-                      if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
-                      badges.push({ label: aula.ativo ? 'Ativo' : 'Inativo', tone: aula.ativo ? 'success' : 'neutral' });
-
-                      const meta = [
-                        ...(aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0
-                          ? [{ icon: ExternalLink, text: `Turmas: ${aula.turmas_autorizadas.join(', ')}` }]
-                          : []),
-                        ...(aula.criado_em ? [{ icon: ExternalLink, text: `Criado em: ${new Date(aula.criado_em).toLocaleString('pt-BR')}` }] : []),
-                      ];
-
-                      const actions = [
-                        { icon: ExternalLink, label: 'Abrir', onClick: () => window.open(aula.link_conteudo, '_blank') },
-                        ...(aula.pdf_url ? [{ icon: FileText, label: 'PDF', onClick: () => window.open(aula.pdf_url!, '_blank') }] : []),
-                        { icon: Edit, label: 'Editar', onClick: () => handleEdit(aula) },
-                        { icon: Edit, label: aula.ativo ? 'Desativar' : 'Ativar', onClick: () => toggleAtivo(aula.id, aula.ativo) },
-                        { icon: Trash2, label: 'Excluir', onClick: () => handleDelete(aula.id), tone: 'danger' as const },
-                      ];
-
-                      return (
-                        <UnifiedCard
-                          key={aula.id}
-                          variant="admin"
-                          item={{
-                            id: aula.id,
-                            module: 'aulas',
-                            coverUrl,
-                            title: aula.titulo,
-                            subtitle: aula.descricao || undefined,
-                            badges,
-                            meta,
-                            actions,
-                          }}
-                        />
-                      );
-                    })}
+                  <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    {aulasModulo.map((aula) => (
+                      <AulaGravadaCardPadrao
+                        key={aula.id}
+                        aula={aula}
+                        perfil="admin"
+                        actions={{
+                          onAssistir: () => window.open(aula.link_conteudo, '_blank'),
+                          onBaixarPdf: aula.pdf_url ? () => window.open(aula.pdf_url!, '_blank') : undefined,
+                          onEditar: () => handleEdit(aula),
+                          onDesativar: () => toggleAtivo(aula.id, aula.ativo),
+                          onExcluir: () => handleDelete(aula.id),
+                        }}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -402,57 +390,21 @@ if (isLoading) {
           })}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {aulas.map((aula) => {
-            const coverUrl = resolveAulaCover(aula);
-                      const badges: { label: string; tone?: BadgeTone }[] = [];
-            const moduloNomes: { [key: string]: string } = {
-              'e951e007-2e33-4491-9cde-883ffc691f24': 'Competência 1',
-              '62c8f686-b03a-4175-8bb2-1812e7d46128': 'Competência 2',
-              '17bc8189-a4ee-4c5a-a604-f188c2699188': 'Competência 3',
-              '65c74163-0e9a-4d16-b142-ef4eade26c13': 'Competência 4',
-              '40b054c6-0df4-4b63-99ba-0fe9f315ef3c': 'Competência 5',
-              '1ef05609-c5ed-418e-90ee-4968f29ebfd9': 'Redatoria',
-              'b14dd9be-a203-45df-97b7-ae592f5c60ed': 'Aula ao vivo'
-            };
-                      if ((aula as any).modulo_id && moduloNomes[(aula as any).modulo_id]) {
-                        badges.push({ label: moduloNomes[(aula as any).modulo_id], tone: 'primary' });
-                      }
-            if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
-            badges.push({ label: aula.ativo ? 'Ativo' : 'Inativo', tone: aula.ativo ? 'success' : 'neutral' });
-
-            const meta = [
-              ...(aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0
-                ? [{ icon: ExternalLink, text: `Turmas: ${aula.turmas_autorizadas.join(', ')}` }]
-                : []),
-              ...(aula.criado_em ? [{ icon: ExternalLink, text: `Criado em: ${new Date(aula.criado_em).toLocaleString('pt-BR')}` }] : []),
-            ];
-
-            const actions = [
-              { icon: ExternalLink, label: 'Abrir', onClick: () => window.open(aula.link_conteudo, '_blank') },
-              ...(aula.pdf_url ? [{ icon: FileText, label: 'PDF', onClick: () => window.open(aula.pdf_url!, '_blank') }] : []),
-              { icon: Edit, label: 'Editar', onClick: () => handleEdit(aula) },
-              { icon: Edit, label: aula.ativo ? 'Desativar' : 'Ativar', onClick: () => toggleAtivo(aula.id, aula.ativo) },
-              { icon: Trash2, label: 'Excluir', onClick: () => handleDelete(aula.id), tone: 'danger' as const },
-            ];
-
-            return (
-              <UnifiedCard
-                key={aula.id}
-                variant="admin"
-                item={{
-                  id: aula.id,
-                  module: 'aulas',
-                  coverUrl,
-                  title: aula.titulo,
-                  subtitle: aula.descricao || undefined,
-                  badges,
-                  meta,
-                  actions,
-                }}
-              />
-            );
-          })}
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {aulas.map((aula) => (
+            <AulaGravadaCardPadrao
+              key={aula.id}
+              aula={aula}
+              perfil="admin"
+              actions={{
+                onAssistir: () => window.open(aula.link_conteudo, '_blank'),
+                onBaixarPdf: aula.pdf_url ? () => window.open(aula.pdf_url!, '_blank') : undefined,
+                onEditar: () => handleEdit(aula),
+                onDesativar: () => toggleAtivo(aula.id, aula.ativo),
+                onExcluir: () => handleDelete(aula.id),
+              }}
+            />
+          ))}
         </div>
       )}
     </div>

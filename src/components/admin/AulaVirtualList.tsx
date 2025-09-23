@@ -94,6 +94,18 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
   };
 
   const deleteAula = async (id: string) => {
+    // Buscar o título da aula para mostrar na confirmação
+    const aula = aulas.find(a => a.id === id);
+    const tituloAula = aula?.titulo || 'esta aula';
+
+    const confirmDelete = window.confirm(
+      `Tem certeza que deseja excluir "${tituloAula}"?\n\nEsta ação não pode ser desfeita e todos os dados relacionados à aula serão perdidos permanentemente.`
+    );
+
+    if (!confirmDelete) {
+      return; // Usuário cancelou a exclusão
+    }
+
     try {
       const { error } = await supabase
         .from('aulas_virtuais')
@@ -101,7 +113,7 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
         .eq('id', id);
 
       if (error) throw error;
-      
+
       toast.success('Aula excluída com sucesso!');
       fetchAulas();
     } catch (error: any) {

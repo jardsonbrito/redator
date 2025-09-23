@@ -43,6 +43,8 @@ import CorretorAulas from "./pages/corretor/CorretorAulas";
 import CorretorVideoteca from "./pages/corretor/CorretorVideoteca";
 import CorretorBiblioteca from "./pages/corretor/CorretorBiblioteca";
 import CorretorRedacoesExemplar from "./pages/corretor/CorretorRedacoesExemplar";
+import RedacaoExemplarDetalhes from "./pages/RedacaoExemplarDetalhes";
+import CorretorRedacaoExemplarDetalhes from "./pages/corretor/CorretorRedacaoExemplarDetalhes";
 import CorretorTop5 from "./pages/corretor/CorretorTop5";
 import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 import { ProfessorAuthProvider } from "./hooks/useProfessorAuth";
@@ -120,6 +122,7 @@ function App() {
                   <Route path="/videoteca" element={<ProtectedStudentRoute><Videoteca /></ProtectedStudentRoute>} />
                   <Route path="/biblioteca" element={<ProtectedStudentRoute><Biblioteca /></ProtectedStudentRoute>} />
                   <Route path="/redacoes" element={<ProtectedStudentRoute><RedacoesExemplar /></ProtectedStudentRoute>} />
+                  <Route path="/redacoes-exemplar/:id" element={<ProtectedStudentRoute><RedacaoExemplarDetalhes /></ProtectedStudentRoute>} />
                   <Route path="/top5" element={<ProtectedStudentRoute><Top5 /></ProtectedStudentRoute>} />
                   <Route path="/lousa" element={<ProtectedStudentRoute><AlunoLousaList /></ProtectedStudentRoute>} />
                   <Route path="/lousa/:id" element={<ProtectedStudentRoute><LousaResponse /></ProtectedStudentRoute>} />
@@ -155,6 +158,7 @@ function App() {
                   <Route path="/corretor/videoteca" element={<CorretorVideoteca />} />
                   <Route path="/corretor/biblioteca" element={<CorretorBiblioteca />} />
                   <Route path="/corretor/redacoes" element={<CorretorRedacoesExemplar />} />
+                  <Route path="/corretor/redacoes-exemplar/:id" element={<CorretorRedacaoExemplarDetalhes />} />
                   <Route path="/corretor/top5" element={<CorretorTop5 />} />
                   <Route path="/corretor/ajuda-rapida" element={<CorretorAjudaRapida />} />
                   <Route path="/corretor/lousas" element={<CorretorLousas />} />

@@ -31,18 +31,7 @@ export async function getMyAttendanceStatus(sessionId: string): Promise<Attendan
       }
     }
     
-    // Se não encontrou no localStorage, tentar Supabase Auth (fallback)
-    if (!studentEmail) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', user.id)
-          .single();
-        studentEmail = profile?.email || null;
-      }
-    }
+    // Não usar Supabase Auth para alunos, apenas localStorage
 
     if (!studentEmail) {
       console.warn('Nenhum email de estudante encontrado');
@@ -90,6 +79,8 @@ export async function registrarEntrada(sessionId: string): Promise<void> {
 
     // Primeiro, vamos verificar se o usuário está autenticado corretamente
     let studentEmail: string | null = null;
+    let studentName: string | null = null;
+    let studentTurma: string | null = null;
 
     // Tentar buscar email do contexto de estudante (localStorage)
     const userType = localStorage.getItem("userType");
@@ -99,6 +90,8 @@ export async function registrarEntrada(sessionId: string): Promise<void> {
         try {
           const dados = JSON.parse(alunoData);
           studentEmail = dados.email;
+          studentName = dados.nome || 'Aluno';
+          studentTurma = dados.turma || 'Não informado';
         } catch (e) {
           console.error('Erro ao parsear dados do aluno:', e);
         }
@@ -109,6 +102,8 @@ export async function registrarEntrada(sessionId: string): Promise<void> {
         try {
           const dados = JSON.parse(visitanteData);
           studentEmail = dados.email;
+          studentName = dados.nome || 'Visitante';
+          studentTurma = 'Visitante';
         } catch (e) {
           console.error('Erro ao parsear dados do visitante:', e);
         }
@@ -121,64 +116,91 @@ export async function registrarEntrada(sessionId: string): Promise<void> {
 
     console.log('🔄 Registrando entrada para:', studentEmail, 'na aula:', sessionId);
 
-    // Teste de conectividade da tabela
-    const { data: testData, error: testError } = await supabase
-      .from('presenca_aulas')
-      .select('count')
-      .limit(1);
+    // Tentar primeiro usar a RPC que aceita email como parâmetro
+    console.log('🔄 Tentando via RPC registrar_entrada_email_param...');
 
-    console.log('🔗 Teste de conectividade da tabela:', { testData, testError });
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('registrar_entrada_email_param', {
+        p_aula_id: sessionId,
+        p_email_aluno: studentEmail.toLowerCase()
+      });
 
-    // Verificar se já existe registro
-    const { data: existingRecord } = await supabase
-      .from('presenca_aulas')
-      .select('*')
-      .eq('aula_id', sessionId)
-      .eq('email_aluno', studentEmail.toLowerCase())
-      .single();
+      console.log('📊 Resultado RPC registrar_entrada_email_param:', { rpcData, rpcError });
 
-    console.log('📋 Registro existente:', existingRecord);
+      if (rpcError) {
+        console.error('❌ Erro na RPC registrar_entrada_email_param:', rpcError);
+        throw rpcError;
+      }
 
-    // Usar inserção direta na tabela ao invés da RPC
-    const agora = new Date().toISOString();
+      if (rpcData === 'entrada_ok' || rpcData === 'entrada_atualizada') {
+        console.log('✅ Entrada registrada com sucesso via RPC!');
+        return;
+      }
+    } catch (rpcError) {
+      console.error('❌ Erro ao tentar RPC registrar_entrada_email_param:', rpcError);
 
-    const recordData = {
-      aula_id: sessionId,
-      email_aluno: studentEmail.toLowerCase(),
-      status: 'presente',
-      entrada_at: agora
-    };
+      // Se a RPC falhou, tentar inserção direta na tabela
+      console.log('🔄 Tentando inserção direta na tabela...');
 
-    console.log('📝 Dados a serem inseridos:', recordData);
+      try {
+        // Verificar se já existe registro
+        const { data: existingRecord } = await supabase
+          .from('presenca_aulas')
+          .select('*')
+          .eq('aula_id', sessionId)
+          .eq('email_aluno', studentEmail.toLowerCase())
+          .single();
 
-    let result;
-    if (existingRecord) {
-      // Atualizar registro existente
-      result = await supabase
-        .from('presenca_aulas')
-        .update({
-          status: 'presente',
-          entrada_at: agora
-        })
-        .eq('aula_id', sessionId)
-        .eq('email_aluno', studentEmail.toLowerCase());
-    } else {
-      // Inserir novo registro
-      result = await supabase
-        .from('presenca_aulas')
-        .insert(recordData);
+        console.log('📋 Registro existente:', existingRecord);
+
+        const agora = new Date().toISOString();
+        let result;
+
+        if (existingRecord) {
+          // Atualizar registro existente
+          console.log('🔄 Atualizando registro existente...');
+          result = await supabase
+            .from('presenca_aulas')
+            .update({
+              entrada_at: agora,
+              tipo_registro: 'entrada'
+            })
+            .eq('aula_id', sessionId)
+            .eq('email_aluno', studentEmail.toLowerCase());
+        } else {
+          // Inserir novo registro
+          console.log('➕ Inserindo novo registro...');
+          const recordData = {
+            aula_id: sessionId,
+            email_aluno: studentEmail.toLowerCase(),
+            nome_aluno: studentName,
+            turma: studentTurma,
+            entrada_at: agora,
+            tipo_registro: 'entrada'
+          };
+
+          console.log('📝 Dados a serem inseridos:', recordData);
+
+          result = await supabase
+            .from('presenca_aulas')
+            .insert(recordData);
+        }
+
+        const { error, data } = result;
+
+        console.log('📊 Resultado da operação direta:', { error, data });
+
+        if (error) {
+          console.error('❌ Erro na operação direta:', error);
+          throw error;
+        }
+
+        console.log('✅ Entrada registrada com sucesso via operação direta!');
+      } catch (directError) {
+        console.error('❌ Erro completo ao registrar:', directError);
+        throw directError;
+      }
     }
-
-    const { error, data } = result;
-
-    console.log('📊 Resultado da operação:', { error, data });
-
-    if (error) {
-      console.error('Erro ao inserir presença:', error);
-      throw new Error(`Erro ao registrar presença: ${error.message}`);
-    }
-
-    console.log('✅ Entrada registrada com sucesso!');
   } catch (error) {
     console.error('Error registering attendance:', error);
     throw error;
@@ -187,6 +209,8 @@ export async function registrarEntrada(sessionId: string): Promise<void> {
 
 export async function registrarSaida(sessionId: string): Promise<void> {
   try {
+    console.log('🚀 Iniciando registro de saída para aula:', sessionId);
+
     // Primeiro, vamos verificar se o usuário está autenticado corretamente
     let studentEmail: string | null = null;
 
@@ -220,13 +244,31 @@ export async function registrarSaida(sessionId: string): Promise<void> {
 
     console.log('🔄 Registrando saída para:', studentEmail, 'na aula:', sessionId);
 
-    // Atualizar registro de presença com horário de saída
+    // Tentar primeiro usar RPC para registrar saída se existir
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('registrar_saida_email_param', {
+        p_aula_id: sessionId,
+        p_email_aluno: studentEmail.toLowerCase()
+      });
+
+      console.log('📊 Resultado RPC registrar_saida_email_param:', { rpcData, rpcError });
+
+      if (!rpcError && (rpcData === 'saida_ok' || rpcData === 'saida_atualizada')) {
+        console.log('✅ Saída registrada com sucesso via RPC!');
+        return;
+      }
+    } catch (rpcError) {
+      console.error('❌ RPC de saída não encontrada ou falhou, usando operação direta');
+    }
+
+    // Atualizar registro de presença com horário de saída (método direto)
     const agora = new Date().toISOString();
 
     const { error } = await supabase
       .from('presenca_aulas')
       .update({
-        saida_at: agora
+        saida_at: agora,
+        tipo_registro: 'saida'
       })
       .eq('aula_id', sessionId)
       .eq('email_aluno', studentEmail.toLowerCase());

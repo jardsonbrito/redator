@@ -6,9 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Edit, Trash2, ExternalLink, FileText, Search } from "lucide-react";
-import { AdminCard, AdminCardSkeleton, type BadgeTone } from "@/components/admin/AdminCard";
-import { resolveCover } from "@/utils/coverUtils";
+import { Search } from "lucide-react";
+import { AulaGravadaCardPadrao } from "@/components/shared/AulaGravadaCardPadrao";
 interface Aula {
   id: string;
   titulo: string;
@@ -92,7 +91,17 @@ export const AulaList = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta aula?")) return;
+    // Buscar informações da aula para mostrar na confirmação
+    const aula = aulas.find(a => a.id === id);
+    const tituloAula = aula?.titulo || 'esta aula';
+
+    const confirmDelete = window.confirm(
+      `Tem certeza que deseja excluir "${tituloAula}"?\n\nEsta ação não pode ser desfeita e todos os dados relacionados à aula serão perdidos permanentemente.`
+    );
+
+    if (!confirmDelete) {
+      return; // Usuário cancelou a exclusão
+    }
 
     try {
       const { error } = await supabase
@@ -127,12 +136,52 @@ export const AulaList = () => {
     }
   };
 
-if (isLoading) {
+
+  const handleAssistir = (id: string) => {
+    const aula = aulas.find(a => a.id === id);
+    if (aula?.link_conteudo) {
+      window.open(aula.link_conteudo, '_blank');
+    }
+  };
+
+  const handleEdit = (id: string) => {
+    // TODO: Implementar navegação para edição
+    console.log('Editando aula:', id);
+    toast.info('Funcionalidade de edição será implementada em breve');
+  };
+
+  if (isLoading) {
     return (
-      <div className="space-y-4">
-        <AdminCardSkeleton />
-        <AdminCardSkeleton />
-        <AdminCardSkeleton />
+      <div className="space-y-6">
+        {/* Filtros skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cards skeleton */}
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="overflow-hidden">
+              <div className="aspect-[16/9] bg-gray-200 animate-pulse"></div>
+              <div className="p-6 space-y-3">
+                <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                <div className="flex gap-2">
+                  <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
+                  <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -176,47 +225,28 @@ if (isLoading) {
       </Card>
 
 {/* Lista de Aulas */}
-      <div className="grid gap-4">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {filteredAulas.length === 0 ? (
-          <Card>
+          <Card className="col-span-full">
             <CardContent className="text-center py-8">
               <p className="text-gray-500">Nenhuma aula encontrada.</p>
             </CardContent>
           </Card>
         ) : (
-          filteredAulas.map((aula) => {
-            const coverUrl = resolveCover((aula as any).cover_file_path, (aula as any).cover_url);
-            const badges: { label: string; tone?: BadgeTone }[] = [];
-            if (aula.modulo) badges.push({ label: aula.modulo, tone: 'primary' });
-            badges.push({ label: aula.ativo ? 'Ativo' : 'Inativo', tone: aula.ativo ? 'success' : 'neutral' });
-
-            const meta = [
-              { icon: ExternalLink, text: `Criado em: ${new Date(aula.criado_em).toLocaleString('pt-BR')}` },
-            ];
-
-            const actions = [
-              { icon: ExternalLink, label: 'Abrir', onClick: () => window.open(aula.link_conteudo, '_blank') },
-              ...(aula.pdf_url ? [{ icon: FileText, label: 'PDF', onClick: () => window.open(aula.pdf_url!, '_blank') }] : []),
-              { icon: Edit, label: aula.ativo ? 'Desativar' : 'Ativar', onClick: () => toggleAtivo(aula.id, aula.ativo) },
-              { icon: Trash2, label: 'Excluir', onClick: () => handleDelete(aula.id), tone: 'danger' as const },
-            ];
-
-            return (
-              <AdminCard
-                key={aula.id}
-                item={{
-                  id: aula.id,
-                  module: 'aulas',
-                  coverUrl,
-                  title: aula.titulo,
-                  subtitle: aula.descricao,
-                  badges,
-                  meta,
-                  actions,
-                }}
-              />
-            );
-          })
+          filteredAulas.map((aula) => (
+            <AulaGravadaCardPadrao
+              key={aula.id}
+              aula={aula}
+              perfil="admin"
+              actions={{
+                onAssistir: () => handleAssistir(aula.id),
+                onBaixarPdf: aula.pdf_url ? () => window.open(aula.pdf_url!, '_blank') : undefined,
+                onEditar: () => handleEdit(aula.id),
+                onDesativar: () => toggleAtivo(aula.id, aula.ativo),
+                onExcluir: () => handleDelete(aula.id),
+              }}
+            />
+          ))
         )}
       </div>
     </div>

@@ -10,14 +10,12 @@ import { dicaToHTML } from "@/utils/dicaToHTML";
 import { useRedacoesExemplarFilters } from "@/hooks/useRedacoesExemplarFilters";
 import { AutocompleteInput } from "@/components/filters/AutocompleteInput";
 import { MultiSelectDropdown } from "@/components/filters/MultiSelectDropdown";
-import { ExemplarCard } from "@/components/ExemplarCard";
+import { RedacaoExemplarCardPadrao } from "@/components/shared/RedacaoExemplarCardPadrao";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 const RedacoesExemplar = () => {
   // Configurar título da página
   usePageTitle('Redações Exemplar');
-  
-  const [selectedRedacao, setSelectedRedacao] = useState<any>(null);
 
   // Usar o hook de filtros
   const {
@@ -55,17 +53,19 @@ const RedacoesExemplar = () => {
               
               {/* Skeleton dos cards em grid */}
               <div className="mx-auto max-w-6xl">
-                <div role="list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="space-y-3">
-                      <Skeleton className="w-full aspect-video rounded-xl" />
-                      <div className="px-4 space-y-3">
-                        <Skeleton className="h-5 w-20" />
-                        <Skeleton className="h-6 w-full" />
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-9 w-full" />
+                <div role="list" className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={i} className="overflow-hidden">
+                      <div className="aspect-[16/9] bg-gray-200 animate-pulse"></div>
+                      <div className="p-6 space-y-3">
+                        <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                        <div className="flex gap-2">
+                          <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
+                        </div>
+                        <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
                       </div>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>
@@ -177,83 +177,17 @@ const RedacoesExemplar = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div role="list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div role="list" className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {redacoesExemplares.map((redacao: any) => (
-                  <ExemplarCard
+                  <RedacaoExemplarCardPadrao
                     key={redacao.id}
-                    id={redacao.id}
-                    titulo={redacao.frase_tematica}
-                    eixo={redacao.eixo_tematico}
-                    autorNome={redacao.autor || "Jardson Brito"}
-                    capaUrl={redacao.imagem_url || redacao.pdf_url}
-                    onViewRedacao={() => setSelectedRedacao(redacao)}
-                    variant="student"
+                    redacao={redacao}
+                    perfil="aluno"
                   />
                 ))}
               </div>
             )}
 
-            {/* Modal para visualizar redação */}
-            {selectedRedacao && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <Card className="max-w-4xl w-full max-h-[80vh] overflow-hidden">
-                  <CardHeader className="border-b">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">
-                        {selectedRedacao.frase_tematica}
-                      </CardTitle>
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedRedacao(null)}>
-                        ✕
-                      </Button>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="overflow-y-auto max-h-[60vh] p-6">
-                    <div className="space-y-6">
-                      {/* Imagem se disponível */}
-                      {selectedRedacao.imagem_url && (
-                        <div className="rounded-lg overflow-hidden">
-                          <img
-                            src={selectedRedacao.imagem_url}
-                            alt="Imagem da redação"
-                            className="w-full h-auto max-h-48 object-cover"
-                          />
-                        </div>
-                      )}
-
-                      {/* Eixo temático se disponível */}
-                      {selectedRedacao.eixo_tematico && (
-                        <div className="bg-primary/5 rounded-lg p-4">
-                          <h4 className="font-semibold text-primary mb-2">Eixo Temático</h4>
-                          <p className="text-sm text-muted-foreground">{selectedRedacao.eixo_tematico}</p>
-                        </div>
-                      )}
-
-                      {/* Texto da redação */}
-                      <div className="prose max-w-none">
-                        <h4 className="font-semibold text-primary mb-3">Redação</h4>
-                        <div className="whitespace-pre-wrap font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-4 bg-gray-50">
-                          {selectedRedacao.texto}
-                        </div>
-                      </div>
-
-                      {/* Dica de escrita se disponível */}
-                      {selectedRedacao.dica_de_escrita && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
-                            <span>💡</span> Dica de Escrita
-                          </h4>
-                          <div 
-                            className="text-sm text-yellow-700 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0"
-                            dangerouslySetInnerHTML={{ __html: dicaToHTML(selectedRedacao.dica_de_escrita) }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </main>
         </div>
       </TooltipProvider>

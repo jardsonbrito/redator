@@ -1,18 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExemplarCard } from "@/components/ExemplarCard";
-import { BookOpen, User, Calendar } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale/pt-BR";
+import { RedacaoExemplarCardPadrao } from "@/components/shared/RedacaoExemplarCardPadrao";
+import { BookOpen } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
-import { useState } from "react";
-import { resolveExemplarCover } from "@/utils/coverUtils";
-import { dicaToHTML } from "@/utils/dicaToHTML";
 
 const CorretorRedacoesExemplar = () => {
-  const [selectedRedacao, setSelectedRedacao] = useState<any>(null);
 
   const { data: redacoesExemplares, isLoading, error } = useQuery({
     queryKey: ['redacoes-exemplares-corretor'],
@@ -59,20 +52,22 @@ const CorretorRedacoesExemplar = () => {
       <CorretorLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Redações Exemplares</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Exemplares</h1>
             <p className="text-gray-600">Redações modelo cadastradas pelo administrador</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="space-y-3">
-                <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
-                <div className="px-4 space-y-3">
-                  <div className="h-5 w-20 bg-muted rounded animate-pulse" />
-                  <div className="h-6 w-full bg-muted rounded animate-pulse" />
-                  <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-                  <div className="h-9 w-full bg-muted rounded animate-pulse" />
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <div className="aspect-[16/9] bg-gray-200 animate-pulse"></div>
+                <div className="p-6 space-y-3">
+                  <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                  <div className="flex gap-2">
+                    <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
+                  </div>
+                  <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -94,7 +89,7 @@ const CorretorRedacoesExemplar = () => {
     <CorretorLayout>
       <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Redações Exemplares</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Exemplares</h1>
             <p className="text-gray-600">Redações modelo cadastradas pelo administrador</p>
           </div>
 
@@ -111,50 +106,17 @@ const CorretorRedacoesExemplar = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {redacoesExemplares?.map((redacao: any) => (
-              <ExemplarCard
+              <RedacaoExemplarCardPadrao
                 key={redacao.id}
-                id={redacao.id}
-                titulo={redacao.frase_tematica}
-                eixo={redacao.eixo_tematico}
-                autorNome={redacao.autor || "Professor"}
-                capaUrl={redacao.imagem_url || redacao.pdf_url}
-                onViewRedacao={() => setSelectedRedacao(redacao)}
-                variant="student"
+                redacao={redacao}
+                perfil="corretor"
               />
             ))}
           </div>
         )}
 
-        {/* Modal para visualizar redação */}
-        <Dialog open={!!selectedRedacao} onOpenChange={() => setSelectedRedacao(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold">
-                {selectedRedacao?.frase_tematica}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-700 leading-relaxed">
-                  A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação, 
-                  redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema <strong>"{selectedRedacao?.frase_tematica}"</strong>, 
-                  apresentando proposta de intervenção que respeite os direitos humanos.
-                </p>
-              </div>
-              
-              {/* Texto da redação */}
-              <div>
-                <h4 className="font-semibold text-gray-800 mb-3">Redação</h4>
-                <div className="whitespace-pre-wrap font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-4 bg-gray-50">
-                  {selectedRedacao?.texto}
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </CorretorLayout>
   );

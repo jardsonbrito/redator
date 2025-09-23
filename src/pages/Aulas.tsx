@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Search, CheckCircle } from "lucide-react";
 import { UnifiedCard, UnifiedCardSkeleton, type BadgeTone, type UnifiedCardItem } from "@/components/ui/unified-card";
 import { resolveAulaCover } from "@/utils/coverUtils";
+import { AulaGravadaCardPadrao } from "@/components/shared/AulaGravadaCardPadrao";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
@@ -301,9 +302,9 @@ const Aulas = () => {
           </Card>
 
           {/* Lista de Aulas */}
-          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 mx-1 sm:mx-0">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mx-1 sm:mx-0">
             {filteredAulas.length === 0 ? (
-              <Card>
+              <Card className="col-span-full">
                 <CardContent className="text-center py-8 sm:py-12">
                   <h3 className="text-lg sm:text-xl font-semibold text-redator-primary mb-2">
                     Nenhuma aula disponível no momento.
@@ -314,50 +315,18 @@ const Aulas = () => {
                 </CardContent>
               </Card>
             ) : (
-              filteredAulas.map((aula) => {
-                const coverUrl = resolveAulaCover(aula);
-                const tone: BadgeTone = aula.modulo === 'Aula ao vivo' ? 'warning' : 'primary';
-                const badges: { label: string; tone: BadgeTone }[] = [];
-                
-                if (aula.modulo) badges.push({ label: aula.modulo, tone });
-                if (aula.platform) badges.push({ label: aula.platform.toUpperCase(), tone: 'neutral' });
-                
-                // Adicionar badge "Assistida" se for vídeo gravado e já foi assistido
-                const isVideoContent = aula.video_id || aula.embed_url || aula.video_url_original;
-                if (isVideoContent && isWatched(aula.id)) {
-                  badges.push({ label: "Assistida", tone: 'success' });
-                }
-                
-                const cardItem: UnifiedCardItem = {
-                  coverUrl,
-                  title: aula.titulo,
-                  subtitle: aula.descricao,
-                  badges,
-                  cta: {
-                    label: "Assistir",
-                    onClick: () => handleAssistirAula(aula),
-                    ariaLabel: `Assistir ${aula.titulo}`
-                  },
-                  ariaLabel: `Aula: ${aula.titulo}`
-                };
-
-                // Adicionar botão de PDF se disponível
-                if (aula.pdf_url) {
-                  cardItem.secondaryCta = {
-                    label: "Baixar PDF",
-                    onClick: () => handleDownloadPdf(aula),
-                    ariaLabel: `Baixar material em PDF da aula ${aula.titulo}`
-                  };
-                }
-
-                return (
-                  <UnifiedCard
-                    key={aula.id}
-                    variant="aluno"
-                    item={cardItem}
-                  />
-                );
-              })
+              filteredAulas.map((aula) => (
+                <AulaGravadaCardPadrao
+                  key={aula.id}
+                  aula={aula}
+                  perfil="aluno"
+                  isWatched={isWatched(aula.id)}
+                  actions={{
+                    onAssistir: () => handleAssistirAula(aula),
+                    onBaixarPdf: aula.pdf_url ? () => handleDownloadPdf(aula) : undefined,
+                  }}
+                />
+              ))
             )}
           </div>
         </main>
