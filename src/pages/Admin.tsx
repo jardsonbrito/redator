@@ -98,6 +98,10 @@ import { AdminList } from "@/components/admin/AdminList";
 // Import avatar component
 import { AdminAvatar } from "@/components/admin/AdminAvatar";
 
+// Import new modern components
+import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
+import { ModernAdminCard } from "@/components/admin/ModernAdminCard";
+
 // Import TOP 5 component
 import { Top5Widget } from "@/components/shared/Top5Widget";
 
@@ -124,6 +128,9 @@ const Admin = () => {
   // Hook para gerenciar alunos pendentes
   const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
   const [mostrarPopupAprovacao, setMostrarPopupAprovacao] = useState(false);
+
+  // Estados para dados dos cards
+  const [cardData, setCardData] = useState<Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }>>({});
 
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
@@ -180,6 +187,117 @@ const Admin = () => {
       setMostrarPopupAprovacao(true);
     }
   }, [temAlunosPendentes, mostrarPopupAprovacao]);
+
+  // Carregar dados dos cards
+  useEffect(() => {
+    loadCardData();
+  }, []);
+
+  const loadCardData = async () => {
+    try {
+      const data: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
+
+      // Temas
+      const { data: temas } = await supabase
+        .from('temas')
+        .select('status')
+        .neq('status', 'inativo');
+
+      const temasPublicados = temas?.filter(t => t.status === 'publicado').length || 0;
+      const temasProgramados = temas?.filter(t => t.status === 'programado').length || 0;
+      data.temas = {
+        info: `${temasPublicados} publicados`,
+        badge: temasProgramados > 0 ? `${temasProgramados} programados` : undefined,
+        badgeVariant: "secondary"
+      };
+
+      // Redações Exemplares
+      const { data: redacoes } = await supabase
+        .from('redacoes')
+        .select('status');
+
+      const redacoesPublicadas = redacoes?.filter(r => r.status === 'publicado').length || 0;
+      const redacoesProgramadas = redacoes?.filter(r => r.status === 'programado').length || 0;
+      data.redacoes = {
+        info: `${redacoesPublicadas} publicadas`,
+        badge: redacoesProgramadas > 0 ? `${redacoesProgramadas} programadas` : undefined,
+        badgeVariant: "secondary"
+      };
+
+      // Redações Enviadas
+      const { data: redacoesEnviadas } = await supabase
+        .from('redacoes_enviadas')
+        .select('status, corretor_id, corretores(nome)')
+        .eq('status', 'enviada');
+
+      const pendentes = redacoesEnviadas?.length || 0;
+      data["redacoes-enviadas"] = {
+        info: `${pendentes} pendentes`,
+        badge: pendentes > 0 ? "Correção" : undefined,
+        badgeVariant: pendentes > 0 ? "destructive" : undefined
+      };
+
+      // Alunos
+      const { data: alunos } = await supabase
+        .from('profiles')
+        .select('ativo')
+        .eq('user_type', 'aluno');
+
+      const alunosAtivos = alunos?.filter(a => a.ativo).length || 0;
+      const alunosInativos = alunos?.filter(a => !a.ativo).length || 0;
+      data.alunos = {
+        info: `${alunosAtivos} ativos`,
+        badge: alunosInativos > 0 ? `${alunosInativos} inativos` : undefined,
+        badgeVariant: "outline"
+      };
+
+      // Corretores
+      const { data: corretores } = await supabase
+        .from('corretores')
+        .select('ativo');
+
+      const corretoresAtivos = corretores?.filter(c => c.ativo).length || 0;
+      const corretoresInativos = corretores?.filter(c => !c.ativo).length || 0;
+      data.corretores = {
+        info: `${corretoresAtivos} disponíveis`,
+        badge: corretoresInativos > 0 ? `${corretoresInativos} indisponíveis` : undefined,
+        badgeVariant: "outline"
+      };
+
+      // Ajuda Rápida
+      const { data: ajudaRapida } = await supabase
+        .from('ajuda_rapida')
+        .select('respondida')
+        .eq('respondida', false);
+
+      const naoRespondidas = ajudaRapida?.length || 0;
+      data["ajuda-rapida"] = {
+        info: naoRespondidas > 0 ? `${naoRespondidas} não respondidas` : "Todas respondidas",
+        badge: naoRespondidas > 0 ? "Pendente" : undefined,
+        badgeVariant: naoRespondidas > 0 ? "destructive" : undefined
+      };
+
+      // Cards sem dados específicos - usar informações genéricas
+      const defaultCards = [
+        "diario", "exercicios", "simulados", "lousa", "salas-virtuais",
+        "aulas", "videos", "biblioteca", "avisos", "radar", "gamificacao",
+        "professores", "administradores", "exportacao", "configuracoes", "top5"
+      ];
+
+      defaultCards.forEach(cardId => {
+        if (!data[cardId]) {
+          data[cardId] = {
+            info: "Clique para acessar",
+            badge: undefined
+          };
+        }
+      });
+
+      setCardData(data);
+    } catch (error) {
+      console.error('Erro ao carregar dados dos cards:', error);
+    }
+  };
 
   console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
 
@@ -602,24 +720,19 @@ const Admin = () => {
       
       default:
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {menuItems.map((item) => (
-              <Card 
-                key={item.id} 
-                className="group cursor-pointer bg-white/80 backdrop-blur-sm hover:bg-white hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 border border-primary/10 hover:border-primary/20 rounded-2xl overflow-hidden" 
-                onClick={() => setActiveView(item.id)}
-              >
-                <CardHeader className="p-8 text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="p-4 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl group-hover:from-primary/20 group-hover:to-accent/20 transition-all duration-300">
-                      <item.icon className="w-8 h-8 text-primary group-hover:text-accent transition-colors duration-300" />
-                    </div>
-                    <CardTitle className="text-xl font-semibold text-primary group-hover:text-accent transition-colors duration-300">
-                      {item.label}
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-              </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+            {menuItems.map((item, index) => (
+              <ModernAdminCard
+                key={item.id}
+                id={item.id}
+                title={item.label}
+                info={cardData[item.id]?.info || "Carregando..."}
+                badge={cardData[item.id]?.badge}
+                badgeVariant={cardData[item.id]?.badgeVariant || "default"}
+                icon={item.icon}
+                onClick={setActiveView}
+                colorIndex={index}
+              />
             ))}
           </div>
         );
@@ -636,47 +749,12 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
-        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-6">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center justify-center flex-1">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse shrink-0"></div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent text-center">
-                  Painel Administrativo
-                </h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-              {/* Perfil do administrador com avatar, nome e função */}
-              <div className="flex items-center gap-2 sm:gap-3">
-                <AdminAvatar size="sm" showUpload={true} />
-                <div className="hidden sm:flex flex-col">
-                  <span className="text-foreground font-medium text-sm">
-                    {user?.email || 'Administrador'}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    Administrador
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="border-primary/20 hover:bg-primary hover:text-white transition-all duration-300 px-2 sm:px-3"
-              >
-                <LogOut className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sair</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Modern Header */}
+      <ModernAdminHeader
+        userEmail={user?.email}
+        onLogout={handleLogout}
+      />
 
       {/* Navigation */}
       {activeView !== "dashboard" && (
