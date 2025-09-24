@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { RedacaoEditForm } from './RedacaoEditForm';
+import { RedacaoForm } from './RedacaoForm';
 
 export const RedacaoList = () => {
   const { toast } = useToast();
@@ -162,7 +162,8 @@ export const RedacaoList = () => {
 
   if (editingId) {
     return (
-      <RedacaoEditForm
+      <RedacaoForm
+        mode="edit"
         redacaoId={editingId}
         onCancel={() => setEditingId(null)}
         onSuccess={() => setEditingId(null)}
