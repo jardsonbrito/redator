@@ -396,9 +396,37 @@ const Admin = () => {
         badge: undefined
       };
 
+      // Corretores - quantos estão disponíveis no momento
+      const { data: corretores } = await supabase
+        .from('corretores')
+        .select('id, ativo')
+        .eq('ativo', true);
+
+      const corretoresDisponiveis = corretores?.length || 0;
+
+      data.corretores = {
+        info: `${corretoresDisponiveis} ${corretoresDisponiveis === 1 ? 'corretor disponível' : 'corretores disponíveis'}`,
+        badge: undefined
+      };
+
+      // Ajuda Rápida - mensagens pendentes de resposta
+      const { data: mensagensPendentes } = await supabase
+        .from('ajuda_rapida')
+        .select('id, respondida')
+        .eq('respondida', false);
+
+      const totalPendentes = mensagensPendentes?.length || 0;
+
+      data["ajuda-rapida"] = {
+        info: totalPendentes > 0
+          ? `${totalPendentes} ${totalPendentes === 1 ? 'mensagem pendente' : 'mensagens pendentes'}`
+          : "Todas respondidas",
+        badge: undefined
+      };
+
       // Cards deixados em branco conforme solicitado
       const cardsVazios = [
-        "radar", "professores", "administradores", "exportacao", "configuracoes", "top5", "gamificacao", "ajuda-rapida"
+        "radar", "professores", "administradores", "exportacao", "configuracoes", "top5", "gamificacao"
       ];
 
       cardsVazios.forEach(cardId => {
@@ -993,12 +1021,6 @@ const Admin = () => {
                       </Badge>
                     </div>
 
-                    {/* Informação principal */}
-                    <div className="mt-auto">
-                      <p className="text-sm font-medium leading-tight opacity-90">
-                        {isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "Gerencie configurações do sistema")}
-                      </p>
-                    </div>
 
                     {/* Efeito de hover */}
                     <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
