@@ -947,6 +947,24 @@ const Admin = () => {
           </div>
         );
       
+      case "diario":
+        const subtab = searchParams.get('subtab');
+
+        if (subtab === 'etapas') {
+          return <GestaoEtapas />;
+        }
+
+        if (subtab === 'aulas') {
+          return <RegistroAulas />;
+        }
+
+        if (subtab === 'turma') {
+          return <ResumoTurma />;
+        }
+
+        // Default: mostrar primeira aba se não especificado
+        return <GestaoEtapas />;
+
       default:
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
@@ -1026,6 +1044,73 @@ const Admin = () => {
                       </Badge>
                     </div>
 
+
+                    {/* Efeito de hover */}
+                    <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  </div>
+                );
+              }
+
+              // Tratamento especial para o card de Diário Online
+              if (item.id === "diario") {
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setActiveView(item.id)}
+                    className={`
+                      group relative cursor-pointer rounded-2xl p-6 shadow-lg transition-all duration-300
+                      hover:shadow-xl hover:scale-105 min-h-[140px] flex flex-col justify-between
+                      bg-gradient-to-br from-primary/30 to-primary/20 hover:from-primary/40 hover:to-primary/30 text-primary
+                    `}
+                  >
+                    {/* Header com título e ícone */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <item.icon className="w-6 h-6" />
+                      <h3 className="text-xl font-bold leading-tight">{item.label}</h3>
+                    </div>
+
+                    {/* Badges clicáveis das 3 abas */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Badge
+                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveView("diario");
+                          const newParams = new URLSearchParams();
+                          newParams.set('view', 'diario');
+                          newParams.set('subtab', 'etapas');
+                          navigate(`?${newParams.toString()}`);
+                        }}
+                      >
+                        Etapas
+                      </Badge>
+                      <Badge
+                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveView("diario");
+                          const newParams = new URLSearchParams();
+                          newParams.set('view', 'diario');
+                          newParams.set('subtab', 'aulas');
+                          navigate(`?${newParams.toString()}`);
+                        }}
+                      >
+                        Aulas
+                      </Badge>
+                      <Badge
+                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveView("diario");
+                          const newParams = new URLSearchParams();
+                          newParams.set('view', 'diario');
+                          newParams.set('subtab', 'turma');
+                          navigate(`?${newParams.toString()}`);
+                        }}
+                      >
+                        Turma
+                      </Badge>
+                    </div>
 
                     {/* Efeito de hover */}
                     <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
