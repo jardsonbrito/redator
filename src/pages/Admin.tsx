@@ -321,34 +321,17 @@ const Admin = () => {
         badge: videosAgendados > 0 ? `${videosAgendados} agendados` : undefined
       };
 
-      // Biblioteca - dividir entre vídeos e arquivos
+      // Biblioteca - materiais publicados
       const { data: bibliotecaItems } = await supabase
-        .from('biblioteca')
-        .select('*');
+        .from('biblioteca_materiais')
+        .select('id, status')
+        .eq('status', 'publicado');
 
-      // Assumindo que há um campo 'tipo' ou podemos distinguir por extensão
-      const bibliotecaVideos = bibliotecaItems?.filter(b => {
-        // Se há campo tipo, usar ele. Caso contrário, verificar extensão
-        if (b.tipo) return b.tipo === 'video';
-        const ext = b.arquivo_url?.split('.').pop()?.toLowerCase();
-        return ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(ext || '');
-      }) || [];
+      const materiaisPublicados = bibliotecaItems?.length || 0;
 
-      const bibliotecaArquivos = bibliotecaItems?.filter(b => {
-        // Se há campo tipo, usar ele. Caso contrário, verificar se não é vídeo
-        if (b.tipo) return b.tipo !== 'video';
-        const ext = b.arquivo_url?.split('.').pop()?.toLowerCase();
-        return !['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(ext || '');
-      }) || [];
-
-      const videosPublicadosBib = bibliotecaVideos.filter(v => !v.data_agendamento || new Date(v.data_agendamento) <= hoje).length;
-      const videosAgendadosBib = bibliotecaVideos.filter(v => v.data_agendamento && new Date(v.data_agendamento) > hoje).length;
-      const arquivosDisponiveis = bibliotecaArquivos.length;
-
-      // Para o card biblioteca, mostrar principalmente arquivos disponíveis
       data.biblioteca = {
-        info: `${arquivosDisponiveis} disponíveis`,
-        badge: videosPublicadosBib > 0 ? `${videosPublicadosBib} vídeos publicados` : undefined
+        info: `${materiaisPublicados} ${materiaisPublicados === 1 ? 'material publicado' : 'materiais publicados'}`,
+        badge: undefined
       };
 
       // Mural de Avisos - quantos publicados
