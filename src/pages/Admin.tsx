@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,8 +130,275 @@ const Admin = () => {
   const { temAlunosPendentes, verificarAlunosPendentes, resetarVerificacao } = useAlunosPendentes();
   const [mostrarPopupAprovacao, setMostrarPopupAprovacao] = useState(false);
 
-  // Estados para dados dos cards
-  const [cardData, setCardData] = useState<Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }>>({});
+  // Função para carregar dados dos cards
+  const loadCardData = async () => {
+    try {
+      const data: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
+      const hoje = new Date();
+
+      // Temas - quantos publicados e quantos agendados
+      const { data: temas } = await supabase
+        .from('temas')
+        .select('*');
+
+      const temasPublicados = temas?.filter(t => !t.data_agendamento || new Date(t.data_agendamento) <= hoje).length || 0;
+      const temasAgendados = temas?.filter(t => t.data_agendamento && new Date(t.data_agendamento) > hoje).length || 0;
+
+      data.temas = {
+        info: `${temasPublicados} publicados`,
+        badge: temasAgendados > 0 ? `${temasAgendados} agendados` : undefined
+      };
+
+      // Redações Exemplares - quantas publicadas e quantas agendadas
+      const { data: redacoes } = await supabase
+        .from('redacoes')
+        .select('*');
+
+      const redacoesPublicadas = redacoes?.filter(r => !r.data_agendamento || new Date(r.data_agendamento) <= hoje).length || 0;
+      const redacoesAgendadas = redacoes?.filter(r => r.data_agendamento && new Date(r.data_agendamento) > hoje).length || 0;
+
+      data.redacoes = {
+        info: `${redacoesPublicadas} publicadas`,
+        badge: redacoesAgendadas > 0 ? `${redacoesAgendadas} agendadas` : undefined
+      };
+
+      // Redações Enviadas - usar status "aguardando"
+      const { data: redacoesEnviadas } = await supabase
+        .from('redacoes_enviadas')
+        .select('status, corretor_id_1, corretores!redacoes_enviadas_corretor_id_1_fkey(nome)')
+        .in('status', ['aguardando', 'em_correcao'])
+        .eq('corrigida', false);
+
+      const aguardando = redacoesEnviadas?.length || 0;
+
+      // Agrupar por corretor
+      const porCorretor = redacoesEnviadas?.reduce((acc: Record<string, number>, r: any) => {
+        const nome = r.corretores?.nome || 'Não atribuído';
+        acc[nome] = (acc[nome] || 0) + 1;
+        return acc;
+      }, {}) || {};
+
+      const corretorInfo = Object.keys(porCorretor).length > 0
+        ? Object.entries(porCorretor).map(([nome, count]) => `${nome}: ${count}`).join(', ')
+        : undefined;
+
+      data["redacoes-enviadas"] = {
+        info: `${aguardando} aguardando`,
+        badge: corretorInfo,
+        badgeVariant: aguardando > 0 ? "destructive" : undefined
+      };
+
+      // Exercícios - quantos publicados e disponíveis (considerando intervalo de datas)
+      const { data: exercicios } = await supabase
+        .from('exercicios')
+        .select('*');
+
+      const exerciciosDisponiveis = exercicios?.filter(e => {
+        const dataInicio = e.data_inicio ? new Date(e.data_inicio) : null;
+        const dataTermino = e.data_termino ? new Date(e.data_termino) : null;
+
+        // Disponível se não tem data_inicio ou se está no período válido
+        if (!dataInicio) return true;
+        if (dataInicio > hoje) return false;
+        if (dataTermino && dataTermino < hoje) return false;
+
+        return true;
+      }).length || 0;
+
+      data.exercicios = {
+        info: `${exerciciosDisponiveis} disponíveis`,
+        badge: undefined
+      };
+
+      // Simulados - quantos agendados (futuros baseado na data_inicio)
+      const { data: simulados } = await supabase
+        .from('simulados')
+        .select('*')
+        .eq('ativo', true);
+
+      const simuladosAgendados = simulados?.filter(s => {
+        if (!s.data_inicio) return false;
+        const dataInicio = new Date(s.data_inicio);
+        return dataInicio > hoje;
+      }).length || 0;
+
+      data.simulados = {
+        info: `${simuladosAgendados} agendados`,
+        badge: undefined
+      };
+
+      // Lousa - quantas publicadas
+      const { data: lousas } = await supabase
+        .from('lousa')
+        .select('*');
+
+      const lousasPublicadas = lousas?.length || 0;
+
+      data.lousa = {
+        info: `${lousasPublicadas} publicadas`,
+        badge: undefined
+      };
+
+      // Aula ao Vivo (salas-virtuais) - quantas agendadas
+      const { data: aulasVirtuais } = await supabase
+        .from('aulas_virtuais')
+        .select('*');
+
+      const aulasAgendadas = aulasVirtuais?.filter(a => {
+        return a.data_aula && new Date(a.data_aula) > hoje;
+      }).length || 0;
+
+      data["salas-virtuais"] = {
+        info: `${aulasAgendadas} agendadas`,
+        badge: undefined
+      };
+
+      // Aulas Gravadas - quantas disponíveis
+      const { data: aulas } = await supabase
+        .from('aulas')
+        .select('*');
+
+      const aulasDisponiveis = aulas?.length || 0;
+
+      data.aulas = {
+        info: `${aulasDisponiveis} disponíveis`,
+        badge: undefined
+      };
+
+      // Videos (Videoteca) - quantos publicados e agendados
+      const { data: videos } = await supabase
+        .from('videos')
+        .select('*');
+
+      const videosPublicados = videos?.filter(v => !v.data_agendamento || new Date(v.data_agendamento) <= hoje).length || 0;
+      const videosAgendados = videos?.filter(v => v.data_agendamento && new Date(v.data_agendamento) > hoje).length || 0;
+
+      data.videos = {
+        info: `${videosPublicados} publicados`,
+        badge: videosAgendados > 0 ? `${videosAgendados} agendados` : undefined
+      };
+
+      // Biblioteca - dividir entre vídeos e arquivos
+      const { data: bibliotecaItems } = await supabase
+        .from('biblioteca')
+        .select('*');
+
+      // Assumindo que há um campo 'tipo' ou podemos distinguir por extensão
+      const bibliotecaVideos = bibliotecaItems?.filter(b => {
+        // Se há campo tipo, usar ele. Caso contrário, verificar extensão
+        if (b.tipo) return b.tipo === 'video';
+        const ext = b.arquivo_url?.split('.').pop()?.toLowerCase();
+        return ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(ext || '');
+      }) || [];
+
+      const bibliotecaArquivos = bibliotecaItems?.filter(b => {
+        // Se há campo tipo, usar ele. Caso contrário, verificar se não é vídeo
+        if (b.tipo) return b.tipo !== 'video';
+        const ext = b.arquivo_url?.split('.').pop()?.toLowerCase();
+        return !['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].includes(ext || '');
+      }) || [];
+
+      const videosPublicadosBib = bibliotecaVideos.filter(v => !v.data_agendamento || new Date(v.data_agendamento) <= hoje).length;
+      const videosAgendadosBib = bibliotecaVideos.filter(v => v.data_agendamento && new Date(v.data_agendamento) > hoje).length;
+      const arquivosDisponiveis = bibliotecaArquivos.length;
+
+      // Para o card biblioteca, mostrar principalmente arquivos disponíveis
+      data.biblioteca = {
+        info: `${arquivosDisponiveis} disponíveis`,
+        badge: videosPublicadosBib > 0 ? `${videosPublicadosBib} vídeos publicados` : undefined
+      };
+
+      // Mural de Avisos - quantos publicados
+      const { data: avisos } = await supabase
+        .from('avisos')
+        .select('*');
+
+      const avisosPublicados = avisos?.length || 0;
+
+      data.avisos = {
+        info: `${avisosPublicados} publicados`,
+        badge: undefined
+      };
+
+      // Alunos
+      const { data: alunos } = await supabase
+        .from('profiles')
+        .select('ativo')
+        .eq('user_type', 'aluno');
+
+      const alunosAtivos = alunos?.filter(a => a.ativo).length || 0;
+      const alunosInativos = alunos?.filter(a => !a.ativo).length || 0;
+      data.alunos = {
+        info: `${alunosAtivos} ativos`,
+        badge: alunosInativos > 0 ? `${alunosInativos} inativos` : undefined,
+        badgeVariant: "outline"
+      };
+
+      // Corretores
+      const { data: corretores } = await supabase
+        .from('corretores')
+        .select('ativo');
+
+      const corretoresAtivos = corretores?.filter(c => c.ativo).length || 0;
+      const corretoresInativos = corretores?.filter(c => !c.ativo).length || 0;
+      data.corretores = {
+        info: `${corretoresAtivos} disponíveis`,
+        badge: corretoresInativos > 0 ? `${corretoresInativos} indisponíveis` : undefined,
+        badgeVariant: "outline"
+      };
+
+      // Diário Online - adicionar informação básica
+      data.diario = {
+        info: "Sistema ativo",
+        badge: undefined
+      };
+
+      // Cards deixados em branco conforme solicitado
+      const cardsVazios = [
+        "radar", "professores", "administradores", "exportacao", "configuracoes", "top5", "gamificacao", "ajuda-rapida"
+      ];
+
+      cardsVazios.forEach(cardId => {
+        data[cardId] = {
+          info: "",
+          badge: undefined
+        };
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Erro ao carregar dados dos cards:', error);
+
+      // Em caso de erro, retornar dados padrão
+      const defaultData: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
+      const allCards = [
+        "temas", "redacoes", "redacoes-enviadas", "diario", "exercicios", "simulados",
+        "lousa", "salas-virtuais", "aulas", "videos", "biblioteca", "avisos",
+        "radar", "gamificacao", "ajuda-rapida", "alunos", "corretores",
+        "professores", "administradores", "exportacao", "configuracoes", "top5"
+      ];
+
+      allCards.forEach(cardId => {
+        defaultData[cardId] = {
+          info: "Erro ao carregar",
+          badge: undefined
+        };
+      });
+
+      return defaultData;
+    }
+  };
+
+  // Cache dos dados dos cards com React Query
+  const { data: cardData = {}, isLoading: isLoadingCards } = useQuery({
+    queryKey: ['admin-dashboard-cards'],
+    queryFn: loadCardData,
+    staleTime: 2 * 60 * 1000, // 2 minutos
+    gcTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    retry: 1
+  });
 
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
@@ -188,271 +456,7 @@ const Admin = () => {
     }
   }, [temAlunosPendentes, mostrarPopupAprovacao]);
 
-  // Carregar dados dos cards
-  useEffect(() => {
-    loadCardData();
-  }, []);
 
-  const loadCardData = async () => {
-    try {
-      const data: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
-
-      // Temas - disponíveis e agendados
-      const { data: temas } = await supabase
-        .from('temas')
-        .select('*');
-
-      // Se não há campo de agendamento, considera todos como disponíveis
-      const totalTemas = temas?.length || 0;
-      const temasDisponiveis = temas?.filter(t => !t.data_agendamento || new Date(t.data_agendamento) <= new Date()).length || totalTemas;
-      const temasAgendados = temas?.filter(t => t.data_agendamento && new Date(t.data_agendamento) > new Date()).length || 0;
-
-      data.temas = {
-        info: `${temasDisponiveis} disponíveis`,
-        badge: temasAgendados > 0 ? `${temasAgendados} agendados` : undefined
-      };
-
-      // Redações Exemplares - disponíveis e agendadas
-      const { data: redacoes } = await supabase
-        .from('redacoes')
-        .select('*');
-
-      // Se não há campo de agendamento, considera todas como disponíveis
-      const totalRedacoes = redacoes?.length || 0;
-      const redacoesDisponiveis = redacoes?.filter(r => !r.data_agendamento || new Date(r.data_agendamento) <= new Date()).length || totalRedacoes;
-      const redacoesAgendadas = redacoes?.filter(r => r.data_agendamento && new Date(r.data_agendamento) > new Date()).length || 0;
-
-      data.redacoes = {
-        info: `${redacoesDisponiveis} disponíveis`,
-        badge: redacoesAgendadas > 0 ? `${redacoesAgendadas} agendadas` : undefined
-      };
-
-      // Redações Enviadas
-      const { data: redacoesEnviadas } = await supabase
-        .from('redacoes_enviadas')
-        .select('status, corretor_id, corretores(nome)')
-        .eq('status', 'enviada');
-
-      const pendentes = redacoesEnviadas?.length || 0;
-      data["redacoes-enviadas"] = {
-        info: `${pendentes} pendentes`,
-        badge: pendentes > 0 ? "Correção" : undefined,
-        badgeVariant: pendentes > 0 ? "destructive" : undefined
-      };
-
-      // Alunos
-      const { data: alunos } = await supabase
-        .from('profiles')
-        .select('ativo')
-        .eq('user_type', 'aluno');
-
-      const alunosAtivos = alunos?.filter(a => a.ativo).length || 0;
-      const alunosInativos = alunos?.filter(a => !a.ativo).length || 0;
-      data.alunos = {
-        info: `${alunosAtivos} ativos`,
-        badge: alunosInativos > 0 ? `${alunosInativos} inativos` : undefined,
-        badgeVariant: "outline"
-      };
-
-      // Corretores
-      const { data: corretores } = await supabase
-        .from('corretores')
-        .select('ativo');
-
-      const corretoresAtivos = corretores?.filter(c => c.ativo).length || 0;
-      const corretoresInativos = corretores?.filter(c => !c.ativo).length || 0;
-      data.corretores = {
-        info: `${corretoresAtivos} disponíveis`,
-        badge: corretoresInativos > 0 ? `${corretoresInativos} indisponíveis` : undefined,
-        badgeVariant: "outline"
-      };
-
-      // Ajuda Rápida
-      const { data: ajudaRapida } = await supabase
-        .from('ajuda_rapida')
-        .select('respondida')
-        .eq('respondida', false);
-
-      const naoRespondidas = ajudaRapida?.length || 0;
-      data["ajuda-rapida"] = {
-        info: naoRespondidas > 0 ? `${naoRespondidas} não respondidas` : "Todas respondidas",
-        badge: naoRespondidas > 0 ? "Pendente" : undefined,
-        badgeVariant: naoRespondidas > 0 ? "destructive" : undefined
-      };
-
-      // Biblioteca - verificar materiais da biblioteca
-      const { data: biblioteca } = await supabase
-        .from('biblioteca_materiais')
-        .select('status')
-        .eq('status', 'publicado');
-
-      const totalBiblioteca = biblioteca?.length || 0;
-      data.biblioteca = {
-        info: `${totalBiblioteca} materiais`,
-        badge: undefined
-      };
-
-      // Vídeos - verificar vídeos da videoteca
-      const { data: videos } = await supabase
-        .from('videos')
-        .select('id');
-
-      const totalVideos = videos?.length || 0;
-      data.videos = {
-        info: `${totalVideos} vídeos`,
-        badge: undefined
-      };
-
-      // Aulas gravadas
-      const { data: aulas } = await supabase
-        .from('aulas')
-        .select('id');
-
-      const totalAulas = aulas?.length || 0;
-      data.aulas = {
-        info: `${totalAulas} aulas`,
-        badge: undefined
-      };
-
-      // Exercícios - apenas ativos com turmas
-      const { data: exercicios } = await supabase
-        .from('exercicios')
-        .select('ativo, turmas_permitidas')
-        .eq('ativo', true);
-
-      const exerciciosAtivos = exercicios?.length || 0;
-      const turmasUnicas = [...new Set(exercicios?.flatMap(e => e.turmas_permitidas || []) || [])];
-
-      data.exercicios = {
-        info: `${exerciciosAtivos} ativos`,
-        badge: turmasUnicas.length > 0 ? `${turmasUnicas.length} turmas` : undefined
-      };
-
-      // Simulados - apenas agendados (futuros)
-      const { data: simulados } = await supabase
-        .from('simulados')
-        .select('data_simulado');
-
-      const simuladosAgendados = simulados?.filter(s => s.data_simulado && new Date(s.data_simulado) > new Date()).length || 0;
-
-      data.simulados = {
-        info: `${simuladosAgendados} agendados`,
-        badge: undefined
-      };
-
-      // Avisos ativos
-      const { data: avisos } = await supabase
-        .from('avisos')
-        .select('id')
-        .eq('ativo', true);
-
-      const totalAvisos = avisos?.length || 0;
-      data.avisos = {
-        info: `${totalAvisos} ativos`,
-        badge: undefined
-      };
-
-      // Diário Online - quantidade de turmas ativas
-      const { data: turmasData } = await supabase
-        .from('profiles')
-        .select('turma')
-        .eq('user_type', 'aluno')
-        .eq('ativo', true);
-
-      const turmasAtivas = [...new Set(turmasData?.map(t => t.turma).filter(Boolean) || [])].length;
-      data.diario = {
-        info: `${turmasAtivas} turmas ativas`,
-        badge: undefined
-      };
-
-      // Lousa - quantidade de lousas ativas com turmas
-      try {
-        const { data: lousas } = await supabase
-          .from('lousas')
-          .select('ativo, turma')
-          .eq('ativo', true);
-
-        const lousasAtivas = lousas?.length || 0;
-        const turmasLousa = [...new Set(lousas?.map(l => l.turma).filter(Boolean) || [])];
-
-        data.lousa = {
-          info: `${lousasAtivas} ativas`,
-          badge: turmasLousa.length > 0 ? `${turmasLousa.length} turmas` : undefined
-        };
-      } catch (lousaError) {
-        data.lousa = {
-          info: "0 ativas",
-          badge: undefined
-        };
-      }
-
-      // Aulas ao Vivo - aulas agendadas com turmas
-      try {
-        const { data: aulasAoVivo } = await supabase
-          .from('aulas_ao_vivo')
-          .select('data_aula, turma')
-          .gte('data_aula', new Date().toISOString());
-
-        const aulasAgendadas = aulasAoVivo?.length || 0;
-        const turmasAulas = [...new Set(aulasAoVivo?.map(a => a.turma).filter(Boolean) || [])];
-
-        data["aulas-ao-vivo"] = {
-          info: `${aulasAgendadas} agendadas`,
-          badge: turmasAulas.length > 0 ? `${turmasAulas.length} turmas` : undefined
-        };
-      } catch (aulasError) {
-        data["aulas-ao-vivo"] = {
-          info: "0 agendadas",
-          badge: undefined
-        };
-      }
-
-      // Gamificação - jogos ativos
-      try {
-        const { data: jogos } = await supabase
-          .from('jogos')
-          .select('ativo')
-          .eq('ativo', true);
-
-        const jogosAtivos = jogos?.length || 0;
-        data.gamificacao = {
-          info: `${jogosAtivos} jogos ativos`,
-          badge: undefined
-        };
-      } catch (jogosError) {
-        data.gamificacao = {
-          info: "0 jogos ativos",
-          badge: undefined
-        };
-      }
-
-      // Cards sem dados específicos
-      const cardsVazios = [
-        "radar", "professores", "administradores", "exportacao", "configuracoes", "top5"
-      ];
-
-      cardsVazios.forEach(cardId => {
-        if (!data[cardId]) {
-          data[cardId] = {
-            info: "",
-            badge: undefined
-          };
-        }
-      });
-
-      // Salas Virtuais mantém o padrão "Sistema"
-      if (!data["salas-virtuais"]) {
-        data["salas-virtuais"] = {
-          info: "Sistema",
-          badge: undefined
-        };
-      }
-
-      setCardData(data);
-    } catch (error) {
-      console.error('Erro ao carregar dados dos cards:', error);
-    }
-  };
 
   console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
 
@@ -875,8 +879,8 @@ const Admin = () => {
                 key={item.id}
                 id={item.id}
                 title={item.label}
-                info={cardData[item.id]?.info || "Carregando..."}
-                badge={cardData[item.id]?.badge}
+                info={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "Sem dados")}
+                badge={isLoadingCards ? undefined : cardData[item.id]?.badge}
                 badgeVariant={cardData[item.id]?.badgeVariant || "default"}
                 icon={item.icon}
                 onClick={setActiveView}
