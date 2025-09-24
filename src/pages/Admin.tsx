@@ -5,6 +5,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
   FileText,
@@ -210,11 +211,13 @@ const Admin = () => {
         .select('id, nome')
         .in('id', corretoresIds);
 
-      // Agrupar por corretor
-      const porCorretor = redacoesAguardando.reduce((acc: Record<string, number>, r: any) => {
+      // Agrupar apenas por corretores ATRIBUÍDOS (ignorar não atribuídas)
+      const redacoesAtribuidas = redacoesAguardando.filter(r => r.corretor_id_1);
+      const porCorretor = redacoesAtribuidas.reduce((acc: Record<string, number>, r: any) => {
         const corretor = corretoresRedacoes?.find(c => c.id === r.corretor_id_1);
-        const nome = corretor?.nome || 'Não atribuído';
-        acc[nome] = (acc[nome] || 0) + 1;
+        if (corretor?.nome) {
+          acc[corretor.nome] = (acc[corretor.nome] || 0) + 1;
+        }
         return acc;
       }, {}) || {};
 
@@ -224,7 +227,7 @@ const Admin = () => {
 
       data["redacoes-enviadas"] = {
         info: `${aguardando} aguardando`,
-        badge: corretorInfo,
+        badge: corretorInfo, // Só mostra se houver redações atribuídas a corretores
         badgeVariant: aguardando > 0 ? "destructive" : undefined
       };
 
@@ -914,19 +917,110 @@ const Admin = () => {
       default:
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {menuItems.map((item, index) => (
-              <ModernAdminCard
-                key={item.id}
-                id={item.id}
-                title={item.label}
-                info={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "Sem dados")}
-                badge={isLoadingCards ? undefined : cardData[item.id]?.badge}
-                badgeVariant={cardData[item.id]?.badgeVariant || "default"}
-                icon={item.icon}
-                onClick={setActiveView}
-                colorIndex={index}
-              />
-            ))}
+            {menuItems.map((item, index) => {
+              // Tratamento especial para o card de Configurações
+              if (item.id === "configuracoes") {
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setActiveView(item.id)}
+                    className={`
+                      group relative cursor-pointer rounded-2xl p-6 shadow-lg transition-all duration-300
+                      hover:shadow-xl hover:scale-105 min-h-[140px] flex flex-col justify-between
+                      bg-gradient-to-br from-secondary/70 to-secondary/50 hover:from-secondary/80 hover:to-secondary/60 text-primary
+                    `}
+                  >
+                    {/* Header com título e ícone */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <item.icon className="w-6 h-6" />
+                      <h3 className="text-xl font-bold leading-tight">{item.label}</h3>
+                    </div>
+
+                    {/* Badges clicáveis das 4 abas */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Badge
+                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveView("configuracoes");
+                          // Navegar para aba específica usando URLSearchParams
+                          const newParams = new URLSearchParams();
+                          newParams.set('view', 'configuracoes');
+                          newParams.set('subtab', 'account');
+                          navigate(`?${newParams.toString()}`);
+                        }}
+                      >
+                        Conta
+                      </Badge>
+                      <Badge
+                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveView("configuracoes");
+                          const newParams = new URLSearchParams();
+                          newParams.set('view', 'configuracoes');
+                          newParams.set('subtab', 'submissions');
+                          navigate(`?${newParams.toString()}`);
+                        }}
+                      >
+                        Envios
+                      </Badge>
+                      <Badge
+                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveView("configuracoes");
+                          const newParams = new URLSearchParams();
+                          newParams.set('view', 'configuracoes');
+                          newParams.set('subtab', 'credits');
+                          navigate(`?${newParams.toString()}`);
+                        }}
+                      >
+                        Créditos
+                      </Badge>
+                      <Badge
+                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveView("configuracoes");
+                          const newParams = new URLSearchParams();
+                          newParams.set('view', 'configuracoes');
+                          newParams.set('subtab', 'subscriptions');
+                          navigate(`?${newParams.toString()}`);
+                        }}
+                      >
+                        Assinatura
+                      </Badge>
+                    </div>
+
+                    {/* Informação principal */}
+                    <div className="mt-auto">
+                      <p className="text-sm font-medium leading-tight opacity-90">
+                        {isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "Gerencie configurações do sistema")}
+                      </p>
+                    </div>
+
+                    {/* Efeito de hover */}
+                    <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  </div>
+                );
+              }
+
+              // Cards normais para os outros itens
+              return (
+                <ModernAdminCard
+                  key={item.id}
+                  id={item.id}
+                  title={item.label}
+                  info={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "Sem dados")}
+                  badge={isLoadingCards ? undefined : cardData[item.id]?.badge}
+                  badgeVariant={cardData[item.id]?.badgeVariant || "default"}
+                  icon={item.icon}
+                  onClick={setActiveView}
+                  colorIndex={index}
+                />
+              );
+            })}
           </div>
         );
     }
