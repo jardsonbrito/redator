@@ -426,10 +426,9 @@ const Admin = () => {
 
       // Gamificação - quantos jogos estão publicados
       const { data: jogos } = await supabase
-        .from('gamificacao_jogos')
-        .select('id, ativo, publicado')
-        .eq('ativo', true)
-        .eq('publicado', true);
+        .from('games')
+        .select('id, status')
+        .eq('status', 'published');
 
       const jogosPublicados = jogos?.length || 0;
 
