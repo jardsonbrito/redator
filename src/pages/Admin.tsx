@@ -162,18 +162,58 @@ const Admin = () => {
         badge: redacoesAgendadas > 0 ? `${redacoesAgendadas} agendadas` : undefined
       };
 
-      // Redações Enviadas - usar status "aguardando"
-      const { data: redacoesEnviadas } = await supabase
+      // Redações Enviadas - testar query mais ampla primeiro
+      const { data: todasRedacoes, error: todasError } = await supabase
         .from('redacoes_enviadas')
-        .select('status, corretor_id_1, corretores!redacoes_enviadas_corretor_id_1_fkey(nome)')
-        .in('status', ['aguardando', 'em_correcao'])
+        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida')
+        .order('data_envio', { ascending: false })
+        .limit(10);
+
+      console.log('🔍 Todas as redações (últimas 10):', { todasRedacoes, todasError });
+
+      // Buscar especificamente as 3 redações mencionadas
+      const { data: redacoesEspecificas, error: especificasError } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida, data_envio')
+        .or('nome_aluno.ilike.%lara%,nome_aluno.ilike.%kauani%,nome_aluno.ilike.%anne%,nome_aluno.ilike.%isabele%,nome_aluno.ilike.%renam%');
+
+      console.log('🔍 Redações dos 3 alunos mencionados:', { redacoesEspecificas, especificasError });
+
+      // Query original com log detalhado
+      const { data: redacoesEnviadas, error: redacoesError } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida')
         .eq('corrigida', false);
 
-      const aguardando = redacoesEnviadas?.length || 0;
+      console.log('🔍 Query redações NÃO corrigidas (todas):', {
+        total: redacoesEnviadas?.length,
+        redacoesEnviadas,
+        redacoesError
+      });
+
+      // Filtrar apenas aguardando e em_correcao
+      const redacoesAguardando = redacoesEnviadas?.filter(r =>
+        r.status === 'aguardando' || r.status === 'em_correcao'
+      ) || [];
+
+      console.log('🔍 Redações aguardando/em_correção:', {
+        quantidade: redacoesAguardando.length,
+        redacoes: redacoesAguardando
+      });
+
+      const aguardando = redacoesAguardando.length;
+
+      // Buscar nomes dos corretores separadamente para evitar problemas de join
+      const corretoresIds = [...new Set(redacoesAguardando.map(r => r.corretor_id_1).filter(Boolean))];
+      const { data: corretoresRedacoes } = await supabase
+        .from('corretores')
+        .select('id, nome')
+        .in('id', corretoresIds);
 
       // Agrupar por corretor
-      const porCorretor = redacoesEnviadas?.reduce((acc: Record<string, number>, r: any) => {
-        const nome = r.corretores?.nome || 'Não atribuído';
+      const porCorretor = redacoesAguardando.reduce((acc: Record<string, number>, r: any) => {
+        const corretor = corretoresRedacoes?.find(c => c.id === r.corretor_id_1);
+        const nome = corretor?.nome || 'Não atribuído';
         acc[nome] = (acc[nome] || 0) + 1;
         return acc;
       }, {}) || {};
@@ -335,12 +375,12 @@ const Admin = () => {
       };
 
       // Corretores
-      const { data: corretores } = await supabase
+      const { data: dadosCorretores } = await supabase
         .from('corretores')
         .select('ativo');
 
-      const corretoresAtivos = corretores?.filter(c => c.ativo).length || 0;
-      const corretoresInativos = corretores?.filter(c => !c.ativo).length || 0;
+      const corretoresAtivos = dadosCorretores?.filter(c => c.ativo).length || 0;
+      const corretoresInativos = dadosCorretores?.filter(c => !c.ativo).length || 0;
       data.corretores = {
         info: `${corretoresAtivos} disponíveis`,
         badge: corretoresInativos > 0 ? `${corretoresInativos} indisponíveis` : undefined,
