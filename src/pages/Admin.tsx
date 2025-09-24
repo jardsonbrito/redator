@@ -694,37 +694,6 @@ const Admin = () => {
           </Tabs>
         );
 
-      case "diario":
-        return (
-          <Tabs defaultValue="etapas" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="etapas" className="flex items-center gap-1 sm:gap-2">
-                <Calendar className="w-4 h-4" />
-                <span className="hidden sm:inline">Gestão de Etapas</span>
-                <span className="sm:hidden">Etapas</span>
-              </TabsTrigger>
-              <TabsTrigger value="aulas" className="flex items-center gap-1 sm:gap-2">
-                <NotebookPen className="w-4 h-4" />
-                <span className="hidden sm:inline">Registro de Aulas</span>
-                <span className="sm:hidden">Aulas</span>
-              </TabsTrigger>
-              <TabsTrigger value="resumo" className="flex items-center gap-1 sm:gap-2">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Resumo da Turma</span>
-                <span className="sm:hidden">Resumo</span>
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="etapas" className="space-y-6">
-              <GestaoEtapas />
-            </TabsContent>
-            <TabsContent value="aulas" className="space-y-6">
-              <RegistroAulas />
-            </TabsContent>
-            <TabsContent value="resumo" className="space-y-6">
-              <ResumoTurma />
-            </TabsContent>
-          </Tabs>
-        );
 
       case "lousa":
         return <LousaList />;
@@ -969,6 +938,7 @@ const Admin = () => {
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
             {menuItems.map((item, index) => {
+
               // Tratamento especial para o card de Configurações
               if (item.id === "configuracoes") {
                 return (
