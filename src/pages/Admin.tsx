@@ -396,7 +396,7 @@ const Admin = () => {
         badge: undefined
       };
 
-      // Corretores - quantos estão disponíveis no momento
+      // Corretores - apenas quantidade disponível
       const { data: corretores } = await supabase
         .from('corretores')
         .select('id, ativo')
@@ -424,17 +424,37 @@ const Admin = () => {
         badge: undefined
       };
 
-      // Cards deixados em branco conforme solicitado
-      const cardsVazios = [
-        "radar", "professores", "administradores", "exportacao", "configuracoes", "top5", "gamificacao"
+      // Gamificação - quantos jogos estão publicados
+      const { data: jogos } = await supabase
+        .from('gamificacao_jogos')
+        .select('id, ativo, publicado')
+        .eq('ativo', true)
+        .eq('publicado', true);
+
+      const jogosPublicados = jogos?.length || 0;
+
+      data.gamificacao = {
+        info: `${jogosPublicados} ${jogosPublicados === 1 ? 'jogo publicado' : 'jogos publicados'}`,
+        badge: undefined
+      };
+
+      // Cards limpos - apenas título, sem informações adicionais
+      const cardsLimpos = [
+        "radar", "professores", "administradores", "exportacao", "top5"
       ];
 
-      cardsVazios.forEach(cardId => {
+      cardsLimpos.forEach(cardId => {
         data[cardId] = {
           info: "",
           badge: undefined
         };
       });
+
+      // Configurações mantém vazio pois tem tratamento especial no render
+      data.configuracoes = {
+        info: "",
+        badge: undefined
+      };
 
       return data;
     } catch (error) {
@@ -449,9 +469,12 @@ const Admin = () => {
         "professores", "administradores", "exportacao", "configuracoes", "top5"
       ];
 
+      // Cards que devem permanecer limpos mesmo em caso de erro
+      const cardsLimpos = ["radar", "professores", "administradores", "exportacao", "top5", "configuracoes"];
+
       allCards.forEach(cardId => {
         defaultData[cardId] = {
-          info: "Erro ao carregar",
+          info: cardsLimpos.includes(cardId) ? "" : "Erro ao carregar",
           badge: undefined
         };
       });
@@ -1034,7 +1057,7 @@ const Admin = () => {
                   key={item.id}
                   id={item.id}
                   title={item.label}
-                  info={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "Sem dados")}
+                  info={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "")}
                   badge={isLoadingCards ? undefined : cardData[item.id]?.badge}
                   badgeVariant={cardData[item.id]?.badgeVariant || "default"}
                   icon={item.icon}
