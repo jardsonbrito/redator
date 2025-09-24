@@ -56,6 +56,7 @@ export const SubscriptionManagementClean = () => {
   const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistory[]>([]);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
 
   // Estados do formulário de edição
   const [editForm, setEditForm] = useState({
@@ -199,7 +200,7 @@ export const SubscriptionManagementClean = () => {
         });
       }
 
-      setEditDialogOpen(false);
+      closeEditDialog();
       loadStudentsAndSubscriptions();
     } catch (error) {
       console.error('Erro ao salvar assinatura:', error);
@@ -269,6 +270,7 @@ export const SubscriptionManagementClean = () => {
   const openEditDialog = (student: Student) => {
     const subscription = getStudentSubscription(student.id);
     setSelectedStudent(student);
+    setEditingStudentId(student.id);
     setEditForm({
       plano: subscription?.plano || '',
       data_inscricao: subscription?.data_inscricao || '2025-02-03',
@@ -276,6 +278,18 @@ export const SubscriptionManagementClean = () => {
       reason: ''
     });
     setEditDialogOpen(true);
+  };
+
+  const closeEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingStudentId(null);
+    setSelectedStudent(null);
+    setEditForm({
+      plano: '',
+      data_inscricao: '2025-02-03',
+      data_validade: '',
+      reason: ''
+    });
   };
 
   const getPlanoBadge = (plano: string) => {
@@ -377,18 +391,15 @@ export const SubscriptionManagementClean = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <Dialog open={editDialogOpen && selectedStudent?.id === student.id} onOpenChange={setEditDialogOpen}>
-                                  <DialogTrigger asChild>
-                                    <DropdownMenuItem
-                                      onSelect={(e) => {
-                                        e.preventDefault();
-                                        openEditDialog(student);
-                                      }}
-                                    >
-                                      <Edit2 className="h-4 w-4 mr-2" />
-                                      {subscription ? 'Editar' : 'Criar'}
-                                    </DropdownMenuItem>
-                                  </DialogTrigger>
+                                <DropdownMenuItem
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    openEditDialog(student);
+                                  }}
+                                >
+                                  <Edit2 className="h-4 w-4 mr-2" />
+                                  {subscription ? 'Editar' : 'Criar'}
+                                </DropdownMenuItem>
 
                                   {subscription && (
                                     <DropdownMenuItem
@@ -420,90 +431,8 @@ export const SubscriptionManagementClean = () => {
                                     <History className="h-4 w-4 mr-2" />
                                     Histórico
                                   </DropdownMenuItem>
-                                </Dialog>
                               </DropdownMenuContent>
                             </DropdownMenu>
-
-                            {/* Dialog de edição fora do dropdown */}
-                            <Dialog open={editDialogOpen && selectedStudent?.id === student.id} onOpenChange={setEditDialogOpen}>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>
-                                    {subscription ? 'Editar' : 'Criar'} Assinatura - {student.nome}
-                                  </DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div className="grid grid-cols-1 gap-4">
-                                    <div className="space-y-2">
-                                      <Label>Plano *</Label>
-                                      <Select
-                                        value={editForm.plano}
-                                        onValueChange={(value: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista') =>
-                                          setEditForm(prev => ({ ...prev, plano: value }))
-                                        }
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Selecione o plano" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {PLANOS.map((plano) => (
-                                            <SelectItem key={plano} value={plano}>
-                                              {plano}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <Label>Data de Inscrição</Label>
-                                        <Input
-                                          type="date"
-                                          value={editForm.data_inscricao}
-                                          onChange={(e) => setEditForm(prev => ({ ...prev, data_inscricao: e.target.value }))}
-                                        />
-                                      </div>
-                                      <div className="space-y-2">
-                                        <Label>Data de Validade *</Label>
-                                        <Input
-                                          type="date"
-                                          value={editForm.data_validade}
-                                          onChange={(e) => setEditForm(prev => ({ ...prev, data_validade: e.target.value }))}
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <Label>Motivo da Alteração (opcional)</Label>
-                                      <Textarea
-                                        value={editForm.reason}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
-                                        placeholder="Descreva o motivo da alteração..."
-                                        rows={3}
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="flex gap-2">
-                                    <Button
-                                      onClick={handleCreateOrUpdateSubscription}
-                                      disabled={loading || !editForm.plano || !editForm.data_validade}
-                                      className="flex-1"
-                                    >
-                                      {loading ? 'Salvando...' : (subscription ? 'Atualizar' : 'Criar')}
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => setEditDialogOpen(false)}
-                                    >
-                                      Cancelar
-                                    </Button>
-                                  </div>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-
                           </div>
                         </TableCell>
                       </TableRow>
@@ -521,6 +450,87 @@ export const SubscriptionManagementClean = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog de Edição de Assinatura */}
+      <Dialog open={editDialogOpen} onOpenChange={closeEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedStudent && getStudentSubscription(selectedStudent.id) ? 'Editar' : 'Criar'} Assinatura
+              {selectedStudent && ` - ${selectedStudent.nome}`}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label>Plano *</Label>
+                <Select
+                  value={editForm.plano}
+                  onValueChange={(value: 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista') =>
+                    setEditForm(prev => ({ ...prev, plano: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o plano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLANOS.map((plano) => (
+                      <SelectItem key={plano} value={plano}>
+                        {plano}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data de Inscrição</Label>
+                  <Input
+                    type="date"
+                    value={editForm.data_inscricao}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, data_inscricao: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data de Validade *</Label>
+                  <Input
+                    type="date"
+                    value={editForm.data_validade}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, data_validade: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Motivo da Alteração (opcional)</Label>
+                <Textarea
+                  value={editForm.reason}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Descreva o motivo da alteração..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={handleCreateOrUpdateSubscription}
+                disabled={loading || !editForm.plano || !editForm.data_validade}
+                className="flex-1"
+              >
+                {loading ? 'Salvando...' : (selectedStudent && getStudentSubscription(selectedStudent.id) ? 'Atualizar' : 'Criar')}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={closeEditDialog}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Histórico */}
       <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
