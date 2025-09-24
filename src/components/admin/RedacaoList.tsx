@@ -188,7 +188,8 @@ export const RedacaoList = () => {
                   data_envio: redacao.data_envio,
                   autor: redacao.autor,
                   pdf_url: redacao.pdf_url,
-                  dica_de_escrita: redacao.dica_de_escrita
+                  dica_de_escrita: redacao.dica_de_escrita,
+                  // data_agendamento: redacao.data_agendamento // Campo ainda não existe no banco
                 }}
                 perfil="admin"
                 actions={{

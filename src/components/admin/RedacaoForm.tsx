@@ -46,9 +46,9 @@ export const RedacaoForm = () => {
           frase_tematica: formData.frase_tematica.trim(),
           eixo_tematico: formData.eixo_tematico.trim(),
           autor: formData.autor.trim() || null,
-          // Campo de agendamento
-          data_agendamento: formData.agendar_publicacao && formData.data_agendamento ?
-            new Date(formData.data_agendamento).toISOString() : null
+          // Campo de agendamento (temporariamente desabilitado para debug)
+          // data_agendamento: formData.agendar_publicacao && formData.data_agendamento ?
+          //   new Date(formData.data_agendamento).toISOString() : null
         }])
         .select('*')
         .single();
@@ -183,8 +183,57 @@ export const RedacaoForm = () => {
         </p>
       </div>
 
+      {/* Seção de Agendamento */}
+      <div className="border rounded-lg p-4 bg-blue-50">
+        <div className="flex items-center space-x-2 mb-3">
+          <Calendar className="w-5 h-5 text-blue-600" />
+          <Label className="text-base font-semibold text-blue-800">Agendamento de Publicação</Label>
+        </div>
+
+        <div className="flex items-center space-x-2 mb-4">
+          <Checkbox
+            id="agendar_publicacao"
+            checked={formData.agendar_publicacao}
+            onCheckedChange={(checked) => setFormData({
+              ...formData,
+              agendar_publicacao: !!checked,
+              data_agendamento: checked ? formData.data_agendamento : ''
+            })}
+          />
+          <Label htmlFor="agendar_publicacao" className="text-sm font-medium">
+            Agendar publicação para data e horário específicos
+          </Label>
+        </div>
+
+        {formData.agendar_publicacao && (
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="data_agendamento" className="flex items-center gap-2 text-sm font-medium mb-2">
+                <Clock className="w-4 h-4" />
+                Data e Horário de Publicação
+              </Label>
+              <Input
+                id="data_agendamento"
+                type="datetime-local"
+                value={formData.data_agendamento}
+                onChange={(e) => setFormData({...formData, data_agendamento: e.target.value})}
+                min={new Date().toISOString().slice(0, 16)}
+                required={formData.agendar_publicacao}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-600 mt-1">
+                A redação será publicada automaticamente na data e horário especificados.
+              </p>
+            </div>
+
+          </div>
+        )}
+
+      </div>
+
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Salvando redação...' : 'Salvar Redação Exemplar'}
+        {loading ? 'Salvando redação...' :
+         formData.agendar_publicacao ? 'Salvar e Agendar Redação' : 'Salvar Redação Exemplar'}
       </Button>
       
       {loading && (

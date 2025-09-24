@@ -53,7 +53,7 @@ export const ModernAdminCard = ({
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
           <Icon className="w-6 h-6" />
-          <h3 className="text-sm font-semibold leading-tight">{title}</h3>
+          <h3 className="text-xl font-bold leading-tight">{title}</h3>
         </div>
         {badge && (
           <Badge
@@ -67,7 +67,7 @@ export const ModernAdminCard = ({
 
       {/* Informação principal */}
       <div className="mt-auto">
-        <p className="text-lg font-bold leading-tight">{info}</p>
+        <p className="text-sm font-medium leading-tight opacity-90">{info}</p>
       </div>
 
       {/* Efeito de hover */}

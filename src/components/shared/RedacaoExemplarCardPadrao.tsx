@@ -25,7 +25,8 @@ interface RedacaoExemplarCardData {
   pdf_url?: string;
   imagem_url?: string;
   dica_de_escrita?: string;
-  // Campos para agendamento/publicação programada
+  data_agendamento?: string | null;
+  // Campos para agendamento/publicação programada (legado)
   data_publicacao?: string | null;
   programada?: boolean;
 }
@@ -83,11 +84,39 @@ export const RedacaoExemplarCardPadrao = ({
   const shouldShowRedacao = () => {
     if (perfil === 'admin') return true; // Admin sempre vê tudo
 
-    if (!redacao.data_publicacao) return true; // Sem agendamento, sempre visível
+    // Verificar agendamento atual (data_agendamento)
+    if (redacao.data_agendamento) {
+      const now = new Date();
+      const scheduledDate = new Date(redacao.data_agendamento);
+      return now >= scheduledDate;
+    }
 
+    // Verificar agendamento legado (data_publicacao) para compatibilidade
+    if (redacao.data_publicacao) {
+      const now = new Date();
+      const publicationDate = new Date(redacao.data_publicacao);
+      return now >= publicationDate;
+    }
+
+    return true; // Sem agendamento, sempre visível
+  };
+
+  // Verificar se está agendada (para admins verem o status)
+  const isScheduled = () => {
+    if (!redacao.data_agendamento) return false;
     const now = new Date();
-    const publicationDate = new Date(redacao.data_publicacao);
-    return now >= publicationDate;
+    const scheduledDate = new Date(redacao.data_agendamento);
+    return now < scheduledDate;
+  };
+
+  const formatScheduledDate = () => {
+    try {
+      if (!redacao.data_agendamento) return null;
+      const date = new Date(redacao.data_agendamento);
+      return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    } catch {
+      return null;
+    }
   };
 
   if (!shouldShowRedacao()) return null;
@@ -168,6 +197,32 @@ export const RedacaoExemplarCardPadrao = ({
           {perfil === 'admin' && formatCreatedDate() && (
             <div className="text-sm text-gray-500">
               <span>Criado em: {formatCreatedDate()}</span>
+            </div>
+          )}
+
+          {/* Status de agendamento (só para admin) */}
+          {perfil === 'admin' && isScheduled() && (
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                <div className="text-sm">
+                  <span className="font-medium text-amber-800">📅 Agendada para: </span>
+                  <span className="text-amber-700">{formatScheduledDate()}</span>
+                </div>
+              </div>
+              <p className="text-xs text-amber-600 mt-1">
+                Esta redação será publicada automaticamente na data programada
+              </p>
+            </div>
+          )}
+
+          {/* Status de publicação imediata (só para admin, quando não agendada) */}
+          {perfil === 'admin' && !isScheduled() && !redacao.data_agendamento && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm font-medium text-green-800">✅ Publicada</span>
+              </div>
             </div>
           )}
 

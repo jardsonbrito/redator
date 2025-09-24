@@ -15,6 +15,7 @@ export interface RedacaoExemplar {
   pdf_url?: string;
   dica_de_escrita?: string;
   autor?: string;
+  data_agendamento?: string | null;
 }
 
 export const useRedacoesExemplarFilters = () => {
@@ -74,6 +75,14 @@ export const useRedacoesExemplarFilters = () => {
     if (!allRedacoes) return [];
 
     let filtered = [...allRedacoes];
+
+    // Filtrar redações por agendamento (temporariamente desabilitado para debug)
+    // filtered = filtered.filter(redacao => {
+    //   if (!redacao.data_agendamento) return true;
+    //   const now = new Date();
+    //   const scheduledDate = new Date(redacao.data_agendamento);
+    //   return now >= scheduledDate;
+    // });
 
     // Filtro por frase temática
     if (debouncedFraseFilter.trim()) {
