@@ -16,6 +16,7 @@ export interface BibliotecaCardData {
   competencia?: string;
   categoria?: string;
   status?: 'publicado' | 'rascunho';
+  published_at?: string;
   unpublished_at?: string;
   thumbnail_url?: string;
   arquivo_url?: string;
@@ -181,12 +182,6 @@ export const BibliotecaCardPadrao = ({ material, perfil, actions }: BibliotecaCa
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {material.competencia && perfil !== 'admin' && (
-                <Badge className="bg-blue-100 text-blue-700">
-                  {material.competencia}
-                </Badge>
-              )}
-
               {material.categoria && (
                 <Badge className="bg-purple-100 text-purple-700">
                   {material.categoria}
@@ -196,16 +191,17 @@ export const BibliotecaCardPadrao = ({ material, perfil, actions }: BibliotecaCa
               {material.unpublished_at && perfil !== 'admin' && (
                 <Badge className="bg-orange-100 text-orange-700">
                   <Calendar className="h-3 w-3 mr-1" />
-                  Disponível até {formatDate(material.unpublished_at)}
+                  Agendado
                 </Badge>
               )}
             </div>
 
             {perfil === 'admin' && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Categoria:</strong> {material.categoria}</p>
                 <p><strong>Turmas:</strong> {getTurmasDisplay()}</p>
                 {material.unpublished_at && (
-                  <p><strong>Disponível até:</strong> {formatDate(material.unpublished_at)}</p>
+                  <p><strong>Publicação:</strong> {formatDate(material.published_at || '')} - {formatDate(material.unpublished_at)}</p>
                 )}
               </div>
             )}

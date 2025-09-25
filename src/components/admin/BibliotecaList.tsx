@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Calendar, Grid, List } from 'lucide-react';
 import { BibliotecaCardPadrao, BibliotecaCardData } from '@/components/shared/BibliotecaCardPadrao';
-import { BibliotecaForm } from './BibliotecaForm';
+import { BibliotecaFormModern as BibliotecaForm } from './BibliotecaFormModern';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -254,10 +254,11 @@ export const BibliotecaList = () => {
   if (showForm) {
     return (
       <div className="space-y-4">
-        <BibliotecaForm 
-          materialEditando={materialEditando}
+        <BibliotecaForm
+          mode={materialEditando ? 'edit' : 'create'}
+          initialValues={materialEditando}
           onSuccess={handleSuccess}
-          onCancelEdit={handleCancelEdit}
+          onCancel={handleCancelEdit}
         />
       </div>
     );
@@ -365,6 +366,7 @@ export const BibliotecaList = () => {
                         competencia: material.competencia,
                         categoria: material.categorias?.nome,
                         status: material.status as 'publicado' | 'rascunho',
+                        published_at: material.published_at,
                         unpublished_at: material.unpublished_at,
                         thumbnail_url: material.thumbnail_url,
                         arquivo_url: material.arquivo_url,
@@ -406,6 +408,7 @@ export const BibliotecaList = () => {
               competencia: material.competencia,
               categoria: material.categorias?.nome,
               status: material.status as 'publicado' | 'rascunho',
+              published_at: material.published_at,
               unpublished_at: material.unpublished_at,
               thumbnail_url: material.thumbnail_url,
               arquivo_url: material.arquivo_url,

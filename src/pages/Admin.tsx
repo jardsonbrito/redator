@@ -37,7 +37,7 @@ import { TemaForm } from "@/components/admin/TemaForm";
 import { TemaList } from "@/components/admin/TemaList";
 import { RedacaoForm } from "@/components/admin/RedacaoForm";
 import { RedacaoList } from "@/components/admin/RedacaoList";
-import { VideoForm } from "@/components/admin/VideoForm";
+import { VideoFormModern as VideoForm } from "@/components/admin/VideoFormModern";
 import { VideoList } from "@/components/admin/VideoList";
 import { RedacaoEnviadaForm } from "@/components/admin/RedacaoEnviadaForm";
 
@@ -47,7 +47,7 @@ import SimuladoList from "@/components/admin/SimuladoList";
 import RedacaoSimuladoList from "@/components/admin/RedacaoSimuladoList";
 
 // Import biblioteca components
-import { BibliotecaForm } from "@/components/admin/BibliotecaForm";
+import { BibliotecaFormModern as BibliotecaForm } from "@/components/admin/BibliotecaFormModern";
 import { BibliotecaList } from "@/components/admin/BibliotecaList";
 
 // Import new components for Aulas and Exercicios
@@ -58,7 +58,7 @@ import { SimpleExercicioList } from "@/components/admin/SimpleExercicioList";
 import { RedacaoExercicioList } from "@/components/admin/RedacaoExercicioList";
 
 // Import avisos components
-import { AvisoForm } from "@/components/admin/AvisoForm";
+import { MuralFormModern as AvisoForm } from "@/components/admin/MuralFormModern";
 import { AvisoList } from "@/components/admin/AvisoList";
 
 // Import radar components
@@ -117,6 +117,7 @@ const Admin = () => {
   const [searchParams] = useSearchParams();
   const [activeView, setActiveView] = useState("dashboard");
   const [refreshAvisos, setRefreshAvisos] = useState(false);
+  const [showAvisosList, setShowAvisosList] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState(null);
   const [aulaEditando, setAulaEditando] = useState(null);
   const [refreshAlunos, setRefreshAlunos] = useState(false);
@@ -636,7 +637,7 @@ const Admin = () => {
               <BibliotecaList />
             </TabsContent>
             <TabsContent value="create">
-              <BibliotecaForm />
+              <BibliotecaForm mode="create" />
             </TabsContent>
           </Tabs>
         );
@@ -700,23 +701,47 @@ const Admin = () => {
 
         const handleEditAviso = (aviso: any) => {
           setAvisoEditando(aviso);
+          setShowAvisosList(false);
         };
 
         const handleCancelEdit = () => {
           setAvisoEditando(null);
+          setShowAvisosList(false);
+        };
+
+        const handleViewAvisosList = () => {
+          setShowAvisosList(true);
         };
 
         return (
-          <div className="space-y-6">
-            <AvisoForm 
-              onSuccess={handleAvisoSuccess}
-              avisoEditando={avisoEditando}
-              onCancelEdit={handleCancelEdit}
-            />
-            <AvisoList 
-              refresh={refreshAvisos}
-              onEdit={handleEditAviso}
-            />
+          <div>
+            {!showAvisosList ? (
+              <AvisoForm
+                mode={avisoEditando ? 'edit' : 'create'}
+                initialValues={avisoEditando}
+                onSuccess={handleAvisoSuccess}
+                onCancel={handleCancelEdit}
+                onViewList={handleViewAvisosList}
+                showViewList={true}
+              />
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setShowAvisosList(false)}
+                    className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-white bg-[#662F96] hover:bg-[#3F0077]"
+                  >
+                    Novo Aviso
+                  </button>
+                  <span className="text-white bg-[#B175FF] px-4 py-2 rounded-full text-sm font-medium">Avisos</span>
+                </div>
+
+                <AvisoList
+                  refresh={refreshAvisos}
+                  onEdit={handleEditAviso}
+                />
+              </div>
+            )}
           </div>
         );
 

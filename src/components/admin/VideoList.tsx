@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { VideoForm } from './VideoForm';
+import { VideoFormModern as VideoForm } from './VideoFormModern';
 import { VideotecaCardPadrao, VideotecaVideoData } from '@/components/shared/VideotecaCardPadrao';
 
 export const VideoList = () => {

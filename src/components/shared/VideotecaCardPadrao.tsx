@@ -156,7 +156,8 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
                 {video.titulo}
               </h3>
 
-              {video.data_publicacao && (
+              {/* Data de publicação - apenas para admin */}
+              {perfil === 'admin' && video.data_publicacao && (
                 <p className="text-sm text-muted-foreground">
                   {formatDate(video.data_publicacao)}
                 </p>
@@ -169,7 +170,8 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
                   {video.eixo_tematico}
                 </Badge>
               )}
-              {video.plataforma && (
+              {/* Plataforma - apenas para admin */}
+              {perfil === 'admin' && video.plataforma && (
                 <Badge className={getPlataformaBadgeColor(video.plataforma)}>
                   {video.plataforma === 'youtube' ? 'YouTube' :
                    video.plataforma === 'instagram' ? 'Instagram' :
