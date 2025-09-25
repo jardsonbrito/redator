@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Trash2, ExternalLink, FileText, Edit, Search, Calendar, Grid, List } from "lucide-react";
-import { AulaForm } from "./AulaForm";
+import { AulaFormModern as AulaForm } from "./AulaFormModern";
 import { AulaGravadaCardPadrao } from "@/components/shared/AulaGravadaCardPadrao";
 
 interface Modulo {

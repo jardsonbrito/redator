@@ -187,8 +187,8 @@ export const AulaGravadaCardPadrao = ({
             )}
           </div>
 
-          {/* Turmas autorizadas */}
-          {aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0 && (
+          {/* Turmas autorizadas - apenas para admin */}
+          {perfil === 'admin' && aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <GraduationCap className="w-4 h-4 text-gray-500" />

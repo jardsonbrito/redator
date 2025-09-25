@@ -179,7 +179,7 @@ export const AulaVirtualList = ({ refresh, onEdit }: { refresh?: boolean; onEdit
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Video className="w-5 h-5" />
-              Aulas Virtuais ({aulas.length})
+              Aulas ao Vivo ({aulas.length})
             </span>
             <Button onClick={fetchAulas} variant="outline" size="sm">
               Atualizar

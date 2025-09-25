@@ -1,20 +1,23 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Video, Clock, Users, Link as LinkIcon, Radio } from "lucide-react";
 
-export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [turmas, setTurmas] = useState<string[]>([]);
+const TURMAS = ['A', 'B', 'C', 'D', 'E'];
+
+interface AulaVirtualFormProps {
+  onSuccess?: () => void;
+}
+
+export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
+  const [loading, setLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>('detalhes');
+
   const [formData, setFormData] = useState({
     titulo: "",
     descricao: "",
@@ -27,32 +30,75 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     abrir_aba_externa: false,
     permite_visitante: false,
     ativo: true,
-    eh_aula_ao_vivo: false
+    eh_aula_ao_vivo: true
   });
 
-  // Buscar turmas ao carregar componente
-  useEffect(() => {
-    setTurmas(['TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E']);
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.titulo || !formData.data_aula || !formData.horario_inicio || !formData.horario_fim || !formData.link_meet || formData.turmas_autorizadas.length === 0) {
-      toast.error("Preencha todos os campos obrigatórios");
+  const handleAction = () => {
+    // Validações básicas
+    if (!formData.titulo.trim()) {
+      toast.error('Título é obrigatório');
+      setActiveSection('detalhes');
       return;
     }
 
-    setIsLoading(true);
+    if (!formData.data_aula || !formData.horario_inicio || !formData.horario_fim) {
+      toast.error('Data e horários são obrigatórios');
+      setActiveSection('detalhes');
+      return;
+    }
+
+    if (!formData.link_meet.trim()) {
+      toast.error('Link do Meet é obrigatório');
+      setActiveSection('configuracao');
+      return;
+    }
+
+    if (formData.turmas_autorizadas.length === 0 && !formData.permite_visitante) {
+      toast.error('Pelo menos uma turma deve ser selecionada OU visitantes permitidos');
+      setActiveSection('turmas');
+      return;
+    }
+
+    if (formData.horario_inicio >= formData.horario_fim) {
+      toast.error('Horário de início deve ser anterior ao horário de fim');
+      setActiveSection('detalhes');
+      return;
+    }
+
+    handleSubmit();
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
 
     try {
+      // Converter turmas para o formato do banco: "A" -> "TURMA A"
+      const turmasFormatoBanco = formData.turmas_autorizadas.map(turma => `TURMA ${turma}`);
+
+      const aulaData = {
+        titulo: formData.titulo.trim(),
+        descricao: formData.descricao.trim(),
+        data_aula: formData.data_aula,
+        horario_inicio: formData.horario_inicio,
+        horario_fim: formData.horario_fim,
+        turmas_autorizadas: turmasFormatoBanco,
+        imagem_capa_url: formData.imagem_capa_url.trim() || null,
+        link_meet: formData.link_meet.trim(),
+        abrir_aba_externa: formData.abrir_aba_externa,
+        permite_visitante: formData.permite_visitante,
+        ativo: formData.ativo,
+        eh_aula_ao_vivo: formData.eh_aula_ao_vivo
+      };
+
       const { error } = await supabase
         .from('aulas_virtuais')
-        .insert([formData]);
+        .insert([aulaData]);
 
       if (error) throw error;
 
-      toast.success("Aula virtual criada com sucesso!");
+      toast.success('Aula ao vivo criada com sucesso!');
+
+      // Limpar formulário
       setFormData({
         titulo: "",
         descricao: "",
@@ -65,194 +111,245 @@ export const AulaVirtualForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         abrir_aba_externa: false,
         permite_visitante: false,
         ativo: true,
-        eh_aula_ao_vivo: false
+        eh_aula_ao_vivo: true
       });
-      
+      setActiveSection('detalhes');
+
       onSuccess?.();
     } catch (error: any) {
-      console.error('Erro ao criar aula virtual:', error);
-      toast.error('Erro ao criar aula virtual: ' + error.message);
+      console.error('Erro ao criar aula ao vivo:', error);
+      toast.error('Erro ao criar aula ao vivo: ' + error.message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleTurmaChange = (turma: string, checked: boolean) => {
-    if (checked) {
-      setFormData(prev => ({
-        ...prev,
-        turmas_autorizadas: [...prev.turmas_autorizadas, turma]
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        turmas_autorizadas: prev.turmas_autorizadas.filter(t => t !== turma)
-      }));
-    }
+  const sections = [
+    { id: 'detalhes', label: 'Detalhes' },
+    { id: 'configuracao', label: 'Configuração' },
+    { id: 'turmas', label: 'Turmas' },
+  ];
+
+  const toggleSection = (sectionId: string) => {
+    setActiveSection(sectionId);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Video className="w-5 h-5" />
-          Criar Aula Virtual
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="titulo">Título da Aula *</Label>
-              <Input
-                id="titulo"
-                value={formData.titulo}
-                onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
-                placeholder="Ex: Aula de Redação - Dissertação"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="data_aula">Data da Aula *</Label>
-              <Input
-                id="data_aula"
-                type="date"
-                value={formData.data_aula}
-                onChange={(e) => setFormData(prev => ({ ...prev, data_aula: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="descricao">Descrição</Label>
-            <Textarea
-              id="descricao"
-              value={formData.descricao}
-              onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-              placeholder="Breve descrição da aula..."
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="horario_inicio">
-                <Clock className="w-4 h-4 inline mr-1" />
-                Horário de Início *
-              </Label>
-              <Input
-                id="horario_inicio"
-                type="time"
-                value={formData.horario_inicio}
-                onChange={(e) => setFormData(prev => ({ ...prev, horario_inicio: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="horario_fim">
-                <Clock className="w-4 h-4 inline mr-1" />
-                Horário de Fim *
-              </Label>
-              <Input
-                id="horario_fim"
-                type="time"
-                value={formData.horario_fim}
-                onChange={(e) => setFormData(prev => ({ ...prev, horario_fim: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>
-              <Users className="w-4 h-4 inline mr-1" />
-              Turmas Autorizadas *
-            </Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-              {turmas.map((turma) => (
-                <div key={turma} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={turma}
-                    checked={formData.turmas_autorizadas.includes(turma)}
-                    onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
-                  />
-                  <Label htmlFor={turma} className="text-sm">{turma}</Label>
-                </div>
+    <div className="min-h-screen" style={{ background: '#f7f7fb' }}>
+      <div className="max-w-6xl mx-auto p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+          {/* Header with chips and action buttons */}
+          <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-200">
+            <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                    activeSection === section.id
+                      ? "text-white"
+                      : "text-white",
+                    activeSection === section.id
+                      ? "bg-[#662F96]"
+                      : "bg-[#B175FF] hover:bg-[#662F96]"
+                  )}
+                >
+                  {section.label}
+                </button>
               ))}
             </div>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="permite_visitante"
-              checked={formData.permite_visitante}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, permite_visitante: checked as boolean }))}
-            />
-            <Label htmlFor="permite_visitante" className="text-sm">
-              Aceitar visitantes (usuários sem login por turma)
-            </Label>
-          </div>
-
-          <div>
-            <Label htmlFor="link_meet">
-              <LinkIcon className="w-4 h-4 inline mr-1" />
-              Link do Google Meet *
-            </Label>
-            <Input
-              id="link_meet"
-              value={formData.link_meet}
-              onChange={(e) => setFormData(prev => ({ ...prev, link_meet: e.target.value }))}
-              placeholder="https://meet.google.com/..."
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="imagem_capa_url">URL da Imagem de Capa</Label>
-            <Input
-              id="imagem_capa_url"
-              value={formData.imagem_capa_url}
-              onChange={(e) => setFormData(prev => ({ ...prev, imagem_capa_url: e.target.value }))}
-              placeholder="https://..."
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="abrir_aba_externa"
-              checked={formData.abrir_aba_externa}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, abrir_aba_externa: checked }))}
-            />
-            <Label htmlFor="abrir_aba_externa">Abrir aula em aba externa</Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="ativo"
-              checked={formData.ativo}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ativo: checked }))}
-            />
-            <Label htmlFor="ativo">Aula ativa</Label>
-          </div>
-
-          <div className="border-t pt-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="eh_aula_ao_vivo"
-                checked={formData.eh_aula_ao_vivo}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, eh_aula_ao_vivo: checked }))}
-              />
-              <Label htmlFor="eh_aula_ao_vivo" className="flex items-center gap-2">
-                <Radio className="w-4 h-4" />
-                Aula ao vivo (com controle de frequência)
-              </Label>
+            <div className="flex gap-2 flex-shrink-0">
+              <Button
+                type="button"
+                onClick={handleAction}
+                disabled={loading}
+                className="bg-[#3F0077] text-white hover:bg-[#662F96]"
+              >
+                {loading ? 'Criando...' : 'Criar Aula ao Vivo'}
+              </Button>
             </div>
-
           </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? "Criando..." : "Criar Aula Virtual"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          {/* Content area */}
+          <div className="p-5">
+            {/* Detalhes Section */}
+            {activeSection === 'detalhes' && (
+              <div className="space-y-4">
+                {/* Título */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <Input
+                    value={formData.titulo}
+                    onChange={(e) => setFormData({...formData, titulo: e.target.value})}
+                    className="text-sm"
+                    placeholder="Título da aula ao vivo"
+                    spellCheck={true}
+                  />
+                </div>
+
+                {/* Descrição */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <Textarea
+                    value={formData.descricao}
+                    onChange={(e) => setFormData({...formData, descricao: e.target.value})}
+                    className="text-sm min-h-[100px]"
+                    placeholder="Descrição da aula"
+                    spellCheck={true}
+                  />
+                </div>
+
+                {/* Data e Horários */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Data da Aula</label>
+                      <Input
+                        type="date"
+                        value={formData.data_aula}
+                        onChange={(e) => setFormData({...formData, data_aula: e.target.value})}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Horário de Início</label>
+                      <Input
+                        type="time"
+                        value={formData.horario_inicio}
+                        onChange={(e) => setFormData({...formData, horario_inicio: e.target.value})}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Horário de Fim</label>
+                      <Input
+                        type="time"
+                        value={formData.horario_fim}
+                        onChange={(e) => setFormData({...formData, horario_fim: e.target.value})}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Configuração Section */}
+            {activeSection === 'configuracao' && (
+              <div className="space-y-6">
+                {/* Link do Meet */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Link do Google Meet</label>
+                    <Input
+                      value={formData.link_meet}
+                      onChange={(e) => setFormData({...formData, link_meet: e.target.value})}
+                      className="text-sm"
+                      spellCheck={false}
+                    />
+                  </div>
+                </div>
+
+                {/* Imagem de Capa */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">URL da Imagem de Capa</label>
+                    <Input
+                      value={formData.imagem_capa_url}
+                      onChange={(e) => setFormData({...formData, imagem_capa_url: e.target.value})}
+                      className="text-sm"
+                      spellCheck={false}
+                    />
+                  </div>
+                </div>
+
+                {/* Configurações */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-medium">Aula ao vivo</div>
+                        <div className="text-xs text-gray-500">Ativar controle de frequência</div>
+                      </div>
+                      <Switch
+                        checked={formData.eh_aula_ao_vivo}
+                        onCheckedChange={(checked) => setFormData({...formData, eh_aula_ao_vivo: checked})}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-medium">Abrir em nova aba</div>
+                        <div className="text-xs text-gray-500">Link abrirá em aba externa</div>
+                      </div>
+                      <Switch
+                        checked={formData.abrir_aba_externa}
+                        onCheckedChange={(checked) => setFormData({...formData, abrir_aba_externa: checked})}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-medium">Status Ativo</div>
+                        <div className="text-xs text-gray-500">Aula ativa pode ser acessada pelos alunos</div>
+                      </div>
+                      <Switch
+                        checked={formData.ativo}
+                        onCheckedChange={(checked) => setFormData({...formData, ativo: checked})}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Turmas Section */}
+            {activeSection === 'turmas' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <div className="space-y-6">
+                  {/* Turmas Autorizadas */}
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium">Turmas Autorizadas</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {TURMAS.map((turma) => (
+                        <div key={turma} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`turma-${turma}`}
+                            checked={formData.turmas_autorizadas.includes(turma)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, turma]});
+                              } else {
+                                setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== turma)});
+                              }
+                            }}
+                          />
+                          <label htmlFor={`turma-${turma}`} className="text-sm font-medium">
+                            Turma {turma}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Permitir Visitantes */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">Permitir Visitantes</div>
+                      <div className="text-xs text-gray-500">Visitantes podem acessar esta aula</div>
+                    </div>
+                    <Switch
+                      checked={formData.permite_visitante}
+                      onCheckedChange={(checked) => setFormData({...formData, permite_visitante: checked})}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };

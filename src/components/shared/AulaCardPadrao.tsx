@@ -240,8 +240,8 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
             </div>
           </div>
 
-          {/* Turmas autorizadas */}
-          {aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0 && (
+          {/* Turmas autorizadas - apenas para admin */}
+          {perfil === 'admin' && aula.turmas_autorizadas && aula.turmas_autorizadas.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Users className="w-4 h-4 text-gray-500" />
@@ -355,7 +355,8 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   className="flex-1"
                   onClick={() => actions?.onEntrarAula?.(aula.id)}
                 >
-                  Ver Aula
+                  <Video className="w-4 h-4 mr-2" />
+                  Acesse a Sala Virtual
                 </Button>
               </div>
             )}

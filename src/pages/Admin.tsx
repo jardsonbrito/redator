@@ -51,7 +51,7 @@ import { BibliotecaForm } from "@/components/admin/BibliotecaForm";
 import { BibliotecaList } from "@/components/admin/BibliotecaList";
 
 // Import new components for Aulas and Exercicios
-import { AulaForm } from "@/components/admin/AulaForm";
+import { AulaFormModern as AulaForm } from "@/components/admin/AulaFormModern";
 import { SimpleAulaList } from "@/components/admin/SimpleAulaList";
 import { ExercicioForm } from "@/components/admin/ExercicioForm";
 import { SimpleExercicioList } from "@/components/admin/SimpleExercicioList";
@@ -489,7 +489,7 @@ const Admin = () => {
 
     // Linha 3: Ferramentas de Ensino
     { id: "lousa", label: "Lousa", icon: Presentation },
-    { id: "salas-virtuais", label: "Aula ao Vivo", icon: Video },
+    { id: "salas-virtuais", label: "Aulas ao Vivo", icon: Video },
     { id: "aulas", label: "Aulas Gravadas", icon: GraduationCap },
 
     // Linha 4: Recursos e Comunicação

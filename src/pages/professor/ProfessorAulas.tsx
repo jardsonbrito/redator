@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { BookOpen, Plus, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import { AulaForm } from "@/components/admin/AulaForm";
+import { AulaFormModern as AulaForm } from "@/components/admin/AulaFormModern";
 
 export const ProfessorAulas = () => {
   const { professor } = useProfessorAuth();
