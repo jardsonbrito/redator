@@ -8,7 +8,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search, UserX, UserCheck, Users, Info } from "lucide-react";
+import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VisitanteInfoModal } from "./VisitanteInfoModal";
 import { MigrarVisitanteModal } from "./MigrarVisitanteModal";
 
@@ -527,68 +528,66 @@ const AlunoTable = ({
                 </div>
               </TableCell>
               <TableCell className="text-right p-2">
-                <div className="flex flex-col gap-1">
-                  {aluno.tipo === 'visitante' ? (
-                    // Ações para visitantes
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onShowVisitanteInfo(aluno)}
-                        className="text-green-600 hover:text-green-700 text-xs h-6 px-2"
-                      >
-                        <Info className="w-3 h-3 mr-1" />
-                        Info
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onShowMigrarModal(aluno)}
-                        className="text-blue-600 hover:text-blue-700 text-xs h-6 px-2"
-                      >
-                        Migrar
-                      </Button>
-                    </>
-                  ) : (
-                    // Ações para alunos regulares
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onToggleStatus(aluno)}
-                        className={`${aluno.ativo ? "text-red-600 hover:text-red-700" : "text-green-600 hover:text-green-700"} text-xs h-6 px-2`}
-                      >
-                        {aluno.ativo ? "Desativar" : "Ativar"}
-                      </Button>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onEdit(aluno);
-                        }}
-                        className="text-blue-600 hover:text-blue-700 text-xs h-6 px-2"
-                      >
-                        Editar
-                      </Button>
-                      
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          if (window.confirm(`Excluir ${aluno.nome}?`)) {
-                            onDelete(aluno);
-                          }
-                        }}
-                        className="text-xs h-6 px-2"
-                      >
-                        Excluir
-                      </Button>
-                    </>
-                  )}
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {aluno.tipo === 'visitante' ? (
+                      // Ações para visitantes
+                      <>
+                        <DropdownMenuItem onClick={() => onShowVisitanteInfo(aluno)}>
+                          <Info className="mr-2 h-4 w-4" />
+                          Ver Informações
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onShowMigrarModal(aluno)}>
+                          <UserCheck className="mr-2 h-4 w-4" />
+                          Migrar para Aluno
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      // Ações para alunos regulares
+                      <>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onEdit(aluno);
+                          }}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onToggleStatus(aluno)}>
+                          {aluno.ativo ? (
+                            <>
+                              <UserX className="mr-2 h-4 w-4" />
+                              Desativar
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="mr-2 h-4 w-4" />
+                              Ativar
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome}?`)) {
+                              onDelete(aluno);
+                            }
+                          }}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}

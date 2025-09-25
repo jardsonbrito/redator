@@ -72,7 +72,7 @@ import { AulaVirtualEditForm } from "@/components/admin/AulaVirtualEditForm";
 import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
 // Import aluno components
-import { AlunoForm } from "@/components/admin/AlunoForm";
+import { AlunoFormModern } from "@/components/admin/AlunoFormModern";
 import { AlunoList } from "@/components/admin/AlunoList";
 
 // Import corretor components
@@ -853,7 +853,7 @@ const Admin = () => {
 
         return (
           <div className="space-y-6">
-            <AlunoForm 
+            <AlunoFormModern
               onSuccess={handleAlunoSuccess}
               alunoEditando={alunoEditando}
               onCancelEdit={handleCancelAlunoEdit}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UserCheck, Home } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 export default function CadastroAluno() {
   const [nome, setNome] = useState("");
@@ -16,14 +16,26 @@ export default function CadastroAluno() {
   const [loading, setLoading] = useState(false);
   const [cadastrado, setCadastrado] = useState(false);
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const turmas = [
-    "Turma A",
-    "Turma B", 
-    "Turma C",
-    "Turma D",
-    "Turma E"
+    "TURMA A",
+    "TURMA B",
+    "TURMA C",
+    "TURMA D",
+    "TURMA E"
   ];
+
+  // Pré-selecionar turma se vier na URL
+  useEffect(() => {
+    const turmaParam = searchParams.get('turma');
+    if (turmaParam) {
+      const turmaFormatada = `TURMA ${turmaParam.toUpperCase()}`;
+      if (turmas.includes(turmaFormatada)) {
+        setTurma(turmaFormatada);
+      }
+    }
+  }, [searchParams]);
 
   const isFormValid = nome.trim() && email.trim() && turma;
 
