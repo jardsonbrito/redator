@@ -18,7 +18,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(mode === 'edit');
-  const [activeSection, setActiveSection] = useState<string>('frase');
+  const [activeSection, setActiveSection] = useState<string>('imagem');
 
   const [formData, setFormData] = useState({
     frase_tematica: '',
@@ -135,12 +135,12 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
   };
 
   const sections = [
+    { id: 'imagem', label: 'Capa' },
     { id: 'frase', label: 'Frase Temática' },
     { id: 'eixo', label: 'Eixo Temático' },
     { id: 'autor', label: 'Autor' },
     { id: 'texto', label: 'Texto da Redação' },
     { id: 'dica', label: 'Dica de Escrita' },
-    { id: 'imagem', label: 'Imagem de Capa' },
   ];
 
   const toggleSection = (sectionId: string) => {

@@ -163,7 +163,8 @@ const SimuladoList = () => {
   if (showForm) {
     return (
       <div className="space-y-4">
-        <SimuladoForm 
+        <SimuladoForm
+          mode={simuladoEditando ? 'edit' : 'create'}
           simuladoEditando={simuladoEditando}
           onSuccess={handleSuccess}
           onCancelEdit={handleCancelEdit}

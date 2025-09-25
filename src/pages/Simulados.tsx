@@ -50,7 +50,7 @@ const { data: simulados, isLoading } = useQuery({
     const simuladosFiltrados = (sims || []).filter((simulado) => {
       const turmasAutorizadas = simulado.turmas_autorizadas || [];
       const permiteVisitante = simulado.permite_visitante;
-      
+
       if (turmaCode === "Visitante") {
         // Visitantes só veem simulados que permitem visitantes
         return permiteVisitante;
@@ -170,12 +170,12 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
       perfil="aluno"
       actions={{
         onVerSimulado: (id) => {
-          // Se o simulado está ativo, permitir participação
+          // Se o simulado está ativo e o aluno não enviou, permitir participação
           const status = computeSimuladoStatus(simulado);
-          if (status === 'ativo') {
+          if (status === 'ativo' && !simuladoWithSubmission.hasSubmitted) {
             navigate(`/simulados/${id}`);
-          } else if (status === 'encerrado' && simuladoWithSubmission.submissionStatus === 'ENVIADO') {
-            // Se o simulado já foi enviado, ir direto para a página de redação corrigida
+          } else if (simuladoWithSubmission.hasSubmitted || simuladoWithSubmission.submissionStatus === 'ENVIADO') {
+            // Se o aluno já enviou (independente do status), ir para a página de redação
             navigate(`/simulados/${id}/redacao-corrigida`);
           }
         }

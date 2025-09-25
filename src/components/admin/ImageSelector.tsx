@@ -365,7 +365,6 @@ export const ImageSelector = ({
           <div className="relative">
             <Input
               type="url"
-              placeholder="https://exemplo.com/imagem.jpg"
               value={tempUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
               disabled={isValidating}

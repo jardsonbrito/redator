@@ -5,11 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { uploadExerciseCover, getEffectiveCover, validateExercisePeriod } from "@/utils/exerciseUtils";
-import { ImagePlus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Tema {
   id: string;
@@ -39,12 +39,17 @@ interface ExercicioEditando {
 }
 
 interface ExercicioFormProps {
+  mode?: 'create' | 'edit';
   exercicioEditando?: ExercicioEditando | null;
   onSuccess?: () => void;
   onCancelEdit?: () => void;
 }
 
-export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: ExercicioFormProps) => {
+export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, onCancelEdit }: ExercicioFormProps) => {
+  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(mode === 'edit');
+  const [activeSection, setActiveSection] = useState<string>('capa');
+
   const [titulo, setTitulo] = useState("");
   const [tipo, setTipo] = useState("");
   const [linkForms, setLinkForms] = useState("");
@@ -80,32 +85,42 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
 
   // Preencher formulário ao editar
   useEffect(() => {
-    if (exercicioEditando) {
-      setTitulo(exercicioEditando.titulo || "");
-      setTipo(exercicioEditando.tipo || "");
-      setLinkForms(exercicioEditando.link_forms || "");
-      setTemaId(exercicioEditando.tema_id || "");
-      setImagemCapaUrl(exercicioEditando.imagem_capa_url || "");
-      setCoverUrl(exercicioEditando.cover_url || "");
-      setCoverUploadPath(exercicioEditando.cover_upload_path || "");
-      setTurmasAutorizadas(exercicioEditando.turmas_autorizadas || []);
-      setPermiteVisitante(exercicioEditando.permite_visitante || false);
-      setAtivo(exercicioEditando.ativo !== false);
-      setAbrirAbaExterna(exercicioEditando.abrir_aba_externa || false);
-      setDataInicio(exercicioEditando.data_inicio || "");
-      setHoraInicio(exercicioEditando.hora_inicio || "");
-      setDataFim(exercicioEditando.data_fim || "");
-      setHoraFim(exercicioEditando.hora_fim || "");
-      
-      // Se tem tema_id, buscar o tema para mostrar na busca
-      if (exercicioEditando.tema_id && temas.length > 0) {
-        const tema = temas.find(t => t.id === exercicioEditando.tema_id);
-        if (tema) {
-          setTemaSearch(tema.frase_tematica);
+    if (mode === 'edit' && exercicioEditando) {
+      const loadExercicioData = async () => {
+        try {
+          setTitulo(exercicioEditando.titulo || "");
+          setTipo(exercicioEditando.tipo || "");
+          setLinkForms(exercicioEditando.link_forms || "");
+          setTemaId(exercicioEditando.tema_id || "");
+          setImagemCapaUrl(exercicioEditando.imagem_capa_url || "");
+          setCoverUrl(exercicioEditando.cover_url || "");
+          setCoverUploadPath(exercicioEditando.cover_upload_path || "");
+          setTurmasAutorizadas(exercicioEditando.turmas_autorizadas || []);
+          setPermiteVisitante(exercicioEditando.permite_visitante || false);
+          setAtivo(exercicioEditando.ativo !== false);
+          setAbrirAbaExterna(exercicioEditando.abrir_aba_externa || false);
+          setDataInicio(exercicioEditando.data_inicio || "");
+          setHoraInicio(exercicioEditando.hora_inicio || "");
+          setDataFim(exercicioEditando.data_fim || "");
+          setHoraFim(exercicioEditando.hora_fim || "");
+
+          // Se tem tema_id, buscar o tema para mostrar na busca
+          if (exercicioEditando.tema_id && temas.length > 0) {
+            const tema = temas.find(t => t.id === exercicioEditando.tema_id);
+            if (tema) {
+              setTemaSearch(tema.frase_tematica);
+            }
+          }
+        } catch (error: any) {
+          toast.error("Erro ao carregar dados do exercício: " + error.message);
+        } finally {
+          setLoadingData(false);
         }
-      }
+      };
+
+      loadExercicioData();
     }
-  }, [exercicioEditando, temas]);
+  }, [exercicioEditando, temas, mode]);
 
   // Atualizar capa automaticamente quando selecionar tema (somente se não tiver upload ou URL)
   useEffect(() => {
@@ -166,9 +181,9 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
     if (!titulo || !tipo) {
       toast.error("Por favor, preencha os campos obrigatórios.");
       return;
@@ -195,7 +210,7 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
       return;
     }
 
-    setIsLoading(true);
+    setLoading(true);
 
     try {
       let finalCoverUploadPath = coverUploadPath;
@@ -278,290 +293,326 @@ export const ExercicioForm = ({ exercicioEditando, onSuccess, onCancelEdit }: Ex
       console.error("Erro ao criar exercício:", error);
       toast.error("Erro ao criar exercício. Tente novamente.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
+  const sections = [
+    { id: 'capa', label: 'Capa' },
+    { id: 'titulo', label: 'Título / Tipo' },
+    { id: 'periodo', label: 'Período' },
+    { id: 'configuracoes', label: 'Configuração' },
+    { id: 'turmas', label: 'Turmas' },
+  ];
+
+  const toggleSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+  };
+
+  if (loadingData) {
+    return <div className="text-center py-4">Carregando dados...</div>;
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          {exercicioEditando ? "Editar Exercício" : "Criar Novo Exercício"}
-          {exercicioEditando && onCancelEdit && (
-            <Button variant="outline" onClick={onCancelEdit} size="sm">
-              Cancelar
+    <div className="min-h-screen" style={{ background: '#f7f7fb' }}>
+      <div className="max-w-6xl mx-auto p-5">
+        {/* Back button for edit mode */}
+        {mode === 'edit' && onCancelEdit && (
+          <div className="mb-4">
+            <Button variant="outline" onClick={onCancelEdit} className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar
             </Button>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="titulo">Título *</Label>
-            <Input
-              id="titulo"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Digite o título do exercício"
-              required
-            />
           </div>
+        )}
 
-          <div>
-            <Label htmlFor="tipo">Tipo *</Label>
-            <Select value={tipo} onValueChange={setTipo} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {tiposDisponiveis.map((tipoItem) => (
-                  <SelectItem key={tipoItem} value={tipoItem}>
-                    {tipoItem}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Seção de Agendamento - Agora obrigatória para todos os tipos */}
-          <Card className="border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                📅 Período de Atividade (Obrigatório)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="dataInicio">Data de Início *</Label>
-                  <Input
-                    id="dataInicio"
-                    type="date"
-                    value={dataInicio}
-                    onChange={(e) => setDataInicio(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="horaInicio">Hora de Início *</Label>
-                  <Input
-                    id="horaInicio"
-                    type="time"
-                    value={horaInicio}
-                    onChange={(e) => setHoraInicio(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="dataFim">Data de Término *</Label>
-                  <Input
-                    id="dataFim"
-                    type="date"
-                    value={dataFim}
-                    onChange={(e) => setDataFim(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="horaFim">Hora de Término *</Label>
-                  <Input
-                    id="horaFim"
-                    type="time"
-                    value={horaFim}
-                    onChange={(e) => setHoraFim(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {!validateExercisePeriod(dataInicio, horaInicio, dataFim, horaFim) && dataInicio && horaInicio && dataFim && horaFim && (
-                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                  ⚠️ O período de término deve ser posterior ao início
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Seção de Capa */}
-          <Card className="border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                🖼️ Capa do Exercício
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="coverUrl">URL da Imagem</Label>
-                <Input
-                  id="coverUrl"
-                  value={coverUrl}
-                  onChange={(e) => setCoverUrl(e.target.value)}
-                  placeholder="https://exemplo.com/imagem.jpg"
-                  type="url"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="coverUpload">Ou fazer upload</Label>
-                <Input
-                  id="coverUpload"
-                  type="file"
-                  onChange={handleCoverUpload}
-                  accept="image/*"
-                />
-                  <small className="text-muted-foreground">
-                    Formatos: JPG, PNG, WebP (máx. 2MB) • Upload tem precedência sobre URL • Para "Redação com Frase Temática" usa a capa do tema por padrão
-                  </small>
-              </div>
-              
-              <div className="cover-preview">
-                <img 
-                  src={getPreviewCover()} 
-                  alt="Preview da capa"
-                  className="w-32 h-24 object-cover rounded border"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholders/aula-cover.png';
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {tipo === 'Google Forms' && (
-            <div>
-              <Label htmlFor="linkForms">Link do Google Forms *</Label>
-              <Input
-                id="linkForms"
-                value={linkForms}
-                onChange={(e) => setLinkForms(e.target.value)}
-                placeholder="https://forms.google.com/..."
-                type="url"
-                required
-              />
-              <div className="flex items-center space-x-2 mt-2">
-                <Checkbox
-                  id="abrirAbaExterna"
-                  checked={abrirAbaExterna}
-                  onCheckedChange={(checked) => setAbrirAbaExterna(checked as boolean)}
-                />
-                <Label htmlFor="abrirAbaExterna">
-                  Permitir abrir em aba externa
-                </Label>
-              </div>
-            </div>
-          )}
-
-          {tipo === 'Redação com Frase Temática' && (
-            <>
-              <div>
-                <Label htmlFor="temaSearch">Buscar Tema *</Label>
-                <div className="relative">
-                  <Input
-                    id="temaSearch"
-                    value={temaSearch}
-                    onChange={(e) => setTemaSearch(e.target.value)}
-                    placeholder="Buscar tema pela frase temática..."
-                    className="mb-2"
-                  />
-                  {temaSearch && (
-                    <div className="absolute z-10 w-full bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                      {temas
-                        .filter(tema => 
-                          tema.frase_tematica.toLowerCase().includes(temaSearch.toLowerCase())
-                        )
-                        .slice(0, 5)
-                        .map((tema) => (
-                          <div
-                            key={tema.id}
-                            className="p-2 hover:bg-accent cursor-pointer border-b last:border-b-0"
-                            onClick={() => {
-                              setTemaId(tema.id);
-                              setTemaSearch(tema.frase_tematica);
-                            }}
-                          >
-                            <div className="font-medium text-sm">{tema.frase_tematica}</div>
-                            <div className="text-xs text-muted-foreground">{tema.eixo_tematico}</div>
-                          </div>
-                        ))}
-                    </div>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+          {/* Header with chips and action buttons */}
+          <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-200">
+            <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                    activeSection === section.id
+                      ? "text-white bg-[#662F96]"
+                      : "text-white bg-[#B175FF] hover:bg-[#662F96]"
                   )}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2 flex-shrink-0">
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="bg-[#3F0077] text-white hover:bg-[#662F96]"
+              >
+                {loading ? 'Salvando...' : (mode === 'edit' ? 'Salvar Alterações' : 'Criar Exercício')}
+              </Button>
+            </div>
+          </div>
+
+          {/* Content area */}
+          <div className="p-5">
+            {/* Show default section if no section is active */}
+            {!activeSection && (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Selecione uma seção acima para começar a editar.</p>
+              </div>
+            )}
+
+            {/* Título e Tipo Section */}
+            {activeSection === 'titulo' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                <div>
+                  <Input
+                    value={titulo}
+                    onChange={(e) => setTitulo(e.target.value)}
+                    className="text-sm"
+                    spellCheck={true}
+                  />
                 </div>
-                {temaId && (
-                  <div className="text-sm text-green-600 mb-2">
-                    Tema selecionado: {temas.find(t => t.id === temaId)?.frase_tematica}
+                <div>
+                  <Select value={tipo} onValueChange={setTipo}>
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposDisponiveis.map((tipoItem) => (
+                        <SelectItem key={tipoItem} value={tipoItem}>
+                          {tipoItem}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {tipo === 'Google Forms' && (
+                  <div className="space-y-4">
+                    <Input
+                      value={linkForms}
+                      onChange={(e) => setLinkForms(e.target.value)}
+                      placeholder="https://forms.google.com/..."
+                      type="url"
+                      className="text-sm"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="abrirAbaExterna"
+                        checked={abrirAbaExterna}
+                        onCheckedChange={(checked) => setAbrirAbaExterna(checked as boolean)}
+                      />
+                      <Label htmlFor="abrirAbaExterna" className="text-sm">
+                        Permitir abrir em aba externa
+                      </Label>
+                    </div>
+                  </div>
+                )}
+
+                {tipo === 'Redação com Frase Temática' && (
+                  <div className="relative">
+                    <Input
+                      value={temaSearch}
+                      onChange={(e) => setTemaSearch(e.target.value)}
+                      placeholder="Buscar tema pela frase temática..."
+                      className="text-sm mb-2"
+                    />
+                    {temaSearch && (
+                      <div className="absolute z-10 w-full bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {temas
+                          .filter(tema =>
+                            tema.frase_tematica.toLowerCase().includes(temaSearch.toLowerCase())
+                          )
+                          .slice(0, 5)
+                          .map((tema) => (
+                            <div
+                              key={tema.id}
+                              className="p-2 hover:bg-accent cursor-pointer border-b last:border-b-0"
+                              onClick={() => {
+                                setTemaId(tema.id);
+                                setTemaSearch(tema.frase_tematica);
+                              }}
+                            >
+                              <div className="font-medium text-sm">{tema.frase_tematica}</div>
+                              <div className="text-xs text-muted-foreground">{tema.eixo_tematico}</div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                    {temaId && (
+                      <div className="text-sm text-green-600">
+                        Tema selecionado: {temas.find(t => t.id === temaId)?.frase_tematica}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            </>
-          )}
+            )}
 
-          {tipo === 'Google Forms' && (
-            <div>
-              <Label htmlFor="imagemCapaUrl">URL da Imagem (Campo Legado - opcional)</Label>
-              <Input
-                id="imagemCapaUrl"
-                value={imagemCapaUrl}
-                onChange={(e) => setImagemCapaUrl(e.target.value)}
-                placeholder="https://..."
-                type="url"
-              />
-              <small className="text-muted-foreground">
-                Mantenha para compatibilidade. Use a seção "Capa do Exercício" acima para novas capas.
-              </small>
-            </div>
-          )}
+            {/* Período de Atividade Section */}
+            {activeSection === 'periodo' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Input
+                        type="date"
+                        value={dataInicio}
+                        onChange={(e) => setDataInicio(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="time"
+                        value={horaInicio}
+                        onChange={(e) => setHoraInicio(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
 
-          <div>
-            <Label>Turmas Autorizadas</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-              {turmasDisponiveis.map((turma) => (
-                <div key={turma} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={turma}
-                    checked={turmasAutorizadas.includes(turma)}
-                    onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Input
+                        type="date"
+                        value={dataFim}
+                        onChange={(e) => setDataFim(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="time"
+                        value={horaFim}
+                        onChange={(e) => setHoraFim(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {!validateExercisePeriod(dataInicio, horaInicio, dataFim, horaFim) && dataInicio && horaInicio && dataFim && horaFim && (
+                    <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                      ⚠️ O período de término deve ser posterior ao início
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Capa Section */}
+            {activeSection === 'capa' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                <div>
+                  <Input
+                    value={coverUrl}
+                    onChange={(e) => setCoverUrl(e.target.value)}
+                    type="url"
+                    className="text-sm"
                   />
-                  <Label htmlFor={turma} className="text-sm">
-                    {turma}
+                </div>
+
+                <div>
+                  <Input
+                    type="file"
+                    onChange={handleCoverUpload}
+                    accept="image/*"
+                    className="text-sm"
+                  />
+                </div>
+
+                <div className="cover-preview">
+                  <img
+                    src={getPreviewCover()}
+                    alt="Preview da capa"
+                    className="w-32 h-24 object-cover rounded border"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholders/aula-cover.png';
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Configurações Section */}
+            {activeSection === 'configuracoes' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="permiteVisitante"
+                    checked={permiteVisitante}
+                    onCheckedChange={(checked) => setPermiteVisitante(checked as boolean)}
+                  />
+                  <Label htmlFor="permiteVisitante" className="text-sm">
+                    Permite visitante
                   </Label>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="permiteVisitante"
-              checked={permiteVisitante}
-              onCheckedChange={(checked) => setPermiteVisitante(checked as boolean)}
-            />
-            <Label htmlFor="permiteVisitante">
-              Permite visitante
-            </Label>
-          </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="ativo"
+                    checked={ativo}
+                    onCheckedChange={(checked) => setAtivo(checked as boolean)}
+                  />
+                  <Label htmlFor="ativo" className="text-sm">
+                    Ativo
+                  </Label>
+                </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="ativo"
-              checked={ativo}
-              onCheckedChange={(checked) => setAtivo(checked as boolean)}
-            />
-            <Label htmlFor="ativo">
-              Ativo
-            </Label>
-          </div>
+                {tipo === 'Google Forms' && (
+                  <div>
+                    <Input
+                      value={imagemCapaUrl}
+                      onChange={(e) => setImagemCapaUrl(e.target.value)}
+                      type="url"
+                      className="text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading 
-              ? (exercicioEditando ? "Salvando..." : "Criando...")
-              : (exercicioEditando ? "Salvar Alterações" : "Criar Exercício")
-            }
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            {/* Turmas Autorizadas Section */}
+            {activeSection === 'turmas' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {turmasDisponiveis.map((turma) => (
+                    <div key={turma} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={turma}
+                        checked={turmasAutorizadas.includes(turma)}
+                        onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
+                      />
+                      <Label htmlFor={turma} className="text-sm">
+                        {turma}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Loading indicator */}
+            {loading && (
+              <div className="text-center space-y-2 p-4">
+                <p className="text-sm text-gray-600" aria-live="polite">
+                  Salvando exercício...
+                </p>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-[#3F0077] h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
-};
+}; 

@@ -76,11 +76,11 @@ export function ExerciseCard({
 
     switch (availability.status) {
       case 'agendado':
-        return <Badge className="bg-yellow-100 text-yellow-700 text-xs font-medium">Pendente</Badge>;
+        return <Badge className="bg-orange-100 text-orange-700 text-xs font-medium">Indisponível</Badge>;
       case 'disponivel':
         return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Disponível</Badge>;
       case 'encerrado':
-        return <Badge className="bg-purple-100 text-purple-700 text-xs font-medium">Concluído</Badge>;
+        return <Badge className="bg-red-100 text-red-700 text-xs font-medium">Indisponível</Badge>;
       default:
         return null;
     }
@@ -118,23 +118,39 @@ export function ExerciseCard({
               <h2 className="text-lg font-semibold text-gray-900 leading-tight mb-1">
                 {exercise.titulo}
               </h2>
-              <p className="text-sm text-gray-500">
-                {exercise.tipo}
-              </p>
+              {isAdmin && (
+                <p className="text-sm text-gray-500">
+                  {exercise.tipo}
+                </p>
+              )}
             </div>
             {getStatusBadge()}
           </div>
 
           {/* Informações extras */}
           <div className="text-sm text-gray-600 space-y-1">
-            <p className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Tempo estimado: 15 min
-            </p>
+            {availability.status === 'disponivel' && (
+              <p className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Disponível até: {exercise.data_fim && exercise.hora_fim ?
+                  new Date(`${exercise.data_fim}T${exercise.hora_fim}`).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }).replace(',', ',') : 'Sem prazo definido'}
+              </p>
+            )}
             {availability.status === 'encerrado' && (
               <p className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Concluído em: {exercise.data_fim ? new Date(`${exercise.data_fim}T${exercise.hora_fim || '23:59'}`).toLocaleDateString('pt-BR') : 'Data não disponível'}
+                Encerrado em: {exercise.data_fim && exercise.hora_fim ?
+                  new Date(`${exercise.data_fim}T${exercise.hora_fim}`).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }).replace(',', ',') : 'Data não disponível'}
               </p>
             )}
           </div>

@@ -374,12 +374,28 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                   Participar do Simulado
                 </Button>
               )}
-              {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO' && (
+              {perfil === 'aluno' && isAtivo && simulado.hasSubmitted && (
+                <Button
+                  onClick={handleVerRedacao}
+                  className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Ver Redação
+                </Button>
+              )}
+              {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO' && simulado.notaMedia !== null && (
                 <Button
                   onClick={handleVerRedacao}
                   className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   Ver Minha Redação
+                </Button>
+              )}
+              {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO' && simulado.notaMedia === null && (
+                <Button
+                  onClick={handleVerRedacao}
+                  className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Ver Redação
                 </Button>
               )}
               {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'AUSENTE' && (

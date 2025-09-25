@@ -1,16 +1,15 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TurmaSelector } from '@/components/TurmaSelector';
+import { cn } from '@/lib/utils';
 
 interface SimuladoEditando {
   id: string;
@@ -26,16 +25,19 @@ interface SimuladoEditando {
 }
 
 interface SimuladoFormProps {
+  mode?: 'create' | 'edit';
   simuladoEditando?: SimuladoEditando | null;
   onSuccess?: () => void;
   onCancelEdit?: () => void;
 }
 
-export const SimuladoForm = ({ simuladoEditando, onSuccess, onCancelEdit }: SimuladoFormProps) => {
+export const SimuladoForm = ({ mode = 'create', simuladoEditando, onSuccess, onCancelEdit }: SimuladoFormProps) => {
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(mode === 'edit');
+  const [activeSection, setActiveSection] = useState<string>('titulo');
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [formData, setFormData] = useState({
     titulo: '',
     tema_id: '',
@@ -50,24 +52,6 @@ export const SimuladoForm = ({ simuladoEditando, onSuccess, onCancelEdit }: Simu
 
   const [buscaTema, setBuscaTema] = useState('');
 
-  // Preencher formulário ao editar
-  useEffect(() => {
-    if (simuladoEditando) {
-      setFormData({
-        titulo: simuladoEditando.titulo || '',
-        tema_id: simuladoEditando.tema_id || '',
-        data_inicio: simuladoEditando.data_inicio || '',
-        hora_inicio: simuladoEditando.hora_inicio || '',
-        data_fim: simuladoEditando.data_fim || '',
-        hora_fim: simuladoEditando.hora_fim || '',
-        turmas_autorizadas: simuladoEditando.turmas_autorizadas || [],
-        permite_visitante: simuladoEditando.permite_visitante || false,
-        ativo: simuladoEditando.ativo !== false
-      });
-    }
-  }, [simuladoEditando]);
-
-
   // Buscar temas disponíveis (incluindo rascunhos para uso em simulados)
   const { data: temas, isLoading: loadingTemas } = useQuery({
     queryKey: ['admin-temas-simulado', buscaTema],
@@ -80,33 +64,76 @@ export const SimuladoForm = ({ simuladoEditando, onSuccess, onCancelEdit }: Simu
       if (buscaTema) {
         query = query.ilike('frase_tematica', `%${buscaTema}%`);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
       return data || [];
     }
   });
 
+  // Preencher formulário ao editar
+  useEffect(() => {
+    if (mode === 'edit' && simuladoEditando) {
+      const loadSimuladoData = async () => {
+        try {
+          setFormData({
+            titulo: simuladoEditando.titulo || '',
+            tema_id: simuladoEditando.tema_id || '',
+            data_inicio: simuladoEditando.data_inicio || '',
+            hora_inicio: simuladoEditando.hora_inicio || '',
+            data_fim: simuladoEditando.data_fim || '',
+            hora_fim: simuladoEditando.hora_fim || '',
+            turmas_autorizadas: simuladoEditando.turmas_autorizadas || [],
+            permite_visitante: simuladoEditando.permite_visitante || false,
+            ativo: simuladoEditando.ativo !== false
+          });
+
+          // Se tem tema_id, buscar o tema para mostrar na busca
+          if (simuladoEditando.tema_id && temas && temas.length > 0) {
+            const tema = temas.find(t => t.id === simuladoEditando.tema_id);
+            if (tema) {
+              setBuscaTema(tema.frase_tematica);
+            }
+          }
+        } catch (error: any) {
+          toast({
+            title: "❌ Erro",
+            description: "Erro ao carregar dados do simulado: " + error.message,
+            variant: "destructive",
+          });
+        } finally {
+          setLoadingData(false);
+        }
+      };
+
+      loadSimuladoData();
+    }
+  }, [simuladoEditando, temas, mode, toast]);
+
   const temaEscolhido = temas?.find(tema => tema.id === formData.tema_id);
 
-  const handleTurmasChange = (turmas: string[]) => {
-    setFormData(prev => ({
-      ...prev,
-      turmas_autorizadas: turmas
-    }));
+  const turmasDisponiveis = [
+    'Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'
+  ];
+
+  const handleTurmaChange = (turma: string, checked: boolean) => {
+    if (checked) {
+      setFormData(prev => ({
+        ...prev,
+        turmas_autorizadas: [...prev.turmas_autorizadas, turma]
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        turmas_autorizadas: prev.turmas_autorizadas.filter(t => t !== turma)
+      }));
+    }
   };
 
-  const handlePermiteVisitanteChange = (permite: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      permite_visitante: permite
-    }));
-  };
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
     if (!formData.tema_id) {
       toast({
         title: "Erro",
@@ -129,7 +156,7 @@ export const SimuladoForm = ({ simuladoEditando, onSuccess, onCancelEdit }: Simu
         hora_fim: formData.hora_fim,
         turmas_autorizadas: formData.turmas_autorizadas,
         permite_visitante: formData.permite_visitante,
-        ativo: formData.ativo
+        ativo: true // Todos os simulados são criados como ativos
       };
 
       let error;
@@ -175,6 +202,7 @@ export const SimuladoForm = ({ simuladoEditando, onSuccess, onCancelEdit }: Simu
           permite_visitante: false,
           ativo: true
         });
+        setBuscaTema('');
       }
 
     } catch (error: any) {
@@ -189,146 +217,235 @@ export const SimuladoForm = ({ simuladoEditando, onSuccess, onCancelEdit }: Simu
     }
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          {simuladoEditando ? "Editar Simulado" : "Criar Novo Simulado"}
-          {simuladoEditando && onCancelEdit && (
-            <Button variant="outline" onClick={onCancelEdit} size="sm">
-              Cancelar
-            </Button>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <Label htmlFor="titulo">Título do Simulado (opcional)</Label>
-        <Input
-          id="titulo"
-          value={formData.titulo}
-          onChange={(e) => setFormData({...formData, titulo: e.target.value})}
-          placeholder="Ex: Simulado ENEM - Novembro"
-        />
-        <p className="text-xs text-gray-500 mt-1">Se não preenchido, será usado "Simulado" como padrão</p>
-      </div>
+  const sections = [
+    { id: 'titulo', label: 'Título' },
+    { id: 'tema', label: 'Seleção de Tema' },
+    { id: 'periodo', label: 'Período' },
+    { id: 'configuracao', label: 'Configuração' },
+    { id: 'turmas', label: 'Turmas' },
+  ];
 
-      <div>
-        <Label htmlFor="tema">Selecionar Tema *</Label>
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Buscar tema pela frase temática..."
-              value={buscaTema}
-              onChange={(e) => setBuscaTema(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="button" variant="outline" size="icon">
-              <Search className="w-4 h-4" />
+  const toggleSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+  };
+
+  if (loadingData) {
+    return <div className="text-center py-4">Carregando dados...</div>;
+  }
+
+  return (
+    <div className="min-h-screen" style={{ background: '#f7f7fb' }}>
+      <div className="max-w-6xl mx-auto p-5">
+        {/* Back button for edit mode */}
+        {mode === 'edit' && onCancelEdit && (
+          <div className="mb-4">
+            <Button variant="outline" onClick={onCancelEdit} className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar
             </Button>
           </div>
-          
-          {loadingTemas ? (
-            <div className="text-sm text-gray-500">Carregando temas...</div>
-          ) : (
-            <Select value={formData.tema_id} onValueChange={(value) => setFormData({...formData, tema_id: value})}>
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha um tema" />
-              </SelectTrigger>
-              <SelectContent>
-                {temas?.map((tema) => (
-                  <SelectItem key={tema.id} value={tema.id}>
-                    <div className="flex items-center gap-2">
-                      <span className="truncate">{tema.frase_tematica}</span>
-                      <Badge variant={tema.status === 'rascunho' ? 'secondary' : 'default'} className="text-xs">
-                        {tema.status === 'rascunho' ? 'Rascunho' : 'Publicado'}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+        )}
 
-          {temaEscolhido && (
-            <div className="p-4 bg-gray-50 rounded-lg border">
-              <h4 className="font-medium text-sm mb-2">Tema Selecionado:</h4>
-              <p className="text-sm text-gray-700 mb-2">{temaEscolhido.frase_tematica}</p>
-              <div className="flex items-center gap-2">
-                <Badge variant={temaEscolhido.status === 'rascunho' ? 'secondary' : 'default'}>
-                  {temaEscolhido.status === 'rascunho' ? 'Rascunho' : 'Publicado'}
-                </Badge>
-                <span className="text-xs text-gray-500">
-                  Eixo: {temaEscolhido.eixo_tematico}
-                </span>
-              </div>
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+          {/* Header with chips and action buttons */}
+          <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-200">
+            <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                    activeSection === section.id
+                      ? "text-white bg-[#662F96]"
+                      : "text-white bg-[#B175FF] hover:bg-[#662F96]"
+                  )}
+                >
+                  {section.label}
+                </button>
+              ))}
             </div>
-          )}
+
+            <div className="flex gap-2 flex-shrink-0">
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="bg-[#3F0077] text-white hover:bg-[#662F96]"
+              >
+                {loading ? 'Salvando...' : (mode === 'edit' ? 'Salvar Alterações' : 'Criar Simulado')}
+              </Button>
+            </div>
+          </div>
+
+          {/* Content area */}
+          <div className="p-5">
+            {/* Show default section if no section is active */}
+            {!activeSection && (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Selecione uma seção acima para começar a editar.</p>
+              </div>
+            )}
+
+            {/* Título Section */}
+            {activeSection === 'titulo' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <Input
+                  value={formData.titulo}
+                  onChange={(e) => setFormData({...formData, titulo: e.target.value})}
+                  className="text-sm"
+                  spellCheck={true}
+                />
+              </div>
+            )}
+
+            {/* Seleção de Tema Section */}
+            {activeSection === 'tema' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                <div>
+                  <Input
+                    value={buscaTema}
+                    onChange={(e) => setBuscaTema(e.target.value)}
+                    className="text-sm"
+                    spellCheck={true}
+                  />
+                </div>
+
+                {loadingTemas ? (
+                  <div className="text-sm text-gray-500">Carregando temas...</div>
+                ) : (
+                  <Select value={formData.tema_id} onValueChange={(value) => setFormData({...formData, tema_id: value})}>
+                    <SelectTrigger className="text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {temas?.map((tema) => (
+                        <SelectItem key={tema.id} value={tema.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="truncate">{tema.frase_tematica}</span>
+                            <Badge variant={tema.status === 'rascunho' ? 'secondary' : 'default'} className="text-xs">
+                              {tema.status === 'rascunho' ? 'Rascunho' : 'Publicado'}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {temaEscolhido && (
+                  <div className="p-4 bg-gray-50 rounded-lg border">
+                    <h4 className="font-medium text-sm mb-2">Tema Selecionado:</h4>
+                    <p className="text-sm text-gray-700 mb-2">{temaEscolhido.frase_tematica}</p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={temaEscolhido.status === 'rascunho' ? 'secondary' : 'default'}>
+                        {temaEscolhido.status === 'rascunho' ? 'Rascunho' : 'Publicado'}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        Eixo: {temaEscolhido.eixo_tematico}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Período Section */}
+            {activeSection === 'periodo' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Input
+                        type="date"
+                        value={formData.data_inicio}
+                        onChange={(e) => setFormData({...formData, data_inicio: e.target.value})}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="time"
+                        value={formData.hora_inicio}
+                        onChange={(e) => setFormData({...formData, hora_inicio: e.target.value})}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Input
+                        type="date"
+                        value={formData.data_fim}
+                        onChange={(e) => setFormData({...formData, data_fim: e.target.value})}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="time"
+                        value={formData.hora_fim}
+                        onChange={(e) => setFormData({...formData, hora_fim: e.target.value})}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Configuração Section */}
+            {activeSection === 'configuracao' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="permiteVisitante"
+                    checked={formData.permite_visitante}
+                    onCheckedChange={(checked) => setFormData(prev => ({...prev, permite_visitante: checked as boolean}))}
+                  />
+                  <Label htmlFor="permiteVisitante" className="text-sm">
+                    Permite visitante
+                  </Label>
+                </div>
+              </div>
+            )}
+
+            {/* Turmas Section */}
+            {activeSection === 'turmas' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {turmasDisponiveis.map((turma) => (
+                    <div key={turma} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={turma}
+                        checked={formData.turmas_autorizadas.includes(turma)}
+                        onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
+                      />
+                      <Label htmlFor={turma} className="text-sm">
+                        {turma}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Loading indicator */}
+            {loading && (
+              <div className="text-center space-y-2 p-4">
+                <p className="text-sm text-gray-600" aria-live="polite">
+                  Salvando simulado...
+                </p>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-[#3F0077] h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="data_inicio">Data de Início *</Label>
-          <Input
-            id="data_inicio"
-            type="date"
-            value={formData.data_inicio}
-            onChange={(e) => setFormData({...formData, data_inicio: e.target.value})}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="hora_inicio">Hora de Início *</Label>
-          <Input
-            id="hora_inicio"
-            type="time"
-            value={formData.hora_inicio}
-            onChange={(e) => setFormData({...formData, hora_inicio: e.target.value})}
-            required
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="data_fim">Data de Término *</Label>
-          <Input
-            id="data_fim"
-            type="date"
-            value={formData.data_fim}
-            onChange={(e) => setFormData({...formData, data_fim: e.target.value})}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="hora_fim">Hora de Término *</Label>
-          <Input
-            id="hora_fim"
-            type="time"
-            value={formData.hora_fim}
-            onChange={(e) => setFormData({...formData, hora_fim: e.target.value})}
-            required
-          />
-        </div>
-      </div>
-
-      <TurmaSelector
-        selectedTurmas={formData.turmas_autorizadas}
-        onTurmasChange={handleTurmasChange}
-        permiteeVisitante={formData.permite_visitante}
-        onPermiteVisitanteChange={handlePermiteVisitanteChange}
-      />
-
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading 
-              ? (simuladoEditando ? 'Salvando...' : 'Criando simulado...')
-              : (simuladoEditando ? 'Salvar Alterações' : 'Criar Simulado')
-            }
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 };

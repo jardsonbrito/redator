@@ -152,7 +152,8 @@ export const SimpleExercicioList = () => {
   if (showForm) {
     return (
       <div className="space-y-4">
-        <ExercicioForm 
+        <ExercicioForm
+          mode={exercicioEditando ? "edit" : "create"}
           exercicioEditando={exercicioEditando}
           onSuccess={handleSuccess}
           onCancelEdit={handleCancelEdit}

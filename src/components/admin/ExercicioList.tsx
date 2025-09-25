@@ -147,6 +147,7 @@ export const ExercicioList = () => {
       {/* Formulário de Edição */}
       {editingExercise && (
         <ExercicioForm
+          mode="edit"
           exercicioEditando={editingExercise}
           onSuccess={() => {
             setEditingExercise(null);

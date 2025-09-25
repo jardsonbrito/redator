@@ -55,9 +55,10 @@ export const ProfessorExercicios = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {showForm ? (
-            <ExercicioForm 
-              onSuccess={handleSuccess} 
-              onCancelEdit={() => setShowForm(false)} 
+            <ExercicioForm
+              mode="create"
+              onSuccess={handleSuccess}
+              onCancelEdit={() => setShowForm(false)}
             />
           ) : (
             /* Empty State */

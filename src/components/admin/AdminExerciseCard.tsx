@@ -77,12 +77,13 @@ export const AdminExerciseCard = ({
     const availability = getExerciseAvailability(exercicio);
     switch (availability.status) {
       case 'agendado':
-        return <Badge className="bg-blue-100 text-blue-700 text-xs font-medium">Agendado</Badge>;
+        return <Badge className="bg-orange-100 text-orange-700 text-xs font-medium">Indisponível</Badge>;
       case 'disponivel':
+        return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Disponível</Badge>;
       case 'encerrado':
-        return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Publicado</Badge>;
+        return <Badge className="bg-red-100 text-red-700 text-xs font-medium">Indisponível</Badge>;
       default:
-        return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Publicado</Badge>;
+        return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Disponível</Badge>;
     }
   };
 
@@ -149,14 +150,26 @@ export const AdminExerciseCard = ({
 
           {/* Informações extras */}
           <div className="text-sm text-gray-600 space-y-2">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              <span>Criado em: {formatCreationDate(exercicio.criado_em)}</span>
-            </div>
-            {exercicio.updated_at && (
+            {exercicio.data_inicio && exercicio.hora_inicio && (
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>Modificado em: {formatCreationDate(exercicio.updated_at)}</span>
+                <span>Início em: {new Date(`${exercicio.data_inicio}T${exercicio.hora_inicio}`).toLocaleDateString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }).replace(',', ',')}</span>
+              </div>
+            )}
+            {exercicio.data_fim && exercicio.hora_fim && (
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>Término em: {new Date(`${exercicio.data_fim}T${exercicio.hora_fim}`).toLocaleDateString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }).replace(',', ',')}</span>
               </div>
             )}
           </div>

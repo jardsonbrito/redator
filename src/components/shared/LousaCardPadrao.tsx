@@ -25,6 +25,13 @@ interface LousaCardData {
   status?: string;
   respostas_count?: number;
   respostas_pendentes?: number;
+  // Dados de resposta para alunos
+  resposta?: {
+    status: string;
+    nota: number | null;
+    comentario_professor: string | null;
+    submitted_at: string | null;
+  } | null;
 }
 
 interface LousaCardActions {
@@ -112,6 +119,28 @@ export const LousaCardPadrao = ({ lousa, perfil, actions }: LousaCardPadraoProps
 
   const available = isAvailable();
 
+  // Função para determinar o estado do botão para alunos
+  const getButtonState = () => {
+
+    // Se tem correção, sempre permite ver
+    if (lousa.resposta && (lousa.resposta.nota || lousa.resposta.comentario_professor)) {
+      return { text: 'Ver correção', disabled: false, color: 'bg-purple-600 hover:bg-purple-700' };
+    }
+
+    // Se tem resposta mas não tem correção
+    if (lousa.resposta && lousa.resposta.submitted_at) {
+      return { text: 'Resposta enviada', disabled: true, color: 'bg-blue-500' };
+    }
+
+    // Se não está disponível e não tem resposta
+    if (!available) {
+      return { text: 'Indisponível', disabled: true, color: 'bg-gray-500' };
+    }
+
+    // Se está disponível e não tem resposta, pode responder
+    return { text: 'Responder', disabled: false, color: 'bg-green-600 hover:bg-green-700' };
+  };
+
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl border border-gray-200 bg-white">
       {/* Capa - Always on top with 16:9 ratio */}
@@ -198,15 +227,18 @@ export const LousaCardPadrao = ({ lousa, perfil, actions }: LousaCardPadraoProps
 
           {/* Ações */}
           <div className="pt-2">
-            {perfil === 'aluno' && (
-              <Button
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-                onClick={() => actions?.onResponder?.(lousa.id)}
-                disabled={!available}
-              >
-                {available ? 'Responder' : 'Indisponível'}
-              </Button>
-            )}
+            {perfil === 'aluno' && (() => {
+              const buttonState = getButtonState();
+              return (
+                <Button
+                  className={`w-full text-white font-semibold ${buttonState.color}`}
+                  onClick={() => actions?.onResponder?.(lousa.id)}
+                  disabled={buttonState.disabled}
+                >
+                  {buttonState.text}
+                </Button>
+              );
+            })()}
 
             {(perfil === 'admin' || perfil === 'corretor') && (
               <div className="flex gap-2">

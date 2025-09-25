@@ -140,7 +140,8 @@ export default function AlunoLousaList() {
                     key={lousa.id}
                     lousa={{
                       ...lousa,
-                      ativo: lousa.ativo !== false
+                      ativo: lousa.ativo !== false,
+                      resposta: lousa.resposta
                     }}
                     perfil="aluno"
                     actions={{

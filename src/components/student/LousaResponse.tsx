@@ -447,16 +447,14 @@ export default function LousaResponse() {
               </div>
             )}
 
-            {isDisabled() && !canEdit && (
+            {isDisabled() && !canEdit && resposta?.status !== 'graded' && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {!lousa.ativo || lousa.status !== 'active' 
-                    ? 'Esta lousa não está mais disponível.' 
+                  {!lousa.ativo || lousa.status !== 'active'
+                    ? 'Esta lousa não está mais disponível.'
                     : resposta?.status === 'submitted'
                     ? 'Resposta já enviada. Aguarde a correção do professor.'
-                    : resposta?.status === 'graded'
-                    ? 'Resposta já foi corrigida.'
                     : 'Esta lousa ainda não está disponível ou já foi encerrada.'
                   }
                 </AlertDescription>

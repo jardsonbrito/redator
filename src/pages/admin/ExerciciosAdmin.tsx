@@ -14,7 +14,7 @@ export const ExerciciosAdmin = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Gerenciar Exercícios</h1>
       
-      <ExercicioForm onSuccess={handleSuccess} />
+      <ExercicioForm mode="create" onSuccess={handleSuccess} />
       <ExercicioList />
     </div>
   );
