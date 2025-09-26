@@ -96,13 +96,6 @@ export const DetailedDashboardCard = ({
           </div>
         )}
 
-        {/* Informação secundária */}
-        {secondaryInfo && (
-          <div className="text-xs text-gray-500 font-medium">
-            {secondaryInfo}
-          </div>
-        )}
-
         {/* Chips clicáveis */}
         {chips.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
@@ -138,10 +131,21 @@ export const DetailedDashboardCard = ({
           </div>
         )}
 
+        {/* Informação secundária - abaixo da linha */}
+        {secondaryInfo && (
+          <div className="border-t pt-2 mt-2">
+            <div className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded">
+              {secondaryInfo}
+            </div>
+          </div>
+        )}
+
         {/* Descrição */}
-        <p className="text-xs text-gray-500 leading-relaxed border-t pt-2 mt-2">
-          {description}
-        </p>
+        {description && (
+          <p className="text-xs text-gray-500 leading-relaxed border-t pt-2 mt-2">
+            {description}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
