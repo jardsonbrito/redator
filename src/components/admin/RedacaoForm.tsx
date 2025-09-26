@@ -100,8 +100,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
             nota_total: 1000, // Redação exemplar
-            data_envio: new Date().toISOString(),
-            published_at: new Date().toISOString()
+            data_envio: new Date().toISOString()
           }]);
 
         if (error) throw error;
