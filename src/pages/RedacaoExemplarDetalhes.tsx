@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { dicaToHTML } from "@/utils/dicaToHTML";
+import { formatRedacaoText } from "@/utils/formatRedacaoText";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 const RedacaoExemplarDetalhes = () => {
@@ -198,9 +199,12 @@ const RedacaoExemplarDetalhes = () => {
                     <div>
                       <h3 className="font-semibold text-lg text-gray-800 mb-4">Redação Exemplar</h3>
                       <div className="prose max-w-none">
-                        <div className="whitespace-pre-wrap font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-6 bg-gray-50">
-                          {redacao.conteudo || redacao.texto}
-                        </div>
+                        <div
+                          className="font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-6 bg-gray-50 text-justify hyphens-none [&_p]:indent-8 [&_p]:mb-4 [&_p:first-child]:indent-8"
+                          dangerouslySetInnerHTML={{
+                            __html: formatRedacaoText(redacao.conteudo || redacao.texto)
+                          }}
+                        />
                       </div>
                     </div>
 
