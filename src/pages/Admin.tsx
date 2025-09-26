@@ -163,6 +163,14 @@ const Admin = () => {
       const temasPublicados = temas?.filter(t => !t.scheduled_publish_at || new Date(t.scheduled_publish_at) <= hoje).length || 0;
       const temasAgendados = temas?.filter(t => t.scheduled_publish_at && new Date(t.scheduled_publish_at) > hoje).length || 0;
 
+      console.log('🔍 Debug Temas:', {
+        total: temas?.length,
+        publicados: temasPublicados,
+        agendados: temasAgendados,
+        temasComAgendamento: temas?.filter(t => t.scheduled_publish_at).length,
+        hoje: hoje.toISOString()
+      });
+
       data.temas = {
         info: `${temasPublicados} publicados`,
         badge: temasAgendados > 0 ? `${temasAgendados} agendados` : undefined

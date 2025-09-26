@@ -26,6 +26,15 @@ export const DetailedDashboardCard = ({
   onClick,
   onChipClick
 }: DetailedDashboardCardProps) => {
+
+  // Debug log for temas card
+  if (title === 'Temas') {
+    console.log('🔍 DetailedDashboardCard - Temas:', {
+      primaryInfo,
+      secondaryInfo,
+      hasSecondaryInfo: !!secondaryInfo
+    });
+  }
   const variantClasses = {
     default: 'border-gray-200 bg-white',
     primary: 'border-blue-200 bg-blue-50',
