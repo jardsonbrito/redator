@@ -9,14 +9,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { AlunoCSVImport } from "./AlunoCSVImport";
 import { AlunoSelfServiceModern } from "./AlunoSelfServiceModern";
+import { AlunoList } from "./AlunoList";
 
 interface AlunoFormModernProps {
   onSuccess: () => void;
   alunoEditando?: any;
   onCancelEdit?: () => void;
+  // Props para a lista
+  refresh?: boolean;
+  onEdit?: (aluno: any) => void;
 }
 
-export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormModernProps) => {
+export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refresh, onEdit }: AlunoFormModernProps) => {
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('cm');
   const { toast } = useToast();
@@ -262,7 +266,8 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit }: Alun
   const sections = [
     { id: 'cm', label: 'CM' },
     { id: 'importar', label: 'Importar' },
-    { id: 'autoatendimento', label: 'Autoatendimento' }
+    { id: 'autoatendimento', label: 'Autoatendimento' },
+    { id: 'lista', label: 'Lista' }
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -370,6 +375,16 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit }: Alun
             {activeSection === 'autoatendimento' && (
               <div>
                 <AlunoSelfServiceModern onSuccess={onSuccess} />
+              </div>
+            )}
+
+            {/* Lista Section */}
+            {activeSection === 'lista' && (
+              <div>
+                <AlunoList
+                  refresh={refresh || false}
+                  onEdit={onEdit || (() => {})}
+                />
               </div>
             )}
           </div>

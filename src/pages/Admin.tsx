@@ -73,7 +73,6 @@ import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
 // Import aluno components
 import { AlunoFormModern } from "@/components/admin/AlunoFormModern";
-import { AlunoList } from "@/components/admin/AlunoList";
 
 // Import corretor components
 import { CorretorForm } from "@/components/admin/CorretorForm";
@@ -852,17 +851,13 @@ const Admin = () => {
         };
 
         return (
-          <div className="space-y-6">
-            <AlunoFormModern
-              onSuccess={handleAlunoSuccess}
-              alunoEditando={alunoEditando}
-              onCancelEdit={handleCancelAlunoEdit}
-            />
-            <AlunoList 
-              refresh={refreshAlunos}
-              onEdit={handleEditAluno}
-            />
-          </div>
+          <AlunoFormModern
+            onSuccess={handleAlunoSuccess}
+            alunoEditando={alunoEditando}
+            onCancelEdit={handleCancelAlunoEdit}
+            refresh={refreshAlunos}
+            onEdit={handleEditAluno}
+          />
         );
 
       case "professores":
