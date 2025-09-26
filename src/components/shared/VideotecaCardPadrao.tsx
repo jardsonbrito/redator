@@ -67,15 +67,7 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
   const renderActions = () => {
     if (perfil === 'admin') {
       return (
-        <div className="flex justify-between items-center">
-          <div className="flex gap-2">
-            {video.publicado !== undefined && (
-              <Badge className={video.publicado ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
-                {video.publicado ? 'Publicado' : 'Rascunho'}
-              </Badge>
-            )}
-          </div>
-
+        <div className="flex justify-end items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -155,6 +147,12 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
                   {video.plataforma === 'youtube' ? 'YouTube' :
                    video.plataforma === 'instagram' ? 'Instagram' :
                    video.plataforma}
+                </Badge>
+              )}
+              {/* Status de publicação - apenas para admin */}
+              {perfil === 'admin' && video.publicado !== undefined && (
+                <Badge className={video.publicado ? 'bg-green-100 text-green-700 text-xs' : 'bg-gray-100 text-gray-700 text-xs'}>
+                  {video.publicado ? 'Publicado' : 'Rascunho'}
                 </Badge>
               )}
             </div>
