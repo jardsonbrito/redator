@@ -112,13 +112,24 @@ export default function ExerciseCard({
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 bg-white border border-gray-200 rounded-2xl">
       <div className="flex flex-col lg:flex-row">
         {/* Cover */}
-        <div className="w-full lg:w-56 h-36 flex-shrink-0 bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden">
+        <div className="w-full lg:w-56 h-36 flex-shrink-0 bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden relative">
           <img
             src={currentCover}
             alt={`Capa do exercício: ${title}`}
             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
             onError={() => setImageError(true)}
           />
+
+          {/* Badges na imagem */}
+          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+            {getStatusBadge()}
+            {getKindBadge()}
+            {tags.map((tag, idx) => (
+              <Badge key={idx} variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                {tag}
+              </Badge>
+            ))}
+          </div>
         </div>
 
         {/* Content */}
@@ -138,16 +149,6 @@ export default function ExerciseCard({
               )}
             </div>
 
-            {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              {getStatusBadge()}
-              {getKindBadge()}
-              {tags.map((tag, idx) => (
-                <Badge key={idx} variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
 
             {/* Period Info */}
             <div className="space-y-1 text-sm text-gray-600">

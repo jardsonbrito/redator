@@ -132,7 +132,7 @@ export const RedacaoExemplarCardPadrao = ({
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl border border-gray-200 bg-white">
       {/* Capa - Always on top with 16:9 ratio */}
-      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200">
+      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200 relative">
         <img
           src={getCoverImage()}
           alt={`Capa da redação: ${redacao.frase_tematica}`}
@@ -142,6 +142,13 @@ export const RedacaoExemplarCardPadrao = ({
           }}
           loading="lazy"
         />
+
+        {/* Badge do eixo temático na imagem */}
+        {getEixoBadge() && (
+          <div className="absolute top-2 left-2">
+            {getEixoBadge()}
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -161,11 +168,6 @@ export const RedacaoExemplarCardPadrao = ({
                   <span>Por: {getAutorName()}</span>
                 </div>
               )}
-
-              {/* Badge do eixo temático */}
-              <div className="flex flex-wrap items-center gap-2">
-                {getEixoBadge()}
-              </div>
             </div>
 
             {/* Menu três pontinhos apenas para admin */}

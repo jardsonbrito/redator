@@ -141,6 +141,24 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
                 <Play className="h-12 w-12 text-purple-400" />
               </div>
             )}
+
+            {/* Badges sobrepostas na imagem */}
+            <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+              {video.eixo_tematico && (
+                <Badge className="bg-purple-100 text-purple-700 text-xs">
+                  {video.eixo_tematico}
+                </Badge>
+              )}
+              {/* Plataforma - apenas para admin */}
+              {perfil === 'admin' && video.plataforma && (
+                <Badge className={`${getPlataformaBadgeColor(video.plataforma)} text-xs`}>
+                  {video.plataforma === 'youtube' ? 'YouTube' :
+                   video.plataforma === 'instagram' ? 'Instagram' :
+                   video.plataforma}
+                </Badge>
+              )}
+            </div>
+
             {video.is_novo && (
               <Badge className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1">
                 Novo
@@ -164,21 +182,6 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {video.eixo_tematico && (
-                <Badge className="bg-purple-100 text-purple-700">
-                  {video.eixo_tematico}
-                </Badge>
-              )}
-              {/* Plataforma - apenas para admin */}
-              {perfil === 'admin' && video.plataforma && (
-                <Badge className={getPlataformaBadgeColor(video.plataforma)}>
-                  {video.plataforma === 'youtube' ? 'YouTube' :
-                   video.plataforma === 'instagram' ? 'Instagram' :
-                   video.plataforma}
-                </Badge>
-              )}
-            </div>
 
             {renderActions()}
           </div>

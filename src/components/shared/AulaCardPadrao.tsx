@@ -160,7 +160,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl border border-gray-200 bg-white">
       {/* Capa - Always on top with 16:9 ratio */}
-      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200">
+      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200 relative">
         <img
           src={getCoverImage()}
           alt={`Capa da aula: ${aula.titulo}`}
@@ -170,6 +170,12 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
           }}
           loading="lazy"
         />
+
+        {/* Badges na imagem */}
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+          {getStatusBadge()}
+          {getAttendanceBadge()}
+        </div>
       </div>
 
       {/* Content */}
@@ -188,8 +194,6 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
               )}
             </div>
             <div className="flex items-center gap-2">
-              {getStatusBadge()}
-              {getAttendanceBadge()}
               {perfil === 'admin' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

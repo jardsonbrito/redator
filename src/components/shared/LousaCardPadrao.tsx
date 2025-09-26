@@ -144,7 +144,7 @@ export const LousaCardPadrao = ({ lousa, perfil, actions }: LousaCardPadraoProps
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl border border-gray-200 bg-white">
       {/* Capa - Always on top with 16:9 ratio */}
-      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200">
+      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200 relative">
         <img
           src={getCoverImage()}
           alt={`Capa da lousa: ${lousa.titulo}`}
@@ -154,6 +154,11 @@ export const LousaCardPadrao = ({ lousa, perfil, actions }: LousaCardPadraoProps
           }}
           loading="lazy"
         />
+
+        {/* Badge de status na imagem */}
+        <div className="absolute top-2 left-2">
+          {getStatusBadge()}
+        </div>
       </div>
 
       {/* Content */}
@@ -167,7 +172,6 @@ export const LousaCardPadrao = ({ lousa, perfil, actions }: LousaCardPadraoProps
               </h2>
             </div>
             <div className="flex items-center gap-2">
-              {getStatusBadge()}
               {(perfil === 'admin' || perfil === 'corretor') && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

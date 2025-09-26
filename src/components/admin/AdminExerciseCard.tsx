@@ -90,7 +90,7 @@ export const AdminExerciseCard = ({
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl border border-gray-200 bg-white">
       {/* Capa - Always on top with 16:9 ratio */}
-      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200">
+      <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-purple-200 relative">
         <img
           src={getCoverImage()}
           alt={`Capa do exercício: ${exercicio.titulo}`}
@@ -100,6 +100,11 @@ export const AdminExerciseCard = ({
           }}
           loading="lazy"
         />
+
+        {/* Badge de status na imagem */}
+        <div className="absolute top-2 left-2">
+          {getStatusBadge()}
+        </div>
       </div>
 
       {/* Content */}
@@ -116,7 +121,6 @@ export const AdminExerciseCard = ({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {getStatusBadge()}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
