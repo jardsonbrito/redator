@@ -7,30 +7,50 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  BookOpen,
-  FileText,
-  Video,
-  ClipboardCheck,
-  Send,
   LogOut,
-  File,
-  GraduationCap,
-  NotebookPen,
-  MessageSquare,
-  Radar,
-  Users,
-  UserCheck,
   AlertTriangle,
   Download,
   Settings,
-  ShieldCheck,
-  Presentation,
-  Gamepad2,
-  Award,
-  Calendar
+  ShieldCheck
 } from "lucide-react";
+import {
+  BookOpen as PhosphorBookOpen,
+  Star,
+  PaperPlaneTilt,
+  CalendarCheck,
+  CheckSquare,
+  Timer,
+  Chalkboard,
+  VideoCamera,
+  PlayCircle,
+  Books,
+  PushPin,
+  ChartPieSlice,
+  Trophy,
+  ChatCircle,
+  UsersThree,
+  MagnifyingGlass,
+  GearSix,
+  Export,
+  Gear,
+  Medal,
+  FileText as PhosphorFileText,
+  Video as PhosphorVideo,
+  ClipboardCheck as PhosphorClipboardCheck,
+  File as PhosphorFile,
+  GraduationCap as PhosphorGraduationCap,
+  NotebookPen as PhosphorNotebookPen,
+  MessageSquare as PhosphorMessageSquare,
+  Users as PhosphorUsers,
+  UserCheck as PhosphorUserCheck,
+  Presentation as PhosphorPresentation,
+  Gamepad2 as PhosphorGamepad2,
+  Award as PhosphorAward,
+  Calendar as PhosphorCalendar
+} from "phosphor-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { DetailedDashboardCard } from "@/components/admin/DetailedDashboardCard";
 
 // Import existing admin components with correct named imports
 import { TemaForm } from "@/components/admin/TemaForm";
@@ -100,7 +120,6 @@ import { AdminAvatar } from "@/components/admin/AdminAvatar";
 
 // Import new modern components
 import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
-import { ModernAdminCard } from "@/components/admin/ModernAdminCard";
 
 // Import TOP 5 component
 import { Top5Widget } from "@/components/shared/Top5Widget";
@@ -230,20 +249,23 @@ const Admin = () => {
         badgeVariant: aguardando > 0 ? "destructive" : undefined
       };
 
-      // Exercícios - quantos publicados e disponíveis (considerando intervalo de datas)
+      // Exercícios - quantos disponíveis (considerando intervalo de datas e status ativo)
       const { data: exercicios } = await supabase
         .from('exercicios')
-        .select('*');
+        .select('*')
+        .eq('ativo', true);
 
       const exerciciosDisponiveis = exercicios?.filter(e => {
         const dataInicio = e.data_inicio ? new Date(e.data_inicio) : null;
         const dataTermino = e.data_termino ? new Date(e.data_termino) : null;
 
-        // Disponível se não tem data_inicio ou se está no período válido
-        if (!dataInicio) return true;
-        if (dataInicio > hoje) return false;
-        if (dataTermino && dataTermino < hoje) return false;
+        // Se tem data de início, deve ter começado
+        if (dataInicio && hoje < dataInicio) return false;
 
+        // Se tem data de fim, não deve ter terminado
+        if (dataTermino && hoje > dataTermino) return false;
+
+        // Está no período válido para receber respostas
         return true;
       }).length || 0;
 
@@ -269,15 +291,31 @@ const Admin = () => {
         badge: undefined
       };
 
-      // Lousa - quantas publicadas
+      // Lousa - quantas disponíveis (considerando período de disponibilidade)
       const { data: lousas } = await supabase
         .from('lousa')
-        .select('*');
+        .select('*')
+        .eq('ativo', true);
 
-      const lousasPublicadas = lousas?.length || 0;
+      const lousasDisponiveis = lousas?.filter(l => {
+        const dataInicio = l.inicio_em ? new Date(l.inicio_em) : null;
+        const dataTermino = l.fim_em ? new Date(l.fim_em) : null;
+
+        // Deve estar ativa
+        if (!l.ativo) return false;
+
+        // Se tem data de início, deve ter começado
+        if (dataInicio && hoje < dataInicio) return false;
+
+        // Se tem data de fim, não deve ter terminado
+        if (dataTermino && hoje > dataTermino) return false;
+
+        // Está no período válido para receber respostas
+        return true;
+      }).length || 0;
 
       data.lousa = {
-        info: `${lousasPublicadas} publicadas`,
+        info: `${lousasDisponiveis} disponíveis`,
         badge: undefined
       };
 
@@ -421,7 +459,7 @@ const Admin = () => {
 
       // Cards limpos - apenas título, sem informações adicionais
       const cardsLimpos = [
-        "radar", "professores", "administradores", "exportacao", "top5"
+        "radar", "professores", "administradores", "exportacao", "top5", "configuracoes"
       ];
 
       cardsLimpos.forEach(cardId => {
@@ -430,12 +468,6 @@ const Admin = () => {
           badge: undefined
         };
       });
-
-      // Configurações mantém vazio pois tem tratamento especial no render
-      data.configuracoes = {
-        info: "",
-        badge: undefined
-      };
 
       return data;
     } catch (error) {
@@ -478,42 +510,42 @@ const Admin = () => {
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
     // Linha 1: Conteúdo Pedagógico Principal
-    { id: "temas", label: "Temas", icon: BookOpen },
-    { id: "redacoes", label: "Redações Exemplares", icon: FileText },
-    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: Send },
+    { id: "temas", label: "Temas", icon: PhosphorBookOpen, iconColor: "#FF6B35" },
+    { id: "redacoes", label: "Redações Exemplares", icon: Star, iconColor: "#FFD700" },
+    { id: "redacoes-enviadas", label: "Redações Enviadas", icon: PaperPlaneTilt, iconColor: "#4CAF50" },
 
     // Linha 2: Atividades e Avaliações
-    { id: "diario", label: "Diário Online", icon: Calendar },
-    { id: "exercicios", label: "Exercícios", icon: NotebookPen },
-    { id: "simulados", label: "Simulados", icon: ClipboardCheck },
+    { id: "diario", label: "Diário Online", icon: CalendarCheck, iconColor: "#2196F3", chips: ["Etapas", "Aulas", "Turma"] },
+    { id: "exercicios", label: "Exercícios", icon: CheckSquare, iconColor: "#9C27B0" },
+    { id: "simulados", label: "Simulados", icon: Timer, iconColor: "#FF5722" },
 
     // Linha 3: Ferramentas de Ensino
-    { id: "lousa", label: "Lousa", icon: Presentation },
-    { id: "salas-virtuais", label: "Aulas ao Vivo", icon: Video },
-    { id: "aulas", label: "Aulas Gravadas", icon: GraduationCap },
+    { id: "lousa", label: "Lousa", icon: Chalkboard, iconColor: "#795548" },
+    { id: "salas-virtuais", label: "Aulas ao Vivo", icon: VideoCamera, iconColor: "#E91E63" },
+    { id: "aulas", label: "Aulas Gravadas", icon: PlayCircle, iconColor: "#FF9800" },
 
     // Linha 4: Recursos e Comunicação
-    { id: "videos", label: "Videoteca", icon: Video },
-    { id: "biblioteca", label: "Biblioteca", icon: File },
-    { id: "avisos", label: "Mural de Avisos", icon: MessageSquare },
+    { id: "videos", label: "Videoteca", icon: VideoCamera, iconColor: "#FF4444" },
+    { id: "biblioteca", label: "Biblioteca", icon: Books, iconColor: "#607D8B" },
+    { id: "avisos", label: "Mural de Avisos", icon: PushPin, iconColor: "#FFC107" },
 
     // Linha 5: Análise e Engajamento
-    { id: "radar", label: "Radar", icon: Radar },
-    { id: "gamificacao", label: "Gamificação", icon: Gamepad2 },
-    { id: "ajuda-rapida", label: "Ajuda Rápida", icon: MessageSquare },
+    { id: "radar", label: "Radar", icon: ChartPieSlice, iconColor: "#3F51B5" },
+    { id: "gamificacao", label: "Gamificação", icon: Trophy, iconColor: "#FFD700" },
+    { id: "ajuda-rapida", label: "Ajuda Rápida", icon: ChatCircle, iconColor: "#00BCD4" },
 
     // Linha 6: Gestão de Usuários
-    { id: "alunos", label: "Alunos", icon: Users },
-    { id: "corretores", label: "Corretores", icon: UserCheck },
-    { id: "professores", label: "Professores", icon: GraduationCap },
+    { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
+    { id: "corretores", label: "Corretores", icon: MagnifyingGlass, iconColor: "#FF5722" },
+    { id: "professores", label: "Professores", icon: GearSix, iconColor: "#9C27B0" },
 
     // Linha 7: Administração Avançada
-    { id: "administradores", label: "Administradores", icon: ShieldCheck },
-    { id: "exportacao", label: "Exportação", icon: Download },
-    { id: "configuracoes", label: "Configurações", icon: Settings },
+    { id: "administradores", label: "Administradores", icon: ShieldCheck, iconColor: "#9E9E9E" },
+    { id: "exportacao", label: "Exportação", icon: Export, iconColor: "#607D8B" },
+    { id: "configuracoes", label: "Configurações", icon: Gear, iconColor: "#795548", chips: ["Conta", "Envios", "Créditos", "Assinatura"] },
 
     // Linha 8: Motivacional
-    { id: "top5", label: "TOP 5", icon: Award }
+    { id: "top5", label: "TOP 5", icon: Medal, iconColor: "#FFD700" }
   ];
 
   // Verificar parâmetros de query string para definir view inicial
@@ -545,6 +577,7 @@ const Admin = () => {
     signOut();
     navigate('/login', { replace: true });
   };
+
 
 
   const renderContent = () => {
@@ -954,167 +987,55 @@ const Admin = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
             {menuItems.map((item, index) => {
 
-              // Tratamento especial para o card de Configurações
-              if (item.id === "configuracoes") {
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setActiveView(item.id)}
-                    className={`
-                      group relative cursor-pointer rounded-2xl p-6 shadow-lg transition-all duration-300
-                      hover:shadow-xl hover:scale-105 min-h-[140px] flex flex-col justify-between
-                      bg-gradient-to-br from-secondary/70 to-secondary/50 hover:from-secondary/80 hover:to-secondary/60 text-primary
-                    `}
-                  >
-                    {/* Header com título e ícone */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <item.icon className="w-6 h-6" />
-                      <h3 className="text-xl font-bold leading-tight">{item.label}</h3>
-                    </div>
 
-                    {/* Badges clicáveis das 4 abas */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <Badge
-                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView("configuracoes");
-                          // Navegar para aba específica usando URLSearchParams
-                          const newParams = new URLSearchParams();
-                          newParams.set('view', 'configuracoes');
-                          newParams.set('subtab', 'account');
-                          navigate(`?${newParams.toString()}`);
-                        }}
-                      >
-                        Conta
-                      </Badge>
-                      <Badge
-                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView("configuracoes");
-                          const newParams = new URLSearchParams();
-                          newParams.set('view', 'configuracoes');
-                          newParams.set('subtab', 'submissions');
-                          navigate(`?${newParams.toString()}`);
-                        }}
-                      >
-                        Envios
-                      </Badge>
-                      <Badge
-                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView("configuracoes");
-                          const newParams = new URLSearchParams();
-                          newParams.set('view', 'configuracoes');
-                          newParams.set('subtab', 'credits');
-                          navigate(`?${newParams.toString()}`);
-                        }}
-                      >
-                        Créditos
-                      </Badge>
-                      <Badge
-                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView("configuracoes");
-                          const newParams = new URLSearchParams();
-                          newParams.set('view', 'configuracoes');
-                          newParams.set('subtab', 'subscriptions');
-                          navigate(`?${newParams.toString()}`);
-                        }}
-                      >
-                        Assinatura
-                      </Badge>
-                    </div>
-
-
-                    {/* Efeito de hover */}
-                    <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                  </div>
-                );
-              }
-
-              // Tratamento especial para o card de Diário Online
-              if (item.id === "diario") {
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setActiveView(item.id)}
-                    className={`
-                      group relative cursor-pointer rounded-2xl p-6 shadow-lg transition-all duration-300
-                      hover:shadow-xl hover:scale-105 min-h-[140px] flex flex-col justify-between
-                      bg-gradient-to-br from-primary/30 to-primary/20 hover:from-primary/40 hover:to-primary/30 text-primary
-                    `}
-                  >
-                    {/* Header com título e ícone */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <item.icon className="w-6 h-6" />
-                      <h3 className="text-xl font-bold leading-tight">{item.label}</h3>
-                    </div>
-
-                    {/* Badges clicáveis das 3 abas */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <Badge
-                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView("diario");
-                          const newParams = new URLSearchParams();
-                          newParams.set('view', 'diario');
-                          newParams.set('subtab', 'etapas');
-                          navigate(`?${newParams.toString()}`);
-                        }}
-                      >
-                        Etapas
-                      </Badge>
-                      <Badge
-                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView("diario");
-                          const newParams = new URLSearchParams();
-                          newParams.set('view', 'diario');
-                          newParams.set('subtab', 'aulas');
-                          navigate(`?${newParams.toString()}`);
-                        }}
-                      >
-                        Aulas
-                      </Badge>
-                      <Badge
-                        className="cursor-pointer bg-white/20 text-primary border-white/30 hover:bg-white/40 transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveView("diario");
-                          const newParams = new URLSearchParams();
-                          newParams.set('view', 'diario');
-                          newParams.set('subtab', 'turma');
-                          navigate(`?${newParams.toString()}`);
-                        }}
-                      >
-                        Turma
-                      </Badge>
-                    </div>
-
-                    {/* Efeito de hover */}
-                    <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                  </div>
-                );
-              }
 
               // Cards normais para os outros itens
               return (
-                <ModernAdminCard
+                <DetailedDashboardCard
                   key={item.id}
-                  id={item.id}
                   title={item.label}
-                  info={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "")}
-                  badge={isLoadingCards ? undefined : cardData[item.id]?.badge}
-                  badgeVariant={cardData[item.id]?.badgeVariant || "default"}
-                  icon={item.icon}
-                  onClick={setActiveView}
-                  colorIndex={index}
+                  icon={<item.icon size={32} color={item.iconColor} weight="fill" />}
+                  primaryInfo={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "")}
+                  secondaryInfo={cardData[item.id]?.badge}
+                  description=""
+                  chips={item.chips}
+                  chipColor={item.iconColor}
+                  onClick={() => setActiveView(item.id)}
+                  onChipClick={(chipIndex, chipValue) => {
+                    // Handle Diário Online chips
+                    if (item.id === "diario") {
+                      const subtabMap: Record<string, string> = {
+                        "Etapas": "etapas",
+                        "Aulas": "aulas",
+                        "Turma": "turma"
+                      };
+                      const subtab = subtabMap[chipValue];
+                      if (subtab) {
+                        setActiveView("diario");
+                        const newParams = new URLSearchParams();
+                        newParams.set('view', 'diario');
+                        newParams.set('subtab', subtab);
+                        navigate(`?${newParams.toString()}`);
+                      }
+                    }
+                    // Handle Configurações chips
+                    else if (item.id === "configuracoes") {
+                      const subtabMap: Record<string, string> = {
+                        "Conta": "account",
+                        "Envios": "submissions",
+                        "Créditos": "credits",
+                        "Assinatura": "subscriptions"
+                      };
+                      const subtab = subtabMap[chipValue];
+                      if (subtab) {
+                        setActiveView("configuracoes");
+                        const newParams = new URLSearchParams();
+                        newParams.set('view', 'configuracoes');
+                        newParams.set('subtab', subtab);
+                        navigate(`?${newParams.toString()}`);
+                      }
+                    }
+                  }}
                 />
               );
             })}

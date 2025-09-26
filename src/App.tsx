@@ -28,7 +28,6 @@ import { StudentAuthProvider } from "./hooks/useStudentAuth";
 import { NavigationProvider } from "./hooks/useNavigationContext";
 import { AdminNavigationProvider } from "./hooks/useAdminNavigationContext";
 import { Toaster } from "@/components/ui/toaster"
-import { Dashboard } from "./pages/admin/Dashboard";
 import { Avisos } from "./pages/admin/Avisos";
 import { Redacoes } from "./pages/admin/Redacoes";
 import { SimuladosAdmin } from "./pages/admin/SimuladosAdmin";
@@ -138,7 +137,6 @@ function App() {
 
                   {/* Rotas do Admin */}
                   <Route path="/admin" element={<Admin />} />
-                  <Route path="/admin/dashboard" element={<Dashboard />} />
                   <Route path="/admin/avisos" element={<Avisos />} />
                   <Route path="/admin/redacoes" element={<Redacoes />} />
                   <Route path="/admin/simulados" element={<SimuladosAdmin />} />
