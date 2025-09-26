@@ -11,7 +11,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { dicaToHTML } from "@/utils/dicaToHTML";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
-import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 const RedacaoExemplarDetalhes = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,40 +18,23 @@ const RedacaoExemplarDetalhes = () => {
   const [redacao, setRedacao] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  const { isStudentLoggedIn } = useStudentAuth();
-
   // Configurar título da página
   usePageTitle(redacao?.frase_tematica || 'Redação Exemplar');
 
-  // Verificar autenticação
-  const checkAuth = () => {
-    const adminSession = localStorage.getItem('admin_session');
-    const isAdminLoggedIn = !!adminSession;
-
-    if (!isStudentLoggedIn && !isAdminLoggedIn) {
-      navigate('/', { replace: true });
-      return false;
-    }
-    return true;
-  };
-
   useEffect(() => {
-    if (!authChecked) {
-      const authOk = checkAuth();
-      setAuthChecked(true);
-      if (!authOk) return;
-    }
-
-    if (id && authChecked) {
+    if (id) {
       fetchRedacao();
     }
-  }, [id, isStudentLoggedIn, authChecked]);
+  }, [id]);
 
   const fetchRedacao = async () => {
     try {
       setIsLoading(true);
       setError(null);
+
+      if (!id) {
+        throw new Error('ID da redação não fornecido');
+      }
 
       const { data, error } = await supabase
         .from('redacoes')
@@ -60,8 +42,16 @@ const RedacaoExemplarDetalhes = () => {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw new Error(`Erro ao buscar redação: ${error.message}`);
+      }
 
+      if (!data) {
+        throw new Error('Redação não encontrada');
+      }
+
+      console.log('Redação carregada com sucesso:', data.frase_tematica);
       setRedacao(data);
     } catch (err: any) {
       console.error('Erro ao buscar redação:', err);
@@ -73,52 +63,48 @@ const RedacaoExemplarDetalhes = () => {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
-        <TooltipProvider>
-          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-            <StudentHeader pageTitle="Carregando..." />
-            <main className="mx-auto max-w-4xl px-4 py-8">
-              <div className="space-y-6">
-                <div className="h-8 bg-muted rounded animate-pulse"></div>
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="h-6 bg-muted rounded animate-pulse"></div>
-                      <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
-                      <div className="h-32 bg-muted rounded animate-pulse"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </main>
-          </div>
-        </TooltipProvider>
-      </ProtectedRoute>
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+          <StudentHeader pageTitle="Carregando..." />
+          <main className="mx-auto max-w-4xl px-4 py-8">
+            <div className="space-y-6">
+              <div className="h-8 bg-muted rounded animate-pulse"></div>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="h-6 bg-muted rounded animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
+                    <div className="h-32 bg-muted rounded animate-pulse"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </main>
+        </div>
+      </TooltipProvider>
     );
   }
 
   if (error || !redacao) {
     return (
-      <ProtectedRoute>
-        <TooltipProvider>
-          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-            <StudentHeader pageTitle="Erro" />
-            <main className="mx-auto max-w-4xl px-4 py-8">
-              <Card>
-                <CardContent className="text-center py-12">
-                  <p className="text-red-600 mb-4">
-                    {error || "Redação não encontrada"}
-                  </p>
-                  <Button onClick={() => navigate(-1)} variant="outline">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Voltar
-                  </Button>
-                </CardContent>
-              </Card>
-            </main>
-          </div>
-        </TooltipProvider>
-      </ProtectedRoute>
+      <TooltipProvider>
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+          <StudentHeader pageTitle="Erro" />
+          <main className="mx-auto max-w-4xl px-4 py-8">
+            <Card>
+              <CardContent className="text-center py-12">
+                <p className="text-red-600 mb-4">
+                  {error || "Redação não encontrada"}
+                </p>
+                <Button onClick={() => navigate(-1)} variant="outline">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Voltar
+                </Button>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </TooltipProvider>
     );
   }
 
@@ -132,8 +118,7 @@ const RedacaoExemplarDetalhes = () => {
   };
 
   return (
-    <ProtectedRoute>
-      <TooltipProvider>
+    <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
           <StudentHeader pageTitle={redacao.frase_tematica} />
 
@@ -239,7 +224,6 @@ const RedacaoExemplarDetalhes = () => {
           </main>
         </div>
       </TooltipProvider>
-    </ProtectedRoute>
   );
 };
 
