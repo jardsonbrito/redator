@@ -160,8 +160,8 @@ const Admin = () => {
         .from('temas')
         .select('*');
 
-      const temasPublicados = temas?.filter(t => !t.data_agendamento || new Date(t.data_agendamento) <= hoje).length || 0;
-      const temasAgendados = temas?.filter(t => t.data_agendamento && new Date(t.data_agendamento) > hoje).length || 0;
+      const temasPublicados = temas?.filter(t => !t.scheduled_publish_at || new Date(t.scheduled_publish_at) <= hoje).length || 0;
+      const temasAgendados = temas?.filter(t => t.scheduled_publish_at && new Date(t.scheduled_publish_at) > hoje).length || 0;
 
       data.temas = {
         info: `${temasPublicados} publicados`,
