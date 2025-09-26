@@ -25,11 +25,6 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const adminSession = localStorage.getItem('admin_session');
     const isAdminLoggedIn = !!adminSession;
 
-    console.log('ProtectedRoute - isStudentLoggedIn:', isStudentLoggedIn);
-    console.log('ProtectedRoute - isCorretorLoggedIn:', isCorretorLoggedIn);
-    console.log('ProtectedRoute - isAdminLoggedIn:', isAdminLoggedIn);
-    console.log('ProtectedRoute - current path:', location.pathname);
-    console.log('ProtectedRoute - isLoginPage:', isLoginPage);
 
     // Se nem aluno nem corretor nem admin está logado e não está numa página de login
     if (!isStudentLoggedIn && !isCorretorLoggedIn && !isAdminLoggedIn && !isLoginPage) {

@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, Calendar } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { dicaToHTML } from "@/utils/dicaToHTML";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 
 const RedacaoExemplarDetalhes = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,15 +19,35 @@ const RedacaoExemplarDetalhes = () => {
   const [redacao, setRedacao] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const { isStudentLoggedIn } = useStudentAuth();
 
   // Configurar título da página
   usePageTitle(redacao?.frase_tematica || 'Redação Exemplar');
 
+  // Verificar autenticação
+  const checkAuth = () => {
+    const adminSession = localStorage.getItem('admin_session');
+    const isAdminLoggedIn = !!adminSession;
+
+    if (!isStudentLoggedIn && !isAdminLoggedIn) {
+      navigate('/', { replace: true });
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
-    if (id) {
+    if (!authChecked) {
+      const authOk = checkAuth();
+      setAuthChecked(true);
+      if (!authOk) return;
+    }
+
+    if (id && authChecked) {
       fetchRedacao();
     }
-  }, [id]);
+  }, [id, isStudentLoggedIn, authChecked]);
 
   const fetchRedacao = async () => {
     try {

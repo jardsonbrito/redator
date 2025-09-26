@@ -16,31 +16,21 @@ export const ProtectedStudentOrAdminRoute = ({ children }: ProtectedStudentOrAdm
   const isAdminLoggedIn = () => {
     try {
       const adminSession = localStorage.getItem('admin_session');
-      console.log('ProtectedStudentOrAdminRoute - Admin session check:', adminSession);
       return !!adminSession;
     } catch {
-      console.log('ProtectedStudentOrAdminRoute - Error checking admin session');
       return false;
     }
   };
 
   useEffect(() => {
-    const adminLoggedIn = isAdminLoggedIn();
-    console.log('ProtectedStudentOrAdminRoute - Student logged in:', isStudentLoggedIn);
-    console.log('ProtectedStudentOrAdminRoute - Admin logged in:', adminLoggedIn);
-    console.log('ProtectedStudentOrAdminRoute - Current path:', location.pathname);
-
     // Se nem aluno nem admin está logado, redirecionar para login
-    if (!isStudentLoggedIn && !adminLoggedIn) {
-      console.log('ProtectedStudentOrAdminRoute - Redirecionando para login - nem aluno nem admin logado');
+    if (!isStudentLoggedIn && !isAdminLoggedIn()) {
       navigate('/', { replace: true });
     }
   }, [isStudentLoggedIn, navigate, location.pathname]);
 
   // Se não está logado como aluno nem admin, não renderizar
-  const adminLoggedIn = isAdminLoggedIn();
-  if (!isStudentLoggedIn && !adminLoggedIn) {
-    console.log('ProtectedStudentOrAdminRoute - Não renderizando - nem aluno nem admin logado');
+  if (!isStudentLoggedIn && !isAdminLoggedIn()) {
     return null;
   }
 
