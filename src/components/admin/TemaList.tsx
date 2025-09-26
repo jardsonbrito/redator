@@ -106,20 +106,21 @@ export const TemaList = () => {
       }
       console.log('✅ Usuário autenticado:', user.email);
 
-      // Verificar se é admin com query corrigida
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('id', user.id)
+      // Verificar se é admin usando a tabela admin_users
+      const { data: adminUser, error: adminError } = await supabase
+        .from('admin_users')
+        .select('ativo')
+        .eq('email', user.email?.toLowerCase())
+        .eq('ativo', true)
         .single();
 
-      if (profileError) {
-        console.error('❌ Erro ao verificar perfil:', profileError);
-        throw new Error('Erro ao verificar permissões do usuário');
-      }
-
-      if (!profile || profile.user_type !== 'admin') {
-        throw new Error('Usuário não tem permissões de administrador');
+      if (adminError || !adminUser) {
+        console.error('❌ Erro ao verificar permissões admin:', adminError);
+        // Fallback para emails hardcoded (compatibilidade)
+        const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
+        if (!adminEmails.includes(user.email?.toLowerCase() || '')) {
+          throw new Error('Usuário não tem permissões de administrador');
+        }
       }
       console.log('✅ Usuário confirmado como admin');
 
