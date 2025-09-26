@@ -216,15 +216,6 @@ export const RedacaoExemplarCardPadrao = ({
             </div>
           )}
 
-          {/* Status de publicação imediata (só para admin, quando não agendada) */}
-          {perfil === 'admin' && !isScheduled() && !redacao.data_agendamento && (
-            <div className="bg-green-50 border border-green-200 rounded-md p-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-green-800">✅ Publicada</span>
-              </div>
-            </div>
-          )}
 
           {/* Ações */}
           <div className="pt-2">
