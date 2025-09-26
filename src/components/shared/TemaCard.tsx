@@ -141,14 +141,9 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
 
       {/* Conteúdo */}
       <div className="p-4 flex-1 flex flex-col">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 line-clamp-2 mb-2 leading-tight">
+        <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-3 mb-2 leading-tight">
           {tema.frase_tematica}
         </h3>
-        {perfil === 'admin' && (
-          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-            Desenvolva uma redação dissertativo-argumentativa sobre este tema...
-          </p>
-        )}
         <div className="flex-1"></div>
       </div>
 
