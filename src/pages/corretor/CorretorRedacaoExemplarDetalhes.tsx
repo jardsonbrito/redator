@@ -114,8 +114,22 @@ const CorretorRedacaoExemplarDetalhes = () => {
                 {/* Autor */}
                 {redacao.autor && (
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span>Por: {redacao.autor}</span>
+                    {redacao.foto_autor ? (
+                      <img
+                        src={redacao.foto_autor}
+                        alt={redacao.autor}
+                        className="w-10 h-10 rounded-full border border-gray-200 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                        <User className="h-5 w-5 text-white" />
+                      </div>
+                    )}
+                    <span>Por: <strong>{redacao.autor}</strong></span>
                   </div>
                 )}
 

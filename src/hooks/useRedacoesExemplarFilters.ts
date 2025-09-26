@@ -15,6 +15,7 @@ export interface RedacaoExemplar {
   pdf_url?: string;
   dica_de_escrita?: string;
   autor?: string;
+  foto_autor?: string;
   data_agendamento?: string | null;
 }
 
@@ -32,20 +33,23 @@ export const useRedacoesExemplarFilters = () => {
 
   // Buscar todas as redações
   const { data: allRedacoes, isLoading, error } = useQuery({
-    queryKey: ['redacoes-exemplares-all'],
+    queryKey: ['redacoes-exemplares-all', 'fixed-cache'], // Cache fixo
     queryFn: async (): Promise<RedacaoExemplar[]> => {
       try {
         const { data, error } = await supabase
           .from('redacoes')
-          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor')
-          .order('data_envio', { ascending: false }); // Ordenação mais recente primeiro
+          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor')
+          .order('data_envio', { ascending: false });
 
         if (error) throw error;
 
-        return (data || []).map((r) => ({
+        const processedData = (data || []).map((r) => ({
           ...r,
           frase_tematica: r.frase_tematica || 'Redação Exemplar',
         }));
+
+
+        return processedData;
       } catch (e) {
         console.error('Erro ao buscar redações exemplares:', e);
         return [];

@@ -20,14 +20,19 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     // Verificar se é corretor logado
     const corretorSession = localStorage.getItem('corretor_session');
     const isCorretorLoggedIn = !!corretorSession;
-    
+
+    // Verificar se é admin logado
+    const adminSession = localStorage.getItem('admin_session');
+    const isAdminLoggedIn = !!adminSession;
+
     console.log('ProtectedRoute - isStudentLoggedIn:', isStudentLoggedIn);
     console.log('ProtectedRoute - isCorretorLoggedIn:', isCorretorLoggedIn);
+    console.log('ProtectedRoute - isAdminLoggedIn:', isAdminLoggedIn);
     console.log('ProtectedRoute - current path:', location.pathname);
     console.log('ProtectedRoute - isLoginPage:', isLoginPage);
-    
-    // Se nem aluno nem corretor está logado e não está numa página de login
-    if (!isStudentLoggedIn && !isCorretorLoggedIn && !isLoginPage) {
+
+    // Se nem aluno nem corretor nem admin está logado e não está numa página de login
+    if (!isStudentLoggedIn && !isCorretorLoggedIn && !isAdminLoggedIn && !isLoginPage) {
       console.log('Redirecionando para login - usuário não logado');
       navigate('/', { replace: true });
     }
@@ -38,8 +43,10 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const isLoginPage = loginPages.includes(location.pathname);
   const corretorSession = localStorage.getItem('corretor_session');
   const isCorretorLoggedIn = !!corretorSession;
-  
-  if (!isStudentLoggedIn && !isCorretorLoggedIn && !isLoginPage) {
+  const adminSession = localStorage.getItem('admin_session');
+  const isAdminLoggedIn = !!adminSession;
+
+  if (!isStudentLoggedIn && !isCorretorLoggedIn && !isAdminLoggedIn && !isLoginPage) {
     return null;
   }
 

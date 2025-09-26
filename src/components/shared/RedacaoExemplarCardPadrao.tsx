@@ -22,6 +22,7 @@ interface RedacaoExemplarCardData {
   texto?: string;
   data_envio?: string;
   autor?: string;
+  foto_autor?: string;
   pdf_url?: string;
   imagem_url?: string;
   dica_de_escrita?: string;
@@ -48,6 +49,8 @@ export const RedacaoExemplarCardPadrao = ({
   actions
 }: RedacaoExemplarCardPadraoProps) => {
   const navigate = useNavigate();
+
+
 
   const getCoverImage = () => {
     // Priorizar imagem_url, depois pdf_url, depois placeholder
@@ -125,6 +128,7 @@ export const RedacaoExemplarCardPadrao = ({
     if (perfil === 'corretor') {
       navigate(`/corretor/redacoes-exemplar/${redacao.id}`);
     } else {
+      // Admin e aluno usam a mesma rota
       navigate(`/redacoes-exemplar/${redacao.id}`);
     }
   };
@@ -164,8 +168,23 @@ export const RedacaoExemplarCardPadrao = ({
               {/* Autor */}
               {getAutorName() && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                  <User className="h-4 w-4" aria-hidden="true" />
-                  <span>Por: {getAutorName()}</span>
+                  {/* Usar foto real do banco ou fallback */}
+                  {redacao.foto_autor ? (
+                    <img
+                      src={redacao.foto_autor}
+                      alt={getAutorName()}
+                      className="w-8 h-8 rounded-full border border-gray-200 object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                      <User className="h-4 w-4 text-white" aria-hidden="true" />
+                    </div>
+                  )}
+                  <span>Por: <strong>{getAutorName()}</strong></span>
                 </div>
               )}
             </div>

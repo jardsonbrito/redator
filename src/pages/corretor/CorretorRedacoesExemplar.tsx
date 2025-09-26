@@ -8,7 +8,7 @@ import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 const CorretorRedacoesExemplar = () => {
 
   const { data: redacoesExemplares, isLoading, error } = useQuery({
-    queryKey: ['redacoes-exemplares-corretor'],
+    queryKey: ['redacoes-exemplares-corretor', 'v2'], // Alterando para forçar refresh
     queryFn: async () => {
       try {
         console.log('🔍 Buscando redações exemplares...');
@@ -16,7 +16,7 @@ const CorretorRedacoesExemplar = () => {
         // Buscar redações exemplares da tabela 'redacoes' (cadastradas pelo administrador)
         const { data, error } = await supabase
           .from('redacoes')
-          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor')
+          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor')
           .order('data_envio', { ascending: false });
 
         if (error) {

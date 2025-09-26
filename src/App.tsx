@@ -50,6 +50,7 @@ import { CorretorAuthProvider } from "./hooks/useCorretorAuth";
 import { ProfessorAuthProvider } from "./hooks/useProfessorAuth";
 import { ProfessorProtectedRoute } from "./components/ProfessorProtectedRoute";
 import { ProtectedStudentRoute } from "./components/ProtectedStudentRoute";
+import { ProtectedStudentOrAdminRoute } from "./components/ProtectedStudentOrAdminRoute";
 import { ProfessorLogin } from "./pages/ProfessorLogin";
 import { ProfessorDashboard } from "./pages/ProfessorDashboard";
 import { TrocarSenhaProfessor } from "./pages/TrocarSenhaProfessor";
@@ -126,7 +127,7 @@ function App() {
                   <Route path="/videoteca" element={<ProtectedStudentRoute><Videoteca /></ProtectedStudentRoute>} />
                   <Route path="/biblioteca" element={<ProtectedStudentRoute><Biblioteca /></ProtectedStudentRoute>} />
                   <Route path="/redacoes" element={<ProtectedStudentRoute><RedacoesExemplar /></ProtectedStudentRoute>} />
-                  <Route path="/redacoes-exemplar/:id" element={<ProtectedStudentRoute><RedacaoExemplarDetalhes /></ProtectedStudentRoute>} />
+                  <Route path="/redacoes-exemplar/:id" element={<ProtectedStudentOrAdminRoute><RedacaoExemplarDetalhes /></ProtectedStudentOrAdminRoute>} />
                   <Route path="/top5" element={<ProtectedStudentRoute><Top5 /></ProtectedStudentRoute>} />
                   <Route path="/lousa" element={<ProtectedStudentRoute><AlunoLousaList /></ProtectedStudentRoute>} />
                   <Route path="/lousa/:id" element={<ProtectedStudentRoute><LousaResponse /></ProtectedStudentRoute>} />

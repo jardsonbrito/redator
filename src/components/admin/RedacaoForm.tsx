@@ -26,7 +26,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     conteudo: '',
     pdf_url: '',
     dica_de_escrita: '',
-    autor: ''
+    autor: '',
+    foto_autor: ''
   });
 
   useEffect(() => {
@@ -47,7 +48,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             conteudo: data.conteudo || '',
             pdf_url: data.pdf_url || '',
             dica_de_escrita: data.dica_de_escrita || '',
-            autor: data.autor || ''
+            autor: data.autor || '',
+            foto_autor: data.foto_autor || ''
           });
         } catch (error: any) {
           toast({
@@ -79,6 +81,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             pdf_url: formData.pdf_url.trim() || null,
             dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
+            foto_autor: formData.foto_autor.trim() || null,
           })
           .eq('id', redacaoId);
 
@@ -99,6 +102,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             pdf_url: formData.pdf_url.trim() || null,
             dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
+            foto_autor: formData.foto_autor.trim() || null,
             nota_total: 1000, // Redação exemplar
             data_envio: new Date().toISOString()
           }]);
@@ -117,7 +121,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           conteudo: '',
           pdf_url: '',
           dica_de_escrita: '',
-          autor: ''
+          autor: '',
+          foto_autor: ''
         });
       }
 
@@ -138,6 +143,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     { id: 'frase', label: 'Frase Temática' },
     { id: 'eixo', label: 'Eixo Temático' },
     { id: 'autor', label: 'Autor' },
+    { id: 'foto_autor', label: 'Foto do Autor' },
     { id: 'texto', label: 'Texto da Redação' },
     { id: 'dica', label: 'Dica de Escrita' },
   ];
@@ -236,8 +242,48 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
                   value={formData.autor}
                   onChange={(e) => setFormData({...formData, autor: e.target.value})}
                   className="text-sm"
+                  placeholder="Nome do autor da redação"
                   spellCheck={true}
                 />
+              </div>
+            )}
+
+            {/* Foto do Autor Section */}
+            {activeSection === 'foto_autor' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                <div className="space-y-4">
+                  <Input
+                    type="url"
+                    value={formData.foto_autor}
+                    onChange={(e) => setFormData({...formData, foto_autor: e.target.value})}
+                    className="text-sm"
+                  />
+
+                  {/* Preview da foto */}
+                  {formData.foto_autor && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <img
+                        src={formData.foto_autor}
+                        alt="Preview da foto do autor"
+                        className="w-12 h-12 rounded-full border border-gray-200 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="text-sm text-gray-600">
+                        <p className="font-medium">Preview da foto</p>
+                        <p className="text-xs">Esta foto aparecerá nos cards e na página de detalhes</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.foto_autor && (
+                    <p className="text-xs text-gray-500">
+                      💡 Dica: Use URLs de imagens hospedadas publicamente. A foto deve ter boa qualidade e ser quadrada para melhor resultado.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 

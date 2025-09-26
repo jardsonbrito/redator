@@ -29,11 +29,11 @@ export const RedacaoList = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: redacoes, isLoading, refetch } = useQuery({
-    queryKey: ['admin-redacoes'],
+    queryKey: ['admin-redacoes', 'with-foto-autor'], // Cache com foto_autor
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes')
-        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor')
+        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor')
         .order('data_envio', { ascending: false });
       
       if (error) throw error;
@@ -189,6 +189,7 @@ export const RedacaoList = () => {
                   conteudo: redacao.conteudo,
                   data_envio: redacao.data_envio,
                   autor: redacao.autor,
+                  foto_autor: redacao.foto_autor,
                   pdf_url: redacao.pdf_url,
                   dica_de_escrita: redacao.dica_de_escrita,
                   // data_agendamento: redacao.data_agendamento // Campo ainda não existe no banco
