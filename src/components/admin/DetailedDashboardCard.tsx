@@ -131,21 +131,19 @@ export const DetailedDashboardCard = ({
           </div>
         )}
 
-        {/* Informação secundária - abaixo da linha */}
-        {secondaryInfo && (
-          <div className="border-t pt-2 mt-2">
-            <div className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded">
-              {secondaryInfo}
-            </div>
-          </div>
-        )}
+        {/* Descrição com linha separadora */}
+        <div className="text-xs text-gray-500 leading-relaxed border-t pt-2 mt-2">
+          {description}
 
-        {/* Descrição */}
-        {description && (
-          <p className="text-xs text-gray-500 leading-relaxed border-t pt-2 mt-2">
-            {description}
-          </p>
-        )}
+          {/* Informação secundária - abaixo da linha existente */}
+          {secondaryInfo && (
+            <div className="mt-2">
+              <div className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded">
+                {secondaryInfo}
+              </div>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
