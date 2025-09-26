@@ -147,28 +147,23 @@ const TemaDetalhes = () => {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="border-redator-accent/20">
           <CardContent className="p-8">
-            {/* 1. Frase Temática */}
-            <div className="flex flex-col gap-4 mb-8">
-              <h1 className="text-2xl font-bold text-redator-primary leading-tight">
-                {tema.frase_tematica}
-              </h1>
-              {redacaoEnviada && (
-                <div className="flex items-center gap-2">
-                  <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full border border-green-200">
-                    ✓ Já enviado
-                  </span>
-                  <span className="text-sm text-gray-600">
-                    Enviado em {new Date(redacaoEnviada.data_envio).toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-              )}
-            </div>
+            {/* Status de redação enviada (se existir) */}
+            {redacaoEnviada && (
+              <div className="flex items-center gap-2 mb-6">
+                <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full border border-green-200">
+                  ✓ Já enviado
+                </span>
+                <span className="text-sm text-gray-600">
+                  Enviado em {new Date(redacaoEnviada.data_envio).toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+            )}
 
             <div className="space-y-6">
-              {/* 2. Cover Image */}
+              {/* 1. Cover Image - Agora no topo */}
               <div className="rounded-lg overflow-hidden mb-6">
-                <img 
-                  src={getTemaCoverUrl(tema)} 
+                <img
+                  src={getTemaCoverUrl(tema)}
                   alt={`Capa do tema: ${tema.frase_tematica}`}
                   className="w-full h-auto"
                   onError={(e) => {
@@ -178,74 +173,81 @@ const TemaDetalhes = () => {
                 />
               </div>
 
-              {/* 3. Cabeçalho padrão */}
+              {/* 2. Cabeçalho padrão */}
               <div className="bg-redator-primary/5 rounded-lg p-6 border-l-4 border-redator-primary">
-                <p className="text-redator-primary leading-relaxed font-medium">
-                  A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação, 
-                  redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema "{tema.frase_tematica}", 
-                  apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, 
+                <p className="text-redator-primary leading-relaxed font-medium text-justify indent-8">
+                  A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação,
+                  redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema <span className="font-bold text-lg">"</span><span className="font-bold text-lg">{tema.frase_tematica}</span><span className="font-bold text-lg">"</span>,
+                  apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione,
                   de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.
                 </p>
               </div>
 
-              {/* 4. Texto Motivador 1 */}
-              {tema.texto_1 && (
-                <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                  <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador I</h3>
-                  <div className="text-redator-accent leading-relaxed">
-                    {renderTextWithParagraphs(tema.texto_1)}
-                  </div>
-                </div>
-              )}
+              {/* 3. Textos Motivadores */}
+              {(() => {
+                const textos = [tema.texto_1, tema.texto_2, tema.texto_3].filter(Boolean);
+                let textoCounter = 1;
 
-              {/* 5. Texto Motivador 2 */}
-              {tema.texto_2 && (
-                <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                  <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador II</h3>
-                  <div className="text-redator-accent leading-relaxed">
-                    {renderTextWithParagraphs(tema.texto_2)}
-                  </div>
-                </div>
-              )}
+                return (
+                  <>
+                    {tema.texto_1 && (
+                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
+                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-redator-accent leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
+                          {renderTextWithParagraphs(tema.texto_1)}
+                        </div>
+                      </div>
+                    )}
 
-              {/* 6. Texto Motivador 3 */}
-              {tema.texto_3 && (
-                <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                  <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador III</h3>
-                  <div className="text-redator-accent leading-relaxed">
-                    {renderTextWithParagraphs(tema.texto_3)}
-                  </div>
-                </div>
-              )}
+                    {tema.texto_2 && (
+                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
+                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-redator-accent leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
+                          {renderTextWithParagraphs(tema.texto_2)}
+                        </div>
+                      </div>
+                    )}
 
-              {/* 7. Texto Motivador IV (Image) */}
-              {getTemaMotivatorIVUrl({
-                motivator4_source: tema.motivator4_source,
-                motivator4_url: tema.motivator4_url,
-                motivator4_file_path: tema.motivator4_file_path,
-                imagem_texto_4_url: tema.imagem_texto_4_url
-              }) && (
-                <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                  <h3 className="font-semibold text-redator-primary mb-3">Texto Motivador IV</h3>
-                  <div className="rounded-lg overflow-hidden">
-                    <img 
-                      src={getTemaMotivatorIVUrl({
-                        motivator4_source: tema.motivator4_source,
-                        motivator4_url: tema.motivator4_url,
-                        motivator4_file_path: tema.motivator4_file_path,
-                        imagem_texto_4_url: tema.imagem_texto_4_url
-                      })!}
-                      alt="Charge/Infográfico — Texto Motivador IV"
-                      className="w-full h-auto"
+                    {tema.texto_3 && (
+                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
+                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-redator-accent leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
+                          {renderTextWithParagraphs(tema.texto_3)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Texto 4 (Imagem) */}
+                    {getTemaMotivatorIVUrl({
+                      motivator4_source: tema.motivator4_source,
+                      motivator4_url: tema.motivator4_url,
+                      motivator4_file_path: tema.motivator4_file_path,
+                      imagem_texto_4_url: tema.imagem_texto_4_url
+                    }) && (
+                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
+                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter}</h3>
+                        <div className="rounded-lg overflow-hidden">
+                          <img
+                            src={getTemaMotivatorIVUrl({
+                              motivator4_source: tema.motivator4_source,
+                              motivator4_url: tema.motivator4_url,
+                              motivator4_file_path: tema.motivator4_file_path,
+                              imagem_texto_4_url: tema.imagem_texto_4_url
+                            })!}
+                            alt="Charge/Infográfico — Texto 4"
+                            className="w-full h-auto"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
                       }}
-                    />
-                  </div>
-                </div>
-              )}
-              
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
               {/* Botão para escrever redação - para alunos e visitantes */}
               {canWriteRedacao && (
                 <div className="mt-8 pt-6 border-t border-gray-200 bg-gray-50/50 rounded-lg p-6 shadow-sm text-center">

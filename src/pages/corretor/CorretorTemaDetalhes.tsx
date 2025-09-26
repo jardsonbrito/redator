@@ -103,62 +103,73 @@ const CorretorTemaDetalhes = () => {
         {/* Content */}
         <Card className="border-primary/20">
           <CardContent className="p-8">
-            {/* 1. Frase Temática */}
-            <h1 className="text-2xl font-bold text-foreground mb-8 leading-tight">
-              {tema.frase_tematica}
-            </h1>
-
             <div className="space-y-6">
-              {/* 2. Imagem ampliada (sem rótulo técnico) */}
+              {/* 1. Imagem de destaque no topo */}
               {tema.imagem_texto_4_url && (
                 <div className="rounded-lg overflow-hidden mb-6">
-                  <img 
-                    src={tema.imagem_texto_4_url} 
+                  <img
+                    src={tema.imagem_texto_4_url}
                     alt="Imagem do tema"
                     className="w-full h-auto"
                   />
                 </div>
               )}
 
-              {/* 3. Cabeçalho padrão */}
+              {/* 2. Cabeçalho padrão */}
               <div className="bg-primary/5 rounded-lg p-6 border-l-4 border-primary">
-                <p className="text-foreground leading-relaxed font-medium">
-                  A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação, 
-                  redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema "{tema.frase_tematica}", 
-                  apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, 
+                <p className="text-foreground leading-relaxed font-medium text-justify indent-8">
+                  A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação,
+                  redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema <span className="font-bold text-lg">"</span><span className="font-bold text-lg">{tema.frase_tematica}</span><span className="font-bold text-lg">"</span>,
+                  apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione,
                   de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.
                 </p>
               </div>
 
-              {/* 4. Texto Motivador 1 */}
-              {tema.texto_1 && (
-                <div className="bg-white rounded-lg p-6 border border-muted">
-                  <h3 className="font-semibold text-foreground mb-3">Texto Motivador I</h3>
-                  <div className="text-muted-foreground leading-relaxed">
-                    {renderTextWithParagraphs(tema.texto_1)}
-                  </div>
-                </div>
-              )}
+              {/* 3. Textos Motivadores */}
+              {(() => {
+                let textoCounter = 1;
 
-              {/* 5. Texto Motivador 2 */}
-              {tema.texto_2 && (
-                <div className="bg-white rounded-lg p-6 border border-muted">
-                  <h3 className="font-semibold text-foreground mb-3">Texto Motivador II</h3>
-                  <div className="text-muted-foreground leading-relaxed">
-                    {renderTextWithParagraphs(tema.texto_2)}
-                  </div>
-                </div>
-              )}
+                return (
+                  <>
+                    {tema.texto_1 && (
+                      <div className="bg-white rounded-lg p-6 border border-muted">
+                        <h3 className="font-semibold text-foreground mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-muted-foreground leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
+                          {renderTextWithParagraphs(tema.texto_1)}
+                        </div>
+                      </div>
+                    )}
 
-              {/* 6. Texto Motivador 3 */}
-              {tema.texto_3 && (
-                <div className="bg-white rounded-lg p-6 border border-muted">
-                  <h3 className="font-semibold text-foreground mb-3">Texto Motivador III</h3>
-                  <div className="text-muted-foreground leading-relaxed">
-                    {renderTextWithParagraphs(tema.texto_3)}
-                  </div>
-                </div>
-              )}
+                    {tema.texto_2 && (
+                      <div className="bg-white rounded-lg p-6 border border-muted">
+                        <h3 className="font-semibold text-foreground mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-muted-foreground leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
+                          {renderTextWithParagraphs(tema.texto_2)}
+                        </div>
+                      </div>
+                    )}
+
+                    {tema.texto_3 && (
+                      <div className="bg-white rounded-lg p-6 border border-muted">
+                        <h3 className="font-semibold text-foreground mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-muted-foreground leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
+                          {renderTextWithParagraphs(tema.texto_3)}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Texto 4 (Imagem) - como card separado para identificação */}
+                    {tema.imagem_texto_4_url && (
+                      <div className="bg-white rounded-lg p-6 border border-muted">
+                        <h3 className="font-semibold text-foreground mb-3">Texto {textoCounter}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          (Esta imagem também aparece como capa do tema)
+                        </p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>
