@@ -429,9 +429,6 @@ const EnvieRedacao = () => {
                   <div>
                     <label htmlFor="frase-tematica" className="block text-sm font-medium text-redator-primary mb-2">
                       Frase Temática *
-                      {fonteFromUrl === 'tema' && (
-                        <span className="text-xs text-green-600 ml-2">(Preenchida automaticamente)</span>
-                      )}
                     </label>
                     <Input
                       id="frase-tematica"
@@ -443,12 +440,6 @@ const EnvieRedacao = () => {
                       maxLength={200}
                       readOnly={fonteFromUrl === 'tema'}
                     />
-                    <p className="text-xs text-redator-accent mt-1">
-                      {fraseTematica.length}/200 caracteres
-                      {fonteFromUrl === 'tema' && (
-                        <span className="text-green-600 ml-2">✓ Tema selecionado automaticamente</span>
-                      )}
-                    </p>
                   </div>
 
                   {/* Exibir informações de créditos para alunos */}

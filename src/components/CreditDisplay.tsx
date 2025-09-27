@@ -116,16 +116,7 @@ export const CreditDisplay = ({
           </div>
         )}
 
-        {hasEnoughCredits ? (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
-              <strong>Você tem créditos suficientes!</strong>
-              <br />
-              Esta redação consumirá {requiredCredits} crédito(s).
-            </AlertDescription>
-          </Alert>
-        ) : (
+        {!hasEnoughCredits && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>

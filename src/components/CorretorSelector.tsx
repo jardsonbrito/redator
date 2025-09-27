@@ -192,16 +192,6 @@ export const CorretorSelector = ({
 
         <div className="text-xs text-muted-foreground">
           <p>Corretores selecionados: {selectedCorretores.length}/{maxCorretores || corretores.length}</p>
-          {isSimulado && selectedCorretores.length !== 2 && (
-            <p className="text-red-500 mt-1">
-              ⚠️ Simulados requerem exatamente 2 corretores
-            </p>
-          )}
-          {maxCorretores === 1 && selectedCorretores.length !== 1 && (
-            <p className="text-red-500 mt-1">
-              ⚠️ Envios regulares requerem exatamente 1 corretor
-            </p>
-          )}
         </div>
       </CardContent>
     </Card>
