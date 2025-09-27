@@ -131,10 +131,12 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
           {tema.eixo_tematico}
         </Badge>
 
-        {/* Badge de status - sempre visível */}
-        <Badge className={`absolute top-2 right-2 text-white text-xs px-2 py-1 shadow-sm ${statusInfo.bgColor}`}>
-          {statusInfo.label}
-        </Badge>
+        {/* Badge de status - apenas para administradores */}
+        {perfil === 'admin' && (
+          <Badge className={`absolute top-2 right-2 text-white text-xs px-2 py-1 shadow-sm ${statusInfo.bgColor}`}>
+            {statusInfo.label}
+          </Badge>
+        )}
       </div>
 
       {/* Conteúdo */}
