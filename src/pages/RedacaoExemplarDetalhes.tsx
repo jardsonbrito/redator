@@ -200,7 +200,7 @@ const RedacaoExemplarDetalhes = () => {
                       <h3 className="font-semibold text-lg text-gray-800 mb-4">Redação Exemplar</h3>
                       <div className="prose max-w-none">
                         <div
-                          className="font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-6 bg-gray-50 text-justify hyphens-none [&_p]:indent-8 [&_p]:mb-4 [&_p:first-child]:indent-8"
+                          className="font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-6 bg-gray-50 text-left hyphens-none [&_p]:indent-8 [&_p]:mb-4 [&_p:first-child]:indent-8"
                           dangerouslySetInnerHTML={{
                             __html: formatRedacaoText(redacao.conteudo || redacao.texto)
                           }}
@@ -215,7 +215,7 @@ const RedacaoExemplarDetalhes = () => {
                           <span>💡</span> Dica de Escrita
                         </h4>
                         <div
-                          className="text-sm text-yellow-700 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0"
+                          className="text-sm text-yellow-700 leading-relaxed text-left [&_p]:indent-8 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_p:first-child]:indent-8"
                           dangerouslySetInnerHTML={{ __html: dicaToHTML(redacao.dica_de_escrita) }}
                         />
                       </div>
