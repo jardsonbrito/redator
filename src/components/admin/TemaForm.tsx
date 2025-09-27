@@ -229,7 +229,7 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
       }
       // Note: For scheduling, we keep status as 'rascunho' and use scheduled_publish_at field
 
-      // Preparar dados com nova estrutura
+      // Preparar dados com nova estrutura - apenas texto limpo, sem HTML
       const dataToSave: Record<string, unknown> = {
         frase_tematica: String(formData.frase_tematica || '').trim(),
         eixo_tematico: String(formData.eixo_tematico || '').trim(),
@@ -523,7 +523,8 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                 <Textarea
                   value={formData.texto_1}
                   onChange={(e) => setFormData({...formData, texto_1: e.target.value})}
-                  className="min-h-[120px] text-sm"
+                  className="min-h-[120px] text-sm resize-none"
+                  placeholder="Digite o primeiro texto motivador. Use quebras de linha simples para separar parágrafos."
                   spellCheck={true}
                 />
               </div>
@@ -535,7 +536,8 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                 <Textarea
                   value={formData.texto_2}
                   onChange={(e) => setFormData({...formData, texto_2: e.target.value})}
-                  className="min-h-[120px] text-sm"
+                  className="min-h-[120px] text-sm resize-none"
+                  placeholder="Digite o segundo texto motivador. Use quebras de linha simples para separar parágrafos."
                   spellCheck={true}
                 />
               </div>
@@ -547,7 +549,8 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                 <Textarea
                   value={formData.texto_3}
                   onChange={(e) => setFormData({...formData, texto_3: e.target.value})}
-                  className="min-h-[120px] text-sm"
+                  className="min-h-[120px] text-sm resize-none"
+                  placeholder="Digite o terceiro texto motivador. Use quebras de linha simples para separar parágrafos."
                   spellCheck={true}
                 />
               </div>
@@ -587,67 +590,3 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
   );
 };
 
-// Export a component for theme rendering with justified text and paragraph indentation
-interface TemaRenderProps {
-  tema: {
-    frase_tematica: string;
-    texto_1?: string;
-    texto_2?: string;
-    texto_3?: string;
-    motivator4_url?: string;
-  };
-}
-
-export const TemaRender = ({ tema }: TemaRenderProps) => {
-  return (
-    <div className="tema-render">
-      <style>{`
-        .tema-render p {
-          text-align: justify;
-          text-indent: 2em;
-          margin-bottom: 1em;
-        }
-        .tema-render .tema-destaque {
-          color: #3F0077;
-          font-weight: 700;
-        }
-      `}</style>
-
-      <div className="cabecalho-enem mb-6 p-4 border rounded">
-        <p>
-          Com base na leitura dos textos motivadores e nos conhecimentos construídos ao longo de sua formação, redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema{' '}
-          <span className="tema-destaque">"{tema.frase_tematica}"</span>, apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.
-        </p>
-      </div>
-
-      {/* Render theme content with justified paragraphs */}
-      {tema.texto_1 && (
-        <div className="texto-motivador mb-4">
-          <h4 className="font-semibold mb-2">Texto Motivador I</h4>
-          <div dangerouslySetInnerHTML={{ __html: tema.texto_1 }} />
-        </div>
-      )}
-
-      {tema.texto_2 && (
-        <div className="texto-motivador mb-4">
-          <h4 className="font-semibold mb-2">Texto Motivador II</h4>
-          <div dangerouslySetInnerHTML={{ __html: tema.texto_2 }} />
-        </div>
-      )}
-
-      {tema.texto_3 && (
-        <div className="texto-motivador mb-4">
-          <h4 className="font-semibold mb-2">Texto Motivador III</h4>
-          <div dangerouslySetInnerHTML={{ __html: tema.texto_3 }} />
-        </div>
-      )}
-
-      {tema.motivator4_url && (
-        <div className="texto-motivador mb-4">
-          <h4 className="font-semibold mb-2">Texto Motivador IV</h4>
-          <img src={tema.motivator4_url} alt="Texto Motivador IV" className="max-w-full h-auto" />
-        </div>
-      )}
-    </div>
-  );
-};

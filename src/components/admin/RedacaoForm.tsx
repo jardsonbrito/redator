@@ -293,7 +293,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
                 <Textarea
                   value={formData.conteudo}
                   onChange={(e) => setFormData({...formData, conteudo: e.target.value})}
-                  className="min-h-[400px] text-sm"
+                  className="min-h-[400px] text-sm resize-none"
+                  placeholder="Digite o texto da redação aqui. Use quebras de linha normais para separar parágrafos."
                   spellCheck={true}
                 />
               </div>
@@ -305,7 +306,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
                 <Textarea
                   value={formData.dica_de_escrita}
                   onChange={(e) => setFormData({...formData, dica_de_escrita: e.target.value})}
-                  className="min-h-[100px] text-sm"
+                  className="min-h-[100px] text-sm resize-none"
+                  placeholder="Digite dicas de escrita para os alunos. Use quebras de linha normais para separar parágrafos."
                   spellCheck={true}
                 />
               </div>

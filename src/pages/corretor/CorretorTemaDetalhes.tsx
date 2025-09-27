@@ -6,7 +6,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
-import { renderTextWithParagraphs } from '@/utils/textUtils';
+import { FormattedText } from '@/components/shared/FormattedText';
 import { useCorretorNavigationContext } from "@/hooks/useCorretorNavigationContext";
 
 // Type extension para incluir o campo imagem_texto_4_url
@@ -134,8 +134,8 @@ const CorretorTemaDetalhes = () => {
                     {tema.texto_1 && (
                       <div className="bg-white rounded-lg p-6 border border-muted">
                         <h3 className="font-semibold text-foreground mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-muted-foreground leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
-                          {renderTextWithParagraphs(tema.texto_1)}
+                        <div className="text-muted-foreground">
+                          <FormattedText text={tema.texto_1} />
                         </div>
                       </div>
                     )}
@@ -143,8 +143,8 @@ const CorretorTemaDetalhes = () => {
                     {tema.texto_2 && (
                       <div className="bg-white rounded-lg p-6 border border-muted">
                         <h3 className="font-semibold text-foreground mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-muted-foreground leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
-                          {renderTextWithParagraphs(tema.texto_2)}
+                        <div className="text-muted-foreground">
+                          <FormattedText text={tema.texto_2} />
                         </div>
                       </div>
                     )}
@@ -152,8 +152,8 @@ const CorretorTemaDetalhes = () => {
                     {tema.texto_3 && (
                       <div className="bg-white rounded-lg p-6 border border-muted">
                         <h3 className="font-semibold text-foreground mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-muted-foreground leading-relaxed text-justify [&_p]:indent-8 [&_p]:mb-4">
-                          {renderTextWithParagraphs(tema.texto_3)}
+                        <div className="text-muted-foreground">
+                          <FormattedText text={tema.texto_3} />
                         </div>
                       </div>
                     )}
