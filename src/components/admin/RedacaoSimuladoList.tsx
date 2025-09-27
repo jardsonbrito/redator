@@ -27,6 +27,7 @@ const RedacaoSimuladoList = () => {
   const [buscaNome, setBuscaNome] = useState("");
   const [redacaoSelecionada, setRedacaoSelecionada] = useState<any>(null);
   const [duplicandoRedacao, setDuplicandoRedacao] = useState<any>(null);
+  const [redacaoParaExcluir, setRedacaoParaExcluir] = useState<any>(null);
   const [novoCorretor, setNovoCorretor] = useState("");
   const [notas, setNotas] = useState({
     nota_c1: 0,
@@ -242,6 +243,17 @@ const RedacaoSimuladoList = () => {
   const abrirDuplicacao = (redacao: any) => {
     setDuplicandoRedacao(redacao);
     setNovoCorretor("");
+  };
+
+  const confirmarExclusao = (redacao: any) => {
+    setRedacaoParaExcluir(redacao);
+  };
+
+  const handleExcluir = () => {
+    if (redacaoParaExcluir) {
+      excluirRedacao.mutate(redacaoParaExcluir.id);
+      setRedacaoParaExcluir(null);
+    }
   };
 
   const truncateText = (text: string, maxWords: number) => {
@@ -535,11 +547,11 @@ const RedacaoSimuladoList = () => {
                         </Button>
 
                         {/* Excluir */}
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           size="sm"
                           title="Excluir"
-                          onClick={() => excluirRedacao.mutate(redacao.id)}
+                          onClick={() => confirmarExclusao(redacao)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -596,6 +608,43 @@ const RedacaoSimuladoList = () => {
                 className="bg-redator-primary"
               >
                 {duplicarRedacao.isPending ? "Duplicando..." : "Confirmar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={!!redacaoParaExcluir} onOpenChange={() => setRedacaoParaExcluir(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Tem certeza de que deseja excluir a redação de <strong>{redacaoParaExcluir?.nome_aluno}</strong>?
+            </p>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-800">
+                <strong>Atenção:</strong> Esta ação não pode ser desfeita. A redação será permanentemente removida do sistema.
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setRedacaoParaExcluir(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleExcluir}
+                disabled={excluirRedacao.isPending}
+              >
+                {excluirRedacao.isPending ? "Excluindo..." : "Confirmar Exclusão"}
               </Button>
             </div>
           </div>
