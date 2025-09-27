@@ -108,9 +108,10 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
       <div className="flex justify-center">
         <Button
           onClick={() => actions?.onAssistir?.(video)}
-          className="w-full bg-purple-600 hover:bg-purple-700"
+          className="w-full bg-purple-600 hover:bg-purple-700 text-sm sm:text-base py-2 sm:py-2.5 touch-manipulation"
+          size="default"
         >
-          <Play className="h-4 w-4 mr-2" />
+          <Play className="h-4 w-4 mr-1 sm:mr-2" />
           Assistir
         </Button>
       </div>
@@ -135,15 +136,15 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
             )}
 
             {/* Badges sobrepostas na imagem */}
-            <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+            <div className="absolute top-1 left-1 sm:top-2 sm:left-2 flex flex-wrap gap-1 max-w-[calc(100%-3rem)]">
               {video.eixo_tematico && (
-                <Badge className="bg-purple-100 text-purple-700 text-xs">
+                <Badge className="bg-purple-100 text-purple-700 text-xs sm:text-xs px-1.5 py-0.5 truncate">
                   {video.eixo_tematico}
                 </Badge>
               )}
-              {/* Plataforma - apenas para admin */}
-              {perfil === 'admin' && video.plataforma && (
-                <Badge className={`${getPlataformaBadgeColor(video.plataforma)} text-xs`}>
+              {/* Plataforma - para todos os perfis */}
+              {video.plataforma && (
+                <Badge className={`${getPlataformaBadgeColor(video.plataforma)} text-xs sm:text-xs px-1.5 py-0.5`}>
                   {video.plataforma === 'youtube' ? 'YouTube' :
                    video.plataforma === 'instagram' ? 'Instagram' :
                    video.plataforma}
@@ -151,35 +152,34 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
               )}
               {/* Status de publicação - apenas para admin */}
               {perfil === 'admin' && video.publicado !== undefined && (
-                <Badge className={video.publicado ? 'bg-green-100 text-green-700 text-xs' : 'bg-gray-100 text-gray-700 text-xs'}>
+                <Badge className={video.publicado ? 'bg-green-100 text-green-700 text-xs px-1.5 py-0.5' : 'bg-gray-100 text-gray-700 text-xs px-1.5 py-0.5'}>
                   {video.publicado ? 'Publicado' : 'Rascunho'}
                 </Badge>
               )}
             </div>
 
             {video.is_novo && (
-              <Badge className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1">
+              <Badge className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 sm:px-2 sm:py-1">
                 Novo
               </Badge>
             )}
           </div>
         </CardHeader>
 
-        <CardContent className="p-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 min-h-0">
+        <CardContent className="p-3 sm:p-6">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="space-y-1 sm:space-y-2">
+              <h3 className="font-semibold text-base sm:text-lg text-gray-900 line-clamp-2 min-h-0 leading-tight">
                 {video.titulo}
               </h3>
 
               {/* Data de publicação - apenas para admin */}
               {perfil === 'admin' && video.data_publicacao && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {formatDate(video.data_publicacao)}
                 </p>
               )}
             </div>
-
 
             {renderActions()}
           </div>

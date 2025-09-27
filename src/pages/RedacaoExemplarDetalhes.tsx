@@ -164,13 +164,6 @@ const RedacaoExemplarDetalhes = () => {
                         </div>
                       )}
 
-                      {/* Data */}
-                      {redacao.data_envio && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>Criado em: {formatDate(redacao.data_envio)}</span>
-                        </div>
-                      )}
 
                       {/* Badge do eixo temático */}
                       {redacao.eixo_tematico && (
@@ -197,7 +190,6 @@ const RedacaoExemplarDetalhes = () => {
 
                     {/* Texto da redação */}
                     <div>
-                      <h3 className="font-semibold text-lg text-gray-800 mb-4">Redação Exemplar</h3>
                       <div className="prose max-w-none">
                         <div
                           className="font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-6 bg-gray-50 text-left hyphens-none [&_p]:indent-8 [&_p]:mb-4 [&_p:first-child]:indent-8"

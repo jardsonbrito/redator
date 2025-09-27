@@ -21,7 +21,32 @@ const CorretorVideoteca = () => {
 
   const handleAssistir = (video: VideotecaVideoData) => {
     if (video.url) {
-      window.open(video.url, '_blank', 'noopener,noreferrer');
+      // Verificar se é uma URL do YouTube e abrir diretamente no YouTube
+      const youtubeMatch = video.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+      if (youtubeMatch && youtubeMatch[1]) {
+        // Abrir diretamente no YouTube
+        const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeMatch[1]}`;
+
+        // Para dispositivos móveis, tentar abrir no app do YouTube primeiro
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+          try {
+            // Tentar abrir no app do YouTube
+            window.location.href = `youtube://watch?v=${youtubeMatch[1]}`;
+            // Fallback para navegador após um breve delay
+            setTimeout(() => {
+              window.open(youtubeUrl, '_blank', 'noopener,noreferrer');
+            }, 500);
+          } catch {
+            window.open(youtubeUrl, '_blank', 'noopener,noreferrer');
+          }
+        } else {
+          window.open(youtubeUrl, '_blank', 'noopener,noreferrer');
+        }
+      } else {
+        // Para outras URLs (Instagram, etc.), abrir diretamente
+        window.open(video.url, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 
@@ -52,13 +77,13 @@ const CorretorVideoteca = () => {
 
   return (
     <CorretorLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Videoteca</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Videoteca</h1>
         </div>
 
         {videos && videos.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {videos.filter(video => video.status_publicacao === 'publicado').map((video) => {
               // Determinar thumbnail
               let thumbnailUrl = video.thumbnail_url;

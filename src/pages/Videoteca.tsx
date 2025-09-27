@@ -84,25 +84,30 @@ const Videoteca = () => {
     let videoUrl = video.url;
 
     if (videoUrl) {
-      // Verificar se é uma URL do YouTube e convertê-la para formato compatível
+      // Verificar se é uma URL do YouTube e abrir diretamente no YouTube
       const youtubeMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
       if (youtubeMatch && youtubeMatch[1]) {
-        // Usar embed do YouTube que contorna bloqueios
-        const embedUrl = `https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
+        // Abrir diretamente no YouTube
+        const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeMatch[1]}`;
 
-        // Tentar abrir em nova janela primeiro
-        try {
-          const newWindow = window.open(embedUrl, '_blank', 'width=1280,height=720,scrollbars=yes,resizable=yes');
-          if (!newWindow) {
-            // Se bloqueado, tentar URL original
-            window.open(videoUrl, '_blank', 'noopener,noreferrer');
+        // Para dispositivos móveis, tentar abrir no app do YouTube primeiro
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+          try {
+            // Tentar abrir no app do YouTube
+            window.location.href = `youtube://watch?v=${youtubeMatch[1]}`;
+            // Fallback para navegador após um breve delay
+            setTimeout(() => {
+              window.open(youtubeUrl, '_blank', 'noopener,noreferrer');
+            }, 500);
+          } catch {
+            window.open(youtubeUrl, '_blank', 'noopener,noreferrer');
           }
-        } catch (error) {
-          // Fallback para URL original
-          window.open(videoUrl, '_blank', 'noopener,noreferrer');
+        } else {
+          window.open(youtubeUrl, '_blank', 'noopener,noreferrer');
         }
       } else {
-        // Para outras URLs, abrir diretamente
+        // Para outras URLs (Instagram, etc.), abrir diretamente
         window.open(videoUrl, '_blank', 'noopener,noreferrer');
       }
     }
@@ -115,9 +120,9 @@ const Videoteca = () => {
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
             <StudentHeader pageTitle="Videoteca" />
 
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+          <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
             {videos && videos.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {videos.filter(video => video.status_publicacao === 'publicado').map((video) => {
                   // Determinar thumbnail
                   let thumbnailUrl = video.thumbnail_url;
