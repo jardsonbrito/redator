@@ -90,7 +90,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2 border-white/40 text-white bg-white/10 hover:bg-white/20 hover:border-white/60 rounded-xl px-3 py-2 font-medium transition-all duration-200 shadow-sm backdrop-blur-sm"
+                className="flex items-center gap-2 border-white/40 text-white bg-white/10 hover:bg-white/20 hover:border-white/60 rounded-xl px-3 py-2 font-medium transition-all duration-200 shadow-sm backdrop-blur-sm min-w-[2.5rem] sm:min-w-auto"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Sair</span>
