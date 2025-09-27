@@ -63,6 +63,9 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
     scheduledPublishAt: undefined
   });
 
+  // Estado para armazenar dados originais do tema (para preservar datas de publicação)
+  const [originalThemeData, setOriginalThemeData] = useState<any>(null);
+
   // First useEffect: Load existing theme data when in edit mode
   useEffect(() => {
     if (mode === 'edit' && temaId) {
@@ -75,6 +78,9 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
             .single();
 
           if (error) throw error;
+
+          // Salvar dados originais para preservar datas de publicação
+          setOriginalThemeData(data);
 
           // Pre-populate cover image
           let coverValue: ImageValue = null;
@@ -257,14 +263,23 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
         scheduled_by: action === 'schedule' && formData.scheduledPublishAt
           ? session.user.id
           : null,
-        // Set published_at when publishing immediately
+        // Set published_at when publishing immediately (apenas para novos temas)
         published_at: action === 'publish'
-          ? new Date().toISOString()
-          : null,
+          ? (mode === 'edit' && originalThemeData?.published_at
+              ? originalThemeData.published_at  // Preservar data original
+              : new Date().toISOString()        // Nova data para temas novos
+            )
+          : (mode === 'edit' && originalThemeData?.published_at
+              ? originalThemeData.published_at  // Preservar data original mesmo em rascunho
+              : null
+            ),
       };
 
       if (mode === 'create') {
         dataToSave.publicado_em = new Date().toISOString();
+      } else if (mode === 'edit' && originalThemeData?.publicado_em) {
+        // Preservar data original de publicação para temas editados
+        dataToSave.publicado_em = originalThemeData.publicado_em;
       }
 
       console.log('Dados preparados para salvar:', dataToSave);
