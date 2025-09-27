@@ -85,7 +85,7 @@ export const MinhasRedacoes = () => {
   const { toast } = useToast();
 
   // Hook para cancelamento de redações
-  const { cancelRedacao, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
+  const { cancelRedacao, cancelRedacaoSimulado, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
     onSuccess: () => {
       refetch();
     }
@@ -1054,9 +1054,9 @@ export const MinhasRedacoes = () => {
                     
                   </div>
 
-                   {/* Botão de cancelamento na lista principal */}
+                   {/* Botão de cancelamento - apenas para redações que NÃO são simulados */}
                    {(() => {
-                     const podeCancel = canCancelRedacao(redacao);
+                     const podeCancel = canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado';
                      console.log(`🔍 Redação ${redacao.id}: pode cancelar = ${podeCancel}`);
                      return podeCancel;
                    })() && (
@@ -1101,7 +1101,13 @@ export const MinhasRedacoes = () => {
                          <AlertDialogFooter>
                            <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
                            <AlertDialogAction
-                             onClick={() => cancelRedacao(redacao.id, redacao.email_aluno)}
+                             onClick={() => {
+                               if (redacao.tipo_envio === 'simulado') {
+                                 cancelRedacaoSimulado(redacao.id, redacao.email_aluno);
+                               } else {
+                                 cancelRedacao(redacao.id, redacao.email_aluno);
+                               }
+                             }}
                              className="bg-red-600 hover:bg-red-700"
                              disabled={cancelLoading}
                            >

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Edit, Eye, EyeOff, Trash2, AlertTriangle, MoreVertical } from 'lucide-react';
+import { Calendar, Clock, Edit, Eye, EyeOff, Trash2, AlertTriangle, MoreVertical, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeSimuladoStatus } from '@/utils/simuladoStatus';
@@ -24,6 +24,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useCancelRedacao } from '@/hooks/useCancelRedacao';
+import { useStudentAuth } from '@/hooks/useStudentAuth';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -57,6 +59,16 @@ export interface SimuladoCardData {
   submissionStatus?: 'ENVIADO' | 'AUSENTE';
   // Nota média do aluno no simulado
   notaMedia?: number | null;
+  // Dados da redação enviada (para cancelamento)
+  redacaoId?: string;
+  redacaoData?: {
+    id: string;
+    email_aluno: string;
+    corrigida: boolean;
+    nota_total: number | null;
+    status: string;
+    tipo_envio: string;
+  };
 }
 
 interface SimuladoCardActions {
@@ -177,6 +189,22 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
   const isAtivo = status === 'ativo';
   const isEncerrado = status === 'encerrado';
 
+  // Hook para cancelamento (apenas para alunos)
+  const { studentData } = useStudentAuth();
+  const { cancelRedacaoSimulado, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
+    onSuccess: () => {
+      // Recarregar a página ou atualizar estado
+      window.location.reload();
+    }
+  });
+
+  // Determinar se pode cancelar redação
+  const podeCancelar = perfil === 'aluno' &&
+                       simulado.hasSubmitted &&
+                       simulado.redacaoData &&
+                       canCancelRedacao(simulado.redacaoData);
+
+
   // Determinar se o card é clicável (remover clicabilidade para alunos que já enviaram redação)
   const isClickable = (perfil === 'aluno' && isAtivo) ||
                      (perfil === 'corretor' && isEncerrado);
@@ -199,6 +227,12 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
   const handleExcluir = () => {
     if (actions.onExcluir) {
       actions.onExcluir(simulado.id);
+    }
+  };
+
+  const handleCancelarRedacao = () => {
+    if (simulado.redacaoData && studentData?.email) {
+      cancelRedacaoSimulado(simulado.redacaoData.id, studentData.email);
     }
   };
 
@@ -375,28 +409,178 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                 </Button>
               )}
               {perfil === 'aluno' && isAtivo && simulado.hasSubmitted && (
-                <Button
-                  onClick={handleVerRedacao}
-                  className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Ver Redação
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleVerRedacao}
+                    className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Ver Redação
+                  </Button>
+                  {podeCancelar && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full text-red-600 border-red-200 hover:bg-red-50 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200"
+                          disabled={cancelLoading}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancelar Envio
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                            Cancelar envio da redação
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="space-y-2">
+                            <p>Tem certeza que deseja cancelar o envio desta redação de simulado?</p>
+                            <p className="font-medium">
+                              <strong>Simulado:</strong> {simulado.titulo}
+                            </p>
+                            {getCreditosACancelar('simulado') > 0 && (
+                              <div className="bg-green-50 border border-green-200 rounded p-3 mt-3">
+                                <p className="text-green-800 text-sm">
+                                  ✅ <strong>{getCreditosACancelar('simulado')} crédito(s)</strong> serão devolvidos à sua conta.
+                                </p>
+                              </div>
+                            )}
+                            <p className="text-red-600 text-sm mt-3">
+                              ⚠️ Esta ação não pode ser desfeita. A redação será removida permanentemente.
+                            </p>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleCancelarRedacao}
+                            className="bg-red-600 hover:bg-red-700"
+                            disabled={cancelLoading}
+                          >
+                            {cancelLoading ? "Cancelando..." : "Sim, cancelar envio"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               )}
               {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO' && simulado.notaMedia !== null && (
-                <Button
-                  onClick={handleVerRedacao}
-                  className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Ver Minha Redação
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleVerRedacao}
+                    className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Ver Minha Redação
+                  </Button>
+                  {podeCancelar && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full text-red-600 border-red-200 hover:bg-red-50 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200"
+                          disabled={cancelLoading}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancelar Envio
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                            Cancelar envio da redação
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="space-y-2">
+                            <p>Tem certeza que deseja cancelar o envio desta redação de simulado?</p>
+                            <p className="font-medium">
+                              <strong>Simulado:</strong> {simulado.titulo}
+                            </p>
+                            {getCreditosACancelar('simulado') > 0 && (
+                              <div className="bg-green-50 border border-green-200 rounded p-3 mt-3">
+                                <p className="text-green-800 text-sm">
+                                  ✅ <strong>{getCreditosACancelar('simulado')} crédito(s)</strong> serão devolvidos à sua conta.
+                                </p>
+                              </div>
+                            )}
+                            <p className="text-red-600 text-sm mt-3">
+                              ⚠️ Esta ação não pode ser desfeita. A redação será removida permanentemente.
+                            </p>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleCancelarRedacao}
+                            className="bg-red-600 hover:bg-red-700"
+                            disabled={cancelLoading}
+                          >
+                            {cancelLoading ? "Cancelando..." : "Sim, cancelar envio"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               )}
               {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'ENVIADO' && simulado.notaMedia === null && (
-                <Button
-                  onClick={handleVerRedacao}
-                  className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Ver Redação
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleVerRedacao}
+                    className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Ver Redação
+                  </Button>
+                  {podeCancelar && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full text-red-600 border-red-200 hover:bg-red-50 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200"
+                          disabled={cancelLoading}
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancelar Envio
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                            Cancelar envio da redação
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="space-y-2">
+                            <p>Tem certeza que deseja cancelar o envio desta redação de simulado?</p>
+                            <p className="font-medium">
+                              <strong>Simulado:</strong> {simulado.titulo}
+                            </p>
+                            {getCreditosACancelar('simulado') > 0 && (
+                              <div className="bg-green-50 border border-green-200 rounded p-3 mt-3">
+                                <p className="text-green-800 text-sm">
+                                  ✅ <strong>{getCreditosACancelar('simulado')} crédito(s)</strong> serão devolvidos à sua conta.
+                                </p>
+                              </div>
+                            )}
+                            <p className="text-red-600 text-sm mt-3">
+                              ⚠️ Esta ação não pode ser desfeita. A redação será removida permanentemente.
+                            </p>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleCancelarRedacao}
+                            className="bg-red-600 hover:bg-red-700"
+                            disabled={cancelLoading}
+                          >
+                            {cancelLoading ? "Cancelando..." : "Sim, cancelar envio"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               )}
               {perfil === 'aluno' && isEncerrado && simulado.submissionStatus === 'AUSENTE' && (
                 <div className="text-center text-sm text-gray-500 py-2">

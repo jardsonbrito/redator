@@ -119,49 +119,71 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
   const { data: submissionData } = useSimuladoSubmission(simulado.id);
   const { studentData } = useStudentAuth();
 
+
   // Determinar status de submissão para exibir badge correto
   let submissionStatus: 'ENVIADO' | 'AUSENTE' | undefined;
-  if (computeSimuladoStatus(simulado) === 'encerrado') {
+  const statusSimulado = computeSimuladoStatus(simulado);
+
+  if (statusSimulado === 'encerrado') {
     submissionStatus = submissionData?.hasSubmitted ? 'ENVIADO' : 'AUSENTE';
+  } else if (statusSimulado === 'ativo' && submissionData?.hasSubmitted) {
+    // Para simulados ativos mas onde o aluno já enviou
+    submissionStatus = 'ENVIADO';
   }
 
-  // Buscar nota média se o simulado estiver encerrado e o aluno tiver enviado
-  const { data: notaData } = useQuery({
-    queryKey: ['simulado-nota', simulado.id, studentData.email],
+  // Buscar dados completos da redação se o aluno tiver enviado
+  const { data: redacaoData } = useQuery({
+    queryKey: ['simulado-redacao', simulado.id, studentData.email],
     queryFn: async () => {
-      if (submissionStatus !== 'ENVIADO') return null;
+      if (!submissionData?.hasSubmitted) {
+        return null;
+      }
 
       const { data, error } = await supabase
         .from('redacoes_simulado')
-        .select('nota_final_corretor_1, nota_final_corretor_2')
+        .select('*')
         .eq('id_simulado', simulado.id)
         .ilike('email_aluno', studentData.email.toLowerCase().trim())
         .single();
 
-      if (error || !data) return null;
-
-      // Calcular média das duas correções (se ambas existirem)
-      const nota1 = data.nota_final_corretor_1;
-      const nota2 = data.nota_final_corretor_2;
-
-      if (nota1 !== null && nota2 !== null) {
-        return (nota1 + nota2) / 2;
-      } else if (nota1 !== null) {
-        return nota1;
-      } else if (nota2 !== null) {
-        return nota2;
+      if (error || !data) {
+        return null;
       }
 
-      return null;
+      return data;
     },
-    enabled: !!studentData.email && submissionStatus === 'ENVIADO'
+    enabled: !!studentData.email && !!submissionData?.hasSubmitted
   });
+
+  // Calcular nota média a partir dos dados completos
+  const notaMedia = redacaoData ? (() => {
+    const nota1 = redacaoData.nota_final_corretor_1;
+    const nota2 = redacaoData.nota_final_corretor_2;
+
+    if (nota1 !== null && nota2 !== null) {
+      return (nota1 + nota2) / 2;
+    } else if (nota1 !== null) {
+      return nota1;
+    } else if (nota2 !== null) {
+      return nota2;
+    }
+
+    return null;
+  })() : null;
 
   const simuladoWithSubmission = {
     ...simulado,
     hasSubmitted: submissionData?.hasSubmitted,
     submissionStatus,
-    notaMedia: notaData
+    notaMedia,
+    redacaoData: redacaoData ? {
+      id: redacaoData.id,
+      email_aluno: redacaoData.email_aluno,
+      corrigida: redacaoData.corrigida,
+      nota_total: redacaoData.nota_total,
+      status: redacaoData.status || 'pendente',
+      tipo_envio: 'simulado'
+    } : undefined
   };
 
   return (

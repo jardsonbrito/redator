@@ -89,7 +89,7 @@ export const RedacaoEnviadaCard = ({
 }: RedacaoEnviadaCardProps) => {
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
-  const { cancelRedacao, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
+  const { cancelRedacao, cancelRedacaoSimulado, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
     onSuccess: () => {
       onRedacaoCanceled?.();
     }
@@ -231,8 +231,8 @@ export const RedacaoEnviadaCard = ({
                 </Badge>
               )}
 
-              {/* Botão de cancelamento */}
-              {canCancelRedacao(redacao) && (
+              {/* Botão de cancelamento - apenas para redações que NÃO são simulados */}
+              {canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado' && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -274,7 +274,13 @@ export const RedacaoEnviadaCard = ({
                     <AlertDialogFooter>
                       <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() => cancelRedacao(redacao.id, redacao.email_aluno)}
+                        onClick={() => {
+                          if (redacao.tipo_envio === 'simulado') {
+                            cancelRedacaoSimulado(redacao.id, redacao.email_aluno);
+                          } else {
+                            cancelRedacao(redacao.id, redacao.email_aluno);
+                          }
+                        }}
                         className="bg-red-600 hover:bg-red-700"
                         disabled={cancelLoading}
                       >

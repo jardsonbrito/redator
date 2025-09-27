@@ -165,17 +165,182 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
     }
   };
 
+  const cancelRedacaoSimulado = async (redacaoId: string, userEmail: string) => {
+    setLoading(true);
+
+    try {
+      const normalizedEmail = userEmail.toLowerCase().trim();
+      console.log('🔄 Iniciando cancelamento de simulado:', {
+        redacaoId,
+        userEmail,
+        normalizedEmail,
+        emailOriginal: userEmail,
+        emailNormalizado: normalizedEmail
+      });
+
+      // 1. Buscar a redação de simulado e verificar se pode ser cancelada
+      // Primeiro, tentar buscar apenas por ID para ver se RLS está bloqueando
+      const { data: redacaoById, error: redacaoByIdError } = await supabase
+        .from('redacoes_simulado')
+        .select('*')
+        .eq('id', redacaoId)
+        .single();
+
+      console.log('🔍 Busca apenas por ID:', {
+        redacaoById,
+        redacaoByIdError
+      });
+
+      // Agora buscar com filtro de email
+      const { data: redacao, error: redacaoError } = await supabase
+        .from('redacoes_simulado')
+        .select('*')
+        .eq('id', redacaoId)
+        .eq('email_aluno', normalizedEmail)
+        .single();
+
+      console.log('🔍 Resultado da busca de simulado:', {
+        redacao,
+        redacaoError,
+        query: {
+          tabela: 'redacoes_simulado',
+          id: redacaoId,
+          email_aluno: normalizedEmail
+        }
+      });
+
+      if (redacaoError || !redacao) {
+        throw new Error('Redação não encontrada ou não pertence ao usuário');
+      }
+
+      console.log('📄 Redação de simulado encontrada:', redacao);
+
+      // 2. Verificar se ainda pode ser cancelada
+      if (redacao.corrigida || redacao.nota_total !== null) {
+        throw new Error('Não é possível cancelar uma redação que já foi corrigida');
+      }
+
+      // Verificar se já iniciou correção
+      const temNotasLancadas = redacao.nota_c1 !== null ||
+                               redacao.nota_c2 !== null ||
+                               redacao.nota_c3 !== null ||
+                               redacao.nota_c4 !== null ||
+                               redacao.nota_c5 !== null;
+
+      if (temNotasLancadas) {
+        throw new Error('Não é possível cancelar uma redação que já iniciou o processo de correção');
+      }
+
+      // 3. Simulados sempre consomem 2 créditos
+      const creditosParaRessarcir = 2;
+
+      console.log('💰 Créditos a ressarcir:', creditosParaRessarcir);
+
+      // 4. Buscar o perfil do usuário
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, creditos')
+        .eq('email', normalizedEmail)
+        .eq('user_type', 'aluno')
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Perfil do usuário não encontrado');
+      }
+
+      console.log('👤 Perfil encontrado:', profile);
+
+      // 5. Deletar redação de simulado
+      const { error: deleteError } = await supabase
+        .from('redacoes_simulado')
+        .delete()
+        .eq('id', redacaoId);
+
+      if (deleteError) {
+        console.error('❌ Erro ao deletar redação de simulado:', deleteError);
+        throw new Error('Erro ao cancelar redação');
+      }
+
+      console.log('🗑️ Redação de simulado deletada com sucesso');
+
+      // 6. Ressarcir créditos
+      const novoSaldoCreditos = (profile.creditos || 0) + creditosParaRessarcir;
+
+      const { error: creditError } = await supabase
+        .from('profiles')
+        .update({ creditos: novoSaldoCreditos })
+        .eq('id', profile.id);
+
+      if (creditError) {
+        console.error('⚠️ Erro ao ressarcir créditos:', creditError);
+        // Redação já foi deletada, mas créditos não foram ressarcidos
+      } else {
+        console.log('💰 Créditos ressarcidos com sucesso');
+      }
+
+      // 7. Registrar no audit de créditos (opcional)
+      try {
+        await supabase
+          .from('credit_audit')
+          .insert({
+            user_id: profile.id,
+            admin_id: null,
+            action: 'add',
+            old_credits: profile.creditos || 0,
+            new_credits: novoSaldoCreditos,
+            reason: 'Ressarcimento por cancelamento de redação de simulado'
+          });
+        console.log('📝 Audit registrado');
+      } catch (auditError) {
+        console.warn('⚠️ Erro ao registrar audit (não crítico):', auditError);
+      }
+
+      // Sucesso
+      const message = `Redação de simulado cancelada com sucesso! ${creditosParaRessarcir} créditos foram devolvidos. Novo saldo: ${novoSaldoCreditos}`;
+
+      toast({
+        title: "✅ Cancelamento realizado",
+        description: message,
+        className: "border-green-200 bg-green-50 text-green-900",
+        duration: 5000
+      });
+
+      options?.onSuccess?.();
+      return true;
+
+    } catch (error) {
+      console.error('❌ Erro ao cancelar redação de simulado:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+
+      toast({
+        title: "Erro no cancelamento",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000
+      });
+
+      options?.onError?.(errorMessage);
+      return false;
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const canCancelRedacao = (redacao: any): boolean => {
     // Debug apenas em desenvolvimento
     if (process.env.NODE_ENV === 'development') {
       console.log('🔍 canCancelRedacao - Verificando redação:', redacao);
       console.log('📋 Campos disponíveis na redação:', Object.keys(redacao));
+      console.log('🔧 Tipo de envio:', redacao.tipo_envio);
     }
 
     // 1. Não pode cancelar se já foi corrigida
     if (redacao.corrigida === true) {
       if (process.env.NODE_ENV === 'development') {
         console.log('❌ Redação já corrigida, não pode cancelar');
+        console.log('🎯 Resultado final canCancelRedacao:', false);
       }
       return false;
     }
@@ -184,6 +349,7 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
     if (redacao.nota_total !== null && redacao.nota_total !== undefined) {
       if (process.env.NODE_ENV === 'development') {
         console.log('❌ Tem nota total, correção finalizada, não pode cancelar');
+        console.log('🎯 Resultado final canCancelRedacao:', false);
       }
       return false;
     }
@@ -192,38 +358,35 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
     if (redacao.status === 'corrigida' || redacao.status === 'devolvida') {
       if (process.env.NODE_ENV === 'development') {
         console.log('❌ Status não permite cancelamento:', redacao.status);
+        console.log('🎯 Resultado final canCancelRedacao:', false);
       }
       return false;
     }
 
     // 4. Para simulados, verificar se já iniciou qualquer correção
     if (redacao.tipo_envio === 'simulado') {
-      // Se já tem qualquer nota individual, significa que um corretor já iniciou
-      const temNotasIndividuais = redacao.nota_c1 !== null ||
-                                  redacao.nota_c2 !== null ||
-                                  redacao.nota_c3 !== null ||
-                                  redacao.nota_c4 !== null ||
-                                  redacao.nota_c5 !== null;
+
+      // Verificar se tem qualquer nota individual (simplificado)
+      // Para simulados, os dados podem vir com campos diferentes dependendo da origem
+      const temNotasIndividuais = (redacao.nota_c1 !== null && redacao.nota_c1 !== undefined) ||
+                                  (redacao.nota_c2 !== null && redacao.nota_c2 !== undefined) ||
+                                  (redacao.nota_c3 !== null && redacao.nota_c3 !== undefined) ||
+                                  (redacao.nota_c4 !== null && redacao.nota_c4 !== undefined) ||
+                                  (redacao.nota_c5 !== null && redacao.nota_c5 !== undefined) ||
+                                  // Verificar também campos específicos de corretor se existirem
+                                  (redacao.nota_c1_corretor_1 !== null && redacao.nota_c1_corretor_1 !== undefined) ||
+                                  (redacao.nota_c1_corretor_2 !== null && redacao.nota_c1_corretor_2 !== undefined);
 
       if (temNotasIndividuais) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('❌ Simulado já tem notas individuais, correção iniciada');
-        }
         return false;
       }
     }
 
     // 5. Verificar se está em correção (status em_andamento)
     if (redacao.status === 'em_andamento') {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('❌ Redação em andamento, não pode cancelar');
-      }
       return false;
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('✅ Permitindo cancelamento - redação não foi corrigida e não iniciou correção');
-    }
     return true;
   };
 
@@ -244,6 +407,7 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
 
   return {
     cancelRedacao,
+    cancelRedacaoSimulado,
     canCancelRedacao,
     getCreditosACancelar,
     loading

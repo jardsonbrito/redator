@@ -139,7 +139,7 @@ const MinhasRedacoesList = () => {
   const { isRedacaoVisualizada } = useVisualizacoesRealtime();
 
   // Hook para cancelamento de redações
-  const { cancelRedacao, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
+  const { cancelRedacao, cancelRedacaoSimulado, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
     onSuccess: () => {
       // Recarregar a lista após cancelamento
       window.location.reload();
@@ -895,9 +895,9 @@ const MinhasRedacoesList = () => {
                         )}
                       </div>
 
-                      {/* Botão de cancelamento */}
+                      {/* Botão de cancelamento - apenas para redações que NÃO são simulados */}
                       {(() => {
-                        const podeCancel = canCancelRedacao(redacao);
+                        const podeCancel = canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado';
                         // Debug apenas em desenvolvimento
                         if (process.env.NODE_ENV === 'development') {
                           console.log(`🔍 Redação ${redacao.id}: pode cancelar = ${podeCancel}`);
@@ -947,7 +947,13 @@ const MinhasRedacoesList = () => {
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => cancelRedacao(redacao.id, redacao.email_aluno)}
+                                  onClick={() => {
+                                    if (redacao.tipo_envio === 'simulado') {
+                                      cancelRedacaoSimulado(redacao.id, redacao.email_aluno);
+                                    } else {
+                                      cancelRedacao(redacao.id, redacao.email_aluno);
+                                    }
+                                  }}
                                   className="bg-red-600 hover:bg-red-700"
                                   disabled={cancelLoading}
                                 >
