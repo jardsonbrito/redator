@@ -372,51 +372,27 @@ const SimuladoParticipacao = () => {
           
           <main className="max-w-4xl mx-auto px-4 py-8">
             <div className="mb-8">
-              <Button 
-                onClick={() => navigate('/app')} 
-                variant="ghost" 
+              <Button
+                onClick={() => navigate('/app')}
+                variant="ghost"
                 className="mb-4"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar para Home
               </Button>
-
-              <Card className="border-green-200 bg-green-50">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-green-800">
-                      🎯 {simulado.titulo}
-                    </CardTitle>
-                    <Badge className="bg-green-500 text-white">
-                      EM PROGRESSO
-                    </Badge>
-                  </div>
-                   <div className="flex items-center gap-4 text-sm text-green-700">
-                     <div className="flex items-center gap-1">
-                       <Calendar className="w-4 h-4" />
-                       <span>
-                         {statusInfo.timeInfo || (simulado.data_fim && simulado.hora_fim 
-                           ? `Término: ${simulado.data_fim} às ${simulado.hora_fim}`
-                           : 'Horário não definido'
-                         )}
-                       </span>
-                     </div>
-                   </div>
-                </CardHeader>
-              </Card>
             </div>
 
             {simulado.temas && (
               <Card className="mb-8">
                 <CardHeader>
                   <CardTitle className="text-primary">
-                    📝 Proposta de Redação
+                    Proposta de Redação
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
                     <h3 className="text-xl font-bold text-primary mb-4">
-                      {simulado.temas.frase_tematica}
+                      "{simulado.temas.frase_tematica}"
                     </h3>
                   </div>
 
@@ -440,7 +416,7 @@ const SimuladoParticipacao = () => {
 
                   {simulado.temas.texto_1 && (
                     <div className="bg-white rounded-lg p-6 border border-gray-200">
-                      <h4 className="font-semibold text-primary mb-3">Texto Motivador I</h4>
+                      <h4 className="font-semibold text-primary mb-3">Texto 1</h4>
                       <div className="text-gray-700 leading-relaxed text-sm">
                         {renderTextWithParagraphs(simulado.temas.texto_1)}
                       </div>
@@ -449,7 +425,7 @@ const SimuladoParticipacao = () => {
 
                   {simulado.temas.texto_2 && (
                     <div className="bg-white rounded-lg p-6 border border-gray-200">
-                      <h4 className="font-semibold text-primary mb-3">Texto Motivador II</h4>
+                      <h4 className="font-semibold text-primary mb-3">Texto 2</h4>
                       <div className="text-gray-700 leading-relaxed text-sm">
                         {renderTextWithParagraphs(simulado.temas.texto_2)}
                       </div>
@@ -458,7 +434,7 @@ const SimuladoParticipacao = () => {
 
                   {simulado.temas.texto_3 && (
                     <div className="bg-white rounded-lg p-6 border border-gray-200">
-                      <h4 className="font-semibold text-primary mb-3">Texto Motivador III</h4>
+                      <h4 className="font-semibold text-primary mb-3">Texto 3</h4>
                       <div className="text-gray-700 leading-relaxed text-sm">
                         {renderTextWithParagraphs(simulado.temas.texto_3)}
                       </div>
