@@ -17,7 +17,7 @@ export const useSimuladoSubmission = (simuladoId: string) => {
 
       const { data, error } = await supabase
         .from('redacoes_simulado')
-        .select('id, data_envio')
+        .select('*')
         .eq('id_simulado', simuladoId)
         .ilike('email_aluno', normalizedEmail)
         .order('data_envio', { ascending: false })
@@ -31,10 +31,13 @@ export const useSimuladoSubmission = (simuladoId: string) => {
       // Extrair o primeiro item se houver dados
       const submissionData = data && data.length > 0 ? data[0] : null;
 
-      return {
+      const result = {
         hasSubmitted: !!submissionData,
         submissionData: submissionData
       };
+
+
+      return result;
     },
     enabled: !!studentData.email && !!simuladoId
   });

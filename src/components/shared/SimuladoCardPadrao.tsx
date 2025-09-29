@@ -205,6 +205,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                        canCancelRedacao(simulado.redacaoData);
 
 
+
   // Determinar se o card é clicável (remover clicabilidade para alunos que já enviaram redação)
   const isClickable = (perfil === 'aluno' && isAtivo) ||
                      (perfil === 'corretor' && isEncerrado);

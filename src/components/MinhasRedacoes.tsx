@@ -133,15 +133,6 @@ export const MinhasRedacoes = () => {
     }
   }
 
-  // Debug completo dos dados de usuário
-  console.log('🐛 DEBUG COMPLETO - MinhasRedacoes:', {
-    userType,
-    alunoTurma,
-    alunoEmail,
-    visitanteEmail,
-    visitanteData,
-    hasVisitanteData: !!visitanteData
-  });
 
   // Query corrigida para visitantes
   const { data: redacoesTurma, isLoading, error, refetch } = useQuery({
@@ -1054,12 +1045,8 @@ export const MinhasRedacoes = () => {
                     
                   </div>
 
-                   {/* Botão de cancelamento - apenas para redações que NÃO são simulados */}
-                   {(() => {
-                     const podeCancel = canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado';
-                     console.log(`🔍 Redação ${redacao.id}: pode cancelar = ${podeCancel}`);
-                     return podeCancel;
-                   })() && (
+                   {/* Botão de cancelamento - disponível apenas para regulares (simulados cancelam na rota do simulado) */}
+                   {canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado' && (
                      <AlertDialog>
                        <AlertDialogTrigger asChild>
                          <Button
@@ -1102,11 +1089,7 @@ export const MinhasRedacoes = () => {
                            <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
                            <AlertDialogAction
                              onClick={() => {
-                               if (redacao.tipo_envio === 'simulado') {
-                                 cancelRedacaoSimulado(redacao.id, redacao.email_aluno);
-                               } else {
-                                 cancelRedacao(redacao.id, redacao.email_aluno);
-                               }
+                               cancelRedacao(redacao.id, redacao.email_aluno);
                              }}
                              className="bg-red-600 hover:bg-red-700"
                              disabled={cancelLoading}
@@ -1118,14 +1101,6 @@ export const MinhasRedacoes = () => {
                      </AlertDialog>
                    )}
 
-                   {/* TESTE: Botão sempre visível para debug */}
-                   <Button
-                     variant="outline"
-                     size="sm"
-                     className="w-full text-blue-600 border-blue-200 hover:bg-blue-50 text-xs mb-2"
-                   >
-                     🔧 TESTE - Cancelamento (sempre visível)
-                   </Button>
 
                    <Button
                      variant="outline"

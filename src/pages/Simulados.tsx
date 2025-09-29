@@ -131,29 +131,8 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
     submissionStatus = 'ENVIADO';
   }
 
-  // Buscar dados completos da redação se o aluno tiver enviado
-  const { data: redacaoData } = useQuery({
-    queryKey: ['simulado-redacao', simulado.id, studentData.email],
-    queryFn: async () => {
-      if (!submissionData?.hasSubmitted) {
-        return null;
-      }
-
-      const { data, error } = await supabase
-        .from('redacoes_simulado')
-        .select('*')
-        .eq('id_simulado', simulado.id)
-        .ilike('email_aluno', studentData.email.toLowerCase().trim())
-        .single();
-
-      if (error || !data) {
-        return null;
-      }
-
-      return data;
-    },
-    enabled: !!studentData.email && !!submissionData?.hasSubmitted
-  });
+  // Usar dados completos diretamente do useSimuladoSubmission
+  const redacaoData = submissionData?.submissionData;
 
   // Calcular nota média a partir dos dados completos
   const notaMedia = redacaoData ? (() => {

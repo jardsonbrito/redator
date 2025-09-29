@@ -231,7 +231,7 @@ export const RedacaoEnviadaCard = ({
                 </Badge>
               )}
 
-              {/* Botão de cancelamento - apenas para redações que NÃO são simulados */}
+              {/* Botão de cancelamento - disponível apenas para regulares (simulados só cancelam no card resumo) */}
               {canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado' && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -275,11 +275,7 @@ export const RedacaoEnviadaCard = ({
                       <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => {
-                          if (redacao.tipo_envio === 'simulado') {
-                            cancelRedacaoSimulado(redacao.id, redacao.email_aluno);
-                          } else {
-                            cancelRedacao(redacao.id, redacao.email_aluno);
-                          }
+                          cancelRedacao(redacao.id, redacao.email_aluno);
                         }}
                         className="bg-red-600 hover:bg-red-700"
                         disabled={cancelLoading}
