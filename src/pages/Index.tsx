@@ -44,7 +44,7 @@ const Index = () => {
       showAlways: true
     },
     {
-      title: "Meus Simulados",
+      title: "Simulados",
       path: "/simulados",
       icon: ClipboardCheck,
       tooltip: "Participe de simulados com horário controlado e correção detalhada.",
