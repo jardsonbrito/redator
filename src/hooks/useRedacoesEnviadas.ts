@@ -101,7 +101,32 @@ export const useRedacoesEnviadas = () => {
 
       if (error) throw error;
 
-      setRedacoes(data || []);
+      // Resolver nomes de alunos quando o nome_aluno for genérico ("Aluno")
+      const redacoesProcessadas = await Promise.all((data || []).map(async (redacao) => {
+        // Se o nome_aluno for "Aluno" ou estiver vazio, tentar resolver pelo email
+        if (!redacao.nome_aluno || redacao.nome_aluno.trim() === "Aluno" || redacao.nome_aluno.trim() === "") {
+          try {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("nome")
+              .eq("email", redacao.email_aluno)
+              .eq("user_type", "aluno")
+              .single();
+
+            if (profileData?.nome) {
+              return {
+                ...redacao,
+                nome_aluno: profileData.nome
+              };
+            }
+          } catch (profileError) {
+            console.log(`Não foi possível resolver o nome para o email: ${redacao.email_aluno}`);
+          }
+        }
+        return redacao;
+      }));
+
+      setRedacoes(redacoesProcessadas);
     } catch (error: any) {
       console.error("Erro ao buscar redações:", error);
       toast({
