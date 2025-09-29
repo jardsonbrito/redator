@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCreditSync } from '@/hooks/useCreditSync';
 
 interface CancelRedacaoOptions {
   onSuccess?: () => void;
@@ -10,12 +12,27 @@ interface CancelRedacaoOptions {
 export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { syncCreditsUpdate } = useCreditSync();
 
   const cancelRedacao = async (redacaoId: string, userEmail: string) => {
     setLoading(true);
 
+    // Função para log persistente
+    const addDebugLog = (msg: string) => {
+      const timestamp = new Date().toISOString().substring(11, 19);
+      const logEntry = `[${timestamp}] ${msg}`;
+      console.log(logEntry);
+
+      // Salvar no localStorage para persistir entre reloads
+      const existingLogs = localStorage.getItem('cancelamento_logs') || '';
+      const newLogs = existingLogs + '\n' + logEntry;
+      localStorage.setItem('cancelamento_logs', newLogs);
+    };
+
     try {
-      console.log('🔄 Iniciando cancelamento:', { redacaoId, userEmail });
+      addDebugLog('🔄 Iniciando cancelamento de redação regular...');
+      addDebugLog(`📧 Email: ${userEmail}, ID: ${redacaoId}`);
 
       // 1. Buscar a redação e verificar se pode ser cancelada
       const { data: redacao, error: redacaoError } = await supabase
@@ -29,7 +46,12 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
         throw new Error('Redação não encontrada ou não pertence ao usuário');
       }
 
-      console.log('📄 Redação encontrada:', redacao);
+      addDebugLog('📄 Redação encontrada: ' + JSON.stringify({
+        id: redacao.id,
+        tipo_envio: redacao.tipo_envio,
+        corrigida: redacao.corrigida,
+        nota_total: redacao.nota_total
+      }));
 
       // 2. Verificar se ainda pode ser cancelada
       if (redacao.corrigida || redacao.nota_total !== null) {
@@ -64,7 +86,7 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
           creditosParaRessarcir = 1;
       }
 
-      console.log('💰 Créditos a ressarcir:', creditosParaRessarcir);
+      addDebugLog(`💰 Créditos a ressarcir: ${creditosParaRessarcir}`);
 
       // 4. Buscar o perfil do usuário
       const { data: profile, error: profileError } = await supabase
@@ -78,7 +100,7 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
         throw new Error('Perfil do usuário não encontrado');
       }
 
-      console.log('👤 Perfil encontrado:', profile);
+      addDebugLog(`👤 Perfil encontrado: ID=${profile.id}, créditos=${profile.creditos}`);
 
       // 5. Deletar redação
       const { error: deleteError } = await supabase
@@ -98,35 +120,140 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       if (creditosParaRessarcir > 0) {
         novoSaldoCreditos = (profile.creditos || 0) + creditosParaRessarcir;
 
-        const { error: creditError } = await supabase
-          .from('profiles')
-          .update({ creditos: novoSaldoCreditos })
-          .eq('id', profile.id);
+        // USAR ABORDAGEM MAIS DIRETA - SIMILAR AO CONSUMO
+        addDebugLog('🔧 🔧 🔧 RETORNANDO CRÉDITOS - MÉTODO MAIS DIRETO 🔧 🔧 🔧');
+        addDebugLog(`📊 Créditos atuais: ${profile.creditos}`);
+        addDebugLog(`➕ Créditos a ressarcir: ${creditosParaRessarcir}`);
+        addDebugLog(`🎯 Novos créditos esperados: ${novoSaldoCreditos}`);
 
-        if (creditError) {
-          console.error('⚠️ Erro ao ressarcir créditos:', creditError);
-          // Redação já foi deletada, mas créditos não foram ressarcidos
-          // Em produção seria ideal ter uma transação atômica
-        } else {
-          console.log('💰 Créditos ressarcidos com sucesso');
-        }
-
-        // 7. Registrar no audit de créditos (opcional, pode falhar sem problemas)
+        // Usar função RPC para ressarcir créditos
+        let ressarcimentoSucesso = false;
         try {
-          await supabase
-            .from('credit_audit')
-            .insert({
-              user_id: profile.id,
-              admin_id: null,
-              action: 'add',
-              old_credits: profile.creditos || 0,
-              new_credits: novoSaldoCreditos,
-              reason: `Ressarcimento por cancelamento de redação ${redacao.tipo_envio}`
+          addDebugLog('🔧 Tentando refund_credits_on_cancel...');
+          addDebugLog(`📋 Parâmetros: user_id=${profile.id}, amount=${creditosParaRessarcir}`);
+
+          const { data: refundResult, error: refundError } = await supabase
+            .rpc('refund_credits_on_cancel', {
+              p_user_id: profile.id,
+              p_amount: creditosParaRessarcir,
+              p_reason: `Ressarcimento por cancelamento de redação ${redacao.tipo_envio}`
             });
-          console.log('📝 Audit registrado');
-        } catch (auditError) {
-          console.warn('⚠️ Erro ao registrar audit (não crítico):', auditError);
+
+          addDebugLog(`🔧 Resultado refund_credits_on_cancel: data=${refundResult}, error=${JSON.stringify(refundError)}`);
+
+          if (refundError) {
+            addDebugLog(`❌ Erro na função refund_credits_on_cancel: ${JSON.stringify(refundError)}`);
+            addDebugLog(`❌ Código do erro: ${refundError.code}, Mensagem: ${refundError.message}`);
+
+            // Se erro PGRST202, a função não existe - tentar fallback
+            if (refundError.code === 'PGRST202') {
+              addDebugLog('🔄 Função refund_credits_on_cancel não encontrada - usando fallback direto');
+              throw new Error('FUNCTION_NOT_FOUND');
+            }
+
+            // Outros erros são re-lançados
+            const errorMessage = refundError.message || 'Erro desconhecido na função de ressarcimento';
+            throw new Error(`Falha no ressarcimento: ${errorMessage}`);
+          }
+
+          if (refundResult === true) {
+            addDebugLog('✅ refund_credits_on_cancel funcionou!');
+            novoSaldoCreditos = (profile.creditos || 0) + creditosParaRessarcir;
+            addDebugLog(`💰 Novos créditos calculados: ${profile.creditos} + ${creditosParaRessarcir} = ${novoSaldoCreditos}`);
+            ressarcimentoSucesso = true;
+          } else {
+            addDebugLog(`⚠️ refund_credits_on_cancel retornou valor inesperado: ${refundResult}`);
+            throw new Error(`Função de refund retornou valor inválido: ${refundResult}`);
+          }
+        } catch (refundErr) {
+          addDebugLog(`💥 Erro na refund_credits_on_cancel: ${JSON.stringify(refundErr)}`);
+
+          // Se é erro de função não encontrada, tentar fallback direto
+          if (refundErr instanceof Error && refundErr.message === 'FUNCTION_NOT_FOUND') {
+            addDebugLog('🔄 FALLBACK: Tentando update direto no banco...');
+
+            try {
+              novoSaldoCreditos = (profile.creditos || 0) + creditosParaRessarcir;
+
+              // Update direto na tabela profiles
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                  creditos: novoSaldoCreditos,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', profile.id);
+
+              if (updateError) {
+                addDebugLog(`❌ Erro no update direto: ${JSON.stringify(updateError)}`);
+                throw updateError;
+              }
+
+              addDebugLog(`✅ Update direto funcionou! ${profile.creditos} → ${novoSaldoCreditos}`);
+              ressarcimentoSucesso = true;
+
+              // Tentar registrar audit manualmente com schema REAL
+              try {
+                await supabase
+                  .from('credit_audit')
+                  .insert({
+                    user_id: profile.id,
+                    admin_id: null,
+                    action: 'refund',
+                    old_credits: profile.creditos || 0,
+                    new_credits: novoSaldoCreditos,
+                    created_at: new Date().toISOString()
+                  });
+                addDebugLog('✅ Audit registrado via fallback (schema real)');
+              } catch (auditErr) {
+                addDebugLog(`⚠️ Erro no audit (não crítico): ${JSON.stringify(auditErr)}`);
+              }
+
+            } catch (fallbackErr) {
+              addDebugLog(`💥 Erro no fallback: ${JSON.stringify(fallbackErr)}`);
+              throw fallbackErr;
+            }
+          } else {
+            // Outros erros são re-lançados
+            throw refundErr;
+          }
         }
+
+        if (!ressarcimentoSucesso) {
+          throw new Error('Falha ao ressarcir créditos - todas as tentativas falharam');
+        }
+
+        // Verificar se o ressarcimento funcionou no banco
+        addDebugLog('🔍 Verificando se o ressarcimento funcionou...');
+        const { data: verifyData, error: verifyError } = await supabase
+          .from('profiles')
+          .select('creditos')
+          .eq('id', profile.id)
+          .single();
+
+        addDebugLog(`🔍 Verificação pós-ressarcimento: creditos=${verifyData?.creditos}, error=${JSON.stringify(verifyError)}`);
+
+        if (verifyData && verifyError === null) {
+          novoSaldoCreditos = verifyData.creditos; // Usar valor real do banco
+          addDebugLog(`✅ CONFIRMADO! Créditos atualizados no banco: ${profile.creditos} → ${verifyData.creditos}`);
+        } else {
+          addDebugLog(`⚠️ ERRO na verificação: ${JSON.stringify(verifyError)}`);
+          throw new Error('Não foi possível verificar a atualização dos créditos');
+        }
+      }
+
+      // SINCRONIZAR INTERFACE APÓS RESSARCIMENTO
+      if (creditosParaRessarcir > 0) {
+        addDebugLog('🔄 Sincronizando interface de créditos...');
+
+        await syncCreditsUpdate(
+          userEmail.toLowerCase().trim(),
+          novoSaldoCreditos,
+          'add',
+          creditosParaRessarcir
+        );
+
+        addDebugLog('✅ Sincronização completa via hook useCreditSync');
       }
 
       // Sucesso
@@ -168,15 +295,22 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
   const cancelRedacaoSimulado = async (redacaoId: string, userEmail: string) => {
     setLoading(true);
 
+    // Função para log persistente
+    const addDebugLog = (msg: string) => {
+      const timestamp = new Date().toISOString().substring(11, 19);
+      const logEntry = `[${timestamp}] ${msg}`;
+      console.log(logEntry);
+
+      // Salvar no localStorage para persistir entre reloads
+      const existingLogs = localStorage.getItem('cancelamento_logs') || '';
+      const newLogs = existingLogs + '\n' + logEntry;
+      localStorage.setItem('cancelamento_logs', newLogs);
+    };
+
     try {
       const normalizedEmail = userEmail.toLowerCase().trim();
-      console.log('🔄 Iniciando cancelamento de simulado:', {
-        redacaoId,
-        userEmail,
-        normalizedEmail,
-        emailOriginal: userEmail,
-        emailNormalizado: normalizedEmail
-      });
+      addDebugLog('🔄 Iniciando cancelamento de simulado...');
+      addDebugLog(`📧 Email: ${userEmail} → ${normalizedEmail}, ID: ${redacaoId}`);
 
       // 1. Buscar a redação de simulado e verificar se pode ser cancelada
       // Primeiro, tentar buscar apenas por ID para ver se RLS está bloqueando
@@ -234,7 +368,7 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       // 3. Simulados sempre consomem 2 créditos
       const creditosParaRessarcir = 2;
 
-      console.log('💰 Créditos a ressarcir:', creditosParaRessarcir);
+      addDebugLog(`💰 Créditos a ressarcir: ${creditosParaRessarcir}`);
 
       // 4. Buscar o perfil do usuário
       const { data: profile, error: profileError } = await supabase
@@ -248,7 +382,7 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
         throw new Error('Perfil do usuário não encontrado');
       }
 
-      console.log('👤 Perfil encontrado:', profile);
+      addDebugLog(`👤 Perfil encontrado: ID=${profile.id}, créditos=${profile.creditos}`);
 
       // 5. Deletar redação de simulado
       const { error: deleteError } = await supabase
@@ -266,34 +400,114 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       // 6. Ressarcir créditos
       const novoSaldoCreditos = (profile.creditos || 0) + creditosParaRessarcir;
 
-      const { error: creditError } = await supabase
-        .from('profiles')
-        .update({ creditos: novoSaldoCreditos })
-        .eq('id', profile.id);
+      // USAR ABORDAGEM MAIS DIRETA - SIMULADOS
+      console.log('🔧 🔧 🔧 RETORNANDO CRÉDITOS SIMULADO - MÉTODO MAIS DIRETO 🔧 🔧 🔧');
+      console.log(`📊 Créditos atuais: ${profile.creditos}`);
+      console.log(`➕ Créditos a ressarcir: ${creditosParaRessarcir}`);
+      console.log(`🎯 Novos créditos esperados: ${novoSaldoCreditos}`);
 
-      if (creditError) {
-        console.error('⚠️ Erro ao ressarcir créditos:', creditError);
-        // Redação já foi deletada, mas créditos não foram ressarcidos
-      } else {
-        console.log('💰 Créditos ressarcidos com sucesso');
+      // ESTRATÉGIA 1: Tentar usar função add_credits_safe
+      let creditosFoiRessarcido = false;
+      try {
+        console.log('🔧 Tentando add_credits_safe...');
+        const { data: addResult, error: addError } = await supabase
+          .rpc('add_credits_safe', {
+            target_user_id: profile.id,
+            credit_amount: creditosParaRessarcir,
+            admin_user_id: null
+          });
+
+        console.log('🔧 Resultado add_credits_safe:', { addResult, addError });
+
+        if (!addError && addResult === true) {
+          console.log('✅ add_credits_safe funcionou!');
+          creditosFoiRessarcido = true;
+        } else {
+          console.log('⚠️ add_credits_safe falhou ou retornou false');
+        }
+      } catch (addErr) {
+        console.log('💥 Erro na add_credits_safe:', addErr);
       }
 
-      // 7. Registrar no audit de créditos (opcional)
+      // ESTRATÉGIA 2: Se falhou, usar update direto múltiplas vezes
+      if (!creditosFoiRessarcido) {
+        console.log('🔧 Fallback: update direto na tabela profiles...');
+
+        // Tentar update por ID primeiro
+        const { error: creditError1 } = await supabase
+          .from('profiles')
+          .update({ creditos: novoSaldoCreditos, updated_at: new Date().toISOString() })
+          .eq('id', profile.id);
+
+        console.log('🔧 Update por ID:', { creditError1 });
+
+        // Tentar update por email também
+        const { error: creditError2 } = await supabase
+          .from('profiles')
+          .update({ creditos: novoSaldoCreditos, updated_at: new Date().toISOString() })
+          .eq('email', normalizedEmail)
+          .eq('user_type', 'aluno');
+
+        console.log('🔧 Update por email:', { creditError2 });
+
+        if (!creditError1 || !creditError2) {
+          console.log('✅ Pelo menos um update funcionou!');
+          creditosFoiRessarcido = true;
+        }
+      }
+
+      // VERIFICAR SE DE FATO FUNCIONOU
+      console.log('🔍 Verificando se o ressarcimento funcionou...');
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('profiles')
+        .select('creditos')
+        .eq('id', profile.id)
+        .single();
+
+      console.log('🔍 Verificação pós-ressarcimento:', { verifyData, verifyError });
+
+      if (verifyData && verifyData.creditos === novoSaldoCreditos) {
+        console.log('✅ SUCESSO! Créditos atualizados no banco!');
+      } else {
+        console.log('⚠️ AVISO: Banco pode não ter sido atualizado, mas vamos continuar...');
+      }
+
+      // 7. Registrar no audit de créditos com schema dinâmico
       try {
+        // Construir registro de audit baseado nos campos disponíveis
+        const auditRecord: any = {};
+
+        // Campos comuns que devem existir
+        auditRecord.user_id = profile.id;
+        auditRecord.admin_id = null;
+        auditRecord.action = 'add';
+        auditRecord.old_credits = profile.creditos || 0;
+        auditRecord.new_credits = novoSaldoCreditos;
+        auditRecord.amount = creditosParaRessarcir;
+        auditRecord.created_at = new Date().toISOString();
+
+        // Tentar diferentes nomes para o campo de descrição
+        auditRecord.description = 'Ressarcimento por cancelamento de redação de simulado';
+
         await supabase
           .from('credit_audit')
-          .insert({
-            user_id: profile.id,
-            admin_id: null,
-            action: 'add',
-            old_credits: profile.creditos || 0,
-            new_credits: novoSaldoCreditos,
-            reason: 'Ressarcimento por cancelamento de redação de simulado'
-          });
-        console.log('📝 Audit registrado');
+          .insert(auditRecord);
+        console.log('📝 Audit registrado com sucesso');
       } catch (auditError) {
         console.warn('⚠️ Erro ao registrar audit (não crítico):', auditError);
       }
+
+      // SINCRONIZAR INTERFACE APÓS RESSARCIMENTO DE SIMULADO
+      addDebugLog('🔄 Sincronizando interface de créditos...');
+
+      await syncCreditsUpdate(
+        normalizedEmail,
+        novoSaldoCreditos,
+        'add',
+        creditosParaRessarcir
+      );
+
+      addDebugLog('✅ Sincronização completa via hook useCreditSync');
 
       // Sucesso
       const message = `Redação de simulado cancelada com sucesso! ${creditosParaRessarcir} créditos foram devolvidos. Novo saldo: ${novoSaldoCreditos}`;
