@@ -86,6 +86,7 @@ import MinhasConquistas from "./pages/MinhasConquistas";
 import Gamificacao from "./pages/Gamificacao";
 import DiarioOnline from "./pages/DiarioOnline";
 import SimuladoRedacaoCorrigida from "./pages/SimuladoRedacaoCorrigida";
+import RedacaoRegularDetalhes from "./pages/RedacaoRegularDetalhes";
 import { CustomizePlanSimple } from "./pages/admin/CustomizePlanSimple";
 import { CustomizePlanByName } from "./pages/admin/CustomizePlanByName";
 import { CustomizeStudentPlan } from "./pages/admin/CustomizeStudentPlan";
@@ -121,6 +122,7 @@ function App() {
                   <Route path="/exercicios" element={<ProtectedStudentRoute><Exercicios /></ProtectedStudentRoute>} />
                   <Route path="/envie-redacao" element={<ProtectedStudentRoute><EnvieRedacao /></ProtectedStudentRoute>} />
                   <Route path="/minhas-redacoes" element={<ProtectedStudentRoute><MinhasRedacoesList /></ProtectedStudentRoute>} />
+                  <Route path="/minhas-redacoes/:redacaoId" element={<ProtectedStudentRoute><RedacaoRegularDetalhes /></ProtectedStudentRoute>} />
                   <Route path="/redacoes/manuscrita/:id" element={<ProtectedStudentRoute><RedacaoManuscrita /></ProtectedStudentRoute>} />
                   <Route path="/aulas" element={<ProtectedStudentRoute><Aulas /></ProtectedStudentRoute>} />
                   <Route path="/aulas-ao-vivo" element={<ProtectedStudentRoute><AulasAoVivo /></ProtectedStudentRoute>} />

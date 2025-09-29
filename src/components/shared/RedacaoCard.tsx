@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Eye, CheckCircle, Clock, X, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, X, AlertTriangle } from 'lucide-react';
 
 export interface RedacaoCardData {
   id: string;
@@ -20,6 +20,7 @@ export interface RedacaoCardData {
   imagem_url?: string;
   video_url?: string;
   redacao_manuscrita_url?: string | null;
+  tipo_envio?: string; // Para identificar tema livre
   // Campos do tema para buscar imagem
   tema?: {
     cover_url?: string;
@@ -85,33 +86,43 @@ const getEixoTematico = (redacao: RedacaoCardData): string => {
   return redacao.tema?.eixo_tematico || redacao.eixo_tematico || 'Sem eixo';
 };
 
+const isTemaLivre = (redacao: RedacaoCardData): boolean => {
+  return redacao.tipo_envio === 'tema_livre' || (!redacao.tema && !redacao.eixo_tematico);
+};
+
 export const RedacaoCard = ({ redacao, actions, className = '' }: RedacaoCardProps) => {
   const statusInfo = getStatusInfo(redacao);
   const imageUrl = getImageUrl(redacao);
   const eixoTematico = getEixoTematico(redacao);
   const corrigida = redacao.corrigida || redacao.status === 'corrigida';
+  const isTempoLivre = isTemaLivre(redacao);
 
   return (
     <Card className={`bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border-gray-200 flex flex-col h-full ${className}`}>
-      {/* Imagem + badges */}
-      <div className="relative">
-        <div className="w-full h-40 sm:h-44 md:h-40 overflow-hidden">
-          <img
-            src={imageUrl}
-            alt={`Tema: ${redacao.frase_tematica}`}
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
-            }}
-          />
-        </div>
+      {/* Imagem + badges - apenas se não for tema livre */}
+      {!isTempoLivre ? (
+        <div className="relative">
+          <div className="w-full h-40 sm:h-44 md:h-40 overflow-hidden">
+            <img
+              src={imageUrl}
+              alt={`Tema: ${redacao.frase_tematica}`}
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
+              }}
+            />
+          </div>
 
-        {/* Badge do eixo temático */}
-        <Badge className="absolute top-2 left-2 bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 shadow-sm">
-          {eixoTematico}
-        </Badge>
-      </div>
+          {/* Badge do eixo temático */}
+          <Badge className="absolute top-2 left-2 bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 shadow-sm">
+            {eixoTematico}
+          </Badge>
+        </div>
+      ) : (
+        /* Para tema livre, mostrar um espaço em branco ou uma indicação visual mais sutil */
+        <div className="w-full h-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-100"></div>
+      )}
 
       {/* Conteúdo */}
       <div className="p-4 flex-1 flex flex-col">
@@ -175,7 +186,6 @@ export const RedacaoCard = ({ redacao, actions, className = '' }: RedacaoCardPro
                 onClick={() => actions.onVerRedacao?.(redacao.id)}
                 className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <Eye className="w-4 h-4 mr-2" />
                 Ver Minha Redação
               </Button>
               <Button
@@ -194,7 +204,6 @@ export const RedacaoCard = ({ redacao, actions, className = '' }: RedacaoCardPro
                 onClick={() => actions.onVerRedacao?.(redacao.id)}
                 className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <Eye className="w-4 h-4 mr-2" />
                 Ver Minha Redação
               </Button>
             </>

@@ -307,12 +307,6 @@ export const RedacaoEnviadaCard = ({
                 <User className="w-4 h-4 text-primary shrink-0" />
                 <span className="font-medium">Corretor:</span>
                 <span className="text-xs sm:text-sm">{redacao.corretor}</span>
-                {/* Mostrar nota do corretor se disponível - não mostrar para simulados */}
-                {redacao.nota_total !== null && redacao.nota_total !== undefined && redacao.tipo_envio !== 'simulado' && (
-                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-300">
-                    {redacao.nota_total} pontos
-                  </Badge>
-                )}
               </div>
             )}
           </div>
