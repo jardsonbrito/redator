@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
+import { RedacaoCard } from "@/components/shared/RedacaoCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,8 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 // Email validation será importada dinamicamente
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 // Tipo para representar uma redação com informações básicas compatível com RedacaoEnviadaCard
@@ -75,35 +75,21 @@ interface RedacaoTurma {
   elogios_pontos_atencao_corretor_2?: string | null;
   correcao_arquivo_url_corretor_1?: string | null;
   correcao_arquivo_url_corretor_2?: string | null;
+  // Dados do tema para exibir imagem e eixo
+  tema?: {
+    id: string;
+    cover_url?: string;
+    cover_source?: string;
+    cover_file_path?: string;
+    motivator4_url?: string;
+    motivator4_source?: string;
+    motivator4_file_path?: string;
+    imagem_texto_4_url?: string;
+    eixo_tematico: string;
+  };
+  eixo_tematico?: string;
 }
 
-// Função para verificar se deve mostrar as notas
-// Para simulados, só mostra quando ambas as correções estiverem finalizadas
-const shouldShowScores = (redacao: RedacaoTurma) => {
-  if (redacao.tipo_envio === 'simulado') {
-    // Para simulados, precisamos verificar se AMBAS as correções foram finalizadas
-    // Primeiro buscamos a redação original para ter acesso aos dados completos
-    const originalId = redacao.original_id || redacao.id;
-    
-    // Se não temos dados completos dos dois corretores, não mostramos
-    // Para simulados, verificar se as notas já foram mapeadas corretamente
-    const temTodasNotasCorretor1 = [1, 2, 3, 4, 5].every(comp => {
-      const nota = (redacao as any)[`nota_c${comp}`];
-      return nota !== null && nota !== undefined;
-    });
-    
-    // Se é uma redação específica de um corretor, só precisa verificar se tem todas as notas
-    if (redacao.corretor_numero) {
-      return temTodasNotasCorretor1;
-    }
-    
-    // Se não tem corretor número específico, é uma redação original - não mostrar notas ainda
-    return false;
-  }
-  
-  // Para outros tipos de redação (regular, exercício, visitante), usar lógica atual
-  return true;
-};
 
 const MinhasRedacoesList = () => {
   // Configurar título da página
@@ -244,37 +230,8 @@ const MinhasRedacoesList = () => {
       console.log('🔍 Buscando redações para email:', emailBusca);
 
       try {
-        // Primeiro, vamos ver TODAS as redações para debug
-        const { data: debugRedacoes, error: errorTodas } = await supabase
-          .from('redacoes_enviadas')
-          .select('id, email_aluno, nome_aluno, data_envio')
-          .order('data_envio', { ascending: false })
-          .limit(10);
-
-        console.log('🔍 DEBUG - Últimas 10 redações no banco:', debugRedacoes);
         console.log('🔍 DEBUG - Procurando por email:', emailBusca);
 
-        // Teste múltiplas formas de buscar
-        console.log('🧪 TESTE 1 - Busca com eq (exato)');
-        const { data: teste1 } = await supabase
-          .from('redacoes_enviadas')
-          .select('id, email_aluno')
-          .eq('email_aluno', emailBusca);
-        console.log('🧪 TESTE 1 resultado:', teste1);
-
-        console.log('🧪 TESTE 2 - Busca com ilike (case insensitive)');
-        const { data: teste2 } = await supabase
-          .from('redacoes_enviadas')
-          .select('id, email_aluno')
-          .ilike('email_aluno', emailBusca);
-        console.log('🧪 TESTE 2 resultado:', teste2);
-
-        console.log('🧪 TESTE 3 - Busca com like (pattern)');
-        const { data: teste3 } = await supabase
-          .from('redacoes_enviadas')
-          .select('id, email_aluno')
-          .like('email_aluno', `%${emailBusca}%`);
-        console.log('🧪 TESTE 3 resultado:', teste3);
 
         // Buscar redações regulares com informações do corretor
         const { data: redacoesRegulares, error: errorRegulares } = await supabase
@@ -304,6 +261,53 @@ const MinhasRedacoesList = () => {
         // Processar e combinar resultados
         const todasRedacoes: RedacaoTurma[] = [];
 
+        // Buscar temas correspondentes às frases temáticas das redações
+        let temasMap = new Map();
+        if (redacoesRegulares && redacoesRegulares.length > 0) {
+          const frasesTemáticas = [...new Set(redacoesRegulares.map((r: any) => r.frase_tematica))];
+
+          if (frasesTemáticas.length > 0) {
+            // Tentar busca exata primeiro - buscar todos os campos necessários para imagens
+            let { data: temas, error: errorTemas } = await supabase
+              .from('temas')
+              .select('id, frase_tematica, cover_url, cover_source, cover_file_path, motivator4_url, motivator4_source, motivator4_file_path, imagem_texto_4_url, eixo_tematico')
+              .in('frase_tematica', frasesTemáticas);
+
+            // Se não encontrou nada, tentar busca com LIKE para cada frase
+            if (!temas || temas.length === 0) {
+
+              for (const frase of frasesTemáticas) {
+                const { data: temasLike } = await supabase
+                  .from('temas')
+                  .select('id, frase_tematica, cover_url, cover_source, cover_file_path, motivator4_url, motivator4_source, motivator4_file_path, imagem_texto_4_url, eixo_tematico')
+                  .ilike('frase_tematica', `%${frase}%`);
+
+                if (temasLike && temasLike.length > 0) {
+                  if (!temas) temas = [];
+                  temas.push(...temasLike);
+                }
+              }
+            }
+
+
+            if (temas) {
+              // Mapeamento exato e também busca por similaridade
+              temas.forEach(tema => {
+                const fraseNormalizada = tema.frase_tematica.trim();
+                temasMap.set(fraseNormalizada, tema);
+
+                // Também mapear para busca por similaridade
+                frasesTemáticas.forEach(fraseRedacao => {
+                  const fraseRedacaoNorm = fraseRedacao.trim();
+                  if (fraseNormalizada.includes(fraseRedacaoNorm) || fraseRedacaoNorm.includes(fraseNormalizada)) {
+                    temasMap.set(fraseRedacaoNorm, tema);
+                  }
+                });
+              });
+            }
+          }
+        }
+
         // Adicionar redações regulares
         if (redacoesRegulares && redacoesRegulares.length > 0) {
           console.log('✅ Processando', redacoesRegulares.length, 'redações regulares');
@@ -316,12 +320,18 @@ const MinhasRedacoesList = () => {
               nomeCorretor = item.corretor2.nome_completo;
             }
 
+            // Buscar tema correspondente (normalizar frase da redação)
+            const fraseRedacaoNormalizada = item.frase_tematica.trim();
+            const temaCorrespondente = temasMap.get(fraseRedacaoNormalizada);
+
             todasRedacoes.push({
               ...item,
               tipo_envio: item.tipo_envio || 'tema_livre',
               corrigida: item.status === 'corrigida' || item.status === 'corrigido' || item.corrigida,
               status: item.status || 'aguardando',
-              corretor: nomeCorretor
+              corretor: nomeCorretor,
+              tema: temaCorrespondente || null,
+              eixo_tematico: temaCorrespondente?.eixo_tematico || null
             } as RedacaoTurma);
           });
         }
@@ -589,102 +599,6 @@ const MinhasRedacoesList = () => {
     }
   };
 
-  // FUNÇÃO PARA TRATAR REDAÇÃO DEVOLVIDA
-  const handleRedacaoDevolvida = async (redacao: RedacaoTurma) => {
-    console.log('🔄 Processando redação devolvida:', redacao);
-    
-    // Verificar se já foi visualizada (está ciente)
-    const jaFoiVisualizada = isRedacaoVisualizada(redacao.id, studentData?.email || '');
-    console.log('🔍 Status de visualização:', { jaFoiVisualizada });
-    
-    try {
-      // Buscar informações da devolução e corretor
-      let devolutionData;
-      let justificativa = 'Motivo não especificado';
-      
-      // Buscar dados da devolução apenas para redações regulares
-      const { data, error } = await supabase
-        .from('redacoes_enviadas')
-        .select(`
-          justificativa_devolucao,
-          elogios_pontos_atencao_corretor_1,
-          elogios_pontos_atencao_corretor_2,
-          data_envio,
-          devolvida_por,
-          corretor_id_1,
-          corretores!devolvida_por(nome_completo)
-        `)
-        .eq('id', redacao.id)
-        .single();
-
-      if (error) {
-        console.error('Erro ao buscar dados da redação regular:', error);
-      } else {
-        devolutionData = data;
-        justificativa = data.justificativa_devolucao ||
-                        data.elogios_pontos_atencao_corretor_1 ||
-                        data.elogios_pontos_atencao_corretor_2 ||
-                        'Motivo não especificado';
-      }
-
-      if (devolutionData) {
-        console.log('📋 Dados da devolução encontrados:', devolutionData);
-        
-        // Buscar nome do corretor que devolveu
-        let nomeCorretor = 'Corretor';
-        
-        if (devolutionData.devolvida_por && devolutionData.corretores) {
-          nomeCorretor = (devolutionData.corretores as any)?.nome_completo || 'Corretor';
-        } else if (devolutionData.corretor_id_1) {
-          // Se não tem devolvida_por mas tem corretor_id_1, buscar nome do corretor 1
-          const { data: corretorData } = await supabase
-            .from('corretores')
-            .select('nome_completo')
-            .eq('id', devolutionData.corretor_id_1)
-            .single();
-          nomeCorretor = corretorData?.nome_completo || 'Corretor';
-        }
-        
-        // Limpar formatação desnecessária da justificativa
-        const justificativaLimpa = justificativa
-          .replace('Sua redação foi devolvida pelo corretor com a seguinte justificativa:\n\n', '')
-          .replace(/^\s*"?\s*/, '') // Remove aspas iniciais e espaços
-          .replace(/\s*"?\s*$/, '') // Remove aspas finais e espaços
-          .trim();
-        
-        console.log('💬 Justificativa processada:', justificativaLimpa);
-        
-        setDevolutionInfo({
-          corretor: nomeCorretor,
-          justificativa: justificativaLimpa,
-          tema: redacao.frase_tematica,
-          dataEnvio: new Date(devolutionData.data_envio).toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit', 
-            year: 'numeric'
-          })
-        });
-        
-        setShowDevolutionDialog(true);
-        
-        console.log('✅ Modal de devolução configurado e exibido');
-      } else {
-        console.error('❌ Nenhum dado de devolução encontrado');
-        toast({
-          title: "Erro",
-          description: "Não foi possível encontrar os dados da devolução.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('💥 Erro ao buscar informações da devolução:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as informações da devolução.",
-        variant: "destructive"
-      });
-    }
-  };
 
   // FUNÇÃO PARA MARCAR DEVOLUÇÃO COMO VISUALIZADA
   const handleEntendi = async () => {
@@ -751,33 +665,6 @@ const MinhasRedacoesList = () => {
     }
   };
 
-  const iniciarDownloadCorrecaoCompleta = async (redacao: RedacaoTurma) => {
-    console.log('📥 Iniciando download da correção completa para redação:', redacao.id);
-    
-    try {
-      toast({
-        title: "Download iniciado",
-        description: "Seu arquivo será baixado em breve",
-      });
-
-      // Para redações manuscritas, usar função específica
-      if (redacao.redacao_manuscrita_url) {
-        const { downloadRedacaoManuscritaCorrigida } = await import('@/utils/redacaoDownload');
-        await downloadRedacaoManuscritaCorrigida(redacao);
-      } else {
-        // Para redações digitadas, usar nova função
-        const { downloadRedacaoDigitadaCorrigida } = await import('@/utils/redacaoDownload');
-        await downloadRedacaoDigitadaCorrigida(redacao);
-      }
-    } catch (error) {
-      console.error('❌ Erro ao baixar correção:', error);
-      toast({
-        title: "Erro no download",
-        description: "Não foi possível baixar a correção. Tente novamente.",
-        variant: "destructive"
-      });
-    }
-  };
 
   const resetAuthenticationState = () => {
     setSelectedRedacao(null);
@@ -818,34 +705,6 @@ const MinhasRedacoesList = () => {
     return pages;
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-  };
-
-  const getTipoEnvioLabel = (tipo: string) => {
-    switch (tipo) {
-      case 'tema_livre': return 'Exercício';
-      case 'simulado': return 'Simulado';
-      case 'exercicio': return 'Exercício';
-      case 'manuscrita': return 'Regular';
-      case 'regular': return 'Regular';
-      case 'avulsa': return 'Avulsa';
-      default: return 'Regular';
-    }
-  };
-
-  const getTipoEnvioColor = (tipo: string) => {
-    switch (tipo) {
-      case 'tema_livre': return 'bg-green-100 text-green-800';
-      case 'simulado': return 'bg-purple-100 text-purple-800';
-      case 'exercicio': return 'bg-green-100 text-green-800';
-      case 'manuscrita': return 'bg-blue-100 text-blue-800';
-      case 'regular': return 'bg-blue-100 text-blue-800';
-      case 'avulsa': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-blue-100 text-blue-800';
-    }
-  };
 
   // Verificação removida - a proteção de rota já é feita no App.tsx
 
@@ -902,174 +761,41 @@ const MinhasRedacoesList = () => {
           </Card>
         )}
 
-        {/* Lista de redações */}
         {!isLoading && !error && currentRedacoes.length > 0 && (
-          <div className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {currentRedacoes.map((redacao) => (
-              <Card
+              <RedacaoCard
                 key={redacao.id}
-                className="transition-all hover:shadow-md hover:scale-[1.01]"
-              >
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <Badge 
-                          variant="outline" 
-                          className={getTipoEnvioColor(redacao.tipo_envio)}
-                        >
-                          {getTipoEnvioLabel(redacao.tipo_envio)}
-                        </Badge>
-                        
-                        {/* TAG DEVOLVIDA/CIENTE - SEMPRE EXIBIR SE STATUS FOR DEVOLVIDA */}
-                        {redacao.status === 'devolvida' && (() => {
-                          const foiVisualizada = studentData?.email && isRedacaoVisualizada(
-                            redacao.original_id || redacao.id, 
-                            studentData.email
-                          );
-                          
-                          return foiVisualizada ? (
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              Ciente
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                              Devolvida
-                            </Badge>
-                          );
-                        })()}
-                        
-                        {redacao.status === 'corrigida' && (
-                          <Badge variant="default">
-                            Corrigida
-                          </Badge>
-                        )}
-                        {redacao.status === 'em_andamento' && (
-                          <Badge variant="secondary">
-                            Em andamento
-                          </Badge>
-                        )}
-                      </div>
+                redacao={redacao}
+                actions={{
+                  onVerRedacao: (id) => {
+                    if (redacao.status === 'devolvida') {
+                      handleViewRedacao(redacao);
+                    } else {
+                      navigate(`/minhas-redacoes/${id}`);
+                    }
+                  },
+                  onCancelarEnvio: (id) => {
+                    // Implementar lógica de cancelamento usando o hook existente
+                    if (canCancelRedacao && canCancelRedacao(redacao)) {
+                      // Abrir dialog de confirmação de cancelamento
+                      const creditos = getCreditosACancelar ? getCreditosACancelar(redacao.tipo_envio) : 0;
 
-                      {/* Botão de cancelamento - apenas para redações que NÃO são simulados */}
-                      {(() => {
-                        const podeCancel = canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado';
-                        // Debug apenas em desenvolvimento
-                        if (process.env.NODE_ENV === 'development') {
-                          console.log(`🔍 Redação ${redacao.id}: pode cancelar = ${podeCancel}`);
+                      // Por simplicidade, usar um confirm nativo por enquanto
+                      // Em produção, deveria usar um AlertDialog
+                      if (window.confirm(`Deseja cancelar esta redação? ${creditos > 0 ? `Você receberá ${creditos} crédito(s) de volta.` : ''}`)) {
+                        const emailAluno = studentData?.email || visitanteData?.email || '';
+
+                        if (redacao.tipo_envio === 'simulado') {
+                          cancelRedacaoSimulado?.(id, emailAluno);
+                        } else {
+                          cancelRedacao?.(id, emailAluno);
                         }
-                        return podeCancel;
-                      })() && (
-                        <div className="mb-2">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-red-600 border-red-200 hover:bg-red-50 text-xs"
-                                disabled={cancelLoading}
-                                onClick={(e) => e.stopPropagation()} // Evitar propagação do click do card
-                              >
-                                <X className="w-3 h-3 mr-1" />
-                                Cancelar envio
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="flex items-center gap-2">
-                                  <AlertTriangle className="w-5 h-5 text-orange-500" />
-                                  Cancelar envio da redação
-                                </AlertDialogTitle>
-                                <AlertDialogDescription className="space-y-2">
-                                  <p>Tem certeza que deseja cancelar o envio desta redação?</p>
-                                  <p className="font-medium">
-                                    <strong>Tema:</strong> {redacao.frase_tematica}
-                                  </p>
-                                  <p className="text-sm text-gray-600">
-                                    <strong>Tipo:</strong> {getTipoEnvioLabel(redacao.tipo_envio)}
-                                  </p>
-                                  {getCreditosACancelar(redacao.tipo_envio) > 0 && (
-                                    <div className="bg-green-50 border border-green-200 rounded p-3 mt-3">
-                                      <p className="text-green-800 text-sm">
-                                        ✅ <strong>{getCreditosACancelar(redacao.tipo_envio)} crédito(s)</strong> serão devolvidos à sua conta.
-                                      </p>
-                                    </div>
-                                  )}
-                                  <p className="text-red-600 text-sm mt-3">
-                                    ⚠️ Esta ação não pode ser desfeita. A redação será removida permanentemente.
-                                  </p>
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => {
-                                    if (redacao.tipo_envio === 'simulado') {
-                                      cancelRedacaoSimulado(redacao.id, redacao.email_aluno);
-                                    } else {
-                                      cancelRedacao(redacao.id, redacao.email_aluno);
-                                    }
-                                  }}
-                                  className="bg-red-600 hover:bg-red-700"
-                                  disabled={cancelLoading}
-                                >
-                                  {cancelLoading ? "Cancelando..." : "Sim, cancelar envio"}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      )}
-
-
-                       <h3 className="font-semibold text-foreground mb-1 line-clamp-2 cursor-pointer" onClick={() => handleViewRedacao(redacao)}>
-                        {redacao.frase_tematica}
-                       </h3>
-                       
-                       {redacao.corretor && (
-                         <p className="text-sm text-muted-foreground font-medium">
-                           Corretor: {redacao.corretor}
-                         </p>
-                       )}
-
-                      {/* Exibir notas por competência se a correção foi finalizada */}
-                      {redacao.corrigida && shouldShowScores(redacao) && (redacao.nota_c1 || redacao.nota_c2 || redacao.nota_c3 || redacao.nota_c4 || redacao.nota_c5) && (
-                        <div className="text-sm text-muted-foreground mt-2 mb-1">
-                          <span className="font-medium">
-                            C1: {redacao.nota_c1 || '-'} | C2: {redacao.nota_c2 || '-'} | C3: {redacao.nota_c3 || '-'} | C4: {redacao.nota_c4 || '-'} | C5: {redacao.nota_c5 || '-'} | Nota: {redacao.nota_total || '-'}
-                          </span>
-                        </div>
-                      )}
-                      
-                      <p className="text-sm text-muted-foreground">
-                        Enviado em: {formatDate(redacao.data_envio)}
-                        {redacao.corrigida && redacao.data_correcao && (
-                          <span> • Corrigido em: {formatDate(redacao.data_correcao)}</span>
-                        )}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {redacao.status === 'devolvida' ? (() => {
-                        const foiVisualizada = studentData?.email && isRedacaoVisualizada(
-                          redacao.original_id || redacao.id, 
-                          studentData.email
-                        );
-                        
-                        return foiVisualizada ? (
-                          <span className="text-green-600 font-medium">Clique para rever motivo</span>
-                        ) : (
-                          <span className="text-red-600 font-medium">Clique para ver o motivo →</span>
-                        );
-                      })() : redacao.corrigida ? (
-                        <span>Ver detalhes →</span>
-                      ) : (
-                        <span>Ver redação →</span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                      }
+                    }
+                  }
+                }}
+              />
             ))}
           </div>
         )}
