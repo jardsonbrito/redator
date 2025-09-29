@@ -126,19 +126,50 @@ export const useCredits = (userEmail?: string): UseCreditsReturn => {
 
       console.log('👤 Usuário encontrado:', userData);
 
-      // Usar a função RPC corrigida para consumir créditos
-      console.log('🔄 Chamando consume_credit_safe...');
-      const { data: newCredits, error: consumeError } = await supabase
-        .rpc('consume_credit_safe', {
-          target_user_id: userData.id
-        });
+      // Para simulados (amount = 2), usar função específica que consume exatamente 2 créditos
+      // Para outros casos (amount = 1), usar a função padrão
+      let newCredits: number;
+      if (amount === 2) {
+        console.log('🔄 Chamando consume_credit_safe para simulado (2 créditos)...');
 
-      if (consumeError) {
-        console.error('❌ Erro ao consumir créditos:', consumeError);
-        throw consumeError;
+        // Chamar duas vezes a função que consume 1 crédito, ou implementar lógica específica
+        const { data: firstResult, error: firstError } = await supabase
+          .rpc('consume_credit_safe', {
+            target_user_id: userData.id
+          });
+
+        if (firstError) {
+          console.error('❌ Erro ao consumir primeiro crédito:', firstError);
+          throw firstError;
+        }
+
+        const { data: secondResult, error: secondError } = await supabase
+          .rpc('consume_credit_safe', {
+            target_user_id: userData.id
+          });
+
+        if (secondError) {
+          console.error('❌ Erro ao consumir segundo crédito:', secondError);
+          throw secondError;
+        }
+
+        newCredits = secondResult;
+        console.log('✅ 2 créditos consumidos com sucesso! Novos créditos:', newCredits);
+      } else {
+        console.log('🔄 Chamando consume_credit_safe...');
+        const { data: result, error: consumeError } = await supabase
+          .rpc('consume_credit_safe', {
+            target_user_id: userData.id
+          });
+
+        if (consumeError) {
+          console.error('❌ Erro ao consumir créditos:', consumeError);
+          throw consumeError;
+        }
+
+        newCredits = result;
+        console.log('✅ Créditos consumidos com sucesso! Novos créditos:', newCredits);
       }
-
-      console.log('✅ Créditos consumidos com sucesso! Novos créditos:', newCredits);
 
       // Atualizar o estado local
       setCredits(newCredits);

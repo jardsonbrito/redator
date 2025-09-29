@@ -37,6 +37,9 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
           text-indent: 2em;
           margin-bottom: 1em;
           line-height: 1.6;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          max-width: 100%;
         }
         .formatted-text .reference {
           text-align: right;
@@ -45,6 +48,10 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
           color: #6b7280;
           margin-bottom: 1em;
           margin-top: 0.5em;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          hyphens: auto;
+          max-width: 100%;
         }
         .formatted-text p:last-child {
           margin-bottom: 0;

@@ -1,0 +1,612 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { X, Camera } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useCredits } from "@/hooks/useCredits";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+
+interface RedacaoFormUnificadoProps {
+  // Configurações do formulário
+  isSimulado?: boolean;
+  simuladoId?: string;
+  fraseTematica: string;
+  readOnlyFraseTematica?: boolean;
+
+  // Configurações de créditos e corretores
+  requiredCorretores?: number; // 1 para regular, 2 para simulado
+  requiredCredits?: number; // 1 para regular, 2 para simulado
+
+  // Dados de contexto
+  fonte?: string;
+  exercicioId?: string;
+
+  // Callbacks
+  onSubmitSuccess?: () => void;
+
+  // Estilo
+  className?: string;
+}
+
+export const RedacaoFormUnificado = ({
+  isSimulado = false,
+  simuladoId,
+  fraseTematica,
+  readOnlyFraseTematica = false,
+  requiredCorretores = 1,
+  requiredCredits = 1,
+  fonte,
+  exercicioId,
+  onSubmitSuccess,
+  className
+}: RedacaoFormUnificadoProps) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { studentData } = useStudentAuth();
+
+  // Estados do formulário
+  const [nomeCompleto, setNomeCompleto] = useState("");
+  const [email, setEmail] = useState("");
+  const [fraseTematicaLocal, setFraseTematicaLocal] = useState(fraseTematica);
+  const [redacaoTexto, setRedacaoTexto] = useState("");
+  const [palavras, setPalavras] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
+  const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
+  const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
+  const [tipoRedacao, setTipoRedacao] = useState<"manuscrita" | "digitada">("digitada");
+  const [corretores, setCorretores] = useState<any[]>([]);
+  const [loadingCorretores, setLoadingCorretores] = useState(true);
+
+  // Determinar tipo de usuário e envio
+  const userType = localStorage.getItem("userType");
+  const alunoTurma = localStorage.getItem("alunoTurma");
+
+  let tipoEnvio = "avulsa";
+  let turmaCode = "visitante";
+
+  if (isSimulado) {
+    tipoEnvio = "simulado";
+  } else if (exercicioId) {
+    tipoEnvio = "exercicio";
+  } else if (userType === "aluno" && alunoTurma) {
+    tipoEnvio = "regular";
+    const turmasMap = {
+      "Turma A": "LRA2025",
+      "Turma B": "LRB2025",
+      "Turma C": "LRC2025",
+      "Turma D": "LRD2025",
+      "Turma E": "LRE2025"
+    };
+    turmaCode = turmasMap[alunoTurma] || "visitante";
+  }
+
+  // Hook para gerenciar créditos
+  const getCreditEmail = () => {
+    if (userType === "aluno") {
+      return studentData.email || localStorage.getItem("alunoEmail") || email;
+    }
+    return email || "";
+  };
+
+  const creditEmail = getCreditEmail();
+  const { credits, loading: creditsLoading, consumeCredits, checkSufficientCredits } = useCredits(creditEmail);
+
+  // Carregar dados do usuário
+  useEffect(() => {
+    if (userType === "aluno") {
+      const alunoEmail = studentData.email || localStorage.getItem("alunoEmail");
+      const alunoNome = localStorage.getItem("alunoNome") || "Aluno";
+
+      if (alunoEmail && !email) {
+        setEmail(alunoEmail);
+      }
+      if (!nomeCompleto && alunoNome) {
+        setNomeCompleto(alunoNome);
+      }
+    } else if (studentData.userType === "visitante" && studentData.visitanteInfo) {
+      setNomeCompleto(studentData.visitanteInfo.nome);
+      setEmail(studentData.visitanteInfo.email);
+    }
+
+    // Atualizar frase temática se mudou
+    setFraseTematicaLocal(fraseTematica);
+
+    // Carregar corretores
+    fetchCorretores();
+  }, [userType, fraseTematica, studentData]);
+
+  const fetchCorretores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('corretores')
+        .select('id, nome_completo, email')
+        .eq('ativo', true)
+        .eq('visivel_no_formulario', true)
+        .order('nome_completo');
+
+      if (error) throw error;
+      setCorretores(data || []);
+    } catch (error: any) {
+      console.error('Erro ao buscar corretores:', error);
+      toast({
+        title: "Erro ao carregar corretores",
+        description: "Não foi possível carregar a lista de corretores.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingCorretores(false);
+    }
+  };
+
+  // Contador de palavras
+  const handleTextoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const texto = e.target.value;
+    setRedacaoTexto(texto);
+    const textoLimpo = texto.trim();
+    const totalPalavras = textoLimpo ? textoLimpo.split(/\s+/).length : 0;
+    setPalavras(totalPalavras);
+  };
+
+  // Seleção de corretores
+  const handleCorretorToggle = (corretorId: string, checked: boolean) => {
+    let newSelected = [...selectedCorretores];
+
+    if (checked) {
+      if (newSelected.length >= requiredCorretores) {
+        const maxMessage = isSimulado ?
+          "Simulados requerem exatamente 2 corretores." :
+          "Envios regulares são feitos para apenas um corretor.";
+        toast({
+          title: "Limite excedido",
+          description: maxMessage,
+          variant: "destructive"
+        });
+        return;
+      }
+      newSelected.push(corretorId);
+    } else {
+      newSelected = newSelected.filter(id => id !== corretorId);
+    }
+
+    setSelectedCorretores(newSelected);
+  };
+
+  // Upload de arquivo
+  const handleRedacaoManuscritaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Verificar tamanho (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "O arquivo deve ter no máximo 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Verificar tipo
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Tipo de arquivo não suportado",
+          description: "Use apenas JPG, PNG ou PDF.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setRedacaoManuscrita(file);
+      const url = URL.createObjectURL(file);
+      setRedacaoManuscritaUrl(url);
+    }
+  };
+
+  const handleRemoveRedacaoManuscrita = () => {
+    setRedacaoManuscrita(null);
+    if (redacaoManuscritaUrl) {
+      URL.revokeObjectURL(redacaoManuscritaUrl);
+      setRedacaoManuscritaUrl(null);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Validações
+      if (!fraseTematicaLocal.trim()) {
+        throw new Error("Preencha a frase temática");
+      }
+
+      if (userType === "visitante" && (!nomeCompleto.trim() || !email.trim())) {
+        throw new Error("Preencha todos os campos obrigatórios");
+      }
+
+      // Validação específica para simulados
+      if (isSimulado && selectedCorretores.length !== 2) {
+        throw new Error("Simulados requerem exatamente 2 corretores");
+      } else if (!isSimulado && selectedCorretores.length === 0) {
+        throw new Error("Selecione pelo menos um corretor");
+      }
+
+      // Verificar se corretores são únicos (para simulados)
+      if (isSimulado && selectedCorretores.length === 2 && selectedCorretores[0] === selectedCorretores[1]) {
+        throw new Error("Não é possível selecionar o mesmo corretor duas vezes");
+      }
+
+      if (tipoRedacao === "digitada" && !redacaoTexto.trim()) {
+        throw new Error("O campo da redação não pode estar vazio");
+      }
+
+      if (tipoRedacao === "manuscrita" && !redacaoManuscrita) {
+        throw new Error("Selecione o arquivo da redação manuscrita");
+      }
+
+      // Verificar créditos para alunos
+      if (userType === "aluno" && credits < requiredCredits) {
+        throw new Error("Créditos insuficientes");
+      }
+
+      let redacaoUrl = null;
+
+      // Upload do arquivo se manuscrita
+      if (tipoRedacao === "manuscrita" && redacaoManuscrita) {
+        const fileName = `redacao_${Date.now()}_${redacaoManuscrita.name}`;
+        const bucketName = isSimulado ? 'redacoes-manuscritas' : 'redacoes';
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(fileName, redacaoManuscrita);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(fileName);
+
+        redacaoUrl = publicUrl;
+      }
+
+      // Preparar dados finais
+      let finalNomeCompleto = nomeCompleto.trim();
+      let finalEmail = email.toLowerCase().trim();
+
+      if (userType === "aluno") {
+        const alunoEmail = studentData.email || localStorage.getItem("alunoEmail");
+        const alunoNome = localStorage.getItem("alunoNome") || "Aluno";
+
+        if (alunoEmail) {
+          finalEmail = alunoEmail.toLowerCase().trim();
+        }
+        if (!finalNomeCompleto && alunoNome) {
+          finalNomeCompleto = alunoNome;
+        }
+      }
+
+      // Inserir redação no banco apropriado
+      if (isSimulado) {
+        // Para simulados
+        const { error: redacaoError } = await supabase
+          .from('redacoes_simulado')
+          .insert({
+            id_simulado: simuladoId,
+            nome_aluno: finalNomeCompleto,
+            email_aluno: finalEmail,
+            turma: studentData.turma || turmaCode !== "visitante" ? turmaCode : null,
+            texto: tipoRedacao === "digitada" ? redacaoTexto.trim() : ".",
+            redacao_manuscrita_url: redacaoUrl,
+            corretor_id_1: selectedCorretores[0] || null,
+            corretor_id_2: selectedCorretores[1] || null,
+            status_corretor_1: 'pendente',
+            status_corretor_2: selectedCorretores[1] ? 'pendente' : null,
+            corrigida: false,
+            data_envio: new Date().toISOString()
+          });
+
+        if (redacaoError) throw redacaoError;
+      } else {
+        // Para redações regulares
+        const redacaoData = {
+          nome_aluno: finalNomeCompleto,
+          email_aluno: finalEmail,
+          frase_tematica: fraseTematicaLocal.trim(),
+          redacao_texto: tipoRedacao === "digitada" ? redacaoTexto.trim() : ".",
+          redacao_manuscrita_url: redacaoUrl,
+          tipo_envio: tipoEnvio,
+          turma: turmaCode !== "visitante" ? turmaCode : null,
+          corretor_id_1: selectedCorretores[0] || null,
+          corretor_id_2: selectedCorretores[1] || null
+        };
+
+        const { error: redacaoError } = await supabase
+          .from('redacoes_enviadas')
+          .insert(redacaoData);
+
+        if (redacaoError) throw redacaoError;
+      }
+
+      // Consumir créditos se for aluno
+      if (userType === "aluno") {
+        const success = await consumeCredits(
+          requiredCredits,
+          isSimulado ? `Envio de redação de simulado` : 'Envio de redação'
+        );
+
+        if (!success) {
+          toast({
+            title: "Erro",
+            description: "Não foi possível debitar os créditos. Tente novamente.",
+            variant: "destructive"
+          });
+          return;
+        }
+      } else {
+        // Toast apenas para visitantes (alunos já recebem o toast de créditos)
+        toast({
+          title: "✅ Redação enviada com sucesso!",
+          description: isSimulado ?
+            "Sua redação do simulado foi enviada para correção." :
+            "Sua redação foi enviada para correção.",
+          className: "border-green-200 bg-green-50 text-green-900",
+          duration: 5000
+        });
+      }
+
+      // Callback de sucesso
+      if (onSubmitSuccess) {
+        onSubmitSuccess();
+      } else {
+        // Navegar para página apropriada
+        if (isSimulado) {
+          navigate('/app');
+        } else {
+          navigate('/minhas-redacoes');
+        }
+      }
+
+    } catch (error) {
+      console.error('Erro ao enviar redação:', error);
+
+      let errorMessage = "Erro desconhecido";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String(error.message);
+      }
+
+      toast({
+        title: "Erro ao enviar redação",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className={className}>
+      <CardContent className="p-4 sm:p-6">
+        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-2">
+          {/* Cabeçalho */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <h2 className="text-lg sm:text-xl font-semibold">
+              {isSimulado ? 'Enviar Redação do Simulado' :
+               (fonte === 'tema' ? 'Redação sobre o Tema Selecionado' :
+                (userType === "aluno" ? 'Enviar Redação — Tema Livre' : 'Enviar Redação Avulsa — Tema Livre'))}
+            </h2>
+            <div className="flex items-center gap-2">
+              {userType === "aluno" && (
+                <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                  {creditsLoading ? "..." : credits}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Nome completo e email - só para visitantes */}
+          {userType === "visitante" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="nome-completo" className="text-sm">Nome Completo *</Label>
+                <Input
+                  id="nome-completo"
+                  type="text"
+                  placeholder="Digite seu nome completo..."
+                  value={nomeCompleto}
+                  onChange={(e) => setNomeCompleto(e.target.value)}
+                  maxLength={100}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="email" className="text-sm">E-mail *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Digite seu e-mail..."
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  maxLength={100}
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Frase Temática */}
+          <div className="space-y-1">
+            <Label htmlFor="frase-tematica" className="text-sm">Frase Temática *</Label>
+            <Input
+              id="frase-tematica"
+              type="text"
+              value={fraseTematicaLocal}
+              onChange={(e) => setFraseTematicaLocal(e.target.value)}
+              maxLength={200}
+              readOnly={readOnlyFraseTematica}
+              required
+            />
+          </div>
+
+          {/* Tipo de envio */}
+          <div className="space-y-1">
+            <Label className="text-sm">Como deseja enviar sua redação?</Label>
+            <RadioGroup
+              value={tipoRedacao}
+              onValueChange={(value: "manuscrita" | "digitada") => {
+                setTipoRedacao(value);
+                if (value === "manuscrita") {
+                  setRedacaoTexto("");
+                  setPalavras(0);
+                } else {
+                  handleRemoveRedacaoManuscrita();
+                }
+              }}
+              className="flex flex-col sm:flex-row gap-2 sm:gap-6 mt-1"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="manuscrita" id="manuscrita" />
+                <Label htmlFor="manuscrita" className="text-sm">Manuscrita / Foto</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="digitada" id="digitada" />
+                <Label htmlFor="digitada" className="text-sm">Digitada</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Upload de manuscrita */}
+          {tipoRedacao === "manuscrita" && (
+            <Card>
+              <CardContent className="p-4 text-center border-2 border-dashed border-purple-400 rounded-xl">
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, application/pdf"
+                  className="hidden"
+                  id="upload-file"
+                  onChange={handleRedacaoManuscritaChange}
+                />
+                <label
+                  htmlFor="upload-file"
+                  className="cursor-pointer text-purple-700 font-medium flex flex-col items-center gap-2"
+                >
+                  <Camera className="w-6 h-6" />
+                  Selecionar arquivo da redação
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Somente JPG, PNG ou PDF (máx. 5MB)
+                </p>
+
+                {/* Preview do arquivo */}
+                {redacaoManuscritaUrl && (
+                  <div className="relative mt-4 max-w-md mx-auto">
+                    {redacaoManuscrita?.type === 'application/pdf' ? (
+                      <div className="bg-white rounded-lg border p-4">
+                        <div className="text-2xl mb-2">📄</div>
+                        <p className="text-sm font-medium">{redacaoManuscrita.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(redacaoManuscrita.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    ) : (
+                      <img
+                        src={redacaoManuscritaUrl}
+                        alt="Preview da redação"
+                        className="w-full h-auto max-h-96 rounded-lg border object-contain bg-white"
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute -top-2 -right-2 rounded-full w-8 h-8 p-0"
+                      onClick={handleRemoveRedacaoManuscrita}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Texto digitado */}
+          {tipoRedacao === "digitada" && (
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="redacao" className="text-sm">Texto da Redação</Label>
+                <span className="text-xs text-gray-500">Palavras: {palavras}</span>
+              </div>
+              <Textarea
+                id="redacao"
+                rows={10}
+                className="resize-none"
+                value={redacaoTexto}
+                onChange={handleTextoChange}
+                required
+              />
+            </div>
+          )}
+
+          {/* Corretores disponíveis */}
+          <div className="mt-4">
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">
+              Corretores disponíveis:
+              {isSimulado && (
+                <span className="text-sm font-normal text-gray-600 ml-2">
+                  (Simulado requer exatamente 2 corretores)
+                </span>
+              )}
+            </h3>
+            {loadingCorretores ? (
+              <p className="text-sm text-gray-500">Carregando corretores...</p>
+            ) : (
+              <div className="space-y-2">
+                {corretores.map((corretor) => (
+                  <div key={corretor.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`corretor-${corretor.id}`}
+                      checked={selectedCorretores.includes(corretor.id)}
+                      onCheckedChange={(checked) =>
+                        handleCorretorToggle(corretor.id, checked as boolean)
+                      }
+                    />
+                    <Label
+                      htmlFor={`corretor-${corretor.id}`}
+                      className="text-sm cursor-pointer"
+                    >
+                      {corretor.nome_completo}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Botão Enviar */}
+          <Button
+            type="submit"
+            className="w-full text-white bg-purple-600 hover:bg-purple-700 rounded-xl py-3 text-lg font-semibold mt-6"
+            disabled={isSubmitting || (userType === "aluno" && (creditsLoading || credits < requiredCredits))}
+          >
+            {isSubmitting ? "Enviando..." : "Enviar Redação"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};

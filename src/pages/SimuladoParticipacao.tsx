@@ -4,77 +4,62 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Send, ArrowLeft, FileText, Upload, X } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale/pt-BR";
+import { ArrowLeft, FileText } from "lucide-react";
 import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoStatus";
-import { useToast } from "@/hooks/use-toast";
-import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { RedacaoEnemForm } from "@/components/RedacaoEnemForm";
-import { CorretorSelector } from "@/components/CorretorSelector";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useCredits } from "@/hooks/useCredits";
-import { CreditDisplay } from "@/components/CreditDisplay";
 import { renderTextWithParagraphs } from '@/utils/textUtils';
+
+// Função para extrair e separar fonte do texto
+const extrairFonteDoTexto = (texto: string) => {
+  if (!texto) return { textoLimpo: '', fonte: '' };
+
+  // Padrões para detectar fonte no final do texto
+  const padroesFonte = [
+    /\n\s*(Fonte:\s*.+?)$/i,
+    /\n\s*(Disponível em:\s*.+?)$/i,
+    /\n\s*(Fonte -\s*.+?)$/i,
+    /\n\s*(Disponível em -\s*.+?)$/i,
+    /\n\s*(FONTE:\s*.+?)$/i,
+    /\n\s*(DISPONÍVEL EM:\s*.+?)$/i
+  ];
+
+  let textoLimpo = texto;
+  let fonte = '';
+
+  // Tentar cada padrão para encontrar a fonte
+  for (const padrao of padroesFonte) {
+    const match = texto.match(padrao);
+    if (match) {
+      fonte = match[1].trim();
+      textoLimpo = texto.replace(padrao, '').trim();
+      break;
+    }
+  }
+
+  return { textoLimpo, fonte };
+};
 import { useNavigationContext } from "@/hooks/useNavigationContext";
+import { RedacaoFormUnificado } from "@/components/shared/RedacaoFormUnificado";
 
 const SimuladoParticipacao = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { studentData } = useStudentAuth();
 
-  const [nomeCompleto, setNomeCompleto] = useState("");
-  const [email, setEmail] = useState("");
-  const [redacaoTexto, setRedacaoTexto] = useState("");
-  const [isRedacaoValid, setIsRedacaoValid] = useState(false);
-  const [selectedCorretores, setSelectedCorretores] = useState<string[]>([]);
-  const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
-  const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [canSubmit, setCanSubmit] = useState(false);
-
-  // Simulados sempre precisam de 2 corretores
-  const requiredCredits = 2;
-  
-  // Hook para gerenciar créditos
-  const { consumeCredits, checkSufficientCredits } = useCredits(email);
-
-  useEffect(() => {
-    // Preencher automaticamente os dados do usuário logado
-    if (studentData.userType === "visitante" && studentData.visitanteInfo) {
-      setNomeCompleto(studentData.visitanteInfo.nome);
-      setEmail(studentData.visitanteInfo.email);
-    } else if (studentData.nomeUsuario && studentData.email) {
-      setNomeCompleto(studentData.nomeUsuario);
-      setEmail(studentData.email);
-    }
-  }, [studentData]);
 
   const { data: simulado, isLoading, error } = useQuery({
     queryKey: ['simulado-participacao', id],
     queryFn: async () => {
       if (!id) throw new Error('ID do simulado não fornecido');
 
-      console.log('🎯 Carregando simulado para participação:', id);
       
       const { data, error } = await supabase
         .from('simulados')
         .select(`
           *,
           temas (
-            frase_tematica,
-            eixo_tematico,
-            texto_1,
-            texto_2,
-            texto_3,
-            imagem_texto_4_url,
-            cabecalho_enem
+            *
           )
         `)
         .eq('id', id)
@@ -82,11 +67,10 @@ const SimuladoParticipacao = () => {
         .single();
 
       if (error) {
-        console.error('❌ Erro ao carregar simulado:', error);
         throw error;
       }
 
-      console.log('✅ Simulado carregado:', data);
+
       return data;
     },
     enabled: !!id
@@ -106,174 +90,6 @@ const SimuladoParticipacao = () => {
     }
   }, [simulado?.frase_tematica, setBreadcrumbs, setPageTitle]);
 
-  const handleRedacaoManuscritaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Formato inválido",
-        description: "Por favor, selecione apenas arquivos de imagem (JPG, JPEG ou PNG).",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      toast({
-        title: "Arquivo muito grande",
-        description: "A imagem deve ter no máximo 5MB.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setRedacaoManuscrita(file);
-    const tempUrl = URL.createObjectURL(file);
-    setRedacaoManuscritaUrl(tempUrl);
-  };
-
-  const handleRemoveRedacaoManuscrita = () => {
-    if (redacaoManuscritaUrl && redacaoManuscritaUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(redacaoManuscritaUrl);
-    }
-    setRedacaoManuscrita(null);
-    setRedacaoManuscritaUrl(null);
-  };
-
-  const uploadRedacaoManuscrita = async (file: File): Promise<string | null> => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `redacoes-manuscritas/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('redacoes-manuscritas')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('redacoes-manuscritas')
-        .getPublicUrl(filePath);
-
-      return data.publicUrl;
-    } catch (error) {
-      console.error('Erro ao fazer upload da redação manuscrita:', error);
-      return null;
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!nomeCompleto.trim() || !email.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!redacaoTexto.trim() && !redacaoManuscrita) {
-      toast({
-        title: "Redação obrigatória",
-        description: "Digite sua redação ou envie uma redação manuscrita para continuar.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (selectedCorretores.length !== 2) {
-      toast({
-        title: "Simulado requer 2 corretores",
-        description: "Para simulados, é obrigatório selecionar exatamente 2 corretores.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const uniqueCorretores = new Set(selectedCorretores);
-    if (uniqueCorretores.size !== selectedCorretores.length) {
-      toast({
-        title: "Corretores duplicados",
-        description: "Não é possível selecionar o mesmo corretor duas vezes.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Verificar créditos se é um aluno autenticado
-    if (studentData.email && studentData.userType === 'aluno') {
-      const hasCredits = checkSufficientCredits(requiredCredits);
-      if (!hasCredits) {
-        return; // O hook já mostra a mensagem de erro
-      }
-
-      // Consumir créditos antes de processar o envio
-      const creditConsumed = await consumeCredits(
-        requiredCredits, 
-        `Envio de redação de simulado: ${simulado.titulo}`
-      );
-      
-      if (!creditConsumed) {
-        return; // O hook já mostra a mensagem de erro
-      }
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      let manuscritaUrl = null;
-      if (redacaoManuscrita) {
-        manuscritaUrl = await uploadRedacaoManuscrita(redacaoManuscrita);
-        if (!manuscritaUrl) {
-          throw new Error("Erro ao fazer upload da redação manuscrita");
-        }
-      }
-
-      const { error } = await supabase
-        .from('redacoes_simulado')
-        .insert({
-          id_simulado: id,
-          nome_aluno: nomeCompleto.trim(),
-          email_aluno: email.trim().toLowerCase(),
-          turma: studentData.turma || 'visitante',
-          texto: redacaoTexto.trim(),
-          redacao_manuscrita_url: manuscritaUrl,
-          corretor_id_1: selectedCorretores[0] || null,
-          corretor_id_2: selectedCorretores[1] || null,
-          status_corretor_1: 'pendente',
-          status_corretor_2: selectedCorretores[1] ? 'pendente' : null,
-          corrigida: false,
-          data_envio: new Date().toISOString()
-        });
-
-      if (error) throw error;
-
-      // Toast adicional apenas para visitantes (alunos já recebem o toast de créditos)
-      if (studentData.userType !== 'aluno') {
-        toast({
-          title: "Redação enviada com sucesso!",
-          description: "Sua redação do simulado foi enviada e será corrigida pelos corretores selecionados.",
-        });
-      }
-
-      navigate('/app');
-
-    } catch (error: any) {
-      console.error("❌ Erro ao enviar redação do simulado:", error);
-      toast({
-        title: "Erro ao enviar redação",
-        description: error.message || "Ocorreu um erro inesperado.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -396,16 +212,6 @@ const SimuladoParticipacao = () => {
                     </h3>
                   </div>
 
-                  {simulado.temas.imagem_texto_4_url && (
-                    <div className="rounded-lg overflow-hidden">
-                      <img 
-                        src={simulado.temas.imagem_texto_4_url} 
-                        alt="Imagem do tema"
-                        className="w-full h-auto"
-                      />
-                    </div>
-                  )}
-
                   <div className="bg-primary/5 rounded-lg p-6 border-l-4 border-primary">
                     <p className="text-primary leading-relaxed font-medium text-sm">
                       {simulado.temas.cabecalho_enem || 
@@ -414,160 +220,106 @@ const SimuladoParticipacao = () => {
                     </p>
                   </div>
 
-                  {simulado.temas.texto_1 && (
-                    <div className="bg-white rounded-lg p-6 border border-gray-200">
-                      <h4 className="font-semibold text-primary mb-3">Texto 1</h4>
-                      <div className="text-gray-700 leading-relaxed text-sm">
-                        {renderTextWithParagraphs(simulado.temas.texto_1)}
-                      </div>
-                    </div>
-                  )}
+                  {/* TEXTOS MOTIVADORES */}
 
-                  {simulado.temas.texto_2 && (
-                    <div className="bg-white rounded-lg p-6 border border-gray-200">
-                      <h4 className="font-semibold text-primary mb-3">Texto 2</h4>
-                      <div className="text-gray-700 leading-relaxed text-sm">
-                        {renderTextWithParagraphs(simulado.temas.texto_2)}
+                  {simulado.temas.texto_1 && (() => {
+                    const { textoLimpo, fonte } = extrairFonteDoTexto(simulado.temas.texto_1);
+                    return (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h4 className="font-semibold text-primary mb-3">Texto 1</h4>
+                        <div className="text-gray-700 leading-relaxed text-sm">
+                          {renderTextWithParagraphs(textoLimpo)}
+                        </div>
+                        {fonte && (
+                          <div className="text-right mt-3 pt-2 border-t border-gray-100">
+                            <p className="text-xs text-gray-500 italic">
+                              {fonte}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
-                  {simulado.temas.texto_3 && (
-                    <div className="bg-white rounded-lg p-6 border border-gray-200">
-                      <h4 className="font-semibold text-primary mb-3">Texto 3</h4>
-                      <div className="text-gray-700 leading-relaxed text-sm">
-                        {renderTextWithParagraphs(simulado.temas.texto_3)}
+                  {simulado.temas.texto_2 && (() => {
+                    const { textoLimpo, fonte } = extrairFonteDoTexto(simulado.temas.texto_2);
+                    return (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h4 className="font-semibold text-primary mb-3">Texto 2</h4>
+                        <div className="text-gray-700 leading-relaxed text-sm">
+                          {renderTextWithParagraphs(textoLimpo)}
+                        </div>
+                        {fonte && (
+                          <div className="text-right mt-3 pt-2 border-t border-gray-100">
+                            <p className="text-xs text-gray-500 italic">
+                              {fonte}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
+
+                  {simulado.temas.texto_3 && (() => {
+                    const { textoLimpo, fonte } = extrairFonteDoTexto(simulado.temas.texto_3);
+                    return (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h4 className="font-semibold text-primary mb-3">Texto 3</h4>
+                        <div className="text-gray-700 leading-relaxed text-sm">
+                          {renderTextWithParagraphs(textoLimpo)}
+                        </div>
+                        {fonte && (
+                          <div className="text-right mt-3 pt-2 border-t border-gray-100">
+                            <p className="text-xs text-gray-500 italic">
+                              {fonte}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+
+                  {/* TEXTO MOTIVADOR (IMAGEM) - Numeração dinâmica baseada nos textos existentes */}
+                  {(() => {
+                    const imagemMotivador = simulado.temas.motivator4_url ||
+                                           simulado.temas.imagem_texto_4_url ||
+                                           simulado.temas.motivator4_file_path ||
+                                           simulado.temas.cover_url;
+
+                    if (imagemMotivador) {
+                      const textosVerbais = [simulado.temas.texto_1, simulado.temas.texto_2, simulado.temas.texto_3].filter(Boolean);
+                      const numeroTextoImagem = textosVerbais.length + 1;
+
+                      return (
+                        <div className="bg-white rounded-lg p-6 border border-gray-200">
+                          <h4 className="font-semibold text-primary mb-3">Texto {numeroTextoImagem}</h4>
+                          <div className="rounded-lg overflow-hidden">
+                            <img
+                              src={imagemMotivador}
+                              alt={`Texto ${numeroTextoImagem}`}
+                              className="w-full h-auto"
+                            />
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                 </CardContent>
               </Card>
             )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Send className="w-5 h-5" />
-                  Enviar Redação do Simulado
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="nome-completo">Nome Completo *</Label>
-                      <Input
-                        id="nome-completo"
-                        type="text"
-                        placeholder="Digite seu nome completo..."
-                        value={nomeCompleto}
-                        onChange={(e) => setNomeCompleto(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="email">E-mail *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Digite seu e-mail..."
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Exibir informações de créditos para alunos */}
-                  {studentData.email && studentData.userType === 'aluno' && (
-                    <CreditDisplay 
-                      userEmail={studentData.email}
-                      requiredCredits={requiredCredits}
-                      onCreditCheck={setCanSubmit}
-                    />
-                  )}
-
-                  <CorretorSelector
-                    selectedCorretores={selectedCorretores}
-                    onCorretoresChange={setSelectedCorretores}
-                    isSimulado={true}
-                    required={true}
-                  />
-
-                  <div>
-                    <Label className="text-base font-medium">Redação Manuscrita (opcional)</Label>
-                    <div className="space-y-4 mt-2">
-                      <div className="flex items-center gap-4">
-                        <label htmlFor="redacao-manuscrita" className="cursor-pointer">
-                          <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
-                            <Upload className="w-4 h-4" />
-                            <span className="text-sm">Selecionar imagem</span>
-                          </div>
-                        </label>
-                        <input
-                          id="redacao-manuscrita"
-                          type="file"
-                          accept="image/jpeg,image/jpg,image/png"
-                          onChange={handleRedacaoManuscritaChange}
-                          className="hidden"
-                        />
-                      </div>
-
-                      {redacaoManuscritaUrl && (
-                        <div className="relative inline-block">
-                          <img 
-                            src={redacaoManuscritaUrl} 
-                            alt="Preview da redação manuscrita" 
-                            className="max-w-xs max-h-60 rounded-lg border"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0"
-                            onClick={handleRemoveRedacaoManuscrita}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Formatos aceitos: JPG, JPEG, PNG
-                    </p>
-                  </div>
-
-                  <RedacaoEnemForm
-                    value={redacaoTexto}
-                    onChange={setRedacaoTexto}
-                    onValidChange={setIsRedacaoValid}
-                    placeholder="Escreva sua redação aqui..."
-                  />
-
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <p className="text-sm text-green-800">
-                      <strong>Simulado:</strong> {simulado.titulo}
-                    </p>
-                    <p className="text-xs text-green-600 mt-1">
-                      Sua redação será enviada para correção pelos corretores selecionados.
-                    </p>
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    disabled={
-                      isSubmitting || 
-                      (!isRedacaoValid && !redacaoManuscrita) ||
-                      (studentData.userType === 'aluno' && !canSubmit)
-                    }
-                    className="w-full bg-primary"
-                  >
-                    {isSubmitting ? "Enviando..." : "Enviar Redação do Simulado"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+            <RedacaoFormUnificado
+              isSimulado={true}
+              simuladoId={id}
+              fraseTematica={simulado.temas?.frase_tematica || ""}
+              readOnlyFraseTematica={true}
+              requiredCorretores={2}
+              requiredCredits={2}
+              onSubmitSuccess={() => navigate('/app')}
+            />
           </main>
         </div>
       </TooltipProvider>
