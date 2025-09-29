@@ -136,98 +136,14 @@ const MinhasRedacoesList = () => {
   const itemsPerPage = 10;
   const { toast } = useToast();
 
-  // SISTEMA DE DEBUG PARA CANCELAMENTOS
-  const [showDebugModal, setShowDebugModal] = useState(false);
-  const [debugLogs, setDebugLogs] = useState('');
-
-  const addDebugLog = (msg: string) => {
-    const timestamp = new Date().toISOString().substring(11, 19);
-    const logEntry = `[${timestamp}] ${msg}`;
-    console.log(logEntry);
-
-    // Salvar no localStorage para persistir entre reloads
-    const existingLogs = localStorage.getItem('cancelamento_logs') || '';
-    const newLogs = existingLogs + '\n' + logEntry;
-    localStorage.setItem('cancelamento_logs', newLogs);
-    setDebugLogs(newLogs);
-  };
-
-  // Carregar logs do localStorage na inicialização
-  useEffect(() => {
-    // Limpar logs antigos ao carregar a página
-    localStorage.removeItem('cancelamento_logs');
-    addDebugLog('🧹 Sistema de debug inicializado - logs limpos');
-    const logs = localStorage.getItem('cancelamento_logs') || '';
-    setDebugLogs(logs);
-  }, []);
-
-  // FUNÇÃO DE TESTE PARA CRÉDITOS
-  const testarAddCredits = async () => {
-    addDebugLog('🧪 TESTE - Verificando função add_credits_safe...');
-
-    try {
-      // Buscar o perfil do usuário primeiro
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, creditos, email')
-        .eq('email', 'alunoa@gmail.com')
-        .eq('user_type', 'aluno')
-        .single();
-
-      if (profileError || !profile) {
-        addDebugLog(`❌ Erro ao buscar perfil: ${JSON.stringify(profileError)}`);
-        return;
-      }
-
-      addDebugLog(`👤 Perfil encontrado: ID=${profile.id}, créditos=${profile.creditos}`);
-
-      // Testar função refund_credits_on_cancel
-      addDebugLog('🔧 Testando refund_credits_on_cancel com 1 crédito...');
-      const { data: refundResult, error: refundError } = await supabase
-        .rpc('refund_credits_on_cancel', {
-          p_user_id: profile.id,
-          p_amount: 1,
-          p_reason: 'Teste manual de devolução'
-        });
-
-      addDebugLog(`🔧 Resultado refund: data=${refundResult}, error=${JSON.stringify(refundError)}`);
-
-      // Se falhar, testar add_credits_safe
-      if (refundError) {
-        addDebugLog('🔧 Fallback: testando add_credits_safe...');
-        const { data: addResult, error: addError } = await supabase
-          .rpc('add_credits_safe', {
-            target_user_id: profile.id,
-            credit_amount: 1,
-            admin_user_id: null
-          });
-
-        addDebugLog(`🔧 Resultado add_credits_safe: data=${addResult}, error=${JSON.stringify(addError)}`);
-      }
-
-      // Verificar se funcionou
-      const { data: newProfile, error: verifyError } = await supabase
-        .from('profiles')
-        .select('creditos')
-        .eq('id', profile.id)
-        .single();
-
-      addDebugLog(`🔍 Verificação: antigo=${profile.creditos}, novo=${newProfile?.creditos}, error=${JSON.stringify(verifyError)}`);
-
-    } catch (err) {
-      addDebugLog(`💥 Erro no teste: ${JSON.stringify(err)}`);
-    }
-  };
   const navigate = useNavigate();
   const { isRedacaoVisualizada } = useVisualizacoesRealtime();
 
   // Hook para cancelamento de redações
   const { cancelRedacao, cancelRedacaoSimulado, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
     onSuccess: () => {
-      addDebugLog('✅ Cancelamento concluído com sucesso - aguardando 5 segundos antes de recarregar...');
       // Recarregar a lista após cancelamento com delay maior para capturar logs
       setTimeout(() => {
-        addDebugLog('🔄 Recarregando página agora...');
         window.location.reload();
       }, 5000);
     }
@@ -1088,15 +1004,9 @@ const MinhasRedacoesList = () => {
                                 <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => {
-                                    addDebugLog(`🚀 INICIANDO CANCELAMENTO - ID: ${redacao.id}`);
-                                    addDebugLog(`📄 Tipo: ${redacao.tipo_envio}, Email: ${redacao.email_aluno}`);
-                                    addDebugLog(`💰 Créditos a retornar: ${getCreditosACancelar(redacao.tipo_envio)}`);
-
                                     if (redacao.tipo_envio === 'simulado') {
-                                      addDebugLog('🎯 Cancelando redação de SIMULADO...');
                                       cancelRedacaoSimulado(redacao.id, redacao.email_aluno);
                                     } else {
-                                      addDebugLog('🎯 Cancelando redação REGULAR...');
                                       cancelRedacao(redacao.id, redacao.email_aluno);
                                     }
                                   }}
@@ -1347,64 +1257,8 @@ const MinhasRedacoesList = () => {
           />
         )}
 
-        {/* MODAL DE DEBUG PARA CANCELAMENTOS */}
-        <Dialog open={showDebugModal} onOpenChange={setShowDebugModal}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
-                🛠️ Debug de Cancelamentos
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      navigator.clipboard.writeText(debugLogs);
-                      toast({
-                        title: "Logs copiados!",
-                        description: "Logs copiados para área de transferência",
-                        duration: 2000
-                      });
-                    }}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Copiar Logs
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      localStorage.removeItem('cancelamento_logs');
-                      setDebugLogs('');
-                      addDebugLog('🧹 Logs limpos');
-                    }}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Limpar
-                  </Button>
-                  <Button
-                    onClick={testarAddCredits}
-                    variant="outline"
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    🧪 Testar Créditos
-                  </Button>
-                </div>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="overflow-auto max-h-[60vh] bg-black text-green-400 p-4 rounded font-mono text-sm">
-              <pre>{debugLogs}</pre>
-            </div>
-          </DialogContent>
-        </Dialog>
       </main>
 
-      {/* BOTÃO FLUTUANTE DE DEBUG */}
-      <Button
-        onClick={() => setShowDebugModal(true)}
-        className="fixed bottom-4 right-4 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg z-50"
-        size="sm"
-      >
-        🛠️
-      </Button>
     </div>
   );
 };
