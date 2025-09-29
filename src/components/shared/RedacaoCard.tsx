@@ -99,30 +99,27 @@ export const RedacaoCard = ({ redacao, actions, className = '' }: RedacaoCardPro
 
   return (
     <Card className={`bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border-gray-200 flex flex-col h-full ${className}`}>
-      {/* Imagem + badges - apenas se não for tema livre */}
-      {!isTempoLivre ? (
-        <div className="relative">
-          <div className="w-full h-40 sm:h-44 md:h-40 overflow-hidden">
-            <img
-              src={imageUrl}
-              alt={`Tema: ${redacao.frase_tematica}`}
-              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
-              }}
-            />
-          </div>
+      {/* Imagem + badges */}
+      <div className="relative">
+        <div className="w-full h-40 sm:h-44 md:h-40 overflow-hidden">
+          <img
+            src={isTempoLivre ? '/placeholders/aula-cover/redacaoComTemaEsolhidoRedator.jpg' : imageUrl}
+            alt={`Tema: ${redacao.frase_tematica}`}
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/lovable-uploads/66db3418-766f-47b9-836b-07a6a228a79c.png';
+            }}
+          />
+        </div>
 
-          {/* Badge do eixo temático */}
+        {/* Badge do eixo temático - apenas se não for tema livre */}
+        {!isTempoLivre && (
           <Badge className="absolute top-2 left-2 bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 shadow-sm">
             {eixoTematico}
           </Badge>
-        </div>
-      ) : (
-        /* Para tema livre, mostrar um espaço em branco ou uma indicação visual mais sutil */
-        <div className="w-full h-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-100"></div>
-      )}
+        )}
+      </div>
 
       {/* Conteúdo */}
       <div className="p-4 flex-1 flex flex-col">
