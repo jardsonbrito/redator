@@ -69,6 +69,7 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
   const [isLoading, setIsLoading] = useState(false);
   const [temas, setTemas] = useState<Tema[]>([]);
   const [temaSearch, setTemaSearch] = useState("");
+  const [showTemaDropdown, setShowTemaDropdown] = useState(false);
 
   const tiposDisponiveis = [
     'Google Forms',
@@ -287,6 +288,7 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
         setDataFim("");
         setHoraFim("");
         setTemaSearch("");
+        setShowTemaDropdown(false);
       }
 
     } catch (error) {
@@ -420,12 +422,24 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
                   <div className="relative">
                     <Input
                       value={temaSearch}
-                      onChange={(e) => setTemaSearch(e.target.value)}
+                      onChange={(e) => {
+                        setTemaSearch(e.target.value);
+                        setShowTemaDropdown(true);
+                        // Limpar seleção se usuário continuar digitando
+                        if (temaId && e.target.value !== temas.find(t => t.id === temaId)?.frase_tematica) {
+                          setTemaId("");
+                        }
+                      }}
+                      onFocus={() => setShowTemaDropdown(true)}
+                      onBlur={() => {
+                        // Pequeno delay para permitir clique nos itens
+                        setTimeout(() => setShowTemaDropdown(false), 200);
+                      }}
                       placeholder="Buscar tema pela frase temática..."
                       className="text-sm mb-2"
                     />
-                    {temaSearch && (
-                      <div className="absolute z-10 w-full bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {temaSearch && showTemaDropdown && (
+                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                         {temas
                           .filter(tema =>
                             tema.frase_tematica.toLowerCase().includes(temaSearch.toLowerCase())
@@ -434,21 +448,29 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
                           .map((tema) => (
                             <div
                               key={tema.id}
-                              className="p-2 hover:bg-accent cursor-pointer border-b last:border-b-0"
+                              className="p-2 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
                               onClick={() => {
                                 setTemaId(tema.id);
                                 setTemaSearch(tema.frase_tematica);
+                                setShowTemaDropdown(false);
                               }}
                             >
                               <div className="font-medium text-sm">{tema.frase_tematica}</div>
-                              <div className="text-xs text-muted-foreground">{tema.eixo_tematico}</div>
+                              <div className="text-xs text-gray-500">{tema.eixo_tematico}</div>
                             </div>
                           ))}
+                        {temas.filter(tema =>
+                          tema.frase_tematica.toLowerCase().includes(temaSearch.toLowerCase())
+                        ).length === 0 && (
+                          <div className="p-2 text-sm text-gray-500">
+                            Nenhum tema encontrado
+                          </div>
+                        )}
                       </div>
                     )}
                     {temaId && (
                       <div className="text-sm text-green-600">
-                        Tema selecionado: {temas.find(t => t.id === temaId)?.frase_tematica}
+                        ✓ Tema selecionado: {temas.find(t => t.id === temaId)?.frase_tematica}
                       </div>
                     )}
                   </div>
