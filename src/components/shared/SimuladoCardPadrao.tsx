@@ -335,7 +335,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="p-2 h-8 w-8 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
                   >
                     <MoreVertical className="h-4 w-4 text-gray-600" />
                   </Button>

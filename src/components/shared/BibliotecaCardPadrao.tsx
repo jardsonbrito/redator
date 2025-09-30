@@ -89,7 +89,7 @@ export const BibliotecaCardPadrao = ({ material, perfil, actions }: BibliotecaCa
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

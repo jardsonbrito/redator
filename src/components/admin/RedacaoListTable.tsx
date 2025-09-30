@@ -3,11 +3,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Eye, RotateCcw, Download } from "lucide-react";
+import { Trash2, Eye, RotateCcw, Download, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
 import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { getStatusColor, getTurmaColor } from "@/utils/redacaoUtils";
@@ -31,6 +36,7 @@ interface RedacaoListTableProps {
 export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: RedacaoListTableProps) => {
   const [corretores, setCorretores] = useState<Corretor[]>([]);
   const [showCorretorDialog, setShowCorretorDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoEnviada | null>(null);
   const [selectedCorretor, setSelectedCorretor] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -65,6 +71,19 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
     setSelectedRedacao(redacao);
     setSelectedCorretor("");
     setShowCorretorDialog(true);
+  };
+
+  const handleDeleteClick = (redacao: RedacaoEnviada) => {
+    setSelectedRedacao(redacao);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedRedacao) {
+      onDelete(selectedRedacao);
+      setShowDeleteDialog(false);
+      setSelectedRedacao(null);
+    }
   };
 
   const handleConfirmRotateCorretor = async () => {
@@ -103,37 +122,36 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
     }
   };
   return (
-    <TooltipProvider>
-      <div className="w-full">
+    <div className="w-full">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[20%]">Aluno</TableHead>
-              <TableHead className="w-[8%]">Turma</TableHead>
-              <TableHead className="w-[30%]">Tema</TableHead>
-              <TableHead className="w-[8%]">Data</TableHead>
+              <TableHead className="w-[30%]">Aluno</TableHead>
+              <TableHead className="w-[12%]">Data de Envio</TableHead>
               <TableHead className="w-[18%]">Corretor</TableHead>
-              <TableHead className="w-[8%]">Status</TableHead>
+              <TableHead className="w-[12%]">Status</TableHead>
               <TableHead className="w-[8%] text-center">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {redacoes.map((redacao) => (
+            {redacoes.map((redacao, index) => (
               <TableRow key={redacao.id}>
-                <TableCell className="w-[20%]">
-                  <div className="font-medium text-sm leading-tight">{redacao.nome_aluno}</div>
-                </TableCell>
-                <TableCell className="w-[8%]">
-                  <Badge className={`${getTurmaColor(redacao.turma)} text-xs px-1 py-0.5`}>
-                    {redacao.turma}
-                  </Badge>
-                </TableCell>
                 <TableCell className="w-[30%]">
-                  <div className="text-sm truncate" title={redacao.frase_tematica}>
-                    {truncateTheme(redacao.frase_tematica)}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground font-mono min-w-[20px]">{index + 1}</span>
+                      <span className="font-medium text-sm">{redacao.nome_aluno}</span>
+                      <span className="text-xs text-muted-foreground">—</span>
+                      <Badge className={`${getTurmaColor(redacao.turma)} text-xs px-1 py-0.5`}>
+                        {redacao.turma}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground ml-6" title={redacao.frase_tematica}>
+                      {truncateTheme(redacao.frase_tematica)}
+                    </div>
                   </div>
                 </TableCell>
-                <TableCell className="w-[8%]">
+                <TableCell className="w-[12%]">
                   <div className="text-sm">
                     {new Date(redacao.data_envio).toLocaleDateString('pt-BR', {
                       day: '2-digit',
@@ -146,14 +164,14 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                   <div className="text-xs space-y-0.5">
                     {redacao.corretor_1 && (
                       <div className="truncate" title={redacao.corretor_1.nome_completo}>
-                        {redacao.corretor_1.nome_completo.length > 15 
+                        {redacao.corretor_1.nome_completo.length > 15
                           ? redacao.corretor_1.nome_completo.substring(0, 15) + '...'
                           : redacao.corretor_1.nome_completo}
                       </div>
                     )}
                     {redacao.corretor_2 && (
                       <div className="truncate" title={redacao.corretor_2.nome_completo}>
-                        {redacao.corretor_2.nome_completo.length > 15 
+                        {redacao.corretor_2.nome_completo.length > 15
                           ? redacao.corretor_2.nome_completo.substring(0, 15) + '...'
                           : redacao.corretor_2.nome_completo}
                       </div>
@@ -163,7 +181,7 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="w-[8%]">
+                <TableCell className="w-[12%]">
                   <Badge className={`${getStatusColor(redacao.status, redacao.corrigida)} text-xs px-1 py-0.5`}>
                     {redacao.status === 'devolvida' ? "Devolvida" :
                      redacao.status_corretor_1 === 'incompleta' || redacao.status_corretor_2 === 'incompleta' ? "Incompleta" :
@@ -171,98 +189,44 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                   </Badge>
                 </TableCell>
                 <TableCell className="w-[8%]">
-                  <div className="flex gap-1 justify-center flex-wrap">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                  <div className="flex justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          onClick={() => onView(redacao)}
-                          className="h-6 w-6 p-0"
+                          className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200"
                         >
-                          <Eye className="w-3 h-3" />
+                          <MoreVertical className="w-4 h-4" />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Visualizar</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    {/* Debug: Verificar se redação está corrigida */}
-                    {(() => {
-                      console.log('🔍 Debug redação:', redacao.nome_aluno, 'corrigida:', redacao.corrigida);
-                      return null;
-                    })()}
-                    
-                    {redacao.corrigida && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => downloadRedacaoCorrigida(redacao)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Download className="w-3 h-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Download PDF</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onView(redacao)}>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Visualizar
+                        </DropdownMenuItem>
+                        {redacao.corrigida && (
+                          <DropdownMenuItem onClick={() => downloadRedacaoCorrigida(redacao)}>
+                            <Download className="w-4 h-4 mr-2" />
+                            Download PDF
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
                           onClick={() => handleRotateCorretor(redacao)}
-                          className="h-6 w-6 p-0"
                           disabled={redacao.corrigida}
                         >
-                          <RotateCcw className="w-3 h-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Mudar corretor</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <AlertDialog>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm" className="h-6 w-6 p-0">
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Excluir</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza de que deseja excluir esta redação de <strong>{redacao.nome_aluno}</strong>?
-                            <br />
-                            <br />
-                            <strong>Esta ação não poderá ser desfeita.</strong>
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => onDelete(redacao)}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          Mudar corretor
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(redacao)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Deletar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </TableCell>
               </TableRow>
@@ -306,7 +270,30 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza de que deseja excluir esta redação de <strong>{selectedRedacao?.nome_aluno}</strong>?
+                <br />
+                <br />
+                <strong>Esta ação não poderá ser desfeita.</strong>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-    </TooltipProvider>
   );
 };

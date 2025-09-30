@@ -224,7 +224,11 @@ export const RadarRedacoes = () => {
     fetchRedacoes();
   }, []);
 
-  const turmasUnicas = [...new Set(redacoes.map(r => r.turma))];
+  // Filtrar apenas turmas válidas que funcionam corretamente
+  const turmasValidas = ['LRA2025', 'LRB2025', 'LRD2025', 'Turma A', 'Turma B', 'Turma D'];
+  const turmasUnicas = turmasValidas.filter(turma =>
+    redacoes.some(r => r.turma === turma)
+  );
   const tiposUnicos = [...new Set(redacoes.map(r => r.tipo_envio))];
 
   const getTipoLabel = (tipo: string) => {

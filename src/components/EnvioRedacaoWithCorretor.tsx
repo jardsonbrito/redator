@@ -12,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { CorretorSelector } from "./CorretorSelector";
 import { CreditDisplay } from "./CreditDisplay";
 import { useCredits } from "@/hooks/useCredits";
-import { CreditDebugger } from "./CreditDebugger";
 import { Upload, X } from "lucide-react";
 
 interface EnvioRedacaoProps {
@@ -317,9 +316,6 @@ export const EnvioRedacaoWithCorretor = ({
 
   return (
     <>
-      {/* Debugger temporário - REMOVER após resolver problema */}
-      <CreditDebugger />
-      
       <Card className="max-w-5xl mx-auto">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg text-primary">

@@ -27,7 +27,8 @@
       "Bash(npm run lint)",
       "Bash(npm run preview:*)",
       "Bash(node:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run build:dev:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

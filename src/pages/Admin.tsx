@@ -51,6 +51,7 @@ import {
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DetailedDashboardCard } from "@/components/admin/DetailedDashboardCard";
+import { getExerciseAvailability } from "@/utils/exerciseUtils";
 
 // Import existing admin components with correct named imports
 import { TemaForm } from "@/components/admin/TemaForm";
@@ -163,13 +164,6 @@ const Admin = () => {
       const temasPublicados = temas?.filter(t => !t.scheduled_publish_at || new Date(t.scheduled_publish_at) <= hoje).length || 0;
       const temasAgendados = temas?.filter(t => t.scheduled_publish_at && new Date(t.scheduled_publish_at) > hoje).length || 0;
 
-      console.log('🔍 Debug Temas:', {
-        total: temas?.length,
-        publicados: temasPublicados,
-        agendados: temasAgendados,
-        temasComAgendamento: temas?.filter(t => t.scheduled_publish_at).length,
-        hoje: hoje.toISOString()
-      });
 
       data.temas = {
         info: `${temasPublicados} publicados`,
@@ -196,7 +190,6 @@ const Admin = () => {
         .order('data_envio', { ascending: false })
         .limit(10);
 
-      console.log('🔍 Todas as redações (últimas 10):', { todasRedacoes, todasError });
 
       // Buscar especificamente as 3 redações mencionadas
       const { data: redacoesEspecificas, error: especificasError } = await supabase
@@ -204,7 +197,6 @@ const Admin = () => {
         .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida, data_envio')
         .or('nome_aluno.ilike.%lara%,nome_aluno.ilike.%kauani%,nome_aluno.ilike.%anne%,nome_aluno.ilike.%isabele%,nome_aluno.ilike.%renam%');
 
-      console.log('🔍 Redações dos 3 alunos mencionados:', { redacoesEspecificas, especificasError });
 
       // Query original com log detalhado
       const { data: redacoesEnviadas, error: redacoesError } = await supabase
@@ -223,10 +215,6 @@ const Admin = () => {
         r.status === 'aguardando' || r.status === 'em_correcao'
       ) || [];
 
-      console.log('🔍 Redações aguardando/em_correção:', {
-        quantidade: redacoesAguardando.length,
-        redacoes: redacoesAguardando
-      });
 
       const aguardando = redacoesAguardando.length;
 
@@ -257,24 +245,16 @@ const Admin = () => {
         badgeVariant: aguardando > 0 ? "destructive" : undefined
       };
 
-      // Exercícios - quantos disponíveis (considerando intervalo de datas e status ativo)
+      // Exercícios - quantos disponíveis (usando função de disponibilidade oficial)
       const { data: exercicios } = await supabase
         .from('exercicios')
         .select('*')
         .eq('ativo', true);
 
+      // Filtrar apenas exercícios que estão realmente disponíveis
       const exerciciosDisponiveis = exercicios?.filter(e => {
-        const dataInicio = e.data_inicio ? new Date(e.data_inicio) : null;
-        const dataTermino = e.data_termino ? new Date(e.data_termino) : null;
-
-        // Se tem data de início, deve ter começado
-        if (dataInicio && hoje < dataInicio) return false;
-
-        // Se tem data de fim, não deve ter terminado
-        if (dataTermino && hoje > dataTermino) return false;
-
-        // Está no período válido para receber respostas
-        return true;
+        const availability = getExerciseAvailability(e);
+        return availability.status === 'disponivel';
       }).length || 0;
 
       data.exercicios = {
@@ -573,10 +553,8 @@ const Admin = () => {
 
 
 
-  console.log('🔍 Admin component - User:', user?.email, 'IsAdmin:', isAdmin);
 
   if (!user || !isAdmin) {
-    console.log('❌ Redirecionando para login - User:', !!user, 'IsAdmin:', isAdmin);
     return <Navigate to="/login" replace />;
   }
 
@@ -870,24 +848,15 @@ const Admin = () => {
 
       case "alunos":
         const handleAlunoSuccess = () => {
-          console.log("Admin - handleAlunoSuccess chamado");
           setRefreshAlunos(!refreshAlunos);
           setAlunoEditando(null);
         };
 
         const handleEditAluno = (aluno: any) => {
-          console.log("Admin - handleEditAluno chamado com:", aluno);
-          console.log("Admin - Definindo alunoEditando para:", {
-            id: aluno.id,
-            nome: aluno.nome,
-            email: aluno.email,
-            turma: aluno.turma
-          });
           setAlunoEditando(aluno);
         };
 
         const handleCancelAlunoEdit = () => {
-          console.log("Admin - handleCancelAlunoEdit chamado");
           setAlunoEditando(null);
         };
 

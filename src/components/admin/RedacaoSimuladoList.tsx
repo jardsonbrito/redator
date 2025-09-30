@@ -12,7 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Edit, CheckCircle, Calendar, User, Mail, RotateCcw, Copy, Trash2 } from "lucide-react";
+import { Eye, Edit, CheckCircle, Calendar, User, Mail, RotateCcw, Copy, Trash2, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
@@ -26,6 +32,7 @@ const RedacaoSimuladoList = () => {
   const [filtroCorretor, setFiltroCorretor] = useState<string>("todos");
   const [buscaNome, setBuscaNome] = useState("");
   const [redacaoSelecionada, setRedacaoSelecionada] = useState<any>(null);
+  const [redacaoVisualizacao, setRedacaoVisualizacao] = useState<any>(null);
   const [duplicandoRedacao, setDuplicandoRedacao] = useState<any>(null);
   const [redacaoParaExcluir, setRedacaoParaExcluir] = useState<any>(null);
   const [novoCorretor, setNovoCorretor] = useState("");
@@ -240,6 +247,10 @@ const RedacaoSimuladoList = () => {
     setComentarioPedagogico(redacao.comentario_pedagogico || "");
   };
 
+  const abrirVisualizacao = (redacao: any) => {
+    setRedacaoVisualizacao(redacao);
+  };
+
   const abrirDuplicacao = (redacao: any) => {
     setDuplicandoRedacao(redacao);
     setNovoCorretor("");
@@ -311,18 +322,34 @@ const RedacaoSimuladoList = () => {
   // Filtrar redações expandidas
   const redacoesFiltradas = redacoesExpandidas?.filter(redacao => {
     const matchTurma = filtroTurma === "todas" || redacao.turma === filtroTurma;
-    const matchStatus = filtroStatus === "todas" || 
+    const matchStatus = filtroStatus === "todas" ||
       (filtroStatus === "corrigidas" && redacao.status_atual === 'corrigida') ||
       (filtroStatus === "pendentes" && redacao.status_atual === 'pendente') ||
       (filtroStatus === "incompleta" && redacao.status_atual === 'incompleta');
     const matchSimulado = filtroSimulado === "todos" || redacao.id_simulado === filtroSimulado;
     const matchCorretor = filtroCorretor === "todos" || redacao.corretor_id_atual === filtroCorretor;
-    const matchNome = buscaNome === "" || 
+    const matchNome = buscaNome === "" ||
       redacao.nome_aluno.toLowerCase().includes(buscaNome.toLowerCase()) ||
       redacao.email_aluno.toLowerCase().includes(buscaNome.toLowerCase());
-    
+
     return matchTurma && matchStatus && matchSimulado && matchCorretor && matchNome;
   });
+
+  // Criar mapeamento de números únicos por aluno
+  const alunosUnicos = [...new Set(redacoesFiltradas?.map(redacao =>
+    `${redacao.nome_aluno}|${redacao.email_aluno}`
+  ))];
+
+  const numerosPorAluno = new Map<string, number>();
+  alunosUnicos.forEach((chaveAluno, index) => {
+    numerosPorAluno.set(chaveAluno, index + 1);
+  });
+
+  // Adicionar número do aluno às redações filtradas
+  const redacoesComNumero = redacoesFiltradas?.map(redacao => ({
+    ...redacao,
+    numero_aluno: numerosPorAluno.get(`${redacao.nome_aluno}|${redacao.email_aluno}`) || 0
+  }));
 
   const turmasDisponiveis = ["LRA2025", "LRB2025", "LRC2025", "LRD2025", "LRE2025", "visitante"];
 
@@ -348,7 +375,7 @@ const RedacaoSimuladoList = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-redator-primary">Redações de Simulados</h2>
         <Badge variant="outline" className="text-sm">
-          {redacoesFiltradas?.length || 0} entrada(s) encontrada(s)
+          {redacoesComNumero?.length || 0} entrada(s) encontrada(s)
         </Badge>
       </div>
 
@@ -447,6 +474,7 @@ const RedacaoSimuladoList = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[60px]">#</TableHead>
                 <TableHead>Aluno</TableHead>
                 <TableHead>Turma</TableHead>
                 <TableHead>Tema</TableHead>
@@ -457,15 +485,20 @@ const RedacaoSimuladoList = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {!redacoesFiltradas || redacoesFiltradas.length === 0 ? (
+              {!redacoesComNumero || redacoesComNumero.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <p className="text-gray-500">Nenhuma redação encontrada com os filtros aplicados.</p>
                   </TableCell>
                 </TableRow>
               ) : (
-                redacoesFiltradas.map((redacao) => (
+                redacoesComNumero.map((redacao) => (
                   <TableRow key={`${redacao.id}-${redacao.tipo_corretor || 'single'}`}>
+                    <TableCell className="text-center">
+                      <div className="font-bold text-lg text-redator-primary">
+                        {redacao.numero_aluno}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium">
                         {truncateName(redacao.nome_aluno, 3)}
@@ -502,59 +535,39 @@ const RedacaoSimuladoList = () => {
                     </TableCell>
                     
                     <TableCell>
-                      <div className="flex gap-1">
-                        {/* Visualizar */}
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" title="Visualizar">
-                              <Eye className="w-4 h-4" />
+                      <div className="flex justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200"
+                            >
+                              <MoreVertical className="w-4 h-4" />
                             </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Redação - {redacao.nome_aluno}</DialogTitle>
-                            </DialogHeader>
-                            <div className="mt-4">
-                              <div className="bg-gray-50 p-4 rounded mb-4">
-                                <h3 className="font-bold text-redator-primary mb-2">{redacao.simulados.frase_tematica}</h3>
-                              </div>
-                              <div className="bg-white p-4 border rounded whitespace-pre-wrap">
-                                {redacao.texto}
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-
-                        {/* Duplicar */}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          title="Duplicar"
-                          onClick={() => abrirDuplicacao(redacao)}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-
-                        {/* Corrigir */}
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          title={redacao.status_atual === 'corrigida' ? "Editar" : "Corrigir"}
-                          onClick={() => abrirCorrecao(redacao)}
-                          className="bg-redator-primary"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-
-                        {/* Excluir */}
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          title="Excluir"
-                          onClick={() => confirmarExclusao(redacao)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => abrirVisualizacao(redacao)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Visualizar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => abrirDuplicacao(redacao)}>
+                              <Copy className="w-4 h-4 mr-2" />
+                              Duplicar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => abrirCorrecao(redacao)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              {redacao.status_atual === 'corrigida' ? "Editar" : "Corrigir"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => confirmarExclusao(redacao)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -564,6 +577,41 @@ const RedacaoSimuladoList = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Modal de Visualização */}
+      <Dialog open={!!redacaoVisualizacao} onOpenChange={() => setRedacaoVisualizacao(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Redação - {redacaoVisualizacao?.nome_aluno}</DialogTitle>
+          </DialogHeader>
+          {redacaoVisualizacao && (
+            <div className="mt-4">
+              <div className="bg-gray-50 p-4 rounded mb-4">
+                <h3 className="font-bold text-redator-primary mb-2">
+                  {redacaoVisualizacao.simulados.frase_tematica}
+                </h3>
+              </div>
+
+              {/* Renderizar redação manuscrita ou digitada */}
+              {redacaoVisualizacao.redacao_manuscrita_url ? (
+                <div className="bg-white p-4 border rounded">
+                  <p className="text-sm text-gray-600 mb-4">Redação manuscrita enviada em foto:</p>
+                  <img
+                    src={redacaoVisualizacao.redacao_manuscrita_url}
+                    alt="Redação manuscrita"
+                    className="max-w-full h-auto border rounded shadow-sm"
+                    style={{ maxHeight: '70vh' }}
+                  />
+                </div>
+              ) : (
+                <div className="bg-white p-4 border rounded whitespace-pre-wrap">
+                  {redacaoVisualizacao.texto || "Texto da redação não disponível."}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Duplicação */}
       <Dialog open={!!duplicandoRedacao} onOpenChange={() => setDuplicandoRedacao(null)}>
