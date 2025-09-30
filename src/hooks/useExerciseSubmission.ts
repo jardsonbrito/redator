@@ -15,10 +15,28 @@ export const useExerciseSubmission = (exerciseId: string) => {
       // Normalizar email para busca (remover espaços e converter para lowercase)
       const normalizedEmail = studentData.email.toLowerCase().trim();
 
+      // Primeiro, buscar a frase_tematica do exercício
+      const { data: exerciseData, error: exerciseError } = await supabase
+        .from('exercicios')
+        .select(`
+          tema_id,
+          temas!inner(frase_tematica)
+        `)
+        .eq('id', exerciseId)
+        .single();
+
+      if (exerciseError || !exerciseData?.temas?.frase_tematica) {
+        console.error('Erro ao buscar dados do exercício:', exerciseError);
+        return { hasSubmitted: false };
+      }
+
+      const fraseTematica = exerciseData.temas.frase_tematica;
+
+      // Buscar se existe redação para esta frase temática e email
       const { data, error } = await supabase
         .from('redacoes_enviadas')
         .select('*')
-        .eq('exercicio_id', exerciseId)
+        .eq('frase_tematica', fraseTematica)
         .ilike('email_aluno', normalizedEmail)
         .order('data_envio', { ascending: false })
         .limit(1);

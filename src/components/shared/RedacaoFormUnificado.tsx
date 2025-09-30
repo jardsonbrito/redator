@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCredits } from "@/hooks/useCredits";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface RedacaoFormUnificadoProps {
   // Configurações do formulário
@@ -50,6 +51,7 @@ export const RedacaoFormUnificado = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
+  const queryClient = useQueryClient();
 
   // Estados do formulário
   const [nomeCompleto, setNomeCompleto] = useState("");
@@ -315,7 +317,7 @@ export const RedacaoFormUnificado = ({
 
         if (redacaoError) throw redacaoError;
       } else {
-        // Para redações regulares
+        // Para redações regulares (incluindo exercícios)
         const redacaoData = {
           nome_aluno: finalNomeCompleto,
           email_aluno: finalEmail,
@@ -359,6 +361,13 @@ export const RedacaoFormUnificado = ({
             "Sua redação foi enviada para correção.",
           className: "border-green-200 bg-green-50 text-green-900",
           duration: 5000
+        });
+      }
+
+      // Invalidar cache do exercício se for um exercício
+      if (exercicioId) {
+        queryClient.invalidateQueries({
+          queryKey: ['exercise-submission', exercicioId, studentData.email]
         });
       }
 

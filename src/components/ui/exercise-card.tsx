@@ -52,6 +52,7 @@ export function ExerciseCard({
 }: ExerciseCardProps) {
   // Hook para verificar se o aluno já participou do exercício
   const { data: submissionData } = useExerciseSubmission(exercise.id);
+
   // Implementar sistema de múltiplas fontes de imagem com fallback automático
   const imageSources = pickCoverImage({
     cover_url: exercise?.cover_url,
@@ -91,16 +92,7 @@ export function ExerciseCard({
       }
     }
 
-    // Para alunos: não mostrar badges quando agendado ou encerrado
-    if (!exercise.ativo) {
-      return null;
-    }
-
-    // Apenas mostrar badge quando disponível
-    if (availability.status === 'disponivel') {
-      return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Disponível</Badge>;
-    }
-
+    // Para alunos: não mostrar badges
     return null;
   };
 
