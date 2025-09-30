@@ -207,8 +207,17 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
     }
 
     if (tipo === 'Redação com Frase Temática' && !temaId) {
-      toast.error("Tema é obrigatório para exercícios de redação.");
-      return;
+      // Tentar encontrar tema por correspondência exata
+      const temaEncontrado = temas.find(t => t.frase_tematica === temaSearch);
+      if (temaEncontrado) {
+        console.log('Tema encontrado automaticamente:', temaEncontrado.frase_tematica);
+        setTemaId(temaEncontrado.id);
+        // Continuar com a criação
+      } else {
+        console.log('Validação falhou:', { tipo, temaId, temaSearch, temas: temas.length });
+        toast.error("Por favor, selecione um tema da lista de busca para exercícios de redação.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -468,9 +477,13 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
                         )}
                       </div>
                     )}
-                    {temaId && (
-                      <div className="text-sm text-green-600">
+                    {temaId ? (
+                      <div className="text-sm text-green-600 bg-green-50 p-2 rounded border border-green-200">
                         ✓ Tema selecionado: {temas.find(t => t.id === temaId)?.frase_tematica}
+                      </div>
+                    ) : temaSearch && (
+                      <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded border border-orange-200">
+                        ⚠️ Digite mais caracteres ou clique em um tema da lista para selecionar
                       </div>
                     )}
                   </div>
