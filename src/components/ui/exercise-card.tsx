@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, ExternalLink, FileText, Calendar, Users } from "lucide-react";
 import { pickCoverImage, getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
 import { useState } from "react";
+import { useExerciseSubmission } from "@/hooks/useExerciseSubmission";
 
 interface ExerciseCardProps {
   exercise: {
@@ -39,16 +40,18 @@ interface ExerciseCardProps {
   onToggleStatus?: (id: string, ativo: boolean) => void;
 }
 
-export function ExerciseCard({ 
-  exercise, 
-  onAction, 
-  actionLabel = "Abrir Exercício", 
+export function ExerciseCard({
+  exercise,
+  onAction,
+  actionLabel = "Abrir Exercício",
   showActions = true,
   isAdmin = false,
   onEdit,
   onDelete,
   onToggleStatus
 }: ExerciseCardProps) {
+  // Hook para verificar se o aluno já participou do exercício
+  const { data: submissionData } = useExerciseSubmission(exercise.id);
   // Implementar sistema de múltiplas fontes de imagem com fallback automático
   const imageSources = pickCoverImage({
     cover_url: exercise?.cover_url,
@@ -70,20 +73,35 @@ export function ExerciseCard({
   );
 
   const getStatusBadge = () => {
-    if (!exercise.ativo) {
-      return <Badge className="bg-gray-100 text-gray-700 text-xs font-medium">Inativo</Badge>;
+    // Para administradores, manter comportamento original
+    if (isAdmin) {
+      if (!exercise.ativo) {
+        return <Badge className="bg-gray-100 text-gray-700 text-xs font-medium">Inativo</Badge>;
+      }
+
+      switch (availability.status) {
+        case 'agendado':
+          return <Badge className="bg-orange-100 text-orange-700 text-xs font-medium">Indisponível</Badge>;
+        case 'disponivel':
+          return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Disponível</Badge>;
+        case 'encerrado':
+          return <Badge className="bg-red-100 text-red-700 text-xs font-medium">Indisponível</Badge>;
+        default:
+          return null;
+      }
     }
 
-    switch (availability.status) {
-      case 'agendado':
-        return <Badge className="bg-orange-100 text-orange-700 text-xs font-medium">Indisponível</Badge>;
-      case 'disponivel':
-        return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Disponível</Badge>;
-      case 'encerrado':
-        return <Badge className="bg-red-100 text-red-700 text-xs font-medium">Indisponível</Badge>;
-      default:
-        return null;
+    // Para alunos: não mostrar badges quando agendado ou encerrado
+    if (!exercise.ativo) {
+      return null;
     }
+
+    // Apenas mostrar badge quando disponível
+    if (availability.status === 'disponivel') {
+      return <Badge className="bg-green-100 text-green-700 text-xs font-medium">Disponível</Badge>;
+    }
+
+    return null;
   };
 
   const isDisabled = !exercise.ativo || availability.status === 'encerrado' || availability.status === 'agendado';
@@ -246,28 +264,55 @@ export function ExerciseCard({
                   )}
                 </div>
               ) : (
-                /* Student Actions */
-                availability.status === 'disponivel' ? (
-                  onAction && (
+                /* Student Actions - seguindo padrão dos simulados */
+                <>
+                  {/* Antes do período (agendado) */}
+                  {availability.status === 'agendado' && (
                     <Button
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-                      onClick={() => onAction(exercise)}
-                      disabled={isDisabled}
+                      className="w-full bg-gray-400 text-white font-semibold"
+                      disabled
                     >
                       Iniciar
                     </Button>
-                  )
-                ) : availability.status === 'encerrado' ? (
-                  <Button variant="outline" disabled className="w-full">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Concluído
-                  </Button>
-                ) : (
-                  <Button variant="outline" disabled className="w-full">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Pendente
-                  </Button>
-                )
+                  )}
+
+                  {/* Durante o período - disponível */}
+                  {availability.status === 'disponivel' && !submissionData?.hasSubmitted && (
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                      onClick={() => onAction && onAction(exercise)}
+                    >
+                      Iniciar
+                    </Button>
+                  )}
+
+                  {/* Durante o período - já enviou */}
+                  {availability.status === 'disponivel' && submissionData?.hasSubmitted && (
+                    <Button
+                      className="w-full bg-blue-600 text-white font-semibold"
+                      disabled
+                    >
+                      {exercise.tipo === 'Redação com Frase Temática' ? 'Redação enviada' : 'Concluído'}
+                    </Button>
+                  )}
+
+                  {/* Após o período - com envio */}
+                  {availability.status === 'encerrado' && submissionData?.hasSubmitted && (
+                    <Button
+                      className="w-full bg-blue-600 text-white font-semibold"
+                      disabled
+                    >
+                      {exercise.tipo === 'Redação com Frase Temática' ? 'Redação enviada' : 'Concluído'}
+                    </Button>
+                  )}
+
+                  {/* Após o período - sem envio */}
+                  {availability.status === 'encerrado' && !submissionData?.hasSubmitted && (
+                    <div className="text-center text-sm text-gray-500 py-2">
+                      Você não participou desta atividade
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

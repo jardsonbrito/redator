@@ -163,41 +163,8 @@ const Exercicios = () => {
 
       if (error) throw error;
       
-      // Sort exercises: Available first (newest to oldest), then Ended (newest to oldest)
+      // Ordenar exercícios por data de publicação (mais recentes primeiro)
       const sortedExercicios = (data || []).sort((a, b) => {
-        // Use the same status logic as ExerciseCard for consistency
-        const availabilityA = getExerciseAvailability(a);
-        const availabilityB = getExerciseAvailability(b);
-        
-        const statusA = availabilityA.status;
-        const statusB = availabilityB.status;
-        
-        console.log(`${a.titulo}: status=${statusA}`);
-        console.log(`${b.titulo}: status=${statusB}`);
-        
-        // Assign priority: disponivel = 0, agendado = 1, encerrado = 2
-        const getPriority = (status: string) => {
-          switch (status) {
-            case 'disponivel': return 0; // Available exercises first
-            case 'agendado': return 1;   // Scheduled in the middle
-            case 'encerrado': return 2;  // Ended exercises last
-            default: return 3;
-          }
-        };
-        
-        const priorityA = getPriority(statusA);
-        const priorityB = getPriority(statusB);
-        
-        console.log(`Prioridades: ${a.titulo}=${priorityA}, ${b.titulo}=${priorityB}`);
-        
-        // If different priorities, sort by priority (Available -> Scheduled -> Ended)
-        if (priorityA !== priorityB) {
-          const result = priorityA - priorityB;
-          console.log(`Resultado: ${result}`);
-          return result;
-        }
-        
-        // If same priority, sort by creation date DESCENDING (newest first within each group)
         return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime();
       });
       
@@ -209,51 +176,29 @@ const Exercicios = () => {
     }
   };
   const filterExercicios = () => {
-    console.log('🔍 Filtrando exercícios:', {
-      totalExercicios: exercicios.length,
-      userType: studentData.userType,
-      userTurma: studentData.turma
-    });
     let filtered = exercicios.filter(exercicio => {
-      console.log('📝 Verificando exercício:', {
-        titulo: exercicio.titulo,
-        turmasAutorizadas: exercicio.turmas_autorizadas,
-        permiteVisitante: exercicio.permite_visitante,
-        ativo: exercicio.ativo
-      });
-
       const isVisitante = studentData.userType === "visitante";
       const userTurma = studentData.turma;
       const turmasAutorizadas = exercicio.turmas_autorizadas || [];
 
       // REGRA 1: Visitante - só tem acesso se permite_visitante = true
       if (isVisitante) {
-        const hasAccess = exercicio.permite_visitante;
-        console.log('🎯 Visitante:', { hasAccess });
-        return hasAccess;
+        return exercicio.permite_visitante;
       }
 
       // REGRA 2-4: Aluno - verificar turmas autorizadas
       if (!isVisitante && userTurma && userTurma !== "visitante") {
         // Se não há turmas autorizadas, só visitantes têm acesso (se permite_visitante = true)
         if (turmasAutorizadas.length === 0) {
-          console.log('❌ Aluno sem turmas autorizadas');
           return false;
         }
-        
+
         // Verificar se o aluno está em uma das turmas autorizadas
-        const hasAccess = turmasAutorizadas.some(turma => 
+        return turmasAutorizadas.some(turma =>
           turma.toUpperCase() === userTurma.toUpperCase()
         );
-        console.log('👤 Verificando acesso do aluno:', {
-          userTurma,
-          turmasAutorizadas,
-          hasAccess
-        });
-        return hasAccess;
       }
-      
-      console.log('❌ Acesso negado');
+
       return false;
     });
 
@@ -264,9 +209,7 @@ const Exercicios = () => {
     if (tipoFilter && tipoFilter !== "todos") {
       filtered = filtered.filter(exercicio => exercicio.tipo === tipoFilter);
     }
-    console.log('📊 Resultado da filtragem:', {
-      totalFiltrados: filtered.length
-    });
+
     setFilteredExercicios(filtered);
   };
   if (isLoading) {
