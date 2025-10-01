@@ -264,7 +264,7 @@ export const RedacaoFormUnificado = ({
       // Upload do arquivo se manuscrita
       if (tipoRedacao === "manuscrita" && redacaoManuscrita) {
         const fileName = `redacao_${Date.now()}_${redacaoManuscrita.name}`;
-        const bucketName = isSimulado ? 'redacoes-manuscritas' : 'redacoes';
+        const bucketName = 'redacoes-manuscritas';
 
         const { error: uploadError } = await supabase.storage
           .from(bucketName)
