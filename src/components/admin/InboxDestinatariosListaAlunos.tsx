@@ -46,7 +46,16 @@ export function InboxDestinatariosListaAlunos({
 
       // Filtrar por turma se selecionada
       if (selectedTurma && selectedTurma !== 'todas') {
-        query = query.eq('turma_codigo', selectedTurma);
+        // Buscar primeiro uma turma pelo código
+        const turmaSelecionada = turmas.find(t => t.codigo === selectedTurma);
+
+        if (turmaSelecionada) {
+          // Tentar filtrar por turma_codigo primeiro, depois por turma
+          query = query.or(`turma_codigo.eq.${selectedTurma},turma.eq.${turmaSelecionada.nome}`);
+        } else {
+          // Fallback: usar diretamente o valor como turma_codigo
+          query = query.eq('turma_codigo', selectedTurma);
+        }
       }
 
       // Filtrar por termo de busca
@@ -76,8 +85,7 @@ export function InboxDestinatariosListaAlunos({
         .select('turma, turma_codigo')
         .eq('user_type', 'aluno')
         .eq('ativo', true)
-        .not('turma', 'is', null)
-        .not('turma_codigo', 'is', null);
+        .not('turma', 'is', null);
 
       if (error) {
         console.error('Erro ao buscar turmas:', error);
@@ -85,15 +93,24 @@ export function InboxDestinatariosListaAlunos({
       }
 
       if (!data || data.length === 0) {
-        return [];
+        // Fallback: usar turmas fixas como no AlunoList
+        return [
+          { codigo: 'turma-a', nome: 'Turma A' },
+          { codigo: 'turma-b', nome: 'Turma B' },
+          { codigo: 'turma-c', nome: 'Turma C' },
+          { codigo: 'turma-d', nome: 'Turma D' },
+          { codigo: 'turma-e', nome: 'Turma E' }
+        ];
       }
 
       // Extrair turmas únicas
       const turmasUnicas = new Map();
       data.forEach(item => {
-        if (item.turma && item.turma_codigo) {
-          turmasUnicas.set(item.turma_codigo, {
-            codigo: item.turma_codigo,
+        if (item.turma) {
+          // Usar turma como código se turma_codigo estiver vazio
+          const codigo = item.turma_codigo || item.turma.toLowerCase().replace(/\s+/g, '-');
+          turmasUnicas.set(codigo, {
+            codigo: codigo,
             nome: item.turma
           });
         }
