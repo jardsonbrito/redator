@@ -10,6 +10,7 @@ import { StudentAvatar } from "@/components/StudentAvatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BreadcrumbNavigation } from "@/components/BreadcrumbNavigation";
 import { useSubscription } from "@/hooks/useSubscription";
+import { InboxNotificationIcon } from "@/components/student/InboxNotificationIcon";
 
 interface StudentHeaderProps {
   pageTitle?: string;
@@ -59,6 +60,9 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
 
             {/* Controles do usuário à direita */}
             <div className="flex items-center gap-4">
+              {/* Ícone de notificações do Inbox */}
+              <InboxNotificationIcon />
+
               {/* Perfil do usuário com avatar clicável, nome e turma */}
               <div className="flex items-center gap-3">
                 <StudentAvatar size="sm" showUpload={true} />

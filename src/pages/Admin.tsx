@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   Download,
   Settings,
-  ShieldCheck
+  ShieldCheck,
+  Mail
 } from "lucide-react";
 import {
   BookOpen as PhosphorBookOpen,
@@ -81,6 +82,9 @@ import { RedacaoExercicioList } from "@/components/admin/RedacaoExercicioList";
 // Import avisos components
 import { MuralFormModern as AvisoForm } from "@/components/admin/MuralFormModern";
 import { AvisoList } from "@/components/admin/AvisoList";
+
+// Import inbox components
+import { InboxForm } from "@/components/admin/InboxForm";
 
 // Import radar components
 import { RadarUpload } from "@/components/admin/RadarUpload";
@@ -371,6 +375,18 @@ const Admin = () => {
         badge: undefined
       };
 
+      // Inbox - quantas mensagens ativas (publicadas)
+      const { data: mensagensInbox } = await supabase
+        .from('inbox_messages')
+        .select('*');
+
+      const mensagensAtivas = mensagensInbox?.length || 0;
+
+      data.inbox = {
+        info: `${mensagensAtivas} mensagens`,
+        badge: undefined
+      };
+
       // Alunos
       const { data: alunos } = await supabase
         .from('profiles')
@@ -465,7 +481,7 @@ const Admin = () => {
       const defaultData: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
       const allCards = [
         "temas", "redacoes", "redacoes-enviadas", "diario", "exercicios", "simulados",
-        "lousa", "salas-virtuais", "aulas", "videos", "biblioteca", "avisos",
+        "lousa", "salas-virtuais", "aulas", "videos", "biblioteca", "avisos", "inbox",
         "radar", "gamificacao", "ajuda-rapida", "alunos", "corretores",
         "professores", "administradores", "exportacao", "configuracoes", "top5"
       ];
@@ -517,22 +533,25 @@ const Admin = () => {
     { id: "biblioteca", label: "Biblioteca", icon: Books, iconColor: "#607D8B" },
     { id: "avisos", label: "Mural de Avisos", icon: PushPin, iconColor: "#FFC107" },
 
-    // Linha 5: Análise e Engajamento
+    // Linha 5: Comunicação e Notificações
+    { id: "inbox", label: "Inbox", icon: Mail, iconColor: "#FF9800" },
+
+    // Linha 6: Análise e Engajamento
     { id: "radar", label: "Radar", icon: ChartPieSlice, iconColor: "#3F51B5" },
     { id: "gamificacao", label: "Gamificação", icon: Trophy, iconColor: "#FFD700" },
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: ChatCircle, iconColor: "#00BCD4" },
 
-    // Linha 6: Gestão de Usuários
+    // Linha 7: Gestão de Usuários
     { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
     { id: "corretores", label: "Corretores", icon: MagnifyingGlass, iconColor: "#FF5722" },
     { id: "professores", label: "Professores", icon: GearSix, iconColor: "#9C27B0" },
 
-    // Linha 7: Administração Avançada
+    // Linha 8: Administração Avançada
     { id: "administradores", label: "Administradores", icon: ShieldCheck, iconColor: "#9E9E9E" },
     { id: "exportacao", label: "Exportação", icon: Export, iconColor: "#607D8B" },
     { id: "configuracoes", label: "Configurações", icon: Gear, iconColor: "#795548", chips: ["Conta", "Envios", "Créditos", "Assinatura"] },
 
-    // Linha 8: Motivacional
+    // Linha 9: Motivacional
     { id: "top5", label: "TOP 5", icon: Medal, iconColor: "#FFD700" }
   ];
 
@@ -845,6 +864,9 @@ const Admin = () => {
             </TabsContent>
           </Tabs>
         );
+
+      case "inbox":
+        return <InboxForm />;
 
       case "alunos":
         const handleAlunoSuccess = () => {

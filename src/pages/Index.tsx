@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
+import { StudentInboxManager } from "@/components/student/StudentInboxManager";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
@@ -183,11 +184,14 @@ const Index = () => {
             <MuralAvisos turmaCode={turmaCode} />
 
             {/* Menu Principal Horizontal */}
-            <MenuGrid 
-              menuItems={menuItems} 
-              showMinhasRedacoes={!!showMinhasRedacoes} 
+            <MenuGrid
+              menuItems={menuItems}
+              showMinhasRedacoes={!!showMinhasRedacoes}
             />
           </main>
+
+          {/* Gerenciador de mensagens do Inbox */}
+          <StudentInboxManager />
         </div>
       </TooltipProvider>
     </ProtectedRoute>
