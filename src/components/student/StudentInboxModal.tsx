@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Clock, CheckCircle, MessageSquare, ExternalLink, Image } from "lucide-react";
+import { Mail, Clock, CheckCircle, MessageSquare, ExternalLink, Image, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useStudentInbox, type StudentInboxMessage } from "@/hooks/useStudentInbox";
@@ -27,6 +27,7 @@ export function StudentInboxModal({ isOpen, onClose }: StudentInboxModalProps) {
   } = useStudentInbox();
 
   const [responseText, setResponseText] = useState<Record<string, string>>({});
+  const [imagePopup, setImagePopup] = useState<string | null>(null);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -199,14 +200,15 @@ export function StudentInboxModal({ isOpen, onClose }: StudentInboxModalProps) {
                       </Button>
                     )}
                     {message.extra_image && (
-                      <div className="flex items-center gap-2">
-                        <Image className="h-4 w-4 text-muted-foreground" />
-                        <img
-                          src={message.extra_image}
-                          alt="Imagem anexada"
-                          className="max-w-32 max-h-20 rounded-lg object-cover border-2 border-gray-200 shadow-sm"
-                        />
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setImagePopup(message.extra_image!)}
+                        className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100 transition-all duration-200 shadow-sm hover:shadow-md"
+                      >
+                        <Image className="h-4 w-4 text-purple-600 mr-2" />
+                        <span className="font-medium text-purple-700">Anexo enviado pelo professor</span>
+                      </Button>
                     )}
                   </div>
                 )}
@@ -253,6 +255,29 @@ export function StudentInboxModal({ isOpen, onClose }: StudentInboxModalProps) {
           </div>
         </ScrollArea>
       </DialogContent>
+
+      {/* Popup de Imagem */}
+      <Dialog open={!!imagePopup} onOpenChange={() => setImagePopup(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setImagePopup(null)}
+              className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            {imagePopup && (
+              <img
+                src={imagePopup}
+                alt="Anexo do professor"
+                className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
