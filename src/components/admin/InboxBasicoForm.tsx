@@ -58,12 +58,6 @@ export function InboxBasicoForm({ onMessageChange, initialMessage = "" }: InboxB
             )}
           />
         </Form>
-
-        <div className="mt-4 text-sm text-muted-foreground">
-          <p>• Este campo é obrigatório para criação da mensagem</p>
-          <p>• A mensagem será exibida para os destinatários selecionados</p>
-          <p>• Configure o tipo (bloqueante/amigável) na aba "Configuração"</p>
-        </div>
       </div>
     </div>
   );

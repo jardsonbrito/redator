@@ -216,23 +216,9 @@ export function InboxExtrasForm({ onExtrasChange, initialExtras }: InboxExtrasFo
                   )}
                 </div>
               )}
-
-              <div className="text-sm text-muted-foreground mt-2">
-                A imagem será exibida junto com a mensagem
-              </div>
             </div>
           </div>
         </Form>
-
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          <h4 className="font-medium mb-2">Informações sobre os campos extras:</h4>
-          <ul className="space-y-1">
-            <li>• O link pode direcionar para páginas específicas do sistema ou externas</li>
-            <li>• A imagem ajuda a chamar atenção e ilustrar a mensagem</li>
-            <li>• Ambos os campos são opcionais</li>
-            <li>• Links devem incluir o protocolo (http:// ou https://)</li>
-          </ul>
-        </div>
       </div>
     </div>
   );
