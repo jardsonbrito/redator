@@ -16,8 +16,8 @@ ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'inbox-images');
 
--- Permitir que usuários autenticados deletem suas próprias imagens
-CREATE POLICY "Usuários autenticados podem deletar imagens"
+-- Permitir que qualquer um delete imagens (necessário porque admin não usa auth)
+CREATE POLICY "Permitir deletar imagens do inbox"
 ON storage.objects FOR DELETE
-TO authenticated
+TO public
 USING (bucket_id = 'inbox-images');
