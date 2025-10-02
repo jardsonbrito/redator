@@ -52,6 +52,14 @@ export function InboxForm() {
         throw new Error("Data de validade é obrigatória quando selecionada");
       }
 
+      // Debug: verificar dados antes de enviar
+      console.log('📤 Dados do formulário:', {
+        message: data.message.trim(),
+        type: data.config.type,
+        extra_link: data.extras.extraLink,
+        extra_image: data.extras.extraImage,
+      });
+
       // Criar mensagem
       const { data: messageData, error: messageError } = await supabase
         .from('inbox_messages')
@@ -65,6 +73,8 @@ export function InboxForm() {
         })
         .select()
         .single();
+
+      console.log('✅ Mensagem criada:', messageData);
 
       if (messageError) throw messageError;
 

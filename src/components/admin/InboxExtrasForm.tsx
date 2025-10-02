@@ -84,7 +84,14 @@ export function InboxExtrasForm({ onExtrasChange, initialExtras }: InboxExtrasFo
         .getPublicUrl(fileName);
 
       setSelectedImage(publicUrl);
-      handleFormChange();
+
+      // Atualizar extras imediatamente com a nova URL
+      const values = form.getValues();
+      onExtrasChange({
+        extraLink: values.extraLink || undefined,
+        extraImage: publicUrl,
+      });
+
       toast.success("Imagem carregada com sucesso!");
 
     } catch (error) {
@@ -111,7 +118,13 @@ export function InboxExtrasForm({ onExtrasChange, initialExtras }: InboxExtrasFo
     }
 
     setSelectedImage(undefined);
-    handleFormChange();
+
+    // Atualizar extras imediatamente removendo a imagem
+    const values = form.getValues();
+    onExtrasChange({
+      extraLink: values.extraLink || undefined,
+      extraImage: undefined,
+    });
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
