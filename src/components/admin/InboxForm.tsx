@@ -130,7 +130,7 @@ export function InboxForm() {
 
   const canSendMessage = () => {
     return (
-      formData.message.trim().length >= 10 &&
+      formData.message.trim().length >= 1 &&
       formData.destinatarios.length > 0 &&
       (formData.config.validity !== "ate_data" || formData.config.validUntil)
     );

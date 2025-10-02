@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 const formSchema = z.object({
-  message: z.string().min(1, "A mensagem é obrigatória").min(10, "A mensagem deve ter pelo menos 10 caracteres"),
+  message: z.string().min(1, "A mensagem é obrigatória"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -25,6 +25,11 @@ export function InboxBasicoForm({ onMessageChange, initialMessage = "" }: InboxB
       message: initialMessage,
     },
   });
+
+  // Resetar form quando initialMessage mudar (após envio)
+  useEffect(() => {
+    form.reset({ message: initialMessage });
+  }, [initialMessage, form]);
 
   const handleMessageChange = (value: string) => {
     onMessageChange(value);
