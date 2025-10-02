@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Edit, Trash2, Eye, Power, MoreHorizontal, Calendar, Users } from "lucide-react";
+import { Edit, Trash2, Eye, Power, MoreHorizontal, Calendar, Users, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { ExercicioSubmissionsModal } from "./ExercicioSubmissionsModal";
 
 interface Exercicio {
   id: string;
@@ -53,6 +56,37 @@ export const AdminExerciseCard = ({
   onToggleActive,
   onDelete
 }: AdminExerciseCardProps) => {
+  const [submissionsCount, setSubmissionsCount] = useState<number>(0);
+  const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
+
+  useEffect(() => {
+    fetchSubmissionsCount();
+  }, [exercicio.id]);
+
+  const fetchSubmissionsCount = async () => {
+    try {
+      // Buscar a frase temática do tema vinculado ao exercício
+      if (!exercicio.temas?.frase_tematica) {
+        setSubmissionsCount(0);
+        return;
+      }
+
+      const fraseTematica = exercicio.temas.frase_tematica;
+
+      // Buscar redações que têm essa frase temática
+      const { count, error } = await supabase
+        .from("redacoes_enviadas")
+        .select("*", { count: "exact", head: true })
+        .eq("frase_tematica", fraseTematica);
+
+      if (error) throw error;
+      setSubmissionsCount(count || 0);
+    } catch (error) {
+      console.error("Erro ao buscar contagem de envios:", error);
+      setSubmissionsCount(0);
+    }
+  };
+
   const getCoverImage = () => {
     if (exercicio.cover_upload_url) return exercicio.cover_upload_url;
     if (exercicio.cover_url) return exercicio.cover_url;
@@ -142,6 +176,12 @@ export const AdminExerciseCard = ({
                       Visualizar exercício
                     </DropdownMenuItem>
                   )}
+                  {exercicio.tipo === 'Redação com Frase Temática' && (
+                    <DropdownMenuItem onClick={() => setShowSubmissionsModal(true)}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Alunos que Enviaram
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onDelete(exercicio)} className="text-red-600">
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -201,8 +241,29 @@ export const AdminExerciseCard = ({
               <span className="font-medium">Tema vinculado:</span> {exercicio.temas.frase_tematica}
             </div>
           )}
+
+          {/* Contador de envios - apenas para Redação com Frase Temática */}
+          {exercicio.tipo === 'Redação com Frase Temática' && (
+            <div className="pt-2 border-t border-gray-200">
+              <div className="flex items-center gap-2 text-sm">
+                <FileText className="w-4 h-4 text-purple-600" />
+                <span className="font-medium text-gray-700">Enviaram:</span>
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold">
+                  {submissionsCount}
+                </Badge>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Modal de lista de alunos que enviaram */}
+      <ExercicioSubmissionsModal
+        isOpen={showSubmissionsModal}
+        onClose={() => setShowSubmissionsModal(false)}
+        exercicioId={exercicio.id}
+        exercicioTitulo={exercicio.titulo}
+      />
     </Card>
   );
 };
