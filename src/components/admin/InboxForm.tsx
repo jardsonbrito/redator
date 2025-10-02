@@ -161,30 +161,49 @@ export function InboxForm() {
     toast.success("Mensagem duplicada! Ajuste os dados e selecione novos destinatários.");
   };
 
+  const tabs = [
+    { value: 'basico', label: 'Básico' },
+    { value: 'configuracao', label: 'Configuração' },
+    { value: 'destinatarios', label: 'Destinatários' },
+    { value: 'extras', label: 'Extras' },
+    { value: 'mensagens', label: 'Mensagens' }
+  ];
+
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between">
-          <TabsList className="grid w-full max-w-2xl grid-cols-5">
-            <TabsTrigger value="basico">Básico</TabsTrigger>
-            <TabsTrigger value="configuracao">Configuração</TabsTrigger>
-            <TabsTrigger value="destinatarios">Destinatários</TabsTrigger>
-            <TabsTrigger value="extras">Extras</TabsTrigger>
-            <TabsTrigger value="mensagens">Mensagens</TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+          {/* Tabs com scroll horizontal no mobile */}
+          <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setActiveTab(tab.value)}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeTab === tab.value
+                    ? "bg-[#662F96] text-white"
+                    : "bg-[#B175FF] text-white hover:bg-[#662F96]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
+          {/* Botão de enviar */}
           {activeTab !== "mensagens" && (
             <Button
               onClick={handleSendMessage}
               disabled={!canSendMessage() || createMessageMutation.isPending}
-              className="ml-4"
+              className="shrink-0"
             >
               {createMessageMutation.isPending ? (
                 "Enviando..."
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Enviar Mensagem
+                  Enviar
                 </>
               )}
             </Button>
