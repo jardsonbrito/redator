@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { InboxRecipientsModal } from "./InboxRecipientsModal";
 
 interface InboxMessage {
   id: string;
@@ -35,6 +36,8 @@ interface InboxMensagensListProps {
 
 export function InboxMensagensList({ onEdit, onDuplicate }: InboxMensagensListProps) {
   const queryClient = useQueryClient();
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [selectedMessageText, setSelectedMessageText] = useState<string>("");
 
   // Buscar mensagens
   const { data: messages = [], isLoading, error } = useQuery({
@@ -176,17 +179,18 @@ export function InboxMensagensList({ onEdit, onDuplicate }: InboxMensagensListPr
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg border">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Mail className="h-5 w-5 mr-2" />
-            Histórico de Mensagens ({messages.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {messages.map((message) => (
+    <>
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg border">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Mail className="h-5 w-5 mr-2" />
+              Histórico de Mensagens ({messages.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {messages.map((message) => (
               <Card key={message.id} className="border-l-4" style={{
                 borderLeftColor: message.type === 'bloqueante' ? '#ef4444' : '#3b82f6'
               }}>
@@ -202,7 +206,14 @@ export function InboxMensagensList({ onEdit, onDuplicate }: InboxMensagensListPr
                           {getValidityText(message.valid_until)}
                         </Badge>
                         {message.recipients && (
-                          <Badge variant="outline">
+                          <Badge
+                            variant="outline"
+                            className="cursor-pointer hover:bg-gray-100 transition-colors"
+                            onClick={() => {
+                              setSelectedMessageId(message.id);
+                              setSelectedMessageText(message.message);
+                            }}
+                          >
                             <Users className="h-3 w-3 mr-1" />
                             {message.recipients.total} destinatários
                           </Badge>
@@ -306,20 +317,44 @@ export function InboxMensagensList({ onEdit, onDuplicate }: InboxMensagensListPr
                     {message.recipients && message.recipients.total > 0 && (
                       <div className="flex items-center space-x-4 text-sm">
                         <div className="text-muted-foreground">Status:</div>
-                        <div className="flex space-x-3">
-                          <span className="text-yellow-600">Pendente: {message.recipients.pendente}</span>
-                          <span className="text-blue-600">Lida: {message.recipients.lida}</span>
-                          <span className="text-green-600">Respondida: {message.recipients.respondida}</span>
+                        <div
+                          className="flex space-x-3 cursor-pointer hover:opacity-70 transition-opacity"
+                          onClick={() => {
+                            setSelectedMessageId(message.id);
+                            setSelectedMessageText(message.message);
+                          }}
+                        >
+                          <span className="text-yellow-600 font-medium">
+                            Pendente: {message.recipients.pendente}
+                          </span>
+                          <span className="text-blue-600 font-medium">
+                            Lida: {message.recipients.lida}
+                          </span>
+                          <span className="text-green-600 font-medium">
+                            Respondida: {message.recipients.respondida}
+                          </span>
                         </div>
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </CardContent>
+              ))}
+            </div>
+          </CardContent>
+        </div>
       </div>
-    </div>
+
+      {/* Modal de destinatários */}
+      <InboxRecipientsModal
+        isOpen={selectedMessageId !== null}
+        onClose={() => {
+          setSelectedMessageId(null);
+          setSelectedMessageText("");
+        }}
+        messageId={selectedMessageId || ""}
+        messageText={selectedMessageText}
+      />
+    </>
   );
 }
