@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Edit, Eye, EyeOff, Trash2, AlertTriangle } from 'lucide-react';
+import { MoreVertical, Edit, Eye, EyeOff, Trash2, AlertTriangle, FileText } from 'lucide-react';
+import { TemaSubmissionsModal } from '@/components/admin/TemaSubmissionsModal';
 
 export interface TemaCardData {
   id: string;
@@ -103,6 +104,7 @@ const getFormattedDate = (tema: TemaCardData) => {
 export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCardProps) => {
   const statusInfo = getStatusInfo(tema);
   const formattedDate = getFormattedDate(tema);
+  const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
 
   const handleExcluir = () => {
     if (actions.onExcluir) {
@@ -169,7 +171,7 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
                   <MoreVertical className="h-4 w-4 text-gray-600" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
+              <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
                 <DropdownMenuItem
                   onClick={() => actions.onEditar?.(tema.id)}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
@@ -192,6 +194,13 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
                       Publicar
                     </>
                   )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setShowSubmissionsModal(true)}
+                  className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Alunos que Enviaram
                 </DropdownMenuItem>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -236,6 +245,16 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
           </Button>
         )}
       </div>
+
+      {/* Modal de lista de alunos que enviaram - apenas para admin */}
+      {perfil === 'admin' && (
+        <TemaSubmissionsModal
+          isOpen={showSubmissionsModal}
+          onClose={() => setShowSubmissionsModal(false)}
+          fraseTematica={tema.frase_tematica}
+          temaId={tema.id}
+        />
+      )}
     </Card>
   );
 };

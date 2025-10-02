@@ -28,11 +28,14 @@ export const TemaList = () => {
     error,
     fraseFilter,
     statusFilter,
+    tipoFilter,
     statusOptions,
+    tipoOptions,
     fraseSuggestions,
     hasActiveFilters,
     updateFraseFilter,
     updateStatusFilter,
+    updateTipoFilter,
     clearFilters,
   } = useAdminTemasFilters();
 
@@ -221,7 +224,7 @@ export const TemaList = () => {
               className="w-full"
             />
           </div>
-          
+
           <div className="w-full sm:w-64">
             <Select value={statusFilter} onValueChange={updateStatusFilter}>
               <SelectTrigger className="bg-background border border-input">
@@ -229,6 +232,21 @@ export const TemaList = () => {
               </SelectTrigger>
               <SelectContent className="bg-popover border border-border z-50">
                 {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-full sm:w-64">
+            <Select value={tipoFilter} onValueChange={updateTipoFilter}>
+              <SelectTrigger className="bg-background border border-input">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border border-border z-50">
+                {tipoOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -246,6 +264,7 @@ export const TemaList = () => {
                 {temas?.length || 0} tema(s) encontrado(s)
                 {fraseFilter && ` para "${fraseFilter}"`}
                 {statusFilter && statusFilter !== 'todos' && ` com status "${statusOptions.find(s => s.value === statusFilter)?.label}"`}
+                {tipoFilter && tipoFilter !== 'todos' && ` - ${tipoOptions.find(t => t.value === tipoFilter)?.label}`}
               </span>
             </div>
             <Button
