@@ -11,8 +11,13 @@ export function InboxNotificationIcon() {
 
   if (isLoading) {
     return (
-      <Button variant="ghost" size="sm" disabled className="relative">
-        <Bell className="h-5 w-5" />
+      <Button
+        variant="outline"
+        size="sm"
+        disabled
+        className="relative border-white/40 text-white bg-white/10 rounded-xl px-3 py-2 shadow-sm backdrop-blur-sm min-w-[2.5rem]"
+      >
+        <Bell className="w-4 h-4" />
       </Button>
     );
   }
@@ -20,12 +25,12 @@ export function InboxNotificationIcon() {
   return (
     <>
       <Button
-        variant="ghost"
+        variant="outline"
         size="sm"
         onClick={() => setIsModalOpen(true)}
-        className="relative hover:bg-white/20 text-white"
+        className="relative flex items-center gap-2 border-white/40 text-white bg-white/10 hover:bg-white/20 hover:border-white/60 rounded-xl px-3 py-2 font-medium transition-all duration-200 shadow-sm backdrop-blur-sm min-w-[2.5rem]"
       >
-        <Bell className="h-5 w-5 text-white" />
+        <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
           <Badge
             variant="destructive"
