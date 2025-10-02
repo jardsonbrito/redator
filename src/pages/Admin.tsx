@@ -375,16 +375,30 @@ const Admin = () => {
         badge: undefined
       };
 
-      // Inbox - quantas mensagens ativas (publicadas)
+      // Inbox - resumo de status das mensagens
       const { data: mensagensInbox } = await supabase
-        .from('inbox_messages')
+        .from('inbox_messages' as any)
         .select('*');
 
       const mensagensAtivas = mensagensInbox?.length || 0;
 
+      // Buscar status agregado dos recipients
+      const { data: recipients } = await supabase
+        .from('inbox_recipients' as any)
+        .select('status');
+
+      const pendentes = recipients?.filter((r: any) => r.status === 'pendente').length || 0;
+      const lidas = recipients?.filter((r: any) => r.status === 'lida').length || 0;
+      const respondidas = recipients?.filter((r: any) => r.status === 'respondida').length || 0;
+
+      // Montar badge com resumo de status
+      const statusBadge = pendentes > 0 || lidas > 0 || respondidas > 0
+        ? `${pendentes} pendentes • ${lidas} lidas • ${respondidas} respondidas`
+        : undefined;
+
       data.inbox = {
         info: `${mensagensAtivas} mensagens`,
-        badge: undefined
+        badge: statusBadge
       };
 
       // Alunos
