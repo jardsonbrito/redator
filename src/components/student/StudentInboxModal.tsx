@@ -179,25 +179,32 @@ export function StudentInboxModal({ isOpen, onClose }: StudentInboxModalProps) {
 
                 {/* Extras */}
                 {(message.extra_link || message.extra_image) && (
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     {message.extra_link && (
-                      <a
-                        href={message.extra_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary hover:underline"
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100 transition-all duration-200 shadow-sm hover:shadow-md"
                       >
-                        <ExternalLink className="h-4 w-4" />
-                        Link anexado
-                      </a>
+                        <a
+                          href={message.extra_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4 text-purple-600" />
+                          <span className="font-medium text-purple-700">Anexo enviado pelo professor</span>
+                        </a>
+                      </Button>
                     )}
                     {message.extra_image && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Image className="h-4 w-4" />
+                      <div className="flex items-center gap-2">
+                        <Image className="h-4 w-4 text-muted-foreground" />
                         <img
                           src={message.extra_image}
                           alt="Imagem anexada"
-                          className="max-w-32 max-h-20 rounded object-cover"
+                          className="max-w-32 max-h-20 rounded-lg object-cover border-2 border-gray-200 shadow-sm"
                         />
                       </div>
                     )}
