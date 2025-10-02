@@ -61,14 +61,56 @@ export const EnvioRedacaoWithCorretor = ({
 
   // Preencher dados automaticamente quando o usuário está logado
   useEffect(() => {
-    if (studentData.nomeUsuario && studentData.email && studentData.turma) {
-      setFormData(prev => ({
-        ...prev,
-        nome_aluno: studentData.nomeUsuario,
-        email_aluno: studentData.email,
-        turma: studentData.turma
-      }));
-    }
+    const fetchRealStudentName = async () => {
+      if (studentData.email) {
+        try {
+          // Buscar o nome real do perfil baseado no email
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('nome, turma')
+            .eq('email', studentData.email.toLowerCase())
+            .single();
+
+          if (error) {
+            console.error('Erro ao buscar perfil:', error);
+            // Usar dados do studentData como fallback
+            setFormData(prev => ({
+              ...prev,
+              nome_aluno: studentData.nomeUsuario,
+              email_aluno: studentData.email,
+              turma: studentData.turma || ''
+            }));
+          } else {
+            // Usar nome real do perfil
+            setFormData(prev => ({
+              ...prev,
+              nome_aluno: profile.nome || studentData.nomeUsuario,
+              email_aluno: studentData.email,
+              turma: profile.turma || studentData.turma || ''
+            }));
+          }
+        } catch (error) {
+          console.error('Erro ao buscar nome real do aluno:', error);
+          // Usar dados do studentData como fallback
+          setFormData(prev => ({
+            ...prev,
+            nome_aluno: studentData.nomeUsuario,
+            email_aluno: studentData.email,
+            turma: studentData.turma || ''
+          }));
+        }
+      } else if (studentData.nomeUsuario && studentData.turma) {
+        // Para visitantes, usar os dados do studentData
+        setFormData(prev => ({
+          ...prev,
+          nome_aluno: studentData.nomeUsuario,
+          email_aluno: studentData.email || '',
+          turma: studentData.turma
+        }));
+      }
+    };
+
+    fetchRealStudentName();
   }, [studentData]);
 
   const handleRedacaoManuscritaChange = (event: React.ChangeEvent<HTMLInputElement>) => {

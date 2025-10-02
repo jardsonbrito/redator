@@ -20,6 +20,9 @@ interface SubmissionData {
   nome_aluno: string;
   email_aluno: string;
   turma: string | null;
+  nota_total: number | null;
+  corrigida: boolean;
+  status: string;
 }
 
 interface ExercicioSubmissionsModalProps {
@@ -67,13 +70,47 @@ export const ExercicioSubmissionsModal = ({
       // 2. Buscar redações que têm essa frase temática
       const { data, error } = await supabase
         .from("redacoes_enviadas")
-        .select("nome_aluno, email_aluno, turma")
-        .eq("frase_tematica", fraseTematica)
-        .order("nome_aluno", { ascending: true });
+        .select("nome_aluno, email_aluno, turma, nota_total, corrigida, status")
+        .eq("frase_tematica", fraseTematica);
 
       if (error) throw error;
 
-      setSubmissions(data || []);
+      // Ordenar por nota (maior nota primeiro), devolvidas e não corrigidas por último
+      const sortedData = (data || []).sort((a, b) => {
+        // Redações devolvidas vão para o final
+        const aDevolvida = a.status === 'devolvida';
+        const bDevolvida = b.status === 'devolvida';
+
+        if (aDevolvida && !bDevolvida) return 1;
+        if (!aDevolvida && bDevolvida) return -1;
+
+        // Se ambas devolvidas, ordenar por nome
+        if (aDevolvida && bDevolvida) {
+          return a.nome_aluno.localeCompare(b.nome_aluno);
+        }
+
+        // Se ambas não foram corrigidas (aguardando/em_correcao), ordenar por nome
+        if (!a.corrigida && !b.corrigida) {
+          return a.nome_aluno.localeCompare(b.nome_aluno);
+        }
+
+        // Redações não corrigidas vão depois das corrigidas
+        if (!a.corrigida) return 1;
+        if (!b.corrigida) return -1;
+
+        // Se ambas foram corrigidas, ordenar pela maior nota primeiro (ranking)
+        const notaA = a.nota_total ?? 0;
+        const notaB = b.nota_total ?? 0;
+
+        if (notaB !== notaA) {
+          return notaB - notaA; // Maior nota primeiro
+        }
+
+        // Se notas iguais, ordenar por nome
+        return a.nome_aluno.localeCompare(b.nome_aluno);
+      });
+
+      setSubmissions(sortedData);
     } catch (error) {
       console.error("Erro ao buscar envios:", error);
       setSubmissions([]);
@@ -110,6 +147,7 @@ export const ExercicioSubmissionsModal = ({
                   <TableHead className="w-16 text-center font-semibold">#</TableHead>
                   <TableHead className="font-semibold">Nome do Aluno</TableHead>
                   <TableHead className="font-semibold">Turma</TableHead>
+                  <TableHead className="font-semibold text-center">Nota</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -123,6 +161,21 @@ export const ExercicioSubmissionsModal = ({
                     </TableCell>
                     <TableCell className="text-gray-700">
                       {submission.turma || "Sem turma"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {submission.status === 'devolvida' ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-orange-100 text-orange-700">
+                          Devolvida
+                        </span>
+                      ) : submission.corrigida ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                          {submission.nota_total !== null ? submission.nota_total : "—"}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                          Aguardando
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
