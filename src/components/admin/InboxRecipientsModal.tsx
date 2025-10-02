@@ -18,8 +18,8 @@ import { Loader2, CheckCircle2, Clock, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface RecipientData {
-  recipient_email: string;
-  recipient_name: string;
+  student_email: string;
+  student_name: string;
   turma: string | null;
   status: 'pendente' | 'lida' | 'respondida';
   response_text: string | null;
@@ -52,15 +52,56 @@ export const InboxRecipientsModal = ({
     try {
       setIsLoading(true);
 
-      const { data, error } = await supabase
+      console.log('🔍 Buscando destinatários para message_id:', messageId);
+
+      // Buscar recipients da tabela inbox_recipients
+      const { data: recipientsData, error: recipientsError } = await supabase
         .from("inbox_recipients")
-        .select("recipient_email, recipient_name, turma, status, response_text, responded_at")
-        .eq("message_id", messageId)
-        .order('recipient_name', { ascending: true });
+        .select("student_email, status, response_text, responded_at")
+        .eq("message_id", messageId);
 
-      if (error) throw error;
+      console.log('📊 Recipients raw:', recipientsData?.length);
+      console.log('❌ Erro recipients:', recipientsError);
 
-      setRecipients(data || []);
+      if (recipientsError) throw recipientsError;
+
+      // Buscar informações dos alunos da tabela profiles
+      if (recipientsData && recipientsData.length > 0) {
+        const emails = recipientsData.map(r => r.student_email);
+
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("email, nome, turma")
+          .in("email", emails);
+
+        console.log('📊 Profiles encontrados:', profilesData?.length);
+        console.log('❌ Erro profiles:', profilesError);
+
+        if (profilesError) throw profilesError;
+
+        // Mapear profiles por email
+        const profilesMap = new Map(profilesData?.map(p => [p.email, p]) || []);
+
+        // Combinar dados
+        const combined = recipientsData.map(r => {
+          const profile = profilesMap.get(r.student_email);
+          return {
+            student_email: r.student_email,
+            student_name: profile?.nome || r.student_email,
+            turma: profile?.turma || null,
+            status: r.status as 'pendente' | 'lida' | 'respondida',
+            response_text: r.response_text,
+            responded_at: r.responded_at
+          };
+        });
+
+        // Ordenar por nome
+        combined.sort((a, b) => a.student_name.localeCompare(b.student_name));
+
+        setRecipients(combined);
+      } else {
+        setRecipients([]);
+      }
     } catch (error) {
       console.error("Erro ao buscar destinatários:", error);
       setRecipients([]);
@@ -113,9 +154,6 @@ export const InboxRecipientsModal = ({
           <DialogTitle className="text-xl font-semibold">
             Destinatários da Mensagem
           </DialogTitle>
-          <p className="text-sm text-gray-600 mt-2">
-            {messageText.length > 100 ? `${messageText.substring(0, 100)}...` : messageText}
-          </p>
         </DialogHeader>
 
         {/* Resumo de estatísticas */}
@@ -167,7 +205,7 @@ export const InboxRecipientsModal = ({
                       {index + 1}
                     </TableCell>
                     <TableCell className="font-medium text-gray-900">
-                      {recipient.recipient_name}
+                      {recipient.student_name}
                     </TableCell>
                     <TableCell className="text-gray-700">
                       {recipient.turma || "Sem turma"}
