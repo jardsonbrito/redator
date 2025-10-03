@@ -146,9 +146,24 @@ export function InboxForm() {
     );
   };
 
-  const handleEditMessage = (message: { id: string; message: string; type: string }) => {
-    // Implementar edição de mensagem
-    toast.info("Funcionalidade de edição em desenvolvimento");
+  const handleEditMessage = (message: { id: string; message: string; type: string; valid_until: string | null; extra_link: string | null; extra_image: string | null }) => {
+    // Preencher formulário com dados da mensagem para edição
+    setFormData({
+      message: message.message,
+      config: {
+        type: message.type,
+        validity: message.valid_until ? "ate_data" : "permanente",
+        validUntil: message.valid_until ? new Date(message.valid_until) : undefined,
+      },
+      destinatarios: [], // Não carregamos destinatários na edição
+      extras: {
+        extraLink: message.extra_link || undefined,
+        extraImage: message.extra_image || undefined,
+      },
+    });
+
+    setActiveTab("basico");
+    toast.info("Mensagem carregada para edição. Ajuste os dados e envie novamente.");
   };
 
   const handleDuplicateMessage = (message: { message: string; type: string; valid_until: string | null; extra_link: string | null; extra_image: string | null }) => {

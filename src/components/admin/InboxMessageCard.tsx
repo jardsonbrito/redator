@@ -20,7 +20,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Trash2, Copy, RotateCcw, Users, Calendar, ExternalLink, Image } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { MoreVertical, Trash2, Copy, RotateCcw, Users, Calendar, ExternalLink, Image, Edit, Eye } from "lucide-react";
 
 interface InboxMessage {
   id: string;
@@ -41,6 +47,8 @@ interface InboxMessage {
 
 interface InboxMessageCardProps {
   message: InboxMessage;
+  onEdit?: (message: InboxMessage) => void;
+  onView?: (message: InboxMessage) => void;
   onDuplicate?: (message: InboxMessage) => void;
   onDelete?: (messageId: string) => void;
   onReopen?: (messageId: string) => void;
@@ -51,6 +59,8 @@ interface InboxMessageCardProps {
 
 export function InboxMessageCard({
   message,
+  onEdit,
+  onView,
   onDuplicate,
   onDelete,
   onReopen,
@@ -59,6 +69,7 @@ export function InboxMessageCard({
   isReopening = false,
 }: InboxMessageCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
 
   const getStatusInfo = () => {
     if (message.type === 'bloqueante') {
@@ -183,6 +194,20 @@ export function InboxMessageCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
                 <DropdownMenuItem
+                  onClick={() => setShowViewDialog(true)}
+                  className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ver Mensagem
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onEdit?.(message)}
+                  className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() => onDuplicate?.(message)}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
@@ -209,6 +234,102 @@ export function InboxMessageCard({
           </div>
         </div>
       </Card>
+
+      {/* Dialog de visualização */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Visualizar Mensagem
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Informações da mensagem */}
+            <div className="flex flex-wrap gap-2">
+              <Badge className={statusInfo.bgColor + " text-white"}>
+                {statusInfo.label}
+              </Badge>
+              <Badge variant="outline">
+                <Calendar className="h-3 w-3 mr-1" />
+                {getValidityText()}
+              </Badge>
+              {message.recipients && (
+                <Badge variant="outline">
+                  <Users className="h-3 w-3 mr-1" />
+                  {message.recipients.total} destinatário{message.recipients.total !== 1 ? 's' : ''}
+                </Badge>
+              )}
+            </div>
+
+            {/* Data de criação */}
+            <div className="text-sm text-muted-foreground">
+              Criada em {format(new Date(message.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            </div>
+
+            {/* Conteúdo da mensagem */}
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h4 className="text-sm font-semibold mb-2">Mensagem:</h4>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.message}</p>
+            </div>
+
+            {/* Extras */}
+            {(message.extra_link || message.extra_image) && (
+              <div className="space-y-3 border-t pt-4">
+                <h4 className="text-sm font-semibold">Anexos:</h4>
+                {message.extra_link && (
+                  <div className="flex items-center gap-2">
+                    <ExternalLink className="h-4 w-4 text-purple-600" />
+                    <a
+                      href={message.extra_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-purple-600 hover:underline break-all"
+                    >
+                      {message.extra_link}
+                    </a>
+                  </div>
+                )}
+                {message.extra_image && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Image className="h-4 w-4" />
+                      Imagem anexada:
+                    </div>
+                    <img
+                      src={message.extra_image}
+                      alt="Anexo da mensagem"
+                      className="max-w-full rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Estatísticas */}
+            {message.recipients && message.recipients.total > 0 && (
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-semibold mb-3">Status dos Destinatários:</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-yellow-600">{message.recipients.pendente}</div>
+                    <div className="text-xs text-yellow-700">Pendente</div>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-blue-600">{message.recipients.lida}</div>
+                    <div className="text-xs text-blue-700">Lida</div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-green-600">{message.recipients.respondida}</div>
+                    <div className="text-xs text-green-700">Respondida</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

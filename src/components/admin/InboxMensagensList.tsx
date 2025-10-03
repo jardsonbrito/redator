@@ -175,6 +175,7 @@ export function InboxMensagensList({ onEdit, onDuplicate }: InboxMensagensListPr
             <InboxMessageCard
               key={message.id}
               message={message}
+              onEdit={onEdit}
               onDuplicate={onDuplicate}
               onDelete={(messageId) => deleteMutation.mutate(messageId)}
               onReopen={(messageId) => reopenMutation.mutate(messageId)}
