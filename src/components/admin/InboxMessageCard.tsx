@@ -70,6 +70,7 @@ export function InboxMessageCard({
 }: InboxMessageCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const getStatusInfo = () => {
     if (message.type === 'bloqueante') {
@@ -186,7 +187,7 @@ export function InboxMessageCard({
             </div>
 
             {/* Menu de ações */}
-            <DropdownMenu>
+            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -198,7 +199,10 @@ export function InboxMessageCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 shadow-lg border border-gray-200">
                 <DropdownMenuItem
-                  onClick={() => setShowViewDialog(true)}
+                  onClick={() => {
+                    setShowViewDialog(true);
+                    setDropdownOpen(false);
+                  }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <Eye className="h-4 w-4 mr-2" />
@@ -206,7 +210,10 @@ export function InboxMessageCard({
                 </DropdownMenuItem>
                 {message.recipients && message.recipients.total > 0 && (
                   <DropdownMenuItem
-                    onClick={() => onViewRecipients?.(message.id, message.message)}
+                    onClick={() => {
+                      onViewRecipients?.(message.id, message.message);
+                      setDropdownOpen(false);
+                    }}
                     className="flex items-center cursor-pointer hover:bg-purple-50 transition-colors text-purple-700"
                   >
                     <Users className="h-4 w-4 mr-2" />
@@ -214,21 +221,30 @@ export function InboxMessageCard({
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
-                  onClick={() => onEdit?.(message)}
+                  onClick={() => {
+                    onEdit?.(message);
+                    setDropdownOpen(false);
+                  }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Editar
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onDuplicate?.(message)}
+                  onClick={() => {
+                    onDuplicate?.(message);
+                    setDropdownOpen(false);
+                  }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <Copy className="h-4 w-4 mr-2" />
                   Duplicar
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onReopen?.(message.id)}
+                  onClick={() => {
+                    onReopen?.(message.id);
+                    setDropdownOpen(false);
+                  }}
                   disabled={isReopening}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
@@ -236,7 +252,10 @@ export function InboxMessageCard({
                   Reabrir
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => setShowDeleteDialog(true)}
+                  onClick={() => {
+                    setShowDeleteDialog(true);
+                    setDropdownOpen(false);
+                  }}
                   className="flex items-center cursor-pointer hover:bg-red-50 text-red-600 transition-colors"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
