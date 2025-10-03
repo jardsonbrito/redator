@@ -119,29 +119,43 @@ export function InboxDestinatariosForm({ onDestinatariosChange, destinatariosSel
     const turma = turmas.find(t => t.codigo === selectedTurma);
     if (!turma) return;
 
-    // Usar os alunos já carregados da turma selecionada
-    if (alunos.length === 0) {
-      toast.warning("Esta turma não possui alunos ativos");
-      return;
+    try {
+      // Buscar TODOS os alunos da turma, IGNORANDO o filtro de busca
+      const { data: todosAlunosDaTurma, error } = await supabase
+        .from('profiles')
+        .select('email, nome, turma, turma_codigo')
+        .eq('user_type', 'aluno')
+        .eq('ativo', true)
+        .eq('turma_codigo', selectedTurma);
+
+      if (error) throw error;
+
+      if (!todosAlunosDaTurma || todosAlunosDaTurma.length === 0) {
+        toast.warning("Esta turma não possui alunos ativos");
+        return;
+      }
+
+      // Adicionar todos os alunos da turma
+      const novosDestinatarios: DestinatarioSelecionado[] = todosAlunosDaTurma.map(aluno => ({
+        email: aluno.email,
+        nome: aluno.nome,
+        tipo: 'aluno' as const,
+        turma: aluno.turma,
+        turmaCodigo: aluno.turma_codigo,
+      }));
+
+      // Remover duplicatas baseadas no email
+      setSelectedDestinatarios(prev => {
+        const emailsExistentes = new Set(prev.map(d => d.email));
+        const destinatariosUnicos = novosDestinatarios.filter(d => !emailsExistentes.has(d.email));
+        return [...prev, ...destinatariosUnicos];
+      });
+
+      toast.success(`${todosAlunosDaTurma.length} alunos da turma "${turma.nome}" adicionados`);
+    } catch (error) {
+      console.error('Erro ao selecionar todos os alunos:', error);
+      toast.error("Erro ao selecionar alunos da turma");
     }
-
-    // Adicionar todos os alunos da turma
-    const novosDestinatarios: DestinatarioSelecionado[] = alunos.map(aluno => ({
-      email: aluno.email,
-      nome: aluno.nome,
-      tipo: 'aluno' as const,
-      turma: aluno.turma,
-      turmaCodigo: aluno.turma_codigo,
-    }));
-
-    // Remover duplicatas baseadas no email
-    setSelectedDestinatarios(prev => {
-      const emailsExistentes = new Set(prev.map(d => d.email));
-      const destinatariosUnicos = novosDestinatarios.filter(d => !emailsExistentes.has(d.email));
-      return [...prev, ...destinatariosUnicos];
-    });
-
-    toast.success(`${alunos.length} alunos da turma "${turma.nome}" adicionados`);
   };
 
   const handleRemoveDestinatario = (destinatario: DestinatarioSelecionado) => {

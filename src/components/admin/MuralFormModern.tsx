@@ -26,7 +26,7 @@ interface MuralFormModernProps {
   };
   onCancel?: () => void;
   onSuccess?: () => void;
-  onViewList?: () => void;
+  onViewList?: (currentData?: any) => void;
   showViewList?: boolean;
 }
 
@@ -195,7 +195,11 @@ export const MuralFormModern = ({ mode, initialValues, onCancel, onSuccess, onVi
 
   const toggleSection = (sectionId: string) => {
     if (sectionId === 'avisos' && onViewList) {
-      onViewList();
+      // Enviar dados atuais do formulário antes de trocar para lista
+      onViewList({
+        ...formData,
+        imageUrl
+      });
     } else {
       setActiveSection(sectionId);
     }
