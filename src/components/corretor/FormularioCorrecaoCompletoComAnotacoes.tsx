@@ -149,11 +149,22 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const carregarCorrecaoExistente = async () => {
     try {
       let data, error;
-      
+
+      // Colunas específicas para evitar erro 406
+      const colunas = `
+        id,
+        c1_corretor_1, c2_corretor_1, c3_corretor_1, c4_corretor_1, c5_corretor_1, nota_final_corretor_1,
+        c1_corretor_2, c2_corretor_2, c3_corretor_2, c4_corretor_2, c5_corretor_2, nota_final_corretor_2,
+        comentario_c1_corretor_1, comentario_c2_corretor_1, comentario_c3_corretor_1, comentario_c4_corretor_1, comentario_c5_corretor_1,
+        comentario_c1_corretor_2, comentario_c2_corretor_2, comentario_c3_corretor_2, comentario_c4_corretor_2, comentario_c5_corretor_2,
+        elogios_pontos_atencao_corretor_1, elogios_pontos_atencao_corretor_2,
+        audio_url_corretor_1, audio_url_corretor_2
+      `;
+
       if (redacao.tipo_redacao === 'regular') {
         const result = await supabase
           .from('redacoes_enviadas')
-          .select('*')
+          .select(colunas)
           .eq('id', redacao.id)
           .single();
         data = result.data;
@@ -161,7 +172,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       } else if (redacao.tipo_redacao === 'simulado') {
         const result = await supabase
           .from('redacoes_simulado')
-          .select('*')
+          .select(colunas)
           .eq('id', redacao.id)
           .single();
         data = result.data;
@@ -169,7 +180,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       } else if (redacao.tipo_redacao === 'exercicio') {
         const result = await supabase
           .from('redacoes_exercicio')
-          .select('*')
+          .select(colunas)
           .eq('id', redacao.id)
           .single();
         data = result.data;
@@ -557,15 +568,45 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </Button>
       </div>
 
-      {/* Redação Manuscrita - Exibe quando há URL de imagem */}
-      {redacao.redacao_manuscrita_url && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Redação Manuscrita</CardTitle>
+      {/* Redação em Imagem - Prioriza imagem gerada (digitada→A4) ou manuscrita */}
+      {((redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url) && (
+        <Card className="w-full">
+          <CardHeader className="pb-3">
+            <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-3">
+                <CardTitle className="text-lg">
+                  {(redacao as any).redacao_imagem_gerada_url ? 'Redação digitalizada' : 'Redação Manuscrita'}
+                </CardTitle>
+                {(redacao as any).contagem_palavras ? (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {(redacao as any).contagem_palavras} palavras
+                  </span>
+                ) : (
+                  console.log('Contador não exibido - contagem_palavras:', (redacao as any).contagem_palavras, 'redacao completa:', redacao)
+                )}
+              </div>
+              {(redacao as any).redacao_imagem_gerada_url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const conteudo = `Aluno: ${redacao.nome_aluno}\nTema: ${redacao.frase_tematica}\n\nTexto:\n${redacao.texto}`;
+                    navigator.clipboard.writeText(conteudo);
+                    toast({
+                      title: "Copiado!",
+                      description: "Texto da redação copiado para a área de transferência.",
+                    });
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar redação
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 m-0 overflow-hidden">
             <RedacaoAnotacaoVisual
-              imagemUrl={redacao.redacao_manuscrita_url}
+              imagemUrl={(redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url}
               redacaoId={redacao.id}
               corretorId={corretorId}
               ehCorretor1={redacao.eh_corretor_1}
@@ -576,8 +617,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         </Card>
       )}
 
-      {/* Redação Digitada (não exibir quando há manuscrita) */}
-      {!redacao.redacao_manuscrita_url && (
+      {/* Redação Digitada - Texto puro (exibir APENAS se não houver NENHUMA imagem) */}
+      {!(redacao as any).redacao_imagem_gerada_url && !redacao.redacao_manuscrita_url && (
         <Card className="card">
           <CardHeader className="card__header">
             <CardTitle>Redação Digitada</CardTitle>
@@ -614,11 +655,12 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
           <CardTitle>Relatório Pedagógico de Correção</CardTitle>
           <Button
             variant="outline"
+            size="sm"
             onClick={copiarRelatorioPedagogico}
-            className="icon-btn"
             aria-label="Copiar relatório"
           >
-            <Copy className="w-4 h-4" />
+            <Copy className="w-4 h-4 mr-2" />
+            Copiar relatório
           </Button>
         </CardHeader>
         <CardContent>

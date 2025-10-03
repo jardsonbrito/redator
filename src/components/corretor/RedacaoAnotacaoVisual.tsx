@@ -54,10 +54,35 @@ const customStyles = `
     stroke-width: 2px !important;
   }
   
-  /* Garantir que a imagem não se mova */
+  /* Container: mesmo tratamento para fotos e imagens convertidas */
+  .container-imagem-redacao {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: hidden; /* Sem scroll interno */
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white;
+  }
+
+  .container-imagem-redacao > div {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+  }
+
   .container-imagem-redacao img {
-    transition: none !important;
-    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    object-fit: contain !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
   }
   
   /* Removido modo de tela cheia */
@@ -1103,23 +1128,23 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
   };
 
 
-  // Estilo estático para a imagem (sem modo de tela cheia)
+  // Estilo: largura total, altura automática (container se ajusta ao conteúdo)
   const getImageStyle = () => {
     return {
       userSelect: 'none' as const,
       cursor: 'default' as const,
-      maxWidth: '100%',
-      maxHeight: '100%',
-      objectFit: 'contain' as const,
-      transition: 'none', // Remover transição para evitar movimento
       width: '100%',
       height: 'auto',
-      minHeight: '80vh',
+      objectFit: 'contain' as const,
+      transition: 'none',
+      display: 'block',
+      margin: '0',
+      padding: '0',
     };
   };
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Painel de competências */}
       {!readonly && (
         <div className="mb-4 painel-correcao">
@@ -1157,13 +1182,13 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
 
       {/* Container da Imagem da Redação */}
-      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao`}>
-        
-        <div ref={containerRef} className="flex justify-center items-center w-full h-full p-2">
-          <img 
+      <div className={`container-imagem-redacao border rounded-lg relative painel-correcao bg-white`}>
+
+        <div ref={containerRef} className="w-full h-full">
+          <img
             ref={imageRef}
-            src={imagemUrl} 
-            alt="Redação para correção" 
+            src={imagemUrl}
+            alt="Redação para correção"
             className="img-redacao"
             onLoad={handleImageLoad}
             loading="lazy"

@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCredits } from "@/hooks/useCredits";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useQueryClient } from "@tanstack/react-query";
+import { gerarImagemA4DeTexto, validarImagemGerada, gerarNomeArquivoA4, contarPalavras } from "@/utils/gerarImagemA4";
 
 interface RedacaoFormUnificadoProps {
   // Configurações do formulário
@@ -148,13 +149,23 @@ export const RedacaoFormUnificado = ({
     }
   };
 
-  // Contador de palavras
+  // Contador de palavras com validação de limite
   const handleTextoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const texto = e.target.value;
     setRedacaoTexto(texto);
     const textoLimpo = texto.trim();
     const totalPalavras = textoLimpo ? textoLimpo.split(/\s+/).length : 0;
     setPalavras(totalPalavras);
+
+    // Validar limite de 500 palavras
+    if (totalPalavras > 500) {
+      toast({
+        title: "Limite de palavras excedido",
+        description: `Sua redação tem ${totalPalavras} palavras. O limite é 500 palavras.`,
+        variant: "destructive",
+        duration: 3000
+      });
+    }
   };
 
   // Seleção de corretores
@@ -254,12 +265,18 @@ export const RedacaoFormUnificado = ({
         throw new Error("Selecione o arquivo da redação manuscrita");
       }
 
+      // Validar limite de 500 palavras para redação digitada
+      if (tipoRedacao === "digitada" && palavras > 500) {
+        throw new Error(`Sua redação tem ${palavras} palavras. O limite é 500 palavras.`);
+      }
+
       // Verificar créditos para alunos
       if (userType === "aluno" && credits < requiredCredits) {
         throw new Error("Créditos insuficientes");
       }
 
       let redacaoUrl = null;
+      let imagemGeradaUrl = null;
 
       // Upload do arquivo se manuscrita
       if (tipoRedacao === "manuscrita" && redacaoManuscrita) {
@@ -279,6 +296,45 @@ export const RedacaoFormUnificado = ({
         redacaoUrl = publicUrl;
       }
 
+      // Gerar imagem A4 se redação digitada
+      if (tipoRedacao === "digitada") {
+        try {
+          // Gerar imagem A4 do texto (sem frase temática)
+          const imagemBlob = await gerarImagemA4DeTexto(
+            redacaoTexto.trim()
+          );
+
+          // Validar imagem gerada
+          const validacao = validarImagemGerada(imagemBlob);
+          if (!validacao.valido) {
+            throw new Error(validacao.erro || "Imagem gerada inválida");
+          }
+
+          // Upload da imagem gerada
+          const nomeArquivo = gerarNomeArquivoA4('redacao');
+          const bucketName = 'redacoes-manuscritas';
+
+          const { error: uploadError } = await supabase.storage
+            .from(bucketName)
+            .upload(nomeArquivo, imagemBlob, {
+              contentType: 'image/jpeg',
+              cacheControl: '3600'
+            });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(nomeArquivo);
+
+          imagemGeradaUrl = publicUrl;
+
+        } catch (erroGeracao) {
+          console.error("Erro ao gerar imagem A4:", erroGeracao);
+          throw new Error(`Erro ao gerar imagem da redação: ${erroGeracao.message || erroGeracao}`);
+        }
+      }
+
       // Preparar dados finais
       let finalNomeCompleto = nomeCompleto.trim();
       let finalEmail = email.toLowerCase().trim();
@@ -295,6 +351,9 @@ export const RedacaoFormUnificado = ({
         }
       }
 
+      // Calcular contagem de palavras para redações digitadas
+      const contagemPalavras = tipoRedacao === "digitada" ? contarPalavras(redacaoTexto) : null;
+
       // Inserir redação no banco apropriado
       if (isSimulado) {
         // Para simulados
@@ -305,8 +364,11 @@ export const RedacaoFormUnificado = ({
             nome_aluno: finalNomeCompleto,
             email_aluno: finalEmail,
             turma: studentData.turma || turmaCode !== "visitante" ? turmaCode : null,
-            texto: tipoRedacao === "digitada" ? redacaoTexto.trim() : ".",
+            texto: redacaoTexto.trim(), // Sempre salvar texto original
             redacao_manuscrita_url: redacaoUrl,
+            redacao_imagem_gerada_url: imagemGeradaUrl, // Nova: imagem A4 gerada
+            tipo_redacao_original: tipoRedacao, // Nova: tipo original
+            contagem_palavras: contagemPalavras, // Nova: contagem de palavras
             corretor_id_1: selectedCorretores[0] || null,
             corretor_id_2: selectedCorretores[1] || null,
             status_corretor_1: 'pendente',
@@ -322,8 +384,11 @@ export const RedacaoFormUnificado = ({
           nome_aluno: finalNomeCompleto,
           email_aluno: finalEmail,
           frase_tematica: fraseTematicaLocal.trim(),
-          redacao_texto: tipoRedacao === "digitada" ? redacaoTexto.trim() : ".",
+          redacao_texto: redacaoTexto.trim() || ".", // Sempre salvar texto original
           redacao_manuscrita_url: redacaoUrl,
+          redacao_imagem_gerada_url: imagemGeradaUrl, // Nova: imagem A4 gerada
+          tipo_redacao_original: tipoRedacao, // Nova: tipo original
+          contagem_palavras: contagemPalavras, // Nova: contagem de palavras
           tipo_envio: tipoEnvio,
           turma: turmaCode !== "visitante" ? turmaCode : null,
           corretor_id_1: selectedCorretores[0] || null,
@@ -558,16 +623,27 @@ export const RedacaoFormUnificado = ({
             <div className="space-y-1">
               <div className="flex justify-between items-center">
                 <Label htmlFor="redacao" className="text-sm">Texto da Redação</Label>
-                <span className="text-xs text-gray-500">Palavras: {palavras}</span>
+                <span className={`text-xs font-medium ${
+                  palavras > 500 ? 'text-red-600' :
+                  palavras > 450 ? 'text-amber-600' :
+                  'text-gray-500'
+                }`}>
+                  Palavras: {palavras}/500
+                </span>
               </div>
               <Textarea
                 id="redacao"
                 rows={10}
-                className="resize-none"
+                className={`resize-none ${palavras > 500 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 value={redacaoTexto}
                 onChange={handleTextoChange}
                 required
               />
+              {palavras > 500 && (
+                <p className="text-xs text-red-600 mt-1">
+                  ⚠️ Você excedeu o limite de 500 palavras. Por favor, reduza o texto.
+                </p>
+              )}
             </div>
           )}
 

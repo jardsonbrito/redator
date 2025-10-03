@@ -15,6 +15,8 @@ export interface RedacaoCorretor {
   eh_corretor_1: boolean;
   eh_corretor_2: boolean;
   redacao_manuscrita_url?: string | null;
+  redacao_imagem_gerada_url?: string | null; // Imagem A4 gerada de redação digitada
+  contagem_palavras?: number | null; // Número de palavras (redações digitadas)
   corretor_id_1?: string | null;
   corretor_id_2?: string | null;
   turma?: string; // Added turma property

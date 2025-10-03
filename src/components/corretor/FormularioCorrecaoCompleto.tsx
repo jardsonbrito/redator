@@ -48,8 +48,12 @@ export const FormularioCorrecaoCompleto = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    // Inicializar manuscrita URL da redação original
-    setManuscritaUrl(redacao.redacao_manuscrita_url || null);
+    // Priorizar imagem gerada (digitada convertida) ou manuscrita original
+    // Ordem de prioridade:
+    // 1. redacao_imagem_gerada_url (redação digitada convertida para A4)
+    // 2. redacao_manuscrita_url (redação manuscrita upload direto)
+    const imagemUrl = (redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url || null;
+    setManuscritaUrl(imagemUrl);
     carregarCorrecaoExistente();
   }, [redacao.id, corretorEmail, redacao.redacao_manuscrita_url]);
 
@@ -82,7 +86,11 @@ export const FormularioCorrecaoCompleto = ({
         });
         
         setRelatorioPedagogico(data[`elogios_pontos_atencao_${prefixo}`] || "");
-        setManuscritaUrl(data.redacao_manuscrita_url || null);
+
+        // Priorizar imagem gerada (digitada→A4) ou manuscrita original
+        const imagemUrl = data.redacao_imagem_gerada_url || data.redacao_manuscrita_url || null;
+        setManuscritaUrl(imagemUrl);
+
         setCorrecaoUrl(data[`correcao_arquivo_url_${prefixo}`] || null);
         
         // Verificar se há correção salva para habilitar modo de edição
