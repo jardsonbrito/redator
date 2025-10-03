@@ -53,7 +53,7 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
         </DialogHeader>
 
         {/* Corpo da mensagem */}
-        <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-gray-700">
+        <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap">
           {message.message}
         </div>
 

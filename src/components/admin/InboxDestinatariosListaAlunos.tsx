@@ -32,6 +32,7 @@ export function InboxDestinatariosListaAlunos({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTurma, setSelectedTurma] = useState<string>("todas");
   const [selectedAlunos, setSelectedAlunos] = useState<AlunoSelecionado[]>(destinatariosSelecionados);
+  const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
 
   // Buscar todos os alunos ativos
   const { data: alunos = [], isLoading: loadingAlunos } = useQuery({
@@ -107,10 +108,10 @@ export function InboxDestinatariosListaAlunos({
       const turmasUnicas = new Map();
       data.forEach(item => {
         if (item.turma) {
-          // Usar turma como código se turma_codigo estiver vazio
-          const codigo = item.turma_codigo || item.turma.toLowerCase().replace(/\s+/g, '-');
-          turmasUnicas.set(codigo, {
-            codigo: codigo,
+          // Como turma_codigo está null, usar o próprio nome da turma como código
+          // Isso garante que o código usado nos checkboxes corresponda ao valor real no banco
+          turmasUnicas.set(item.turma, {
+            codigo: item.turma, // Usar o nome real da turma como código
             nome: item.turma
           });
         }
@@ -125,7 +126,8 @@ export function InboxDestinatariosListaAlunos({
   // Notificar mudanças na seleção
   useEffect(() => {
     onDestinatariosChange(selectedAlunos);
-  }, [selectedAlunos, onDestinatariosChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAlunos]);
 
   const handleSelectAluno = (aluno: any, isSelected: boolean) => {
     if (isSelected) {
@@ -143,7 +145,7 @@ export function InboxDestinatariosListaAlunos({
     }
   };
 
-  const handleSelectAllFromTurma = () => {
+  const handleSelectAllFromTurma = async () => {
     if (selectedTurma === 'todas') {
       // Selecionar todos os alunos visíveis
       const novosAlunos = alunos.filter(aluno =>
@@ -160,24 +162,105 @@ export function InboxDestinatariosListaAlunos({
       setSelectedAlunos(prev => [...prev, ...novosAlunos]);
       toast.success(`${novosAlunos.length} alunos adicionados`);
     } else {
-      // Selecionar todos da turma específica
-      const alunosDaTurma = alunos.filter(aluno =>
-        aluno.turma_codigo === selectedTurma &&
-        !selectedAlunos.some(s => s.id === aluno.id)
-      ).map(aluno => ({
-        id: aluno.id,
-        email: aluno.email,
-        nome: aluno.nome,
-        sobrenome: aluno.sobrenome,
-        turma: aluno.turma,
-        turmaCodigo: aluno.turma_codigo,
-      }));
+      try {
+        // Buscar TODOS os alunos da turma, IGNORANDO filtro de busca
+        const { data: todosAlunosDaTurma, error } = await supabase
+          .from('profiles')
+          .select('id, email, nome, sobrenome, turma, turma_codigo')
+          .eq('user_type', 'aluno')
+          .eq('ativo', true)
+          .eq('turma_codigo', selectedTurma)
+          .order('nome');
 
-      setSelectedAlunos(prev => [...prev, ...alunosDaTurma]);
+        if (error) throw error;
 
-      const turma = turmas.find(t => t.codigo === selectedTurma);
-      toast.success(`${alunosDaTurma.length} alunos da turma "${turma?.nome}" adicionados`);
+        if (!todosAlunosDaTurma || todosAlunosDaTurma.length === 0) {
+          toast.warning("Esta turma não possui alunos ativos");
+          return;
+        }
+
+        // Filtrar apenas os que não estão selecionados
+        const alunosDaTurma = todosAlunosDaTurma
+          .filter(aluno => !selectedAlunos.some(s => s.id === aluno.id))
+          .map(aluno => ({
+            id: aluno.id,
+            email: aluno.email,
+            nome: aluno.nome,
+            sobrenome: aluno.sobrenome,
+            turma: aluno.turma,
+            turmaCodigo: aluno.turma_codigo,
+          }));
+
+        setSelectedAlunos(prev => [...prev, ...alunosDaTurma]);
+
+        const turma = turmas.find(t => t.codigo === selectedTurma);
+        toast.success(`${alunosDaTurma.length} alunos da turma "${turma?.nome}" adicionados`);
+      } catch (error) {
+        console.error('Erro ao selecionar todos os alunos da turma:', error);
+        toast.error("Erro ao selecionar alunos da turma");
+      }
     }
+  };
+
+  const handleAdicionarTurmasSelecionadas = async () => {
+    if (turmasSelecionadas.length === 0) {
+      toast.error("Selecione pelo menos uma turma");
+      return;
+    }
+
+    try {
+
+      // Buscar todos os alunos das turmas selecionadas
+      // Como turma_codigo está null, usar o campo 'turma' diretamente
+      const { data: todosAlunosDasTurmas, error } = await supabase
+        .from('profiles')
+        .select('id, email, nome, sobrenome, turma, turma_codigo')
+        .eq('user_type', 'aluno')
+        .eq('ativo', true)
+        .in('turma', turmasSelecionadas) // Usar 'turma' ao invés de 'turma_codigo'
+        .order('nome');
+
+      if (error) throw error;
+
+      if (!todosAlunosDasTurmas || todosAlunosDasTurmas.length === 0) {
+        toast.warning("As turmas selecionadas não possuem alunos ativos");
+        return;
+      }
+
+      // Filtrar apenas os que não estão selecionados
+      const novosAlunos = todosAlunosDasTurmas
+        .filter(aluno => !selectedAlunos.some(s => s.id === aluno.id))
+        .map(aluno => ({
+          id: aluno.id,
+          email: aluno.email,
+          nome: aluno.nome,
+          sobrenome: aluno.sobrenome,
+          turma: aluno.turma,
+          turmaCodigo: aluno.turma_codigo,
+        }));
+
+      setSelectedAlunos(prev => [...prev, ...novosAlunos]);
+
+      const turmasNomes = turmas
+        .filter(t => turmasSelecionadas.includes(t.codigo))
+        .map(t => t.nome)
+        .join(', ');
+
+      toast.success(`${novosAlunos.length} alunos das turmas ${turmasNomes} adicionados`);
+      setTurmasSelecionadas([]); // Limpar seleção de turmas
+    } catch (error) {
+      console.error('Erro ao adicionar turmas:', error);
+      toast.error("Erro ao adicionar alunos das turmas");
+    }
+  };
+
+  const handleToggleTurma = (turmaCodigo: string) => {
+    setTurmasSelecionadas(prev => {
+      const novaLista = prev.includes(turmaCodigo)
+        ? prev.filter(t => t !== turmaCodigo)
+        : [...prev, turmaCodigo];
+      return novaLista;
+    });
   };
 
   const handleRemoveAluno = (alunoId: string) => {
@@ -210,29 +293,69 @@ export function InboxDestinatariosListaAlunos({
         </CardHeader>
         <CardContent className="space-y-6">
 
+          {/* Seleção múltipla de turmas */}
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <Label className="text-base font-semibold mb-3 block">Adicionar turmas completas:</Label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+              {turmas.map((turma) => (
+                <div key={turma.codigo} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`turma-${turma.codigo}`}
+                    checked={turmasSelecionadas.includes(turma.codigo)}
+                    onCheckedChange={() => handleToggleTurma(turma.codigo)}
+                  />
+                  <label
+                    htmlFor={`turma-${turma.codigo}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    {turma.nome}
+                  </label>
+                </div>
+              ))}
+            </div>
+            <div className="text-xs text-muted-foreground mb-2">
+              Turmas selecionadas: {turmasSelecionadas.length} | {turmasSelecionadas.join(', ') || 'nenhuma'}
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleAdicionarTurmasSelecionadas();
+              }}
+              disabled={turmasSelecionadas.length === 0}
+              className={`inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-9 px-4 py-2 ${
+                turmasSelecionadas.length > 0
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <GraduationCap className="h-4 w-4 mr-2" />
+              {turmasSelecionadas.length === 0
+                ? 'Selecione turmas acima'
+                : `Adicionar ${turmasSelecionadas.length !== 1 ? `${turmasSelecionadas.length} turmas` : '1 turma'}`
+              }
+            </button>
+          </div>
+
           {/* Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Filtro por turma */}
             <div>
-              <Label htmlFor="turma-filter">Filtrar por turma:</Label>
+              <Label htmlFor="turma-filter">Filtrar visualização por turma:</Label>
               <select
                 id="turma-filter"
                 value={selectedTurma}
                 onChange={(e) => setSelectedTurma(e.target.value)}
                 className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               >
-                <option value="todas">Todas as turmas ({turmas.length} turmas encontradas)</option>
+                <option value="todas">Todas as turmas</option>
                 {turmas.map((turma) => (
                   <option key={turma.codigo} value={turma.codigo}>
-                    {turma.nome} ({turma.codigo})
+                    {turma.nome}
                   </option>
                 ))}
               </select>
-              {turmasError && (
-                <div className="text-red-600 text-xs mt-1">
-                  Erro ao carregar turmas: {turmasError.message}
-                </div>
-              )}
             </div>
 
             {/* Campo de busca */}

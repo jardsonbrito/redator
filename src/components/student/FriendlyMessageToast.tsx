@@ -53,7 +53,7 @@ export function FriendlyMessageToast({ message, onDismiss }: FriendlyMessageToas
 
           <div className="space-y-3">
             {/* Conteúdo da mensagem */}
-            <div className="text-sm leading-relaxed">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">
               {message.message}
             </div>
 
