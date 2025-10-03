@@ -143,21 +143,25 @@ export function InboxMessageCard({
           {/* Estatísticas de destinatários */}
           {message.recipients && message.recipients.total > 0 && (
             <div
-              className="bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+              className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-3 cursor-pointer hover:from-purple-100 hover:to-blue-100 transition-all duration-200 border border-purple-200 hover:border-purple-300 shadow-sm hover:shadow-md"
               onClick={() => onViewRecipients?.(message.id, message.message)}
+              title="Clique para ver lista completa de destinatários"
             >
-              <div className="text-xs font-semibold text-gray-700 mb-2 flex items-center">
-                <Users className="h-3 w-3 mr-1" />
-                {message.recipients.total} destinatário{message.recipients.total !== 1 ? 's' : ''}
+              <div className="text-xs font-semibold text-purple-900 mb-2 flex items-center justify-between">
+                <div className="flex items-center">
+                  <Users className="h-3 w-3 mr-1" />
+                  {message.recipients.total} destinatário{message.recipients.total !== 1 ? 's' : ''}
+                </div>
+                <Eye className="h-3 w-3 text-purple-600" />
               </div>
-              <div className="flex gap-3 text-xs">
-                <span className="text-yellow-600">
+              <div className="flex gap-2 text-xs flex-wrap">
+                <span className="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
                   Pendente: {message.recipients.pendente}
                 </span>
-                <span className="text-blue-600">
+                <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
                   Lida: {message.recipients.lida}
                 </span>
-                <span className="text-green-600">
+                <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">
                   Respondida: {message.recipients.respondida}
                 </span>
               </div>
@@ -192,7 +196,7 @@ export function InboxMessageCard({
                   <MoreVertical className="h-4 w-4 text-gray-600" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
+              <DropdownMenuContent align="end" className="w-56 shadow-lg border border-gray-200">
                 <DropdownMenuItem
                   onClick={() => setShowViewDialog(true)}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
@@ -200,6 +204,15 @@ export function InboxMessageCard({
                   <Eye className="h-4 w-4 mr-2" />
                   Ver Mensagem
                 </DropdownMenuItem>
+                {message.recipients && message.recipients.total > 0 && (
+                  <DropdownMenuItem
+                    onClick={() => onViewRecipients?.(message.id, message.message)}
+                    className="flex items-center cursor-pointer hover:bg-purple-50 transition-colors text-purple-700"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Ver Destinatários ({message.recipients.total})
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => onEdit?.(message)}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
