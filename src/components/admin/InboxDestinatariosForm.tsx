@@ -117,9 +117,14 @@ export function InboxDestinatariosForm({ onDestinatariosChange, destinatariosSel
     }
 
     const turma = turmas.find(t => t.codigo === selectedTurma);
-    if (!turma) return;
+    if (!turma) {
+      console.log('Turma não encontrada:', selectedTurma);
+      return;
+    }
 
     try {
+      console.log('Buscando todos os alunos da turma:', selectedTurma);
+
       // Buscar TODOS os alunos da turma, IGNORANDO o filtro de busca
       const { data: todosAlunosDaTurma, error } = await supabase
         .from('profiles')
@@ -127,6 +132,8 @@ export function InboxDestinatariosForm({ onDestinatariosChange, destinatariosSel
         .eq('user_type', 'aluno')
         .eq('ativo', true)
         .eq('turma_codigo', selectedTurma);
+
+      console.log('Resultado da busca:', { todosAlunosDaTurma, error });
 
       if (error) throw error;
 
@@ -144,14 +151,22 @@ export function InboxDestinatariosForm({ onDestinatariosChange, destinatariosSel
         turmaCodigo: aluno.turma_codigo,
       }));
 
+      console.log('Novos destinatários criados:', novosDestinatarios);
+
       // Remover duplicatas baseadas no email
       setSelectedDestinatarios(prev => {
         const emailsExistentes = new Set(prev.map(d => d.email));
         const destinatariosUnicos = novosDestinatarios.filter(d => !emailsExistentes.has(d.email));
-        return [...prev, ...destinatariosUnicos];
+        const novaLista = [...prev, ...destinatariosUnicos];
+
+        console.log('Destinatários anteriores:', prev.length);
+        console.log('Destinatários únicos novos:', destinatariosUnicos.length);
+        console.log('Total após adição:', novaLista.length);
+
+        return novaLista;
       });
 
-      toast.success(`${todosAlunosDaTurma.length} alunos da turma "${turma.nome}" adicionados`);
+      toast.success(`${todosAlunosDaTurma.length} alunos da turma "${turma.nome}" selecionados`);
     } catch (error) {
       console.error('Erro ao selecionar todos os alunos:', error);
       toast.error("Erro ao selecionar alunos da turma");

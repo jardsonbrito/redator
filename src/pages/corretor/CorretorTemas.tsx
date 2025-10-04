@@ -20,8 +20,10 @@ const CorretorTemas = () => {
         .select('*')
         .eq('status', 'publicado')
         .order('publicado_em', { ascending: false });
-      
+
       if (error) throw error;
+      console.log('Temas carregados para corretor:', data);
+      console.log('Primeiro tema com textos:', data?.[0]?.texto_1, data?.[0]?.texto_2, data?.[0]?.texto_3);
       return data || [];
     }
   });
@@ -119,6 +121,11 @@ const CorretorTemas = () => {
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-center mb-2">
                 {selectedTema?.frase_tematica}
+                {selectedTema && console.log('Tema selecionado:', {
+                  texto_1: selectedTema.texto_1,
+                  texto_2: selectedTema.texto_2,
+                  texto_3: selectedTema.texto_3
+                })}
               </DialogTitle>
               {selectedTema?.eixo_tematico && (
                 <div className="text-center">
@@ -146,24 +153,35 @@ const CorretorTemas = () => {
                 </p>
               </div>
 
-              {selectedTema?.texto_1 && (
+              {selectedTema?.texto_1 && selectedTema.texto_1.trim() !== '' && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador I</h3>
-                  <div className="text-gray-700">{renderTextWithParagraphs(selectedTema.texto_1)}</div>
+                  <div className="text-gray-700 whitespace-pre-wrap">{renderTextWithParagraphs(selectedTema.texto_1)}</div>
                 </div>
               )}
 
-              {selectedTema?.texto_2 && (
+              {selectedTema?.texto_2 && selectedTema.texto_2.trim() !== '' && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador II</h3>
-                  <div className="text-gray-700">{renderTextWithParagraphs(selectedTema.texto_2)}</div>
+                  <div className="text-gray-700 whitespace-pre-wrap">{renderTextWithParagraphs(selectedTema.texto_2)}</div>
                 </div>
               )}
 
-              {selectedTema?.texto_3 && (
+              {selectedTema?.texto_3 && selectedTema.texto_3.trim() !== '' && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador III</h3>
-                  <div className="text-gray-700">{renderTextWithParagraphs(selectedTema.texto_3)}</div>
+                  <div className="text-gray-700 whitespace-pre-wrap">{renderTextWithParagraphs(selectedTema.texto_3)}</div>
+                </div>
+              )}
+
+              {/* Mensagem de debug se nenhum texto estiver disponível */}
+              {(!selectedTema?.texto_1 || selectedTema?.texto_1?.trim() === '') &&
+               (!selectedTema?.texto_2 || selectedTema?.texto_2?.trim() === '') &&
+               (!selectedTema?.texto_3 || selectedTema?.texto_3?.trim() === '') && (
+                <div className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ Este tema não possui textos motivadores cadastrados.
+                  </p>
                 </div>
               )}
             </div>

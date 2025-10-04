@@ -58,7 +58,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({ clas
               const isFirst = index === 0;
 
               return (
-                <React.Fragment key={index}>
+                <React.Fragment key={`breadcrumb-${index}`}>
                   <BreadcrumbItem>
                     {isLast ? (
                       <BreadcrumbPage className="flex items-center gap-1.5">
