@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState } from "react";
 import { TemaCardPadrao } from "@/components/shared/TemaCard";
+import { FormattedText } from "@/components/shared/FormattedText";
+import { getTemaMotivatorIVUrl } from "@/utils/temaImageUtils";
 
 const CorretorTemas = () => {
   const [selectedTema, setSelectedTema] = useState<any>(null);
@@ -132,53 +134,80 @@ const CorretorTemas = () => {
             </DialogHeader>
 
             <div className="space-y-6">
-              {selectedTema?.imagem_texto_4_url && (
-                <img 
-                  src={selectedTema.imagem_texto_4_url} 
-                  alt="Imagem do tema"
-                  className="block mx-auto max-h-[250px] w-auto object-contain rounded-md my-4"
-                />
-              )}
-
-              <div className="bg-gray-50 rounded-lg p-6">
-                <p className="text-gray-700 leading-relaxed text-center">
-                  A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação, 
-                  redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema <strong>"{selectedTema?.frase_tematica}"</strong>, 
-                  apresentando proposta de intervenção que respeite os direitos humanos.
+              {/* Cabeçalho padrão */}
+              <div className="bg-gray-50 rounded-lg p-6 border-l-4 border-primary">
+                <p className="text-gray-700 leading-relaxed text-justify indent-8">
+                  A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação,
+                  redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema <strong>"{selectedTema?.frase_tematica}"</strong>,
+                  apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione,
+                  de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.
                 </p>
               </div>
 
-              {selectedTema?.texto_1 && selectedTema.texto_1.trim() !== '' && (
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Texto Motivador I</h3>
-                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedTema.texto_1}</div>
-                </div>
-              )}
+              {/* Textos Motivadores */}
+              {(() => {
+                const textos = [selectedTema?.texto_1, selectedTema?.texto_2, selectedTema?.texto_3].filter(Boolean);
+                let textoCounter = 1;
 
-              {selectedTema?.texto_2 && selectedTema.texto_2.trim() !== '' && (
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Texto Motivador II</h3>
-                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedTema.texto_2}</div>
-                </div>
-              )}
+                return (
+                  <>
+                    {selectedTema?.texto_1 && (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-gray-700">
+                          <FormattedText text={selectedTema.texto_1} />
+                        </div>
+                      </div>
+                    )}
 
-              {selectedTema?.texto_3 && selectedTema.texto_3.trim() !== '' && (
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Texto Motivador III</h3>
-                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedTema.texto_3}</div>
-                </div>
-              )}
+                    {selectedTema?.texto_2 && (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-gray-700">
+                          <FormattedText text={selectedTema.texto_2} />
+                        </div>
+                      </div>
+                    )}
 
-              {/* Mensagem de debug se nenhum texto estiver disponível */}
-              {(!selectedTema?.texto_1 || selectedTema?.texto_1?.trim() === '') &&
-               (!selectedTema?.texto_2 || selectedTema?.texto_2?.trim() === '') &&
-               (!selectedTema?.texto_3 || selectedTema?.texto_3?.trim() === '') && (
-                <div className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
-                  <p className="text-sm text-yellow-800">
-                    ⚠️ Este tema não possui textos motivadores cadastrados.
-                  </p>
-                </div>
-              )}
+                    {selectedTema?.texto_3 && (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-3">Texto {textoCounter++}</h3>
+                        <div className="text-gray-700">
+                          <FormattedText text={selectedTema.texto_3} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Texto 4 (Imagem) */}
+                    {getTemaMotivatorIVUrl({
+                      motivator4_source: selectedTema?.motivator4_source,
+                      motivator4_url: selectedTema?.motivator4_url,
+                      motivator4_file_path: selectedTema?.motivator4_file_path,
+                      imagem_texto_4_url: selectedTema?.imagem_texto_4_url
+                    }) && (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-3">Texto {textoCounter}</h3>
+                        <div className="rounded-lg overflow-hidden">
+                          <img
+                            src={getTemaMotivatorIVUrl({
+                              motivator4_source: selectedTema?.motivator4_source,
+                              motivator4_url: selectedTema?.motivator4_url,
+                              motivator4_file_path: selectedTema?.motivator4_file_path,
+                              imagem_texto_4_url: selectedTema?.imagem_texto_4_url
+                            })!}
+                            alt="Charge/Infográfico — Texto 4"
+                            className="w-full h-auto"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </DialogContent>
         </Dialog>
