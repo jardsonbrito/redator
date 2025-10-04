@@ -3,10 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useState } from "react";
-import { renderTextWithParagraphs } from '@/utils/textUtils';
 import { TemaCardPadrao } from "@/components/shared/TemaCard";
 
 const CorretorTemas = () => {
@@ -22,8 +21,6 @@ const CorretorTemas = () => {
         .order('publicado_em', { ascending: false });
 
       if (error) throw error;
-      console.log('Temas carregados para corretor:', data);
-      console.log('Primeiro tema com textos:', data?.[0]?.texto_1, data?.[0]?.texto_2, data?.[0]?.texto_3);
       return data || [];
     }
   });
@@ -121,12 +118,10 @@ const CorretorTemas = () => {
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-center mb-2">
                 {selectedTema?.frase_tematica}
-                {selectedTema && console.log('Tema selecionado:', {
-                  texto_1: selectedTema.texto_1,
-                  texto_2: selectedTema.texto_2,
-                  texto_3: selectedTema.texto_3
-                })}
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                Visualização completa do tema de redação com textos motivadores
+              </DialogDescription>
               {selectedTema?.eixo_tematico && (
                 <div className="text-center">
                   <Badge variant="secondary" className="mb-4">
@@ -156,21 +151,21 @@ const CorretorTemas = () => {
               {selectedTema?.texto_1 && selectedTema.texto_1.trim() !== '' && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador I</h3>
-                  <div className="text-gray-700 whitespace-pre-wrap">{renderTextWithParagraphs(selectedTema.texto_1)}</div>
+                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedTema.texto_1}</div>
                 </div>
               )}
 
               {selectedTema?.texto_2 && selectedTema.texto_2.trim() !== '' && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador II</h3>
-                  <div className="text-gray-700 whitespace-pre-wrap">{renderTextWithParagraphs(selectedTema.texto_2)}</div>
+                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedTema.texto_2}</div>
                 </div>
               )}
 
               {selectedTema?.texto_3 && selectedTema.texto_3.trim() !== '' && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-2">Texto Motivador III</h3>
-                  <div className="text-gray-700 whitespace-pre-wrap">{renderTextWithParagraphs(selectedTema.texto_3)}</div>
+                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedTema.texto_3}</div>
                 </div>
               )}
 
