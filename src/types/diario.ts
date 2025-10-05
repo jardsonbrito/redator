@@ -67,6 +67,11 @@ export interface DadosLousas {
   nota_media: number;
 }
 
+export interface DadosAvaliacaoPresencial {
+  nota: number | null;
+  observacoes?: string;
+}
+
 export interface DiarioEtapa {
   etapa_id: string;
   etapa_nome: string;
@@ -79,6 +84,7 @@ export interface DiarioEtapa {
   simulados: DadosSimulados;
   exercicios: DadosExercicios;
   lousas: DadosLousas;
+  avaliacao_presencial?: DadosAvaliacaoPresencial;
   media_final: number;
 }
 

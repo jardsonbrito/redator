@@ -58,11 +58,17 @@ export const ModernAdminHeader = ({ userEmail, onLogout }: ModernAdminHeaderProp
             <Button
               variant="ghost"
               size="sm"
-              onClick={onLogout}
-              className="text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors duration-200 p-2"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🚪 Botão de logout clicado');
+                onLogout();
+              }}
+              className="text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors duration-200 cursor-pointer flex items-center gap-2"
+              type="button"
             >
               <LogOut className="w-4 h-4" />
-              <span className="sr-only">Sair</span>
+              <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>

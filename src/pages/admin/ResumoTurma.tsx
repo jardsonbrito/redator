@@ -38,6 +38,8 @@ export default function ResumoTurma() {
       'Participação (%)',
       'Redações',
       'Nota Média Redações',
+      'Lousas',
+      'Nota Média Lousas',
       'Simulados',
       'Nota Média Simulados',
       'Exercícios',
@@ -51,6 +53,8 @@ export default function ResumoTurma() {
       aluno.dados.participacao.percentual_participacao,
       aluno.dados.redacoes.total_redacoes,
       aluno.dados.redacoes.nota_media,
+      aluno.dados.lousas?.total_lousas || 0,
+      aluno.dados.lousas?.nota_media || 0,
       aluno.dados.simulados.total_simulados,
       aluno.dados.simulados.nota_media,
       aluno.dados.exercicios.total_exercicios,
@@ -296,6 +300,7 @@ export default function ResumoTurma() {
                       <TableHead className="text-center">Frequência</TableHead>
                       <TableHead className="text-center">Participação</TableHead>
                       <TableHead className="text-center">Redações</TableHead>
+                      <TableHead className="text-center">Lousa</TableHead>
                       <TableHead className="text-center">Simulados</TableHead>
                       <TableHead className="text-center">Exercícios</TableHead>
                       <TableHead className="text-center">Nota Final</TableHead>
@@ -335,6 +340,14 @@ export default function ResumoTurma() {
                             <div className="font-medium">{aluno.dados.redacoes.total_redacoes}</div>
                             <div className="text-xs text-muted-foreground">
                               Média: {formatNota(aluno.dados.redacoes.nota_media)}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="space-y-1">
+                            <div className="font-medium">{aluno.dados.lousas?.total_lousas || 0}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Nota: {formatNota(aluno.dados.lousas?.nota_media || 0)}
                             </div>
                           </div>
                         </TableCell>

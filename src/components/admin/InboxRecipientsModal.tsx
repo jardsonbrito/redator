@@ -14,8 +14,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CheckCircle2, Clock, MessageSquare } from "lucide-react";
+import { Loader2, CheckCircle2, Clock, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface RecipientData {
   student_email: string;
@@ -32,6 +33,54 @@ interface InboxRecipientsModalProps {
   messageId: string;
   messageText: string;
 }
+
+// Componente para resposta expansível
+const ExpandableResponse = ({ text, timestamp }: { text: string; timestamp: string | null }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const MAX_LENGTH = 150;
+  const shouldTruncate = text.length > MAX_LENGTH;
+
+  return (
+    <div className="text-sm space-y-2">
+      <div className={`text-gray-700 whitespace-pre-wrap ${!isExpanded && shouldTruncate ? 'max-h-20 overflow-hidden' : 'max-h-[60vh] overflow-y-auto'} rounded-lg bg-gray-50 p-3`}>
+        {!isExpanded && shouldTruncate ? text.slice(0, MAX_LENGTH) + '...' : text}
+      </div>
+
+      {shouldTruncate && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-primary hover:text-primary/80 p-0 h-auto font-medium flex items-center gap-1"
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="w-4 h-4" />
+              Mostrar menos
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4" />
+              Ler tudo
+            </>
+          )}
+        </Button>
+      )}
+
+      {timestamp && (
+        <div className="text-xs text-gray-500">
+          {new Date(timestamp).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const InboxRecipientsModal = ({
   isOpen,
@@ -149,7 +198,7 @@ export const InboxRecipientsModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             Destinatários da Mensagem
@@ -213,24 +262,12 @@ export const InboxRecipientsModal = ({
                     <TableCell className="text-center">
                       {getStatusBadge(recipient.status)}
                     </TableCell>
-                    <TableCell className="max-w-xs">
+                    <TableCell className="max-w-md">
                       {recipient.response_text ? (
-                        <div className="text-sm">
-                          <div className="text-gray-700 line-clamp-2">
-                            {recipient.response_text}
-                          </div>
-                          {recipient.responded_at && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {new Date(recipient.responded_at).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </div>
-                          )}
-                        </div>
+                        <ExpandableResponse
+                          text={recipient.response_text}
+                          timestamp={recipient.responded_at}
+                        />
                       ) : (
                         <span className="text-gray-400 text-sm">—</span>
                       )}

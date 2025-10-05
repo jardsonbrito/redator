@@ -133,6 +133,7 @@ import { Top5Widget } from "@/components/shared/Top5Widget";
 import GestaoEtapas from "@/pages/admin/GestaoEtapas";
 import RegistroAulas from "@/pages/admin/RegistroAulas";
 import ResumoTurma from "@/pages/admin/ResumoTurma";
+import AvaliacaoPresencial from "@/pages/admin/AvaliacaoPresencial";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -533,7 +534,7 @@ const Admin = () => {
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: PaperPlaneTilt, iconColor: "#4CAF50" },
 
     // Linha 2: Atividades e Avaliações
-    { id: "diario", label: "Diário Online", icon: CalendarCheck, iconColor: "#2196F3", chips: ["Etapas", "Aulas", "Turma"] },
+    { id: "diario", label: "Diário Online", icon: CalendarCheck, iconColor: "#2196F3", chips: ["Etapas", "Aulas", "Turma", "Avaliação"] },
     { id: "exercicios", label: "Exercícios", icon: CheckSquare, iconColor: "#9C27B0" },
     { id: "simulados", label: "Simulados", icon: Timer, iconColor: "#FF5722" },
 
@@ -592,9 +593,17 @@ const Admin = () => {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    signOut();
-    navigate('/login', { replace: true });
+    console.log('🔐 Iniciando logout do admin...');
+    try {
+      await supabase.auth.signOut();
+      console.log('✅ Supabase auth signOut completo');
+      signOut();
+      console.log('✅ Context signOut completo');
+      navigate('/login', { replace: true });
+      console.log('✅ Navegação para /login completa');
+    } catch (error) {
+      console.error('❌ Erro no logout:', error);
+    }
   };
 
 
@@ -992,6 +1001,10 @@ const Admin = () => {
           return <ResumoTurma />;
         }
 
+        if (subtab === 'avaliação') {
+          return <AvaliacaoPresencial />;
+        }
+
         // Default: mostrar primeira aba se não especificado
         return <GestaoEtapas />;
 
@@ -1020,7 +1033,8 @@ const Admin = () => {
                       const subtabMap: Record<string, string> = {
                         "Etapas": "etapas",
                         "Aulas": "aulas",
-                        "Turma": "turma"
+                        "Turma": "turma",
+                        "Avaliação": "avaliação"
                       };
                       const subtab = subtabMap[chipValue];
                       if (subtab) {

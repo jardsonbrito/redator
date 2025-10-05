@@ -20,7 +20,7 @@ const converterNota1000ParaNota10 = (nota: number): number => {
   return nota / 100; // 800 -> 8.0
 };
 
-const calcularNovaMediaFinal = (
+const calcularMediaOnline = (
   frequencia: number,
   participacao: number,
   redacoes: number,
@@ -28,6 +28,19 @@ const calcularNovaMediaFinal = (
   simulados: number
 ): number => {
   return (frequencia + participacao + redacoes + lousas + simulados) / 5;
+};
+
+const calcularMediaFinalComAvaliacao = (
+  mediaOnline: number,
+  notaAvaliacaoPresencial: number | null
+): number => {
+  // Se não houver avaliação presencial, retorna apenas a média online
+  if (notaAvaliacaoPresencial === null || notaAvaliacaoPresencial === undefined) {
+    return mediaOnline;
+  }
+
+  // Se houver avaliação presencial: (Média Online + Avaliação Presencial) ÷ 2
+  return (mediaOnline + notaAvaliacaoPresencial) / 2;
 };
 
 // Hook para gerenciar etapas
@@ -571,7 +584,27 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           console.log('⚠️ Erro ao buscar exercícios:', error);
         }
 
-        // NOVA LÓGICA: Calcular média final com 5 critérios fixos
+        // Buscar avaliação presencial da etapa
+        let avaliacaoPresencialData: { nota: number | null; observacoes?: string } = { nota: null };
+        try {
+          const { data: avaliacaoData, error: avaliacaoError } = await supabase
+            .from('avaliacoes_presenciais')
+            .select('nota, observacoes')
+            .eq('aluno_email', alunoEmail)
+            .eq('etapa_id', etapa.id)
+            .maybeSingle();
+
+          if (!avaliacaoError && avaliacaoData) {
+            avaliacaoPresencialData = {
+              nota: avaliacaoData.nota,
+              observacoes: avaliacaoData.observacoes
+            };
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar avaliação presencial:', error);
+        }
+
+        // NOVA LÓGICA: Calcular média final
         // Converter percentuais para notas 0-10
         const frequenciaNota = converterPercentualParaNota(frequenciaData.percentual_frequencia);
         const participacaoNota = converterPercentualParaNota(participacaoData.percentual_participacao);
@@ -583,8 +616,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
         // Converter notas das lousas (já estão em escala 0-10)
         const lousasNota = lousasData.nota_media;
 
-        // Calcular média final sempre dividindo por 5 (mesmo que algum critério seja 0)
-        const mediaFinal = calcularNovaMediaFinal(
+        // 1. Calcular média online (5 critérios ÷ 5)
+        const mediaOnline = calcularMediaOnline(
           frequenciaNota,
           participacaoNota,
           redacoesNota,
@@ -592,8 +625,17 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           simuladosNota
         );
 
+        // 2. Calcular média final: (Média Online + Avaliação Presencial) ÷ 2
+        const mediaFinal = calcularMediaFinalComAvaliacao(
+          mediaOnline,
+          avaliacaoPresencialData.nota
+        );
+
         // Logs simplificados para melhor performance
-        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: F${frequenciaNota.toFixed(1)} P${participacaoNota.toFixed(1)} R${redacoesNota.toFixed(1)} L${lousasNota.toFixed(1)} S${simuladosNota.toFixed(1)} = ${mediaFinal.toFixed(1)}`);
+        const avaliacaoText = avaliacaoPresencialData.nota !== null
+          ? `AP${avaliacaoPresencialData.nota.toFixed(1)}`
+          : 'AP-';
+        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: Online=${mediaOnline.toFixed(1)} (F${frequenciaNota.toFixed(1)} P${participacaoNota.toFixed(1)} R${redacoesNota.toFixed(1)} L${lousasNota.toFixed(1)} S${simuladosNota.toFixed(1)}) ${avaliacaoText} → Final=${mediaFinal.toFixed(1)}`);
 
         diarioData.push({
           etapa_numero: etapa.numero,
@@ -606,6 +648,7 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           simulados: simuladosData,
           exercicios: exerciciosData,
           lousas: lousasData,
+          avaliacao_presencial: avaliacaoPresencialData,
           media_final: Math.max(0, Math.min(10, mediaFinal)) // Garantir que fica entre 0 e 10
         });
       }
