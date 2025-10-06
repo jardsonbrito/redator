@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Search, Download, Calendar } from "lucide-react";
+import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface RedacaoCorrigida {
   id: string;
@@ -224,9 +225,8 @@ export const RadarRedacoes = () => {
     fetchRedacoes();
   }, []);
 
-  // Filtrar apenas turmas válidas que funcionam corretamente
-  const turmasValidas = ['LRA2025', 'LRB2025', 'LRD2025', 'Turma A', 'Turma B', 'Turma D'];
-  const turmasUnicas = turmasValidas.filter(turma =>
+  // Filtrar turmas que existem nas redações
+  const turmasUnicas = TODAS_TURMAS.filter(turma =>
     redacoes.some(r => r.turma === turma)
   );
   const tiposUnicos = [...new Set(redacoes.map(r => r.tipo_envio))];
@@ -297,7 +297,7 @@ export const RadarRedacoes = () => {
             <SelectContent>
               <SelectItem value="all">Todas as turmas</SelectItem>
               {turmasUnicas.map(turma => (
-                <SelectItem key={turma} value={turma}>{turma}</SelectItem>
+                <SelectItem key={turma} value={turma}>{formatTurmaDisplay(turma)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -406,7 +406,7 @@ export const RadarRedacoes = () => {
                     <TableCell className="font-medium">{redacao.nome_aluno}</TableCell>
                     <TableCell>{redacao.email_aluno}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{redacao.turma}</Badge>
+                      <Badge variant="secondary">{formatTurmaDisplay(redacao.turma)}</Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {redacao.frase_tematica}

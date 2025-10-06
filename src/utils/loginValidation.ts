@@ -25,43 +25,43 @@ interface ValidationResult {
 
 export const validateLoginSystem = async (): Promise<ValidationResult> => {
   const testCases: TestCase[] = [
-    // Casos de sucesso
+    // Casos de sucesso - usando formato normalizado
     {
       description: "Login válido - Turma A",
       email: "abiliode@laboratoriodoredator.com",
-      turma: "Turma A",
+      turma: "A", // Formato normalizado
       expectedResult: 'success'
     },
     {
-      description: "Login válido - Turma B", 
+      description: "Login válido - Turma B",
       email: "alessandra@laboratoriodoredator.com",
-      turma: "Turma B",
+      turma: "B", // Formato normalizado
       expectedResult: 'success'
     },
     {
       description: "Login válido - Turma C",
-      email: "anajuliafreitas@laboratoriodoredator.com", 
-      turma: "Turma C",
+      email: "anajuliafreitas@laboratoriodoredator.com",
+      turma: "C", // Formato normalizado
       expectedResult: 'success'
     },
     {
       description: "Login válido - Turma D",
       email: "adriellybraz@laboratoriodoredator.com",
-      turma: "Turma D", 
+      turma: "D", // Formato normalizado
       expectedResult: 'success'
     },
     // Casos de falha - email não existe
     {
       description: "Email inexistente",
       email: "emailinexistente@laboratoriodoredator.com",
-      turma: "Turma A",
+      turma: "A", // Formato normalizado
       expectedResult: 'email_not_found'
     },
     // Casos de falha - turma incorreta
     {
       description: "Turma incorreta para email válido",
       email: "abiliode@laboratoriodoredator.com", // Este aluno está na Turma A
-      turma: "Turma B", // Mas tentando logar na Turma B
+      turma: "B", // Mas tentando logar na Turma B (formato normalizado)
       expectedResult: 'wrong_class'
     }
   ];

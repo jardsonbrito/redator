@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Minus, Eye, Users, CreditCard, History } from 'lucide-react';
+import { TODAS_TURMAS, formatTurmaDisplay } from '@/utils/turmaUtils';
 
 interface Student {
   id: string;
@@ -32,7 +33,8 @@ interface CreditAudit {
   created_at: string;
 }
 
-const TURMAS = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'];
+// Turmas normalizadas
+const TURMAS = TODAS_TURMAS;
 
 export const CreditManagement = () => {
   const { toast } = useToast();
@@ -339,7 +341,7 @@ export const CreditManagement = () => {
                 <SelectContent>
                   {TURMAS.map((turma) => (
                     <SelectItem key={turma} value={turma}>
-                      {turma}
+                      {formatTurmaDisplay(turma)}
                     </SelectItem>
                   ))}
                 </SelectContent>

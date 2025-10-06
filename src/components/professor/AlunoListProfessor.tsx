@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Search, Users, Mail, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getTurmaColorClasses } from "@/utils/turmaUtils";
 
 interface AlunoVisitante {
   id: string;
@@ -166,15 +167,7 @@ export const AlunoListProfessor = ({ refresh }: AlunoListProfessorProps) => {
   }, [usuarios]);
 
   const getTurmaColor = (turma: string) => {
-    const colors = {
-      "visitante": "bg-orange-100 text-orange-800",
-      "Turma A": "bg-blue-100 text-blue-800",
-      "Turma B": "bg-green-100 text-green-800", 
-      "Turma C": "bg-purple-100 text-purple-800",
-      "Turma D": "bg-orange-100 text-orange-800",
-      "Turma E": "bg-pink-100 text-pink-800"
-    };
-    return colors[turma as keyof typeof colors] || "bg-gray-100 text-gray-800";
+    return getTurmaColorClasses(turma);
   };
 
   const getTipoBadge = (usuario: AlunoVisitante) => {

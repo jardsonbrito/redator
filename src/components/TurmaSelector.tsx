@@ -2,14 +2,10 @@
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { TURMAS_VALIDAS, formatTurmaDisplay, type TurmaLetra } from "@/utils/turmaUtils";
 
-const turmasDisponiveis = [
-  "Turma A",
-  "Turma B", 
-  "Turma C",
-  "Turma D",
-  "Turma E"
-];
+// Lista de turmas (armazenadas como letras)
+const turmasDisponiveis: TurmaLetra[] = [...TURMAS_VALIDAS];
 
 interface TurmaSelectorProps {
   selectedTurmas: string[];
@@ -18,13 +14,13 @@ interface TurmaSelectorProps {
   onPermiteVisitanteChange?: (permite: boolean) => void;
 }
 
-export const TurmaSelector = ({ 
-  selectedTurmas, 
-  onTurmasChange, 
+export const TurmaSelector = ({
+  selectedTurmas,
+  onTurmasChange,
   permiteeVisitante = false,
-  onPermiteVisitanteChange 
+  onPermiteVisitanteChange
 }: TurmaSelectorProps) => {
-  const handleTurmaChange = (turma: string, checked: boolean) => {
+  const handleTurmaChange = (turma: TurmaLetra, checked: boolean) => {
     if (checked) {
       onTurmasChange([...selectedTurmas, turma]);
     } else {
@@ -65,7 +61,7 @@ export const TurmaSelector = ({
                 onCheckedChange={(checked) => handleTurmaChange(turma, !!checked)}
               />
               <Label htmlFor={turma} className="text-sm">
-                {turma}
+                {formatTurmaDisplay(turma)}
               </Label>
             </div>
           ))}

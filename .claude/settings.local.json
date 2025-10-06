@@ -35,7 +35,9 @@
       "Bash(cat:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(pbcopy)",
+      "Bash(open \"https://supabase.com/dashboard/project/kgmxntpmvlnbftjqtyxx/sql/new\")"
     ]
   },
   "enableAllProjectMcpServers": true,

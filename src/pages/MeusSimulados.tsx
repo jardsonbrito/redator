@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { useToast } from "@/hooks/use-toast";
+import { getTurmaCode } from "@/utils/turmaUtils";
 import { RedacaoAnotacaoVisual } from "@/components/corretor/RedacaoAnotacaoVisual";
 
 // Função para verificar se deve mostrar as notas
@@ -50,14 +51,7 @@ const MeusSimulados = () => {
   
   let turmaUsuario = "visitante";
   if (userType === "aluno" && alunoTurma) {
-    const turmasMap = {
-      "Turma A": "LRA2025",
-      "Turma B": "LRB2025", 
-      "Turma C": "LRC2025",
-      "Turma D": "LRD2025",
-      "Turma E": "LRE2025"
-    };
-    turmaUsuario = turmasMap[alunoTurma as keyof typeof turmasMap] || "visitante";
+    turmaUsuario = getTurmaCode(alunoTurma);
   }
 
   const { data: redacoesCorrigidas, isLoading } = useQuery({

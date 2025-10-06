@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeTurmaToLetter } from '@/utils/turmaUtils';
 import type {
   EtapaEstudo,
   AulaDiario,
@@ -21,6 +22,16 @@ const converterNota1000ParaNota10 = (nota: number): number => {
 };
 
 const calcularMediaOnline = (
+  frequencia: number,
+  participacao: number,
+  redacoes: number,
+  lousas: number,
+  simulados: number
+): number => {
+  return (frequencia + participacao + redacoes + lousas + simulados) / 5;
+};
+
+const calcularNovaMediaFinal = (
   frequencia: number,
   participacao: number,
   redacoes: number,
@@ -164,6 +175,15 @@ export function useAulasDiario(turma?: string, etapaId?: string) {
   return useQuery({
     queryKey: ['aulas_diario', turma, etapaId],
     queryFn: async () => {
+      // Normalizar turma para busca
+      const turmaNormalizada = normalizeTurmaToLetter(turma) || turma;
+      const possiveisTurmas = [
+        turmaNormalizada,
+        `TURMA ${turmaNormalizada}`,
+        `Turma ${turmaNormalizada}`,
+        `turma ${turmaNormalizada}`
+      ];
+
       let query = supabase
         .from('aulas_diario')
         .select(`
@@ -175,17 +195,17 @@ export function useAulasDiario(turma?: string, etapaId?: string) {
           )
         `)
         .order('data_aula', { ascending: false });
-      
+
       if (turma) {
-        query = query.eq('turma', turma);
+        query = query.in('turma', possiveisTurmas);
       }
-      
+
       if (etapaId) {
         query = query.eq('etapa_id', etapaId);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
       return data as (AulaDiario & { etapas_estudo: { id: string; nome: string; numero: number } })[];
     },
@@ -357,11 +377,16 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
   return useQuery({
     queryKey: ['diario_aluno', alunoEmail, turma, etapaNumero],
     queryFn: async () => {
-      // Buscar etapas da turma
+      // Normalizar turma para garantir compatibilidade (aceita "A", "Turma A", "TURMA A", etc.)
+      const turmaNormalizada = normalizeTurmaToLetter(turma) || turma;
+
+      console.log('🔍 Buscando diário - turma original:', turma, '→ normalizada:', turmaNormalizada);
+
+      // Buscar etapas da turma (usando a turma normalizada)
       const { data: etapas, error: etapasError } = await supabase
         .from('etapas_estudo')
         .select('*')
-        .eq('turma', turma)
+        .eq('turma', turmaNormalizada)
         .eq('ativo', true)
         .order('numero');
       
@@ -380,11 +405,19 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           continue;
         }
 
-        // Buscar aulas desta etapa
-        const { data: aulas } = await supabase
+        // Buscar aulas desta etapa (usando turma normalizada)
+        // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade com dados antigos
+        const possiveisTurmas = [
+          turmaNormalizada,              // "C"
+          `TURMA ${turmaNormalizada}`,   // "TURMA C"
+          `Turma ${turmaNormalizada}`,   // "Turma C"
+          `turma ${turmaNormalizada}`    // "turma C"
+        ];
+
+        const { data: aulas, error: aulasError } = await supabase
           .from('aulas_diario')
-          .select('id')
-          .eq('turma', turma)
+          .select('id, turma')
+          .in('turma', possiveisTurmas)
           .eq('etapa_id', etapa.id);
 
         // Buscar presença do aluno nessas aulas do diário
@@ -415,18 +448,18 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
 
         try {
           // Buscar aulas virtuais do período da etapa para a turma do aluno
+          // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade
           const { data: aulasVirtuais } = await supabase
             .from('aulas_virtuais')
             .select('id')
             .eq('ativo', true)
             .gte('data_aula', etapa.data_inicio)
             .lt('data_aula', etapa.data_fim + 'T23:59:59')
-            .or(`turmas_autorizadas.cs.{"${turma}"},turmas_autorizadas.cs.{"Todas"}`);
+            .or(`turmas_autorizadas.cs.{"${turmaNormalizada}"},turmas_autorizadas.cs.{"TURMA ${turmaNormalizada}"},turmas_autorizadas.cs.{"Turma ${turmaNormalizada}"},turmas_autorizadas.cs.{"Todas"}`);
 
           if (aulasVirtuais && aulasVirtuais.length > 0) {
             totalAulasVirtuais = aulasVirtuais.length;
-            
-            // Buscar presenças nas aulas virtuais (entrada registrada = presente)
+
             const { data: presencasAulasVirtuais } = await supabase
               .from('presenca_aulas')
               .select('entrada_at')
@@ -437,7 +470,7 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             presencasVirtuais = presencasAulasVirtuais?.length || 0;
           }
         } catch (error) {
-          console.log('⚠️ Erro ao buscar aulas virtuais:', error);
+          console.error('Erro ao buscar aulas virtuais:', error);
         }
 
         // Combinar dados do diário + aulas virtuais
@@ -590,7 +623,7 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           const { data: avaliacaoData, error: avaliacaoError } = await supabase
             .from('avaliacoes_presenciais')
             .select('nota, observacoes')
-            .eq('aluno_email', alunoEmail)
+            .ilike('aluno_email', alunoEmail)
             .eq('etapa_id', etapa.id)
             .maybeSingle();
 
@@ -601,7 +634,7 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             };
           }
         } catch (error) {
-          console.log('⚠️ Erro ao buscar avaliação presencial:', error);
+          console.error('Erro ao buscar avaliação presencial:', error);
         }
 
         // NOVA LÓGICA: Calcular média final
@@ -670,11 +703,15 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
         return null;
       }
 
+      // Normalizar turma para garantir compatibilidade
+      const turmaNormalizada = normalizeTurmaToLetter(turma) || turma;
+      console.log('🔍 Resumo Turma - turma original:', turma, '→ normalizada:', turmaNormalizada);
+
       // Buscar a etapa específica
       const { data: etapas, error: etapasError } = await supabase
         .from('etapas_estudo')
         .select('*')
-        .eq('turma', turma)
+        .eq('turma', turmaNormalizada)
         .eq('numero', etapaNumero)
         .eq('ativo', true)
         .limit(1)
@@ -685,12 +722,12 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
         return null;
       }
 
-      // Buscar todos os alunos dessa turma
+      // Buscar todos os alunos dessa turma (usando turma normalizada)
       const { data: alunos, error: alunosError } = await supabase
         .from('profiles')
         .select('email, nome')
         .eq('user_type', 'aluno')
-        .eq('turma', turma)
+        .eq('turma', turmaNormalizada)
         .eq('ativo', true);
 
       if (alunosError) {
@@ -761,15 +798,23 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
 
       console.log(`📊 Dados carregados em lote!`);
 
-      // Buscar aulas desta etapa UMA VEZ SÓ
+      // Buscar aulas desta etapa UMA VEZ SÓ (usando turma normalizada)
+      // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade com dados antigos
+      const possiveisTurmas = [
+        turmaNormalizada,              // "C"
+        `TURMA ${turmaNormalizada}`,   // "TURMA C"
+        `Turma ${turmaNormalizada}`,   // "Turma C"
+        `turma ${turmaNormalizada}`    // "turma C"
+      ];
+
       const { data: aulas } = await supabase
         .from('aulas_diario')
         .select('id')
-        .eq('turma', turma)
+        .in('turma', possiveisTurmas)
         .eq('etapa_id', etapas.id);
 
       const aulaIds = aulas?.map(a => a.id) || [];
-      
+
       // Buscar TODAS as presenças de UMA VEZ para todos os alunos
       const { data: todasPresencas } = await supabase
         .from('presenca_participacao_diario')
@@ -777,16 +822,15 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
         .in('aluno_email', emailsAlunos)
         .in('aula_id', aulaIds);
 
-      console.log(`🎯 Dados de presença carregados: ${todasPresencas?.length || 0} registros`);
-
       // Buscar aulas virtuais do período da etapa para esta turma (UMA VEZ SÓ)
+      // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade
       const { data: aulasVirtuais } = await supabase
         .from('aulas_virtuais')
         .select('id')
         .eq('ativo', true)
         .gte('data_aula', etapas.data_inicio)
         .lt('data_aula', etapas.data_fim + 'T23:59:59')
-        .or(`turmas_autorizadas.cs.{"${turma}"},turmas_autorizadas.cs.{"Todas"}`);
+        .or(`turmas_autorizadas.cs.{"${turmaNormalizada}"},turmas_autorizadas.cs.{"TURMA ${turmaNormalizada}"},turmas_autorizadas.cs.{"Turma ${turmaNormalizada}"},turmas_autorizadas.cs.{"Todas"}`);
 
       const aulasVirtuaisIds = aulasVirtuais?.map(a => a.id) || [];
       
@@ -966,6 +1010,27 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
 
         console.log(`📊 Resumo para ${aluno.email} - Período: ${etapas.data_inicio} a ${etapas.data_fim}`);
 
+        // Buscar avaliação presencial da etapa
+        let avaliacaoPresencialData: { nota: number | null; observacoes?: string } = { nota: null };
+        try {
+          const { data: avaliacaoData, error: avaliacaoError } = await supabase
+            .from('avaliacoes_presenciais')
+            .select('nota, observacoes')
+            .eq('aluno_email', aluno.email)
+            .eq('etapa_id', etapas.id)
+            .maybeSingle();
+
+          if (!avaliacaoError && avaliacaoData) {
+            avaliacaoPresencialData = {
+              nota: avaliacaoData.nota,
+              observacoes: avaliacaoData.observacoes
+            };
+            console.log(`✅ Avaliação presencial de ${aluno.email}: ${avaliacaoData.nota}`);
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar avaliação presencial:', aluno.email, error);
+        }
+
         // NOVA LÓGICA: Calcular média final com 5 critérios fixos
         // Converter percentuais para notas 0-10
         const frequenciaNota = converterPercentualParaNota(frequenciaData.percentual_frequencia);
@@ -978,13 +1043,19 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
         // Converter notas das lousas (já estão em escala 0-10)
         const lousasNota = lousasData.nota_media;
 
-        // Calcular média final sempre dividindo por 5 (mesmo que algum critério seja 0)
-        const mediaFinal = calcularNovaMediaFinal(
+        // 1. Calcular Média Online (5 critérios)
+        const mediaOnline = calcularMediaOnline(
           frequenciaNota,
           participacaoNota,
           redacoesNota,
           lousasNota,
           simuladosNota
+        );
+
+        // 2. Calcular Média Final: (Média Online + Avaliação Presencial) ÷ 2
+        const mediaFinal = calcularMediaFinalComAvaliacao(
+          mediaOnline,
+          avaliacaoPresencialData.nota
         );
 
         const dadosAluno = {
@@ -994,6 +1065,7 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           simulados: simuladosData,
           exercicios: exerciciosData,
           lousas: lousasData,
+          avaliacao_presencial: avaliacaoPresencialData,
           media_final: Math.max(0, Math.min(10, mediaFinal))
         };
 
@@ -1013,10 +1085,15 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
       }
 
       const totalAlunos = alunos.length;
-      
+
+      // Ordenar alunos por nome em ordem alfabética
+      const alunosOrdenados = resumoAlunos.sort((a, b) =>
+        a.aluno_nome.localeCompare(b.aluno_nome, 'pt-BR', { sensitivity: 'base' })
+      );
+
       return {
         etapa: etapas,
-        alunos: resumoAlunos,
+        alunos: alunosOrdenados,
         estatisticas: {
           totalAlunos,
           frequenciaMedia: totalAlunos > 0 ? totalFrequencia / totalAlunos : 0,
@@ -1091,51 +1168,36 @@ export function useTurmasDisponiveis() {
   return useQuery({
     queryKey: ['turmas_disponiveis'],
     queryFn: async () => {
-      // Buscar turmas que têm redações enviadas
+      // Buscar turmas distintas que existem no sistema
       const { data, error } = await supabase
-        .from('redacoes_enviadas')
+        .from('profiles')
         .select('turma')
+        .eq('user_type', 'aluno')
         .not('turma', 'is', null);
-      
+
       if (error) throw error;
-      
-      // Turmas dinâmicas encontradas nas redações
-      const turmasComRedacoes = [...new Set(data.map(item => item.turma))];
-      
-      // Turmas fixas que sempre devem aparecer
-      const turmasFixas = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E', 'visitante'];
-      
-      // Combinar turmas fixas com as encontradas nas redações, removendo duplicatas
-      const todasTurmas = [...new Set([...turmasFixas, ...turmasComRedacoes])];
-      
-      // Mapeamento de códigos para nomes amigáveis
-      const turmasMap: { [key: string]: string } = {
-        'LRA2025': 'Turma A',
-        'LRB2025': 'Turma B', 
-        'LRC2025': 'Turma C',
-        'LRD2025': 'Turma D',
-        'LRE2025': 'Turma E',
-        'Turma A': 'Turma A',
-        'Turma B': 'Turma B',
-        'Turma C': 'Turma C',
-        'Turma D': 'Turma D',
-        'Turma E': 'Turma E',
-        'visitante': 'Visitantes'
-      };
-      
-      // Primeiro mapear para nomes amigáveis, depois remover duplicatas finais
-      const turmasComNomes = todasTurmas.map(codigo => ({
-        codigo,
-        nome: turmasMap[codigo] || codigo
+
+      // Turmas dinâmicas encontradas
+      const turmasEncontradas = [...new Set(data.map(item => item.turma))];
+
+      // Turmas fixas no formato normalizado (A-E, VISITANTE)
+      const turmasFixas = ['A', 'B', 'C', 'D', 'E', 'VISITANTE'];
+
+      // Combinar turmas fixas com as encontradas, removendo duplicatas
+      const todasTurmasLetras = [...new Set([...turmasFixas, ...turmasEncontradas])];
+
+      // Retornar no formato { codigo: "A", nome: "A" }
+      const turmasFormatadas = todasTurmasLetras.map(letra => ({
+        codigo: letra,
+        nome: letra // Apenas a letra (A, B, C, D, E ou VISITANTE)
       }));
-      
-      // Remover duplicatas baseado no nome final e manter ordem
-      const turmasUnicas = turmasComNomes.filter((turma, index, array) => 
-        array.findIndex(t => t.nome === turma.nome) === index
-      );
-      
-      // Ordenar por nome
-      return turmasUnicas.sort((a, b) => a.nome.localeCompare(b.nome));
+
+      // Ordenar: A-E primeiro, depois VISITANTE
+      return turmasFormatadas.sort((a, b) => {
+        if (a.codigo === 'VISITANTE') return 1;
+        if (b.codigo === 'VISITANTE') return -1;
+        return a.codigo.localeCompare(b.codigo);
+      });
     },
     staleTime: 10 * 60 * 1000, // 10 minutos
   });

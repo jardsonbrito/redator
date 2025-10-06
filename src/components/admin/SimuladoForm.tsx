@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { TODAS_TURMAS, formatTurmaDisplay } from '@/utils/turmaUtils';
 
 interface SimuladoEditando {
   id: string;
@@ -113,9 +114,8 @@ export const SimuladoForm = ({ mode = 'create', simuladoEditando, onSuccess, onC
 
   const temaEscolhido = temas?.find(tema => tema.id === formData.tema_id);
 
-  const turmasDisponiveis = [
-    'Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'
-  ];
+  // Turmas geradas dinamicamente a partir do utils
+  const turmasDisponiveis = TODAS_TURMAS.map(turma => formatTurmaDisplay(turma));
 
   const handleTurmaChange = (turma: string, checked: boolean) => {
     if (checked) {

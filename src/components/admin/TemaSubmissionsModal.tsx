@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface SubmissionData {
   nome_aluno: string;
@@ -76,6 +77,18 @@ export const TemaSubmissionsModal = ({
         if (redacoesError) {
           error = redacoesError;
         } else {
+          // Buscar nomes reais dos profiles
+          const emails = (redacoesSimulado || []).map(r => r.email_aluno).filter(Boolean);
+
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("email, nome")
+            .in("email", emails);
+
+          const profileMap = new Map(
+            (profiles || []).map(p => [p.email, p.nome])
+          );
+
           // Calcular média das duas notas para cada redação
           data = (redacoesSimulado || []).map(r => {
             const nota1 = r.nota_final_corretor_1 ?? null;
@@ -90,8 +103,11 @@ export const TemaSubmissionsModal = ({
               corrigida = true;
             }
 
+            // Usar nome do profile se disponível, senão usar nome_aluno da redação
+            const nomeReal = profileMap.get(r.email_aluno) || r.nome_aluno;
+
             return {
-              nome_aluno: r.nome_aluno,
+              nome_aluno: nomeReal,
               email_aluno: r.email_aluno,
               turma: r.turma || null,
               nota_total: notaFinal,
@@ -114,7 +130,31 @@ export const TemaSubmissionsModal = ({
         if (redacoesError) {
           error = redacoesError;
         } else {
-          data = redacoesRegulares || [];
+          // Buscar nomes reais dos profiles
+          const emails = (redacoesRegulares || []).map(r => r.email_aluno).filter(Boolean);
+
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("email, nome")
+            .in("email", emails);
+
+          const profileMap = new Map(
+            (profiles || []).map(p => [p.email, p.nome])
+          );
+
+          // Mapear para usar nome do profile
+          data = (redacoesRegulares || []).map(r => {
+            const nomeReal = profileMap.get(r.email_aluno) || r.nome_aluno;
+
+            return {
+              nome_aluno: nomeReal,
+              email_aluno: r.email_aluno,
+              turma: r.turma || null,
+              nota_total: r.nota_total,
+              corrigida: r.corrigida,
+              status: r.status
+            };
+          });
         }
       }
 
@@ -213,7 +253,7 @@ export const TemaSubmissionsModal = ({
                       {submission.nome_aluno}
                     </TableCell>
                     <TableCell className="text-gray-700">
-                      {submission.turma || "Sem turma"}
+                      {submission.turma && submission.turma !== "null" ? formatTurmaDisplay(submission.turma) : "—"}
                     </TableCell>
                     {isSimulado ? (
                       <>

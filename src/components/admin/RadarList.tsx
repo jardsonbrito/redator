@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Search, Filter, Trash2, Download } from "lucide-react";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface RadarDado {
   id: string;
@@ -174,7 +175,7 @@ export const RadarList = () => {
             <SelectContent>
               <SelectItem value="all">Todas as turmas</SelectItem>
               {turmasUnicas.map(turma => (
-                <SelectItem key={turma} value={turma}>{turma}</SelectItem>
+                <SelectItem key={turma} value={turma}>{formatTurmaDisplay(turma)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -230,7 +231,7 @@ export const RadarList = () => {
                     <TableCell className="font-medium">{dado.nome_aluno}</TableCell>
                     <TableCell>{dado.email_aluno}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{dado.turma}</Badge>
+                      <Badge variant="secondary">{formatTurmaDisplay(dado.turma)}</Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {dado.titulo_exercicio}

@@ -15,25 +15,13 @@ import { StudentInboxManager } from "@/components/student/StudentInboxManager";
 const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
-  
-  // Mapear nomes de turma para códigos corretos
-  const getTurmaCode = (turmaNome: string) => {
-    const turmasMap = {
-      "Turma A": "LRA2025",
-      "Turma B": "LRB2025", 
-      "Turma C": "LRC2025",
-      "Turma D": "LRD2025",
-      "Turma E": "LRE2025"
-    };
-    return turmasMap[turmaNome as keyof typeof turmasMap] || turmaNome;
-  };
 
   // Determina a turma/código do usuário
   let turmaCode = "Visitante";
   if (studentData.userType === "aluno" && studentData.turma) {
-    turmaCode = studentData.turma; // Usar nome da turma para display, código será mapeado internamente
+    turmaCode = studentData.turma;
   } else if (studentData.userType === "visitante") {
-    turmaCode = "Visitante"; // Corrigido para usar maiúscula consistente
+    turmaCode = "Visitante";
   }
 
   const menuItems = [

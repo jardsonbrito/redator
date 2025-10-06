@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Search, Download, Calendar, Clock, Users } from "lucide-react";
+import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface FrequenciaData {
   id: string;
@@ -45,7 +46,8 @@ export const FrequenciaAulas = () => {
     searchTerm: ""
   });
 
-  const turmasDisponiveis = ["Turma A", "Turma B", "Turma C", "Turma D", "Turma E", "visitante"];
+  // Turmas geradas dinamicamente a partir do utils + visitante
+  const turmasDisponiveis = [...TODAS_TURMAS.map(turma => formatTurmaDisplay(turma)), "visitante"];
 
   const fetchData = async () => {
     try {

@@ -14,6 +14,7 @@ import { RedacaoViewForm } from "./RedacaoViewForm";
 import { RedacaoListTable } from "./RedacaoListTable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 export const RedacaoEnviadaForm = () => {
   const {
@@ -120,7 +121,7 @@ export const RedacaoEnviadaForm = () => {
     return matchNome && matchTurma && matchStatus && matchCorretor && matchMes;
   });
 
-  const turmasDisponiveis = ["LRA2025", "LRB2025", "LRC2025", "LRD2025", "LRE2025", "Visitantes"];
+  const turmasDisponiveis = TODAS_TURMAS; // ['A', 'B', 'C', 'D', 'E', 'VISITANTE']
 
   const handleView = (redacao: RedacaoEnviada) => {
     setSelectedRedacao(redacao);
@@ -178,7 +179,7 @@ export const RedacaoEnviadaForm = () => {
                   <SelectItem value="todas">Todas as turmas</SelectItem>
                   {turmasDisponiveis.map(turma => (
                     <SelectItem key={turma} value={turma}>
-                      {turma}
+                      {formatTurmaDisplay(turma)}
                     </SelectItem>
                   ))}
                 </SelectContent>

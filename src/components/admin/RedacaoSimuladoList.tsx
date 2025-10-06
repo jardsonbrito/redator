@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
+import { TURMAS_VALIDAS, TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 const RedacaoSimuladoList = () => {
   const { toast } = useToast();
@@ -351,7 +352,7 @@ const RedacaoSimuladoList = () => {
     numero_aluno: numerosPorAluno.get(`${redacao.nome_aluno}|${redacao.email_aluno}`) || 0
   }));
 
-  const turmasDisponiveis = ["LRA2025", "LRB2025", "LRC2025", "LRD2025", "LRE2025", "visitante"];
+  const turmasDisponiveis = TODAS_TURMAS; // ['A', 'B', 'C', 'D', 'E', 'VISITANTE']
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -405,7 +406,7 @@ const RedacaoSimuladoList = () => {
                   <SelectItem value="todas">Todas as turmas</SelectItem>
                   {turmasDisponiveis.map(turma => (
                     <SelectItem key={turma} value={turma}>
-                      {turma === "visitante" ? "Visitantes" : turma}
+                      {formatTurmaDisplay(turma)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -510,7 +511,7 @@ const RedacaoSimuladoList = () => {
                     
                     <TableCell>
                       <Badge variant="outline">
-                        {redacao.turma === "visitante" ? "Visitante" : redacao.turma}
+                        {formatTurmaDisplay(redacao.turma)}
                       </Badge>
                     </TableCell>
                     

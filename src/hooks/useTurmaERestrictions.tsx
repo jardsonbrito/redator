@@ -1,9 +1,10 @@
 import { useStudentAuth } from "./useStudentAuth";
+import { normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
 export const useTurmaERestrictions = () => {
   const { studentData } = useStudentAuth();
-  
-  const isTurmaE = studentData.turma === "Turma E";
+
+  const isTurmaE = normalizeTurmaToLetter(studentData.turma) === "E";
   
   const isBlockedResource = (resourceType: string) => {
     if (!isTurmaE) return false;

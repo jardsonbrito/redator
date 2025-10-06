@@ -41,10 +41,17 @@ export default function GestaoEtapas() {
   };
 
   const getStatusBadge = (etapa: EtapaEstudo) => {
+    // Criar data atual com horas zeradas para comparação justa
     const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
     // Usar função utilitária para corrigir timezone das datas
     const inicio = parseDateSafely(etapa.data_inicio);
     const fim = parseDateSafely(etapa.data_fim);
+
+    if (!inicio || !fim) {
+      return <Badge variant="outline">Data inválida</Badge>;
+    }
 
     if (hoje < inicio) {
       return <Badge variant="secondary">Futura</Badge>;

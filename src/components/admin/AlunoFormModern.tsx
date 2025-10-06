@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { AlunoCSVImport } from "./AlunoCSVImport";
 import { AlunoSelfServiceModern } from "./AlunoSelfServiceModern";
 import { AlunoList } from "./AlunoList";
+import { TURMAS_VALIDAS, formatTurmaDisplay, normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
 interface AlunoFormModernProps {
   onSuccess: () => void;
@@ -32,21 +33,19 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
     turma: ''
   });
 
-  const turmas = [
-    "TURMA A",
-    "TURMA B",
-    "TURMA C",
-    "TURMA D",
-    "TURMA E"
-  ];
+  // Lista de turmas usando padrão normalizado
+  const turmas = TURMAS_VALIDAS;
 
   // Preencher formulário quando um aluno for selecionado para edição
   useEffect(() => {
     if (alunoEditando) {
+      // Normaliza a turma do aluno para garantir compatibilidade
+      const turmaNormalizada = normalizeTurmaToLetter(alunoEditando.turma) || '';
+
       setFormData({
         nome: alunoEditando.nome || '',
         email: alunoEditando.email || '',
-        turma: alunoEditando.turma || ''
+        turma: turmaNormalizada
       });
       setActiveSection('cm');
     } else {
@@ -249,7 +248,7 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
                     <SelectContent>
                       {turmas.map((turmaOption) => (
                         <SelectItem key={turmaOption} value={turmaOption}>
-                          {turmaOption}
+                          {formatTurmaDisplay(turmaOption)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -344,7 +343,7 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
                     <SelectContent>
                       {turmas.map((turmaOption) => (
                         <SelectItem key={turmaOption} value={turmaOption}>
-                          {turmaOption}
+                          {formatTurmaDisplay(turmaOption)}
                         </SelectItem>
                       ))}
                     </SelectContent>

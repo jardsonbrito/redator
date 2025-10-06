@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { uploadExerciseCover, getEffectiveCover, validateExercisePeriod } from "@/utils/exerciseUtils";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface Tema {
   id: string;
@@ -76,9 +77,7 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
     'Redação com Frase Temática'
   ];
 
-  const turmasDisponiveis = [
-    'TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E'
-  ];
+  const turmasDisponiveis = TURMAS_VALIDAS;
 
   useEffect(() => {
     fetchTemas();
@@ -626,7 +625,7 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
                         onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
                       />
                       <Label htmlFor={turma} className="text-sm">
-                        {turma}
+                        {formatTurmaDisplay(turma)}
                       </Label>
                     </div>
                   ))}

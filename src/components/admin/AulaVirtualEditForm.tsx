@@ -53,21 +53,13 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
 
   useEffect(() => {
     if (aula) {
-      // Converter turmas do formato do banco "TURMA A" para formato do form "A"
-      const turmasConvertidas = (aula.turmas_autorizadas || []).map(turma => {
-        if (typeof turma === 'string' && turma.startsWith('TURMA ')) {
-          return turma.replace('TURMA ', '');
-        }
-        return turma;
-      });
-
       setFormData({
         titulo: aula.titulo,
         descricao: aula.descricao || "",
         data_aula: aula.data_aula,
         horario_inicio: aula.horario_inicio,
         horario_fim: aula.horario_fim,
-        turmas_autorizadas: turmasConvertidas,
+        turmas_autorizadas: aula.turmas_autorizadas || [],
         imagem_capa_url: aula.imagem_capa_url || "",
         link_meet: aula.link_meet,
         abrir_aba_externa: aula.abrir_aba_externa,
@@ -117,16 +109,13 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
     setLoading(true);
 
     try {
-      // Converter turmas para o formato do banco: "A" -> "TURMA A"
-      const turmasFormatoBanco = formData.turmas_autorizadas.map(turma => `TURMA ${turma}`);
-
       const aulaData = {
         titulo: formData.titulo.trim(),
         descricao: formData.descricao.trim(),
         data_aula: formData.data_aula,
         horario_inicio: formData.horario_inicio,
         horario_fim: formData.horario_fim,
-        turmas_autorizadas: turmasFormatoBanco,
+        turmas_autorizadas: formData.turmas_autorizadas,
         imagem_capa_url: formData.imagem_capa_url.trim() || null,
         link_meet: formData.link_meet.trim(),
         abrir_aba_externa: formData.abrir_aba_externa,
@@ -379,7 +368,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                             }}
                           />
                           <label htmlFor={`turma-${turma}`} className="text-sm font-medium">
-                            Turma {turma}
+                            {turma}
                           </label>
                         </div>
                       ))}

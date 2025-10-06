@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UserPlus } from "lucide-react";
 import { useProfessorAuth } from "@/hooks/useProfessorAuth";
+import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface AlunoFormProfessorProps {
   onSuccess: () => void;
@@ -45,7 +46,7 @@ export const AlunoFormProfessor = ({ onSuccess, onCancel }: AlunoFormProfessorPr
       } catch (error) {
         console.error("Erro ao buscar turmas do professor:", error);
         // Fallback para turmas padrão se houver erro
-        setTurmasDisponíveis(["Turma A", "Turma B", "Turma C", "Turma D", "Turma E"]);
+        setTurmasDisponíveis(TODAS_TURMAS.map(turma => formatTurmaDisplay(turma)));
       }
     };
 

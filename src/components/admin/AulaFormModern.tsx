@@ -14,6 +14,7 @@ import { Upload, FileText } from "lucide-react";
 import { ImageSelector } from "@/components/admin/ImageSelector";
 import { VideoParser, processAulaVideoMetadata, resolveAulaCover } from "@/utils/aulaImageUtils";
 import { VideoThumbnailReprocessor } from "@/components/admin/VideoThumbnailReprocessor";
+import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface AulaEditando {
   id: string;
@@ -100,8 +101,8 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
         ]);
       }
 
-      // Definir turmas padrão
-      setTurmas(['TURMA A', 'TURMA B', 'TURMA C', 'TURMA D', 'TURMA E']);
+      // Definir turmas normalizadas
+      setTurmas(TURMAS_VALIDAS as any);
     };
 
     fetchData();
@@ -684,7 +685,7 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
                             onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
                           />
                           <Label htmlFor={turma} className="text-sm font-medium">
-                            {turma}
+                            {formatTurmaDisplay(turma)}
                           </Label>
                         </div>
                       ))}

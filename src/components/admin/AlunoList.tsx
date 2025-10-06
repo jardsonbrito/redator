@@ -12,6 +12,7 @@ import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VisitanteInfoModal } from "./VisitanteInfoModal";
 import { MigrarVisitanteModal } from "./MigrarVisitanteModal";
+import { formatTurmaDisplay, getTurmaColorClasses } from "@/utils/turmaUtils";
 
 interface Aluno {
   id: string;
@@ -101,21 +102,21 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
       if (todasRedacoes) {
         const visitantesEmails = new Set<string>();
         todasRedacoes.forEach(redacao => {
-          if (redacao.turma === 'visitante') {
+          if (redacao.turma === 'VISITANTE') { // Formato normalizado
             visitantesEmails.add(redacao.email_aluno.toLowerCase());
           }
         });
 
         visitantesEmails.forEach(email => {
-          const redacoesVisitante = todasRedacoes.filter(r => 
-            r.turma === 'visitante' && r.email_aluno.toLowerCase() === email
+          const redacoesVisitante = todasRedacoes.filter(r =>
+            r.turma === 'VISITANTE' && r.email_aluno.toLowerCase() === email
           ).length;
-          
+
           todosUsuarios.push({
             id: `visitante-${email}`,
             nome: 'Visitante',
             email: email,
-            turma: 'visitante',
+            turma: 'VISITANTE', // Formato normalizado
             created_at: new Date().toISOString(),
             ativo: true,
             tipo: 'visitante',
@@ -153,7 +154,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
 
   // Lista fixa de turmas do sistema + visitantes
   const turmasDisponiveis = useMemo(() => {
-    const turmasFixas = ['visitante', 'Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'];
+    // Usando formato normalizado: letras únicas
+    const turmasFixas = ['VISITANTE', 'A', 'B', 'C', 'D', 'E'];
     return turmasFixas;
   }, []);
 
@@ -277,15 +279,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   };
 
   const getTurmaColor = (turma: string) => {
-    const colors = {
-      "visitante": "bg-teal-100 text-teal-800",        // Teal único para visitante
-      "Turma A": "bg-blue-100 text-blue-800",
-      "Turma B": "bg-green-100 text-green-800", 
-      "Turma C": "bg-purple-100 text-purple-800",
-      "Turma D": "bg-orange-100 text-orange-800",
-      "Turma E": "bg-pink-100 text-pink-800"
-    };
-    return colors[turma as keyof typeof colors] || "bg-gray-100 text-gray-800";
+    // Usar função centralizada que normaliza automaticamente
+    return getTurmaColorClasses(turma);
   };
 
   const getTipoBadge = (usuario: Aluno) => {
@@ -324,12 +319,12 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
               Todos ({alunos.length})
             </TabsTrigger>
             {turmasDisponiveis.map((turma) => (
-              <TabsTrigger 
-                key={turma} 
+              <TabsTrigger
+                key={turma}
                 value={turma}
                 className="flex items-center gap-2"
               >
-                {turma === 'visitante' ? 'Visitante' : turma} ({contadorPorTurma[turma] || 0})
+                {formatTurmaDisplay(turma)} ({contadorPorTurma[turma] || 0})
               </TabsTrigger>
             ))}
           </TabsList>
@@ -502,7 +497,7 @@ const AlunoTable = ({
               </TableCell>
               <TableCell className="p-2">
                 <div className={`text-xs px-1 py-0.5 rounded text-center font-medium ${getTurmaColor(aluno.turma)}`}>
-                  {aluno.turma === 'visitante' ? 'V' : aluno.turma?.slice(-1) || ''}
+                  {aluno.turma === 'VISITANTE' ? 'V' : aluno.turma || ''}
                 </div>
               </TableCell>
               <TableCell className="text-center p-2">

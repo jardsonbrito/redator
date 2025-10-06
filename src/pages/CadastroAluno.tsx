@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { UserCheck, Home } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
+import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 export default function CadastroAluno() {
   const [nome, setNome] = useState("");
@@ -18,21 +19,16 @@ export default function CadastroAluno() {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
 
-  const turmas = [
-    "TURMA A",
-    "TURMA B",
-    "TURMA C",
-    "TURMA D",
-    "TURMA E"
-  ];
+  // Lista de turmas usando padrão normalizado
+  const turmas = TURMAS_VALIDAS;
 
   // Pré-selecionar turma se vier na URL
   useEffect(() => {
     const turmaParam = searchParams.get('turma');
     if (turmaParam) {
-      const turmaFormatada = `TURMA ${turmaParam.toUpperCase()}`;
-      if (turmas.includes(turmaFormatada)) {
-        setTurma(turmaFormatada);
+      const turmaLetra = turmaParam.toUpperCase();
+      if (turmas.includes(turmaLetra as any)) {
+        setTurma(turmaLetra);
       }
     }
   }, [searchParams]);
@@ -168,7 +164,7 @@ export default function CadastroAluno() {
                 <SelectContent>
                   {turmas.map((turmaOption) => (
                     <SelectItem key={turmaOption} value={turmaOption}>
-                      {turmaOption}
+                      {formatTurmaDisplay(turmaOption)}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { computeStatus } from '@/utils/aulaStatus';
+import { formatTurmaDisplay } from '@/utils/turmaUtils';
 
 interface AulaCardData {
   id: string;
@@ -254,7 +255,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
               <div className="flex flex-wrap gap-1">
                 {aula.turmas_autorizadas.slice(0, 3).map((turma, index) => (
                   <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                    {turma}
+                    {formatTurmaDisplay(turma)}
                   </Badge>
                 ))}
                 {aula.turmas_autorizadas.length > 3 && (

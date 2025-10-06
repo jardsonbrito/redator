@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserPlus, Upload, Link } from "lucide-react";
 import { AlunoCSVImport } from "./AlunoCSVImport";
 import { AlunoSelfService } from "./AlunoSelfService";
+import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface AlunoFormProps {
   onSuccess: () => void;
@@ -25,13 +26,8 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const turmas = [
-    "Turma A",
-    "Turma B", 
-    "Turma C",
-    "Turma D",
-    "Turma E"
-  ];
+  // Turmas geradas dinamicamente a partir do utils
+  const turmas = TODAS_TURMAS.map(turma => formatTurmaDisplay(turma));
 
   // Preencher formulário quando um aluno for selecionado para edição
   useEffect(() => {

@@ -72,16 +72,13 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
     setLoading(true);
 
     try {
-      // Converter turmas para o formato do banco: "A" -> "TURMA A"
-      const turmasFormatoBanco = formData.turmas_autorizadas.map(turma => `TURMA ${turma}`);
-
       const aulaData = {
         titulo: formData.titulo.trim(),
         descricao: formData.descricao.trim(),
         data_aula: formData.data_aula,
         horario_inicio: formData.horario_inicio,
         horario_fim: formData.horario_fim,
-        turmas_autorizadas: turmasFormatoBanco,
+        turmas_autorizadas: formData.turmas_autorizadas,
         imagem_capa_url: formData.imagem_capa_url.trim() || null,
         link_meet: formData.link_meet.trim(),
         abrir_aba_externa: formData.abrir_aba_externa,
@@ -326,7 +323,7 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
                             }}
                           />
                           <label htmlFor={`turma-${turma}`} className="text-sm font-medium">
-                            Turma {turma}
+                            {turma}
                           </label>
                         </div>
                       ))}

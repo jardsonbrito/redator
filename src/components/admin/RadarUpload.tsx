@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
 export const RadarUpload = () => {
   const [isUploading, setIsUploading] = useState(false);
@@ -52,7 +53,8 @@ export const RadarUpload = () => {
         
         const nome = cols[nomeIdx] || '';
         const email = cols[emailIdx] || '';
-        const turma = cols[turmaIdx] || 'Não informado';
+        const turmaRaw = cols[turmaIdx] || 'Não informado';
+        const turma = normalizeTurmaToLetter(turmaRaw) || turmaRaw; // Normalizar turma
         const tituloExercicio = cols[exercicioIdx] || 'Exercício importado';
         
         // Melhor tratamento de data

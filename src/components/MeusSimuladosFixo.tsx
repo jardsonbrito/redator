@@ -13,6 +13,7 @@ import { ptBR } from "date-fns/locale/pt-BR";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
+import { getTurmaCode } from "@/utils/turmaUtils";
 import html2canvas from "html2canvas";
 
 interface MeusSimuladosFixoProps {
@@ -81,17 +82,6 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
     }
   }
 
-  // Mapear nomes de turma para códigos corretos
-  const getTurmaCode = (turmaNome: string) => {
-    const turmasMap = {
-      "Turma A": "LRA2025",
-      "Turma B": "LRB2025", 
-      "Turma C": "LRC2025",
-      "Turma D": "LRD2025",
-      "Turma E": "LRE2025"
-    };
-    return turmasMap[turmaNome as keyof typeof turmasMap] || turmaNome;
-  };
 
   // Query usando função atualizada que busca por user_id primeiro
   const { data: redacoesRecentes, isLoading } = useQuery({

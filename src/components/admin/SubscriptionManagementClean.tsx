@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Crown, Edit2, History, Calendar, MoreVertical, Trash2, Settings2 } from 'lucide-react';
 import { formatDateSafe, isDateActiveOrFuture, formatDateTimeSafe } from '@/utils/dateUtils';
+import { TURMAS_VALIDAS, formatTurmaDisplay } from '@/utils/turmaUtils';
 
 interface Student {
   id: string;
@@ -41,7 +42,7 @@ interface SubscriptionHistory {
   admin_responsavel: string;
 }
 
-const TURMAS = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'];
+const TURMAS = TURMAS_VALIDAS;
 const PLANOS = ['Liderança', 'Lapidação', 'Largada', 'Bolsista'] as const;
 
 export const SubscriptionManagementClean = () => {
@@ -328,7 +329,7 @@ export const SubscriptionManagementClean = () => {
                 <SelectContent>
                   {TURMAS.map((turma) => (
                     <SelectItem key={turma} value={turma}>
-                      {turma}
+                      {formatTurmaDisplay(turma)}
                     </SelectItem>
                   ))}
                 </SelectContent>

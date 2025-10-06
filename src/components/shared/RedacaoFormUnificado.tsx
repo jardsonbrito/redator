@@ -14,6 +14,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { gerarImagemA4DeTexto, validarImagemGerada, gerarNomeArquivoA4, contarPalavras } from "@/utils/gerarImagemA4";
+import { getTurmaCode } from "@/utils/turmaUtils";
 
 interface RedacaoFormUnificadoProps {
   // Configurações do formulário
@@ -81,14 +82,7 @@ export const RedacaoFormUnificado = ({
     tipoEnvio = "exercicio";
   } else if (userType === "aluno" && alunoTurma) {
     tipoEnvio = "regular";
-    const turmasMap = {
-      "Turma A": "LRA2025",
-      "Turma B": "LRB2025",
-      "Turma C": "LRC2025",
-      "Turma D": "LRD2025",
-      "Turma E": "LRE2025"
-    };
-    turmaCode = turmasMap[alunoTurma] || "visitante";
+    turmaCode = getTurmaCode(alunoTurma);
   }
 
   // Hook para gerenciar créditos

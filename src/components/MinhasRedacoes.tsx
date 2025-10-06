@@ -13,6 +13,7 @@ import { getStatusColor, getStatusLabel } from "@/utils/redacaoUtils";
 import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
 import { useCancelRedacao } from "@/hooks/useCancelRedacao";
 import { X, AlertTriangle } from "lucide-react";
+import { getTurmaCode } from "@/utils/turmaUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -113,14 +114,7 @@ export const MinhasRedacoes = () => {
     try {
       const dados = JSON.parse(alunoData);
       alunoEmail = dados.email;
-      const turmasMap = {
-        "Turma A": "LRA2025",
-        "Turma B": "LRB2025", 
-        "Turma C": "LRC2025",
-        "Turma D": "LRD2025",
-        "Turma E": "LRE2025"
-      };
-      turmaCode = turmasMap[alunoTurma as keyof typeof turmasMap] || "";
+      turmaCode = getTurmaCode(alunoTurma);
     } catch (error) {
       console.error('❌ Erro ao parsear dados do aluno:', error);
     }

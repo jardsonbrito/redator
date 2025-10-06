@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface StudentActivity {
   profile_id: string;
@@ -30,7 +31,8 @@ interface StudentDetail {
   metadata: any;
 }
 
-const TURMAS = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'];
+// Turmas geradas dinamicamente a partir do utils
+const TURMAS = TODAS_TURMAS.map(turma => formatTurmaDisplay(turma));
 
 export const MonitoramentoPage = () => {
   const { toast } = useToast();

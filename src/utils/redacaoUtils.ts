@@ -1,3 +1,4 @@
+import { getTurmaColorClasses } from "./turmaUtils";
 
 export const getStatusColor = (status: string, corrigida: boolean) => {
   if (status === "devolvida") return "bg-orange-100 text-orange-800 border-orange-200";
@@ -17,13 +18,6 @@ export const getStatusLabel = (status: string, corrigida: boolean) => {
 };
 
 export const getTurmaColor = (turma: string) => {
-  const colors = {
-    "Turma A": "bg-blue-100 text-blue-800",
-    "Turma B": "bg-green-100 text-green-800", 
-    "Turma C": "bg-purple-100 text-purple-800",
-    "Turma D": "bg-orange-100 text-orange-800",
-    "Turma E": "bg-pink-100 text-pink-800",
-    "Visitante": "bg-gray-100 text-gray-800"
-  };
-  return colors[turma as keyof typeof colors] || "bg-gray-100 text-gray-800";
+  // Usar função centralizada que aceita qualquer formato de turma
+  return getTurmaColorClasses(turma);
 };

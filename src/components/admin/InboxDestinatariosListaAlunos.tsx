@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Search, Users, User, GraduationCap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 export interface AlunoSelecionado {
   id: string;
@@ -94,14 +95,11 @@ export function InboxDestinatariosListaAlunos({
       }
 
       if (!data || data.length === 0) {
-        // Fallback: usar turmas fixas como no AlunoList
-        return [
-          { codigo: 'turma-a', nome: 'Turma A' },
-          { codigo: 'turma-b', nome: 'Turma B' },
-          { codigo: 'turma-c', nome: 'Turma C' },
-          { codigo: 'turma-d', nome: 'Turma D' },
-          { codigo: 'turma-e', nome: 'Turma E' }
-        ];
+        // Fallback: usar turmas do utils
+        return TURMAS_VALIDAS.map(letra => ({
+          codigo: letra.toLowerCase(),
+          nome: formatTurmaDisplay(letra)
+        }));
       }
 
       // Extrair turmas únicas
@@ -447,7 +445,7 @@ export function InboxDestinatariosListaAlunos({
                           {aluno.turma && (
                             <Badge variant="outline" className="text-xs">
                               <GraduationCap className="h-3 w-3 mr-1" />
-                              {aluno.turma}
+                              {formatTurmaDisplay(aluno.turma)}
                             </Badge>
                           )}
                         </div>
@@ -474,7 +472,7 @@ export function InboxDestinatariosListaAlunos({
                   >
                     <User className="h-3 w-3 mr-1" />
                     {formatNomeCompleto(aluno)}
-                    {aluno.turma && ` (${aluno.turma})`}
+                    {aluno.turma && ` (${formatTurmaDisplay(aluno.turma)})`}
                     <Button
                       variant="ghost"
                       size="sm"

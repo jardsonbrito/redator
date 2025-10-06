@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, Download, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface ImportResult {
   total: number;
@@ -23,9 +24,9 @@ export const AlunoCSVImport = ({ onSuccess }: { onSuccess: () => void }) => {
 
   const downloadTemplate = () => {
     const csvContent = `nome,email,turma
-João da Silva,joao@email.com,Turma A
-Maria Souza,maria@email.com,Turma B
-Pedro Santos,pedro@email.com,Turma C`;
+João da Silva,joao@email.com,A
+Maria Souza,maria@email.com,B
+Pedro Santos,pedro@email.com,C`;
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -83,7 +84,7 @@ Pedro Santos,pedro@email.com,Turma C`;
       const emailIndex = headers.indexOf('email');
       const turmaIndex = headers.indexOf('turma');
 
-      const validTurmas = ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E'];
+      const validTurmas = TURMAS_VALIDAS;
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       
       const alunosParaImportar = [];
@@ -288,7 +289,7 @@ Pedro Santos,pedro@email.com,Turma C`;
           <div className="text-sm text-muted-foreground space-y-1">
             <p>• <strong>nome:</strong> Nome completo do aluno</p>
             <p>• <strong>email:</strong> E-mail único (usado para login)</p>
-            <p>• <strong>turma:</strong> Turma A, Turma B, Turma C, Turma D ou Turma E</p>
+            <p>• <strong>turma:</strong> {TURMAS_VALIDAS.join(', ')}</p>
           </div>
         </div>
 

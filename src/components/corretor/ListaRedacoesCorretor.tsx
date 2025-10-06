@@ -12,6 +12,7 @@ import { Clock, FileText, CheckCircle, User, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
 import { supabase } from "@/integrations/supabase/client";
+import { TODAS_TURMAS } from "@/utils/turmaUtils";
 
 interface ListaRedacoesCorretorProps {
   corretorEmail: string;
@@ -43,7 +44,7 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
 
   // Lista fixa de todas as turmas do sistema
   const turmasDisponiveis = useMemo(() => {
-    return ['Turma A', 'Turma B', 'Turma C', 'Turma D', 'Turma E', 'Visitantes'];
+    return TODAS_TURMAS;
   }, []);
 
   const mesesDisponiveis = useMemo(() => {

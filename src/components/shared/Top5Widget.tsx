@@ -7,24 +7,7 @@ import { Trophy, Medal, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
-
-// Função para extrair a letra da turma 
-const extractTurmaLetter = (turma: string | null | undefined): string => {
-  if (!turma) return 'N/A';
-  
-  // Formato 1: "LRA2025", "LRB2025", etc.
-  const match1 = turma.match(/LR([A-Z])20\d{2}/);
-  if (match1) return match1[1];
-  
-  // Formato 2: "Turma A", "Turma B", etc.
-  const match2 = turma.match(/Turma ([A-Z])/);
-  if (match2) return match2[1];
-  
-  // Formato 3: Apenas a letra "A", "B", etc.
-  if (turma.length === 1 && /[A-Z]/.test(turma)) return turma;
-  
-  return 'N/A';
-};
+import { normalizeTurmaToLetter, formatTurmaDisplay, TURMAS_VALIDAS } from "@/utils/turmaUtils";
 
 // Função para obter as cores da turma
 const getTurmaColors = (turmaLetter: string) => {
@@ -79,8 +62,8 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         turmaFilter = turmaAtivaLetter;
       } else if (variant === "student" && studentData?.turma) {
         // Aluno: filtra apenas sua turma
-        const turmaLetter = extractTurmaLetter(studentData.turma);
-        turmaFilter = turmaLetter !== 'N/A' ? turmaLetter : null;
+        const turmaLetter = normalizeTurmaToLetter(studentData.turma);
+        turmaFilter = turmaLetter || null;
       }
       // Visitantes: sem filtro (turmaFilter = null)
       
@@ -231,9 +214,9 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         rankingTurmaFilter = turmaAtivaLetter;
       } else if (variant === "student" && studentData?.turma) {
         // Aluno: filtra apenas sua turma
-        const turmaLetter = extractTurmaLetter(studentData.turma);
-        rankingTurmaFilter = turmaLetter !== 'N/A' ? turmaLetter : null;
-        
+        const turmaLetter = normalizeTurmaToLetter(studentData.turma);
+        rankingTurmaFilter = turmaLetter || null;
+
         console.log(`👨‍🎓 Student Ranking Filter:`, {
           email: studentData.email,
           turmaBruta: studentData.turma,
@@ -504,7 +487,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
             nome: item.nome_aluno,
             turma: item.turma,
             nota: item.nota_total,
-            turmaExtracted: extractTurmaLetter(item.turma || '')
+            turmaExtracted: normalizeTurmaToLetter(item.turma || '')
           }))
         });
       }
@@ -606,11 +589,11 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                           {aluno.nome_aluno}
                           {variant === "admin" && aluno.turma && (
                             (() => {
-                              const turmaLetter = extractTurmaLetter(aluno.turma);
+                              const turmaLetter = normalizeTurmaToLetter(aluno.turma) || 'N/A';
                               const colors = getTurmaColors(turmaLetter);
                               return (
                                 <span className={`ml-2 px-2 py-1 ${colors.bg} ${colors.text} ${colors.border} border text-xs rounded font-medium`}>
-                                  Turma {turmaLetter}
+                                  {formatTurmaDisplay(aluno.turma)}
                                 </span>
                               );
                             })()
@@ -665,11 +648,11 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="geral">Geral (Todas as turmas)</SelectItem>
-                  <SelectItem value="A">Turma A</SelectItem>
-                  <SelectItem value="B">Turma B</SelectItem>
-                  <SelectItem value="C">Turma C</SelectItem>
-                  <SelectItem value="D">Turma D</SelectItem>
-                  <SelectItem value="E">Turma E</SelectItem>
+                  {TURMAS_VALIDAS.map(letra => (
+                    <SelectItem key={letra} value={letra}>
+                      {formatTurmaDisplay(letra)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <div className="text-xs text-blue-600 mt-1">
@@ -790,11 +773,11 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                         {item.nome_aluno}
                         {variant === "admin" && item.turma && (
                           (() => {
-                            const turmaLetter = extractTurmaLetter(item.turma);
+                            const turmaLetter = normalizeTurmaToLetter(item.turma) || 'N/A';
                             const colors = getTurmaColors(turmaLetter);
                             return (
                               <span className={`ml-2 px-2 py-1 ${colors.bg} ${colors.text} ${colors.border} border text-xs rounded font-medium`}>
-                                Turma {turmaLetter}
+                                {formatTurmaDisplay(item.turma)}
                               </span>
                             );
                           })()
