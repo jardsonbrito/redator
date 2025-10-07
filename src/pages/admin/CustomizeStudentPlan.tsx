@@ -71,7 +71,7 @@ export const CustomizeStudentPlan = () => {
       setBreadcrumbs([
         { label: 'Dashboard', href: '/admin' },
         { label: 'Configurações', href: '/admin?view=configuracoes' },
-        { label: 'Assinatura', href: `/admin?view=configuracoes&tab=assinatura&turma=${encodeURIComponent(student.turma)}` },
+        { label: 'Assinatura', href: `/admin?view=configuracoes&subtab=subscriptions&turma=${encodeURIComponent(student.turma)}` },
         { label: 'Personalização' },
         { label: student.nome }
       ]);
