@@ -759,23 +759,12 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
             try {
               const id = annotation.id;
               console.log('🎯 Clique na anotação (modo leitura):', id);
-              
+
               if (id) {
                 // Mesmo comportamento do clique no ícone de olho
                 destacarRetangulo(id);
                 destacarComentario(id);
               }
-
-              // Mostrar breve toast informativo
-              const comment = annotation.body?.[0]?.value || '';
-              const competencia = annotation.body?.[0]?.purpose || 1;
-              const corCompetencia = CORES_COMPETENCIAS[competencia as keyof typeof CORES_COMPETENCIAS];
-              
-              toast({
-                title: `${corCompetencia?.label || 'Anotação'}`,
-                description: comment,
-                duration: 3000,
-              });
             } catch (error) {
               console.error('Erro ao mostrar anotação (aluno):', error);
             }
