@@ -67,11 +67,19 @@ export const SubscriptionManagementClean = () => {
     reason: ''
   });
 
-  // Verificar parâmetro turma da URL
+  // Verificar parâmetro turma da URL ou sessionStorage
   useEffect(() => {
     const turmaParam = searchParams.get('turma');
     if (turmaParam && TURMAS.includes(decodeURIComponent(turmaParam))) {
-      setSelectedTurma(decodeURIComponent(turmaParam));
+      const turmaNormalizada = decodeURIComponent(turmaParam);
+      setSelectedTurma(turmaNormalizada);
+      sessionStorage.setItem('last_selected_turma', turmaNormalizada);
+    } else {
+      // Tentar recuperar última turma selecionada do sessionStorage
+      const lastTurma = sessionStorage.getItem('last_selected_turma');
+      if (lastTurma && TURMAS.includes(lastTurma)) {
+        setSelectedTurma(lastTurma);
+      }
     }
   }, [searchParams]);
 
@@ -322,7 +330,13 @@ export const SubscriptionManagementClean = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Selecionar Turma</Label>
-              <Select value={selectedTurma} onValueChange={setSelectedTurma}>
+              <Select
+                value={selectedTurma}
+                onValueChange={(value) => {
+                  setSelectedTurma(value);
+                  sessionStorage.setItem('last_selected_turma', value);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma turma" />
                 </SelectTrigger>

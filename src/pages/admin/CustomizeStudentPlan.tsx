@@ -65,12 +65,15 @@ export const CustomizeStudentPlan = () => {
   // Configurar breadcrumbs dinâmicos baseados no contexto do aluno
   useEffect(() => {
     if (student) {
+      // Salvar turma em sessionStorage para manter estado ao voltar
+      sessionStorage.setItem('last_selected_turma', student.turma);
+
       setBreadcrumbs([
         { label: 'Dashboard', href: '/admin' },
         { label: 'Configurações', href: '/admin?view=configuracoes' },
-        { label: 'Assinatura' }, // sem href - não clicável
-        { label: 'Personalização' }, // sem href - não clicável
-        { label: student.nome } // sem href - não clicável
+        { label: 'Assinatura', href: `/admin?view=configuracoes&tab=assinatura&turma=${encodeURIComponent(student.turma)}` },
+        { label: 'Personalização' },
+        { label: student.nome }
       ]);
     }
   }, [student, setBreadcrumbs]);
