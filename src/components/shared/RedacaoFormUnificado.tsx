@@ -272,9 +272,18 @@ export const RedacaoFormUnificado = ({
       let redacaoUrl = null;
       let imagemGeradaUrl = null;
 
+      // Função para sanitizar nome de arquivo
+      const sanitizeFileName = (name: string): string => {
+        return name
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')     // Remove acentos
+          .replace(/[^a-zA-Z0-9_.-]/g, '_');   // Substitui caracteres inválidos por "_"
+      };
+
       // Upload do arquivo se manuscrita
       if (tipoRedacao === "manuscrita" && redacaoManuscrita) {
-        const fileName = `redacao_${Date.now()}_${redacaoManuscrita.name}`;
+        const sanitizedName = sanitizeFileName(redacaoManuscrita.name);
+        const fileName = `redacao_${Date.now()}_${sanitizedName}`;
         const bucketName = 'redacoes-manuscritas';
 
         const { error: uploadError } = await supabase.storage

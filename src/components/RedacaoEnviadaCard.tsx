@@ -28,6 +28,7 @@ interface RedacaoEnviadaCardProps {
     frase_tematica: string;
     redacao_texto: string;
     redacao_manuscrita_url?: string | null;
+    redacao_imagem_gerada_url?: string | null;
     data_envio: string;
     nota_c1?: number | null;
     nota_c2?: number | null;
@@ -76,6 +77,8 @@ interface RedacaoEnviadaCardProps {
     audio_url_corretor_2?: string | null;
     corretor_id_1?: string | null;
     corretor_id_2?: string | null;
+    corretor_id_real?: string | null;
+    original_id?: string;
     // Campos da tabela real
     c1_corretor_1?: number | null;
     c1_corretor_2?: number | null;
@@ -429,33 +432,64 @@ export const RedacaoEnviadaCard = ({
                 </div>
               </div>
             )}
-
-            {/* Player de áudio do corretor - logo após as notas */}
-            {/* Lógica: só exibe áudio se este card corresponder ao corretor que gravou */}
-            {(() => {
-              // Determinar qual campo de áudio usar baseado no corretor
-              const audioUrl = redacao.corretor_numero === 1 
-                ? redacao.audio_url_corretor_1 
-                : redacao.corretor_numero === 2 
-                  ? redacao.audio_url_corretor_2 
-                  : redacao.audio_url; // Fallback para compatibilidade
-
-              if (audioUrl) {
-                return (
-                  <div className="pt-4 border-t border-primary/20">
-                    <AudioPlayerAluno 
-                      audioUrl={audioUrl} 
-                      corretorNome={redacao.corretor_numero === 1 ? "Corretor 1" : redacao.corretor_numero === 2 ? "Corretor 2" : "Corretor"}
-                      isStudentView={true}
-                    />
-                  </div>
-                );
-              }
-              return null;
-            })()}
           </CardContent>
         </Card>
       )}
+
+      {/* Player de áudio do corretor - CARD SEPARADO que aparece sempre que houver áudio */}
+      {(() => {
+        // Determinar qual campo de áudio usar - verificar todos os campos possíveis
+        let audioUrl = null;
+        let corretorNome = "Corretor";
+
+        // Para simulados com corretor_numero definido
+        if (redacao.corretor_numero === 1 && redacao.audio_url_corretor_1) {
+          audioUrl = redacao.audio_url_corretor_1;
+          corretorNome = "Corretor 1";
+        } else if (redacao.corretor_numero === 2 && redacao.audio_url_corretor_2) {
+          audioUrl = redacao.audio_url_corretor_2;
+          corretorNome = "Corretor 2";
+        }
+        // Para redações regulares ou quando corretor_numero não está definido
+        else {
+          // Tentar audio_url_corretor_1 primeiro (mais comum em redações regulares)
+          if (redacao.audio_url_corretor_1) {
+            audioUrl = redacao.audio_url_corretor_1;
+            corretorNome = redacao.corretor || "Corretor";
+          }
+          // Depois audio_url_corretor_2
+          else if (redacao.audio_url_corretor_2) {
+            audioUrl = redacao.audio_url_corretor_2;
+            corretorNome = redacao.corretor || "Corretor";
+          }
+          // Fallback para audio_url (campo legado)
+          else if (redacao.audio_url) {
+            audioUrl = redacao.audio_url;
+            corretorNome = redacao.corretor || "Corretor";
+          }
+        }
+
+        if (audioUrl) {
+          return (
+            <Card className="border-primary/20 bg-amber-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg text-primary">
+                  <Volume2 className="w-5 h-5" />
+                  Comentário do Corretor
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AudioPlayerAluno
+                  audioUrl={audioUrl}
+                  corretorNome={corretorNome}
+                  isStudentView={true}
+                />
+              </CardContent>
+            </Card>
+          );
+        }
+        return null;
+      })()}
 
       {/* Área de exibição da redação - SEGUNDA NA ORDEM */}
       <Card className="border-primary/20">
@@ -471,6 +505,7 @@ export const RedacaoEnviadaCard = ({
             {(() => {
               const temCorrecaoExterna = correcao1 || correcao2;
               const redacaoFoiManuscrita = redacao.redacao_manuscrita_url;
+              const redacaoTemImagemGerada = redacao.redacao_imagem_gerada_url;
 
               // Se há correção externa e redação foi manuscrita, mostrar apenas a correção
               if (temCorrecaoExterna && redacaoFoiManuscrita) {
@@ -494,12 +529,15 @@ export const RedacaoEnviadaCard = ({
                 );
               }
 
-              // Se redação foi manuscrita e corrigida, exibir visualizador interativo (aluno)
-              if (redacaoFoiManuscrita && redacao.corrigida) {
+              // Se redação foi manuscrita OU tem imagem gerada (digitada convertida) e está corrigida, exibir visualizador interativo
+              if ((redacaoFoiManuscrita || redacaoTemImagemGerada) && redacao.corrigida) {
+                // Priorizar imagem gerada (redação digitada convertida), senão usar manuscrita
+                const imagemParaExibir = redacaoTemImagemGerada || redacao.redacao_manuscrita_url;
+
                 return (
                   <div className="space-y-4">
                     <RedacaoAnotacaoVisual
-                      imagemUrl={redacao.redacao_manuscrita_url as string}
+                      imagemUrl={imagemParaExibir as string}
                       redacaoId={(() => {
                         const finalId = redacao.original_id || redacao.id.replace('-corretor1', '').replace('-corretor2', '');
                         return finalId;

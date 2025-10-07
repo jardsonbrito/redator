@@ -21,6 +21,7 @@ interface RedacaoRegular {
   frase_tematica: string;
   redacao_texto: string;
   redacao_manuscrita_url?: string | null;
+  redacao_imagem_gerada_url?: string | null;
   data_envio: string;
   nome_aluno: string;
   email_aluno: string;

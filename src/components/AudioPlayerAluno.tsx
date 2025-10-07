@@ -136,11 +136,6 @@ export const AudioPlayerAluno = ({ audioUrl, corretorNome, corretorAvatar, isStu
   if (isStudentView) {
     return (
       <div className="space-y-3">
-        {/* Texto "Comentário do corretor" acima do player */}
-        <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-          <span>Comentário do corretor</span>
-        </div>
-        
         {/* Player de áudio */}
         <div className="audio-player-aluno flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.1)] max-w-[420px] w-full border border-gray-100">
           <audio
