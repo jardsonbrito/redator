@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AulaGravadaCardData {
   id: string;
@@ -61,6 +62,18 @@ export const AulaGravadaCardPadrao = ({
   const getCoverImage = () => {
     // Prioritizar cover específico, depois thumbnail do vídeo, depois placeholder
     if (aula.cover_url) return aula.cover_url;
+
+    // Se houver cover_file_path, gerar URL pública do storage
+    if (aula.cover_file_path) {
+      const { data } = supabase.storage
+        .from('aulas')
+        .getPublicUrl(aula.cover_file_path);
+
+      // Add cache busting if we have creation timestamp
+      const cacheBuster = aula.criado_em ? `?v=${new Date(aula.criado_em).getTime()}` : '';
+      return data.publicUrl + cacheBuster;
+    }
+
     if (aula.video_thumbnail_url) return aula.video_thumbnail_url;
     return "/placeholders/aula-cover.png";
   };

@@ -222,13 +222,16 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
     setLoading(true);
 
     try {
+      let finalCoverUrl = coverUrl;
       let finalCoverUploadPath = coverUploadPath;
-      
+
       // Upload da nova capa se houver arquivo
       if (coverFile) {
-        const uploadedPath = await uploadExerciseCover(coverFile);
-        if (uploadedPath) {
-          finalCoverUploadPath = uploadedPath;
+        const uploadedUrl = await uploadExerciseCover(coverFile);
+        if (uploadedUrl) {
+          // Quando faz upload, a URL completa vai para cover_url
+          finalCoverUrl = uploadedUrl;
+          finalCoverUploadPath = uploadedUrl;
         }
       }
 
@@ -237,7 +240,7 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
         tipo,
         link_forms: tipo === 'Google Forms' ? linkForms : null,
         tema_id: tipo === 'Redação com Frase Temática' ? temaId : null,
-        cover_url: coverUrl || null,
+        cover_url: finalCoverUrl || null,
         cover_upload_path: finalCoverUploadPath || null,
         // Manter compatibilidade com campo legado
         imagem_capa_url: tipo === 'Google Forms' ? (imagemCapaUrl || null) : null,
