@@ -98,9 +98,9 @@ export const RedacaoEnviadaForm = () => {
       return filtroTurma === redacao.turma;
     })();
     
-    const matchStatus = filtroStatus === "todas" || 
-      (filtroStatus === "pendentes" && (!redacao.status || redacao.status === 'pendente')) ||
-      (filtroStatus === "incompletas" && redacao.status === 'incompleta') ||
+    const matchStatus = filtroStatus === "todas" ||
+      (filtroStatus === "aguardando" && !redacao.corrigida && redacao.status !== 'incompleta' && redacao.status !== 'devolvida') ||
+      (filtroStatus === "incompletas" && (redacao.status === 'incompleta' || redacao.status_corretor_1 === 'incompleta' || redacao.status_corretor_2 === 'incompleta')) ||
       (filtroStatus === "corrigidas" && (redacao.status === 'corrigida' || redacao.corrigida));
     
     const matchCorretor = filtroCorretor === "todos" || 
@@ -194,7 +194,7 @@ export const RedacaoEnviadaForm = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="pendentes">Pendentes</SelectItem>
+                  <SelectItem value="aguardando">Aguardando</SelectItem>
                   <SelectItem value="incompletas">Incompletas</SelectItem>
                   <SelectItem value="corrigidas">Corrigidas</SelectItem>
                 </SelectContent>

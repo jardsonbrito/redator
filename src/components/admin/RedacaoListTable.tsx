@@ -16,6 +16,7 @@ import {
 import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { getStatusColor, getTurmaColor } from "@/utils/redacaoUtils";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -143,7 +144,7 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                       <span className="font-medium text-sm">{redacao.nome_aluno}</span>
                       <span className="text-xs text-muted-foreground">—</span>
                       <Badge className={`${getTurmaColor(redacao.turma)} text-xs px-1 py-0.5`}>
-                        {redacao.turma}
+                        {formatTurmaDisplay(redacao.turma)}
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground ml-6" title={redacao.frase_tematica}>
@@ -185,7 +186,8 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                   <Badge className={`${getStatusColor(redacao.status, redacao.corrigida)} text-xs px-1 py-0.5`}>
                     {redacao.status === 'devolvida' ? "Devolvida" :
                      redacao.status_corretor_1 === 'incompleta' || redacao.status_corretor_2 === 'incompleta' ? "Incompleta" :
-                     redacao.corrigida ? "Corrigida" : "Aguardando"}
+                     redacao.corrigida ? "Corrigida" :
+                     redacao.status === 'pendente' ? "Aguardando" : "Aguardando"}
                   </Badge>
                 </TableCell>
                 <TableCell className="w-[8%]">

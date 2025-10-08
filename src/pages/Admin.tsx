@@ -416,19 +416,6 @@ const Admin = () => {
         badgeVariant: "outline"
       };
 
-      // Corretores
-      const { data: dadosCorretores } = await supabase
-        .from('corretores')
-        .select('ativo');
-
-      const corretoresAtivos = dadosCorretores?.filter(c => c.ativo).length || 0;
-      const corretoresInativos = dadosCorretores?.filter(c => !c.ativo).length || 0;
-      data.corretores = {
-        info: `${corretoresAtivos} disponíveis`,
-        badge: corretoresInativos > 0 ? `${corretoresInativos} indisponíveis` : undefined,
-        badgeVariant: "outline"
-      };
-
       // Diário Online - adicionar informação básica
       data.diario = {
         info: "Sistema ativo",
@@ -438,10 +425,10 @@ const Admin = () => {
       // Corretores - apenas quantidade disponível
       const { data: corretores } = await supabase
         .from('corretores')
-        .select('id, ativo')
+        .select('id, ativo, visivel_no_formulario')
         .eq('ativo', true);
 
-      const corretoresDisponiveis = corretores?.length || 0;
+      const corretoresDisponiveis = corretores?.filter(c => c.visivel_no_formulario).length || 0;
 
       data.corretores = {
         info: `${corretoresDisponiveis} ${corretoresDisponiveis === 1 ? 'corretor disponível' : 'corretores disponíveis'}`,
