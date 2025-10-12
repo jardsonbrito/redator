@@ -39,12 +39,15 @@ const TIPO_OPTIONS = [
 
 export const useAdminTemasFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Estados dos filtros
   const [fraseFilter, setFraseFilter] = useState(searchParams.get('q') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'todos');
   const [tipoFilter, setTipoFilter] = useState(searchParams.get('tipo') || 'todos');
-  
+  const [orderBy, setOrderBy] = useState<'recente' | 'mais_redacoes'>(
+    (searchParams.get('order') as 'recente' | 'mais_redacoes') || 'recente'
+  );
+
   // Debounce para a busca
   const debouncedFraseFilter = useDebounce(fraseFilter, 400);
 
@@ -53,13 +56,12 @@ export const useAdminTemasFilters = () => {
     queryKey: ['admin-temas-all'],
     queryFn: async (): Promise<AdminTema[]> => {
       try {
-        // Buscar todos os temas
+        // Buscar todos os temas ordenados pela data original de publicação
         const { data: temasData, error: temasError } = await supabase
           .from('temas')
           .select('*')
-          .order('publicado_em', { ascending: false, nullsFirst: false })
-          .order('published_at', { ascending: false, nullsFirst: false })
-          .order('id', { ascending: false });
+          .order('published_at', { ascending: false, nullsFirst: false }) // Data original de publicação
+          .order('id', { ascending: false }); // Fallback para temas sem published_at
 
         if (temasError) throw temasError;
 
@@ -82,6 +84,30 @@ export const useAdminTemasFilters = () => {
         return [];
       }
     },
+  });
+
+  // Buscar contagem de redações por tema (só quando necessário)
+  const { data: redacoesCount } = useQuery({
+    queryKey: ['redacoes-count-por-tema-admin'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('frase_tematica');
+
+      if (error) throw error;
+
+      // Contar redações por frase temática
+      const countMap: Record<string, number> = {};
+      data?.forEach((redacao) => {
+        const frase = redacao.frase_tematica;
+        if (frase) {
+          countMap[frase] = (countMap[frase] || 0) + 1;
+        }
+      });
+
+      return countMap;
+    },
+    enabled: orderBy === 'mais_redacoes', // Só busca quando necessário
   });
 
   // Lista de sugestões para autocomplete
@@ -142,8 +168,19 @@ export const useAdminTemasFilters = () => {
       });
     }
 
+    // Ordenação
+    if (orderBy === 'mais_redacoes' && redacoesCount) {
+      // Ordenar por quantidade de redações (maior para menor)
+      filtered.sort((a, b) => {
+        const countA = redacoesCount[a.frase_tematica] || 0;
+        const countB = redacoesCount[b.frase_tematica] || 0;
+        return countB - countA;
+      });
+    }
+    // Se orderBy === 'recente', já está ordenado pela query
+
     return filtered;
-  }, [allTemas, debouncedFraseFilter, statusFilter, tipoFilter]);
+  }, [allTemas, debouncedFraseFilter, statusFilter, tipoFilter, orderBy, redacoesCount]);
 
   // Sincronizar filtros com URL
   useEffect(() => {
@@ -161,13 +198,17 @@ export const useAdminTemasFilters = () => {
       params.set('tipo', tipoFilter);
     }
 
+    if (orderBy && orderBy !== 'recente') {
+      params.set('order', orderBy);
+    }
+
     const newSearch = params.toString();
     const currentSearch = searchParams.toString();
 
     if (newSearch !== currentSearch) {
       setSearchParams(params, { replace: true });
     }
-  }, [debouncedFraseFilter, statusFilter, tipoFilter, searchParams, setSearchParams]);
+  }, [debouncedFraseFilter, statusFilter, tipoFilter, orderBy, searchParams, setSearchParams]);
 
   // Handlers
   const updateFraseFilter = useCallback((value: string) => {
@@ -182,16 +223,22 @@ export const useAdminTemasFilters = () => {
     setTipoFilter(tipo);
   }, []);
 
+  const updateOrderBy = useCallback((order: 'recente' | 'mais_redacoes') => {
+    setOrderBy(order);
+  }, []);
+
   const clearFilters = useCallback(() => {
     setFraseFilter('');
     setStatusFilter('todos');
     setTipoFilter('todos');
+    setOrderBy('recente');
   }, []);
 
   const hasActiveFilters =
     debouncedFraseFilter.trim() ||
     (statusFilter && statusFilter !== 'todos') ||
-    (tipoFilter && tipoFilter !== 'todos');
+    (tipoFilter && tipoFilter !== 'todos') ||
+    (orderBy && orderBy !== 'recente');
 
   return {
     // Dados
@@ -203,6 +250,7 @@ export const useAdminTemasFilters = () => {
     fraseFilter,
     statusFilter,
     tipoFilter,
+    orderBy,
     statusOptions: STATUS_OPTIONS,
     tipoOptions: TIPO_OPTIONS,
     fraseSuggestions,
@@ -212,6 +260,7 @@ export const useAdminTemasFilters = () => {
     updateFraseFilter,
     updateStatusFilter,
     updateTipoFilter,
+    updateOrderBy,
     clearFilters,
   };
 };

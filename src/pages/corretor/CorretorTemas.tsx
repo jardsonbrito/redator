@@ -5,14 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { TemaCardPadrao } from "@/components/shared/TemaCard";
 import { FormattedText } from "@/components/shared/FormattedText";
 import { getTemaMotivatorIVUrl } from "@/utils/temaImageUtils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const CorretorTemas = () => {
   const [selectedTema, setSelectedTema] = useState<any>(null);
+  const [orderBy, setOrderBy] = useState<'recente' | 'mais_redacoes'>('recente');
 
+  // Buscar temas publicados
   const { data: temas, isLoading, error } = useQuery({
     queryKey: ['temas-corretor'],
     queryFn: async () => {
@@ -20,12 +23,54 @@ const CorretorTemas = () => {
         .from('temas')
         .select('*')
         .eq('status', 'publicado')
-        .order('publicado_em', { ascending: false });
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: false }); // Fallback para temas sem published_at
 
       if (error) throw error;
       return data || [];
     }
   });
+
+  // Buscar contagem de redações por tema
+  const { data: redacoesCount } = useQuery({
+    queryKey: ['redacoes-count-por-tema'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('frase_tematica');
+
+      if (error) throw error;
+
+      // Contar redações por frase temática
+      const countMap: Record<string, number> = {};
+      data?.forEach((redacao) => {
+        const frase = redacao.frase_tematica;
+        if (frase) {
+          countMap[frase] = (countMap[frase] || 0) + 1;
+        }
+      });
+
+      return countMap;
+    },
+    enabled: orderBy === 'mais_redacoes' // Só busca quando necessário
+  });
+
+  // Ordenar temas baseado no filtro selecionado
+  const temasOrdenados = useMemo(() => {
+    if (!temas) return [];
+
+    if (orderBy === 'mais_redacoes' && redacoesCount) {
+      // Ordenar por quantidade de redações (maior para menor)
+      return [...temas].sort((a, b) => {
+        const countA = redacoesCount[a.frase_tematica] || 0;
+        const countB = redacoesCount[b.frase_tematica] || 0;
+        return countB - countA;
+      });
+    }
+
+    // Ordenação padrão (recente) já vem da query
+    return temas;
+  }, [temas, orderBy, redacoesCount]);
 
   if (isLoading) {
     return (
@@ -35,7 +80,16 @@ const CorretorTemas = () => {
             <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
             <p className="text-gray-600">Visualização dos temas disponíveis</p>
           </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="space-y-3">
+              <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
+              <div className="px-4 space-y-3">
+                <div className="h-5 w-20 bg-muted rounded animate-pulse" />
+                <div className="h-6 w-full bg-muted rounded animate-pulse" />
+                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                <div className="h-9 w-full bg-muted rounded animate-pulse" />
+              </div>
+            </div>
             <div className="space-y-3">
               <div className="w-full aspect-video rounded-xl bg-muted animate-pulse" />
               <div className="px-4 space-y-3">
@@ -82,12 +136,27 @@ const CorretorTemas = () => {
   return (
     <CorretorLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
-          <p className="text-gray-600">Visualização dos temas disponíveis</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Temas</h1>
+            <p className="text-gray-600">Visualização dos temas disponíveis</p>
+          </div>
+
+          {/* Filtro de ordenação */}
+          <div className="w-full sm:w-auto">
+            <Select value={orderBy} onValueChange={(value) => setOrderBy(value as 'recente' | 'mais_redacoes')}>
+              <SelectTrigger className="w-full sm:w-[250px]">
+                <SelectValue placeholder="Ordenar por..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recente">Mais recentes</SelectItem>
+                <SelectItem value="mais_redacoes">Mais redações</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {(!temas || temas.length === 0) ? (
+        {(!temasOrdenados || temasOrdenados.length === 0) ? (
           <Card>
             <CardContent className="text-center py-12">
               <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -100,8 +169,8 @@ const CorretorTemas = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {temas?.map((tema) => (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {temasOrdenados.map((tema) => (
               <TemaCardPadrao
                 key={tema.id}
                 tema={tema}

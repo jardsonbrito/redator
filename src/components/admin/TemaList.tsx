@@ -29,6 +29,7 @@ export const TemaList = () => {
     fraseFilter,
     statusFilter,
     tipoFilter,
+    orderBy,
     statusOptions,
     tipoOptions,
     fraseSuggestions,
@@ -36,6 +37,7 @@ export const TemaList = () => {
     updateFraseFilter,
     updateStatusFilter,
     updateTipoFilter,
+    updateOrderBy,
     clearFilters,
   } = useAdminTemasFilters();
 
@@ -225,7 +227,7 @@ export const TemaList = () => {
             />
           </div>
 
-          <div className="w-full sm:w-64">
+          <div className="w-full sm:w-52">
             <Select value={statusFilter} onValueChange={updateStatusFilter}>
               <SelectTrigger className="bg-background border border-input">
                 <SelectValue placeholder="Status" />
@@ -240,7 +242,7 @@ export const TemaList = () => {
             </Select>
           </div>
 
-          <div className="w-full sm:w-64">
+          <div className="w-full sm:w-52">
             <Select value={tipoFilter} onValueChange={updateTipoFilter}>
               <SelectTrigger className="bg-background border border-input">
                 <SelectValue placeholder="Tipo" />
@@ -251,6 +253,18 @@ export const TemaList = () => {
                     {option.label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-full sm:w-52">
+            <Select value={orderBy} onValueChange={(value) => updateOrderBy(value as 'recente' | 'mais_redacoes')}>
+              <SelectTrigger className="bg-background border border-input">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border border-border z-50">
+                <SelectItem value="recente">Mais recentes</SelectItem>
+                <SelectItem value="mais_redacoes">Mais redações</SelectItem>
               </SelectContent>
             </Select>
           </div>

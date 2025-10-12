@@ -60,7 +60,8 @@ export const SimuladoForm = ({ mode = 'create', simuladoEditando, onSuccess, onC
       let query = supabase
         .from('temas')
         .select('*')
-        .order('publicado_em', { ascending: false });
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: false }); // Fallback para temas sem published_at
 
       if (buscaTema) {
         query = query.ilike('frase_tematica', `%${buscaTema}%`);
