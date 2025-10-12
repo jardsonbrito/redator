@@ -1,5 +1,5 @@
-import { ReactNode, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState } from 'react';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
@@ -20,7 +20,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { MoreVertical, Edit, Eye, EyeOff, Trash2, AlertTriangle, FileText } from 'lucide-react';
 import { TemaSubmissionsModal } from '@/components/admin/TemaSubmissionsModal';
@@ -105,11 +104,15 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
   const statusInfo = getStatusInfo(tema);
   const formattedDate = getFormattedDate(tema);
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleExcluir = () => {
     if (actions.onExcluir) {
       actions.onExcluir(tema.id);
     }
+    setDeleteDialogOpen(false);
+    setDropdownOpen(false);
   };
 
   return (
@@ -161,7 +164,7 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
             </div>
 
             {/* Menu de ações */}
-            <DropdownMenu>
+            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -171,16 +174,24 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
                   <MoreVertical className="h-4 w-4 text-gray-600" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
+              <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200" onCloseAutoFocus={(e) => e.preventDefault()}>
                 <DropdownMenuItem
-                  onClick={() => actions.onEditar?.(tema.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setDropdownOpen(false);
+                    actions.onEditar?.(tema.id);
+                  }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Editar
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => actions.onToggleStatus?.(tema.id, tema.status)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setDropdownOpen(false);
+                    actions.onToggleStatus?.(tema.id, tema.status);
+                  }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   {tema.status === 'publicado' ? (
@@ -196,43 +207,27 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => setShowSubmissionsModal(true)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setDropdownOpen(false);
+                    setShowSubmissionsModal(true);
+                  }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Alunos que Enviaram
                 </DropdownMenuItem>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <DropdownMenuItem
-                      onSelect={(e) => e.preventDefault()}
-                      className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-md mx-4 rounded-lg">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                        Confirmar Exclusão
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja excluir este tema? Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                      <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleExcluir}
-                        className="w-full sm:w-auto bg-red-600 hover:bg-red-700 transition-colors"
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setDropdownOpen(false);
+                    setTimeout(() => setDeleteDialogOpen(true), 100);
+                  }}
+                  className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -248,12 +243,38 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
 
       {/* Modal de lista de alunos que enviaram - apenas para admin */}
       {perfil === 'admin' && (
-        <TemaSubmissionsModal
-          isOpen={showSubmissionsModal}
-          onClose={() => setShowSubmissionsModal(false)}
-          fraseTematica={tema.frase_tematica}
-          temaId={tema.id}
-        />
+        <>
+          <TemaSubmissionsModal
+            isOpen={showSubmissionsModal}
+            onClose={() => setShowSubmissionsModal(false)}
+            fraseTematica={tema.frase_tematica}
+            temaId={tema.id}
+          />
+
+          {/* AlertDialog de exclusão - separado do DropdownMenu */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent className="max-w-md mx-4 rounded-lg">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  Confirmar Exclusão
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir este tema? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleExcluir}
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 transition-colors"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
       )}
     </Card>
   );
