@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CorretorTurmasDialog } from "./CorretorTurmasDialog";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
 
 interface Corretor {
   id: string;
@@ -30,6 +32,7 @@ interface Corretor {
   email: string;
   ativo: boolean;
   visivel_no_formulario: boolean;
+  turmas_autorizadas: string[] | null;
   criado_em: string;
   atualizado_em: string;
 }
@@ -42,6 +45,8 @@ interface CorretorListProps {
 export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   const [corretores, setCorretores] = useState<Corretor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [turmasDialogOpen, setTurmasDialogOpen] = useState(false);
+  const [corretorSelecionado, setCorretorSelecionado] = useState<Corretor | null>(null);
   const { toast } = useToast();
 
   const fetchCorretores = async () => {
@@ -96,27 +101,34 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   };
 
   const handleToggleVisibilityInForm = async (corretor: Corretor) => {
-    try {
-      const { error } = await supabase
-        .from("corretores")
-        .update({ visivel_no_formulario: !corretor.visivel_no_formulario })
-        .eq("id", corretor.id);
+    // Se está disponível, tornar indisponível diretamente
+    if (corretor.visivel_no_formulario) {
+      try {
+        const { error } = await supabase
+          .from("corretores")
+          .update({ visivel_no_formulario: false })
+          .eq("id", corretor.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Disponibilidade atualizada!",
-        description: `Corretor agora está ${corretor.visivel_no_formulario ? 'indisponível' : 'disponível'} para seleção.`,
-      });
+        toast({
+          title: "Disponibilidade atualizada!",
+          description: "Corretor agora está indisponível para seleção.",
+        });
 
-      fetchCorretores();
-    } catch (error: any) {
-      console.error("Erro ao alterar visibilidade:", error);
-      toast({
-        title: "Erro ao alterar disponibilidade",
-        description: error.message || "Ocorreu um erro inesperado.",
-        variant: "destructive"
-      });
+        fetchCorretores();
+      } catch (error: any) {
+        console.error("Erro ao alterar visibilidade:", error);
+        toast({
+          title: "Erro ao alterar disponibilidade",
+          description: error.message || "Ocorreu um erro inesperado.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Se está indisponível, abrir dialog para selecionar turmas
+      setCorretorSelecionado(corretor);
+      setTurmasDialogOpen(true);
     }
   };
 
@@ -167,7 +179,7 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                 className="flex items-center justify-between p-4 border rounded-lg"
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold">{corretor.nome_completo}</h3>
                     <Badge variant={corretor.ativo ? "default" : "secondary"}>
                       {corretor.ativo ? "Ativo" : "Inativo"}
@@ -177,6 +189,11 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{corretor.email}</p>
+                  {corretor.visivel_no_formulario && corretor.turmas_autorizadas && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Turmas: {corretor.turmas_autorizadas.map(t => formatTurmaDisplay(t)).join(", ")}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Cadastrado em: {new Date(corretor.criado_em).toLocaleDateString('pt-BR')}
                   </p>
@@ -257,6 +274,15 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
           </div>
         )}
       </CardContent>
+
+      {corretorSelecionado && (
+        <CorretorTurmasDialog
+          open={turmasDialogOpen}
+          onOpenChange={setTurmasDialogOpen}
+          corretor={corretorSelecionado}
+          onSuccess={fetchCorretores}
+        />
+      )}
     </Card>
   );
 };
