@@ -14,7 +14,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { gerarImagemA4DeTexto, validarImagemGerada, gerarNomeArquivoA4, contarPalavras } from "@/utils/gerarImagemA4";
-import { getTurmaCode } from "@/utils/turmaUtils";
+import { getTurmaCode, normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
 interface RedacaoFormUnificadoProps {
   // Configurações do formulário
@@ -121,16 +121,65 @@ export const RedacaoFormUnificado = ({
   }, [userType, fraseTematica, studentData]);
 
   const fetchCorretores = async () => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🚀 RedacaoFormUnificado - BUSCA DE CORRETORES');
+    console.log('═══════════════════════════════════════════════════════');
+
     try {
       const { data, error } = await supabase
         .from('corretores')
-        .select('id, nome_completo, email')
+        .select('id, nome_completo, email, turmas_autorizadas')
         .eq('ativo', true)
         .eq('visivel_no_formulario', true)
         .order('nome_completo');
 
       if (error) throw error;
-      setCorretores(data || []);
+
+      console.log('📦 DADOS RECEBIDOS DO BANCO:', data);
+      console.log('👤 TURMA DO ALUNO (alunoTurma):', alunoTurma);
+      console.log('👤 TURMA DO ALUNO (studentData.turma):', studentData.turma);
+
+      let corretoresFiltrados = data || [];
+
+      // Obter a turma do aluno
+      const turmaAluno = studentData.turma || alunoTurma;
+
+      if (turmaAluno) {
+        // Normalizar a turma do aluno usando a função do turmaUtils
+        const turmaNormalizada = normalizeTurmaToLetter(turmaAluno);
+        console.log('✨ TURMA NORMALIZADA (extraída):', turmaNormalizada);
+
+        if (!turmaNormalizada) {
+          console.log('⚠️ Turma do aluno inválida, mostrando todos os corretores');
+        } else {
+          corretoresFiltrados = corretoresFiltrados.filter(corretor => {
+            // Se turmas_autorizadas é null, o corretor está disponível para todas as turmas
+            if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
+              console.log(`✅ ${corretor.nome_completo} - Disponível para todas as turmas (null/vazio)`);
+              return true;
+            }
+
+            // Normalizar as turmas autorizadas usando a mesma função
+            const turmasNormalizadas = corretor.turmas_autorizadas
+              .map(t => normalizeTurmaToLetter(t))
+              .filter(Boolean);
+
+            console.log(`🔍 ${corretor.nome_completo}:`);
+            console.log(`   - Turmas autorizadas (original):`, corretor.turmas_autorizadas);
+            console.log(`   - Turmas autorizadas (normalizado):`, turmasNormalizadas);
+            console.log(`   - Turma do aluno (normalizada): "${turmaNormalizada}"`);
+
+            // Verificar se a turma do aluno está nas turmas autorizadas
+            const incluido = turmasNormalizadas.includes(turmaNormalizada);
+            console.log(`   - ${incluido ? '✅ INCLUÍDO' : '❌ EXCLUÍDO'}`);
+
+            return incluido;
+          });
+        }
+      }
+
+      console.log('🔍 DEBUG RedacaoFormUnificado - Corretores filtrados:', corretoresFiltrados);
+      setCorretores(corretoresFiltrados);
     } catch (error: any) {
       console.error('Erro ao buscar corretores:', error);
       toast({

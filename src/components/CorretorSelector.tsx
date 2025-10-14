@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, AlertCircle } from "lucide-react";
+import { normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
 interface Corretor {
   id: string;
@@ -36,11 +37,18 @@ export const CorretorSelector = ({
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  console.log('🎯 CorretorSelector RENDERIZADO - turmaAluno:', turmaAluno);
+
   useEffect(() => {
+    console.log('🔄 useEffect DISPARADO - turmaAluno mudou para:', turmaAluno);
     fetchCorretores();
   }, [turmaAluno]);
 
   const fetchCorretores = async () => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🚀 INICIANDO BUSCA DE CORRETORES');
+    console.log('═══════════════════════════════════════════════════════');
+
     try {
       const { data, error } = await supabase
         .from('corretores')
@@ -51,39 +59,46 @@ export const CorretorSelector = ({
 
       if (error) throw error;
 
-      console.log('🔍 DEBUG CorretorSelector - Dados recebidos do banco:', data);
-      console.log('🔍 DEBUG CorretorSelector - Turma do aluno:', turmaAluno);
-      console.log('🔍 DEBUG CorretorSelector - Tipo da turma:', typeof turmaAluno);
-      console.log('🔍 DEBUG CorretorSelector - Turma normalizada:', turmaAluno?.toUpperCase().trim());
+      console.log('📦 DADOS RECEBIDOS DO BANCO:', data);
+      console.log('👤 TURMA DO ALUNO (original):', turmaAluno);
+      console.log('🔤 TIPO DA TURMA:', typeof turmaAluno);
 
       // Filtrar corretores baseado na turma do aluno
       let corretoresFiltrados = data || [];
 
       if (turmaAluno) {
-        // Normalizar a turma do aluno (remover espaços, garantir maiúscula)
-        const turmaNormalizada = turmaAluno.trim().toUpperCase();
+        // Normalizar a turma do aluno usando a função do turmaUtils
+        // Isso converte "Turma A", "TURMA A", "A" -> "A"
+        const turmaNormalizada = normalizeTurmaToLetter(turmaAluno);
+        console.log('✨ TURMA NORMALIZADA (extraída):', turmaNormalizada);
 
-        corretoresFiltrados = corretoresFiltrados.filter(corretor => {
-          // Se turmas_autorizadas é null, o corretor está disponível para todas as turmas
-          if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
-            console.log(`✅ ${corretor.nome_completo} - Disponível para todas as turmas (null/vazio)`);
-            return true;
-          }
+        if (!turmaNormalizada) {
+          console.log('⚠️ Turma do aluno inválida, mostrando todos os corretores');
+        } else {
+          corretoresFiltrados = corretoresFiltrados.filter(corretor => {
+            // Se turmas_autorizadas é null, o corretor está disponível para todas as turmas
+            if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
+              console.log(`✅ ${corretor.nome_completo} - Disponível para todas as turmas (null/vazio)`);
+              return true;
+            }
 
-          // Normalizar as turmas autorizadas (remover espaços, garantir maiúsculas)
-          const turmasNormalizadas = corretor.turmas_autorizadas.map(t => t?.trim().toUpperCase()).filter(Boolean);
+            // Normalizar as turmas autorizadas usando a mesma função
+            const turmasNormalizadas = corretor.turmas_autorizadas
+              .map(t => normalizeTurmaToLetter(t))
+              .filter(Boolean);
 
-          console.log(`🔍 ${corretor.nome_completo}:`);
-          console.log(`   - Turmas autorizadas (original):`, corretor.turmas_autorizadas);
-          console.log(`   - Turmas autorizadas (normalizado):`, turmasNormalizadas);
-          console.log(`   - Turma do aluno (normalizada): "${turmaNormalizada}"`);
+            console.log(`🔍 ${corretor.nome_completo}:`);
+            console.log(`   - Turmas autorizadas (original):`, corretor.turmas_autorizadas);
+            console.log(`   - Turmas autorizadas (normalizado):`, turmasNormalizadas);
+            console.log(`   - Turma do aluno (normalizada): "${turmaNormalizada}"`);
 
-          // Verificar se a turma do aluno está nas turmas autorizadas
-          const incluido = turmasNormalizadas.includes(turmaNormalizada);
-          console.log(`   - ${incluido ? '✅ INCLUÍDO' : '❌ EXCLUÍDO'}`);
+            // Verificar se a turma do aluno está nas turmas autorizadas
+            const incluido = turmasNormalizadas.includes(turmaNormalizada);
+            console.log(`   - ${incluido ? '✅ INCLUÍDO' : '❌ EXCLUÍDO'}`);
 
-          return incluido;
-        });
+            return incluido;
+          });
+        }
       }
 
       console.log('🔍 DEBUG CorretorSelector - Corretores filtrados:', corretoresFiltrados);
