@@ -60,15 +60,28 @@ export const CorretorSelector = ({
       let corretoresFiltrados = data || [];
 
       if (turmaAluno) {
+        // Normalizar a turma do aluno (remover espaços, garantir maiúscula)
+        const turmaNormalizada = turmaAluno.trim().toUpperCase();
+
         corretoresFiltrados = corretoresFiltrados.filter(corretor => {
           // Se turmas_autorizadas é null, o corretor está disponível para todas as turmas
           if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
             console.log(`✅ ${corretor.nome_completo} - Disponível para todas as turmas (null/vazio)`);
             return true;
           }
+
+          // Normalizar as turmas autorizadas (remover espaços, garantir maiúsculas)
+          const turmasNormalizadas = corretor.turmas_autorizadas.map(t => t?.trim().toUpperCase()).filter(Boolean);
+
+          console.log(`🔍 ${corretor.nome_completo}:`);
+          console.log(`   - Turmas autorizadas (original):`, corretor.turmas_autorizadas);
+          console.log(`   - Turmas autorizadas (normalizado):`, turmasNormalizadas);
+          console.log(`   - Turma do aluno (normalizada): "${turmaNormalizada}"`);
+
           // Verificar se a turma do aluno está nas turmas autorizadas
-          const incluido = corretor.turmas_autorizadas.includes(turmaAluno);
-          console.log(`${incluido ? '✅' : '❌'} ${corretor.nome_completo} - Turmas autorizadas:`, corretor.turmas_autorizadas, `- Turma do aluno: ${turmaAluno}`);
+          const incluido = turmasNormalizadas.includes(turmaNormalizada);
+          console.log(`   - ${incluido ? '✅ INCLUÍDO' : '❌ EXCLUÍDO'}`);
+
           return incluido;
         });
       }
