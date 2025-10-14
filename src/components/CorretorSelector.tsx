@@ -53,6 +53,8 @@ export const CorretorSelector = ({
 
       console.log('🔍 DEBUG CorretorSelector - Dados recebidos do banco:', data);
       console.log('🔍 DEBUG CorretorSelector - Turma do aluno:', turmaAluno);
+      console.log('🔍 DEBUG CorretorSelector - Tipo da turma:', typeof turmaAluno);
+      console.log('🔍 DEBUG CorretorSelector - Turma normalizada:', turmaAluno?.toUpperCase().trim());
 
       // Filtrar corretores baseado na turma do aluno
       let corretoresFiltrados = data || [];
