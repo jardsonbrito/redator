@@ -37,7 +37,9 @@
       "Bash(xargs kill:*)",
       "Bash(git restore:*)",
       "Bash(pbcopy)",
-      "Bash(open \"https://supabase.com/dashboard/project/kgmxntpmvlnbftjqtyxx/sql/new\")"
+      "Bash(open \"https://supabase.com/dashboard/project/kgmxntpmvlnbftjqtyxx/sql/new\")",
+      "Bash(timeout:*)",
+      "Bash(git config:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

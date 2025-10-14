@@ -12,6 +12,7 @@ interface Corretor {
   id: string;
   nome_completo: string;
   email: string;
+  turmas_autorizadas: string[] | null;
 }
 
 interface CorretorSelectorProps {
@@ -20,14 +21,16 @@ interface CorretorSelectorProps {
   isSimulado?: boolean;
   required?: boolean;
   maxCorretores?: number; // Limite máximo de corretores
+  turmaAluno?: string; // Turma do aluno para filtrar corretores
 }
 
-export const CorretorSelector = ({ 
-  selectedCorretores, 
-  onCorretoresChange, 
+export const CorretorSelector = ({
+  selectedCorretores,
+  onCorretoresChange,
   isSimulado = false,
   required = false,
-  maxCorretores
+  maxCorretores,
+  turmaAluno
 }: CorretorSelectorProps) => {
   const [corretores, setCorretores] = useState<Corretor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,19 +38,34 @@ export const CorretorSelector = ({
 
   useEffect(() => {
     fetchCorretores();
-  }, []);
+  }, [turmaAluno]);
 
   const fetchCorretores = async () => {
     try {
       const { data, error } = await supabase
         .from('corretores')
-        .select('id, nome_completo, email')
+        .select('id, nome_completo, email, turmas_autorizadas')
         .eq('ativo', true)
         .eq('visivel_no_formulario', true)
         .order('nome_completo');
 
       if (error) throw error;
-      setCorretores(data || []);
+
+      // Filtrar corretores baseado na turma do aluno
+      let corretoresFiltrados = data || [];
+
+      if (turmaAluno) {
+        corretoresFiltrados = corretoresFiltrados.filter(corretor => {
+          // Se turmas_autorizadas é null, o corretor está disponível para todas as turmas
+          if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
+            return true;
+          }
+          // Verificar se a turma do aluno está nas turmas autorizadas
+          return corretor.turmas_autorizadas.includes(turmaAluno);
+        });
+      }
+
+      setCorretores(corretoresFiltrados);
     } catch (error: any) {
       console.error('Erro ao buscar corretores:', error);
       toast({

@@ -258,15 +258,15 @@
   resolved "https://registry.npmjs.org/@emotion/weak-memoize/-/weak-memoize-0.4.0.tgz"
   integrity sha512-snKqtPW01tN0ui7yu9rGv69aJXr/a/Ywvl11sUjNtEcRc+ng/mQriFL0wLXMef74iHa/EkftbDzU9F8iFbH+zg==
 
-"@esbuild/darwin-arm64@0.21.5":
+"@esbuild/win32-x64@0.21.5":
   version "0.21.5"
-  resolved "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.21.5.tgz"
-  integrity sha512-DwqXqZyuk5AiWWf3UfLiRDJ5EDd49zg6O9wclZ7kUMv2WRFr4HKjXp/5t8JZ11QbQfUS6/cRCKGwYhtNAY88kQ==
+  resolved "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.21.5.tgz"
+  integrity sha512-tQd/1efJuzPC6rCFwEvLtci/xNFcTZknmXs98FYDfGE4wP9ClFV98nyKrzJKVPMhdDnjzLhdUyMX4PsQAPjwIw==
 
-"@esbuild/darwin-arm64@0.25.0":
+"@esbuild/win32-x64@0.25.0":
   version "0.25.0"
-  resolved "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.25.0.tgz"
-  integrity sha512-mVwdUb5SRkPayVadIOI78K7aAnPamoeFR2bT5nszFUZ9P8UpK4ratOdYbZZXYSqPKMHfS1wdHCJk1P1EZpRdvw==
+  resolved "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.25.0.tgz"
+  integrity sha512-ZENoHJBxA20C2zFzh6AI4fT6RraMzjYw4xKWemRTRmRVtN9c5DcH9r/f2ihEkMjOW5eGgrwCslG/+Y/3bL+DHQ==
 
 "@eslint-community/eslint-utils@^4.2.0", "@eslint-community/eslint-utils@^4.4.0":
   version "4.4.0"
@@ -447,10 +447,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@napi-rs/canvas-darwin-arm64@0.1.74":
+"@napi-rs/canvas-win32-x64-msvc@0.1.74":
   version "0.1.74"
-  resolved "https://registry.npmjs.org/@napi-rs/canvas-darwin-arm64/-/canvas-darwin-arm64-0.1.74.tgz"
-  integrity sha512-eO5Miz+ef1dEQyUMWDdcbAb1Wr7yMyxD9/CL9d4frQxO4pTTaCiMBUWup8XDPLr/g7XkSkGCZLP47xiXiyXSpQ==
+  resolved "https://registry.npmjs.org/@napi-rs/canvas-win32-x64-msvc/-/canvas-win32-x64-msvc-0.1.74.tgz"
+  integrity sha512-x6bhwlhn0wU7dfiP46mt5Bi6PowSUH4CJ4PTzGj58LRQ1HVasEIJgoMx7MLC48F738eJpzbfg3WR/D8+e9CeTA==
 
 "@napi-rs/canvas@^0.1.67":
   version "0.1.74"
@@ -1297,15 +1297,15 @@
   resolved "https://registry.npmjs.org/@rolldown/pluginutils/-/pluginutils-1.0.0-beta.38.tgz"
   integrity sha512-N/ICGKleNhA5nc9XXQG/kkKHJ7S55u0x0XUJbbkmdCnFuoRkM1Il12q9q0eX19+M7KKUEPw/daUPIRnxhcxAIw==
 
-"@rollup/rollup-darwin-arm64@4.24.0":
-  version "4.24.0"
-  resolved "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.24.0.tgz"
-  integrity sha512-bIv+X9xeSs1XCk6DVvkO+S/z8/2AMt/2lMqdQbMrmVpgFvXlmde9mLcbQpztXm1tajC3raFDqegsH18HQPMYtA==
-
-"@rollup/rollup-win32-x64-msvc@^4.52.3", "@rollup/rollup-win32-x64-msvc@4.24.0":
+"@rollup/rollup-win32-x64-msvc@^4.52.3":
   version "4.52.3"
   resolved "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.52.3.tgz"
   integrity sha512-zGIbEVVXVtauFgl3MRwGWEN36P5ZGenHRMgNw88X5wEhEBpq0XrMEZwOn07+ICrwM17XO5xfMZqh0OldCH5VTA==
+
+"@rollup/rollup-win32-x64-msvc@4.24.0":
+  version "4.24.0"
+  resolved "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.24.0.tgz"
+  integrity sha512-fbMkAF7fufku0N2dE5TBXcNlg0pt0cJue4xBRE2Qc5Vqikxr4VCgKj/ht6SMdFcOacVA9rqF70APJ8RN/4vMJw==
 
 "@standard-schema/spec@^1.0.0":
   version "1.0.0"
@@ -1375,10 +1375,10 @@
     "@supabase/realtime-js" "2.11.15"
     "@supabase/storage-js" "2.7.1"
 
-"@swc/core-darwin-arm64@1.13.5":
+"@swc/core-win32-x64-msvc@1.13.5":
   version "1.13.5"
-  resolved "https://registry.npmjs.org/@swc/core-darwin-arm64/-/core-darwin-arm64-1.13.5.tgz"
-  integrity sha512-lKNv7SujeXvKn16gvQqUQI5DdyY8v7xcoO3k06/FJbHJS90zEwZdQiMNRiqpYw/orU543tPaWgz7cIYWhbopiQ==
+  resolved "https://registry.npmjs.org/@swc/core-win32-x64-msvc/-/core-win32-x64-msvc-1.13.5.tgz"
+  integrity sha512-YrKdMVxbYmlfybCSbRtrilc6UA8GF5aPmGKBdPvjrarvsmf4i7ZHGCEnLtfOMd3Lwbs2WUZq3WdMbozYeLU93Q==
 
 "@swc/core@^1.13.5", "@swc/core@^1.7.26":
   version "1.13.5"

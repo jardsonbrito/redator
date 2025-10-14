@@ -432,6 +432,7 @@ export const EnvioRedacaoWithCorretor = ({
                 onCorretoresChange={setSelectedCorretores}
                 isSimulado={isSimulado}
                 required={true}
+                turmaAluno={formData.turma}
               />
             </div>
 

@@ -97,8 +97,13 @@ export const CorretorTurmasDialog = ({
         }.`,
       });
 
-      onSuccess();
+      // Fechar o dialog primeiro
       onOpenChange(false);
+
+      // Aguardar um momento antes de atualizar para garantir que o dialog fechou
+      setTimeout(() => {
+        onSuccess();
+      }, 100);
     } catch (error: any) {
       console.error("Erro ao atualizar disponibilidade:", error);
       toast({

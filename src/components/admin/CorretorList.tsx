@@ -278,7 +278,15 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
       {corretorSelecionado && (
         <CorretorTurmasDialog
           open={turmasDialogOpen}
-          onOpenChange={setTurmasDialogOpen}
+          onOpenChange={(open) => {
+            setTurmasDialogOpen(open);
+            // Limpar o corretor selecionado quando o dialog é fechado
+            if (!open) {
+              setTimeout(() => {
+                setCorretorSelecionado(null);
+              }, 200);
+            }
+          }}
           corretor={corretorSelecionado}
           onSuccess={fetchCorretores}
         />
