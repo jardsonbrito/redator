@@ -51,6 +51,9 @@ export const CorretorSelector = ({
 
       if (error) throw error;
 
+      console.log('🔍 DEBUG CorretorSelector - Dados recebidos do banco:', data);
+      console.log('🔍 DEBUG CorretorSelector - Turma do aluno:', turmaAluno);
+
       // Filtrar corretores baseado na turma do aluno
       let corretoresFiltrados = data || [];
 
@@ -58,13 +61,17 @@ export const CorretorSelector = ({
         corretoresFiltrados = corretoresFiltrados.filter(corretor => {
           // Se turmas_autorizadas é null, o corretor está disponível para todas as turmas
           if (!corretor.turmas_autorizadas || corretor.turmas_autorizadas.length === 0) {
+            console.log(`✅ ${corretor.nome_completo} - Disponível para todas as turmas (null/vazio)`);
             return true;
           }
           // Verificar se a turma do aluno está nas turmas autorizadas
-          return corretor.turmas_autorizadas.includes(turmaAluno);
+          const incluido = corretor.turmas_autorizadas.includes(turmaAluno);
+          console.log(`${incluido ? '✅' : '❌'} ${corretor.nome_completo} - Turmas autorizadas:`, corretor.turmas_autorizadas, `- Turma do aluno: ${turmaAluno}`);
+          return incluido;
         });
       }
 
+      console.log('🔍 DEBUG CorretorSelector - Corretores filtrados:', corretoresFiltrados);
       setCorretores(corretoresFiltrados);
     } catch (error: any) {
       console.error('Erro ao buscar corretores:', error);
