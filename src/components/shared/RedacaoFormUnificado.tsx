@@ -200,11 +200,11 @@ export const RedacaoFormUnificado = ({
     const totalPalavras = textoLimpo ? textoLimpo.split(/\s+/).length : 0;
     setPalavras(totalPalavras);
 
-    // Validar limite de 500 palavras
-    if (totalPalavras > 500) {
+    // Validar limite de 550 palavras
+    if (totalPalavras > 550) {
       toast({
         title: "Limite de palavras excedido",
-        description: `Sua redação tem ${totalPalavras} palavras. O limite é 500 palavras.`,
+        description: `Sua redação tem ${totalPalavras} palavras. O limite é 550 palavras.`,
         variant: "destructive",
         duration: 3000
       });
@@ -308,9 +308,9 @@ export const RedacaoFormUnificado = ({
         throw new Error("Selecione o arquivo da redação manuscrita");
       }
 
-      // Validar limite de 500 palavras para redação digitada
-      if (tipoRedacao === "digitada" && palavras > 500) {
-        throw new Error(`Sua redação tem ${palavras} palavras. O limite é 500 palavras.`);
+      // Validar limite de 550 palavras para redação digitada
+      if (tipoRedacao === "digitada" && palavras > 550) {
+        throw new Error(`Sua redação tem ${palavras} palavras. O limite é 550 palavras.`);
       }
 
       // Verificar créditos para alunos
@@ -676,24 +676,24 @@ export const RedacaoFormUnificado = ({
               <div className="flex justify-between items-center">
                 <Label htmlFor="redacao" className="text-sm">Texto da Redação</Label>
                 <span className={`text-xs font-medium ${
-                  palavras > 500 ? 'text-red-600' :
-                  palavras > 450 ? 'text-amber-600' :
+                  palavras > 550 ? 'text-red-600' :
+                  palavras > 500 ? 'text-amber-600' :
                   'text-gray-500'
                 }`}>
-                  Palavras: {palavras}/500
+                  Palavras: {palavras}/550
                 </span>
               </div>
               <Textarea
                 id="redacao"
                 rows={10}
-                className={`resize-none ${palavras > 500 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                className={`resize-none ${palavras > 550 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 value={redacaoTexto}
                 onChange={handleTextoChange}
                 required
               />
-              {palavras > 500 && (
+              {palavras > 550 && (
                 <p className="text-xs text-red-600 mt-1">
-                  ⚠️ Você excedeu o limite de 500 palavras. Por favor, reduza o texto.
+                  ⚠️ Você excedeu o limite de 550 palavras. Por favor, reduza o texto.
                 </p>
               )}
             </div>
