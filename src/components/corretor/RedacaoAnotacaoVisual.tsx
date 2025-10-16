@@ -1250,7 +1250,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editandoAnotacao ? "Editar Comentário" : "Redação Manuscrita"}
+              {editandoAnotacao ? "Editar Comentário" : "Legenda das Competências"}
             </DialogTitle>
           </DialogHeader>
           
@@ -1296,6 +1296,8 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               onChange={(e) => setComentarioTemp(e.target.value)}
               rows={4}
               autoFocus
+              autoCapitalize="sentences"
+              spellCheck={true}
             />
             
             <div className="flex justify-end gap-2">
@@ -1304,7 +1306,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
               </Button>
               <Button onClick={salvarAnotacao}>
                 <Save className="w-4 h-4 mr-2" />
-                Salvar Comentário
+                Salvar
               </Button>
             </div>
           </div>
