@@ -39,7 +39,9 @@
       "Bash(pbcopy)",
       "Bash(open \"https://supabase.com/dashboard/project/kgmxntpmvlnbftjqtyxx/sql/new\")",
       "Bash(timeout:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(cd:*)",
+      "Bash(git rm:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

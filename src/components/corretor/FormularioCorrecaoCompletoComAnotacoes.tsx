@@ -642,7 +642,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="max-h-[200px] overflow-y-auto p-4 border rounded-lg bg-background prose whitespace-pre-line leading-relaxed">
+            <div className="max-h-[200px] overflow-y-auto p-4 border rounded-lg bg-background prose whitespace-pre-wrap leading-relaxed">
               {redacao.texto || 'Texto da redação não disponível'}
             </div>
           </CardContent>
@@ -761,8 +761,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             <div className="text-sm text-muted-foreground">
               <strong>Tema:</strong> {redacao.frase_tematica}
             </div>
-            
-            <div className="max-h-[60vh] overflow-y-auto p-4 border rounded-lg bg-background prose whitespace-pre-line leading-relaxed">
+
+            <div className="max-h-[60vh] overflow-y-auto p-4 border rounded-lg bg-background prose whitespace-pre-wrap leading-relaxed">
               {redacao.texto || 'Texto da redação não disponível'}
             </div>
             

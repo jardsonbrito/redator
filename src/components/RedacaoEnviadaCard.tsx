@@ -619,12 +619,8 @@ export const RedacaoEnviadaCard = ({
                     {redacao.redacao_texto?.trim() ? (
                       <div>
                         <h4 className="font-medium text-primary mb-2"></h4>
-                        <div className="prose max-w-none text-sm sm:text-base leading-relaxed text-gray-800 p-3 bg-white rounded border">
-                          {redacao.redacao_texto.split('\n\n').map((paragrafo, index) => (
-                            <p key={index} className="mb-3 sm:mb-4">
-                              {paragrafo}
-                            </p>
-                          ))}
+                        <div className="prose max-w-none text-sm sm:text-base leading-relaxed text-gray-800 p-3 bg-white rounded border whitespace-pre-wrap">
+                          {redacao.redacao_texto}
                         </div>
                       </div>
                     ) : (
