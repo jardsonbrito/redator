@@ -86,24 +86,47 @@ export const useAdminTemasFilters = () => {
     },
   });
 
-  // Buscar contagem de redações por tema (só quando necessário)
+  // Buscar contagem de redações por tema (regulares + simulados)
   const { data: redacoesCount } = useQuery({
     queryKey: ['redacoes-count-por-tema-admin'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Buscar redações regulares
+      const { data: regulares, error: errorRegulares } = await supabase
         .from('redacoes_enviadas')
         .select('frase_tematica');
 
-      if (error) throw error;
+      if (errorRegulares) throw errorRegulares;
 
-      // Contar redações por frase temática
+      // 2. Buscar simulados e suas redações
+      const { data: simulados, error: errorSimulados } = await supabase
+        .from('simulados')
+        .select('id, frase_tematica');
+
+      if (errorSimulados) throw errorSimulados;
+
+      // Contar redações por frase temática (regulares)
       const countMap: Record<string, number> = {};
-      data?.forEach((redacao) => {
+      regulares?.forEach((redacao) => {
         const frase = redacao.frase_tematica;
         if (frase) {
           countMap[frase] = (countMap[frase] || 0) + 1;
         }
       });
+
+      // 3. Para cada simulado, contar redações
+      if (simulados && simulados.length > 0) {
+        for (const simulado of simulados) {
+          const { count, error } = await supabase
+            .from('redacoes_simulado')
+            .select('*', { count: 'exact', head: true })
+            .eq('id_simulado', simulado.id);
+
+          if (!error && simulado.frase_tematica) {
+            const countAtual = countMap[simulado.frase_tematica] || 0;
+            countMap[simulado.frase_tematica] = countAtual + (count || 0);
+          }
+        }
+      }
 
       return countMap;
     },

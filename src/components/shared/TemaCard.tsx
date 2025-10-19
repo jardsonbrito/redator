@@ -117,19 +117,42 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
 
   const fetchSubmissionsCount = async () => {
     try {
-      // Buscar redações que têm essa frase temática (sem aluno_id para evitar erro)
-      const { count, error } = await supabase
+      // 1. Buscar redações regulares
+      const { count: countRegulares, error: errorRegulares } = await supabase
         .from("redacoes_enviadas")
         .select("*", { count: "exact", head: true })
         .eq("frase_tematica", tema.frase_tematica);
 
-      if (error) {
-        console.error("Erro ao buscar contagem de envios para tema:", error);
-        setSubmissionsCount(0);
-        return;
+      if (errorRegulares) {
+        console.error("Erro ao buscar contagem de redações regulares:", errorRegulares);
       }
 
-      setSubmissionsCount(count || 0);
+      // 2. Verificar se existe simulado com essa frase temática
+      const { data: simulado, error: errorSimulado } = await supabase
+        .from("simulados")
+        .select("id")
+        .eq("frase_tematica", tema.frase_tematica)
+        .maybeSingle();
+
+      let countSimulados = 0;
+
+      if (!errorSimulado && simulado?.id) {
+        // 3. Buscar redações do simulado
+        const { count, error: errorRedacoesSimulado } = await supabase
+          .from("redacoes_simulado")
+          .select("*", { count: "exact", head: true })
+          .eq("id_simulado", simulado.id);
+
+        if (errorRedacoesSimulado) {
+          console.error("Erro ao buscar contagem de redações do simulado:", errorRedacoesSimulado);
+        } else {
+          countSimulados = count || 0;
+        }
+      }
+
+      // Total = regulares + simulados
+      const totalCount = (countRegulares || 0) + countSimulados;
+      setSubmissionsCount(totalCount);
     } catch (error) {
       console.error("Erro ao buscar contagem de envios:", error);
       setSubmissionsCount(0);
