@@ -67,10 +67,13 @@ export const TemaSubmissionsModal = ({
 
       console.log('🔍 [TemaSubmissionsModal] Simulado encontrado:', simulado);
 
-      let data: SubmissionData[] = [];
+      let allSubmissions: SubmissionData[] = [];
       let error = null;
+      let hasSimulado = false;
 
+      // PARTE 1: Buscar redações de SIMULADO (se existir)
       if (simulado && simulado.id) {
+        hasSimulado = true;
         // É um simulado - buscar de redacoes_simulado
         setIsSimulado(true);
 
@@ -122,7 +125,7 @@ export const TemaSubmissionsModal = ({
             );
 
             // Calcular média das duas notas para cada redação
-            data = redacoesSimulado.map((r: any) => {
+            const simuladoSubmissions = redacoesSimulado.map((r: any) => {
               const nota1 = r.nota_final_corretor_1 ?? null;
               const nota2 = r.nota_final_corretor_2 ?? null;
 
@@ -162,11 +165,14 @@ export const TemaSubmissionsModal = ({
                 is_simulado: true
               };
             });
+
+            allSubmissions = [...allSubmissions, ...simuladoSubmissions];
           }
         }
-      } else {
-        // É um tema regular - buscar de redacoes_enviadas
-        setIsSimulado(false);
+      }
+
+      // PARTE 2: SEMPRE buscar redações REGULARES também
+      {
         console.log('🔍 [TemaSubmissionsModal] Iniciando busca por redações regulares...');
 
         let redacoesRegulares: any = null;
@@ -253,7 +259,7 @@ export const TemaSubmissionsModal = ({
               );
 
               // Mapear para usar dados reais da tabela alunos
-              data = redacoesRegulares.map((r: any) => {
+              const regularSubmissions = redacoesRegulares.map((r: any) => {
                 // Normalizar email para buscar no Map
                 const emailNormalizado = r.email_aluno?.toLowerCase().trim();
                 const alunoData = alunosMap.get(emailNormalizado);
@@ -275,14 +281,23 @@ export const TemaSubmissionsModal = ({
                   status: r.status
                 };
               });
+
+              allSubmissions = [...allSubmissions, ...regularSubmissions];
             }
           }
         }
 
       if (error) throw error;
 
+      // Atualizar estado de isSimulado baseado nos dados
+      setIsSimulado(hasSimulado && allSubmissions.some(s => s.is_simulado));
+
+      console.log('✅ [TemaSubmissionsModal] Total de submissões encontradas:', allSubmissions.length);
+      console.log('   - Simulados:', allSubmissions.filter(s => s.is_simulado).length);
+      console.log('   - Regulares:', allSubmissions.filter(s => !s.is_simulado).length);
+
       // Ordenar por nota (maior nota primeiro), devolvidas e não corrigidas por último
-      const sortedData = (data || []).sort((a, b) => {
+      const sortedData = (allSubmissions || []).sort((a, b) => {
         // Redações devolvidas vão para o final
         const aDevolvida = a.status === 'devolvida';
         const bDevolvida = b.status === 'devolvida';
