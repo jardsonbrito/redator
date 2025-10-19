@@ -209,20 +209,39 @@ export const TemaSubmissionsModal = ({
                 .map((r: any) => r.email_aluno?.toLowerCase().trim())
                 .filter(Boolean);
 
-              console.log('🔍 [TemaSubmissionsModal] Emails para buscar (normalizados):', emails);
+              console.log('🔍 [TemaSubmissionsModal] === BUSCANDO ALUNOS ===');
+              console.log('   Emails para buscar:', emails);
+              console.log('   Total de emails:', emails.length);
 
               const { data: alunos, error: alunosError } = await supabase
                 .from("alunos")
                 .select("email, nome_completo, turma")
                 .in("email", emails);
 
-              console.log('🔍 [TemaSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
-              console.log('🔍 [TemaSubmissionsModal] Detalhes dos alunos:',
-                alunos?.map(a => ({ email: a.email, nome: a.nome_completo, turma: a.turma }))
-              );
+              console.log('🔍 [TemaSubmissionsModal] === RESULTADO DA BUSCA ===');
+              console.log('   Alunos encontrados:', alunos?.length || 0);
 
               if (alunosError) {
-                console.error('❌ [TemaSubmissionsModal] Erro ao buscar alunos:', alunosError);
+                console.error('❌ [TemaSubmissionsModal] ERRO AO BUSCAR ALUNOS:');
+                console.error('   Código:', alunosError.code);
+                console.error('   Mensagem:', alunosError.message);
+                console.error('   Detalhes:', alunosError.details);
+                console.error('   Hint:', alunosError.hint);
+                console.error('   Objeto completo:', JSON.stringify(alunosError, null, 2));
+              }
+
+              if (!alunosError && alunos && alunos.length > 0) {
+                console.log('✅ [TemaSubmissionsModal] Alunos encontrados com sucesso:');
+                alunos.forEach((a, i) => {
+                  console.log(`   ${i + 1}. Email: ${a.email}, Nome: ${a.nome_completo}, Turma: ${a.turma}`);
+                });
+              }
+
+              if (!alunosError && (!alunos || alunos.length === 0)) {
+                console.error('❌ [TemaSubmissionsModal] EMAILS NÃO ENCONTRADOS NA TABELA ALUNOS!');
+                console.error('   Emails buscados:', emails);
+                console.error('   Isso significa que esses alunos NÃO estão cadastrados na tabela alunos');
+                console.error('   Ou os emails estão em formato diferente no banco');
               }
 
               // Criar mapa de email => dados do aluno (normalizar email para garantir match)
