@@ -68,7 +68,6 @@ export const TemaSubmissionsModal = ({
       console.log('🔍 [TemaSubmissionsModal] Simulado encontrado:', simulado);
 
       let allSubmissions: SubmissionData[] = [];
-      let error = null;
       let hasSimulado = false;
 
       // PARTE 1: Buscar redações de SIMULADO (se existir)
@@ -80,17 +79,16 @@ export const TemaSubmissionsModal = ({
         console.log('🔍 [TemaSubmissionsModal] Buscando redações do simulado:', simulado.id);
 
         // Buscar redações do simulado (sem JOIN que pode falhar)
-        let redacoesSimulado: any = null;
         const { data: redacoesData, error: redacoesError } = await supabase
           .from("redacoes_simulado")
-          .select("email_aluno, nota_final_corretor_1, nota_final_corretor_2, corrigida, aluno_id, turma")
+          .select("email_aluno, nota_final_corretor_1, nota_final_corretor_2, corrigida, turma")
           .eq("id_simulado", simulado.id);
 
         if (redacoesError) {
           console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações do simulado:', redacoesError);
-          error = redacoesError;
-        } else {
-          redacoesSimulado = redacoesData;
+          // Não fazer throw - apenas log o erro e continua
+        } else if (redacoesData) {
+          const redacoesSimulado = redacoesData;
           console.log('🔍 [TemaSubmissionsModal] Redações do simulado encontradas:', redacoesSimulado?.length || 0);
 
           if (redacoesSimulado && redacoesSimulado.length > 0) {
@@ -175,37 +173,18 @@ export const TemaSubmissionsModal = ({
       {
         console.log('🔍 [TemaSubmissionsModal] Iniciando busca por redações regulares...');
 
-        let redacoesRegulares: any = null;
+        // Buscar SEM aluno_id para evitar erro
         const { data: redacoesData, error: redacoesError } = await supabase
           .from("redacoes_enviadas")
-          .select("email_aluno, nota_total, corrigida, status, aluno_id")
+          .select("email_aluno, nota_total, corrigida, status")
           .eq("frase_tematica", fraseTematica);
 
         if (redacoesError) {
-          console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações:');
-          console.error('   Código:', redacoesError.code);
-          console.error('   Mensagem:', redacoesError.message);
-
-          // Tentar query alternativa sem aluno_id
-          console.log('🔄 [TemaSubmissionsModal] Tentando query alternativa sem aluno_id...');
-          const { data: redacoesAlt, error: errorAlt } = await supabase
-            .from("redacoes_enviadas")
-            .select("email_aluno, nota_total, corrigida, status")
-            .eq("frase_tematica", fraseTematica);
-
-          if (errorAlt) {
-            console.error('❌ [TemaSubmissionsModal] Query alternativa também falhou:', errorAlt);
-            error = redacoesError;
-          } else {
-            console.log('✅ [TemaSubmissionsModal] Query alternativa funcionou!');
-            redacoesRegulares = redacoesAlt;
-          }
-        } else {
-          redacoesRegulares = redacoesData;
-        }
-
-        if (!error && redacoesRegulares) {
-          console.log('🔍 [TemaSubmissionsModal] Redações regulares encontradas:', redacoesRegulares?.length || 0);
+          console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações regulares:', redacoesError);
+          // Não fazer throw - apenas log o erro e continua
+        } else if (redacoesData && redacoesData.length > 0) {
+          const redacoesRegulares = redacoesData;
+          console.log('✅ [TemaSubmissionsModal] Redações regulares encontradas:', redacoesRegulares?.length || 0);
           console.log('🔍 [TemaSubmissionsModal] Dados brutos de redações:', redacoesRegulares);
 
             if (redacoesRegulares && redacoesRegulares.length > 0) {
@@ -286,8 +265,6 @@ export const TemaSubmissionsModal = ({
             }
           }
         }
-
-      if (error) throw error;
 
       // Atualizar estado de isSimulado baseado nos dados
       setIsSimulado(hasSimulado && allSubmissions.some(s => s.is_simulado));
