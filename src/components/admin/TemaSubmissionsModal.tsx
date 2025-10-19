@@ -100,13 +100,13 @@ export const TemaSubmissionsModal = ({
             console.log('🔍 [TemaSubmissionsModal] Emails para buscar (normalizados):', emails);
 
             const { data: alunos, error: alunosError } = await supabase
-              .from("alunos")
-              .select("email, nome_completo, turma")
+              .from("profiles")
+              .select("email, nome, turma")
               .in("email", emails);
 
             console.log('🔍 [TemaSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
             console.log('🔍 [TemaSubmissionsModal] Detalhes dos alunos:',
-              alunos?.map(a => ({ email: a.email, nome: a.nome_completo, turma: a.turma }))
+              alunos?.map(a => ({ email: a.email, nome: a.nome, turma: a.turma }))
             );
 
             if (alunosError) {
@@ -117,7 +117,7 @@ export const TemaSubmissionsModal = ({
             const alunosMap = new Map(
               (alunos || []).map(a => [
                 a.email.toLowerCase().trim(),
-                { nome: a.nome_completo, turma: a.turma }
+                { nome: a.nome, turma: a.turma }
               ])
             );
 
@@ -214,8 +214,8 @@ export const TemaSubmissionsModal = ({
               console.log('   Total de emails:', emails.length);
 
               const { data: alunos, error: alunosError } = await supabase
-                .from("alunos")
-                .select("email, nome_completo, turma")
+                .from("profiles")
+                .select("email, nome, turma")
                 .in("email", emails);
 
               console.log('🔍 [TemaSubmissionsModal] === RESULTADO DA BUSCA ===');
@@ -248,7 +248,7 @@ export const TemaSubmissionsModal = ({
               const alunosMap = new Map(
                 (alunos || []).map(a => [
                   a.email.toLowerCase().trim(),
-                  { nome: a.nome_completo, turma: a.turma }
+                  { nome: a.nome, turma: a.turma }
                 ])
               );
 

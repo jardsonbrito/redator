@@ -127,8 +127,8 @@ export const ExercicioSubmissionsModal = ({
       console.log('🔍 [ExercicioSubmissionsModal] Emails para buscar (normalizados):', emails);
 
       const { data: alunos, error: alunosError } = await supabase
-        .from("alunos")
-        .select("email, nome_completo, turma")
+        .from("profiles")
+        .select("email, nome, turma")
         .in("email", emails);
 
       console.log('🔍 [ExercicioSubmissionsModal] === DIAGNÓSTICO COMPLETO ===');
@@ -139,7 +139,7 @@ export const ExercicioSubmissionsModal = ({
       if (alunos && alunos.length > 0) {
         console.log('🔍 [ExercicioSubmissionsModal] PRIMEIRO ALUNO DETALHADO:');
         console.log('   - Email:', alunos[0].email);
-        console.log('   - Nome Completo:', alunos[0].nome_completo);
+        console.log('   - Nome:', alunos[0].nome);
         console.log('   - Turma:', alunos[0].turma);
         console.log('   - Tipo de turma:', typeof alunos[0].turma);
       }
@@ -157,7 +157,7 @@ export const ExercicioSubmissionsModal = ({
       const alunosMap = new Map(
         (alunos || []).map(a => [
           a.email.toLowerCase().trim(),
-          { nome: a.nome_completo, turma: a.turma }
+          { nome: a.nome, turma: a.turma }
         ])
       );
 
