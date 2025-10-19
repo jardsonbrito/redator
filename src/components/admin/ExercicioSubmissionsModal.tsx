@@ -131,11 +131,23 @@ export const ExercicioSubmissionsModal = ({
         .select("email, nome_completo, turma")
         .in("email", emails);
 
-      console.log('🔍 [ExercicioSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
-      console.log('🔍 [ExercicioSubmissionsModal] Dados de alunos:', alunos);
-      console.log('🔍 [ExercicioSubmissionsModal] Detalhes dos alunos:',
-        alunos?.map(a => ({ email: a.email, nome: a.nome_completo, turma: a.turma }))
-      );
+      console.log('🔍 [ExercicioSubmissionsModal] === DIAGNÓSTICO COMPLETO ===');
+      console.log('🔍 [ExercicioSubmissionsModal] Emails buscados (normalizados):', emails);
+      console.log('🔍 [ExercicioSubmissionsModal] Total de alunos retornados:', alunos?.length || 0);
+      console.log('🔍 [ExercicioSubmissionsModal] Alunos retornados (RAW):', JSON.stringify(alunos, null, 2));
+
+      if (alunos && alunos.length > 0) {
+        console.log('🔍 [ExercicioSubmissionsModal] PRIMEIRO ALUNO DETALHADO:');
+        console.log('   - Email:', alunos[0].email);
+        console.log('   - Nome Completo:', alunos[0].nome_completo);
+        console.log('   - Turma:', alunos[0].turma);
+        console.log('   - Tipo de turma:', typeof alunos[0].turma);
+      }
+
+      if (emails.length > 0 && (!alunos || alunos.length === 0)) {
+        console.error('❌ [ExercicioSubmissionsModal] PROBLEMA: Buscamos emails mas não encontramos NENHUM aluno!');
+        console.error('   Isso significa que os emails em redacoes_enviadas NÃO existem na tabela alunos');
+      }
 
       if (alunosError) {
         console.error('❌ [ExercicioSubmissionsModal] Erro ao buscar alunos:', alunosError);
@@ -149,21 +161,30 @@ export const ExercicioSubmissionsModal = ({
         ])
       );
 
+      console.log('🔍 [ExercicioSubmissionsModal] Map criado com', alunosMap.size, 'entradas');
+      console.log('🔍 [ExercicioSubmissionsModal] Chaves do Map:', Array.from(alunosMap.keys()));
+
       // 5. Mapear os dados para o formato esperado
-      const mappedData: SubmissionData[] = redacoes.map((item: any) => {
+      const mappedData: SubmissionData[] = redacoes.map((item: any, index: number) => {
         // Normalizar email para buscar no Map
         const emailNormalizado = item.email_aluno?.toLowerCase().trim();
         const alunoData = alunosMap.get(emailNormalizado);
 
-        console.log('🔍 [ExercicioSubmissionsModal] Mapeando redação:', {
-          email_original: item.email_aluno,
-          email_normalizado: emailNormalizado,
-          aluno_data: alunoData,
-          nome_completo: alunoData?.nome,
-          turma_raw: alunoData?.turma
-        });
+        if (index === 0) {
+          console.log('🔍 [ExercicioSubmissionsModal] === MAPEAMENTO PRIMEIRO ITEM ===');
+          console.log('   Email original:', item.email_aluno);
+          console.log('   Email normalizado:', emailNormalizado);
+          console.log('   Aluno encontrado no Map?', alunoData ? 'SIM' : 'NÃO');
+          if (alunoData) {
+            console.log('   Nome:', alunoData.nome);
+            console.log('   Turma:', alunoData.turma);
+          } else {
+            console.error('   ❌ PROBLEMA: Email não encontrado no Map!');
+            console.error('   Verifique se o email está exatamente igual na tabela alunos');
+          }
+        }
 
-        return {
+        const resultado = {
           nome_aluno: alunoData?.nome || item.email_aluno || 'Aluno',
           email_aluno: item.email_aluno,
           turma: alunoData?.turma || null,
@@ -172,6 +193,12 @@ export const ExercicioSubmissionsModal = ({
           status: item.status,
           aluno_id: item.aluno_id
         };
+
+        if (index === 0) {
+          console.log('   Resultado final:', resultado);
+        }
+
+        return resultado;
       });
 
       // Ordenar por nota (maior nota primeiro), devolvidas e não corrigidas por último
