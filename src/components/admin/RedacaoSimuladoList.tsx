@@ -49,7 +49,8 @@ const RedacaoSimuladoList = () => {
   const { data: redacoes, isLoading } = useQuery({
     queryKey: ['redacoes-simulado'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Buscar redações
+      const { data: redacoesData, error: redacoesError } = await supabase
         .from('redacoes_simulado')
         .select(`
           *,
@@ -58,9 +59,39 @@ const RedacaoSimuladoList = () => {
           corretor_2:corretores!corretor_id_2(nome_completo)
         `)
         .order('data_envio', { ascending: false });
-      
-      if (error) throw error;
-      return data;
+
+      if (redacoesError) throw redacoesError;
+
+      // Buscar emails únicos dos alunos
+      const emailsUnicos = [...new Set(redacoesData?.map(r => r.email_aluno))];
+
+      // Buscar profiles dos alunos
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('email, nome, turma')
+        .in('email', emailsUnicos);
+
+      if (profilesError) {
+        console.error('Erro ao buscar profiles:', profilesError);
+        // Continuar sem os profiles
+      }
+
+      // Criar mapa de email -> profile para lookup rápido
+      const profilesMap = new Map(
+        profilesData?.map(p => [p.email, p]) || []
+      );
+
+      // Processar dados para usar o nome real do aluno e turma do profile
+      const processedData = redacoesData?.map(redacao => {
+        const profile = profilesMap.get(redacao.email_aluno);
+        return {
+          ...redacao,
+          nome_aluno: profile?.nome || redacao.nome_aluno,
+          turma: profile?.turma || redacao.turma
+        };
+      });
+
+      return processedData;
     }
   });
 
