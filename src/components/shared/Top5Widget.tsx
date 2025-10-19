@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,13 +39,10 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   const { studentData } = useStudentAuth();
   const { user: adminUser } = useAuth();
   
-  // Determinar turma ativa para filtros - diferentes formatos por tabela
+  // Determinar turma ativa para filtros - apenas letra maiúscula
   const getTurmaForTable = (letra: string, tabela: string) => {
-    if (tabela === 'redacoes_simulado') {
-      return `Turma ${letra}`;
-    } else {
-      return `LR${letra}2025`;
-    }
+    // Todas as tabelas agora usam apenas a letra (A, B, C, D, E ou VISITANTE)
+    return letra;
   };
   
   const turmaAtivaLetter = variant === "admin" && selectedTurmaAdmin !== "geral" ? selectedTurmaAdmin : null;
@@ -186,21 +183,35 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
       
       if (error) throw error;
       
-      // Extrair meses únicos
-      const meses = new Set<string>();
+      // Extrair meses únicos com suas datas para ordenação cronológica
+      const mesesComData = new Map<string, Date>();
       (data || []).forEach(redacao => {
         const dataRedacao = new Date(redacao.data_envio);
-        const mes = dataRedacao.toLocaleDateString('pt-BR', { 
-          month: 'long', 
-          year: 'numeric' 
+        const mes = dataRedacao.toLocaleDateString('pt-BR', {
+          month: 'long',
+          year: 'numeric'
         });
         const mesCapitalizado = mes.charAt(0).toUpperCase() + mes.slice(1);
-        meses.add(mesCapitalizado);
+
+        // Guardar a data mais recente para cada mês
+        if (!mesesComData.has(mesCapitalizado) || dataRedacao > mesesComData.get(mesCapitalizado)!) {
+          mesesComData.set(mesCapitalizado, dataRedacao);
+        }
       });
-      
-      return Array.from(meses).sort() as string[];
+
+      // Ordenar por data decrescente (mais recente primeiro)
+      return Array.from(mesesComData.entries())
+        .sort((a, b) => b[1].getTime() - a[1].getTime())
+        .map(([mes]) => mes) as string[];
     }
   });
+
+  // Auto-selecionar o mês mais recente quando a lista de meses mudar
+  useEffect(() => {
+    if (mesesDisponiveis && mesesDisponiveis.length > 0 && !selectedMonth) {
+      setSelectedMonth(mesesDisponiveis[0]); // Primeiro mês = mais recente
+    }
+  }, [mesesDisponiveis]);
 
   // Buscar ranking baseado no tipo selecionado
   const { data: ranking } = useQuery({
@@ -230,65 +241,56 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
       let processedData = [];
       
       if (selectedType === "simulado") {
-        // Para simulados, buscar dados diretamente da tabela redacoes_simulado
-        let query = supabase
+        // Para simulados, buscar TODOS os dados e filtrar no client-side
+        // (para evitar problemas com formatos diferentes de turma no banco)
+        const query = supabase
           .from('redacoes_simulado')
           .select(`
-            nome_aluno, 
-            email_aluno, 
-            nota_total, 
+            nome_aluno,
+            email_aluno,
+            nota_total,
             data_envio,
             turma,
             simulados(titulo)
           `)
           .not('nota_total', 'is', null)
-          .eq('corrigida', true);
-        
-        // Filtrar por turma se necessário (admin, aluno ou visitante)
-        if (rankingTurmaFilter) {
-          const turmaForSimulado = getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado');
-          query = query.eq('turma', turmaForSimulado);
-          
-          console.log(`🎯 Simulado Query Filter:`, {
-            turmaLetter: rankingTurmaFilter,
-            turmaFormatted: turmaForSimulado
-          });
-        }
-        
-        const { data, error } = await query.order('nota_total', { ascending: false });
-        
+          .eq('corrigida', true)
+          .order('nota_total', { ascending: false });
+
+        const { data, error } = await query;
+
         if (error) throw error;
-        
+
         let filteredData = data || [];
-        
-        // Debug para verificar resultados do filtro de simulado
-        if (variant === "student" && rankingTurmaFilter) {
-          console.log(`📊 Simulado Results for Turma ${rankingTurmaFilter}:`, {
-            totalFound: filteredData.length,
-            expectedTurma: getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado'),
-            students: filteredData.slice(0, 15).map(item => ({
-              nome: item.nome_aluno,
-              email: item.email_aluno,
-              turma: item.turma,
-              nota: item.nota_total,
-              isCorrectTurma: item.turma === getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado')
-            }))
+
+        // Filtrar por turma no client-side usando normalização (admin, aluno ou visitante)
+        if (rankingTurmaFilter) {
+          console.log(`🎯 Simulado Query Filter (client-side):`, {
+            turmaLetter: rankingTurmaFilter,
+            totalBeforeFilter: filteredData.length
           });
-          
-          // Verificar se há estudantes de turmas incorretas
-          const wrongTurmaStudents = filteredData.filter(item => 
-            item.turma !== getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado')
-          );
-          
-          if (wrongTurmaStudents.length > 0) {
-            console.log(`❌ WRONG TURMA STUDENTS FOUND:`, wrongTurmaStudents.map(item => ({
-              nome: item.nome_aluno,
-              turmaFound: item.turma,
-              turmaExpected: getTurmaForTable(rankingTurmaFilter, 'redacoes_simulado')
-            })));
-          }
+
+          filteredData = filteredData.filter(item => {
+            const turmaNormalizada = normalizeTurmaToLetter(item.turma);
+            const match = turmaNormalizada === rankingTurmaFilter;
+
+            if (!match) {
+              console.log(`🔍 Filtrado fora:`, {
+                nome: item.nome_aluno,
+                turmaRaw: item.turma,
+                turmaNormalizada,
+                esperado: rankingTurmaFilter
+              });
+            }
+
+            return match;
+          });
+
+          console.log(`📊 Simulado Results after filter:`, {
+            totalAfterFilter: filteredData.length,
+            expectedTurma: rankingTurmaFilter
+          });
         }
-        
         // Filtrar por simulado específico se selecionado
         if (selectedSimulado && simulados) {
           const simuladoSelecionado = simulados.find(s => s.id === selectedSimulado);
@@ -315,30 +317,37 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           .select('nome_aluno, nota_total, tipo_envio, data_envio, email_aluno, turma')
           .not('nota_total', 'is', null)
           .eq('corrigida', true);
-          
+
         if (selectedType === "regular") {
           query = query.eq('tipo_envio', 'regular');
         } else if (selectedType === "avulsa") {
           query = query.eq('tipo_envio', 'avulsa');
         }
-        
-        // Filtrar por turma se necessário (admin, aluno ou visitante)
+
+        const { data, error } = await query.order('nota_total', { ascending: false });
+
+        if (error) throw error;
+
+        let filteredData = data || [];
+
+        // Filtrar por turma no client-side usando normalização (admin, aluno ou visitante)
         if (rankingTurmaFilter) {
-          const turmaForEnviadas = getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas');
-          query = query.eq('turma', turmaForEnviadas);
-          
-          console.log(`🎯 Regular/Avulsa Query Filter:`, {
+          console.log(`🎯 Regular/Avulsa Query Filter (client-side):`, {
             selectedType: selectedType,
             turmaLetter: rankingTurmaFilter,
-            turmaFormatted: turmaForEnviadas
+            totalBeforeFilter: filteredData.length
+          });
+
+          filteredData = filteredData.filter(item => {
+            const turmaNormalizada = normalizeTurmaToLetter(item.turma);
+            return turmaNormalizada === rankingTurmaFilter;
+          });
+
+          console.log(`📊 Regular/Avulsa Results after filter:`, {
+            totalAfterFilter: filteredData.length,
+            expectedTurma: rankingTurmaFilter
           });
         }
-        
-        const { data, error } = await query.order('nota_total', { ascending: false });
-        
-        if (error) throw error;
-        
-        let filteredData = data || [];
         
         // Debug para verificar resultados do filtro de regular/avulsa
         if (variant === "student" && rankingTurmaFilter) {

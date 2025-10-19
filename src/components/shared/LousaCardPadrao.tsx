@@ -49,6 +49,8 @@ interface LousaCardPadraoProps {
 }
 
 export const LousaCardPadrao = ({ lousa, perfil, actions }: LousaCardPadraoProps) => {
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+
   const getStatusBadge = () => {
     const now = new Date();
     const inicio = lousa.inicio_em ? new Date(lousa.inicio_em) : null;
@@ -173,23 +175,32 @@ export const LousaCardPadrao = ({ lousa, perfil, actions }: LousaCardPadraoProps
             </div>
             <div className="flex items-center gap-2">
               {(perfil === 'admin' || perfil === 'corretor') && (
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => actions?.onEditar?.(lousa.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onEditar?.(lousa.id);
+                    }}>
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => actions?.onEncerrar?.(lousa.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onEncerrar?.(lousa.id);
+                    }}>
                       <Eye className="mr-2 h-4 w-4" />
                       Encerrar
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => actions?.onDeletar?.(lousa.id)} className="text-red-600">
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onDeletar?.(lousa.id);
+                    }} className="text-red-600">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Deletar
                     </DropdownMenuItem>

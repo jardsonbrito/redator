@@ -36,6 +36,7 @@ interface VideotecaCardPadraoProps {
 
 export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPadraoProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const formatDate = (dateString: string) => {
     try {
@@ -68,7 +69,7 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
     if (perfil === 'admin') {
       return (
         <div className="flex justify-end items-center">
-          <DropdownMenu>
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                 <MoreVertical className="h-4 w-4" />
@@ -76,22 +77,34 @@ export const VideotecaCardPadrao = ({ video, perfil, actions }: VideotecaCardPad
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {video.publicado ? (
-                <DropdownMenuItem onClick={() => actions?.onDespublicar?.(video.id)}>
+                <DropdownMenuItem onClick={() => {
+                  setDropdownOpen(false);
+                  actions?.onDespublicar?.(video.id);
+                }}>
                   <EyeOff className="h-4 w-4 mr-2" />
                   Despublicar
                 </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem onClick={() => actions?.onPublicar?.(video.id)}>
+                <DropdownMenuItem onClick={() => {
+                  setDropdownOpen(false);
+                  actions?.onPublicar?.(video.id);
+                }}>
                   <Eye className="h-4 w-4 mr-2" />
                   Publicar
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => actions?.onEditar?.(video)}>
+              <DropdownMenuItem onClick={() => {
+                setDropdownOpen(false);
+                actions?.onEditar?.(video);
+              }}>
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={() => {
+                  setDropdownOpen(false);
+                  setShowDeleteDialog(true);
+                }}
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4 mr-2" />

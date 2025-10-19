@@ -58,6 +58,7 @@ export const AdminExerciseCard = ({
 }: AdminExerciseCardProps) => {
   const [submissionsCount, setSubmissionsCount] = useState<number>(0);
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchSubmissionsCount();
@@ -154,42 +155,6 @@ export const AdminExerciseCard = ({
                 {exercicio.tipo}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(exercicio)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar exercício
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onToggleActive(exercicio)}>
-                    <Power className="mr-2 h-4 w-4" />
-                    {exercicio.ativo ? 'Marcar como rascunho' : 'Publicar exercício'}
-                  </DropdownMenuItem>
-                  {exercicio.link_forms && (
-                    <DropdownMenuItem onClick={() => window.open(exercicio.link_forms, '_blank')}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Visualizar exercício
-                    </DropdownMenuItem>
-                  )}
-                  {exercicio.tipo === 'Redação com Frase Temática' && (
-                    <DropdownMenuItem onClick={() => setShowSubmissionsModal(true)}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Alunos que Enviaram
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onDelete(exercicio)} className="text-red-600">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir exercício
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </div>
 
           {/* Informações extras */}
@@ -242,18 +207,80 @@ export const AdminExerciseCard = ({
             </div>
           )}
 
-          {/* Contador de envios - apenas para Redação com Frase Temática */}
-          {exercicio.tipo === 'Redação com Frase Temática' && (
-            <div className="pt-2 border-t border-gray-200">
-              <div className="flex items-center gap-2 text-sm">
-                <FileText className="w-4 h-4 text-purple-600" />
-                <span className="font-medium text-gray-700">Enviaram:</span>
-                <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold">
-                  {submissionsCount}
-                </Badge>
-              </div>
+          {/* Rodapé com contador e menu de ações */}
+          <div className="pt-3 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              {/* Contador de envios - clicável apenas para Redação com Frase Temática */}
+              {exercicio.tipo === 'Redação com Frase Temática' ? (
+                <button
+                  onClick={() => setShowSubmissionsModal(true)}
+                  className="flex items-center gap-2 text-sm hover:bg-purple-50 px-2 py-1 rounded-md transition-colors group"
+                >
+                  <FileText className="w-4 h-4 text-purple-600 group-hover:text-purple-700" />
+                  <span className="font-medium text-gray-700 group-hover:text-purple-700">Enviaram:</span>
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold group-hover:bg-purple-200">
+                    {submissionsCount}
+                  </Badge>
+                </button>
+              ) : (
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <span>📅</span>
+                  <span>{formatCreationDate(exercicio.criado_em)}</span>
+                </div>
+              )}
+
+              {/* Menu de ações (três pontinhos) */}
+              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                    <MoreHorizontal className="h-4 w-4 text-gray-600" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
+                  <DropdownMenuItem onClick={() => {
+                    setDropdownOpen(false);
+                    onEdit(exercicio);
+                  }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Edit className="mr-2 h-4 w-4" />
+                    Editar exercício
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setDropdownOpen(false);
+                    onToggleActive(exercicio);
+                  }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Power className="mr-2 h-4 w-4" />
+                    {exercicio.ativo ? 'Marcar como rascunho' : 'Publicar exercício'}
+                  </DropdownMenuItem>
+                  {exercicio.link_forms && (
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      window.open(exercicio.link_forms, '_blank');
+                    }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                      <Eye className="mr-2 h-4 w-4" />
+                      Visualizar exercício
+                    </DropdownMenuItem>
+                  )}
+                  {exercicio.tipo === 'Redação com Frase Temática' && (
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      setShowSubmissionsModal(true);
+                    }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Alunos que Enviaram
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => {
+                    setDropdownOpen(false);
+                    onDelete(exercicio);
+                  }} className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 transition-colors">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir exercício
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          )}
+          </div>
         </div>
       </div>
 

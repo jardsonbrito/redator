@@ -58,6 +58,7 @@ export const AulaGravadaCardPadrao = ({
   actions,
   isWatched = false
 }: AulaGravadaCardPadraoProps) => {
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
 
   const getCoverImage = () => {
     // Prioritizar cover específico, depois thumbnail do vídeo, depois placeholder
@@ -165,18 +166,24 @@ export const AulaGravadaCardPadrao = ({
             {/* Menu três pontinhos apenas para admin */}
             {perfil === 'admin' && (
               <div className="flex-shrink-0">
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => actions?.onEditar?.(aula.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onEditar?.(aula.id);
+                    }}>
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => actions?.onDesativar?.(aula.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onDesativar?.(aula.id);
+                    }}>
                       {aula.ativo ? (
                         <>
                           <PowerOff className="mr-2 h-4 w-4" />
@@ -190,7 +197,10 @@ export const AulaGravadaCardPadrao = ({
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => actions?.onExcluir?.(aula.id)} className="text-red-600">
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onExcluir?.(aula.id);
+                    }} className="text-red-600">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>

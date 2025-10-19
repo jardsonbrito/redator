@@ -50,6 +50,8 @@ interface AulaCardPadraoProps {
 }
 
 export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ausente', loadingOperation }: AulaCardPadraoProps) => {
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+
   const getStatusAula = () => {
     if (!aula.eh_aula_ao_vivo) return 'encerrada';
 
@@ -196,7 +198,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
             </div>
             <div className="flex items-center gap-2">
               {perfil === 'admin' && (
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                       <MoreHorizontal className="h-4 w-4" />
@@ -204,16 +206,25 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {aula.eh_aula_ao_vivo && (
-                      <DropdownMenuItem onClick={() => actions?.onFrequencia?.(aula.id)}>
+                      <DropdownMenuItem onClick={() => {
+                        setDropdownOpen(false);
+                        actions?.onFrequencia?.(aula.id);
+                      }}>
                         <BarChart3 className="mr-2 h-4 w-4" />
                         Frequência
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem onClick={() => actions?.onEditar?.(aula.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onEditar?.(aula.id);
+                    }}>
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => actions?.onDesativar?.(aula.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onDesativar?.(aula.id);
+                    }}>
                       {aula.ativo ? (
                         <>
                           <PowerOff className="mr-2 h-4 w-4" />
@@ -227,7 +238,10 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => actions?.onExcluir?.(aula.id)} className="text-red-600">
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onExcluir?.(aula.id);
+                    }} className="text-red-600">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>

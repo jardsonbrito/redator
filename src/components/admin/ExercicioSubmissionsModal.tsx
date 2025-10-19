@@ -23,6 +23,7 @@ interface SubmissionData {
   nota_total: number | null;
   corrigida: boolean;
   status: string;
+  aluno_id: string | null;
 }
 
 interface ExercicioSubmissionsModalProps {
@@ -62,21 +63,106 @@ export const ExercicioSubmissionsModal = ({
 
       const fraseTematica = exercicio?.temas?.frase_tematica;
 
+      console.log('🔍 [ExercicioSubmissionsModal] Exercício:', exercicioId);
+      console.log('🔍 [ExercicioSubmissionsModal] Frase temática encontrada:', fraseTematica);
+
       if (!fraseTematica) {
+        console.warn('⚠️ [ExercicioSubmissionsModal] Nenhuma frase temática encontrada para o exercício');
         setSubmissions([]);
         return;
       }
 
       // 2. Buscar redações que têm essa frase temática
-      const { data, error } = await supabase
+      console.log('🔍 [ExercicioSubmissionsModal] Iniciando busca por redações...');
+      console.log('🔍 [ExercicioSubmissionsModal] Query: frase_tematica =', fraseTematica);
+
+      let redacoes: any = null;
+      const { data: redacoesData, error: redacoesError } = await supabase
         .from("redacoes_enviadas")
-        .select("nome_aluno, email_aluno, turma, nota_total, corrigida, status")
+        .select("email_aluno, nota_total, corrigida, status, aluno_id")
         .eq("frase_tematica", fraseTematica);
 
-      if (error) throw error;
+      console.log('🔍 [ExercicioSubmissionsModal] Redações encontradas:', redacoesData?.length || 0);
+      console.log('🔍 [ExercicioSubmissionsModal] Dados brutos de redações:', redacoesData);
+
+      if (redacoesError) {
+        console.error('❌ [ExercicioSubmissionsModal] Erro ao buscar redações:');
+        console.error('   Código:', redacoesError.code);
+        console.error('   Mensagem:', redacoesError.message);
+        console.error('   Detalhes:', redacoesError.details);
+        console.error('   Hint:', redacoesError.hint);
+        console.error('   Objeto completo:', redacoesError);
+
+        // Tentar uma query alternativa sem aluno_id
+        console.log('🔄 [ExercicioSubmissionsModal] Tentando query alternativa sem aluno_id...');
+        const { data: redacoesAlt, error: errorAlt } = await supabase
+          .from("redacoes_enviadas")
+          .select("email_aluno, nota_total, corrigida, status")
+          .eq("frase_tematica", fraseTematica);
+
+        if (errorAlt) {
+          console.error('❌ [ExercicioSubmissionsModal] Query alternativa também falhou:', errorAlt);
+          throw redacoesError;
+        }
+
+        console.log('✅ [ExercicioSubmissionsModal] Query alternativa funcionou! Usando esses dados.');
+        // Usar dados da query alternativa
+        redacoes = redacoesAlt;
+      } else {
+        redacoes = redacoesData;
+      }
+
+      if (!redacoes || redacoes.length === 0) {
+        console.log('⚠️ [ExercicioSubmissionsModal] Nenhuma redação encontrada');
+        setSubmissions([]);
+        return;
+      }
+
+      // 3. Buscar dados dos alunos separadamente
+      const emails = redacoes.map(r => r.email_aluno).filter(Boolean);
+      console.log('🔍 [ExercicioSubmissionsModal] Emails para buscar:', emails);
+
+      const { data: alunos, error: alunosError } = await supabase
+        .from("alunos")
+        .select("email, nome_completo, turma")
+        .in("email", emails);
+
+      console.log('🔍 [ExercicioSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
+      console.log('🔍 [ExercicioSubmissionsModal] Dados de alunos:', alunos);
+
+      if (alunosError) {
+        console.error('❌ [ExercicioSubmissionsModal] Erro ao buscar alunos:', alunosError);
+      }
+
+      // 4. Criar mapa de email => dados do aluno
+      const alunosMap = new Map(
+        (alunos || []).map(a => [a.email, { nome: a.nome_completo, turma: a.turma }])
+      );
+
+      // 5. Mapear os dados para o formato esperado
+      const mappedData: SubmissionData[] = redacoes.map((item: any) => {
+        const alunoData = alunosMap.get(item.email_aluno);
+
+        console.log('🔍 [ExercicioSubmissionsModal] Mapeando redação:', {
+          email: item.email_aluno,
+          aluno_data: alunoData,
+          nome_completo: alunoData?.nome,
+          turma: alunoData?.turma
+        });
+
+        return {
+          nome_aluno: alunoData?.nome || item.email_aluno || 'Aluno',
+          email_aluno: item.email_aluno,
+          turma: alunoData?.turma || null,
+          nota_total: item.nota_total,
+          corrigida: item.corrigida,
+          status: item.status,
+          aluno_id: item.aluno_id
+        };
+      });
 
       // Ordenar por nota (maior nota primeiro), devolvidas e não corrigidas por último
-      const sortedData = (data || []).sort((a, b) => {
+      const sortedData = mappedData.sort((a, b) => {
         // Redações devolvidas vão para o final
         const aDevolvida = a.status === 'devolvida';
         const bDevolvida = b.status === 'devolvida';

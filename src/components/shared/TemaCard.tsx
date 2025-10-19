@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MoreVertical, Edit, Eye, EyeOff, Trash2, AlertTriangle, FileText } from 'lucide-react';
 import { TemaSubmissionsModal } from '@/components/admin/TemaSubmissionsModal';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface TemaCardData {
   id: string;
@@ -106,6 +107,34 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [submissionsCount, setSubmissionsCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (perfil === 'admin') {
+      fetchSubmissionsCount();
+    }
+  }, [tema.id, perfil]);
+
+  const fetchSubmissionsCount = async () => {
+    try {
+      // Buscar redações que têm essa frase temática (sem aluno_id para evitar erro)
+      const { count, error } = await supabase
+        .from("redacoes_enviadas")
+        .select("*", { count: "exact", head: true })
+        .eq("frase_tematica", tema.frase_tematica);
+
+      if (error) {
+        console.error("Erro ao buscar contagem de envios para tema:", error);
+        setSubmissionsCount(0);
+        return;
+      }
+
+      setSubmissionsCount(count || 0);
+    } catch (error) {
+      console.error("Erro ao buscar contagem de envios:", error);
+      setSubmissionsCount(0);
+    }
+  };
 
   const handleExcluir = () => {
     if (actions.onExcluir) {
@@ -156,11 +185,26 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
       <div className="px-4 py-3 border-t border-gray-100 mt-auto">
         {perfil === 'admin' ? (
           <div className="flex items-center justify-between">
-            {/* Data à esquerda */}
-            <div className="text-xs text-gray-500 flex items-center gap-1">
-              <span>📅</span>
-              <span className="hidden sm:inline">{formattedDate || 'Sem data'}</span>
-              <span className="sm:hidden">{formattedDate?.split('/').slice(0, 2).join('/') || 'S/D'}</span>
+            {/* Informações à esquerda */}
+            <div className="flex items-center gap-3">
+              {/* Data */}
+              <div className="text-xs text-gray-500 flex items-center gap-1">
+                <span>📅</span>
+                <span className="hidden sm:inline">{formattedDate || 'Sem data'}</span>
+                <span className="sm:hidden">{formattedDate?.split('/').slice(0, 2).join('/') || 'S/D'}</span>
+              </div>
+
+              {/* Contador de envios - clicável */}
+              <button
+                onClick={() => setShowSubmissionsModal(true)}
+                className="flex items-center gap-2 text-sm hover:bg-purple-50 px-2 py-1 rounded-md transition-colors group"
+              >
+                <FileText className="w-4 h-4 text-purple-600 group-hover:text-purple-700" />
+                <span className="font-medium text-gray-700 group-hover:text-purple-700">Enviaram:</span>
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold group-hover:bg-purple-200">
+                  {submissionsCount}
+                </Badge>
+              </button>
             </div>
 
             {/* Menu de ações */}

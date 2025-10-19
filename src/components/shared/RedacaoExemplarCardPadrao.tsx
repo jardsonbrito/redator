@@ -49,6 +49,7 @@ export const RedacaoExemplarCardPadrao = ({
   actions
 }: RedacaoExemplarCardPadraoProps) => {
   const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
 
 
 
@@ -192,19 +193,25 @@ export const RedacaoExemplarCardPadrao = ({
             {/* Menu três pontinhos apenas para admin */}
             {perfil === 'admin' && (
               <div className="flex-shrink-0">
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => actions?.onEditar?.(redacao.id)}>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onEditar?.(redacao.id);
+                    }}>
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => actions?.onExcluir?.(redacao.id)} className="text-red-600">
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onExcluir?.(redacao.id);
+                    }} className="text-red-600">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </DropdownMenuItem>

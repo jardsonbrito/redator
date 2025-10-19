@@ -56,6 +56,8 @@ export const TemaSubmissionsModal = ({
     try {
       setIsLoading(true);
 
+      console.log('🔍 [TemaSubmissionsModal] Buscando envios para tema:', fraseTematica);
+
       // Verificar se existe um simulado com essa frase temática
       const { data: simulado, error: simuladoError } = await supabase
         .from("simulados")
@@ -63,100 +65,175 @@ export const TemaSubmissionsModal = ({
         .eq("frase_tematica", fraseTematica)
         .maybeSingle();
 
+      console.log('🔍 [TemaSubmissionsModal] Simulado encontrado:', simulado);
+
       let data: SubmissionData[] = [];
       let error = null;
 
       if (simulado && simulado.id) {
         // É um simulado - buscar de redacoes_simulado
         setIsSimulado(true);
-        const { data: redacoesSimulado, error: redacoesError } = await supabase
+
+        console.log('🔍 [TemaSubmissionsModal] Buscando redações do simulado:', simulado.id);
+
+        // Buscar redações do simulado (sem JOIN que pode falhar)
+        let redacoesSimulado: any = null;
+        const { data: redacoesData, error: redacoesError } = await supabase
           .from("redacoes_simulado")
-          .select("nome_aluno, email_aluno, turma, nota_final_corretor_1, nota_final_corretor_2, corrigida")
+          .select("email_aluno, nota_final_corretor_1, nota_final_corretor_2, corrigida, aluno_id, turma")
           .eq("id_simulado", simulado.id);
 
         if (redacoesError) {
+          console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações do simulado:', redacoesError);
           error = redacoesError;
         } else {
-          // Buscar nomes reais dos profiles
-          const emails = (redacoesSimulado || []).map(r => r.email_aluno).filter(Boolean);
+          redacoesSimulado = redacoesData;
+          console.log('🔍 [TemaSubmissionsModal] Redações do simulado encontradas:', redacoesSimulado?.length || 0);
 
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("email, nome")
-            .in("email", emails);
+          if (redacoesSimulado && redacoesSimulado.length > 0) {
+            // Buscar dados dos alunos separadamente
+            const emails = redacoesSimulado.map((r: any) => r.email_aluno).filter(Boolean);
+            console.log('🔍 [TemaSubmissionsModal] Emails para buscar:', emails);
 
-          const profileMap = new Map(
-            (profiles || []).map(p => [p.email, p.nome])
-          );
+            const { data: alunos, error: alunosError } = await supabase
+              .from("alunos")
+              .select("email, nome_completo, turma")
+              .in("email", emails);
 
-          // Calcular média das duas notas para cada redação
-          data = (redacoesSimulado || []).map(r => {
-            const nota1 = r.nota_final_corretor_1 ?? null;
-            const nota2 = r.nota_final_corretor_2 ?? null;
+            console.log('🔍 [TemaSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
 
-            let notaFinal = null;
-            let corrigida = r.corrigida || false;
-
-            // Se ambas as notas existem, calcular média
-            if (nota1 !== null && nota2 !== null) {
-              notaFinal = Math.round((nota1 + nota2) / 2);
-              corrigida = true;
+            if (alunosError) {
+              console.error('❌ [TemaSubmissionsModal] Erro ao buscar alunos:', alunosError);
             }
 
-            // Usar nome do profile se disponível, senão usar nome_aluno da redação
-            const nomeReal = profileMap.get(r.email_aluno) || r.nome_aluno;
+            // Criar mapa de email => dados do aluno
+            const alunosMap = new Map(
+              (alunos || []).map(a => [a.email, { nome: a.nome_completo, turma: a.turma }])
+            );
 
-            return {
-              nome_aluno: nomeReal,
-              email_aluno: r.email_aluno,
-              turma: r.turma || null,
-              nota_total: notaFinal,
-              nota_corretor_1: nota1,
-              nota_corretor_2: nota2,
-              corrigida: corrigida,
-              status: corrigida ? 'corrigida' : 'aguardando',
-              is_simulado: true
-            };
-          });
+            // Calcular média das duas notas para cada redação
+            data = redacoesSimulado.map((r: any) => {
+              const nota1 = r.nota_final_corretor_1 ?? null;
+              const nota2 = r.nota_final_corretor_2 ?? null;
+
+              let notaFinal = null;
+              let corrigida = r.corrigida || false;
+
+              // Se ambas as notas existem, calcular média
+              if (nota1 !== null && nota2 !== null) {
+                notaFinal = Math.round((nota1 + nota2) / 2);
+                corrigida = true;
+              }
+
+              // Usar dados reais da tabela alunos
+              const alunoData = alunosMap.get(r.email_aluno);
+              const nomeReal = alunoData?.nome || r.email_aluno || 'Aluno';
+              const turmaAtual = alunoData?.turma || r.turma || null;
+
+              console.log('🔍 [TemaSubmissionsModal] Mapeando redação simulado:', {
+                email: r.email_aluno,
+                aluno_data: alunoData,
+                nome_completo: nomeReal,
+                turma: turmaAtual
+              });
+
+              return {
+                nome_aluno: nomeReal,
+                email_aluno: r.email_aluno,
+                turma: turmaAtual,
+                nota_total: notaFinal,
+                nota_corretor_1: nota1,
+                nota_corretor_2: nota2,
+                corrigida: corrigida,
+                status: corrigida ? 'corrigida' : 'aguardando',
+                is_simulado: true
+              };
+            });
+          }
         }
       } else {
         // É um tema regular - buscar de redacoes_enviadas
         setIsSimulado(false);
-        const { data: redacoesRegulares, error: redacoesError } = await supabase
+        console.log('🔍 [TemaSubmissionsModal] Iniciando busca por redações regulares...');
+
+        let redacoesRegulares: any = null;
+        const { data: redacoesData, error: redacoesError } = await supabase
           .from("redacoes_enviadas")
-          .select("nome_aluno, email_aluno, turma, nota_total, corrigida, status")
+          .select("email_aluno, nota_total, corrigida, status, aluno_id")
           .eq("frase_tematica", fraseTematica);
 
         if (redacoesError) {
-          error = redacoesError;
+          console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações:');
+          console.error('   Código:', redacoesError.code);
+          console.error('   Mensagem:', redacoesError.message);
+
+          // Tentar query alternativa sem aluno_id
+          console.log('🔄 [TemaSubmissionsModal] Tentando query alternativa sem aluno_id...');
+          const { data: redacoesAlt, error: errorAlt } = await supabase
+            .from("redacoes_enviadas")
+            .select("email_aluno, nota_total, corrigida, status")
+            .eq("frase_tematica", fraseTematica);
+
+          if (errorAlt) {
+            console.error('❌ [TemaSubmissionsModal] Query alternativa também falhou:', errorAlt);
+            error = redacoesError;
+          } else {
+            console.log('✅ [TemaSubmissionsModal] Query alternativa funcionou!');
+            redacoesRegulares = redacoesAlt;
+          }
         } else {
-          // Buscar nomes reais dos profiles
-          const emails = (redacoesRegulares || []).map(r => r.email_aluno).filter(Boolean);
-
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("email, nome")
-            .in("email", emails);
-
-          const profileMap = new Map(
-            (profiles || []).map(p => [p.email, p.nome])
-          );
-
-          // Mapear para usar nome do profile
-          data = (redacoesRegulares || []).map(r => {
-            const nomeReal = profileMap.get(r.email_aluno) || r.nome_aluno;
-
-            return {
-              nome_aluno: nomeReal,
-              email_aluno: r.email_aluno,
-              turma: r.turma || null,
-              nota_total: r.nota_total,
-              corrigida: r.corrigida,
-              status: r.status
-            };
-          });
+          redacoesRegulares = redacoesData;
         }
-      }
+
+        if (!error && redacoesRegulares) {
+          console.log('🔍 [TemaSubmissionsModal] Redações regulares encontradas:', redacoesRegulares?.length || 0);
+          console.log('🔍 [TemaSubmissionsModal] Dados brutos de redações:', redacoesRegulares);
+
+            if (redacoesRegulares && redacoesRegulares.length > 0) {
+              // Buscar dados dos alunos separadamente
+              const emails = redacoesRegulares.map((r: any) => r.email_aluno).filter(Boolean);
+              console.log('🔍 [TemaSubmissionsModal] Emails para buscar:', emails);
+
+              const { data: alunos, error: alunosError } = await supabase
+                .from("alunos")
+                .select("email, nome_completo, turma")
+                .in("email", emails);
+
+              console.log('🔍 [TemaSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
+              console.log('🔍 [TemaSubmissionsModal] Dados de alunos:', alunos);
+
+              if (alunosError) {
+                console.error('❌ [TemaSubmissionsModal] Erro ao buscar alunos:', alunosError);
+              }
+
+              // Criar mapa de email => dados do aluno
+              const alunosMap = new Map(
+                (alunos || []).map(a => [a.email, { nome: a.nome_completo, turma: a.turma }])
+              );
+
+              // Mapear para usar dados reais da tabela alunos
+              data = redacoesRegulares.map((r: any) => {
+                const alunoData = alunosMap.get(r.email_aluno);
+
+                console.log('🔍 [TemaSubmissionsModal] Mapeando redação:', {
+                  email: r.email_aluno,
+                  aluno_data: alunoData,
+                  nome_completo: alunoData?.nome,
+                  turma: alunoData?.turma
+                });
+
+                return {
+                  nome_aluno: alunoData?.nome || r.email_aluno || 'Aluno',
+                  email_aluno: r.email_aluno,
+                  turma: alunoData?.turma || null,
+                  nota_total: r.nota_total,
+                  corrigida: r.corrigida,
+                  status: r.status
+                };
+              });
+            }
+          }
+        }
 
       if (error) throw error;
 

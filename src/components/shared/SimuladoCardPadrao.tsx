@@ -198,13 +198,14 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
     }
   });
 
+  // Estado do dropdown
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   // Determinar se pode cancelar redação
   const podeCancelar = perfil === 'aluno' &&
                        simulado.hasSubmitted &&
                        simulado.redacaoData &&
                        canCancelRedacao(simulado.redacaoData);
-
-
 
   // Determinar se o card é clicável (remover clicabilidade para alunos que já enviaram redação)
   const isClickable = (perfil === 'aluno' && isAtivo) ||
@@ -330,7 +331,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
               </div>
 
               {/* Menu de ações */}
-              <DropdownMenu>
+              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
@@ -342,14 +343,20 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
                   <DropdownMenuItem
-                    onClick={() => actions.onEditar?.(simulado.id)}
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      actions.onEditar?.(simulado.id);
+                    }}
                     className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => actions.onToggleStatus?.(simulado.id, simulado.ativo ? 'ativo' : 'inativo')}
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      actions.onToggleStatus?.(simulado.id, simulado.ativo ? 'ativo' : 'inativo');
+                    }}
                     className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     {simulado.ativo ? (
@@ -367,7 +374,10 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem
-                        onSelect={(e) => e.preventDefault()}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setDropdownOpen(false);
+                        }}
                         className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
