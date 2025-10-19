@@ -119,8 +119,12 @@ export const ExercicioSubmissionsModal = ({
       }
 
       // 3. Buscar dados dos alunos separadamente
-      const emails = redacoes.map(r => r.email_aluno).filter(Boolean);
-      console.log('🔍 [ExercicioSubmissionsModal] Emails para buscar:', emails);
+      // Normalizar emails (lowercase e trim) para garantir match
+      const emails = redacoes
+        .map(r => r.email_aluno?.toLowerCase().trim())
+        .filter(Boolean);
+
+      console.log('🔍 [ExercicioSubmissionsModal] Emails para buscar (normalizados):', emails);
 
       const { data: alunos, error: alunosError } = await supabase
         .from("alunos")
@@ -129,25 +133,34 @@ export const ExercicioSubmissionsModal = ({
 
       console.log('🔍 [ExercicioSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
       console.log('🔍 [ExercicioSubmissionsModal] Dados de alunos:', alunos);
+      console.log('🔍 [ExercicioSubmissionsModal] Detalhes dos alunos:',
+        alunos?.map(a => ({ email: a.email, nome: a.nome_completo, turma: a.turma }))
+      );
 
       if (alunosError) {
         console.error('❌ [ExercicioSubmissionsModal] Erro ao buscar alunos:', alunosError);
       }
 
-      // 4. Criar mapa de email => dados do aluno
+      // 4. Criar mapa de email => dados do aluno (normalizar email para garantir match)
       const alunosMap = new Map(
-        (alunos || []).map(a => [a.email, { nome: a.nome_completo, turma: a.turma }])
+        (alunos || []).map(a => [
+          a.email.toLowerCase().trim(),
+          { nome: a.nome_completo, turma: a.turma }
+        ])
       );
 
       // 5. Mapear os dados para o formato esperado
       const mappedData: SubmissionData[] = redacoes.map((item: any) => {
-        const alunoData = alunosMap.get(item.email_aluno);
+        // Normalizar email para buscar no Map
+        const emailNormalizado = item.email_aluno?.toLowerCase().trim();
+        const alunoData = alunosMap.get(emailNormalizado);
 
         console.log('🔍 [ExercicioSubmissionsModal] Mapeando redação:', {
-          email: item.email_aluno,
+          email_original: item.email_aluno,
+          email_normalizado: emailNormalizado,
           aluno_data: alunoData,
           nome_completo: alunoData?.nome,
-          turma: alunoData?.turma
+          turma_raw: alunoData?.turma
         });
 
         return {

@@ -92,8 +92,12 @@ export const TemaSubmissionsModal = ({
 
           if (redacoesSimulado && redacoesSimulado.length > 0) {
             // Buscar dados dos alunos separadamente
-            const emails = redacoesSimulado.map((r: any) => r.email_aluno).filter(Boolean);
-            console.log('🔍 [TemaSubmissionsModal] Emails para buscar:', emails);
+            // Normalizar emails (lowercase e trim) para garantir match
+            const emails = redacoesSimulado
+              .map((r: any) => r.email_aluno?.toLowerCase().trim())
+              .filter(Boolean);
+
+            console.log('🔍 [TemaSubmissionsModal] Emails para buscar (normalizados):', emails);
 
             const { data: alunos, error: alunosError } = await supabase
               .from("alunos")
@@ -101,14 +105,20 @@ export const TemaSubmissionsModal = ({
               .in("email", emails);
 
             console.log('🔍 [TemaSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
+            console.log('🔍 [TemaSubmissionsModal] Detalhes dos alunos:',
+              alunos?.map(a => ({ email: a.email, nome: a.nome_completo, turma: a.turma }))
+            );
 
             if (alunosError) {
               console.error('❌ [TemaSubmissionsModal] Erro ao buscar alunos:', alunosError);
             }
 
-            // Criar mapa de email => dados do aluno
+            // Criar mapa de email => dados do aluno (normalizar email para garantir match)
             const alunosMap = new Map(
-              (alunos || []).map(a => [a.email, { nome: a.nome_completo, turma: a.turma }])
+              (alunos || []).map(a => [
+                a.email.toLowerCase().trim(),
+                { nome: a.nome_completo, turma: a.turma }
+              ])
             );
 
             // Calcular média das duas notas para cada redação
@@ -126,12 +136,15 @@ export const TemaSubmissionsModal = ({
               }
 
               // Usar dados reais da tabela alunos
-              const alunoData = alunosMap.get(r.email_aluno);
+              // Normalizar email para buscar no Map
+              const emailNormalizado = r.email_aluno?.toLowerCase().trim();
+              const alunoData = alunosMap.get(emailNormalizado);
               const nomeReal = alunoData?.nome || r.email_aluno || 'Aluno';
               const turmaAtual = alunoData?.turma || r.turma || null;
 
               console.log('🔍 [TemaSubmissionsModal] Mapeando redação simulado:', {
-                email: r.email_aluno,
+                email_original: r.email_aluno,
+                email_normalizado: emailNormalizado,
                 aluno_data: alunoData,
                 nome_completo: nomeReal,
                 turma: turmaAtual
@@ -191,8 +204,12 @@ export const TemaSubmissionsModal = ({
 
             if (redacoesRegulares && redacoesRegulares.length > 0) {
               // Buscar dados dos alunos separadamente
-              const emails = redacoesRegulares.map((r: any) => r.email_aluno).filter(Boolean);
-              console.log('🔍 [TemaSubmissionsModal] Emails para buscar:', emails);
+              // Normalizar emails (lowercase e trim) para garantir match
+              const emails = redacoesRegulares
+                .map((r: any) => r.email_aluno?.toLowerCase().trim())
+                .filter(Boolean);
+
+              console.log('🔍 [TemaSubmissionsModal] Emails para buscar (normalizados):', emails);
 
               const { data: alunos, error: alunosError } = await supabase
                 .from("alunos")
@@ -200,23 +217,31 @@ export const TemaSubmissionsModal = ({
                 .in("email", emails);
 
               console.log('🔍 [TemaSubmissionsModal] Alunos encontrados:', alunos?.length || 0);
-              console.log('🔍 [TemaSubmissionsModal] Dados de alunos:', alunos);
+              console.log('🔍 [TemaSubmissionsModal] Detalhes dos alunos:',
+                alunos?.map(a => ({ email: a.email, nome: a.nome_completo, turma: a.turma }))
+              );
 
               if (alunosError) {
                 console.error('❌ [TemaSubmissionsModal] Erro ao buscar alunos:', alunosError);
               }
 
-              // Criar mapa de email => dados do aluno
+              // Criar mapa de email => dados do aluno (normalizar email para garantir match)
               const alunosMap = new Map(
-                (alunos || []).map(a => [a.email, { nome: a.nome_completo, turma: a.turma }])
+                (alunos || []).map(a => [
+                  a.email.toLowerCase().trim(),
+                  { nome: a.nome_completo, turma: a.turma }
+                ])
               );
 
               // Mapear para usar dados reais da tabela alunos
               data = redacoesRegulares.map((r: any) => {
-                const alunoData = alunosMap.get(r.email_aluno);
+                // Normalizar email para buscar no Map
+                const emailNormalizado = r.email_aluno?.toLowerCase().trim();
+                const alunoData = alunosMap.get(emailNormalizado);
 
                 console.log('🔍 [TemaSubmissionsModal] Mapeando redação:', {
-                  email: r.email_aluno,
+                  email_original: r.email_aluno,
+                  email_normalizado: emailNormalizado,
                   aluno_data: alunoData,
                   nome_completo: alunoData?.nome,
                   turma: alunoData?.turma
