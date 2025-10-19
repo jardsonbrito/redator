@@ -10,6 +10,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { renderTextWithParagraphs } from '@/utils/textUtils';
+import { getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 
 // Função para extrair e separar fonte do texto
 const extrairFonteDoTexto = (texto: string) => {
@@ -280,12 +281,10 @@ const SimuladoParticipacao = () => {
                   })()}
 
 
-                  {/* TEXTO MOTIVADOR (IMAGEM) - Numeração dinâmica baseada nos textos existentes */}
+                  {/* TEXTO MOTIVADOR IV (IMAGEM) - Numeração dinâmica baseada nos textos existentes */}
                   {(() => {
-                    const imagemMotivador = simulado.temas.motivator4_url ||
-                                           simulado.temas.imagem_texto_4_url ||
-                                           simulado.temas.motivator4_file_path ||
-                                           simulado.temas.cover_url;
+                    // Usar a função correta para resolver a URL do Texto 4
+                    const imagemMotivador = getTemaMotivatorIVUrl(simulado.temas);
 
                     if (imagemMotivador) {
                       const textosVerbais = [simulado.temas.texto_1, simulado.temas.texto_2, simulado.temas.texto_3].filter(Boolean);
@@ -297,8 +296,13 @@ const SimuladoParticipacao = () => {
                           <div className="rounded-lg overflow-hidden">
                             <img
                               src={imagemMotivador}
-                              alt={`Texto ${numeroTextoImagem}`}
+                              alt={`Texto ${numeroTextoImagem} - Charge/Infográfico`}
                               className="w-full h-auto"
+                              onError={(e) => {
+                                console.error('Erro ao carregar imagem do Texto 4:', imagemMotivador);
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
                             />
                           </div>
                         </div>

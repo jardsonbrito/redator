@@ -231,18 +231,9 @@ export default function SimuladoDetalhes() {
           </CardHeader>
         </Card>
 
-        {/* Conteúdo do Tema - SEMPRE MOSTRAR TESTE */}
+        {/* Conteúdo do Tema */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            {/* TESTE FORÇADO ANTES DE TUDO */}
-            <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded">
-              <h3 className="font-bold text-red-800 mb-2">TESTE TEXTO IV FORÇADO</h3>
-              <img 
-                src="https://arvoreagua.org/wp-content/uploads/2021/06/crise-climatica.png"
-                alt="Texto Motivador IV" 
-                className="w-full max-w-lg mx-auto rounded"
-              />
-            </div>
               {/* Cabeçalho ENEM */}
               {tema.cabecalho_enem && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
@@ -289,38 +280,29 @@ export default function SimuladoDetalhes() {
                   </div>
                 )}
 
-                {/* TEXTO IV - RENDERIZAÇÃO GARANTIDA */}
+                {/* TEXTO IV - Imagem */}
                 {(() => {
                   const motivatorIVUrl = getTemaMotivatorIVUrl(tema);
-                  console.log('=== DEBUG TEXTO IV ===');
-                  console.log('motivator4_url:', tema.motivator4_url);
-                  console.log('motivator4_file_path:', tema.motivator4_file_path);
-                  console.log('motivator4_source:', tema.motivator4_source);
-                  console.log('imagem_texto_4_url:', tema.imagem_texto_4_url);
-                  console.log('URL final calculada:', motivatorIVUrl);
-                  
-                  // Se há qualquer URL disponível, renderizar o Texto IV
-                  const finalUrl = motivatorIVUrl || tema.imagem_texto_4_url || tema.motivator4_url;
-                  
-                  if (finalUrl) {
+
+                  if (motivatorIVUrl) {
                     return (
                       <div>
                         <h4 className="font-bold text-purple-800 mb-2">TEXTO IV</h4>
                         <div className="p-4 bg-gray-50 rounded border">
-                          <img 
-                            src={finalUrl}
-                            alt="Charge/Infográfico — Texto Motivador IV" 
-                            className="w-full max-w-lg mx-auto rounded"
+                          <img
+                            src={motivatorIVUrl}
+                            alt="Charge/Infográfico — Texto Motivador IV"
+                            className="w-full max-w-2xl mx-auto rounded shadow-sm"
                             onError={(e) => {
-                              console.error('Erro ao carregar Texto IV:', finalUrl);
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
                             }}
-                            onLoad={() => console.log('Texto IV carregado:', finalUrl)}
                           />
                         </div>
                       </div>
                     );
                   }
-                  
+
                   return null;
                 })()}
               </div>
