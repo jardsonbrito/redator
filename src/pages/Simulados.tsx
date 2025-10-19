@@ -35,6 +35,13 @@ const Simulados = () => {
     turmaCode = studentData.turma; // Usar o nome real da turma
   }
 
+  console.log('🔍 [Simulados] Dados do aluno:', {
+    userType: studentData.userType,
+    turma: studentData.turma,
+    turmaCode: turmaCode,
+    email: studentData.email
+  });
+
 const { data: simulados, isLoading } = useQuery({
   queryKey: ['simulados', turmaCode],
   queryFn: async () => {
@@ -50,6 +57,14 @@ const { data: simulados, isLoading } = useQuery({
     const simuladosFiltrados = (sims || []).filter((simulado) => {
       const turmasAutorizadas = simulado.turmas_autorizadas || [];
       const permiteVisitante = simulado.permite_visitante;
+
+      console.log('🔍 [Simulados] Filtro:', {
+        simulado: simulado.titulo,
+        turmasAutorizadas: turmasAutorizadas,
+        turmaCode: turmaCode,
+        includes: turmasAutorizadas.includes(turmaCode),
+        permiteVisitante: permiteVisitante
+      });
 
       if (turmaCode === "Visitante") {
         // Visitantes só veem simulados que permitem visitantes

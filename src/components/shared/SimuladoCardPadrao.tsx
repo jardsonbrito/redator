@@ -200,6 +200,7 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
 
   // Estado do dropdown
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Determinar se pode cancelar redação
   const podeCancelar = perfil === 'aluno' &&
@@ -227,9 +228,12 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
   };
 
   const handleExcluir = () => {
+    console.log('🗑️ [SimuladoCardPadrao] Executando exclusão do simulado:', simulado.id);
     if (actions.onExcluir) {
       actions.onExcluir(simulado.id);
     }
+    setDeleteDialogOpen(false);
+    setDropdownOpen(false);
   };
 
   const handleCancelarRedacao = () => {
@@ -371,40 +375,17 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
                       </>
                     )}
                   </DropdownMenuItem>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem
-                        onSelect={(e) => {
-                          e.preventDefault();
-                          setDropdownOpen(false);
-                        }}
-                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-md mx-4 rounded-lg">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                          <AlertTriangle className="h-5 w-5 text-red-500" />
-                          Confirmar Exclusão
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja excluir este simulado? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                        <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleExcluir}
-                          className="w-full sm:w-auto bg-red-600 hover:bg-red-700 transition-colors"
-                        >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setDropdownOpen(false);
+                      setTimeout(() => setDeleteDialogOpen(true), 100);
+                    }}
+                    className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -609,6 +590,34 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
             </>
           )}
         </div>
+      )}
+
+      {/* AlertDialog de confirmação de exclusão - FORA do DropdownMenu */}
+      {perfil === 'admin' && (
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent className="max-w-md mx-4 rounded-lg">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                Confirmar Exclusão
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o simulado <strong>"{simulado.titulo}"</strong>?
+                <br /><br />
+                Esta ação não pode ser desfeita e todas as redações relacionadas a este simulado serão afetadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleExcluir}
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Excluir Simulado
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </Card>
   );

@@ -45,42 +45,49 @@ const SimuladoList = () => {
   }, [simulados]);
 
   const handleDeleteSimulado = (id: string) => {
-    // Buscar o simulado para mostrar informações na confirmação
-    const simulado = simulados?.find(s => s.id === id);
-    const nomeSimulado = simulado?.titulo || 'este simulado';
-
-    const confirmDelete = window.confirm(
-      `Tem certeza que deseja excluir "${nomeSimulado}"?\n\nEsta ação não pode ser desfeita e todas as redações relacionadas a este simulado serão afetadas.`
-    );
-
-    if (confirmDelete) {
-      deletarSimulado.mutate(id);
-    }
+    console.log('🗑️ [SimuladoList] handleDeleteSimulado chamado com ID:', id);
+    deletarSimulado.mutate(id);
   };
 
   const deletarSimulado = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      console.log('🗑️ [SimuladoList] Tentando deletar simulado:', id);
+
+      const { data, error } = await supabase
         .from('simulados')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      console.log('🗑️ [SimuladoList] Resultado da exclusão:', { data, error });
+
+      if (error) {
+        console.error('❌ [SimuladoList] Erro ao deletar:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
+
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('✅ [SimuladoList] Simulado deletado com sucesso:', data);
       toast({
         title: "Simulado excluído com sucesso!",
         description: "O simulado foi removido do sistema.",
       });
       queryClient.invalidateQueries({ queryKey: ['admin-simulados'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('❌ [SimuladoList] Erro na mutação:', error);
       toast({
         title: "Erro ao excluir simulado",
-        description: "Não foi possível excluir o simulado.",
+        description: error.message || "Não foi possível excluir o simulado.",
         variant: "destructive",
       });
-      console.error("Erro ao excluir simulado:", error);
     }
   });
 
@@ -181,7 +188,7 @@ const SimuladoList = () => {
           Novo Simulado
         </Button>
       </div>
-      
+
       {!simulados || simulados.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">

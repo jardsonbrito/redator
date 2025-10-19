@@ -60,6 +60,13 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
             sessionToken: dados.sessionToken || null
           });
           console.log('✅ Sessão de aluno restaurada persistentemente');
+          console.log('🔍 [useStudentAuth] Dados restaurados:', {
+            email: dados.email,
+            turma: alunoTurma,
+            nome: dados.nome,
+            tipoTurma: typeof alunoTurma,
+            turmaValue: alunoTurma
+          });
         } catch (error) {
           console.error('❌ Erro ao parsear dados do aluno:', error);
           // Limpar dados corrompidos
@@ -241,10 +248,18 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     localStorage.setItem("alunoData", JSON.stringify({...alunoInfo, sessionToken}));
     localStorage.setItem("userType", "aluno");
     localStorage.removeItem("visitanteData");
-    
+
     // Também salvar timestamp para auditoria
     localStorage.setItem("loginTimestamp", new Date().toISOString());
-    
+
+    console.log('🔍 [useStudentAuth] Login - salvando dados:', {
+      turma: turma,
+      tipoTurma: typeof turma,
+      alunoInfo: alunoInfo,
+      localStorage_alunoTurma: localStorage.getItem("alunoTurma"),
+      localStorage_userType: localStorage.getItem("userType")
+    });
+
     setIsStudentLoggedIn(true);
     setStudentData({
       id: email.toLowerCase(), // usar email como ID para alunos

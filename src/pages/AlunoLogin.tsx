@@ -84,6 +84,15 @@ const AlunoLogin = () => {
 
       // Login bem-sucedido
       console.log('Login bem-sucedido para:', aluno.nome, 'Turma:', aluno.turma);
+      console.log('🔍 [AlunoLogin] Dados do profile:', {
+        id: aluno.id,
+        nome: aluno.nome,
+        email: aluno.email,
+        turma: aluno.turma,
+        tipoTurma: typeof aluno.turma,
+        turmaLength: aluno.turma?.length,
+        ativo: aluno.ativo
+      });
       loginAsStudent(aluno.turma, aluno.nome, aluno.email);
       
       toast({
