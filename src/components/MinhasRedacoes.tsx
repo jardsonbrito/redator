@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle, User, Download } from "lucide-react";
+import { FileText, Calendar, Eye, Lock, AlertCircle, Shield, CheckCircle, User, Download, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RedacaoEnviadaCard } from "./RedacaoEnviadaCard";
 import { getStatusColor, getStatusLabel } from "@/utils/redacaoUtils";
@@ -14,6 +14,7 @@ import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
 import { useCancelRedacao } from "@/hooks/useCancelRedacao";
 import { X, AlertTriangle } from "lucide-react";
 import { getTurmaCode } from "@/utils/turmaUtils";
+import { ModalEditarReenviarRedacao } from "./ModalEditarReenviarRedacao";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +45,7 @@ type RedacaoTurma = {
   nota_c3?: number | null;
   nota_c4?: number | null;
   nota_c5?: number | null;
+  exercicio_id?: string;
 };
 
 type AuthenticatedRedacao = RedacaoTurma & {
@@ -83,6 +85,8 @@ export const MinhasRedacoes = () => {
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [showDevolutionDialog, setShowDevolutionDialog] = useState(false);
   const [devolutionInfo, setDevolutionInfo] = useState<{ corretor: string; justificativa: string; tema: string; dataEnvio: string } | null>(null);
+  const [showEditarReenviarModal, setShowEditarReenviarModal] = useState(false);
+  const [redacaoParaEditar, setRedacaoParaEditar] = useState<RedacaoTurma | null>(null);
   const { toast } = useToast();
 
   // Hook para cancelamento de redações
@@ -596,7 +600,7 @@ export const MinhasRedacoes = () => {
 
   const handleEntendi = async () => {
     if (!selectedRedacaoId) return;
-    
+
     try {
       // Determinar tabela origem baseada no tipo de redação
       const redacao = redacoesTurma?.find(r => r.id === selectedRedacaoId);
@@ -605,25 +609,60 @@ export const MinhasRedacoes = () => {
         'exercicio': 'redacoes_exercicio',
         'regular': 'redacoes_enviadas'
       };
-      
+
       const tabelaOrigem = tabelaOrigemMap[redacao?.tipo_envio as keyof typeof tabelaOrigemMap] || 'redacoes_enviadas';
-      
+
       // Marcar como visualizada
       await supabase.rpc('marcar_redacao_devolvida_como_visualizada', {
         redacao_id_param: selectedRedacaoId,
         tabela_origem_param: tabelaOrigem,
         email_aluno_param: (alunoEmail || visitanteEmail).toLowerCase().trim()
       });
-      
+
       setShowDevolutionDialog(false);
       setSelectedRedacaoId(null);
       setDevolutionInfo(null);
-      
+
     } catch (error) {
       console.error('Erro ao marcar como visualizada:', error);
     }
   };
 
+  const handleEditarReenviar = async (redacao: RedacaoTurma) => {
+    console.log('📝 Abrindo modal de edição e reenvio para redação:', redacao.id);
+
+    try {
+      // Buscar dados completos da redação de exercício
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, frase_tematica, redacao_texto')
+        .eq('id', redacao.id)
+        .single();
+
+      if (error || !data) {
+        console.error('Erro ao buscar redação:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados da redação.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setRedacaoParaEditar({
+        ...redacao,
+        ...data
+      });
+      setShowEditarReenviarModal(true);
+    } catch (error) {
+      console.error('Erro ao abrir modal de edição:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir o editor de redação.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleEmailAuth = async () => {
     if (!selectedRedacaoId || !emailInput.trim()) {
@@ -1039,8 +1078,32 @@ export const MinhasRedacoes = () => {
                     
                   </div>
 
-                   {/* Botão de cancelamento - disponível apenas para regulares (simulados cancelam na rota do simulado) */}
-                   {canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado' && (
+                   {/* DEBUG: Log dos dados da redação */}
+                   {console.log('🔍 DEBUG Redação:', {
+                     id: redacao.id.substring(0, 8),
+                     frase: redacao.frase_tematica.substring(0, 30),
+                     tipo_envio: redacao.tipo_envio,
+                     status: redacao.status,
+                     condicao_exercicio: redacao.tipo_envio === 'exercicio',
+                     condicao_devolvida: redacao.status === 'devolvida',
+                     vai_mostrar_botao: redacao.tipo_envio === 'exercicio' && redacao.status === 'devolvida'
+                   })}
+
+                   {/* Botão Editar e Reenviar - apenas para exercícios devolvidos */}
+                   {redacao.tipo_envio === 'exercicio' && redacao.status === 'devolvida' && (
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       className="w-full text-blue-600 border-blue-200 hover:bg-blue-50 text-xs mb-2"
+                       onClick={() => handleEditarReenviar(redacao)}
+                     >
+                       <Edit className="w-3 h-3 mr-1" />
+                       Editar e Reenviar
+                     </Button>
+                   )}
+
+                   {/* Botão de cancelamento - disponível apenas para regulares não devolvidos (simulados cancelam na rota do simulado) */}
+                   {canCancelRedacao(redacao) && redacao.tipo_envio !== 'simulado' && redacao.status !== 'devolvida' && (
                      <AlertDialog>
                        <AlertDialogTrigger asChild>
                          <Button
@@ -1299,6 +1362,21 @@ export const MinhasRedacoes = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Edição e Reenvio */}
+      {redacaoParaEditar && (
+        <ModalEditarReenviarRedacao
+          isOpen={showEditarReenviarModal}
+          onClose={() => {
+            setShowEditarReenviarModal(false);
+            setRedacaoParaEditar(null);
+          }}
+          redacao={redacaoParaEditar}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
+      )}
     </>
   );
 };

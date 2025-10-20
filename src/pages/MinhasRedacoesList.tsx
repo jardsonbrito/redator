@@ -12,6 +12,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ModalDevolucaoRedacao } from "@/components/ModalDevolucaoRedacao";
 import { ModalRevisualizacaoRedacao } from "@/components/ModalRevisualizacaoRedacao";
+import { ModalEditarReenviarRedacao } from "@/components/ModalEditarReenviarRedacao";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
@@ -118,7 +119,11 @@ const MinhasRedacoesList = () => {
   // Estados para modal de revisualização (quando já está ciente)
   const [showModalRevisualizacao, setShowModalRevisualizacao] = useState(false);
   const [redacaoRevisualizacao, setRedacaoRevisualizacao] = useState<RedacaoTurma | null>(null);
-  
+
+  // Estados para modal de editar e reenviar
+  const [showEditarReenviarModal, setShowEditarReenviarModal] = useState(false);
+  const [redacaoParaEditar, setRedacaoParaEditar] = useState<any>(null);
+
   const itemsPerPage = 10;
   const { toast } = useToast();
 
@@ -177,7 +182,7 @@ const MinhasRedacoesList = () => {
     condition2: isVisitanteLoggedIn
   });
 
-  const { data: redacoes = [], isLoading, error } = useQuery({
+  const { data: redacoes = [], isLoading, error, refetch } = useQuery({
     queryKey: ['minhas-redacoes', studentData?.email, visitanteData?.email, userType, 'visitor-essays'],
     queryFn: async () => {
       console.log('🔍 Iniciando busca de redações - userType:', userType);
@@ -512,6 +517,39 @@ const MinhasRedacoesList = () => {
     setShowAuthDialog(true);
   };
 
+  const handleEditarReenviar = async (id: string) => {
+    console.log('📝 Abrindo modal de edição e reenvio para redação:', id);
+
+    try {
+      // Buscar dados completos da redação
+      const { data, error } = await supabase
+        .from('redacoes_enviadas')
+        .select('id, frase_tematica, redacao_texto')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) {
+        console.error('Erro ao buscar redação:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados da redação.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setRedacaoParaEditar(data);
+      setShowEditarReenviarModal(true);
+    } catch (error) {
+      console.error('Erro ao abrir modal de edição:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir o editor de redação.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleEmailAuth = async () => {
     if (!selectedRedacao) return;
     
@@ -793,7 +831,8 @@ const MinhasRedacoesList = () => {
                         }
                       }
                     }
-                  }
+                  },
+                  onEditarReenviar: handleEditarReenviar
                 }}
               />
             ))}
@@ -979,6 +1018,21 @@ const MinhasRedacoesList = () => {
               frase_tematica: redacaoRevisualizacao.frase_tematica,
               justificativa_devolucao: (redacaoRevisualizacao as any).justificativa_devolucao || 'Motivo não especificado',
               data_envio: redacaoRevisualizacao.data_envio
+            }}
+          />
+        )}
+
+        {/* Modal de editar e reenviar redação */}
+        {redacaoParaEditar && (
+          <ModalEditarReenviarRedacao
+            isOpen={showEditarReenviarModal}
+            onClose={() => {
+              setShowEditarReenviarModal(false);
+              setRedacaoParaEditar(null);
+            }}
+            redacao={redacaoParaEditar}
+            onSuccess={() => {
+              refetch();
             }}
           />
         )}

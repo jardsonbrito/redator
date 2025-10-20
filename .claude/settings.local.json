@@ -41,7 +41,9 @@
       "Bash(timeout:*)",
       "Bash(git config:*)",
       "Bash(cd:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__list_migrations"
     ]
   },
   "enableAllProjectMcpServers": true,

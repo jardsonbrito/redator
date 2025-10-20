@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { getTemaCoverUrl } from '@/utils/temaImageUtils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CheckCircle, Clock, X, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, X, AlertTriangle, Edit } from 'lucide-react';
 
 export interface RedacaoCardData {
   id: string;
@@ -37,6 +37,7 @@ export interface RedacaoCardData {
 interface RedacaoCardActions {
   onVerRedacao?: (id: string) => void;
   onCancelarEnvio?: (id: string) => void;
+  onEditarReenviar?: (id: string) => void;
 }
 
 interface RedacaoCardProps {
@@ -185,14 +186,26 @@ export const RedacaoCard = ({ redacao, actions, className = '' }: RedacaoCardPro
               >
                 Ver Minha Redação
               </Button>
-              <Button
-                onClick={() => actions.onCancelarEnvio?.(redacao.id)}
-                variant="destructive"
-                className="w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancelar Envio
-              </Button>
+
+              {/* Botão Editar e Reenviar - para redações devolvidas (regulares e exercícios) */}
+              {redacao.status === 'devolvida' ? (
+                <Button
+                  onClick={() => actions.onEditarReenviar?.(redacao.id)}
+                  className="w-full bg-purple-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium hover:bg-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar e Reenviar
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => actions.onCancelarEnvio?.(redacao.id)}
+                  variant="destructive"
+                  className="w-full py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancelar Envio
+                </Button>
+              )}
             </>
           ) : (
             <>
