@@ -36,8 +36,12 @@ export const MensagensCorretor = () => {
     );
   }
 
-  const conversasPendentes = conversas.filter(c => !c.eh_respondida && c.mensagens_nao_lidas > 0);
-  const conversasRespondidas = conversas.filter(c => c.eh_respondida || c.mensagens_nao_lidas === 0);
+  // Pendentes: conversas onde a última mensagem foi do aluno (precisa resposta do corretor)
+  // Inclui tanto conversas novas quanto continuações onde o aluno enviou nova mensagem
+  const conversasPendentes = conversas.filter(c => !c.eh_respondida);
+
+  // Respondidas: conversas onde a última mensagem foi do corretor (já respondeu)
+  const conversasRespondidas = conversas.filter(c => c.eh_respondida);
 
   const ConversaCard = ({ conversa }: { conversa: Conversa }) => (
     <Card 

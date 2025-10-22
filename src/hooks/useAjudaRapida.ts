@@ -203,13 +203,24 @@ export const useAjudaRapida = () => {
         }
       });
 
-      // Verificar se há resposta do corretor para marcar como respondida
-      data?.forEach((msg: any) => {
-        if (msg.autor === 'corretor') {
-          const conversa = conversasMap.get(msg.aluno_id);
-          if (conversa) {
-            conversa.eh_respondida = true;
-          }
+      // Verificar se a ÚLTIMA mensagem é do corretor para marcar como respondida
+      // Uma conversa só deve estar em "Respondidas" se a última mensagem foi do corretor
+      // Se a última mensagem foi do aluno, deve estar em "Pendentes"
+      conversasMap.forEach((conversa) => {
+        // Filtrar mensagens desta conversa específica
+        const mensagensConversa = data?.filter(
+          (msg: any) => msg.aluno_id === conversa.aluno_id
+        ) || [];
+
+        if (mensagensConversa.length > 0) {
+          // Ordenar por data para encontrar a mais recente
+          const mensagensOrdenadas = mensagensConversa.sort(
+            (a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()
+          );
+
+          // A conversa só é "respondida" se a ÚLTIMA mensagem foi do corretor
+          const ultimaMensagem = mensagensOrdenadas[0];
+          conversa.eh_respondida = ultimaMensagem.autor === 'corretor';
         }
       });
 
