@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { TURMAS_VALIDAS, formatTurmaDisplay, type TurmaLetra } from "@/utils/turmaUtils";
+import { TURMAS_VALIDAS, TODAS_TURMAS, formatTurmaDisplay, type TurmaLetra } from "@/utils/turmaUtils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,8 +43,8 @@ export const CorretorTurmasDialog = ({
       if (corretor.turmas_autorizadas && corretor.turmas_autorizadas.length > 0) {
         setSelectedTurmas(corretor.turmas_autorizadas);
       } else {
-        // Se não tem turmas autorizadas (NULL), marcar todas por padrão
-        setSelectedTurmas([...TURMAS_VALIDAS]);
+        // Se não tem turmas autorizadas (NULL), marcar todas por padrão (incluindo VISITANTE)
+        setSelectedTurmas([...TODAS_TURMAS]);
       }
     }
   }, [open, corretor]);
@@ -59,7 +59,7 @@ export const CorretorTurmasDialog = ({
 
   const handleTodasTurmasChange = (checked: boolean) => {
     if (checked) {
-      setSelectedTurmas([...TURMAS_VALIDAS]);
+      setSelectedTurmas([...TODAS_TURMAS]);
     } else {
       setSelectedTurmas([]);
     }
@@ -89,7 +89,7 @@ export const CorretorTurmasDialog = ({
 
       if (error) throw error;
 
-      const isTodasTurmas = selectedTurmas.length === TURMAS_VALIDAS.length;
+      const isTodasTurmas = selectedTurmas.length === TODAS_TURMAS.length;
       toast({
         title: "Disponibilidade atualizada!",
         description: `Corretor agora está disponível para ${
@@ -116,7 +116,7 @@ export const CorretorTurmasDialog = ({
     }
   };
 
-  const todasSelecionadas = selectedTurmas.length === TURMAS_VALIDAS.length;
+  const todasSelecionadas = selectedTurmas.length === TODAS_TURMAS.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -143,7 +143,7 @@ export const CorretorTurmasDialog = ({
             </div>
 
             <div className="grid grid-cols-2 gap-2 ml-2">
-              {TURMAS_VALIDAS.map((turma) => (
+              {TODAS_TURMAS.map((turma) => (
                 <div key={turma} className="flex items-center space-x-2">
                   <Checkbox
                     id={`turma-${turma}`}

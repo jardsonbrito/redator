@@ -4,6 +4,24 @@ import { useSubscription } from './useSubscription';
 
 type PlanType = 'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista';
 
+// Definir funcionalidades para visitantes (acesso muito limitado)
+const VISITANTE_FEATURES = {
+  'temas': true,
+  'enviar_tema_livre': true,
+  'exercicios': false,
+  'simulados': false,
+  'lousa': false,
+  'biblioteca': false,
+  'redacoes_exemplares': false,
+  'aulas_ao_vivo': false,
+  'videoteca': false,
+  'aulas_gravadas': false,
+  'diario_online': false,
+  'gamificacao': false,
+  'top_5': false,
+  'minhas_conquistas': false
+};
+
 // Definir funcionalidades padrão por plano
 const DEFAULT_PLAN_FEATURES = {
   'Largada': {
@@ -75,6 +93,24 @@ const DEFAULT_PLAN_FEATURES = {
 export const usePlanFeatures = (userEmail: string) => {
   const { data: subscription } = useSubscription(userEmail);
 
+  // Verificar se é visitante
+  const { data: isVisitante } = useQuery({
+    queryKey: ['is-visitante', userEmail],
+    queryFn: async () => {
+      if (!userEmail) return false;
+
+      const { data } = await supabase
+        .from('visitante_sessoes')
+        .select('id')
+        .eq('email_visitante', userEmail)
+        .single();
+
+      return !!data;
+    },
+    enabled: !!userEmail,
+    staleTime: 5 * 60 * 1000 // 5 minutos
+  });
+
   // Buscar overrides do aluno usando RPC
   const { data: overrides = [] } = useQuery({
     queryKey: ['student-plan-overrides', userEmail],
@@ -126,6 +162,11 @@ export const usePlanFeatures = (userEmail: string) => {
   });
 
   const isFeatureEnabled = (functionality: string): boolean => {
+    // Visitantes têm acesso limitado (apenas Temas e Enviar Redação)
+    if (isVisitante) {
+      return VISITANTE_FEATURES[functionality] ?? false;
+    }
+
     if (!subscription?.plano) {
       return false;
     }
@@ -148,11 +189,13 @@ export const usePlanFeatures = (userEmail: string) => {
     overrides,
     // Debug info
     isLoading: !subscription,
+    isVisitante,
     debugInfo: {
       userEmail: userEmail.slice(0, 10) + '...',
       hasSubscription: !!subscription,
       plano: subscription?.plano,
-      overridesCount: overrides.length
+      overridesCount: overrides.length,
+      isVisitante
     }
   };
 };

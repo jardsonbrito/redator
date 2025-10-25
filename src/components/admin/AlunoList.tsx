@@ -61,10 +61,13 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
           .eq("user_type", "aluno")
           .eq("is_authenticated_student", true)
           .order("nome", { ascending: true }),
-        
-        // Simulate visitor data (no visitante_sessoes table exists)
-        Promise.resolve({ data: [], error: null }),
-        
+
+        // Buscar visitantes da tabela visitante_sessoes
+        supabase
+          .from("visitante_sessoes")
+          .select("id, email_visitante, nome_visitante, session_id, primeiro_acesso, ultimo_acesso, ativo, whatsapp")
+          .order("ultimo_acesso", { ascending: false }),
+
         // Buscar TODAS as redações de uma vez
         supabase
           .from('redacoes_enviadas')
@@ -98,32 +101,24 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         });
       }
 
-      // Processar visitantes (no table exists, create from redacoes data)
-      if (todasRedacoes) {
-        const visitantesEmails = new Set<string>();
-        todasRedacoes.forEach(redacao => {
-          if (redacao.turma === 'VISITANTE') { // Formato normalizado
-            visitantesEmails.add(redacao.email_aluno.toLowerCase());
-          }
-        });
-
-        visitantesEmails.forEach(email => {
-          const redacoesVisitante = todasRedacoes.filter(r =>
-            r.turma === 'VISITANTE' && r.email_aluno.toLowerCase() === email
-          ).length;
+      // Processar visitantes da tabela visitante_sessoes
+      if (visitantesData) {
+        visitantesData.forEach(visitante => {
+          const emailLower = visitante.email_visitante.toLowerCase();
+          const totalRedacoes = redacoesPorEmail.get(emailLower) || 0;
 
           todosUsuarios.push({
-            id: `visitante-${email}`,
-            nome: 'Visitante',
-            email: email,
-            turma: 'VISITANTE', // Formato normalizado
-            created_at: new Date().toISOString(),
-            ativo: true,
+            id: visitante.id,
+            nome: visitante.nome_visitante,
+            email: visitante.email_visitante,
+            turma: 'VISITANTE',
+            created_at: visitante.primeiro_acesso,
+            ativo: visitante.ativo,
             tipo: 'visitante',
-            ultimo_acesso: new Date().toISOString(),
-            session_id: null,
-            total_redacoes: redacoesVisitante,
-            whatsapp: null
+            ultimo_acesso: visitante.ultimo_acesso,
+            session_id: visitante.session_id,
+            total_redacoes: totalRedacoes,
+            whatsapp: visitante.whatsapp
           });
         });
       }
