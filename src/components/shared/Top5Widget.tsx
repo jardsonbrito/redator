@@ -34,17 +34,21 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   const [selectedSimulado, setSelectedSimulado] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedTurmaAdmin, setSelectedTurmaAdmin] = useState<string>("geral");
-  
+
   // Hooks de autenticação
   const { studentData } = useStudentAuth();
   const { user: adminUser } = useAuth();
-  
-  // Determinar turma ativa para filtros - apenas letra maiúscula
-  const getTurmaForTable = (letra: string, tabela: string) => {
-    // Todas as tabelas agora usam apenas a letra (A, B, C, D, E ou VISITANTE)
-    return letra;
+
+  // Handler para seleção de simulado com log
+  const handleSimuladoSelect = (simuladoId: string) => {
+    console.log(`🎯 Simulado Selecionado:`, {
+      id: simuladoId,
+      titulo: simulados?.find(s => s.id === simuladoId)?.titulo || 'Todos'
+    });
+    setSelectedSimulado(simuladoId);
   };
-  
+
+  // Determinar turma ativa para filtros - apenas letra maiúscula (A-E ou VISITANTE)
   const turmaAtivaLetter = variant === "admin" && selectedTurmaAdmin !== "geral" ? selectedTurmaAdmin : null;
 
   // Buscar notas 1000 para "Galeria de Honra" (filtra por turma para alunos, global para admin)
@@ -53,7 +57,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
     queryFn: async () => {
       // Determinar filtro de turma baseado no tipo de usuário
       let turmaFilter: string | null = null;
-      
+
       if (variant === "admin") {
         // Admin: usa seletor de turma ou mostra geral
         turmaFilter = turmaAtivaLetter;
@@ -63,48 +67,41 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         turmaFilter = turmaLetter || null;
       }
       // Visitantes: sem filtro (turmaFilter = null)
-      
-      // Construir queries com filtros condicionais
-      let enviadasQuery = supabase
+
+      // Buscar TODOS os registros com nota 1000 (SEM filtro SQL de turma)
+      // Faremos a filtragem client-side para suportar formatos antigos
+      const enviadasQuery = supabase
         .from('redacoes_enviadas')
         .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
-        .eq('nota_total', 1000);
-        
-      let simuladoQuery = supabase
+        .eq('nota_total', 1000)
+        .order('data_envio', { ascending: false });
+
+      const simuladoQuery = supabase
         .from('redacoes_simulado')
         .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
-        .eq('nota_total', 1000);
-        
-      let exercicioQuery = supabase
+        .eq('nota_total', 1000)
+        .order('data_envio', { ascending: false });
+
+      const exercicioQuery = supabase
         .from('redacoes_exercicio')
         .select('nome_aluno, nota_total, data_envio, email_aluno, turma')
-        .eq('nota_total', 1000);
-      
-      // Aplicar filtros de turma se necessário
-      if (turmaFilter) {
-        const turmaForEnviadas = getTurmaForTable(turmaFilter, 'redacoes_enviadas');
-        const turmaForSimulado = getTurmaForTable(turmaFilter, 'redacoes_simulado');
-        const turmaForExercicio = getTurmaForTable(turmaFilter, 'redacoes_exercicio');
-        
-        enviadasQuery = enviadasQuery.eq('turma', turmaForEnviadas);
-        simuladoQuery = simuladoQuery.eq('turma', turmaForSimulado);
-        exercicioQuery = exercicioQuery.eq('turma', turmaForExercicio);
-      }
-      
+        .eq('nota_total', 1000)
+        .order('data_envio', { ascending: false });
+
       // Executar queries
       const [enviadasRes, simuladoRes, exercicioRes] = await Promise.all([
-        enviadasQuery.order('data_envio', { ascending: false }),
-        simuladoQuery.order('data_envio', { ascending: false }),
-        exercicioQuery.order('data_envio', { ascending: false })
+        enviadasQuery,
+        simuladoQuery,
+        exercicioQuery
       ]);
 
-      const todasNotas1000 = [
+      let todasNotas1000 = [
         ...(enviadasRes.data || []),
         ...(simuladoRes.data || []),
         ...(exercicioRes.data || [])
       ];
 
-      console.log(`🎯 Galeria de Honra - Total inicial: ${todasNotas1000.length}`, {
+      console.log(`🎯 Galeria de Honra - Total inicial (antes filtro): ${todasNotas1000.length}`, {
         selectedMonth,
         variant,
         turmaFilter,
@@ -114,9 +111,30 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         exercicioCount: exercicioRes.data?.length || 0
       });
 
+      // FILTRO CLIENT-SIDE: aplicar filtro de turma usando normalização
+      if (turmaFilter) {
+        todasNotas1000 = todasNotas1000.filter(nota => {
+          const turmaNormalizada = normalizeTurmaToLetter(nota.turma);
+          const match = turmaNormalizada === turmaFilter;
+
+          if (!match) {
+            console.log(`🔍 Galeria - Filtrado fora:`, {
+              nome: nota.nome_aluno,
+              turmaRaw: nota.turma,
+              turmaNormalizada,
+              esperado: turmaFilter
+            });
+          }
+
+          return match;
+        });
+
+        console.log(`📊 Galeria de Honra - Após filtro de turma ${turmaFilter}: ${todasNotas1000.length}`);
+      }
+
       if (todasNotas1000.length === 0) return null;
 
-      // A turma já vem diretamente das queries acima
+      // Continuar com os dados já filtrados
       let notasComTurma = todasNotas1000;
       
       // Filtrar por mês se selecionado E tipo for "regular" (mesma lógica do ranking)
@@ -164,8 +182,14 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         .from('simulados')
         .select('id, titulo')
         .order('titulo');
-      
+
       if (error) throw error;
+
+      console.log(`📋 Lista de Simulados Disponíveis:`, {
+        total: data?.length || 0,
+        simulados: data?.map(s => ({ id: s.id, titulo: s.titulo }))
+      });
+
       return data || [];
     }
   });
@@ -214,12 +238,18 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   }, [mesesDisponiveis]);
 
   // Buscar ranking baseado no tipo selecionado
+  // ESTRATÉGIA: Todas as queries buscam dados SEM filtro SQL de turma,
+  // e a filtragem é feita no CLIENT-SIDE usando normalizeTurmaToLetter().
+  // Isso garante compatibilidade com formatos antigos no banco:
+  // - "TURMA A", "Turma A", "turma a" → normaliza para "A"
+  // - "LRA 2025", "LRB 2025" → normaliza para "A", "B"
+  // - Evita problemas de case-sensitivity e formatos inconsistentes
   const { data: ranking } = useQuery({
     queryKey: ['ranking', selectedType, selectedSimulado, selectedMonth, turmaAtivaLetter, variant, studentData?.turma],
     queryFn: async () => {
       // Determinar filtro de turma para o ranking baseado no tipo de usuário
       let rankingTurmaFilter: string | null = null;
-      
+
       if (variant === "admin") {
         // Admin: usa seletor de turma ou mostra geral
         rankingTurmaFilter = turmaAtivaLetter;
@@ -237,12 +267,12 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         });
       }
       // Visitantes: sem filtro (rankingTurmaFilter = null)
-      
+
       let processedData = [];
-      
+
       if (selectedType === "simulado") {
-        // Para simulados, buscar TODOS os dados e filtrar no client-side
-        // (para evitar problemas com formatos diferentes de turma no banco)
+        // Para simulados, buscar TODOS os dados (SEM filtro SQL de turma)
+        // A filtragem por turma será feita no client-side para suportar formatos antigos
         const query = supabase
           .from('redacoes_simulado')
           .select(`
@@ -251,7 +281,8 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
             nota_total,
             data_envio,
             turma,
-            simulados(titulo)
+            id_simulado,
+            simulados!inner(id, titulo)
           `)
           .not('nota_total', 'is', null)
           .eq('corrigida', true)
@@ -259,9 +290,23 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
 
         const { data, error } = await query;
 
-        if (error) throw error;
+        if (error) {
+          console.error(`❌ Erro ao buscar redações de simulado:`, error);
+          throw error;
+        }
 
         let filteredData = data || [];
+
+        console.log(`📚 Redações de Simulado - Total bruto:`, {
+          total: filteredData.length,
+          sample: filteredData.slice(0, 3).map(item => ({
+            nome: item.nome_aluno,
+            turma: item.turma,
+            idSimulado: item.id_simulado,
+            simuladoObj: item.simulados,
+            nota: item.nota_total
+          }))
+        });
 
         // Filtrar por turma no client-side usando normalização (admin, aluno ou visitante)
         if (rankingTurmaFilter) {
@@ -294,10 +339,47 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         // Filtrar por simulado específico se selecionado
         if (selectedSimulado && simulados) {
           const simuladoSelecionado = simulados.find(s => s.id === selectedSimulado);
+
+          console.log(`🎯 Filtro de Simulado Específico:`, {
+            selectedSimuladoId: selectedSimulado,
+            simuladoSelecionado: simuladoSelecionado,
+            totalBeforeFilter: filteredData.length,
+            sampleItems: filteredData.slice(0, 3).map(item => ({
+              nome: item.nome_aluno,
+              idSimulado: item.id_simulado,
+              simuladoTitulo: item.simulados?.titulo,
+              simuladoObjId: item.simulados?.id
+            }))
+          });
+
           if (simuladoSelecionado) {
-            filteredData = filteredData.filter(item => 
-              item.simulados?.titulo === simuladoSelecionado.titulo
-            );
+            const beforeFilterCount = filteredData.length;
+            filteredData = filteredData.filter(item => {
+              // Comparar primeiro pelo ID (mais confiável), depois pelo título como fallback
+              const matchById = item.id_simulado === selectedSimulado || item.simulados?.id === selectedSimulado;
+              const matchByTitle = item.simulados?.titulo === simuladoSelecionado.titulo;
+              const match = matchById || matchByTitle;
+
+              if (!match && (item.id_simulado || item.simulados)) {
+                console.log(`🔍 Simulado não corresponde:`, {
+                  itemIdSimulado: item.id_simulado,
+                  itemSimuladoObjId: item.simulados?.id,
+                  itemTitulo: item.simulados?.titulo,
+                  esperadoId: selectedSimulado,
+                  esperadoTitulo: simuladoSelecionado.titulo,
+                  nome: item.nome_aluno
+                });
+              }
+
+              return match;
+            });
+
+            console.log(`📊 Filtro de Simulado - Resultado:`, {
+              before: beforeFilterCount,
+              after: filteredData.length,
+              simuladoEsperadoId: selectedSimulado,
+              simuladoEsperadoTitulo: simuladoSelecionado.titulo
+            });
           }
         }
         
@@ -349,32 +431,19 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           });
         }
         
-        // Debug para verificar resultados do filtro de regular/avulsa
+        // Debug para verificar resultados do filtro de regular/avulsa (após normalização client-side)
         if (variant === "student" && rankingTurmaFilter) {
           console.log(`📊 ${selectedType} Results for Turma ${rankingTurmaFilter}:`, {
             totalFound: filteredData.length,
-            expectedTurma: getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas'),
+            expectedTurma: rankingTurmaFilter,
             students: filteredData.slice(0, 15).map(item => ({
               nome: item.nome_aluno,
               email: item.email_aluno,
-              turma: item.turma,
-              nota: item.nota_total,
-              isCorrectTurma: item.turma === getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas')
+              turmaRaw: item.turma,
+              turmaNormalizada: normalizeTurmaToLetter(item.turma),
+              nota: item.nota_total
             }))
           });
-          
-          // Verificar se há estudantes de turmas incorretas
-          const wrongTurmaStudents = filteredData.filter(item => 
-            item.turma !== getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas')
-          );
-          
-          if (wrongTurmaStudents.length > 0) {
-            console.log(`❌ WRONG TURMA STUDENTS FOUND in ${selectedType}:`, wrongTurmaStudents.map(item => ({
-              nome: item.nome_aluno,
-              turmaFound: item.turma,
-              turmaExpected: getTurmaForTable(rankingTurmaFilter, 'redacoes_enviadas')
-            })));
-          }
         }
         
         // Filtrar por mês se for tipo "regular" e um mês estiver selecionado
@@ -399,7 +468,24 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
       
       // Agora todas as queries já incluem o campo turma diretamente
       let processedDataComplete = processedData;
-      
+
+      // Log detalhado do processedData antes do agrupamento
+      if (selectedType === "simulado" && selectedSimulado) {
+        const alunosUnicos = [...new Set(processedDataComplete.map(item => item.nome_aluno))];
+        console.log(`📊 Dados ANTES do agrupamento (${selectedType}):`, {
+          totalRedacoes: processedDataComplete.length,
+          alunosUnicos: alunosUnicos.length,
+          listaAlunos: alunosUnicos,
+          sampleRedacoes: processedDataComplete.slice(0, 10).map(item => ({
+            nome: item.nome_aluno,
+            email: item.email_aluno,
+            nota: item.nota_total,
+            corrigida: item.corrigida,
+            simulado: item.simulados?.titulo
+          }))
+        });
+      }
+
       // Agrupar por aluno, mantendo apenas a maior nota de cada um
       const melhoresNotasPorAluno = new Map();
       processedDataComplete.forEach(item => {
@@ -488,8 +574,22 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
       });
       
       // Debug final para verificar o que está sendo retornado
+      console.log(`🏆 RANKING FINAL (${selectedType.toUpperCase()}):`, {
+        variant: variant,
+        turmaFiltro: rankingTurmaFilter || 'TODAS',
+        simuladoFiltro: selectedSimulado ? simulados?.find(s => s.id === selectedSimulado)?.titulo : 'TODOS',
+        totalResultados: rankingComPosicao.length,
+        top5: rankingComPosicao.slice(0, 5).map(item => ({
+          posicao: item.posicao,
+          nome: item.nome_aluno,
+          turma: item.turma,
+          nota: item.nota_total,
+          simulado: item.simulado_titulo
+        }))
+      });
+
       if (variant === "student" && rankingTurmaFilter) {
-        console.log(`🎯 FINAL RANKING RESULTS for Student (Turma ${rankingTurmaFilter}):`, {
+        console.log(`👨‍🎓 Detalhes Student (Turma ${rankingTurmaFilter}):`, {
           totalResults: rankingComPosicao.length,
           results: rankingComPosicao.map(item => ({
             posicao: item.posicao,
@@ -710,7 +810,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant={selectedSimulado === "" ? "default" : "outline"}
-                  onClick={() => setSelectedSimulado("")}
+                  onClick={() => handleSimuladoSelect("")}
                   size="sm"
                   className={variant === "student" ? (selectedSimulado === "" ? styles.buttonSecondaryActive : styles.buttonSecondaryInactive) : ""}
                 >
@@ -720,7 +820,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                   <Button
                     key={simulado.id}
                     variant={selectedSimulado === simulado.id ? "default" : "outline"}
-                    onClick={() => setSelectedSimulado(simulado.id)}
+                    onClick={() => handleSimuladoSelect(simulado.id)}
                     size="sm"
                     className={variant === "student" ? (selectedSimulado === simulado.id ? styles.buttonSecondaryActive : styles.buttonSecondaryInactive) : ""}
                   >

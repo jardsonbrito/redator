@@ -78,8 +78,16 @@ export const RedacaoFormUnificado = ({
 
   if (isSimulado) {
     tipoEnvio = "simulado";
+    // FIX: Definir turma para alunos em simulados também
+    if (userType === "aluno" && alunoTurma) {
+      turmaCode = getTurmaCode(alunoTurma);
+    }
   } else if (exercicioId) {
     tipoEnvio = "exercicio";
+    // FIX: Definir turma para alunos em exercícios também
+    if (userType === "aluno" && alunoTurma) {
+      turmaCode = getTurmaCode(alunoTurma);
+    }
   } else if (userType === "aluno" && alunoTurma) {
     tipoEnvio = "regular";
     turmaCode = getTurmaCode(alunoTurma);
