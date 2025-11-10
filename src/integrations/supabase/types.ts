@@ -2554,9 +2554,28 @@ export type Database = {
           frase_tematica: string
           id: string
           imagem_texto_4_url: string | null
+          motivator1_dimensions: Json | null
+          motivator1_file_path: string | null
+          motivator1_file_size: number | null
+          motivator1_image_position: string | null
+          motivator1_source: string | null
+          motivator1_url: string | null
+          motivator2_dimensions: Json | null
+          motivator2_file_path: string | null
+          motivator2_file_size: number | null
+          motivator2_image_position: string | null
+          motivator2_source: string | null
+          motivator2_url: string | null
+          motivator3_dimensions: Json | null
+          motivator3_file_path: string | null
+          motivator3_file_size: number | null
+          motivator3_image_position: string | null
+          motivator3_source: string | null
+          motivator3_url: string | null
           motivator4_dimensions: Json | null
           motivator4_file_path: string | null
           motivator4_file_size: number | null
+          motivator4_image_position: string | null
           motivator4_source: string | null
           motivator4_url: string | null
           needs_media_update: boolean | null
@@ -2568,6 +2587,13 @@ export type Database = {
           texto_1: string | null
           texto_2: string | null
           texto_3: string | null
+          texto_4: string | null
+          motivator5_dimensions: Json | null
+          motivator5_file_path: string | null
+          motivator5_file_size: number | null
+          motivator5_image_position: string | null
+          motivator5_source: string | null
+          motivator5_url: string | null
         }
         Insert: {
           cabecalho_enem?: string | null
@@ -2580,9 +2606,28 @@ export type Database = {
           frase_tematica: string
           id?: string
           imagem_texto_4_url?: string | null
+          motivator1_dimensions?: Json | null
+          motivator1_file_path?: string | null
+          motivator1_file_size?: number | null
+          motivator1_image_position?: string | null
+          motivator1_source?: string | null
+          motivator1_url?: string | null
+          motivator2_dimensions?: Json | null
+          motivator2_file_path?: string | null
+          motivator2_file_size?: number | null
+          motivator2_image_position?: string | null
+          motivator2_source?: string | null
+          motivator2_url?: string | null
+          motivator3_dimensions?: Json | null
+          motivator3_file_path?: string | null
+          motivator3_file_size?: number | null
+          motivator3_image_position?: string | null
+          motivator3_source?: string | null
+          motivator3_url?: string | null
           motivator4_dimensions?: Json | null
           motivator4_file_path?: string | null
           motivator4_file_size?: number | null
+          motivator4_image_position?: string | null
           motivator4_source?: string | null
           motivator4_url?: string | null
           needs_media_update?: boolean | null
@@ -2594,6 +2639,13 @@ export type Database = {
           texto_1?: string | null
           texto_2?: string | null
           texto_3?: string | null
+          texto_4?: string | null
+          motivator5_dimensions?: Json | null
+          motivator5_file_path?: string | null
+          motivator5_file_size?: number | null
+          motivator5_image_position?: string | null
+          motivator5_source?: string | null
+          motivator5_url?: string | null
         }
         Update: {
           cabecalho_enem?: string | null
@@ -2606,9 +2658,28 @@ export type Database = {
           frase_tematica?: string
           id?: string
           imagem_texto_4_url?: string | null
+          motivator1_dimensions?: Json | null
+          motivator1_file_path?: string | null
+          motivator1_file_size?: number | null
+          motivator1_image_position?: string | null
+          motivator1_source?: string | null
+          motivator1_url?: string | null
+          motivator2_dimensions?: Json | null
+          motivator2_file_path?: string | null
+          motivator2_file_size?: number | null
+          motivator2_image_position?: string | null
+          motivator2_source?: string | null
+          motivator2_url?: string | null
+          motivator3_dimensions?: Json | null
+          motivator3_file_path?: string | null
+          motivator3_file_size?: number | null
+          motivator3_image_position?: string | null
+          motivator3_source?: string | null
+          motivator3_url?: string | null
           motivator4_dimensions?: Json | null
           motivator4_file_path?: string | null
           motivator4_file_size?: number | null
+          motivator4_image_position?: string | null
           motivator4_source?: string | null
           motivator4_url?: string | null
           needs_media_update?: boolean | null
@@ -2620,6 +2691,13 @@ export type Database = {
           texto_1?: string | null
           texto_2?: string | null
           texto_3?: string | null
+          texto_4?: string | null
+          motivator5_dimensions?: Json | null
+          motivator5_file_path?: string | null
+          motivator5_file_size?: number | null
+          motivator5_image_position?: string | null
+          motivator5_source?: string | null
+          motivator5_url?: string | null
         }
         Relationships: []
       }

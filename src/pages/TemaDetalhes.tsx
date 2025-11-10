@@ -14,6 +14,7 @@ import { getTemaCoverUrl, getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { FormattedText } from '@/components/shared/FormattedText';
 import { useNavigationContext } from "@/hooks/useNavigationContext";
+import { MotivatorWithImage } from '@/components/shared/MotivatorWithImage';
 
 // Type extension para incluir os campos novos e legado
 type TemaWithImage = {
@@ -23,14 +24,36 @@ type TemaWithImage = {
   texto_1: string | null;
   texto_2: string | null;
   texto_3: string | null;
+  texto_4: string | null;
   // New cover fields
   cover_source?: string | null;
   cover_url?: string | null;
   cover_file_path?: string | null;
-  // New motivator IV fields
+  // Motivator 1 fields
+  motivator1_source?: string | null;
+  motivator1_url?: string | null;
+  motivator1_file_path?: string | null;
+  motivator1_image_position?: string | null;
+  // Motivator 2 fields
+  motivator2_source?: string | null;
+  motivator2_url?: string | null;
+  motivator2_file_path?: string | null;
+  motivator2_image_position?: string | null;
+  // Motivator 3 fields
+  motivator3_source?: string | null;
+  motivator3_url?: string | null;
+  motivator3_file_path?: string | null;
+  motivator3_image_position?: string | null;
+  // Motivator 4 fields
   motivator4_source?: string | null;
   motivator4_url?: string | null;
   motivator4_file_path?: string | null;
+  motivator4_image_position?: string | null;
+  // Motivator 5 fields
+  motivator5_source?: string | null;
+  motivator5_url?: string | null;
+  motivator5_file_path?: string | null;
+  motivator5_image_position?: string | null;
   // Legacy field
   imagem_texto_4_url: string | null;
   publicado_em: string | null;
@@ -185,65 +208,53 @@ const TemaDetalhes = () => {
 
               {/* 3. Textos Motivadores */}
               {(() => {
-                const textos = [tema.texto_1, tema.texto_2, tema.texto_3].filter(Boolean);
                 let textoCounter = 1;
 
                 return (
                   <>
-                    {tema.texto_1 && (
-                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-redator-accent">
-                          <FormattedText text={tema.texto_1} />
-                        </div>
-                      </div>
-                    )}
+                    <MotivatorWithImage
+                      text={tema.texto_1}
+                      imageSource={tema.motivator1_source}
+                      imageUrl={tema.motivator1_url}
+                      imageFilePath={tema.motivator1_file_path}
+                      imagePosition={tema.motivator1_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
 
-                    {tema.texto_2 && (
-                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-redator-accent">
-                          <FormattedText text={tema.texto_2} />
-                        </div>
-                      </div>
-                    )}
+                    <MotivatorWithImage
+                      text={tema.texto_2}
+                      imageSource={tema.motivator2_source}
+                      imageUrl={tema.motivator2_url}
+                      imageFilePath={tema.motivator2_file_path}
+                      imagePosition={tema.motivator2_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
 
-                    {tema.texto_3 && (
-                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter++}</h3>
-                        <div className="text-redator-accent">
-                          <FormattedText text={tema.texto_3} />
-                        </div>
-                      </div>
-                    )}
+                    <MotivatorWithImage
+                      text={tema.texto_3}
+                      imageSource={tema.motivator3_source}
+                      imageUrl={tema.motivator3_url}
+                      imageFilePath={tema.motivator3_file_path}
+                      imagePosition={tema.motivator3_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
 
-                    {/* Texto 4 (Imagem) */}
-                    {getTemaMotivatorIVUrl({
-                      motivator4_source: tema.motivator4_source,
-                      motivator4_url: tema.motivator4_url,
-                      motivator4_file_path: tema.motivator4_file_path,
-                      imagem_texto_4_url: tema.imagem_texto_4_url
-                    }) && (
-                      <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
-                        <h3 className="font-semibold text-redator-primary mb-3">Texto {textoCounter}</h3>
-                        <div className="rounded-lg overflow-hidden">
-                          <img
-                            src={getTemaMotivatorIVUrl({
-                              motivator4_source: tema.motivator4_source,
-                              motivator4_url: tema.motivator4_url,
-                              motivator4_file_path: tema.motivator4_file_path,
-                              imagem_texto_4_url: tema.imagem_texto_4_url
-                            })!}
-                            alt="Charge/Infográfico — Texto 4"
-                            className="w-full h-auto"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                          />
-                        </div>
-                      </div>
-                    )}
+                    <MotivatorWithImage
+                      text={tema.texto_4}
+                      imageSource={tema.motivator4_source}
+                      imageUrl={tema.motivator4_url}
+                      imageFilePath={tema.motivator4_file_path}
+                      imagePosition={tema.motivator4_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
+
+                    <MotivatorWithImage
+                      imageSource={tema.motivator5_source}
+                      imageUrl={tema.motivator5_url}
+                      imageFilePath={tema.motivator5_file_path}
+                      imagePosition={tema.motivator5_image_position}
+                      motivatorNumber={textoCounter++}
+                    />
                   </>
                 );
               })()}
