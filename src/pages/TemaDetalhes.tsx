@@ -22,9 +22,15 @@ type TemaWithImage = {
   frase_tematica: string;
   eixo_tematico: string;
   texto_1: string | null;
+  texto_1_fonte: string | null;
   texto_2: string | null;
+  texto_2_fonte: string | null;
   texto_3: string | null;
+  texto_3_fonte: string | null;
   texto_4: string | null;
+  texto_4_fonte: string | null;
+  texto_5: string | null;
+  texto_5_fonte: string | null;
   // New cover fields
   cover_source?: string | null;
   cover_url?: string | null;
@@ -214,6 +220,7 @@ const TemaDetalhes = () => {
                   <>
                     <MotivatorWithImage
                       text={tema.texto_1}
+                      fonte={tema.texto_1_fonte}
                       imageSource={tema.motivator1_source}
                       imageUrl={tema.motivator1_url}
                       imageFilePath={tema.motivator1_file_path}
@@ -223,6 +230,7 @@ const TemaDetalhes = () => {
 
                     <MotivatorWithImage
                       text={tema.texto_2}
+                      fonte={tema.texto_2_fonte}
                       imageSource={tema.motivator2_source}
                       imageUrl={tema.motivator2_url}
                       imageFilePath={tema.motivator2_file_path}
@@ -232,6 +240,7 @@ const TemaDetalhes = () => {
 
                     <MotivatorWithImage
                       text={tema.texto_3}
+                      fonte={tema.texto_3_fonte}
                       imageSource={tema.motivator3_source}
                       imageUrl={tema.motivator3_url}
                       imageFilePath={tema.motivator3_file_path}
@@ -241,6 +250,7 @@ const TemaDetalhes = () => {
 
                     <MotivatorWithImage
                       text={tema.texto_4}
+                      fonte={tema.texto_4_fonte}
                       imageSource={tema.motivator4_source}
                       imageUrl={tema.motivator4_url}
                       imageFilePath={tema.motivator4_file_path}
@@ -249,6 +259,8 @@ const TemaDetalhes = () => {
                     />
 
                     <MotivatorWithImage
+                      text={tema.texto_5}
+                      fonte={tema.texto_5_fonte}
                       imageSource={tema.motivator5_source}
                       imageUrl={tema.motivator5_url}
                       imageFilePath={tema.motivator5_file_path}

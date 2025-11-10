@@ -25,9 +25,15 @@ interface FormData {
   frase_tematica: string;
   eixo_tematico: string;
   texto_1: string;
+  texto_1_fonte: string;
   texto_2: string;
+  texto_2_fonte: string;
   texto_3: string;
+  texto_3_fonte: string;
   texto_4: string;
+  texto_4_fonte: string;
+  texto_5: string;
+  texto_5_fonte: string;
   cover: ImageValue;
   motivator1: ImageValue;
   motivator1Position: ImagePosition;
@@ -67,9 +73,15 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
     frase_tematica: '',
     eixo_tematico: '',
     texto_1: '',
+    texto_1_fonte: '',
     texto_2: '',
+    texto_2_fonte: '',
     texto_3: '',
+    texto_3_fonte: '',
     texto_4: '',
+    texto_4_fonte: '',
+    texto_5: '',
+    texto_5_fonte: '',
     cover: null,
     motivator1: null,
     motivator1Position: 'after',
@@ -199,9 +211,15 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
             frase_tematica: data.frase_tematica || '',
             eixo_tematico: data.eixo_tematico || '',
             texto_1: data.texto_1 || '',
+            texto_1_fonte: data.texto_1_fonte || '',
             texto_2: data.texto_2 || '',
+            texto_2_fonte: data.texto_2_fonte || '',
             texto_3: data.texto_3 || '',
+            texto_3_fonte: data.texto_3_fonte || '',
             texto_4: data.texto_4 || '',
+            texto_4_fonte: data.texto_4_fonte || '',
+            texto_5: data.texto_5 || '',
+            texto_5_fonte: data.texto_5_fonte || '',
             cover: coverValue,
             motivator1: motivator1Value,
             motivator1Position: (data.motivator1_image_position as ImagePosition) || 'after',
@@ -334,9 +352,15 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
         status: status,
         cabecalho_enem: cabecalho_enem,
         texto_1: formData.texto_1 ? String(formData.texto_1).trim() : null,
+        texto_1_fonte: formData.texto_1_fonte ? String(formData.texto_1_fonte).trim() : null,
         texto_2: formData.texto_2 ? String(formData.texto_2).trim() : null,
+        texto_2_fonte: formData.texto_2_fonte ? String(formData.texto_2_fonte).trim() : null,
         texto_3: formData.texto_3 ? String(formData.texto_3).trim() : null,
+        texto_3_fonte: formData.texto_3_fonte ? String(formData.texto_3_fonte).trim() : null,
         texto_4: formData.texto_4 ? String(formData.texto_4).trim() : null,
+        texto_4_fonte: formData.texto_4_fonte ? String(formData.texto_4_fonte).trim() : null,
+        texto_5: formData.texto_5 ? String(formData.texto_5).trim() : null,
+        texto_5_fonte: formData.texto_5_fonte ? String(formData.texto_5_fonte).trim() : null,
         // Cover image fields
         cover_source: formData.cover?.source || 'url',
         cover_url: formData.cover?.url || null,
@@ -453,9 +477,15 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
           frase_tematica: '',
           eixo_tematico: '',
           texto_1: '',
+          texto_1_fonte: '',
           texto_2: '',
+          texto_2_fonte: '',
           texto_3: '',
+          texto_3_fonte: '',
           texto_4: '',
+          texto_4_fonte: '',
+          texto_5: '',
+          texto_5_fonte: '',
           cover: null,
           motivator1: null,
           motivator1Position: 'after',
@@ -673,9 +703,16 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                   <Textarea
                     value={formData.texto_1}
                     onChange={(e) => setFormData({...formData, texto_1: e.target.value})}
-                    className="min-h-[120px] text-sm resize-none"
+                    className="min-h-[120px] text-sm resize-none mb-3"
                     placeholder="Digite o primeiro texto motivador. Use quebras de linha simples para separar parágrafos."
                     spellCheck={true}
+                  />
+                  <label className="text-sm font-medium block mb-2">Fonte (opcional)</label>
+                  <Input
+                    value={formData.texto_1_fonte}
+                    onChange={(e) => setFormData({...formData, texto_1_fonte: e.target.value})}
+                    className="text-sm"
+                    placeholder="Ex: Disponível em: www.exemplo.com"
                   />
                 </div>
 
@@ -754,9 +791,16 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                   <Textarea
                     value={formData.texto_2}
                     onChange={(e) => setFormData({...formData, texto_2: e.target.value})}
-                    className="min-h-[120px] text-sm resize-none"
+                    className="min-h-[120px] text-sm resize-none mb-3"
                     placeholder="Digite o segundo texto motivador. Use quebras de linha simples para separar parágrafos."
                     spellCheck={true}
+                  />
+                  <label className="text-sm font-medium block mb-2">Fonte (opcional)</label>
+                  <Input
+                    value={formData.texto_2_fonte}
+                    onChange={(e) => setFormData({...formData, texto_2_fonte: e.target.value})}
+                    className="text-sm"
+                    placeholder="Ex: Disponível em: www.exemplo.com"
                   />
                 </div>
 
@@ -835,9 +879,16 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                   <Textarea
                     value={formData.texto_3}
                     onChange={(e) => setFormData({...formData, texto_3: e.target.value})}
-                    className="min-h-[120px] text-sm resize-none"
+                    className="min-h-[120px] text-sm resize-none mb-3"
                     placeholder="Digite o terceiro texto motivador. Use quebras de linha simples para separar parágrafos."
                     spellCheck={true}
+                  />
+                  <label className="text-sm font-medium block mb-2">Fonte (opcional)</label>
+                  <Input
+                    value={formData.texto_3_fonte}
+                    onChange={(e) => setFormData({...formData, texto_3_fonte: e.target.value})}
+                    className="text-sm"
+                    placeholder="Ex: Disponível em: www.exemplo.com"
                   />
                 </div>
 
@@ -916,9 +967,16 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                   <Textarea
                     value={formData.texto_4}
                     onChange={(e) => setFormData({...formData, texto_4: e.target.value})}
-                    className="min-h-[120px] text-sm resize-none"
+                    className="min-h-[120px] text-sm resize-none mb-3"
                     placeholder="Digite o quarto texto motivador. Use quebras de linha simples para separar parágrafos."
                     spellCheck={true}
+                  />
+                  <label className="text-sm font-medium block mb-2">Fonte (opcional)</label>
+                  <Input
+                    value={formData.texto_4_fonte}
+                    onChange={(e) => setFormData({...formData, texto_4_fonte: e.target.value})}
+                    className="text-sm"
+                    placeholder="Ex: Disponível em: www.exemplo.com"
                   />
                 </div>
 
@@ -991,17 +1049,36 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
 
             {/* Texto Motivador V */}
             {activeSection === 'motivador5' && (
-              <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                <h3 className="text-sm font-medium mb-3">Imagem (Opcional)</h3>
-                <ImageSelector
-                  title=""
-                  description=""
-                  required={false}
-                  value={formData.motivator5}
-                  onChange={(value) => setFormData({...formData, motivator5: value})}
-                  minDimensions={{ width: 200, height: 150 }}
-                  bucket="themes"
-                />
+              <div className="space-y-4">
+                <div className="border border-gray-200 rounded-xl p-5">
+                  <h3 className="text-sm font-medium mb-3">Texto Verbal</h3>
+                  <Textarea
+                    value={formData.texto_5}
+                    onChange={(e) => setFormData({...formData, texto_5: e.target.value})}
+                    className="min-h-[120px] text-sm resize-none mb-3"
+                    placeholder="Digite o quinto texto motivador. Use quebras de linha simples para separar parágrafos."
+                    spellCheck={true}
+                  />
+                  <label className="text-sm font-medium block mb-2">Fonte (opcional)</label>
+                  <Input
+                    value={formData.texto_5_fonte}
+                    onChange={(e) => setFormData({...formData, texto_5_fonte: e.target.value})}
+                    className="text-sm"
+                    placeholder="Ex: Disponível em: www.exemplo.com"
+                  />
+                </div>
+
+                <div className="border border-gray-200 rounded-xl p-5">
+                  <h3 className="text-sm font-medium mb-3">Imagem (Opcional)</h3>
+                  <ImageSelector
+                    title=""
+                    description=""
+                    required={false}
+                    value={formData.motivator5}
+                    onChange={(value) => setFormData({...formData, motivator5: value})}
+                    minDimensions={{ width: 200, height: 150 }}
+                    bucket="themes"
+                  />
 
                 {formData.motivator5 && (
                   <div className="mt-4">
@@ -1055,8 +1132,8 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                   </div>
                 )}
               </div>
+            </div>
             )}
-
 
             {/* Loading indicator */}
             {loading && (

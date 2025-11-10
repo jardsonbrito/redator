@@ -2585,9 +2585,15 @@ export type Database = {
           scheduled_publish_at: string | null
           status: string | null
           texto_1: string | null
+          texto_1_fonte: string | null
           texto_2: string | null
+          texto_2_fonte: string | null
           texto_3: string | null
+          texto_3_fonte: string | null
           texto_4: string | null
+          texto_4_fonte: string | null
+          texto_5: string | null
+          texto_5_fonte: string | null
           motivator5_dimensions: Json | null
           motivator5_file_path: string | null
           motivator5_file_size: number | null
@@ -2637,9 +2643,15 @@ export type Database = {
           scheduled_publish_at?: string | null
           status?: string | null
           texto_1?: string | null
+          texto_1_fonte?: string | null
           texto_2?: string | null
+          texto_2_fonte?: string | null
           texto_3?: string | null
+          texto_3_fonte?: string | null
           texto_4?: string | null
+          texto_4_fonte?: string | null
+          texto_5?: string | null
+          texto_5_fonte?: string | null
           motivator5_dimensions?: Json | null
           motivator5_file_path?: string | null
           motivator5_file_size?: number | null
@@ -2689,9 +2701,15 @@ export type Database = {
           scheduled_publish_at?: string | null
           status?: string | null
           texto_1?: string | null
+          texto_1_fonte?: string | null
           texto_2?: string | null
+          texto_2_fonte?: string | null
           texto_3?: string | null
+          texto_3_fonte?: string | null
           texto_4?: string | null
+          texto_4_fonte?: string | null
+          texto_5?: string | null
+          texto_5_fonte?: string | null
           motivator5_dimensions?: Json | null
           motivator5_file_path?: string | null
           motivator5_file_size?: number | null

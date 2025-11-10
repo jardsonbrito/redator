@@ -5,6 +5,7 @@ type ImagePosition = 'before' | 'after' | 'left' | 'right';
 
 interface MotivatorWithImageProps {
   text?: string | null;
+  fonte?: string | null;
   imageSource?: string | null;
   imageUrl?: string | null;
   imageFilePath?: string | null;
@@ -14,6 +15,7 @@ interface MotivatorWithImageProps {
 
 export const MotivatorWithImage = ({
   text,
+  fonte,
   imageSource,
   imageUrl,
   imageFilePath,
@@ -41,6 +43,13 @@ export const MotivatorWithImage = ({
   // Se não tem texto e nem imagem, não renderiza nada
   if (!hasText && !hasImage) return null;
 
+  // Elemento de fonte (sempre renderizado por último se existir)
+  const fonteElement = fonte && fonte.trim() ? (
+    <div className="mt-4 text-xs text-gray-600 italic border-t pt-3">
+      {fonte}
+    </div>
+  ) : null;
+
   // Se tem apenas texto, renderiza só o texto
   if (hasText && !hasImage) {
     return (
@@ -49,6 +58,7 @@ export const MotivatorWithImage = ({
         <div className="text-redator-accent">
           <FormattedText text={text} />
         </div>
+        {fonteElement}
       </div>
     );
   }
@@ -69,6 +79,7 @@ export const MotivatorWithImage = ({
             }}
           />
         </div>
+        {fonteElement}
       </div>
     );
   }
@@ -143,6 +154,7 @@ export const MotivatorWithImage = ({
     <div className="bg-white rounded-lg p-6 border border-redator-accent/20">
       <h3 className="font-semibold text-redator-primary mb-3">Texto {motivatorNumber}</h3>
       {renderContent()}
+      {fonteElement}
     </div>
   );
 };
