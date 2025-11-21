@@ -8,10 +8,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal } from "lucide-react";
+import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal, LogIn } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VisitanteInfoModal } from "./VisitanteInfoModal";
 import { MigrarVisitanteModal } from "./MigrarVisitanteModal";
+import { StudentLoginActivityModal } from "./StudentLoginActivityModal";
 import { formatTurmaDisplay, getTurmaColorClasses } from "@/utils/turmaUtils";
 
 interface Aluno {
@@ -42,6 +43,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [visitanteParaMigrar, setVisitanteParaMigrar] = useState<Aluno | null>(null);
   const [isMigrarModalOpen, setIsMigrarModalOpen] = useState(false);
+  const [loginModalAluno, setLoginModalAluno] = useState<Aluno | null>(null);
   const { toast } = useToast();
 
   const fetchAlunos = async () => {
@@ -337,8 +339,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
           </div>
 
           <TabsContent value="todos" className="mt-0">
-            <AlunoTable 
-              alunos={filteredAlunos} 
+            <AlunoTable
+              alunos={filteredAlunos}
               loading={loading}
               searchTerm={searchTerm}
               onEdit={handleEdit}
@@ -348,13 +350,14 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
               getTipoBadge={getTipoBadge}
               onShowVisitanteInfo={handleShowVisitanteInfo}
               onShowMigrarModal={handleShowMigrarModal}
+              onShowLoginModal={setLoginModalAluno}
             />
           </TabsContent>
 
           {turmasDisponiveis.map((turma) => (
             <TabsContent key={turma} value={turma} className="mt-0">
-              <AlunoTable 
-                alunos={filteredAlunos} 
+              <AlunoTable
+                alunos={filteredAlunos}
                 loading={loading}
                 searchTerm={searchTerm}
                 onEdit={handleEdit}
@@ -364,6 +367,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                 getTipoBadge={getTipoBadge}
                 onShowVisitanteInfo={handleShowVisitanteInfo}
                 onShowMigrarModal={handleShowMigrarModal}
+                onShowLoginModal={setLoginModalAluno}
               />
             </TabsContent>
           ))}
@@ -415,6 +419,16 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         }}
         onSuccess={handleMigracaoSuccess}
       />
+
+      {/* Modal de Histórico de Login */}
+      {loginModalAluno && (
+        <StudentLoginActivityModal
+          studentEmail={loginModalAluno.email}
+          studentName={loginModalAluno.nome}
+          isOpen={!!loginModalAluno}
+          onClose={() => setLoginModalAluno(null)}
+        />
+      )}
     </Card>
   );
 };
@@ -431,19 +445,21 @@ interface AlunoTableProps {
   getTipoBadge: (usuario: Aluno) => React.ReactNode;
   onShowVisitanteInfo: (visitante: Aluno) => void;
   onShowMigrarModal: (visitante: Aluno) => void;
+  onShowLoginModal: (aluno: Aluno) => void;
 }
 
-const AlunoTable = ({ 
-  alunos, 
-  loading, 
-  searchTerm, 
-  onEdit, 
-  onDelete, 
-  onToggleStatus, 
+const AlunoTable = ({
+  alunos,
+  loading,
+  searchTerm,
+  onEdit,
+  onDelete,
+  onToggleStatus,
   getTurmaColor,
   getTipoBadge,
   onShowVisitanteInfo,
-  onShowMigrarModal
+  onShowMigrarModal,
+  onShowLoginModal
 }: AlunoTableProps) => {
   if (loading) {
     return (
@@ -540,6 +556,10 @@ const AlunoTable = ({
                     ) : (
                       // Ações para alunos regulares
                       <>
+                        <DropdownMenuItem onClick={() => onShowLoginModal(aluno)}>
+                          <LogIn className="mr-2 h-4 w-4" />
+                          Ver Login
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.preventDefault();

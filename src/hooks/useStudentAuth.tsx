@@ -133,11 +133,29 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       }
     };
 
-    // Adicionar listener para beforeunload para garantir persistência
-    const handleBeforeUnload = () => {
+    // Adicionar listener para beforeunload para garantir persistência e registrar logout
+    const handleBeforeUnload = async () => {
       // Garantir que dados estão salvos antes da página fechar
       if (isStudentLoggedIn) {
         console.log('💾 Salvando sessão antes de fechar página');
+
+        // Registrar logout quando a página for fechada
+        const loginSessionId = localStorage.getItem('loginSessionId');
+        if (loginSessionId) {
+          try {
+            const { supabase } = await import('@/integrations/supabase/client');
+            // Usar sendBeacon para garantir que a requisição seja enviada mesmo com a página fechando
+            const data = JSON.stringify({ session_id: loginSessionId });
+            navigator.sendBeacon('/api/logout', data);
+
+            // Fallback: tentar via RPC normal
+            await supabase.rpc('register_student_logout', {
+              p_session_id: loginSessionId
+            });
+          } catch (error) {
+            console.warn('⚠️ Erro ao registrar logout no beforeunload:', error);
+          }
+        }
       }
     };
 
@@ -194,25 +212,26 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
 
   const loginAsStudent = async (turma: string, nome: string, email: string) => {
     console.log('🔐 Login como aluno - turma:', turma, 'nome:', nome, 'email:', email);
-    
+
     const alunoInfo = {
       nome: nome.trim(),
       email: email.trim().toLowerCase(),
       turma: turma
     };
-    
+
     let sessionToken = null;
-    
+    let loginSessionId = null;
+
     try {
       // Garantir que o perfil existe no banco de dados
       await ensureProfileExists(email.trim().toLowerCase(), nome.trim(), turma);
-      
+
       // Verificação automática de contas duplicadas e merge
       const { supabase } = await import('@/integrations/supabase/client');
       const { data: mergeResult } = await supabase.rpc('auto_merge_student_accounts', {
         student_email: email.trim().toLowerCase()
       });
-      
+
       if (mergeResult && typeof mergeResult === 'object' && 'auto_merged' in mergeResult && mergeResult.auto_merged) {
         console.log('✅ Redações anteriores reconectadas automaticamente:', mergeResult.total_redacoes_merged);
       }
@@ -231,12 +250,34 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           const result = tokenResult as { success: boolean; token: string };
           sessionToken = result.token;
           console.log('✅ Token de sessão criado com sucesso');
-          
+
           // Armazenar token em cookie com configurações seguras
           document.cookie = `student_session_token=${sessionToken}; path=/; max-age=86400; SameSite=Strict`;
         }
       } catch (tokenError) {
         console.warn('⚠️ Erro ao criar token de sessão (não crítico):', tokenError);
+      }
+
+      // Registrar sessão de login
+      try {
+        const { data: loginResult, error: loginError } = await supabase.rpc('register_student_login', {
+          p_student_email: email.trim().toLowerCase(),
+          p_student_name: nome.trim(),
+          p_turma: turma,
+          p_user_type: 'aluno',
+          p_session_token: sessionToken
+        });
+
+        if (loginError) {
+          console.warn('⚠️ Erro ao registrar sessão de login:', loginError);
+        } else {
+          loginSessionId = loginResult;
+          console.log('✅ Sessão de login registrada:', loginSessionId);
+          // Armazenar ID da sessão no localStorage para usar no logout
+          localStorage.setItem('loginSessionId', loginSessionId);
+        }
+      } catch (loginError) {
+        console.warn('⚠️ Erro ao registrar sessão de login (não crítico):', loginError);
       }
     } catch (error) {
       console.warn('⚠️ Erro na verificação automática:', error);
@@ -280,10 +321,11 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     };
 
     let sessionId = null;
+    let loginSessionId = null;
 
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      
+
       // Salvar sessão de visitante no banco usando a função RPC
       console.log('💾 Salvando sessão de visitante no banco...');
       const { data: sessaoResult, error: sessaoError } = await supabase.rpc('gerenciar_sessao_visitante', {
@@ -309,9 +351,31 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       const { data: mergeResult } = await supabase.rpc('auto_merge_student_accounts', {
         student_email: email.trim().toLowerCase()
       });
-      
+
       if (mergeResult && typeof mergeResult === 'object' && mergeResult !== null && 'auto_merged' in mergeResult && mergeResult.auto_merged) {
         console.log('✅ Redações anteriores reconectadas automaticamente para visitante:', mergeResult.total_redacoes_merged);
+      }
+
+      // Registrar sessão de login para visitante
+      try {
+        const { data: loginResult, error: loginError } = await supabase.rpc('register_student_login', {
+          p_student_email: email.trim().toLowerCase(),
+          p_student_name: nome.trim(),
+          p_turma: 'visitante',
+          p_user_type: 'visitante',
+          p_session_token: null
+        });
+
+        if (loginError) {
+          console.warn('⚠️ Erro ao registrar sessão de login:', loginError);
+        } else {
+          loginSessionId = loginResult;
+          console.log('✅ Sessão de login registrada:', loginSessionId);
+          // Armazenar ID da sessão no localStorage para usar no logout
+          localStorage.setItem('loginSessionId', loginSessionId);
+        }
+      } catch (loginError) {
+        console.warn('⚠️ Erro ao registrar sessão de login (não crítico):', loginError);
       }
     } catch (error) {
       console.warn('⚠️ Erro na gestão de sessão/merge para visitante:', error);
@@ -341,21 +405,54 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     });
   };
 
-  const logoutStudent = () => {
+  const logoutStudent = async () => {
     console.log('🚪 Logout do estudante');
+
+    // Registrar logout na sessão
+    try {
+      const loginSessionId = localStorage.getItem('loginSessionId');
+      if (loginSessionId) {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { error } = await supabase.rpc('register_student_logout', {
+          p_session_id: loginSessionId
+        });
+
+        if (error) {
+          console.warn('⚠️ Erro ao registrar logout:', error);
+        } else {
+          console.log('✅ Logout registrado com sucesso');
+        }
+      } else if (studentData.email) {
+        // Se não tiver session_id, usar email como fallback
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { error } = await supabase.rpc('register_student_logout_by_email', {
+          p_student_email: studentData.email
+        });
+
+        if (error) {
+          console.warn('⚠️ Erro ao registrar logout por email:', error);
+        } else {
+          console.log('✅ Logout registrado com sucesso (por email)');
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao registrar logout (não crítico):', error);
+    }
+
     // Limpar todos os dados de sessão do estudante
     localStorage.removeItem("userType");
     localStorage.removeItem("alunoTurma");
     localStorage.removeItem("alunoData");
     localStorage.removeItem("visitanteData");
     localStorage.removeItem("loginTimestamp");
-    
+    localStorage.removeItem("loginSessionId");
+
     // Limpar cache do avatar
     localStorage.removeItem("student_avatar_url");
-    
+
     // Limpar token de sessão do cookie
     document.cookie = 'student_session_token=; path=/; max-age=0; SameSite=Strict';
-    
+
     setIsStudentLoggedIn(false);
     setStudentData({
       id: '',

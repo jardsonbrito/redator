@@ -7,20 +7,22 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminHeader } from '@/components/AdminHeader';
-import { 
-  Users, 
-  Search, 
+import {
+  Users,
+  Search,
   Eye,
   UserPlus,
   GraduationCap,
   Calendar,
   FileText,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogIn
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { StudentLoginActivityModal } from '@/components/admin/StudentLoginActivityModal';
 
 interface Aluno {
   id: string;
@@ -38,12 +40,13 @@ interface Aluno {
 
 const AlunosAdmin = () => {
   const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
+  const [loginModalAluno, setLoginModalAluno] = useState<Aluno | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [turmaFilter, setTurmaFilter] = useState<string>('');
   const [tipoFilter, setTipoFilter] = useState<string>(''); // '', 'aluno', 'visitante'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
-  
+
   const { toast } = useToast();
 
   // Buscar todos os alunos e visitantes
@@ -409,6 +412,15 @@ const AlunosAdmin = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => setLoginModalAluno(usuario)}
+                      title="Ver histórico de login"
+                    >
+                      <LogIn className="w-4 h-4 mr-1" />
+                      Login
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setSelectedAluno(usuario)}
                     >
                       <Eye className="w-4 h-4 mr-1" />
@@ -454,6 +466,16 @@ const AlunosAdmin = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal de Histórico de Login */}
+        {loginModalAluno && (
+          <StudentLoginActivityModal
+            studentEmail={loginModalAluno.email}
+            studentName={loginModalAluno.nome}
+            isOpen={!!loginModalAluno}
+            onClose={() => setLoginModalAluno(null)}
+          />
+        )}
 
         {/* Dialog de Detalhes */}
         <Dialog open={!!selectedAluno} onOpenChange={(open) => {
