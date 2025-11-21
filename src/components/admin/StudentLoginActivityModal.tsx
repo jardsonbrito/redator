@@ -35,23 +35,51 @@ export const StudentLoginActivityModal = ({
   isOpen,
   onClose,
 }: StudentLoginActivityModalProps) => {
-  const { data: activities, isLoading } = useQuery({
+  const { data: activities, isLoading, error: queryError } = useQuery({
     queryKey: ['student-login-activity-hybrid', studentEmail],
     queryFn: async (): Promise<DailyActivity[]> => {
-      const { data, error } = await supabase.rpc('get_student_activity_hybrid', {
-        p_student_email: studentEmail,
-        p_days_limit: 30
-      });
+      try {
+        // Tentar primeiro a função híbrida (com dados em tempo real)
+        const { data, error } = await supabase.rpc('get_student_activity_hybrid', {
+          p_student_email: studentEmail,
+          p_days_limit: 30
+        });
 
-      if (error) {
-        console.error('Erro ao buscar atividades:', error);
-        throw error;
+        if (error) {
+          // Se a função híbrida não existir, tentar a função antiga
+          if (error.message?.includes('does not exist') || error.message?.includes('function')) {
+            console.warn('⚠️ Função híbrida não existe, usando função antiga');
+            const { data: oldData, error: oldError } = await supabase.rpc('get_student_activity', {
+              p_student_email: studentEmail,
+              p_days_limit: 30
+            });
+
+            if (oldError) {
+              console.error('Erro ao buscar atividades (fallback):', oldError);
+              return [];
+            }
+
+            // Adicionar is_today: false para compatibilidade
+            return (oldData || []).map((activity: any) => ({
+              ...activity,
+              is_today: false
+            }));
+          }
+
+          console.error('Erro ao buscar atividades:', error);
+          return [];
+        }
+
+        return data || [];
+      } catch (err) {
+        console.error('Erro inesperado ao buscar atividades:', err);
+        return [];
       }
-
-      return data || [];
     },
     enabled: isOpen && !!studentEmail,
     refetchInterval: 30000, // Atualizar a cada 30 segundos para mostrar dados em tempo real
+    retry: 1,
+    retryDelay: 1000,
   });
 
   const formatDate = (dateString: string) => {
@@ -94,6 +122,16 @@ export const StudentLoginActivityModal = ({
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : queryError ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-red-600 mb-2">⚠️ Erro ao carregar dados</p>
+            <p className="text-sm">
+              {queryError instanceof Error ? queryError.message : 'Erro desconhecido'}
+            </p>
+            <p className="text-xs mt-2">
+              Verifique se as funções do banco de dados estão instaladas.
+            </p>
           </div>
         ) : (
           <div className="space-y-6">
