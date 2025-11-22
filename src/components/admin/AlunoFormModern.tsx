@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { AlunoCSVImport } from "./AlunoCSVImport";
 import { AlunoSelfServiceModern } from "./AlunoSelfServiceModern";
 import { AlunoList } from "./AlunoList";
+import { LoginDashboardTab } from "./LoginDashboardTab";
 import { TURMAS_VALIDAS, formatTurmaDisplay, normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
 interface AlunoFormModernProps {
@@ -266,7 +267,8 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
     { id: 'cm', label: 'CM' },
     { id: 'importar', label: 'Importar' },
     { id: 'autoatendimento', label: 'Autoatendimento' },
-    { id: 'lista', label: 'Lista' }
+    { id: 'lista', label: 'Lista' },
+    { id: 'login', label: 'Login' }
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -384,6 +386,13 @@ export const AlunoFormModern = ({ onSuccess, alunoEditando, onCancelEdit, refres
                   refresh={refresh || false}
                   onEdit={onEdit || (() => {})}
                 />
+              </div>
+            )}
+
+            {/* Login Section */}
+            {activeSection === 'login' && (
+              <div>
+                <LoginDashboardTab />
               </div>
             )}
           </div>
