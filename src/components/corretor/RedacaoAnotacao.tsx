@@ -37,6 +37,7 @@ const CORES_COMPETENCIAS = {
   3: { cor: '#3b82f6', nome: 'Azul', label: 'C3 - Argumentação' },
   4: { cor: '#a855f7', nome: 'Roxo', label: 'C4 - Coesão' },
   5: { cor: '#f97316', nome: 'Laranja', label: 'C5 - Proposta' },
+  6: { cor: '#9CA3AF', nome: 'Cinza', label: 'PA - Ponto de Atenção' },
 };
 
 export const RedacaoAnotacao = ({ 
@@ -559,11 +560,11 @@ export const RedacaoAnotacao = ({
               className="flex items-center gap-1"
               style={competenciaSelecionada === parseInt(num) ? { backgroundColor: cor, borderColor: cor } : {}}
             >
-              <div 
-                className="w-3 h-3 rounded-full" 
+              <div
+                className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: cor }}
               />
-              C{num}
+              {num === '6' ? 'PA' : `C${num}`}
             </Button>
           ))}
         </div>
@@ -655,15 +656,15 @@ export const RedacaoAnotacao = ({
                 const compAtual = competenciaDialog ?? marcacaoTemp?.competencia ?? null;
                 
                 return (competenciasExpanded || !compAtual) ? (
-                  // EXPANDIDO → 5 bolinhas
+                  // EXPANDIDO → 6 bolinhas
                   <div className="flex items-center gap-2">
-                    {[1,2,3,4,5].map((num) => (
+                    {[1,2,3,4,5,6].map((num) => (
                       <button
                         key={num}
                         onClick={() => selecionarCompetencia(num)}
                         className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
                         style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
-                        aria-label={`Competência ${num}`}
+                        aria-label={num === 6 ? 'Ponto de Atenção' : `Competência ${num}`}
                         data-testid={`bolinha-c${num}`}
                       />
                     ))}
@@ -679,7 +680,7 @@ export const RedacaoAnotacao = ({
                       className="w-8 h-8 rounded-full border-2 border-gray-300"
                       style={{ backgroundColor: CORES_COMPETENCIAS[compAtual].cor }}
                     />
-                    <span>Competência {compAtual}</span>
+                    <span>{compAtual === 6 ? 'Ponto de Atenção' : `Competência ${compAtual}`}</span>
                   </button>
                 );
               })()}

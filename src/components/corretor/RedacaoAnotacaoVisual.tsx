@@ -53,7 +53,12 @@ const customStyles = `
     stroke: #9C27B0 !important;
     stroke-width: 2px !important;
   }
-  
+  .r6o-annotation.competencia-6 .r6o-shape {
+    fill: rgba(156, 163, 175, 0.15) !important;
+    stroke: #9CA3AF !important;
+    stroke-width: 2px !important;
+  }
+
   /* Container: mesmo tratamento para fotos e imagens convertidas */
   .container-imagem-redacao {
     width: 100%;
@@ -195,7 +200,8 @@ const CORES_COMPETENCIAS = {
   2: { cor: '#43A047', nome: 'Verde', label: 'Competência 2' },
   3: { cor: '#2196F3', nome: 'Azul', label: 'Competência 3' },
   4: { cor: '#FF9800', nome: 'Laranja', label: 'Competência 4' },
-  5: { cor: '#9C27B0', nome: 'Roxo', label: 'Competência 5' }
+  5: { cor: '#9C27B0', nome: 'Roxo', label: 'Competência 5' },
+  6: { cor: '#9CA3AF', nome: 'Cinza', label: 'Ponto de Atenção' }
 } as const;
 
 const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotacaoVisualProps>(({
@@ -1148,7 +1154,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                   style={{ backgroundColor: info.cor }}
                 />
                 <span className="text-xs font-medium text-muted-foreground">
-                  C{num}
+                  {num === '6' ? 'PA' : `C${num}`}
                 </span>
               </div>
             ))}
@@ -1261,15 +1267,15 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                 const compAtual = competenciaDialog ?? null;
                 
                 return (competenciasExpanded || !compAtual) ? (
-                  // EXPANDIDO → 5 bolinhas
+                  // EXPANDIDO → 6 bolinhas
                   <div className="flex items-center gap-2">
-                    {[1,2,3,4,5].map((num) => (
+                    {[1,2,3,4,5,6].map((num) => (
                       <button
                         key={num}
                         onClick={() => selecionarCompetencia(num)}
                         className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-all"
                         style={{ backgroundColor: CORES_COMPETENCIAS[num as keyof typeof CORES_COMPETENCIAS].cor }}
-                        aria-label={`Competência ${num}`}
+                        aria-label={num === 6 ? 'Ponto de Atenção' : `Competência ${num}`}
                         data-testid={`bolinha-c${num}`}
                       />
                     ))}
@@ -1285,7 +1291,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
                       className="w-8 h-8 rounded-full border-2 border-gray-300"
                       style={{ backgroundColor: CORES_COMPETENCIAS[compAtual].cor }}
                     />
-                    <span>Competência {compAtual}</span>
+                    <span>{compAtual === 6 ? 'Ponto de Atenção' : `Competência ${compAtual}`}</span>
                   </button>
                 );
               })()}
