@@ -2,6 +2,7 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import GamificacaoAdmin from "./pages/admin/GamificacaoAdmin";
+import ProcessoSeletivoAdmin from "./pages/admin/ProcessoSeletivoAdmin";
 import Welcome from "./pages/Welcome";
 import Admin from "./pages/Admin";
 import Exportacao from "./pages/admin/Exportacao";
@@ -87,6 +88,7 @@ import Gamificacao from "./pages/Gamificacao";
 import DiarioOnline from "./pages/DiarioOnline";
 import SimuladoRedacaoCorrigida from "./pages/SimuladoRedacaoCorrigida";
 import RedacaoRegularDetalhes from "./pages/RedacaoRegularDetalhes";
+import ProcessoSeletivo from "./pages/ProcessoSeletivo";
 import { CustomizePlanSimple } from "./pages/admin/CustomizePlanSimple";
 import { CustomizePlanByName } from "./pages/admin/CustomizePlanByName";
 import { CustomizeStudentPlan } from "./pages/admin/CustomizeStudentPlan";
@@ -119,6 +121,7 @@ function App() {
                   <Route path="/simulado/:id" element={<ProtectedStudentRoute><SimuladoParticipacao /></ProtectedStudentRoute>} />
                   <Route path="/simulados/:id" element={<ProtectedStudentRoute><SimuladoParticipacao /></ProtectedStudentRoute>} />
                   <Route path="/simulados/:simuladoId/redacao-corrigida" element={<ProtectedStudentRoute><SimuladoRedacaoCorrigida /></ProtectedStudentRoute>} />
+                  <Route path="/processo-seletivo" element={<ProtectedStudentRoute><ProcessoSeletivo /></ProtectedStudentRoute>} />
                   <Route path="/exercicios" element={<ProtectedStudentRoute><Exercicios /></ProtectedStudentRoute>} />
                   <Route path="/envie-redacao" element={<ProtectedStudentRoute><EnvieRedacao /></ProtectedStudentRoute>} />
                   <Route path="/minhas-redacoes" element={<ProtectedStudentRoute><MinhasRedacoesList /></ProtectedStudentRoute>} />
@@ -156,6 +159,7 @@ function App() {
                   <Route path="/admin/exportacao" element={<Exportacao />} />
                   <Route path="/admin/ajuda-rapida" element={<AjudaRapidaAdmin />} />
                   <Route path="/admin/gamificacao" element={<GamificacaoAdmin />} />
+                  <Route path="/admin/processo-seletivo" element={<ProcessoSeletivoAdmin />} />
                   <Route path="/admin/top5" element={<Top5Admin />} />
                   <Route path="/admin/lousa/:lousaId/respostas" element={<LousaRespostasPage />} />
                   <Route path="/admin/customize-plan/:turmaId" element={<CustomizePlanSimple />} />

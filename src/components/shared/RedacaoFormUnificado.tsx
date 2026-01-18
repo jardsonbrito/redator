@@ -30,6 +30,7 @@ interface RedacaoFormUnificadoProps {
   // Dados de contexto
   fonte?: string;
   exercicioId?: string;
+  processoSeletivoCandidatoId?: string | null; // ID do candidato do processo seletivo
 
   // Callbacks
   onSubmitSuccess?: () => void;
@@ -47,6 +48,7 @@ export const RedacaoFormUnificado = ({
   requiredCredits = 1,
   fonte,
   exercicioId,
+  processoSeletivoCandidatoId,
   onSubmitSuccess,
   className
 }: RedacaoFormUnificadoProps) => {
@@ -75,10 +77,16 @@ export const RedacaoFormUnificado = ({
 
   let tipoEnvio = "avulsa";
   let turmaCode = "visitante";
+  const isProcessoSeletivo = !!processoSeletivoCandidatoId;
 
   if (isSimulado) {
     tipoEnvio = "simulado";
     // FIX: Definir turma para alunos em simulados também
+    if (userType === "aluno" && alunoTurma) {
+      turmaCode = getTurmaCode(alunoTurma);
+    }
+  } else if (isProcessoSeletivo) {
+    tipoEnvio = "processo_seletivo";
     if (userType === "aluno" && alunoTurma) {
       turmaCode = getTurmaCode(alunoTurma);
     }
@@ -439,8 +447,8 @@ export const RedacaoFormUnificado = ({
 
         if (redacaoError) throw redacaoError;
       } else {
-        // Para redações regulares (incluindo exercícios)
-        const redacaoData = {
+        // Para redações regulares (incluindo exercícios e processo seletivo)
+        const redacaoData: Record<string, any> = {
           nome_aluno: finalNomeCompleto,
           email_aluno: finalEmail,
           frase_tematica: fraseTematicaLocal.trim(),
@@ -455,15 +463,44 @@ export const RedacaoFormUnificado = ({
           corretor_id_2: selectedCorretores[1] || null
         };
 
-        const { error: redacaoError } = await supabase
+        // Se for processo seletivo, vincular ao candidato
+        if (processoSeletivoCandidatoId) {
+          redacaoData.processo_seletivo_candidato_id = processoSeletivoCandidatoId;
+        }
+
+        const { data: redacaoInserida, error: redacaoError } = await supabase
           .from('redacoes_enviadas')
-          .insert(redacaoData);
+          .insert(redacaoData)
+          .select('id')
+          .single();
 
         if (redacaoError) throw redacaoError;
+
+        // Se for processo seletivo, atualizar o status do candidato para "concluido"
+        if (processoSeletivoCandidatoId) {
+          const { error: updateCandidatoError } = await supabase
+            .from('ps_candidatos')
+            .update({
+              status: 'concluido',
+              data_conclusao: new Date().toISOString()
+            })
+            .eq('id', processoSeletivoCandidatoId);
+
+          if (updateCandidatoError) {
+            console.error('Erro ao atualizar status do candidato:', updateCandidatoError);
+            // Não lançar erro pois a redação já foi enviada
+          }
+
+          // Marcar participação no perfil
+          await supabase
+            .from('profiles')
+            .update({ participou_processo_seletivo: true })
+            .eq('email', finalEmail);
+        }
       }
 
-      // Consumir créditos se for aluno
-      if (userType === "aluno") {
+      // Consumir créditos se for aluno (exceto processo seletivo que é gratuito)
+      if (userType === "aluno" && requiredCredits > 0 && !isProcessoSeletivo) {
         const success = await consumeCredits(
           requiredCredits,
           isSimulado ? `Envio de redação de simulado` : 'Envio de redação'
@@ -478,12 +515,16 @@ export const RedacaoFormUnificado = ({
           return;
         }
       } else {
-        // Toast apenas para visitantes (alunos já recebem o toast de créditos)
+        // Toast para visitantes ou processo seletivo
+        const description = isProcessoSeletivo
+          ? "Sua redação do Processo Seletivo foi enviada com sucesso! Aguarde o resultado."
+          : isSimulado
+            ? "Sua redação do simulado foi enviada para correção."
+            : "Sua redação foi enviada para correção.";
+
         toast({
           title: "✅ Redação enviada com sucesso!",
-          description: isSimulado ?
-            "Sua redação do simulado foi enviada para correção." :
-            "Sua redação foi enviada para correção.",
+          description,
           className: "border-green-200 bg-green-50 text-green-900",
           duration: 5000
         });
@@ -496,6 +537,13 @@ export const RedacaoFormUnificado = ({
         });
       }
 
+      // Invalidar cache do processo seletivo se aplicável
+      if (isProcessoSeletivo) {
+        queryClient.invalidateQueries({ queryKey: ['ps-candidato'] });
+        queryClient.invalidateQueries({ queryKey: ['ps-redacao'] });
+        queryClient.invalidateQueries({ queryKey: ['processo-seletivo-participacao'] });
+      }
+
       // Callback de sucesso
       if (onSubmitSuccess) {
         onSubmitSuccess();
@@ -503,6 +551,8 @@ export const RedacaoFormUnificado = ({
         // Navegar para página apropriada
         if (isSimulado) {
           navigate('/app');
+        } else if (isProcessoSeletivo) {
+          navigate('/processo-seletivo');
         } else {
           navigate('/minhas-redacoes');
         }
@@ -539,14 +589,20 @@ export const RedacaoFormUnificado = ({
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <h2 className="text-lg sm:text-xl font-semibold">
               {isSimulado ? 'Enviar Redação do Simulado' :
+               isProcessoSeletivo ? 'Redação do Processo Seletivo' :
                (fonte === 'tema' ? 'Redação sobre o Tema Selecionado' :
                 (userType === "aluno" ? 'Enviar Redação — Tema Livre' : 'Enviar Redação Avulsa — Tema Livre'))}
             </h2>
             <div className="flex items-center gap-2">
-              {userType === "aluno" && (
+              {userType === "aluno" && !isProcessoSeletivo && (
                 <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
                   {creditsLoading ? "..." : credits}
                 </div>
+              )}
+              {isProcessoSeletivo && (
+                <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">
+                  Gratuito
+                </span>
               )}
             </div>
           </div>
@@ -746,9 +802,9 @@ export const RedacaoFormUnificado = ({
           <Button
             type="submit"
             className="w-full text-white bg-purple-600 hover:bg-purple-700 rounded-xl py-3 text-lg font-semibold mt-6"
-            disabled={isSubmitting || (userType === "aluno" && (creditsLoading || credits < requiredCredits))}
+            disabled={isSubmitting || (userType === "aluno" && !isProcessoSeletivo && (creditsLoading || credits < requiredCredits))}
           >
-            {isSubmitting ? "Enviando..." : "Enviar Redação"}
+            {isSubmitting ? "Enviando..." : isProcessoSeletivo ? "Enviar Redação do Processo Seletivo" : "Enviar Redação"}
           </Button>
         </form>
       </CardContent>

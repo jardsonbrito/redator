@@ -2,8 +2,9 @@
 import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Home, Edit } from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Home, Edit, ClipboardList } from "lucide-react";
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -68,20 +69,32 @@ type TemaWithImage = {
 const TemaDetalhes = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { studentData } = useStudentAuth();
   const { checkIfTodayAllowsTopicSubmissions, getDaysAllowedText, settings } = useAppSettings();
-  
+
+  // Verificar se veio do processo seletivo
+  const processoSeletivoCandidatoId = searchParams.get('processo_seletivo');
+  const isProcessoSeletivo = !!processoSeletivoCandidatoId;
+
   // Permitir acesso tanto para alunos quanto visitantes
   const canWriteRedacao = studentData.userType === "aluno" || studentData.userType === "visitante";
-  
-  // Verificar se hoje é permitido envio por tema
-  const todayAllowsSubmission = checkIfTodayAllowsTopicSubmissions();
+
+  // Verificar se hoje é permitido envio por tema (ignorar restrição se for processo seletivo)
+  const todayAllowsSubmission = isProcessoSeletivo || checkIfTodayAllowsTopicSubmissions();
   const daysAllowedText = getDaysAllowedText();
-  
+
   const handleEscreverRedacao = () => {
     if (tema && todayAllowsSubmission) {
       // Redirecionar para página de envio com parâmetros
-      navigate(`/envie-redacao?tema=${encodeURIComponent(tema.frase_tematica)}&fonte=tema&temaId=${id}`);
+      let url = `/envie-redacao?tema=${encodeURIComponent(tema.frase_tematica)}&fonte=tema&temaId=${id}`;
+
+      // Se for processo seletivo, adicionar o parâmetro
+      if (processoSeletivoCandidatoId) {
+        url += `&processo_seletivo_candidato_id=${processoSeletivoCandidatoId}`;
+      }
+
+      navigate(url);
     }
   };
   
@@ -274,6 +287,16 @@ const TemaDetalhes = () => {
               {/* Botão para escrever redação - para alunos e visitantes */}
               {canWriteRedacao && (
                 <div className="mt-8 pt-6 border-t border-gray-200 bg-gray-50/50 rounded-lg p-6 shadow-sm text-center">
+                  {/* Badge do Processo Seletivo */}
+                  {isProcessoSeletivo && (
+                    <div className="mb-4">
+                      <Badge className="bg-purple-600 text-white px-3 py-1">
+                        <ClipboardList className="w-3 h-3 mr-1" />
+                        Processo Seletivo - Etapa Final
+                      </Badge>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleEscreverRedacao}
                     disabled={!todayAllowsSubmission}
@@ -284,10 +307,10 @@ const TemaDetalhes = () => {
                     }`}
                   >
                     <Edit className="w-4 h-4 mr-2" />
-                    Escreva sobre este tema
+                    {isProcessoSeletivo ? 'Escrever Redação do Processo Seletivo' : 'Escreva sobre este tema'}
                   </Button>
 
-                  {!todayAllowsSubmission && (
+                  {!todayAllowsSubmission && !isProcessoSeletivo && (
                     <p className="text-xs text-gray-500 mt-3 text-center">
                       Envios por tema não estão liberados hoje. Dias permitidos: {daysAllowedText}
                     </p>

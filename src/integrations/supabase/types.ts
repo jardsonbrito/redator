@@ -1434,6 +1434,368 @@ export type Database = {
         }
         Relationships: []
       }
+      ps_candidatos: {
+        Row: {
+          id: string
+          aluno_id: string | null
+          email_aluno: string
+          nome_aluno: string
+          turma: string | null
+          status: string
+          formulario_id: string
+          data_inscricao: string | null
+          data_aprovacao: string | null
+          aprovado_por: string | null
+          motivo_reprovacao: string | null
+          data_conclusao: string | null
+        }
+        Insert: {
+          id?: string
+          aluno_id?: string | null
+          email_aluno: string
+          nome_aluno: string
+          turma?: string | null
+          status?: string
+          formulario_id: string
+          data_inscricao?: string | null
+          data_aprovacao?: string | null
+          aprovado_por?: string | null
+          motivo_reprovacao?: string | null
+          data_conclusao?: string | null
+        }
+        Update: {
+          id?: string
+          aluno_id?: string | null
+          email_aluno?: string
+          nome_aluno?: string
+          turma?: string | null
+          status?: string
+          formulario_id?: string
+          data_inscricao?: string | null
+          data_aprovacao?: string | null
+          aprovado_por?: string | null
+          motivo_reprovacao?: string | null
+          data_conclusao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_candidatos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ps_candidatos_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "ps_formularios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ps_candidatos_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_comunicados: {
+        Row: {
+          id: string
+          formulario_id: string
+          titulo: string
+          descricao: string | null
+          imagem_url: string | null
+          link_externo: string | null
+          data_evento: string | null
+          hora_evento: string | null
+          ativo: boolean
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          formulario_id: string
+          titulo: string
+          descricao?: string | null
+          imagem_url?: string | null
+          link_externo?: string | null
+          data_evento?: string | null
+          hora_evento?: string | null
+          ativo?: boolean
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          formulario_id?: string
+          titulo?: string
+          descricao?: string | null
+          imagem_url?: string | null
+          link_externo?: string | null
+          data_evento?: string | null
+          hora_evento?: string | null
+          ativo?: boolean
+          criado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_comunicados_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "ps_formularios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_etapa_final: {
+        Row: {
+          id: string
+          formulario_id: string
+          tema_redacao: string
+          instrucoes: string | null
+          data_inicio: string
+          hora_inicio: string
+          data_fim: string
+          hora_fim: string
+          ativo: boolean
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          formulario_id: string
+          tema_redacao: string
+          instrucoes?: string | null
+          data_inicio: string
+          hora_inicio: string
+          data_fim: string
+          hora_fim: string
+          ativo?: boolean
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          formulario_id?: string
+          tema_redacao?: string
+          instrucoes?: string | null
+          data_inicio?: string
+          hora_inicio?: string
+          data_fim?: string
+          hora_fim?: string
+          ativo?: boolean
+          criado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_etapa_final_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "ps_formularios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_formularios: {
+        Row: {
+          id: string
+          titulo: string
+          descricao: string | null
+          ativo: boolean
+          criado_em: string
+          criado_por: string | null
+        }
+        Insert: {
+          id?: string
+          titulo: string
+          descricao?: string | null
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Update: {
+          id?: string
+          titulo?: string
+          descricao?: string | null
+          ativo?: boolean
+          criado_em?: string
+          criado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_formularios_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_perguntas: {
+        Row: {
+          id: string
+          secao_id: string
+          texto: string
+          tipo: string
+          obrigatoria: boolean
+          ordem: number
+          opcoes: string[]
+          texto_aceite: string | null
+        }
+        Insert: {
+          id?: string
+          secao_id: string
+          texto: string
+          tipo: string
+          obrigatoria?: boolean
+          ordem?: number
+          opcoes?: string[]
+          texto_aceite?: string | null
+        }
+        Update: {
+          id?: string
+          secao_id?: string
+          texto?: string
+          tipo?: string
+          obrigatoria?: boolean
+          ordem?: number
+          opcoes?: string[]
+          texto_aceite?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_perguntas_secao_id_fkey"
+            columns: ["secao_id"]
+            isOneToOne: false
+            referencedRelation: "ps_secoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_redacoes: {
+        Row: {
+          id: string
+          candidato_id: string
+          etapa_final_id: string
+          texto: string
+          data_envio: string
+          status: string
+          nota_total: number | null
+          comentario: string | null
+        }
+        Insert: {
+          id?: string
+          candidato_id: string
+          etapa_final_id: string
+          texto: string
+          data_envio?: string
+          status?: string
+          nota_total?: number | null
+          comentario?: string | null
+        }
+        Update: {
+          id?: string
+          candidato_id?: string
+          etapa_final_id?: string
+          texto?: string
+          data_envio?: string
+          status?: string
+          nota_total?: number | null
+          comentario?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_redacoes_candidato_id_fkey"
+            columns: ["candidato_id"]
+            isOneToOne: false
+            referencedRelation: "ps_candidatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ps_redacoes_etapa_final_id_fkey"
+            columns: ["etapa_final_id"]
+            isOneToOne: false
+            referencedRelation: "ps_etapa_final"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_respostas: {
+        Row: {
+          id: string
+          candidato_id: string
+          pergunta_id: string
+          resposta_texto: string | null
+          resposta_opcao: string | null
+          resposta_opcoes: string[]
+          aceite_confirmado: boolean
+        }
+        Insert: {
+          id?: string
+          candidato_id: string
+          pergunta_id: string
+          resposta_texto?: string | null
+          resposta_opcao?: string | null
+          resposta_opcoes?: string[]
+          aceite_confirmado?: boolean
+        }
+        Update: {
+          id?: string
+          candidato_id?: string
+          pergunta_id?: string
+          resposta_texto?: string | null
+          resposta_opcao?: string | null
+          resposta_opcoes?: string[]
+          aceite_confirmado?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_respostas_candidato_id_fkey"
+            columns: ["candidato_id"]
+            isOneToOne: false
+            referencedRelation: "ps_candidatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ps_respostas_pergunta_id_fkey"
+            columns: ["pergunta_id"]
+            isOneToOne: false
+            referencedRelation: "ps_perguntas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ps_secoes: {
+        Row: {
+          id: string
+          formulario_id: string
+          titulo: string
+          descricao: string | null
+          ordem: number
+        }
+        Insert: {
+          id?: string
+          formulario_id: string
+          titulo: string
+          descricao?: string | null
+          ordem?: number
+        }
+        Update: {
+          id?: string
+          formulario_id?: string
+          titulo?: string
+          descricao?: string | null
+          ordem?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ps_secoes_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "ps_formularios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           aprovado_por: string | null
@@ -1448,6 +1810,7 @@ export type Database = {
           id: string
           is_authenticated_student: boolean | null
           nome: string
+          participou_processo_seletivo: boolean | null
           sobrenome: string
           status_aprovacao: string | null
           theme_preference: string | null
@@ -1469,6 +1832,7 @@ export type Database = {
           id: string
           is_authenticated_student?: boolean | null
           nome: string
+          participou_processo_seletivo?: boolean | null
           sobrenome: string
           status_aprovacao?: string | null
           theme_preference?: string | null
@@ -1490,6 +1854,7 @@ export type Database = {
           id?: string
           is_authenticated_student?: boolean | null
           nome?: string
+          participou_processo_seletivo?: boolean | null
           sobrenome?: string
           status_aprovacao?: string | null
           theme_preference?: string | null

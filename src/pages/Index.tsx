@@ -1,9 +1,10 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -15,6 +16,7 @@ import { StudentInboxManager } from "@/components/student/StudentInboxManager";
 const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
+  const { elegivel: elegivelProcessoSeletivo } = useProcessoSeletivo(studentData.email || '');
 
   // Determina a turma/código do usuário
   let turmaCode = "Visitante";
@@ -136,6 +138,15 @@ const Index = () => {
       icon: Gamepad2,
       tooltip: "Participe de jogos educativos para treinar redação.",
       showAlways: true
+    },
+    // Processo Seletivo - Visível apenas para alunos sem plano ativo e que não participaram anteriormente
+    {
+      title: "Processo seletivo",
+      path: "/processo-seletivo",
+      icon: ClipboardList,
+      tooltip: "Participe do processo seletivo de bolsas.",
+      showAlways: false,
+      showCondition: elegivelProcessoSeletivo && studentData.userType === 'aluno'
     }
   ];
 

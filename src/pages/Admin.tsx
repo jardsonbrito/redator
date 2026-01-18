@@ -47,7 +47,8 @@ import {
   Presentation as PhosphorPresentation,
   Gamepad2 as PhosphorGamepad2,
   Award as PhosphorAward,
-  Calendar as PhosphorCalendar
+  Calendar as PhosphorCalendar,
+  ListChecks
 } from "phosphor-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -463,6 +464,35 @@ const Admin = () => {
         badge: undefined
       };
 
+      // Processo Seletivo - alunos elegíveis e que já participaram
+      const { data: profilesProcesso } = await supabase
+        .from('profiles')
+        .select('id, email, participou_processo_seletivo')
+        .eq('user_type', 'aluno');
+
+      // Buscar alunos com assinatura ativa
+      const { data: assinaturasAtivas } = await supabase
+        .from('assinaturas')
+        .select('aluno_id, data_validade')
+        .gte('data_validade', hoje.toISOString().split('T')[0]);
+
+      const alunosComPlanoAtivo = new Set(assinaturasAtivas?.map(a => a.aluno_id) || []);
+
+      // Alunos elegíveis: sem plano ativo e não participaram
+      const alunosElegiveis = profilesProcesso?.filter(p =>
+        !alunosComPlanoAtivo.has(p.id) && !p.participou_processo_seletivo
+      ).length || 0;
+
+      // Alunos que já participaram
+      const alunosParticiparam = profilesProcesso?.filter(p =>
+        p.participou_processo_seletivo === true
+      ).length || 0;
+
+      data["processo-seletivo"] = {
+        info: `${alunosElegiveis} ${alunosElegiveis === 1 ? 'aluno elegível' : 'alunos elegíveis'}`,
+        badge: alunosParticiparam > 0 ? `${alunosParticiparam} já participaram` : undefined
+      };
+
       // Cards limpos - apenas título, sem informações adicionais
       const cardsLimpos = [
         "radar", "professores", "administradores", "exportacao", "top5", "configuracoes"
@@ -553,8 +583,9 @@ const Admin = () => {
     { id: "exportacao", label: "Exportação", icon: Export, iconColor: "#607D8B" },
     { id: "configuracoes", label: "Configurações", icon: Gear, iconColor: "#795548", chips: ["Conta", "Envios", "Créditos", "Assinatura"] },
 
-    // Linha 9: Motivacional
-    { id: "top5", label: "TOP 5", icon: Medal, iconColor: "#FFD700" }
+    // Linha 9: Motivacional e Seleção
+    { id: "top5", label: "TOP 5", icon: Medal, iconColor: "#FFD700" },
+    { id: "processo-seletivo", label: "Processo seletivo", icon: ListChecks, iconColor: "#8B5CF6" }
   ];
 
   // Verificar parâmetros de query string para definir view inicial
@@ -972,6 +1003,10 @@ const Admin = () => {
             <Top5Widget variant="admin" showHeader={false} />
           </div>
         );
+
+      case "processo-seletivo":
+        navigate('/admin/processo-seletivo');
+        return null;
       
       case "diario":
         const subtab = searchParams.get('subtab');

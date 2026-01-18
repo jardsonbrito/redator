@@ -43,7 +43,9 @@
       "Bash(cd:*)",
       "Bash(git rm:*)",
       "mcp__supabase__get_advisors",
-      "mcp__supabase__list_migrations"
+      "mcp__supabase__list_migrations",
+      "Bash(npx tsc --noEmit)",
+      "Bash(grep:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

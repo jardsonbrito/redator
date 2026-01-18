@@ -4,9 +4,13 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList } from "lucide-react";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 
 const Student = () => {
+  const { studentData } = useStudentAuth();
+  const { elegivel: elegivelProcessoSeletivo } = useProcessoSeletivo(studentData.email || '');
   const menuItems = [
     // Linha 1, Coluna 1: Temas
     {
@@ -112,6 +116,15 @@ const Student = () => {
       icon: ClipboardCheck,
       tooltip: "Participe de simulados com horário controlado e correção detalhada.",
       showAlways: true
+    },
+    // Processo Seletivo - Visível apenas para alunos sem plano ativo e que não participaram anteriormente
+    {
+      title: "Processo seletivo",
+      path: "/processo-seletivo",
+      icon: ClipboardList,
+      tooltip: "Participe do processo seletivo de bolsas.",
+      showAlways: false,
+      showCondition: elegivelProcessoSeletivo && studentData.userType === 'aluno'
     }
   ];
 
