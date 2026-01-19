@@ -102,29 +102,38 @@ export const useRedacoesEnviadas = () => {
       if (error) throw error;
 
       // Resolver nomes de alunos quando o nome_aluno for genérico ("Aluno")
-      const redacoesProcessadas = await Promise.all((data || []).map(async (redacao) => {
-        // Se o nome_aluno for "Aluno" ou estiver vazio, tentar resolver pelo email
-        if (!redacao.nome_aluno || redacao.nome_aluno.trim() === "Aluno" || redacao.nome_aluno.trim() === "") {
-          try {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("nome")
-              .eq("email", redacao.email_aluno)
-              .eq("user_type", "aluno")
-              .single();
+      const redacoesComNomeGenerico = (data || []).filter(
+        r => !r.nome_aluno || r.nome_aluno.trim() === "Aluno" || r.nome_aluno.trim() === ""
+      );
 
-            if (profileData?.nome) {
-              return {
-                ...redacao,
-                nome_aluno: profileData.nome
-              };
-            }
-          } catch (profileError) {
-            console.log(`Não foi possível resolver o nome para o email: ${redacao.email_aluno}`);
+      // Buscar todos os nomes em uma única query
+      let nomesMap: Record<string, string> = {};
+      if (redacoesComNomeGenerico.length > 0) {
+        const emails = [...new Set(redacoesComNomeGenerico.map(r => r.email_aluno))];
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("email, nome")
+          .in("email", emails)
+          .eq("user_type", "aluno");
+
+        if (profilesData) {
+          nomesMap = profilesData.reduce((acc, p) => {
+            if (p.email && p.nome) acc[p.email] = p.nome;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+
+      // Aplicar os nomes resolvidos
+      const redacoesProcessadas = (data || []).map(redacao => {
+        if (!redacao.nome_aluno || redacao.nome_aluno.trim() === "Aluno" || redacao.nome_aluno.trim() === "") {
+          const nomeResolvido = nomesMap[redacao.email_aluno];
+          if (nomeResolvido) {
+            return { ...redacao, nome_aluno: nomeResolvido };
           }
         }
         return redacao;
-      }));
+      });
 
       setRedacoes(redacoesProcessadas);
     } catch (error: any) {
