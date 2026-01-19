@@ -43,10 +43,7 @@ export interface PerguntaInput {
 export interface ComunicadoInput {
   titulo: string;
   descricao?: string;
-  imagem_url?: string;
   link_externo?: string;
-  data_evento?: string;
-  hora_evento?: string;
   ativo?: boolean;
 }
 
@@ -650,10 +647,7 @@ export const useProcessoSeletivoAdmin = () => {
           .update({
             titulo: input.titulo,
             descricao: input.descricao,
-            imagem_url: input.imagem_url,
             link_externo: input.link_externo,
-            data_evento: input.data_evento,
-            hora_evento: input.hora_evento,
             ativo: input.ativo ?? true
           })
           .eq('id', input.id)
@@ -669,10 +663,7 @@ export const useProcessoSeletivoAdmin = () => {
             formulario_id: formularioAtivo.id,
             titulo: input.titulo,
             descricao: input.descricao,
-            imagem_url: input.imagem_url,
             link_externo: input.link_externo,
-            data_evento: input.data_evento,
-            hora_evento: input.hora_evento,
             ativo: input.ativo ?? true
           })
           .select()
