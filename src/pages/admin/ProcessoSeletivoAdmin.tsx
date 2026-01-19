@@ -2,28 +2,23 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
   Users,
   UserCheck,
-  Clock,
-  FileText,
-  MessageSquare,
   Trophy,
-  CheckCircle,
-  XCircle,
-  Play
+  MessageSquare
 } from "lucide-react";
-import { ListChecks } from "phosphor-react";
+import { useAuth } from "@/hooks/useAuth";
 import { useProcessoSeletivoAdmin } from "@/hooks/useProcessoSeletivoAdmin";
 import { PSFormBuilder } from "@/components/admin/processo-seletivo/PSFormBuilder";
 import { PSCandidatosManager } from "@/components/admin/processo-seletivo/PSCandidatosManager";
 import { PSComunicadoForm } from "@/components/admin/processo-seletivo/PSComunicadoForm";
 import { PSEtapaFinalConfig } from "@/components/admin/processo-seletivo/PSEtapaFinalConfig";
+import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
 
 interface AlunoElegivel {
   id: string;
@@ -43,15 +38,21 @@ interface AlunoParticipou {
 }
 
 const ProcessoSeletivoAdmin = () => {
-  const navigate = useNavigate();
   const hoje = new Date();
-  const [activeTab, setActiveTab] = useState("formulario");
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const [activeTab, setActiveTab] = useState("gerenciar");
+  const [activeSection, setActiveSection] = useState("candidatos");
 
   const {
     formularioAtivo,
-    estatisticas,
-    isLoadingFormularioAtivo
+    estatisticas
   } = useProcessoSeletivoAdmin();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/admin/login');
+  };
 
   // Buscar alunos elegíveis (sem plano ativo e não participaram)
   const { data: alunosElegiveis = [], isLoading: isLoadingElegiveis } = useQuery({
@@ -109,301 +110,208 @@ const ProcessoSeletivoAdmin = () => {
     staleTime: 2 * 60 * 1000
   });
 
+  // Seções para os chips de navegação
+  const sections = [
+    { id: 'candidatos', label: 'Candidatos', icon: Users, badge: estatisticas.aguardandoAnalise },
+    { id: 'comunicado', label: 'Comunicado', icon: MessageSquare },
+    { id: 'etapa-final', label: 'Etapa Final', icon: Trophy },
+    { id: 'elegiveis', label: 'Elegíveis', icon: UserCheck },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
+      <ModernAdminHeader
+        userEmail={user?.email}
+        onLogout={handleLogout}
+      />
+
+      {/* Breadcrumb Navigation */}
+      <nav className="bg-white/80 backdrop-blur-sm border-b border-primary/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 py-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate('/admin')}
-              className="hover:bg-primary/10"
+              className="hover:bg-primary/10 text-primary"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
+              Dashboard
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <ListChecks size={24} color="#8B5CF6" weight="fill" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Processo Seletivo</h1>
-                <p className="text-sm text-gray-500">
-                  {formularioAtivo ? (
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      {formularioAtivo.titulo}
-                    </span>
-                  ) : (
-                    'Nenhum formulário ativo'
-                  )}
-                </p>
-              </div>
-            </div>
+            <span className="text-primary/40">/</span>
+            <span className="text-primary font-semibold">
+              Processo Seletivo
+            </span>
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Cards de Resumo */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-full">
-                  <Users className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Elegíveis</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {isLoadingElegiveis ? '...' : alunosElegiveis.length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          {/* Título */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Processo Seletivo</h1>
+            {formularioAtivo && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                {formularioAtivo.titulo}
+              </Badge>
+            )}
+          </div>
 
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-full">
-                  <Clock className="w-5 h-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Aguardando</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {estatisticas.aguardandoAnalise}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Tabs Principais */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="gerenciar">Gerenciar Processo</TabsTrigger>
+          <TabsTrigger value="configurar">Configurações</TabsTrigger>
+        </TabsList>
 
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 rounded-full">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Aprovados</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {estatisticas.aprovados}
-                  </p>
-                </div>
+        {/* Tab: Gerenciar */}
+        <TabsContent value="gerenciar">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+            {/* Header com Chips */}
+            <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-200">
+              <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
+                {sections.map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => setActiveSection(section.id)}
+                      className={cn(
+                        "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 text-white",
+                        activeSection === section.id
+                          ? "bg-[#662F96]"
+                          : "bg-[#B175FF] hover:bg-[#662F96]"
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {section.label}
+                      {section.badge && section.badge > 0 && (
+                        <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                          {section.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-full">
-                  <XCircle className="w-5 h-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Reprovados</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {estatisticas.reprovados}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Área de Conteúdo */}
+            <div className="p-5">
+              {activeSection === 'candidatos' && <PSCandidatosManager />}
+              {activeSection === 'comunicado' && <PSComunicadoForm />}
+              {activeSection === 'etapa-final' && <PSEtapaFinalConfig />}
+              {activeSection === 'elegiveis' && (
+                <div className="space-y-6">
+                  {/* Alunos Elegíveis */}
+                  <div className="border border-gray-200 rounded-xl p-5">
+                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                      <Users className="w-5 h-5 text-green-600" />
+                      Alunos Elegíveis para o Processo Seletivo
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Alunos sem plano ativo que ainda não participaram do processo seletivo
+                    </p>
+                    {isLoadingElegiveis ? (
+                      <div className="text-center py-8 text-gray-500">Carregando...</div>
+                    ) : alunosElegiveis.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Nenhum aluno elegível no momento
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr className="border-b">
+                              <th className="text-left py-3 px-4 font-medium text-gray-600">Nome</th>
+                              <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
+                              <th className="text-left py-3 px-4 font-medium text-gray-600">Turma</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {alunosElegiveis.map((aluno) => (
+                              <tr key={aluno.id} className="border-b hover:bg-gray-50">
+                                <td className="py-3 px-4">{aluno.nome} {aluno.sobrenome}</td>
+                                <td className="py-3 px-4 text-gray-600">{aluno.email}</td>
+                                <td className="py-3 px-4">
+                                  {aluno.turma ? (
+                                    <Badge variant="outline">{aluno.turma}</Badge>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
 
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <Play className="w-5 h-5 text-blue-600" />
+                  {/* Alunos que já participaram */}
+                  <div className="border border-gray-200 rounded-xl p-5">
+                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                      <UserCheck className="w-5 h-5 text-blue-600" />
+                      Alunos que Já Participaram
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Histórico de alunos que participaram do processo seletivo
+                    </p>
+                    {isLoadingParticiparam ? (
+                      <div className="text-center py-8 text-gray-500">Carregando...</div>
+                    ) : alunosParticiparam.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Nenhum aluno participou ainda
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr className="border-b">
+                              <th className="text-left py-3 px-4 font-medium text-gray-600">Nome</th>
+                              <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
+                              <th className="text-left py-3 px-4 font-medium text-gray-600">Turma</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {alunosParticiparam.map((aluno) => (
+                              <tr key={aluno.id} className="border-b hover:bg-gray-50">
+                                <td className="py-3 px-4">{aluno.nome} {aluno.sobrenome}</td>
+                                <td className="py-3 px-4 text-gray-600">{aluno.email}</td>
+                                <td className="py-3 px-4">
+                                  {aluno.turma ? (
+                                    <Badge variant="outline">{aluno.turma}</Badge>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Etapa Final</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {estatisticas.etapaFinalLiberada}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-full">
-                  <Trophy className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Concluídos</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {estatisticas.concluidos}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs Principais */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6">
-            <TabsTrigger value="formulario" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">Formulário</span>
-            </TabsTrigger>
-            <TabsTrigger value="candidatos" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Candidatos</span>
-              {estatisticas.aguardandoAnalise > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 px-1.5">
-                  {estatisticas.aguardandoAnalise}
-                </Badge>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="comunicado" className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Comunicado</span>
-            </TabsTrigger>
-            <TabsTrigger value="etapa-final" className="flex items-center gap-2">
-              <Trophy className="w-4 h-4" />
-              <span className="hidden sm:inline">Etapa Final</span>
-            </TabsTrigger>
-            <TabsTrigger value="elegiveis" className="flex items-center gap-2">
-              <UserCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Elegíveis</span>
-            </TabsTrigger>
-          </TabsList>
+            </div>
+          </div>
+        </TabsContent>
 
-          {/* Tab: Formulário */}
-          <TabsContent value="formulario">
-            <PSFormBuilder />
-          </TabsContent>
-
-          {/* Tab: Candidatos */}
-          <TabsContent value="candidatos">
-            <PSCandidatosManager />
-          </TabsContent>
-
-          {/* Tab: Comunicado */}
-          <TabsContent value="comunicado">
-            <PSComunicadoForm />
-          </TabsContent>
-
-          {/* Tab: Etapa Final */}
-          <TabsContent value="etapa-final">
-            <PSEtapaFinalConfig />
-          </TabsContent>
-
-          {/* Tab: Elegíveis */}
-          <TabsContent value="elegiveis">
-            <div className="space-y-6">
-              {/* Alunos Elegíveis */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Users className="w-5 h-5 text-green-600" />
-                    Alunos Elegíveis para o Processo Seletivo
-                  </CardTitle>
-                  <p className="text-sm text-gray-500">
-                    Alunos sem plano ativo que ainda não participaram do processo seletivo
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingElegiveis ? (
-                    <div className="text-center py-8 text-gray-500">Carregando...</div>
-                  ) : alunosElegiveis.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      Nenhum aluno elegível no momento
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Nome</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Turma</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {alunosElegiveis.map((aluno) => (
-                            <tr key={aluno.id} className="border-b hover:bg-gray-50">
-                              <td className="py-3 px-4">
-                                {aluno.nome} {aluno.sobrenome}
-                              </td>
-                              <td className="py-3 px-4 text-gray-600">{aluno.email}</td>
-                              <td className="py-3 px-4">
-                                {aluno.turma ? (
-                                  <Badge variant="outline">{aluno.turma}</Badge>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Alunos que já participaram */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <UserCheck className="w-5 h-5 text-blue-600" />
-                    Alunos que Já Participaram
-                  </CardTitle>
-                  <p className="text-sm text-gray-500">
-                    Histórico de alunos que participaram do processo seletivo
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingParticiparam ? (
-                    <div className="text-center py-8 text-gray-500">Carregando...</div>
-                  ) : alunosParticiparam.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      Nenhum aluno participou ainda
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Nome</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Turma</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {alunosParticiparam.map((aluno) => (
-                            <tr key={aluno.id} className="border-b hover:bg-gray-50">
-                              <td className="py-3 px-4">
-                                {aluno.nome} {aluno.sobrenome}
-                              </td>
-                              <td className="py-3 px-4 text-gray-600">{aluno.email}</td>
-                              <td className="py-3 px-4">
-                                {aluno.turma ? (
-                                  <Badge variant="outline">{aluno.turma}</Badge>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+          {/* Tab: Configurações */}
+          <TabsContent value="configurar">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+              <div className="p-5">
+                <PSFormBuilder />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
+        </div>
       </main>
     </div>
   );

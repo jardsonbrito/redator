@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Save, Calendar, Clock, AlertCircle, Search } from 'lucide-react';
+import { FileText, Save, Calendar, Clock, Search, Trash2, Edit } from 'lucide-react';
 import { useProcessoSeletivoAdmin } from '@/hooks/useProcessoSeletivoAdmin';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface TemaOption {
   id: string;
@@ -24,12 +36,14 @@ export const PSEtapaFinalConfig: React.FC = () => {
     etapaFinal,
     isLoadingEtapaFinal,
     salvarEtapaFinal,
-    isSalvandoEtapaFinal
+    excluirEtapaFinal,
+    isSalvandoEtapaFinal,
+    isExcluindoEtapaFinal
   } = useProcessoSeletivoAdmin();
 
   const [form, setForm] = useState({
     tema_id: '',
-    tema_redacao: '', // Mantido para compatibilidade
+    tema_redacao: '',
     instrucoes: '',
     data_inicio: '',
     hora_inicio: '',
@@ -39,32 +53,43 @@ export const PSEtapaFinalConfig: React.FC = () => {
   });
 
   const [buscaTema, setBuscaTema] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const initialLoadDone = useRef(false);
 
-  // Buscar temas disponíveis
-  const { data: temas, isLoading: loadingTemas } = useQuery({
-    queryKey: ['ps-admin-temas-etapa-final', buscaTema],
+  // Buscar TODOS os temas - sem depender de buscaTema na queryKey
+  const { data: todosTemas, isLoading: loadingTemas } = useQuery({
+    queryKey: ['ps-admin-temas-etapa-final-all'],
     queryFn: async (): Promise<TemaOption[]> => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('temas')
         .select('id, frase_tematica, eixo_tematico, status')
         .order('published_at', { ascending: false, nullsFirst: false })
-        .order('id', { ascending: false });
-
-      if (buscaTema) {
-        query = query.ilike('frase_tematica', `%${buscaTema}%`);
-      }
-
-      const { data, error } = await query.limit(50);
+        .order('id', { ascending: false })
+        .limit(200);
 
       if (error) throw error;
       return data || [];
-    }
+    },
+    staleTime: 5 * 60 * 1000
   });
 
-  const temaEscolhido = temas?.find(tema => tema.id === form.tema_id);
+  // Filtrar temas localmente baseado na busca
+  const temasFiltrados = useMemo(() => {
+    if (!todosTemas) return [];
+    if (!buscaTema.trim()) return todosTemas;
+    const termoBusca = buscaTema.toLowerCase();
+    return todosTemas.filter(tema =>
+      tema.frase_tematica.toLowerCase().includes(termoBusca)
+    );
+  }, [todosTemas, buscaTema]);
 
+  const temaEscolhido = todosTemas?.find(tema => tema.id === form.tema_id);
+
+  // Inicializar formulário apenas na primeira carga ou quando etapa é excluída
   useEffect(() => {
-    if (etapaFinal) {
+    // Primeira carga: inicializar com dados existentes
+    if (etapaFinal && !initialLoadDone.current) {
+      initialLoadDone.current = true;
       setForm({
         tema_id: etapaFinal.tema_id || '',
         tema_redacao: etapaFinal.tema_redacao || '',
@@ -75,24 +100,55 @@ export const PSEtapaFinalConfig: React.FC = () => {
         hora_fim: etapaFinal.hora_fim || '',
         ativo: etapaFinal.ativo
       });
-
-      // Se tem tema_id, buscar o tema para mostrar na busca
-      if (etapaFinal.tema_id && temas) {
-        const tema = temas.find(t => t.id === etapaFinal.tema_id);
-        if (tema) {
-          setBuscaTema(tema.frase_tematica);
-        }
-      }
+      setIsEditing(true); // Já existe configuração, então está em modo edição
     }
-  }, [etapaFinal, temas]);
+    // Resetar form quando etapa final é excluída
+    else if (!etapaFinal && initialLoadDone.current) {
+      initialLoadDone.current = false;
+      setIsEditing(false);
+      setForm({
+        tema_id: '',
+        tema_redacao: '',
+        instrucoes: '',
+        data_inicio: '',
+        hora_inicio: '',
+        data_fim: '',
+        hora_fim: '',
+        ativo: true
+      });
+    }
+  }, [etapaFinal]);
+
+  const handleExcluir = () => {
+    if (etapaFinal?.id) {
+      excluirEtapaFinal(etapaFinal.id);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.tema_id || !form.data_inicio || !form.hora_inicio || !form.data_fim || !form.hora_fim) {
+
+    // Validar campos obrigatórios
+    if (!form.tema_id) {
+      toast.error('Selecione um tema para a redação');
+      return;
+    }
+    if (!form.data_inicio || !form.hora_inicio) {
+      toast.error('Preencha a data e horário de início');
+      return;
+    }
+    if (!form.data_fim || !form.hora_fim) {
+      toast.error('Preencha a data e horário de encerramento');
       return;
     }
 
-    const temaSelecionado = temas?.find(t => t.id === form.tema_id);
+    const temaSelecionado = todosTemas?.find(t => t.id === form.tema_id);
+
+    console.log('Salvando etapa final:', {
+      id: etapaFinal?.id,
+      tema_id: form.tema_id,
+      isEditing: !!etapaFinal?.id
+    });
 
     salvarEtapaFinal({
       id: etapaFinal?.id,
@@ -193,19 +249,25 @@ export const PSEtapaFinalConfig: React.FC = () => {
                     <SelectValue placeholder="Selecione um tema..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {temas?.map((tema) => (
-                      <SelectItem key={tema.id} value={tema.id}>
-                        <div className="flex items-center gap-2">
-                          <span className="truncate max-w-[300px]">{tema.frase_tematica}</span>
-                          <Badge
-                            variant={tema.status === 'rascunho' ? 'secondary' : 'default'}
-                            className="text-xs ml-2"
-                          >
-                            {tema.status === 'rascunho' ? 'Rascunho' : 'Publicado'}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {temasFiltrados.length === 0 ? (
+                      <div className="p-2 text-sm text-gray-500 text-center">
+                        Nenhum tema encontrado
+                      </div>
+                    ) : (
+                      temasFiltrados.map((tema) => (
+                        <SelectItem key={tema.id} value={tema.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="truncate max-w-[300px]">{tema.frase_tematica}</span>
+                            <Badge
+                              variant={tema.status === 'rascunho' ? 'secondary' : 'default'}
+                              className="text-xs ml-2"
+                            >
+                              {tema.status === 'rascunho' ? 'Rascunho' : 'Publicado'}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -260,7 +322,6 @@ export const PSEtapaFinalConfig: React.FC = () => {
                     type="date"
                     value={form.data_inicio}
                     onChange={(e) => setForm({ ...form, data_inicio: e.target.value })}
-                    required
                   />
                 </div>
                 <div>
@@ -273,7 +334,6 @@ export const PSEtapaFinalConfig: React.FC = () => {
                     type="time"
                     value={form.hora_inicio}
                     onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })}
-                    required
                   />
                 </div>
               </div>
@@ -290,7 +350,6 @@ export const PSEtapaFinalConfig: React.FC = () => {
                     type="date"
                     value={form.data_fim}
                     onChange={(e) => setForm({ ...form, data_fim: e.target.value })}
-                    required
                   />
                 </div>
                 <div>
@@ -303,7 +362,6 @@ export const PSEtapaFinalConfig: React.FC = () => {
                     type="time"
                     value={form.hora_fim}
                     onChange={(e) => setForm({ ...form, hora_fim: e.target.value })}
-                    required
                   />
                 </div>
               </div>
@@ -325,39 +383,57 @@ export const PSEtapaFinalConfig: React.FC = () => {
             )}
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <strong>Como funciona:</strong> Quando a janela de envio estiver aberta, os candidatos
-              aprovados serão direcionados para a página do tema selecionado, onde poderão ler os
-              textos motivadores e enviar sua redação utilizando o sistema padrão da plataforma.
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-yellow-800">
-              <strong>Importante:</strong> Os candidatos só conseguirão enviar suas redações dentro
-              da janela de tempo configurada. Certifique-se de que os horários estão corretos antes
-              de salvar.
-            </div>
-          </div>
-
-          <div className="pt-4">
+          <div className="pt-4 flex items-center gap-3">
             <Button
               type="submit"
-              disabled={
-                !form.tema_id ||
-                !form.data_inicio ||
-                !form.hora_inicio ||
-                !form.data_fim ||
-                !form.hora_fim ||
-                isSalvandoEtapaFinal
-              }
+              disabled={isSalvandoEtapaFinal}
+              className={etapaFinal ? "bg-green-600 hover:bg-green-700" : ""}
             >
-              <Save className="h-4 w-4 mr-2" />
-              {etapaFinal ? 'Atualizar Configuração' : 'Criar Configuração'}
+              {etapaFinal ? (
+                <>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Criar Configuração
+                </>
+              )}
             </Button>
+
+            {etapaFinal && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={isExcluindoEtapaFinal}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Configuração
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir Etapa Final?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir a configuração da etapa final?
+                      Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleExcluir}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Sim, excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </form>
       </CardContent>

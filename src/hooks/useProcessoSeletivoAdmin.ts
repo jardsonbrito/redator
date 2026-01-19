@@ -687,11 +687,13 @@ export const useProcessoSeletivoAdmin = () => {
   // ============================================
 
   const salvarEtapaFinalMutation = useMutation({
-    mutationFn: async (input: EtapaFinalInput & { id?: string }) => {
+    mutationFn: async (input: EtapaFinalInput & { id?: string }): Promise<{ isUpdate: boolean }> => {
       if (!formularioAtivo?.id) throw new Error('Nenhum formulário ativo');
 
-      if (input.id) {
-        const { data, error } = await supabase
+      const isUpdate = !!input.id;
+
+      if (isUpdate) {
+        const { error } = await supabase
           .from('ps_etapa_final')
           .update({
             tema_id: input.tema_id || null,
@@ -703,14 +705,12 @@ export const useProcessoSeletivoAdmin = () => {
             hora_fim: input.hora_fim,
             ativo: input.ativo ?? true
           })
-          .eq('id', input.id)
-          .select()
-          .single();
+          .eq('id', input.id);
 
         if (error) throw error;
-        return data;
+        return { isUpdate: true };
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('ps_etapa_final')
           .insert({
             formulario_id: formularioAtivo.id,
@@ -722,20 +722,51 @@ export const useProcessoSeletivoAdmin = () => {
             data_fim: input.data_fim,
             hora_fim: input.hora_fim,
             ativo: input.ativo ?? true
-          })
-          .select()
-          .single();
+          });
 
         if (error) throw error;
-        return data;
+        return { isUpdate: false };
       }
     },
-    onSuccess: () => {
-      toast.success('Etapa final configurada!');
+    onSuccess: (result) => {
+      toast.success(
+        result?.isUpdate
+          ? 'Configuração atualizada com sucesso!'
+          : 'Etapa final criada com sucesso!'
+      );
       queryClient.invalidateQueries({ queryKey: ['ps-admin-etapa-final'] });
     },
-    onError: () => {
-      toast.error('Erro ao configurar etapa final');
+    onError: (error: any) => {
+      toast.error(error?.message || 'Erro ao salvar configuração da etapa final');
+    }
+  });
+
+  const excluirEtapaFinalMutation = useMutation({
+    mutationFn: async (etapaFinalId: string) => {
+      // Primeiro, verificar se há redações associadas
+      const { data: redacoesExistentes } = await supabase
+        .from('ps_redacoes')
+        .select('id')
+        .eq('etapa_final_id', etapaFinalId)
+        .limit(1);
+
+      if (redacoesExistentes && redacoesExistentes.length > 0) {
+        throw new Error('Não é possível excluir a etapa final pois existem redações associadas');
+      }
+
+      const { error } = await supabase
+        .from('ps_etapa_final')
+        .delete()
+        .eq('id', etapaFinalId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Etapa final excluída!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-etapa-final'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Erro ao excluir etapa final');
     }
   });
 
@@ -799,6 +830,8 @@ export const useProcessoSeletivoAdmin = () => {
 
     // Ações - Etapa Final
     salvarEtapaFinal: salvarEtapaFinalMutation.mutate,
-    isSalvandoEtapaFinal: salvarEtapaFinalMutation.isPending
+    excluirEtapaFinal: excluirEtapaFinalMutation.mutate,
+    isSalvandoEtapaFinal: salvarEtapaFinalMutation.isPending,
+    isExcluindoEtapaFinal: excluirEtapaFinalMutation.isPending
   };
 };
