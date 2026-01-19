@@ -110,12 +110,19 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
 
       {/* Informações Finais */}
       <Card className="border-blue-200 bg-blue-50/50">
-        <CardContent className="py-4">
-          <h4 className="font-medium text-blue-800 mb-2">E agora?</h4>
+        <CardContent className="py-4 space-y-3">
+          <h4 className="font-medium text-blue-800">E agora?</h4>
           <p className="text-sm text-blue-700">
-            Sua participação no processo seletivo foi registrada. Aguarde o contato
-            da nossa equipe com os próximos passos. Fique atento ao seu e-mail
-            (<strong>{candidato.email_aluno}</strong>).
+            Sua redação foi registrada com sucesso e seguirá para avaliação.
+          </p>
+          <p className="text-sm text-blue-700">
+            Para acompanhar seu desempenho, acesse o card <strong>Minhas Redações</strong>,
+            onde você poderá visualizar o texto enviado e, posteriormente, a <strong>pontuação obtida</strong>.
+          </p>
+          <p className="text-sm text-blue-700">
+            Além disso, fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
+            pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
+            oficiais sobre o resultado do processo seletivo e os contemplados com as bolsas de estudo.
           </p>
         </CardContent>
       </Card>
