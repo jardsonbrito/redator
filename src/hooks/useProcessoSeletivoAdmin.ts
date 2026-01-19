@@ -564,6 +564,63 @@ export const useProcessoSeletivoAdmin = () => {
     }
   });
 
+  const excluirCandidatoMutation = useMutation({
+    mutationFn: async (candidatoId: string) => {
+      // 1. Remover referência em redacoes_enviadas (setar para NULL)
+      const { error: redacoesEnviadasError } = await supabase
+        .from('redacoes_enviadas')
+        .update({ processo_seletivo_candidato_id: null } as any)
+        .eq('processo_seletivo_candidato_id', candidatoId);
+
+      if (redacoesEnviadasError) {
+        console.error('Erro ao limpar referência em redacoes_enviadas:', redacoesEnviadasError);
+        throw redacoesEnviadasError;
+      }
+
+      // 2. Excluir as redações do processo seletivo (ps_redacoes)
+      const { error: redacoesError } = await supabase
+        .from('ps_redacoes')
+        .delete()
+        .eq('candidato_id', candidatoId);
+
+      if (redacoesError) {
+        console.error('Erro ao excluir redações PS:', redacoesError);
+        throw redacoesError;
+      }
+
+      // 3. Excluir as respostas do candidato (ps_respostas)
+      const { error: respostasError } = await supabase
+        .from('ps_respostas')
+        .delete()
+        .eq('candidato_id', candidatoId);
+
+      if (respostasError) {
+        console.error('Erro ao excluir respostas:', respostasError);
+        throw respostasError;
+      }
+
+      // 4. Por fim, excluir o candidato (ps_candidatos)
+      const { error } = await supabase
+        .from('ps_candidatos')
+        .delete()
+        .eq('id', candidatoId);
+
+      if (error) {
+        console.error('Erro ao excluir candidato:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success('Candidato excluído com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-candidatos'] });
+    },
+    onError: (error: any) => {
+      console.error('Erro na exclusão:', error);
+      const mensagem = error?.message || 'Erro desconhecido';
+      toast.error(`Erro ao excluir candidato: ${mensagem}`);
+    }
+  });
+
   // Buscar respostas de um candidato
   const buscarRespostasCandidato = async (candidatoId: string): Promise<Resposta[]> => {
     const { data, error } = await supabase
@@ -742,6 +799,7 @@ export const useProcessoSeletivoAdmin = () => {
     reprovarCandidato: reprovarCandidatoMutation.mutate,
     liberarEtapaFinalCandidato: liberarEtapaFinalCandidatoMutation.mutate,
     liberarEtapaFinalTodos: liberarEtapaFinalTodosMutation.mutate,
+    excluirCandidato: excluirCandidatoMutation.mutate,
     buscarRespostasCandidato,
 
     // Ações - Comunicado

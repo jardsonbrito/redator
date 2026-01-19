@@ -18,6 +18,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -29,7 +36,8 @@ import {
   Eye,
   Play,
   Trophy,
-  Filter
+  Trash2,
+  MoreVertical
 } from 'lucide-react';
 import { useProcessoSeletivoAdmin } from '@/hooks/useProcessoSeletivoAdmin';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,6 +65,7 @@ export const PSCandidatosManager: React.FC = () => {
     reprovarCandidato,
     liberarEtapaFinalCandidato,
     liberarEtapaFinalTodos,
+    excluirCandidato,
     buscarRespostasCandidato
   } = useProcessoSeletivoAdmin();
 
@@ -68,6 +77,7 @@ export const PSCandidatosManager: React.FC = () => {
   const [showReprovar, setShowReprovar] = useState(false);
   const [motivoReprovacao, setMotivoReprovacao] = useState('');
   const [loadingRespostas, setLoadingRespostas] = useState(false);
+  const [showExcluir, setShowExcluir] = useState(false);
 
   const candidatosFiltrados = (candidatos || []).filter(c => {
     const matchBusca = busca === '' ||
@@ -112,6 +122,13 @@ export const PSCandidatosManager: React.FC = () => {
 
   const handleLiberarEtapaFinal = (candidato: Candidato) => {
     liberarEtapaFinalCandidato(candidato.id);
+  };
+
+  const handleExcluir = () => {
+    if (!candidatoSelecionado) return;
+    excluirCandidato(candidatoSelecionado.id);
+    setShowExcluir(false);
+    setCandidatoSelecionado(null);
   };
 
   if (isLoadingCandidatos) {
@@ -254,51 +271,71 @@ export const PSCandidatosManager: React.FC = () => {
                             : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleVerRespostas(candidato)}
-                              disabled={loadingRespostas}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-
-                            {candidato.status === 'formulario_enviado' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleAprovar(candidato)}
-                                  className="text-green-600 hover:text-green-700"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setCandidatoSelecionado(candidato);
-                                    setShowReprovar(true);
-                                  }}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-
-                            {candidato.status === 'aprovado_etapa2' && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleLiberarEtapaFinal(candidato)}
-                                className="text-blue-600 hover:text-blue-700"
+                                className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200"
                               >
-                                <Play className="h-4 w-4" />
+                                <MoreVertical className="h-4 w-4 text-gray-600" />
                               </Button>
-                            )}
-                          </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleVerRespostas(candidato)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver Respostas
+                              </DropdownMenuItem>
+
+                              {candidato.status === 'formulario_enviado' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleAprovar(candidato)}
+                                    className="text-green-600 focus:text-green-600"
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Aprovar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setCandidatoSelecionado(candidato);
+                                      setShowReprovar(true);
+                                    }}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Reprovar
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              {candidato.status === 'aprovado_etapa2' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleLiberarEtapaFinal(candidato)}
+                                    className="text-blue-600 focus:text-blue-600"
+                                  >
+                                    <Play className="mr-2 h-4 w-4" />
+                                    Liberar Etapa Final
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setCandidatoSelecionado(candidato);
+                                  setShowExcluir(true);
+                                }}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir Candidato
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -355,6 +392,32 @@ export const PSCandidatosManager: React.FC = () => {
             </Button>
             <Button variant="destructive" onClick={handleReprovar}>
               Confirmar Reprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Exclusão */}
+      <Dialog open={showExcluir} onOpenChange={setShowExcluir}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Candidato</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>
+              Você está prestes a excluir permanentemente o candidato{' '}
+              <strong>{candidatoSelecionado?.nome_aluno}</strong>.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Esta ação não pode ser desfeita. Todas as respostas e dados do candidato serão removidos.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExcluir(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleExcluir}>
+              Excluir Candidato
             </Button>
           </DialogFooter>
         </DialogContent>
