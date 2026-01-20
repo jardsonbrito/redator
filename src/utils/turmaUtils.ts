@@ -78,6 +78,7 @@ export const formatTurmaDisplay = (letra: TurmaLetra | string | null | undefined
 
   // Se já está no formato correto
   if (letra === 'VISITANTE') return 'VISITANTE';
+  if (letra === 'AGUARDANDO') return 'Aguardando';
 
   // Normaliza primeiro (para aceitar qualquer formato)
   const normalized = normalizeTurmaToLetter(letra);
@@ -172,6 +173,11 @@ export const getTurmaCode = (turmaInput: string, ano: number = 2025): string => 
  * getTurmaColorClasses("VISITANTE")  // → "bg-gray-100 text-gray-800"
  */
 export const getTurmaColorClasses = (turmaInput: string): string => {
+  // Tratar caso especial AGUARDANDO antes de normalizar
+  if (turmaInput?.toUpperCase() === 'AGUARDANDO') {
+    return "bg-amber-100 text-amber-800";
+  }
+
   const letra = normalizeTurmaToLetter(turmaInput);
 
   const colors: Record<string, string> = {

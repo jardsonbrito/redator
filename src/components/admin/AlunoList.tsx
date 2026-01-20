@@ -28,6 +28,7 @@ interface Aluno {
   total_redacoes?: number;
   session_id?: string;
   whatsapp?: string;
+  temPlanoAtivo?: boolean;
 }
 
 interface AlunoListProps {
@@ -53,12 +54,14 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     setLoading(true);
     try {
       const todosUsuarios: Aluno[] = [];
+      const hojeStr = new Date().toISOString().split('T')[0];
 
-      // Buscar alunos tradicionais e visitantes em paralelo
+      // Buscar alunos tradicionais, visitantes e assinaturas em paralelo
       const [
         { data: alunosData, error: alunosError },
         { data: visitantesData, error: visitantesError },
-        { data: todasRedacoes, error: redacoesError }
+        { data: todasRedacoes, error: redacoesError },
+        { data: assinaturasAtivas, error: assinaturasError }
       ] = await Promise.all([
         supabase
           .from("profiles")
@@ -76,11 +79,21 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         // Buscar TODAS as redações de uma vez
         supabase
           .from('redacoes_enviadas')
-          .select('email_aluno, turma')
+          .select('email_aluno, turma'),
+
+        // Buscar assinaturas ativas (data_validade >= hoje)
+        supabase
+          .from('assinaturas')
+          .select('aluno_id')
+          .gte('data_validade', hojeStr)
       ]);
 
       if (alunosError) throw alunosError;
       if (redacoesError) throw redacoesError;
+      if (assinaturasError) throw assinaturasError;
+
+      // Criar Set de alunos com plano ativo
+      const alunosComPlanoSet = new Set(assinaturasAtivas?.map(a => a.aluno_id) || []);
 
       // Criar mapa de contagem de redações por email (otimização)
       const redacoesPorEmail = new Map<string, number>();
@@ -97,11 +110,13 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         alunosData.forEach(aluno => {
           const emailLower = aluno.email.toLowerCase();
           const totalRedacoes = redacoesPorEmail.get(emailLower) || 0;
-          
+          const temPlanoAtivo = alunosComPlanoSet.has(aluno.id);
+
           todosUsuarios.push({
             ...aluno,
             tipo: 'aluno',
-            total_redacoes: totalRedacoes
+            total_redacoes: totalRedacoes,
+            temPlanoAtivo
           });
         });
       }
@@ -123,7 +138,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
             ultimo_acesso: visitante.ultimo_acesso,
             session_id: visitante.session_id,
             total_redacoes: totalRedacoes,
-            whatsapp: visitante.whatsapp
+            whatsapp: visitante.whatsapp,
+            temPlanoAtivo: false // Visitantes não têm plano
           });
         });
       }
@@ -152,25 +168,41 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     fetchAlunos();
   }, [refresh]);
 
-  // Lista fixa de turmas do sistema + visitantes
+  // Lista fixa de turmas do sistema + visitantes + aguardando reativação
   const turmasDisponiveis = useMemo(() => {
-    // Usando formato normalizado: letras únicas
-    const turmasFixas = ['VISITANTE', 'A', 'B', 'C', 'D', 'E'];
+    // Usando formato normalizado: letras únicas + aba especial para aguardando reativação
+    const turmasFixas = ['VISITANTE', 'A', 'B', 'C', 'D', 'E', 'AGUARDANDO'];
     return turmasFixas;
   }, []);
+
+  // Turmas que requerem plano ativo para aparecer nas abas
+  const turmasComPlano = ['A', 'B', 'C', 'D', 'E'];
 
   // Filtrar alunos baseado na turma ativa e termo de busca
   const filteredAlunos = useMemo(() => {
     let filtered = alunos;
 
     // Filtrar por turma
-    if (activeTurma !== "todos") {
-      filtered = filtered.filter(aluno => aluno.turma === activeTurma);
+    if (activeTurma === "AGUARDANDO") {
+      // Aba especial: alunos das turmas A-E SEM plano ativo
+      filtered = filtered.filter(aluno =>
+        turmasComPlano.includes(aluno.turma) && !aluno.temPlanoAtivo
+      );
+    } else if (activeTurma !== "todos") {
+      if (turmasComPlano.includes(activeTurma)) {
+        // Turmas A-E: mostrar apenas alunos COM plano ativo
+        filtered = filtered.filter(aluno =>
+          aluno.turma === activeTurma && aluno.temPlanoAtivo
+        );
+      } else {
+        // VISITANTE ou outras turmas: filtro normal
+        filtered = filtered.filter(aluno => aluno.turma === activeTurma);
+      }
     }
 
     // Filtrar por termo de busca (apenas nome e email)
     if (searchTerm.trim()) {
-      filtered = filtered.filter(aluno => 
+      filtered = filtered.filter(aluno =>
         aluno.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         aluno.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -179,12 +211,27 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     return filtered;
   }, [alunos, activeTurma, searchTerm]);
 
-  // Contar alunos por turma
+  // Contar alunos por turma (considerando plano ativo)
   const contadorPorTurma = useMemo(() => {
     const contador: { [key: string]: number } = {};
+
     alunos.forEach(aluno => {
-      contador[aluno.turma] = (contador[aluno.turma] || 0) + 1;
+      if (turmasComPlano.includes(aluno.turma)) {
+        // Para turmas A-E: contar apenas se tem plano ativo
+        if (aluno.temPlanoAtivo) {
+          contador[aluno.turma] = (contador[aluno.turma] || 0) + 1;
+        }
+      } else {
+        // VISITANTE e outras: contagem normal
+        contador[aluno.turma] = (contador[aluno.turma] || 0) + 1;
+      }
     });
+
+    // Contar alunos aguardando reativação (turmas A-E sem plano)
+    contador['AGUARDANDO'] = alunos.filter(aluno =>
+      turmasComPlano.includes(aluno.turma) && !aluno.temPlanoAtivo
+    ).length;
+
     return contador;
   }, [alunos]);
 
