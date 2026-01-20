@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Home, LogOut } from "lucide-react";
+import { Download, Home, LogOut, Users } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { ExportarAlunosModal } from "@/components/admin/ExportarAlunosModal";
 
 export default function Exportacao() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [isAlunosModalOpen, setIsAlunosModalOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -282,38 +284,8 @@ export default function Exportacao() {
     }
   };
 
-  const exportAlunos = async () => {
-    setIsLoading('alunos');
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_type', 'aluno')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const csvData = data.map(item => ({
-        'Nome Completo': `${item.nome || ''} ${item.sobrenome || ''}`.trim(),
-        'E-mail': item.email || '',
-        'Turma': item.turma || ''
-      }));
-
-      downloadCSV(csvData, 'alunos_exportados');
-      toast({
-        title: "Exportação concluída",
-        description: "Alunos exportados com sucesso!",
-      });
-    } catch (error) {
-      console.error('Erro ao exportar alunos:', error);
-      toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar os alunos.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(null);
-    }
+  const openAlunosModal = () => {
+    setIsAlunosModalOpen(true);
   };
 
   const exportCards = [
@@ -323,7 +295,7 @@ export default function Exportacao() {
     { id: 'aulas', label: 'Aulas', action: exportAulas },
     { id: 'videos', label: 'Vídeos', action: exportVideos },
     { id: 'biblioteca', label: 'Biblioteca', action: exportBiblioteca },
-    { id: 'alunos', label: 'Alunos', action: exportAlunos }
+    { id: 'alunos', label: 'Alunos', action: openAlunosModal, isModal: true }
   ];
 
   return (
@@ -394,11 +366,15 @@ export default function Exportacao() {
             >
               <CardContent className="p-8 flex flex-col items-center justify-center min-h-[160px]">
                 <div className="p-4 bg-gradient-to-br from-purple-500/20 to-violet-500/20 rounded-full mb-4 group-hover:from-purple-500/30 group-hover:to-violet-500/30 transition-all duration-300">
-                  <Download 
-                    className={`w-8 h-8 text-purple-600 transition-all duration-300 ${
-                      isLoading === card.id ? 'animate-pulse' : 'group-hover:scale-110'
-                    }`} 
-                  />
+                  {card.id === 'alunos' ? (
+                    <Users className="w-8 h-8 text-purple-600 transition-all duration-300 group-hover:scale-110" />
+                  ) : (
+                    <Download
+                      className={`w-8 h-8 text-purple-600 transition-all duration-300 ${
+                        isLoading === card.id ? 'animate-pulse' : 'group-hover:scale-110'
+                      }`}
+                    />
+                  )}
                 </div>
                 <span className="text-sm text-center text-purple-700 font-medium transition-opacity duration-300">
                   {card.label}
@@ -413,6 +389,12 @@ export default function Exportacao() {
           ))}
         </div>
       </main>
+
+      {/* Modal de Exportação de Alunos */}
+      <ExportarAlunosModal
+        isOpen={isAlunosModalOpen}
+        onClose={() => setIsAlunosModalOpen(false)}
+      />
     </div>
   );
 }

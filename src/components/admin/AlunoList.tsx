@@ -8,7 +8,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal, LogIn } from "lucide-react";
+import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal, LogIn, CheckSquare } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { VisitanteInfoModal } from "./VisitanteInfoModal";
 import { MigrarVisitanteModal } from "./MigrarVisitanteModal";
@@ -44,6 +45,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [visitanteParaMigrar, setVisitanteParaMigrar] = useState<Aluno | null>(null);
   const [isMigrarModalOpen, setIsMigrarModalOpen] = useState(false);
   const [loginModalAluno, setLoginModalAluno] = useState<Aluno | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const fetchAlunos = async () => {
@@ -275,6 +278,115 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     fetchAlunos();
   };
 
+  const handleDeleteVisitante = async (visitante: Aluno) => {
+    try {
+      // 1. Excluir redações enviadas pelo visitante
+      const { error: redacoesError } = await supabase
+        .from('redacoes_enviadas')
+        .delete()
+        .eq('email_aluno', visitante.email);
+
+      if (redacoesError) {
+        console.error('Erro ao excluir redações:', redacoesError);
+      }
+
+      // 2. Excluir sessão do visitante
+      const { error: sessaoError } = await supabase
+        .from('visitante_sessoes')
+        .delete()
+        .eq('id', visitante.id);
+
+      if (sessaoError) throw sessaoError;
+
+      toast({
+        title: "Visitante excluído",
+        description: `${visitante.nome} e todos os seus dados foram removidos do sistema.`
+      });
+
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao excluir visitante:", error);
+      toast({
+        title: "Erro ao excluir visitante",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Funções de seleção múltipla
+  const handleSelectItem = (id: string, checked: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredAlunos.map(a => a.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedItems = alunos.filter(a => selectedIds.has(a.id));
+    const visitantes = selectedItems.filter(a => a.tipo === 'visitante');
+    const alunosRegulares = selectedItems.filter(a => a.tipo === 'aluno');
+
+    setIsDeleting(true);
+    try {
+      // Excluir visitantes e seus dados
+      for (const visitante of visitantes) {
+        // Excluir redações do visitante
+        await supabase
+          .from('redacoes_enviadas')
+          .delete()
+          .eq('email_aluno', visitante.email);
+
+        // Excluir sessão do visitante
+        await supabase
+          .from('visitante_sessoes')
+          .delete()
+          .eq('id', visitante.id);
+      }
+
+      // Excluir alunos regulares
+      if (alunosRegulares.length > 0) {
+        const alunoIds = alunosRegulares.map(a => a.id);
+        await supabase
+          .from('profiles')
+          .delete()
+          .in('id', alunoIds);
+      }
+
+      toast({
+        title: "Exclusão concluída",
+        description: `${selectedIds.size} ${selectedIds.size === 1 ? 'item excluído' : 'itens excluídos'} com sucesso.`
+      });
+
+      setSelectedIds(new Set());
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao excluir itens:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getTurmaColor = (turma: string) => {
     // Usar função centralizada que normaliza automaticamente
     return getTurmaColorClasses(turma);
@@ -326,8 +438,8 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
             ))}
           </TabsList>
 
-          <div className="mt-4 mb-4">
-            <div className="relative">
+          <div className="mt-4 mb-4 flex gap-4 items-center">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Buscar por nome ou e-mail..."
@@ -336,6 +448,42 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                 className="pl-10"
               />
             </div>
+            {selectedIds.size > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isDeleting}
+                    className="flex items-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Excluir {selectedIds.size} {selectedIds.size === 1 ? 'selecionado' : 'selecionados'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar exclusão em lote</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'itens'}?
+                      <br /><br />
+                      <strong className="text-red-600">Atenção:</strong> Para visitantes, todas as redações enviadas também serão excluídas.
+                      <br /><br />
+                      Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteSelected}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
 
           <TabsContent value="todos" className="mt-0">
@@ -351,6 +499,10 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
               onShowVisitanteInfo={handleShowVisitanteInfo}
               onShowMigrarModal={handleShowMigrarModal}
               onShowLoginModal={setLoginModalAluno}
+              onDeleteVisitante={handleDeleteVisitante}
+              selectedIds={selectedIds}
+              onSelectItem={handleSelectItem}
+              onSelectAll={handleSelectAll}
             />
           </TabsContent>
 
@@ -368,6 +520,10 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                 onShowVisitanteInfo={handleShowVisitanteInfo}
                 onShowMigrarModal={handleShowMigrarModal}
                 onShowLoginModal={setLoginModalAluno}
+                onDeleteVisitante={handleDeleteVisitante}
+                selectedIds={selectedIds}
+                onSelectItem={handleSelectItem}
+                onSelectAll={handleSelectAll}
               />
             </TabsContent>
           ))}
@@ -446,6 +602,10 @@ interface AlunoTableProps {
   onShowVisitanteInfo: (visitante: Aluno) => void;
   onShowMigrarModal: (visitante: Aluno) => void;
   onShowLoginModal: (aluno: Aluno) => void;
+  onDeleteVisitante: (visitante: Aluno) => void;
+  selectedIds: Set<string>;
+  onSelectItem: (id: string, checked: boolean) => void;
+  onSelectAll: (checked: boolean) => void;
 }
 
 const AlunoTable = ({
@@ -459,8 +619,14 @@ const AlunoTable = ({
   getTipoBadge,
   onShowVisitanteInfo,
   onShowMigrarModal,
-  onShowLoginModal
+  onShowLoginModal,
+  onDeleteVisitante,
+  selectedIds,
+  onSelectItem,
+  onSelectAll
 }: AlunoTableProps) => {
+  const allSelected = alunos.length > 0 && alunos.every(a => selectedIds.has(a.id));
+  const someSelected = alunos.some(a => selectedIds.has(a.id)) && !allSelected;
   if (loading) {
     return (
       <div className="text-center py-8">
@@ -482,6 +648,14 @@ const AlunoTable = ({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[40px] p-2">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={onSelectAll}
+                aria-label="Selecionar todos"
+                className={someSelected ? "data-[state=checked]:bg-primary/50" : ""}
+              />
+            </TableHead>
             <TableHead className="w-[120px]">Nome</TableHead>
             <TableHead className="w-[160px]">E-mail</TableHead>
             <TableHead className="w-[80px]">Tipo</TableHead>
@@ -494,7 +668,14 @@ const AlunoTable = ({
         </TableHeader>
         <TableBody>
           {alunos.map((aluno) => (
-            <TableRow key={aluno.id}>
+            <TableRow key={aluno.id} className={selectedIds.has(aluno.id) ? "bg-muted/50" : ""}>
+              <TableCell className="p-2">
+                <Checkbox
+                  checked={selectedIds.has(aluno.id)}
+                  onCheckedChange={(checked) => onSelectItem(aluno.id, checked as boolean)}
+                  aria-label={`Selecionar ${aluno.nome}`}
+                />
+              </TableCell>
               <TableCell className="font-medium text-xs p-2 max-w-[120px] truncate" title={aluno.nome}>
                 {aluno.nome}
               </TableCell>
@@ -551,6 +732,17 @@ const AlunoTable = ({
                         <DropdownMenuItem onClick={() => onShowMigrarModal(aluno)}>
                           <UserCheck className="mr-2 h-4 w-4" />
                           Migrar para Aluno
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome} e TODOS os seus dados (incluindo redações enviadas)?`)) {
+                              onDeleteVisitante(aluno);
+                            }
+                          }}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir Visitante
                         </DropdownMenuItem>
                       </>
                     ) : (

@@ -403,17 +403,30 @@ const Admin = () => {
         badge: statusBadge
       };
 
-      // Alunos
+      // Alunos - buscar com status de plano
       const { data: alunos } = await supabase
         .from('profiles')
-        .select('ativo')
+        .select('id, ativo')
         .eq('user_type', 'aluno');
 
-      const alunosAtivos = alunos?.filter(a => a.ativo).length || 0;
+      // Buscar assinaturas ativas (data_validade >= hoje)
+      const hojeStr = new Date().toISOString().split('T')[0];
+      const { data: assinaturasCard } = await supabase
+        .from('assinaturas')
+        .select('aluno_id')
+        .gte('data_validade', hojeStr);
+
+      // Criar Set de alunos com plano ativo
+      const alunosComPlanoSet = new Set(assinaturasCard?.map(a => a.aluno_id) || []);
+
+      // Categorizar alunos
       const alunosInativos = alunos?.filter(a => !a.ativo).length || 0;
+      const alunosAtivosComPlano = alunos?.filter(a => a.ativo && alunosComPlanoSet.has(a.id)).length || 0;
+      const alunosSemPlano = alunos?.filter(a => a.ativo && !alunosComPlanoSet.has(a.id)).length || 0;
+
       data.alunos = {
-        info: `${alunosAtivos} ativos`,
-        badge: alunosInativos > 0 ? `${alunosInativos} inativos` : undefined,
+        info: `${alunosAtivosComPlano} com plano`,
+        badge: `${alunosSemPlano} sem plano · ${alunosInativos} inativos`,
         badgeVariant: "outline"
       };
 
