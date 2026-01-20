@@ -227,8 +227,43 @@ export const RedacaoFormUnificado = ({
     }
   };
 
+  // Verificar se o aluno tem redação pendente com o corretor
+  const verificarPendenciaCorretor = async (corretorId: string): Promise<boolean> => {
+    try {
+      const emailCredito = getCreditEmail();
+      if (!emailCredito) return false;
+
+      const { data, error } = await supabase.rpc('verificar_redacao_pendente_corretor', {
+        p_email_aluno: emailCredito,
+        p_corretor_id: corretorId
+      });
+
+      if (error) {
+        console.error('Erro ao verificar pendência:', error);
+        return false;
+      }
+
+      if (data && data.length > 0 && data[0].tem_pendente) {
+        const temaExibicao = data[0].tema ?
+          `"${data[0].tema.substring(0, 30)}${data[0].tema.length > 30 ? '...' : ''}"` :
+          'uma redação';
+        toast({
+          title: "Corretor indisponível",
+          description: `Você já tem uma redação pendente com este corretor (${temaExibicao}). Aguarde a correção para enviar outra.`,
+          variant: "destructive",
+          duration: 6000
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao verificar pendência com corretor:', error);
+      return false;
+    }
+  };
+
   // Seleção de corretores
-  const handleCorretorToggle = (corretorId: string, checked: boolean) => {
+  const handleCorretorToggle = async (corretorId: string, checked: boolean) => {
     let newSelected = [...selectedCorretores];
 
     if (checked) {
@@ -243,6 +278,13 @@ export const RedacaoFormUnificado = ({
         });
         return;
       }
+
+      // Verificar se tem pendência com este corretor
+      const temPendencia = await verificarPendenciaCorretor(corretorId);
+      if (temPendencia) {
+        return; // Não adicionar o corretor se já tem pendência
+      }
+
       newSelected.push(corretorId);
     } else {
       newSelected = newSelected.filter(id => id !== corretorId);

@@ -12,6 +12,7 @@ import { Search } from "lucide-react";
 import { useRedacoesEnviadas, RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { RedacaoViewForm } from "./RedacaoViewForm";
 import { RedacaoListTable } from "./RedacaoListTable";
+import { estaCongelada } from "@/utils/redacaoUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
@@ -98,10 +99,12 @@ export const RedacaoEnviadaForm = () => {
       return filtroTurma === redacao.turma;
     })();
     
+    const redacaoCongelada = estaCongelada(redacao);
     const matchStatus = filtroStatus === "todas" ||
-      (filtroStatus === "aguardando" && !redacao.corrigida && redacao.status !== 'incompleta' && redacao.status !== 'devolvida') ||
+      (filtroStatus === "aguardando" && !redacao.corrigida && !redacaoCongelada && redacao.status !== 'incompleta' && redacao.status !== 'devolvida') ||
       (filtroStatus === "incompletas" && (redacao.status === 'incompleta' || redacao.status_corretor_1 === 'incompleta' || redacao.status_corretor_2 === 'incompleta')) ||
-      (filtroStatus === "corrigidas" && (redacao.status === 'corrigida' || redacao.corrigida));
+      (filtroStatus === "corrigidas" && (redacao.status === 'corrigida' || redacao.corrigida)) ||
+      (filtroStatus === "congeladas" && redacaoCongelada);
     
     const matchCorretor = filtroCorretor === "todos" || 
       redacao.corretor_id_1 === filtroCorretor || 
@@ -197,6 +200,7 @@ export const RedacaoEnviadaForm = () => {
                   <SelectItem value="aguardando">Aguardando</SelectItem>
                   <SelectItem value="incompletas">Incompletas</SelectItem>
                   <SelectItem value="corrigidas">Corrigidas</SelectItem>
+                  <SelectItem value="congeladas">Congeladas</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -23,6 +23,11 @@ export interface RedacaoEnviada {
   data_correcao: string | null;
   status: string;
   tipo_envio: string;
+  // Campos de congelamento
+  congelada?: boolean;
+  data_congelamento?: string;
+  descongelada_por?: string;
+  data_descongelamento?: string;
   // New corrector fields
   c1_corretor_1: number | null;
   c2_corretor_1: number | null;
@@ -78,6 +83,10 @@ export const useRedacoesEnviadas = () => {
           data_correcao,
           status,
           tipo_envio,
+          congelada,
+          data_congelamento,
+          descongelada_por,
+          data_descongelamento,
           c1_corretor_1,
           c2_corretor_1,
           c3_corretor_1,

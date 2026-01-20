@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Eye, RotateCcw, Download, MoreVertical } from "lucide-react";
+import { Trash2, Eye, RotateCcw, Download, MoreVertical, Unlock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { downloadRedacaoCorrigida } from "@/utils/redacaoDownload";
 import { RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
-import { getStatusColor, getTurmaColor } from "@/utils/redacaoUtils";
+import { getStatusColor, getTurmaColor, estaCongelada } from "@/utils/redacaoUtils";
+import { useAuth } from "@/hooks/useAuth";
 import { formatTurmaDisplay } from "@/utils/turmaUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,7 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
   const [selectedCorretor, setSelectedCorretor] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchCorretores();
@@ -122,6 +124,44 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
       setLoading(false);
     }
   };
+
+  const handleDescongelar = async (redacao: RedacaoEnviada) => {
+    if (!user?.id) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('descongelar_redacao', {
+        p_redacao_id: redacao.id,
+        p_admin_id: user.id
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        toast({
+          title: "Redação descongelada",
+          description: "A redação foi descongelada e pode ser corrigida novamente.",
+        });
+        onRefresh?.();
+      } else {
+        toast({
+          title: "Ação não realizada",
+          description: "A redação não estava congelada ou já foi descongelada.",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error("Erro ao descongelar redação:", error);
+      toast({
+        title: "Erro ao descongelar",
+        description: "Não foi possível descongelar a redação.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="w-full">
         <Table>
@@ -183,12 +223,19 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                   </div>
                 </TableCell>
                 <TableCell className="w-[12%]">
-                  <Badge className={`${getStatusColor(redacao.status, redacao.corrigida)} text-xs px-1 py-0.5`}>
-                    {redacao.status === 'devolvida' ? "Devolvida" :
-                     redacao.status_corretor_1 === 'incompleta' || redacao.status_corretor_2 === 'incompleta' ? "Incompleta" :
-                     redacao.corrigida ? "Corrigida" :
-                     redacao.status === 'pendente' ? "Aguardando" : "Aguardando"}
-                  </Badge>
+                  {(() => {
+                    const congelada = estaCongelada(redacao);
+                    const statusDisplay = congelada ? "congelada" : redacao.status;
+                    return (
+                      <Badge className={`${getStatusColor(statusDisplay, redacao.corrigida)} text-xs px-1 py-0.5`}>
+                        {congelada ? "Congelada" :
+                         redacao.status === 'devolvida' ? "Devolvida" :
+                         redacao.status_corretor_1 === 'incompleta' || redacao.status_corretor_2 === 'incompleta' ? "Incompleta" :
+                         redacao.corrigida ? "Corrigida" :
+                         redacao.status === 'pendente' ? "Aguardando" : "Aguardando"}
+                      </Badge>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="w-[8%]">
                   <div className="flex justify-center">
@@ -220,6 +267,16 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                           <RotateCcw className="w-4 h-4 mr-2" />
                           Mudar corretor
                         </DropdownMenuItem>
+                        {estaCongelada(redacao) && (
+                          <DropdownMenuItem
+                            onClick={() => handleDescongelar(redacao)}
+                            className="text-cyan-600 focus:text-cyan-600"
+                            disabled={loading}
+                          >
+                            <Unlock className="w-4 h-4 mr-2" />
+                            Descongelar
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => handleDeleteClick(redacao)}
                           className="text-red-600 focus:text-red-600"

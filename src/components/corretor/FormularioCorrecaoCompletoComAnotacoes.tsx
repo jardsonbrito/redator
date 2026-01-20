@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check, AlertTriangle } from "lucide-react";
+import { estaCongelada } from "@/utils/redacaoUtils";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
 import { RelatorioPedagogicoModal } from "./RelatorioPedagogicoModal";
@@ -77,6 +79,13 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [corretorId, setCorretorId] = useState<string>('');
   const [corretorNome, setCorretorNome] = useState<string>('');
   const { toast } = useToast();
+
+  // Verificar se a redação está congelada (prazo de 7 dias expirado)
+  const redacaoCongelada = estaCongelada({
+    data_envio: redacao.data_envio,
+    corrigida: redacao.corrigida || false,
+    congelada: (redacao as any).congelada
+  });
 
   // Buscar ID e nome do corretor ao carregar
   useEffect(() => {
@@ -481,6 +490,17 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         <div><strong>Tema:</strong> {redacao.frase_tematica}</div>
       </div>
 
+      {/* Alerta de redação congelada */}
+      {redacaoCongelada && (
+        <Alert variant="destructive" className="border-cyan-500 bg-cyan-50">
+          <AlertTriangle className="h-4 w-4 text-cyan-600" />
+          <AlertTitle className="text-cyan-800">Redação Congelada</AlertTitle>
+          <AlertDescription className="text-cyan-700">
+            O prazo de 7 dias para correção expirou. Esta redação está congelada e não pode ser corrigida até que um administrador a desbloqueie.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Vista Pedagógica */}
       <Card className="card">
         <CardHeader>
@@ -544,24 +564,24 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         <Button
           variant="outline"
           onClick={() => salvarCorrecao('incompleta')}
-          disabled={loading}
+          disabled={loading || redacaoCongelada}
           className="flex-1"
         >
           Incompleta
         </Button>
-        
+
         <Button
           variant="outline"
           onClick={() => setShowDevolverModal(true)}
-          disabled={loading}
+          disabled={loading || redacaoCongelada}
           className="flex-1"
         >
           Devolver redação
         </Button>
-        
+
         <Button
           onClick={() => salvarCorrecao('corrigida')}
-          disabled={loading}
+          disabled={loading || redacaoCongelada}
           className="flex-1 bg-purple-600 hover:bg-purple-700"
         >
           Finalizar correção
