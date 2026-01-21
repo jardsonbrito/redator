@@ -43,7 +43,7 @@ const Simulados = () => {
   });
 
 const { data: simulados, isLoading } = useQuery({
-  queryKey: ['simulados', turmaCode],
+  queryKey: ['simulados', turmaCode, studentData.email],
   queryFn: async () => {
     let query = supabase
       .from('simulados')
@@ -53,26 +53,39 @@ const { data: simulados, isLoading } = useQuery({
     const { data: sims, error } = await query;
     if (error) throw error;
 
-    // Filtrar simulados baseado na turma do usuário no frontend para controle total
+    // Buscar simulados que o aluno já participou (para mostrar mesmo se turma mudou)
+    let simuladosParticipados: string[] = [];
+    if (studentData.email && studentData.userType === 'aluno') {
+      const { data: participacoes } = await supabase
+        .from('redacoes_simulado')
+        .select('id_simulado')
+        .eq('email_aluno', studentData.email);
+
+      simuladosParticipados = (participacoes || []).map(p => p.id_simulado);
+      console.log('🔍 [Simulados] Simulados já participados pelo aluno:', simuladosParticipados);
+    }
+
+    // Filtrar simulados baseado na turma do usuário OU se já participou
     const simuladosFiltrados = (sims || []).filter((simulado) => {
       const turmasAutorizadas = simulado.turmas_autorizadas || [];
       const permiteVisitante = simulado.permite_visitante;
+      const jaParticipou = simuladosParticipados.includes(simulado.id);
 
       console.log('🔍 [Simulados] Filtro:', {
         simulado: simulado.titulo,
         turmasAutorizadas: turmasAutorizadas,
         turmaCode: turmaCode,
         includes: turmasAutorizadas.includes(turmaCode),
-        permiteVisitante: permiteVisitante
+        permiteVisitante: permiteVisitante,
+        jaParticipou: jaParticipou
       });
 
       if (turmaCode === "Visitante") {
-        // Visitantes só veem simulados que permitem visitantes
-        return permiteVisitante;
+        // Visitantes só veem simulados que permitem visitantes OU que já participaram
+        return permiteVisitante || jaParticipou;
       } else {
-        // Alunos veem apenas simulados da sua turma específica
-        // Simulados exclusivos para visitantes (permite_visitante=true E sem turmas) NÃO são vistos por turmas
-        return turmasAutorizadas.includes(turmaCode);
+        // Alunos veem simulados da sua turma OU que já participaram (caso tenham mudado de turma)
+        return turmasAutorizadas.includes(turmaCode) || jaParticipou;
       }
     });
 

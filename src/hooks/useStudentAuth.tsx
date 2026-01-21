@@ -36,7 +36,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     // Verificar se há uma sessão ativa de estudante no localStorage
-    const checkStudentSession = () => {
+    const checkStudentSession = async () => {
       const userType = localStorage.getItem("userType");
       const alunoTurma = localStorage.getItem("alunoTurma");
       const alunoData = localStorage.getItem("alunoData");
@@ -50,11 +50,33 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
       if (userType === "aluno" && alunoTurma && alunoData) {
         try {
           const dados = JSON.parse(alunoData);
+
+          // Buscar turma atualizada do banco de dados
+          let turmaAtual = alunoTurma;
+          try {
+            const { supabase } = await import('@/integrations/supabase/client');
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('turma')
+              .eq('email', dados.email)
+              .eq('user_type', 'aluno')
+              .maybeSingle();
+
+            if (profileData?.turma && profileData.turma !== alunoTurma) {
+              console.log('🔄 Turma atualizada no banco:', profileData.turma, '(localStorage tinha:', alunoTurma, ')');
+              turmaAtual = profileData.turma;
+              // Atualizar localStorage com a turma correta
+              localStorage.setItem("alunoTurma", turmaAtual);
+            }
+          } catch (dbError) {
+            console.warn('⚠️ Não foi possível verificar turma no banco:', dbError);
+          }
+
           setIsStudentLoggedIn(true);
           setStudentData({
             id: dados.email, // usar email como ID para alunos
             userType: "aluno",
-            turma: alunoTurma,
+            turma: turmaAtual,
             nomeUsuario: dados.nome,
             email: dados.email,
             sessionToken: dados.sessionToken || null
@@ -62,10 +84,10 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
           console.log('✅ Sessão de aluno restaurada persistentemente');
           console.log('🔍 [useStudentAuth] Dados restaurados:', {
             email: dados.email,
-            turma: alunoTurma,
+            turma: turmaAtual,
             nome: dados.nome,
-            tipoTurma: typeof alunoTurma,
-            turmaValue: alunoTurma
+            tipoTurma: typeof turmaAtual,
+            turmaValue: turmaAtual
           });
         } catch (error) {
           console.error('❌ Erro ao parsear dados do aluno:', error);
@@ -129,7 +151,7 @@ export const StudentAuthProvider = ({ children }: { children: React.ReactNode })
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "userType" || e.key === "alunoTurma" || e.key === "alunoData" || e.key === "visitanteData") {
         console.log('🔄 Mudança detectada no localStorage:', e.key);
-        checkStudentSession();
+        checkStudentSession(); // função assíncrona, não precisa de await aqui
       }
     };
 
