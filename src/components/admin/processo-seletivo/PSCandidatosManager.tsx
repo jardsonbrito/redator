@@ -229,8 +229,8 @@ export const PSCandidatosManager: React.FC = () => {
           </div>
 
           {/* Tabela de Candidatos */}
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
+          <div className="border rounded-lg overflow-x-auto">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow>
                   <TableHead>Candidato</TableHead>
