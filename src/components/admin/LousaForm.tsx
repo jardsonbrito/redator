@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
 
 interface FormData {
   titulo: string;
@@ -30,7 +31,7 @@ interface LousaFormProps {
   editData?: any;
 }
 
-const TURMAS = ['A', 'B', 'C', 'D', 'E'];
+const TURMAS = TURMAS_VALIDAS;
 
 interface Corretor {
   id: string;

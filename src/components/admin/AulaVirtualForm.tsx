@@ -7,8 +7,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
 
-const TURMAS = ['A', 'B', 'C', 'D', 'E'];
+const TURMAS = TURMAS_VALIDAS;
 
 interface AulaVirtualFormProps {
   onSuccess?: () => void;

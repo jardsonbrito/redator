@@ -2,19 +2,19 @@
  * Utilitários para normalização e comparação de turmas
  *
  * PADRÃO ADOTADO:
- * - Armazenamento: apenas letras "A", "B", "C", "D", "E" ou "VISITANTE"
+ * - Armazenamento: apenas letras "A", "B", "C", "D", "E", "F", "G", "H" ou "VISITANTE"
  * - Exibição: "Turma A", "Turma B", etc. (formatado dinamicamente)
  */
 
 /**
  * Tipos válidos de turma
  */
-export type TurmaLetra = 'A' | 'B' | 'C' | 'D' | 'E' | 'VISITANTE';
+export type TurmaLetra = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'VISITANTE';
 
 /**
  * Lista de turmas válidas (exceto VISITANTE)
  */
-export const TURMAS_VALIDAS: readonly TurmaLetra[] = ['A', 'B', 'C', 'D', 'E'] as const;
+export const TURMAS_VALIDAS: readonly TurmaLetra[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
 
 /**
  * Todas as turmas possíveis incluindo VISITANTE
@@ -48,15 +48,15 @@ export const normalizeTurmaToLetter = (turma: string | null | undefined): TurmaL
   if (upper === 'VISITANTE') return 'VISITANTE';
 
   // Formato "TURMA X" ou "Turma X"
-  const matchTurma = upper.match(/TURMA\s*([A-E])/);
+  const matchTurma = upper.match(/TURMA\s*([A-H])/);
   if (matchTurma) return matchTurma[1] as TurmaLetra;
 
   // Formato "LRX 2025" ou "LRX" (legado)
-  const matchLR = upper.match(/LR([A-E])(?:\s*\d{4})?/);
+  const matchLR = upper.match(/LR([A-H])(?:\s*\d{4})?/);
   if (matchLR) return matchLR[1] as TurmaLetra;
 
   // Apenas letra única
-  if (/^[A-E]$/.test(upper)) return upper as TurmaLetra;
+  if (/^[A-H]$/.test(upper)) return upper as TurmaLetra;
 
   return null;
 };
@@ -186,6 +186,9 @@ export const getTurmaColorClasses = (turmaInput: string): string => {
     "C": "bg-purple-100 text-purple-800",
     "D": "bg-orange-100 text-orange-800",
     "E": "bg-pink-100 text-pink-800",
+    "F": "bg-teal-100 text-teal-800",
+    "G": "bg-indigo-100 text-indigo-800",
+    "H": "bg-rose-100 text-rose-800",
     "VISITANTE": "bg-gray-100 text-gray-800"
   };
 

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { normalizeTurmaToLetter } from '@/utils/turmaUtils';
+import { normalizeTurmaToLetter, TODAS_TURMAS } from '@/utils/turmaUtils';
 import type {
   EtapaEstudo,
   AulaDiario,
@@ -1180,8 +1180,8 @@ export function useTurmasDisponiveis() {
       // Turmas dinâmicas encontradas
       const turmasEncontradas = [...new Set(data.map(item => item.turma))];
 
-      // Turmas fixas no formato normalizado (A-E, VISITANTE)
-      const turmasFixas = ['A', 'B', 'C', 'D', 'E', 'VISITANTE'];
+      // Turmas fixas no formato normalizado (A-H, VISITANTE)
+      const turmasFixas = [...TODAS_TURMAS];
 
       // Combinar turmas fixas com as encontradas, removendo duplicatas
       const todasTurmasLetras = [...new Set([...turmasFixas, ...turmasEncontradas])];

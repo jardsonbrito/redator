@@ -8,13 +8,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal, LogIn, CheckSquare } from "lucide-react";
+import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal, LogIn, CheckSquare, ChevronDown, ArrowRightLeft } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { VisitanteInfoModal } from "./VisitanteInfoModal";
 import { MigrarVisitanteModal } from "./MigrarVisitanteModal";
 import { StudentLoginActivityModal } from "./StudentLoginActivityModal";
-import { formatTurmaDisplay, getTurmaColorClasses } from "@/utils/turmaUtils";
+import { formatTurmaDisplay, getTurmaColorClasses, TURMAS_VALIDAS, TODAS_TURMAS } from "@/utils/turmaUtils";
 
 interface Aluno {
   id: string;
@@ -48,6 +51,11 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [loginModalAluno, setLoginModalAluno] = useState<Aluno | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isChangingTurma, setIsChangingTurma] = useState(false);
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
+  const [showTurmaModal, setShowTurmaModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedNewTurma, setSelectedNewTurma] = useState<string>("");
   const { toast } = useToast();
 
   const fetchAlunos = async () => {
@@ -171,12 +179,12 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   // Lista fixa de turmas do sistema + visitantes + aguardando reativação
   const turmasDisponiveis = useMemo(() => {
     // Usando formato normalizado: letras únicas + aba especial para aguardando reativação
-    const turmasFixas = ['VISITANTE', 'A', 'B', 'C', 'D', 'E', 'AGUARDANDO'];
+    const turmasFixas = ['VISITANTE', ...TURMAS_VALIDAS, 'AGUARDANDO'];
     return turmasFixas;
   }, []);
 
   // Turmas que requerem plano ativo para aparecer nas abas
-  const turmasComPlano = ['A', 'B', 'C', 'D', 'E'];
+  const turmasComPlano = [...TURMAS_VALIDAS];
 
   // Filtrar alunos baseado na turma ativa e termo de busca
   const filteredAlunos = useMemo(() => {
@@ -431,6 +439,144 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
       });
     } finally {
       setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  // Função para mudar turma em massa
+  const handleChangeTurmaSelected = async () => {
+    if (selectedIds.size === 0 || !selectedNewTurma) return;
+
+    const selectedItems = alunos.filter(a => selectedIds.has(a.id));
+    const alunosRegulares = selectedItems.filter(a => a.tipo === 'aluno');
+
+    if (alunosRegulares.length === 0) {
+      toast({
+        title: "Ação não permitida",
+        description: "Não é possível mudar a turma de visitantes. Migre-os para alunos primeiro.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsChangingTurma(true);
+    try {
+      const alunoIds = alunosRegulares.map(a => a.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ turma: selectedNewTurma })
+        .in('id', alunoIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Turma alterada",
+        description: `${alunosRegulares.length} ${alunosRegulares.length === 1 ? 'aluno movido' : 'alunos movidos'} para a Turma ${selectedNewTurma}.`
+      });
+
+      setSelectedIds(new Set());
+      setShowTurmaModal(false);
+      setSelectedNewTurma("");
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao mudar turma:", error);
+      toast({
+        title: "Erro ao mudar turma",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsChangingTurma(false);
+    }
+  };
+
+  // Função para ativar alunos em massa
+  const handleActivateSelected = async () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedItems = alunos.filter(a => selectedIds.has(a.id));
+    const alunosRegulares = selectedItems.filter(a => a.tipo === 'aluno');
+
+    if (alunosRegulares.length === 0) {
+      toast({
+        title: "Ação não permitida",
+        description: "Selecione pelo menos um aluno regular.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsChangingStatus(true);
+    try {
+      const alunoIds = alunosRegulares.map(a => a.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ativo: true })
+        .in('id', alunoIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Alunos ativados",
+        description: `${alunosRegulares.length} ${alunosRegulares.length === 1 ? 'aluno ativado' : 'alunos ativados'} com sucesso.`
+      });
+
+      setSelectedIds(new Set());
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao ativar alunos:", error);
+      toast({
+        title: "Erro ao ativar alunos",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsChangingStatus(false);
+    }
+  };
+
+  // Função para desativar alunos em massa
+  const handleDeactivateSelected = async () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedItems = alunos.filter(a => selectedIds.has(a.id));
+    const alunosRegulares = selectedItems.filter(a => a.tipo === 'aluno');
+
+    if (alunosRegulares.length === 0) {
+      toast({
+        title: "Ação não permitida",
+        description: "Selecione pelo menos um aluno regular.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsChangingStatus(true);
+    try {
+      const alunoIds = alunosRegulares.map(a => a.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ ativo: false })
+        .in('id', alunoIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Alunos desativados",
+        description: `${alunosRegulares.length} ${alunosRegulares.length === 1 ? 'aluno desativado' : 'alunos desativados'} com sucesso.`
+      });
+
+      setSelectedIds(new Set());
+      fetchAlunos();
+    } catch (error: any) {
+      console.error("Erro ao desativar alunos:", error);
+      toast({
+        title: "Erro ao desativar alunos",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsChangingStatus(false);
     }
   };
 
@@ -496,40 +642,43 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
               />
             </div>
             {selectedIds.size > 0 && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
-                    variant="destructive"
+                    variant="default"
                     size="sm"
-                    disabled={isDeleting}
-                    className="flex items-center gap-2"
+                    disabled={isDeleting || isChangingTurma || isChangingStatus}
+                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
                   >
-                    <Trash2 className="h-4 w-4" />
-                    Excluir {selectedIds.size} {selectedIds.size === 1 ? 'selecionado' : 'selecionados'}
+                    <CheckSquare className="h-4 w-4" />
+                    Ações ({selectedIds.size} {selectedIds.size === 1 ? 'selecionado' : 'selecionados'})
+                    <ChevronDown className="h-4 w-4" />
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar exclusão em lote</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tem certeza que deseja excluir {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'itens'}?
-                      <br /><br />
-                      <strong className="text-red-600">Atenção:</strong> Para visitantes, todas as redações enviadas também serão excluídas.
-                      <br /><br />
-                      Esta ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteSelected}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      Excluir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => setShowTurmaModal(true)}>
+                    <ArrowRightLeft className="mr-2 h-4 w-4" />
+                    Mudar Turma
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleActivateSelected}>
+                    <UserCheck className="mr-2 h-4 w-4 text-green-600" />
+                    Ativar Selecionados
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDeactivateSelected}>
+                    <UserX className="mr-2 h-4 w-4 text-orange-600" />
+                    Desativar Selecionados
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir Selecionados
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
 
@@ -632,6 +781,84 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
           onClose={() => setLoginModalAluno(null)}
         />
       )}
+
+      {/* Modal de Mudar Turma em Massa */}
+      <Dialog open={showTurmaModal} onOpenChange={setShowTurmaModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mudar Turma em Massa</DialogTitle>
+            <DialogDescription>
+              Selecione a nova turma para os {selectedIds.size} {selectedIds.size === 1 ? 'aluno selecionado' : 'alunos selecionados'}.
+              {alunos.filter(a => selectedIds.has(a.id) && a.tipo === 'visitante').length > 0 && (
+                <span className="block mt-2 text-orange-600">
+                  Visitantes serão ignorados. Migre-os para alunos primeiro.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="nova-turma" className="text-sm font-medium">
+              Nova Turma
+            </Label>
+            <Select value={selectedNewTurma} onValueChange={setSelectedNewTurma}>
+              <SelectTrigger id="nova-turma" className="mt-2">
+                <SelectValue placeholder="Selecione a turma" />
+              </SelectTrigger>
+              <SelectContent>
+                {TURMAS_VALIDAS.map((turma) => (
+                  <SelectItem key={turma} value={turma}>
+                    Turma {turma}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTurmaModal(false);
+                setSelectedNewTurma("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleChangeTurmaSelected}
+              disabled={!selectedNewTurma || isChangingTurma}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isChangingTurma ? "Movendo..." : "Confirmar Mudança"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão em Massa */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão em lote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'itens'}?
+              <br /><br />
+              <strong className="text-red-600">Atenção:</strong> Para visitantes, todas as redações enviadas também serão excluídas.
+              <br /><br />
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSelected}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useCorretorAuth } from '@/hooks/useCorretorAuth';
 import { useQueryClient } from '@tanstack/react-query';
+import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
 
 interface FormData {
   titulo: string;
@@ -29,7 +30,7 @@ interface CorretorLousaFormProps {
   editData?: any;
 }
 
-const TURMAS = ['A', 'B', 'C', 'D', 'E'];
+const TURMAS = TURMAS_VALIDAS;
 
 export default function CorretorLousaForm({ onSuccess, editData }: CorretorLousaFormProps) {
   const { toast } = useToast();
