@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Medal, Crown } from "lucide-react";
+import { Trophy, Medal, Crown, History, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,6 +34,10 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   const [selectedSimulado, setSelectedSimulado] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedTurmaAdmin, setSelectedTurmaAdmin] = useState<string>("geral");
+  const [showHistorico, setShowHistorico] = useState<boolean>(false);
+
+  // Ano atual para filtrar meses
+  const anoAtual = new Date().getFullYear();
 
   // Hooks de autenticação
   const { studentData } = useStudentAuth();
@@ -195,7 +199,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   });
 
   // Buscar meses disponíveis para redações regulares
-  const { data: mesesDisponiveis } = useQuery({
+  const { data: mesesDisponiveisData } = useQuery({
     queryKey: ['meses-regulares'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -204,13 +208,14 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         .eq('tipo_envio', 'regular')
         .eq('corrigida', true)
         .not('nota_total', 'is', null);
-      
+
       if (error) throw error;
-      
+
       // Extrair meses únicos com suas datas para ordenação cronológica
-      const mesesComData = new Map<string, Date>();
+      const mesesComData = new Map<string, { data: Date, ano: number }>();
       (data || []).forEach(redacao => {
         const dataRedacao = new Date(redacao.data_envio);
+        const ano = dataRedacao.getFullYear();
         const mes = dataRedacao.toLocaleDateString('pt-BR', {
           month: 'long',
           year: 'numeric'
@@ -218,24 +223,44 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         const mesCapitalizado = mes.charAt(0).toUpperCase() + mes.slice(1);
 
         // Guardar a data mais recente para cada mês
-        if (!mesesComData.has(mesCapitalizado) || dataRedacao > mesesComData.get(mesCapitalizado)!) {
-          mesesComData.set(mesCapitalizado, dataRedacao);
+        if (!mesesComData.has(mesCapitalizado) || dataRedacao > mesesComData.get(mesCapitalizado)!.data) {
+          mesesComData.set(mesCapitalizado, { data: dataRedacao, ano });
         }
       });
 
-      // Ordenar por data decrescente (mais recente primeiro)
-      return Array.from(mesesComData.entries())
-        .sort((a, b) => b[1].getTime() - a[1].getTime())
-        .map(([mes]) => mes) as string[];
+      // Separar em meses do ano atual e histórico
+      const mesesAnoAtual: string[] = [];
+      const mesesHistorico: string[] = [];
+      const currentYear = new Date().getFullYear();
+
+      Array.from(mesesComData.entries())
+        .sort((a, b) => b[1].data.getTime() - a[1].data.getTime())
+        .forEach(([mes, info]) => {
+          if (info.ano === currentYear) {
+            mesesAnoAtual.push(mes);
+          } else {
+            mesesHistorico.push(mes);
+          }
+        });
+
+      return {
+        anoAtual: mesesAnoAtual,
+        historico: mesesHistorico,
+        todos: [...mesesAnoAtual, ...mesesHistorico]
+      };
     }
   });
 
+  // Meses a serem exibidos baseado no estado de showHistorico
+  const mesesDisponiveis = mesesDisponiveisData?.anoAtual || [];
+  const mesesHistorico = mesesDisponiveisData?.historico || [];
+
   // Auto-selecionar o mês mais recente quando a lista de meses mudar
   useEffect(() => {
-    if (mesesDisponiveis && mesesDisponiveis.length > 0 && !selectedMonth) {
-      setSelectedMonth(mesesDisponiveis[0]); // Primeiro mês = mais recente
+    if (mesesDisponiveisData && mesesDisponiveisData.anoAtual.length > 0 && !selectedMonth) {
+      setSelectedMonth(mesesDisponiveisData.anoAtual[0]); // Primeiro mês do ano atual = mais recente
     }
-  }, [mesesDisponiveis]);
+  }, [mesesDisponiveisData]);
 
   // Buscar ranking baseado no tipo selecionado
   // ESTRATÉGIA: Todas as queries buscam dados SEM filtro SQL de turma,
@@ -832,10 +857,10 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           )}
 
           {/* Filtro adicional para aba Regular */}
-          {selectedType === "regular" && mesesDisponiveis && mesesDisponiveis.length > 0 && (
+          {selectedType === "regular" && (mesesDisponiveis.length > 0 || mesesHistorico.length > 0) && (
             <div className="mt-4">
               <label className={`block text-sm font-medium mb-2 ${variant === "student" ? "text-primary" : "text-gray-700"}`}>
-                Filtrar por mês:
+                Filtrar por mês ({anoAtual}):
               </label>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -858,6 +883,43 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                   </Button>
                 ))}
               </div>
+
+              {/* Botão para ver histórico de anos anteriores */}
+              {mesesHistorico.length > 0 && (
+                <div className="mt-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowHistorico(!showHistorico)}
+                    className="text-muted-foreground hover:text-primary flex items-center gap-2"
+                  >
+                    <History className="w-4 h-4" />
+                    {showHistorico ? "Ocultar histórico" : `Ver histórico (${mesesHistorico.length} ${mesesHistorico.length === 1 ? 'mês' : 'meses'})`}
+                    {showHistorico ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+
+                  {showHistorico && (
+                    <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                      <label className="block text-xs font-medium mb-2 text-muted-foreground">
+                        Anos anteriores:
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {mesesHistorico.map(mes => (
+                          <Button
+                            key={mes}
+                            variant={selectedMonth === mes ? "default" : "outline"}
+                            onClick={() => setSelectedMonth(mes)}
+                            size="sm"
+                            className={`text-xs ${variant === "student" ? (selectedMonth === mes ? styles.buttonSecondaryActive : styles.buttonSecondaryInactive) : ""}`}
+                          >
+                            {mes}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </CardHeader>
