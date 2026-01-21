@@ -35,6 +35,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedTurmaAdmin, setSelectedTurmaAdmin] = useState<string>("geral");
   const [showHistorico, setShowHistorico] = useState<boolean>(false);
+  const [showSimuladoHistorico, setShowSimuladoHistorico] = useState<boolean>(false);
 
   // Ano atual para filtrar meses
   const anoAtual = new Date().getFullYear();
@@ -178,25 +179,46 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
     }
   });
 
-  // Buscar simulados disponíveis
-  const { data: simulados } = useQuery({
+  // Buscar simulados disponíveis separados por ano
+  const { data: simuladosData } = useQuery({
     queryKey: ['simulados-lista'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('simulados')
-        .select('id, titulo')
-        .order('titulo');
+        .select('id, titulo, data_inicio')
+        .order('data_inicio', { ascending: false });
 
       if (error) throw error;
 
-      console.log(`📋 Lista de Simulados Disponíveis:`, {
-        total: data?.length || 0,
-        simulados: data?.map(s => ({ id: s.id, titulo: s.titulo }))
+      const currentYear = new Date().getFullYear();
+      const simuladosAnoAtual: typeof data = [];
+      const simuladosHistorico: typeof data = [];
+
+      (data || []).forEach(simulado => {
+        const ano = simulado.data_inicio ? new Date(simulado.data_inicio).getFullYear() : null;
+        if (ano === currentYear) {
+          simuladosAnoAtual.push(simulado);
+        } else {
+          simuladosHistorico.push(simulado);
+        }
       });
 
-      return data || [];
+      console.log(`📋 Simulados:`, {
+        anoAtual: simuladosAnoAtual.length,
+        historico: simuladosHistorico.length
+      });
+
+      return {
+        anoAtual: simuladosAnoAtual,
+        historico: simuladosHistorico,
+        todos: data || []
+      };
     }
   });
+
+  // Simulados a serem exibidos baseado no estado de showHistorico
+  const simulados = simuladosData?.anoAtual || [];
+  const simuladosHistorico = simuladosData?.historico || [];
 
   // Buscar meses disponíveis para redações regulares
   const { data: mesesDisponiveisData } = useQuery({
@@ -827,10 +849,10 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           </div>
 
           {/* Filtro adicional para simulados */}
-          {selectedType === "simulado" && simulados && simulados.length > 0 && (
+          {selectedType === "simulado" && (simulados.length > 0 || simuladosHistorico.length > 0) && (
             <div className="mt-4">
               <label className={`block text-sm font-medium mb-2 ${variant === "student" ? "text-primary" : "text-gray-700"}`}>
-                Filtrar por simulado:
+                Filtrar por simulado ({anoAtual}):
               </label>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -841,18 +863,61 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                 >
                   Todos
                 </Button>
-                {simulados.map(simulado => (
-                  <Button
-                    key={simulado.id}
-                    variant={selectedSimulado === simulado.id ? "default" : "outline"}
-                    onClick={() => handleSimuladoSelect(simulado.id)}
-                    size="sm"
-                    className={variant === "student" ? (selectedSimulado === simulado.id ? styles.buttonSecondaryActive : styles.buttonSecondaryInactive) : ""}
-                  >
-                    {simulado.titulo}
-                  </Button>
-                ))}
+                {simulados.length > 0 ? (
+                  simulados.map(simulado => (
+                    <Button
+                      key={simulado.id}
+                      variant={selectedSimulado === simulado.id ? "default" : "outline"}
+                      onClick={() => handleSimuladoSelect(simulado.id)}
+                      size="sm"
+                      className={variant === "student" ? (selectedSimulado === simulado.id ? styles.buttonSecondaryActive : styles.buttonSecondaryInactive) : ""}
+                    >
+                      {simulado.titulo}
+                    </Button>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground py-1">
+                    Nenhum simulado em {anoAtual}
+                  </span>
+                )}
               </div>
+
+              {/* Botão para ver histórico de simulados de anos anteriores */}
+              {simuladosHistorico.length > 0 && (
+                <div className="mt-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSimuladoHistorico(!showSimuladoHistorico)}
+                    className="text-muted-foreground hover:text-primary flex items-center gap-2"
+                  >
+                    <History className="w-4 h-4" />
+                    {showSimuladoHistorico ? "Ocultar histórico" : `Ver histórico (${simuladosHistorico.length} ${simuladosHistorico.length === 1 ? 'simulado' : 'simulados'})`}
+                    {showSimuladoHistorico ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+
+                  {showSimuladoHistorico && (
+                    <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                      <label className="block text-xs font-medium mb-2 text-muted-foreground">
+                        Anos anteriores:
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {simuladosHistorico.map(simulado => (
+                          <Button
+                            key={simulado.id}
+                            variant={selectedSimulado === simulado.id ? "default" : "outline"}
+                            onClick={() => handleSimuladoSelect(simulado.id)}
+                            size="sm"
+                            className={`text-xs ${variant === "student" ? (selectedSimulado === simulado.id ? styles.buttonSecondaryActive : styles.buttonSecondaryInactive) : ""}`}
+                          >
+                            {simulado.titulo}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
