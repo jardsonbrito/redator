@@ -7,7 +7,7 @@ import { Trophy, Medal, Crown, History, ChevronDown, ChevronUp } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
-import { normalizeTurmaToLetter, formatTurmaDisplay, TURMAS_VALIDAS } from "@/utils/turmaUtils";
+import { normalizeTurmaToLetter, formatTurmaDisplay, TURMAS_VALIDAS, isStatusEspecial } from "@/utils/turmaUtils";
 
 // Função para obter as cores da turma
 const getTurmaColors = (turmaLetter: string) => {
@@ -743,7 +743,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                       <div key={index} className="flex items-center">
                         <span>
                           {aluno.nome_aluno}
-                          {variant === "admin" && aluno.turma && (
+                          {variant === "admin" && aluno.turma && !isStatusEspecial(aluno.turma) && (
                             (() => {
                               const turmaLetter = normalizeTurmaToLetter(aluno.turma) || 'N/A';
                               const colors = getTurmaColors(turmaLetter);
@@ -1007,7 +1007,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
                       </div>
                       <div className={styles.rankingName}>
                         {item.nome_aluno}
-                        {variant === "admin" && item.turma && (
+                        {variant === "admin" && item.turma && !isStatusEspecial(item.turma) && (
                           (() => {
                             const turmaLetter = normalizeTurmaToLetter(item.turma) || 'N/A';
                             const colors = getTurmaColors(turmaLetter);

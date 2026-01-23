@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import { formatTurmaDisplay } from "@/utils/turmaUtils";
+import { formatTurmaDisplay, isStatusEspecial } from "@/utils/turmaUtils";
 
 interface SubmissionData {
   nome_aluno: string;
@@ -366,7 +366,9 @@ export const TemaSubmissionsModal = ({
                       {submission.nome_aluno}
                     </TableCell>
                     <TableCell className="text-gray-700">
-                      {submission.turma && submission.turma !== "null" ? formatTurmaDisplay(submission.turma) : "—"}
+                      {submission.turma && submission.turma !== "null" && !isStatusEspecial(submission.turma)
+                        ? formatTurmaDisplay(submission.turma)
+                        : "—"}
                     </TableCell>
                     {isSimulado ? (
                       <>

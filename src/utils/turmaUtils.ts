@@ -22,6 +22,18 @@ export const TURMAS_VALIDAS: readonly TurmaLetra[] = ['A', 'B', 'C', 'D', 'E', '
 export const STATUS_ESPECIAIS: readonly TurmaLetra[] = ['AGUARDANDO', 'REPROVADOS'] as const;
 
 /**
+ * Verifica se a turma é um status especial (não é uma turma de aula real)
+ *
+ * @param turma - String com turma
+ * @returns true se for AGUARDANDO ou REPROVADOS
+ */
+export const isStatusEspecial = (turma: string | null | undefined): boolean => {
+  if (!turma) return false;
+  const upper = turma.toUpperCase().trim();
+  return STATUS_ESPECIAIS.includes(upper as TurmaLetra);
+};
+
+/**
  * Todas as turmas possíveis incluindo VISITANTE e status especiais
  */
 export const TODAS_TURMAS: readonly TurmaLetra[] = [...TURMAS_VALIDAS, 'VISITANTE', ...STATUS_ESPECIAIS] as const;
