@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Crown, Edit2, History, Calendar, MoreVertical, Trash2, Settings2 } from 'lucide-react';
 import { formatDateSafe, isDateActiveOrFuture, formatDateTimeSafe } from '@/utils/dateUtils';
-import { TURMAS_VALIDAS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { TURMAS_VALIDAS, STATUS_ESPECIAIS, formatTurmaDisplay } from '@/utils/turmaUtils';
 
 interface Student {
   id: string;
@@ -42,7 +42,7 @@ interface SubscriptionHistory {
   admin_responsavel: string;
 }
 
-const TURMAS = TURMAS_VALIDAS;
+const TURMAS = [...TURMAS_VALIDAS, ...STATUS_ESPECIAIS];
 const PLANOS = ['Liderança', 'Lapidação', 'Largada', 'Bolsista'] as const;
 
 export const SubscriptionManagementClean = () => {
