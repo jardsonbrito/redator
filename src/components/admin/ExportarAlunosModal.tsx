@@ -23,6 +23,7 @@ import { Download, Users, FileText, GraduationCap, Loader2, Search, CheckSquare,
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import jsPDF from "jspdf";
+import { TURMAS_VALIDAS } from "@/utils/turmaUtils";
 
 interface ExportarAlunosModalProps {
   isOpen: boolean;
@@ -113,7 +114,7 @@ export function ExportarAlunosModal({ isOpen, onClose }: ExportarAlunosModalProp
   const [incluirSimulados, setIncluirSimulados] = useState(true);
   const [apenasCorrigidas, setApenasCorrigidas] = useState(false);
 
-  const turmas = ["A", "B", "C", "D", "E"];
+  const turmas = [...TURMAS_VALIDAS];
 
   // Carregar alunos quando o modal abrir
   useEffect(() => {
