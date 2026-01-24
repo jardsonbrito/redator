@@ -106,6 +106,7 @@ export const useRedacoesEnviadas = () => {
           corretor_1:corretores!corretor_id_1(nome_completo),
           corretor_2:corretores!corretor_id_2(nome_completo)
         `)
+        .is('deleted_at', null)  // Filtrar soft deletes
         .order("data_envio", { ascending: false });
 
       if (error) throw error;
@@ -159,9 +160,10 @@ export const useRedacoesEnviadas = () => {
 
   const handleDeleteRedacao = async (id: string) => {
     try {
+      // Soft delete - marca como deletada ao invés de remover
       const { error } = await supabase
         .from("redacoes_enviadas")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq("id", id);
 
       if (error) throw error;

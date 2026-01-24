@@ -59,16 +59,16 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
 
     setIsReverting(true);
     try {
-      // Se tem redação, deletar primeiro
+      // Se tem redação, fazer soft delete (marcar como deletada)
       if (redacao?.id) {
         const { error: deleteError } = await supabase
           .from('redacoes_enviadas')
-          .delete()
+          .update({ deleted_at: new Date().toISOString() })
           .eq('id', redacao.id);
 
         if (deleteError) {
-          console.error('Erro ao deletar redação:', deleteError);
-          throw new Error('Erro ao remover redação');
+          console.error('Erro ao cancelar redação:', deleteError);
+          throw new Error('Erro ao cancelar redação');
         }
       }
 

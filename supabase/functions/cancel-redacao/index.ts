@@ -97,14 +97,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 5. Iniciar transação - deletar redação e ressarcir créditos
+    // 5. Soft delete - marcar redação como deletada (em vez de remover)
     const { error: deleteError } = await supabaseClient
       .from('redacoes_enviadas')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', redacaoId);
 
     if (deleteError) {
-      console.error('Erro ao deletar redação:', deleteError);
+      console.error('Erro ao cancelar redação:', deleteError);
       return new Response(
         JSON.stringify({ error: 'Erro ao cancelar redação' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

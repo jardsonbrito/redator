@@ -55,6 +55,7 @@ const CorretorVisitantes = () => {
         .from('redacoes_enviadas')
         .select('*')
         .eq('turma', 'visitante')
+        .is('deleted_at', null)  // Filtrar soft deletes
         .order('data_envio', { ascending: false })
         .limit(50);
 

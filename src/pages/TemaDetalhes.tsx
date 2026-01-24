@@ -144,6 +144,7 @@ const TemaDetalhes = () => {
         .select('id, data_envio')
         .eq('frase_tematica', tema.frase_tematica)
         .eq('email_aluno', studentData.email)
+        .is('deleted_at', null)  // Filtrar soft deletes
         .order('data_envio', { ascending: false })
         .limit(1);
       

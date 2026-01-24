@@ -315,6 +315,7 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
         .from('redacoes_enviadas')
         .select('id, data_envio, frase_tematica, email_aluno, corrigida, nota_total, nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, redacao_texto, status')
         .eq('processo_seletivo_candidato_id', candidato.id)
+        .is('deleted_at', null)  // Filtrar soft deletes
         .order('data_envio', { ascending: false })
         .limit(1)
         .maybeSingle();

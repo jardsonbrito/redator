@@ -193,6 +193,7 @@ const Admin = () => {
       const { data: todasRedacoes, error: todasError } = await supabase
         .from('redacoes_enviadas')
         .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida')
+        .is('deleted_at', null)  // Filtrar soft deletes
         .order('data_envio', { ascending: false })
         .limit(10);
 
@@ -201,6 +202,7 @@ const Admin = () => {
       const { data: redacoesEspecificas, error: especificasError } = await supabase
         .from('redacoes_enviadas')
         .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida, data_envio')
+        .is('deleted_at', null)  // Filtrar soft deletes
         .or('nome_aluno.ilike.%lara%,nome_aluno.ilike.%kauani%,nome_aluno.ilike.%anne%,nome_aluno.ilike.%isabele%,nome_aluno.ilike.%renam%');
 
 
@@ -208,6 +210,7 @@ const Admin = () => {
       const { data: redacoesEnviadas, error: redacoesError } = await supabase
         .from('redacoes_enviadas')
         .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida')
+        .is('deleted_at', null)  // Filtrar soft deletes
         .eq('corrigida', false);
 
       console.log('🔍 Query redações NÃO corrigidas (todas):', {

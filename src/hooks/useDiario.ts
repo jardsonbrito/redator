@@ -498,7 +498,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             .select('nota_total, status')
             .ilike('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
-            .lt('data_envio', etapa.data_fim + 'T23:59:59');
+            .lt('data_envio', etapa.data_fim + 'T23:59:59')
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           if (!redacoesError && redacoes) {
             // Filtrar redações válidas (não devolvidas e com nota)
@@ -529,7 +530,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             .ilike('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
             .lt('data_envio', etapa.data_fim + 'T23:59:59')
-            .is('devolvida_por', null); // Não devolvidas
+            .is('devolvida_por', null) // Não devolvidas
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           if (!simuladosError && simulados) {
             const simuladosComNota = simulados.filter(s => 
@@ -585,7 +587,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             .eq('email_aluno', alunoEmail)
             .gte('data_envio', etapa.data_inicio)
             .lt('data_envio', etapa.data_fim + 'T23:59:59')
-            .is('devolvida_por', null); // Não devolvidas
+            .is('devolvida_por', null) // Não devolvidas
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           // Buscar dados do radar (exercícios importados)
           const { data: radarExercicios, error: radarError } = await supabase
@@ -771,22 +774,25 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           .in('email_aluno', emailsAlunos)
           .gte('data_envio', etapas.data_inicio)
           .lte('data_envio', etapas.data_fim)
-          .is('devolvida_por', null),
-          
+          .is('devolvida_por', null)
+          .is('deleted_at', null),  // Filtrar soft deletes
+
         supabase
           .from('redacoes_simulado')
           .select('email_aluno, nota_total')
           .in('email_aluno', emailsAlunos)
           .gte('data_envio', etapas.data_inicio)
           .lte('data_envio', etapas.data_fim)
-          .is('devolvida_por', null),
-          
+          .is('devolvida_por', null)
+          .is('deleted_at', null),  // Filtrar soft deletes
+
         supabase
           .from('redacoes_exercicio')
           .select('email_aluno')
           .in('email_aluno', emailsAlunos)
           .gte('data_envio', etapas.data_inicio)
-          .lte('data_envio', etapas.data_fim),
+          .lte('data_envio', etapas.data_fim)
+          .is('deleted_at', null),  // Filtrar soft deletes
           
         supabase
           .from('radar_dados')
@@ -883,7 +889,8 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
             .select('nota_total, status, devolvida_por')
             .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
-            .lte('data_envio', etapas.data_fim);
+            .lte('data_envio', etapas.data_fim)
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           if (!redacoesError && redacoes) {
             const redacoesValidas = redacoes.filter(r => 
@@ -917,7 +924,8 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
             .select('nota_total, devolvida_por')
             .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
-            .lte('data_envio', etapas.data_fim);
+            .lte('data_envio', etapas.data_fim)
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           if (!simuladosError && simulados) {
             const simuladosComNota = simulados.filter(s => 
@@ -977,7 +985,8 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
             .select('id')
             .eq('email_aluno', aluno.email)
             .gte('data_envio', etapas.data_inicio)
-            .lte('data_envio', etapas.data_fim);
+            .lte('data_envio', etapas.data_fim)
+            .is('deleted_at', null);  // Filtrar soft deletes
 
           // Buscar dados do radar (exercícios importados)
           const { data: radarExercicios, error: radarError } = await supabase

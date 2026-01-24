@@ -101,18 +101,18 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       }
 
 
-      // 5. Deletar redação
+      // 5. Soft delete da redação (marcar como deletada em vez de remover)
       const { error: deleteError } = await supabase
         .from('redacoes_enviadas')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', redacaoId);
 
       if (deleteError) {
-        console.error('❌ Erro ao deletar redação:', deleteError);
+        console.error('❌ Erro ao cancelar redação:', deleteError);
         throw new Error('Erro ao cancelar redação');
       }
 
-      console.log('🗑️ Redação deletada com sucesso');
+      console.log('🗑️ Redação marcada como cancelada (soft delete)');
 
       // 6. Ressarcir créditos se necessário
       let novoSaldoCreditos = profile.creditos || 0;
@@ -342,14 +342,14 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       }
 
 
-      // 5. Deletar redação de simulado
+      // 5. Soft delete da redação de simulado (marcar como deletada em vez de remover)
       const { error: deleteError } = await supabase
         .from('redacoes_simulado')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', redacaoId);
 
       if (deleteError) {
-        console.error('❌ Erro ao deletar redação de simulado:', deleteError);
+        console.error('❌ Erro ao cancelar redação de simulado:', deleteError);
         throw new Error('Erro ao cancelar redação');
       }
 
@@ -603,18 +603,18 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
         throw new Error('Não é possível cancelar uma redação que já iniciou o processo de correção');
       }
 
-      // 3. Deletar a redação
+      // 3. Soft delete da redação (marcar como deletada em vez de remover)
       const { error: deleteError } = await supabase
         .from('redacoes_enviadas')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', redacaoId);
 
       if (deleteError) {
-        console.error('❌ Erro ao deletar redação:', deleteError);
+        console.error('❌ Erro ao cancelar redação:', deleteError);
         throw new Error('Erro ao cancelar redação');
       }
 
-      console.log('🗑️ Redação deletada com sucesso');
+      console.log('🗑️ Redação marcada como cancelada (soft delete)');
 
       // 4. Atualizar status do candidato de volta para 'etapa_final_liberada'
       const { error: updateCandidatoError } = await supabase

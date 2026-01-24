@@ -37,7 +37,8 @@ const CorretorTemas = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes_enviadas')
-        .select('frase_tematica');
+        .select('frase_tematica')
+        .is('deleted_at', null);  // Filtrar soft deletes
 
       if (error) throw error;
 
