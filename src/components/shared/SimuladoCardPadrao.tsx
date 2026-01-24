@@ -173,8 +173,8 @@ const getFormattedDates = (simulado: SimuladoCardData) => {
     const dataFim = new Date(`${simulado.data_fim}T${simulado.hora_fim}`);
 
     return {
-      inicio: format(dataInicio, "dd/MM/yyyy 'às' HH'h'", { locale: ptBR }),
-      fim: format(dataFim, "dd/MM/yyyy 'às' HH'h'", { locale: ptBR })
+      inicio: format(dataInicio, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }),
+      fim: format(dataFim, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
     };
   } catch {
     return { inicio: 'Data inválida', fim: 'Data inválida' };

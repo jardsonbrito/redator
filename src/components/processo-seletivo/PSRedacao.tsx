@@ -188,8 +188,8 @@ export const PSRedacao: React.FC<PSRedacaoProps> = ({
     }
     try {
       return {
-        inicio: format(janela.inicio, "dd/MM/yyyy 'às' HH'h'", { locale: ptBR }),
-        fim: format(janela.fim, "dd/MM/yyyy 'às' HH'h'", { locale: ptBR })
+        inicio: format(janela.inicio, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }),
+        fim: format(janela.fim, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
       };
     } catch {
       return { inicio: 'Data inválida', fim: 'Data inválida' };
