@@ -46,6 +46,7 @@ type RedacaoTurma = {
   nota_c4?: number | null;
   nota_c5?: number | null;
   exercicio_id?: string;
+  processo_seletivo_candidato_id?: string | null;
 };
 
 type AuthenticatedRedacao = RedacaoTurma & {

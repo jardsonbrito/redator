@@ -559,14 +559,129 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
         return 0;
       case 'visitante':
         return 0;
+      case 'processo_seletivo':
+        return 0; // Processo seletivo é gratuito
       default:
         return 1;
+    }
+  };
+
+  // Função específica para cancelar redação do Processo Seletivo
+  const cancelRedacaoProcessoSeletivo = async (redacaoId: string, userEmail: string, candidatoId: string) => {
+    setLoading(true);
+
+    try {
+      console.log('🔄 Iniciando cancelamento de redação do Processo Seletivo...');
+      console.log(`📧 Email: ${userEmail}, Redação ID: ${redacaoId}, Candidato ID: ${candidatoId}`);
+
+      // 1. Buscar a redação e verificar se pode ser cancelada
+      const { data: redacao, error: redacaoError } = await supabase
+        .from('redacoes_enviadas')
+        .select('*')
+        .eq('id', redacaoId)
+        .eq('email_aluno', userEmail.toLowerCase().trim())
+        .eq('processo_seletivo_candidato_id', candidatoId)
+        .single();
+
+      if (redacaoError || !redacao) {
+        throw new Error('Redação não encontrada ou não pertence ao usuário');
+      }
+
+      // 2. Verificar se ainda pode ser cancelada (não corrigida)
+      if (redacao.corrigida || redacao.nota_total !== null) {
+        throw new Error('Não é possível cancelar uma redação que já foi corrigida');
+      }
+
+      // Verificar se já iniciou correção
+      const temNotasLancadas = redacao.nota_c1 !== null ||
+                               redacao.nota_c2 !== null ||
+                               redacao.nota_c3 !== null ||
+                               redacao.nota_c4 !== null ||
+                               redacao.nota_c5 !== null;
+
+      if (temNotasLancadas) {
+        throw new Error('Não é possível cancelar uma redação que já iniciou o processo de correção');
+      }
+
+      // 3. Deletar a redação
+      const { error: deleteError } = await supabase
+        .from('redacoes_enviadas')
+        .delete()
+        .eq('id', redacaoId);
+
+      if (deleteError) {
+        console.error('❌ Erro ao deletar redação:', deleteError);
+        throw new Error('Erro ao cancelar redação');
+      }
+
+      console.log('🗑️ Redação deletada com sucesso');
+
+      // 4. Atualizar status do candidato de volta para 'etapa_final_liberada'
+      const { error: updateCandidatoError } = await supabase
+        .from('ps_candidatos')
+        .update({
+          status: 'etapa_final_liberada',
+          data_conclusao: null
+        })
+        .eq('id', candidatoId);
+
+      if (updateCandidatoError) {
+        console.error('❌ Erro ao atualizar status do candidato:', updateCandidatoError);
+        throw new Error('Erro ao reverter status do candidato');
+      }
+
+      console.log('✅ Status do candidato revertido para etapa_final_liberada');
+
+      // 5. Remover flag de participação do perfil
+      const { error: updateProfileError } = await supabase
+        .from('profiles')
+        .update({ participou_processo_seletivo: false })
+        .eq('email', userEmail.toLowerCase().trim());
+
+      if (updateProfileError) {
+        console.warn('⚠️ Erro ao atualizar perfil (não crítico):', updateProfileError);
+      }
+
+      // 6. Invalidar cache
+      queryClient.invalidateQueries({ queryKey: ['ps-candidato'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-redacao'] });
+      queryClient.invalidateQueries({ queryKey: ['processo-seletivo-participacao'] });
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+
+      toast({
+        title: "✅ Envio cancelado",
+        description: "Sua redação foi cancelada. Você pode enviar uma nova redação dentro da janela de tempo.",
+        className: "border-green-200 bg-green-50 text-green-900",
+        duration: 5000
+      });
+
+      options?.onSuccess?.();
+      return true;
+
+    } catch (error) {
+      console.error('❌ Erro ao cancelar redação do Processo Seletivo:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+
+      toast({
+        title: "Erro no cancelamento",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000
+      });
+
+      options?.onError?.(errorMessage);
+      return false;
+
+    } finally {
+      setLoading(false);
     }
   };
 
   return {
     cancelRedacao,
     cancelRedacaoSimulado,
+    cancelRedacaoProcessoSeletivo,
     canCancelRedacao,
     getCreditosACancelar,
     loading

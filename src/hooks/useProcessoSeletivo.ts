@@ -313,7 +313,7 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
       // Buscar redação vinculada ao candidato do processo seletivo
       const { data, error } = await supabase
         .from('redacoes_enviadas')
-        .select('id, data_envio, frase_tematica, email_aluno')
+        .select('id, data_envio, frase_tematica, email_aluno, corrigida, nota_total, nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, redacao_texto, status')
         .eq('processo_seletivo_candidato_id', candidato.id)
         .order('data_envio', { ascending: false })
         .limit(1)
@@ -326,7 +326,7 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
 
       return data;
     },
-    enabled: !!candidato?.id && candidato?.status === 'etapa_final_liberada',
+    enabled: !!candidato?.id && (candidato?.status === 'etapa_final_liberada' || candidato?.status === 'concluido'),
     staleTime: 30 * 1000
   });
 

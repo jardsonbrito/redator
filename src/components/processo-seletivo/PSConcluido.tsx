@@ -1,18 +1,118 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Trophy, FileText, Calendar, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2, Trophy, FileText, Calendar, Star, X, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Candidato, PSRedacao } from '@/hooks/useProcessoSeletivo';
+import { useCancelRedacao } from '@/hooks/useCancelRedacao';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface PSConcluidoProps {
   candidato: Candidato;
-  redacao?: PSRedacao | null;
+  redacao?: any | null; // Usando any pois agora vem de redacoes_enviadas
 }
 
 export const PSConcluido: React.FC<PSConcluidoProps> = ({
   candidato,
   redacao
 }) => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isReverting, setIsReverting] = React.useState(false);
+  const { cancelRedacaoProcessoSeletivo, loading: cancelLoading } = useCancelRedacao({
+    onSuccess: () => {
+      // Invalidar caches para atualizar a tela
+      queryClient.invalidateQueries({ queryKey: ['ps-candidato'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-redacao'] });
+      queryClient.invalidateQueries({ queryKey: ['processo-seletivo-participacao'] });
+    }
+  });
+
+  // Verificar se a redação pode ser cancelada (não corrigida)
+  const podeCancelar = redacao && !redacao.corrigida && redacao.nota_total === null;
+
+  // Verificar se está em estado inconsistente (concluído mas sem redação)
+  const estadoInconsistente = !redacao && candidato?.status === 'concluido';
+
+  const handleCancelarEnvio = async () => {
+    if (redacao?.id && candidato?.id) {
+      await cancelRedacaoProcessoSeletivo(redacao.id, candidato.email_aluno, candidato.id);
+    }
+  };
+
+  // Função para voltar para etapa de envio (com ou sem redação)
+  const handleVoltarParaEnvio = async () => {
+    if (!candidato?.id) return;
+
+    setIsReverting(true);
+    try {
+      // Se tem redação, deletar primeiro
+      if (redacao?.id) {
+        const { error: deleteError } = await supabase
+          .from('redacoes_enviadas')
+          .delete()
+          .eq('id', redacao.id);
+
+        if (deleteError) {
+          console.error('Erro ao deletar redação:', deleteError);
+          throw new Error('Erro ao remover redação');
+        }
+      }
+
+      // Reverter status do candidato
+      const { error: updateError } = await supabase
+        .from('ps_candidatos')
+        .update({
+          status: 'etapa_final_liberada',
+          data_conclusao: null
+        })
+        .eq('id', candidato.id);
+
+      if (updateError) throw updateError;
+
+      // Remover flag de participação
+      await supabase
+        .from('profiles')
+        .update({ participou_processo_seletivo: false })
+        .eq('email', candidato.email_aluno);
+
+      // Invalidar caches
+      queryClient.invalidateQueries({ queryKey: ['ps-candidato'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-redacao'] });
+      queryClient.invalidateQueries({ queryKey: ['processo-seletivo-participacao'] });
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+
+      toast({
+        title: "Pronto para reenviar",
+        description: "Você pode enviar uma nova redação agora.",
+        className: "border-green-200 bg-green-50 text-green-900",
+      });
+
+    } catch (error) {
+      console.error('Erro ao reverter status:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível voltar para a etapa de envio. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReverting(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Card de Conclusão */}
@@ -47,6 +147,69 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
               <span className="text-sm">
                 Concluído em: {new Date(candidato.data_conclusao).toLocaleDateString('pt-BR')}
               </span>
+            </div>
+          )}
+
+          {/* Botão para reenviar redação (quando há redação não corrigida ou estado inconsistente) */}
+          {(podeCancelar || estadoInconsistente) && (
+            <div className="mt-4 pt-4 border-t border-purple-200">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                    disabled={cancelLoading || isReverting}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    {estadoInconsistente ? "Voltar para enviar redação" : "Cancelar e reenviar redação"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-orange-500" />
+                      {estadoInconsistente ? "Voltar para etapa de envio" : "Cancelar envio da redação"}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-3">
+                      {estadoInconsistente ? (
+                        <>
+                          <p>Deseja voltar para a etapa de envio da redação?</p>
+                          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                            <p className="text-blue-800 text-sm">
+                              Parece que houve um problema no envio anterior. Ao confirmar, você poderá
+                              enviar sua redação novamente.
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p>Tem certeza que deseja cancelar o envio da sua redação do Processo Seletivo?</p>
+                          <div className="bg-amber-50 border border-amber-200 rounded p-3">
+                            <p className="text-amber-800 text-sm">
+                              <strong>Atenção:</strong> Ao cancelar, você voltará para a etapa de envio da redação
+                              e poderá enviar uma nova redação <strong>apenas se ainda estiver dentro da janela de tempo</strong>.
+                            </p>
+                          </div>
+                          <p className="text-red-600 text-sm">
+                            Esta ação não pode ser desfeita. A redação enviada será removida permanentemente.
+                          </p>
+                        </>
+                      )}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleVoltarParaEnvio}
+                      className={estadoInconsistente ? "bg-blue-600 hover:bg-blue-700" : "bg-orange-600 hover:bg-orange-700"}
+                      disabled={cancelLoading || isReverting}
+                    >
+                      {isReverting ? "Processando..." : (estadoInconsistente ? "Sim, voltar para envio" : "Sim, cancelar e reenviar")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
         </CardContent>

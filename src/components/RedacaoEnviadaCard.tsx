@@ -82,6 +82,8 @@ interface RedacaoEnviadaCardProps {
     // Campos da tabela real
     c1_corretor_1?: number | null;
     c1_corretor_2?: number | null;
+    // Campo do processo seletivo
+    processo_seletivo_candidato_id?: string | null;
   };
   onRedacaoCanceled?: () => void;
 }
@@ -92,11 +94,20 @@ export const RedacaoEnviadaCard = ({
 }: RedacaoEnviadaCardProps) => {
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
-  const { cancelRedacao, cancelRedacaoSimulado, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
+  const { cancelRedacao, cancelRedacaoSimulado, cancelRedacaoProcessoSeletivo, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
     onSuccess: () => {
       onRedacaoCanceled?.();
     }
   });
+
+  // Função para cancelar baseada no tipo de envio
+  const handleCancelRedacao = () => {
+    if (redacao.tipo_envio === 'processo_seletivo' && redacao.processo_seletivo_candidato_id) {
+      cancelRedacaoProcessoSeletivo(redacao.id, redacao.email_aluno, redacao.processo_seletivo_candidato_id);
+    } else {
+      cancelRedacao(redacao.id, redacao.email_aluno);
+    }
+  };
 
   // Função para verificar se deve mostrar as notas
   const shouldShowScores = (redacao: any) => {
@@ -130,7 +141,8 @@ export const RedacaoEnviadaCard = ({
       'regular': 'Regular',
       'exercicio': 'Exercício',
       'simulado': 'Simulado',
-      'visitante': 'Avulsa'
+      'visitante': 'Avulsa',
+      'processo_seletivo': 'Processo Seletivo'
     };
     return tipos[tipo as keyof typeof tipos] || tipo;
   };
@@ -140,7 +152,8 @@ export const RedacaoEnviadaCard = ({
       'regular': 'bg-blue-100 text-blue-800',
       'exercicio': 'bg-purple-100 text-purple-800',
       'simulado': 'bg-orange-100 text-orange-800',
-      'visitante': 'bg-gray-100 text-gray-800'
+      'visitante': 'bg-gray-100 text-gray-800',
+      'processo_seletivo': 'bg-indigo-100 text-indigo-800'
     };
     return cores[tipo as keyof typeof cores] || 'bg-blue-100 text-blue-800';
   };
@@ -269,6 +282,14 @@ export const RedacaoEnviadaCard = ({
                             </p>
                           </div>
                         )}
+                        {redacao.tipo_envio === 'processo_seletivo' && (
+                          <div className="bg-amber-50 border border-amber-200 rounded p-3 mt-3">
+                            <p className="text-amber-800 text-sm">
+                              <strong>Atenção:</strong> Ao cancelar, você voltará para a etapa de envio da redação
+                              e poderá enviar uma nova redação <strong>apenas se ainda estiver dentro da janela de tempo</strong>.
+                            </p>
+                          </div>
+                        )}
                         <p className="text-red-600 text-sm mt-3">
                           ⚠️ Esta ação não pode ser desfeita. A redação será removida permanentemente.
                         </p>
@@ -277,9 +298,7 @@ export const RedacaoEnviadaCard = ({
                     <AlertDialogFooter>
                       <AlertDialogCancel>Não, manter redação</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() => {
-                          cancelRedacao(redacao.id, redacao.email_aluno);
-                        }}
+                        onClick={handleCancelRedacao}
                         className="bg-red-600 hover:bg-red-700"
                         disabled={cancelLoading}
                       >
