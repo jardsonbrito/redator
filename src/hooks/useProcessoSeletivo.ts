@@ -26,6 +26,7 @@ export interface Formulario {
   ativo: boolean;
   inscricoes_abertas: boolean;
   criado_em: string;
+  turma_processo?: string | null;
 }
 
 export interface Secao {
@@ -458,6 +459,8 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
   });
 
   // Buscar configuração de resultado (para saber se foi publicado)
+  // Nota: buscamos sempre que há formulário, não apenas quando concluído,
+  // para evitar condições de corrida no carregamento
   const { data: resultadoConfig, isLoading: isLoadingResultado } = useQuery({
     queryKey: ['ps-resultado-config', formulario?.id],
     queryFn: async (): Promise<ResultadoConfig | null> => {
@@ -476,7 +479,7 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
 
       return data as ResultadoConfig;
     },
-    enabled: !!formulario?.id && candidato?.status === 'concluido',
+    enabled: !!formulario?.id,
     staleTime: 30 * 1000
   });
 

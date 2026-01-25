@@ -218,7 +218,7 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
       </Card>
 
       {/* Card de Resultado (quando publicado) */}
-      {resultadoConfig?.resultado_publicado && candidato.classificacao && (
+      {resultadoConfig?.resultado_publicado && (
         <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-green-200/30 rounded-full -translate-y-1/2 translate-x-1/2" />
 
@@ -235,19 +235,25 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
 
           <CardContent className="space-y-4 relative">
             {/* Classificação */}
-            <div className="text-center py-4">
-              <div className="inline-flex items-center gap-2 bg-white rounded-full px-6 py-3 shadow-md">
-                <Trophy className={`h-6 w-6 ${
-                  candidato.classificacao === 1 ? 'text-yellow-500' :
-                  candidato.classificacao === 2 ? 'text-gray-400' :
-                  candidato.classificacao === 3 ? 'text-orange-400' : 'text-green-600'
-                }`} />
-                <span className="text-4xl font-bold text-green-800">
-                  {candidato.classificacao}º
-                </span>
-                <span className="text-green-600 font-medium">lugar</span>
+            {candidato.classificacao ? (
+              <div className="text-center py-4">
+                <div className="inline-flex items-center gap-2 bg-white rounded-full px-6 py-3 shadow-md">
+                  <Trophy className={`h-6 w-6 ${
+                    candidato.classificacao === 1 ? 'text-yellow-500' :
+                    candidato.classificacao === 2 ? 'text-gray-400' :
+                    candidato.classificacao === 3 ? 'text-orange-400' : 'text-green-600'
+                  }`} />
+                  <span className="text-4xl font-bold text-green-800">
+                    {candidato.classificacao}º
+                  </span>
+                  <span className="text-green-600 font-medium">lugar</span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-green-700">Aguardando classificação final</p>
+              </div>
+            )}
 
             {/* Nota */}
             {redacao?.nota_total !== null && redacao?.nota_total !== undefined && (
@@ -356,24 +362,26 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
         </Card>
       )}
 
-      {/* Informações Finais */}
-      <Card className="border-blue-200 bg-blue-50/50">
-        <CardContent className="py-4 space-y-3">
-          <h4 className="font-medium text-blue-800">E agora?</h4>
-          <p className="text-sm text-blue-700">
-            Sua redação foi registrada com sucesso e seguirá para avaliação.
-          </p>
-          <p className="text-sm text-blue-700">
-            Para acompanhar seu desempenho, acesse o card <strong>Minhas Redações</strong>,
-            onde você poderá visualizar o texto enviado e, posteriormente, a <strong>pontuação obtida</strong>.
-          </p>
-          <p className="text-sm text-blue-700">
-            Além disso, fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
-            pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
-            oficiais sobre o resultado do processo seletivo e os contemplados com as bolsas de estudo.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Informações Finais - só mostra quando resultado não foi publicado */}
+      {!resultadoConfig?.resultado_publicado && (
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardContent className="py-4 space-y-3">
+            <h4 className="font-medium text-blue-800">E agora?</h4>
+            <p className="text-sm text-blue-700">
+              Sua redação foi registrada com sucesso e seguirá para avaliação.
+            </p>
+            <p className="text-sm text-blue-700">
+              Para acompanhar seu desempenho, acesse o card <strong>Minhas Redações</strong>,
+              onde você poderá visualizar o texto enviado e, posteriormente, a <strong>pontuação obtida</strong>.
+            </p>
+            <p className="text-sm text-blue-700">
+              Além disso, fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
+              pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
+              oficiais sobre o resultado do processo seletivo e os contemplados com as bolsas de estudo.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

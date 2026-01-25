@@ -11,7 +11,9 @@ import {
   UserCheck,
   Trophy,
   MessageSquare,
-  Award
+  Award,
+  Link2,
+  ArrowRightLeft
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProcessoSeletivoAdmin } from "@/hooks/useProcessoSeletivoAdmin";
@@ -21,6 +23,8 @@ import { PSComunicadoForm } from "@/components/admin/processo-seletivo/PSComunic
 import { PSEtapaFinalConfig } from "@/components/admin/processo-seletivo/PSEtapaFinalConfig";
 import { PSResultadosManager } from "@/components/admin/processo-seletivo/PSResultadosManager";
 import { PSProcessoSelector } from "@/components/admin/processo-seletivo/PSProcessoSelector";
+import { PSLinkInscricao } from "@/components/admin/processo-seletivo/PSLinkInscricao";
+import { PSMigrarCandidatos } from "@/components/admin/processo-seletivo/PSMigrarCandidatos";
 import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
 import { ProcessoSeletivoAdminProvider, useProcessoSeletivoAdminContext } from "@/contexts/ProcessoSeletivoAdminContext";
 
@@ -47,7 +51,7 @@ const ProcessoSeletivoAdminContent = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("gerenciar");
-  const [activeSection, setActiveSection] = useState("candidatos");
+  const [activeSection, setActiveSection] = useState("link");
 
   // Usar o contexto para gerenciar o ID do processo selecionado
   const { processoSelecionadoId, setProcessoSelecionadoId } = useProcessoSeletivoAdminContext();
@@ -57,13 +61,34 @@ const ProcessoSeletivoAdminContent = () => {
     formularioAtivo,
     formularioIdEfetivo,
     estatisticas,
+    candidatos,
     isLoadingFormularios,
+    isLoadingCandidatos,
     criarFormularioAsync,
     arquivarFormulario,
     desarquivarFormulario,
     isSalvandoFormulario,
     isArquivandoFormulario
   } = useProcessoSeletivoAdmin(processoSelecionadoId);
+
+  // Componente para seção de migração
+  const PSMigrarCandidatosSection = () => {
+    const queryClient = useQuery({
+      queryKey: ['ps-candidatos-migracao', formularioAtivo?.id],
+      queryFn: async () => candidatos || [],
+      enabled: !!formularioAtivo?.id
+    });
+
+    return (
+      <PSMigrarCandidatos
+        candidatos={candidatos || []}
+        onMigracaoConcluida={() => {
+          // Recarregar dados
+          window.location.reload();
+        }}
+      />
+    );
+  };
 
   // Sincronizar o ID selecionado com o ID efetivo do hook
   useEffect(() => {
@@ -170,10 +195,12 @@ const ProcessoSeletivoAdminContent = () => {
 
   // Seções para os chips de navegação
   const sections = [
+    { id: 'link', label: 'Link Inscrição', icon: Link2 },
     { id: 'candidatos', label: 'Candidatos', icon: Users, badge: estatisticas.aguardandoAnalise },
     { id: 'comunicado', label: 'Comunicado', icon: MessageSquare },
     { id: 'etapa-final', label: 'Etapa Final', icon: Trophy },
     { id: 'resultados', label: 'Resultados', icon: Award },
+    { id: 'migrar', label: 'Migrar', icon: ArrowRightLeft, badge: estatisticas.concluidos },
     { id: 'elegiveis', label: 'Elegíveis', icon: UserCheck },
   ];
 
@@ -270,10 +297,20 @@ const ProcessoSeletivoAdminContent = () => {
 
             {/* Área de Conteúdo */}
             <div className="p-5">
+              {activeSection === 'link' && formularioAtivo && (
+                <PSLinkInscricao
+                  formularioId={formularioAtivo.id}
+                  titulo={formularioAtivo.titulo}
+                  turmaProcesso={formularioAtivo.turma_processo || null}
+                  inscricoesAbertas={formularioAtivo.inscricoes_abertas}
+                  totalCandidatos={candidatosPorFormulario[formularioAtivo.id] || 0}
+                />
+              )}
               {activeSection === 'candidatos' && <PSCandidatosManager />}
               {activeSection === 'comunicado' && <PSComunicadoForm />}
               {activeSection === 'etapa-final' && <PSEtapaFinalConfig />}
               {activeSection === 'resultados' && <PSResultadosManager />}
+              {activeSection === 'migrar' && <PSMigrarCandidatosSection />}
               {activeSection === 'elegiveis' && (
                 <div className="space-y-6">
                   {/* Alunos Elegíveis */}

@@ -323,6 +323,20 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
         .single();
 
       if (error) throw error;
+
+      // Gerar turma automaticamente para o processo seletivo
+      if (data?.id) {
+        const { data: turmaData, error: turmaError } = await supabase.rpc('gerar_e_atribuir_turma_processo', {
+          formulario_id: data.id
+        });
+
+        if (turmaError) {
+          console.error('Erro ao gerar turma do processo:', turmaError);
+        } else if (turmaData) {
+          data.turma_processo = turmaData;
+        }
+      }
+
       return data;
     },
     onSuccess: (data) => {

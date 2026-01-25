@@ -89,6 +89,7 @@ import DiarioOnline from "./pages/DiarioOnline";
 import SimuladoRedacaoCorrigida from "./pages/SimuladoRedacaoCorrigida";
 import RedacaoRegularDetalhes from "./pages/RedacaoRegularDetalhes";
 import ProcessoSeletivo from "./pages/ProcessoSeletivo";
+import ProcessoSeletivoInscricao from "./pages/ProcessoSeletivoInscricao";
 import { CustomizePlanSimple } from "./pages/admin/CustomizePlanSimple";
 import { CustomizePlanByName } from "./pages/admin/CustomizePlanByName";
 import { CustomizeStudentPlan } from "./pages/admin/CustomizeStudentPlan";
@@ -112,6 +113,7 @@ function App() {
                   <Route path="/visitante-login" element={<VisitanteLogin />} />
                   <Route path="/cadastro-aluno" element={<CadastroAluno />} />
                   <Route path="/atualizar-email" element={<AtualizarEmail />} />
+                  <Route path="/processo-seletivo/inscricao/:formularioId" element={<ProcessoSeletivoInscricao />} />
 
                   <Route path="/app" element={<ProtectedStudentRoute><Index /></ProtectedStudentRoute>} />
                   <Route path="/temas" element={<ProtectedStudentRoute><Temas /></ProtectedStudentRoute>} />

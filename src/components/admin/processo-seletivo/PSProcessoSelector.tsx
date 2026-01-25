@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   ChevronDown,
   Plus,
@@ -14,7 +15,9 @@ import {
   Archive,
   ArchiveRestore,
   Loader2,
-  Save
+  Save,
+  Link,
+  Copy
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -183,8 +186,13 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
 
         {/* Status do processo selecionado */}
         {formularioSelecionado && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {getStatusBadge(formularioSelecionado)}
+            {formularioSelecionado.turma_processo && (
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                {formularioSelecionado.turma_processo}
+              </Badge>
+            )}
             <span className="text-sm text-muted-foreground flex items-center gap-1">
               <Users className="h-4 w-4" />
               {candidatosPorFormulario[formularioSelecionado.id] || 0} candidatos
@@ -193,6 +201,19 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
               <Calendar className="h-4 w-4" />
               {new Date(formularioSelecionado.criado_em).toLocaleDateString('pt-BR')}
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const link = `${window.location.origin}/processo-seletivo/inscricao/${formularioSelecionado.id}`;
+                navigator.clipboard.writeText(link);
+                toast.success('Link de inscrição copiado!');
+              }}
+              className="text-[#3F0077] border-[#3F0077]/30 hover:bg-[#3F0077]/10"
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              Copiar Link
+            </Button>
             {onArquivarFormulario && formularioSelecionado.ativo && (
               <Button
                 variant="ghost"

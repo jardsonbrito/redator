@@ -168,7 +168,14 @@ export const PSContainer: React.FC<PSContainerProps> = ({
       );
 
     case 'concluido':
-      // Processo concluído
+      // Processo concluído - aguardar carregamento do resultado
+      if (isLoadingResultado) {
+        return (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        );
+      }
       return (
         <PSConcluido
           candidato={candidato!}
