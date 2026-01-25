@@ -191,51 +191,131 @@ export const useProcessoSeletivo = (userEmail: string) => {
 };
 
 /**
- * Hook principal para o candidato do processo seletivo.
- * Gerencia todo o estado e operações do candidato.
+ * Hook para buscar processos seletivos disponíveis para inscrição.
+ * Retorna todos os processos ativos com inscrições abertas.
  */
-export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, userName: string, turma: string | null) => {
-  const queryClient = useQueryClient();
+export const useProcessosSeletivosDisponiveis = (userEmail: string) => {
+  // Buscar processos ativos com inscrições abertas
+  const { data: processosDisponiveis, isLoading: isLoadingProcessos } = useQuery({
+    queryKey: ['ps-processos-disponiveis', userEmail],
+    queryFn: async (): Promise<Formulario[]> => {
+      // Buscar todos os processos ativos com inscrições abertas
+      const { data: processosAbertos, error } = await supabase
+        .from('ps_formularios')
+        .select('*')
+        .eq('ativo', true)
+        .eq('inscricoes_abertas', true)
+        .order('criado_em', { ascending: false });
 
-  // Buscar formulário ativo
-  const { data: formulario, isLoading: isLoadingFormulario } = useQuery({
-    queryKey: ['ps-formulario-ativo', userEmail],
-    queryFn: async (): Promise<FormularioCompleto | null> => {
-      // Primeiro, verificar se o usuário já é candidato de algum formulário ativo
-      // Isso permite que candidatos existentes vejam o formulário mesmo com inscricoes_abertas = false
-      let formData = null;
-
-      if (userEmail) {
-        const { data: candidatoExistente } = await supabase
-          .from('ps_candidatos')
-          .select('formulario_id, ps_formularios!inner(*)')
-          .eq('email_aluno', userEmail)
-          .eq('ps_formularios.ativo', true)
-          .order('data_inscricao', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (candidatoExistente?.ps_formularios) {
-          formData = candidatoExistente.ps_formularios as any;
-        }
+      if (error) {
+        console.error('Erro ao buscar processos disponíveis:', error);
+        return [];
       }
 
-      // Se não é candidato existente, buscar formulário com inscrições abertas
-      if (!formData) {
-        const { data: formAberto, error: formError } = await supabase
+      return processosAbertos || [];
+    },
+    staleTime: 5 * 60 * 1000
+  });
+
+  // Buscar processo onde o usuário já está inscrito (mesmo se inscrições fechadas)
+  const { data: processoInscrito, isLoading: isLoadingInscrito } = useQuery({
+    queryKey: ['ps-processo-inscrito', userEmail],
+    queryFn: async (): Promise<Formulario | null> => {
+      if (!userEmail) return null;
+
+      const { data: candidatoExistente, error } = await supabase
+        .from('ps_candidatos')
+        .select('formulario_id, ps_formularios!inner(*)')
+        .eq('email_aluno', userEmail)
+        .eq('ps_formularios.ativo', true)
+        .order('data_inscricao', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !candidatoExistente) {
+        return null;
+      }
+
+      return candidatoExistente.ps_formularios as unknown as Formulario;
+    },
+    enabled: !!userEmail,
+    staleTime: 5 * 60 * 1000
+  });
+
+  return {
+    processosDisponiveis: processosDisponiveis || [],
+    processoInscrito,
+    isLoading: isLoadingProcessos || isLoadingInscrito,
+    // Se já está inscrito em algum processo, esse é o processo a ser mostrado
+    // Se não está inscrito mas há processos disponíveis, mostrar a lista
+    temMultiplosProcessos: !processoInscrito && (processosDisponiveis?.length || 0) > 1,
+    temProcessoDisponivel: !!processoInscrito || (processosDisponiveis?.length || 0) > 0
+  };
+};
+
+/**
+ * Hook principal para o candidato do processo seletivo.
+ * Gerencia todo o estado e operações do candidato.
+ * @param formularioId - ID do formulário específico (opcional). Se não fornecido, busca automaticamente.
+ */
+export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, userName: string, turma: string | null, formularioId?: string) => {
+  const queryClient = useQueryClient();
+
+  // Buscar formulário ativo (pelo ID específico ou automaticamente)
+  const { data: formulario, isLoading: isLoadingFormulario } = useQuery({
+    queryKey: ['ps-formulario-candidato', userEmail, formularioId],
+    queryFn: async (): Promise<FormularioCompleto | null> => {
+      let formData = null;
+
+      // Se foi passado um ID específico, buscar esse formulário
+      if (formularioId) {
+        const { data: formEspecifico, error: formError } = await supabase
           .from('ps_formularios')
           .select('*')
+          .eq('id', formularioId)
           .eq('ativo', true)
-          .eq('inscricoes_abertas', true)
-          .order('criado_em', { ascending: false })
-          .limit(1)
           .single();
 
-        if (formError || !formAberto) {
-          console.log('Nenhum formulário ativo com inscrições abertas encontrado');
+        if (formError || !formEspecifico) {
+          console.log('Formulário específico não encontrado ou inativo');
           return null;
         }
-        formData = formAberto;
+        formData = formEspecifico;
+      } else {
+        // Comportamento padrão: verificar se o usuário já é candidato de algum formulário ativo
+        // Isso permite que candidatos existentes vejam o formulário mesmo com inscricoes_abertas = false
+        if (userEmail) {
+          const { data: candidatoExistente } = await supabase
+            .from('ps_candidatos')
+            .select('formulario_id, ps_formularios!inner(*)')
+            .eq('email_aluno', userEmail)
+            .eq('ps_formularios.ativo', true)
+            .order('data_inscricao', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (candidatoExistente?.ps_formularios) {
+            formData = candidatoExistente.ps_formularios as any;
+          }
+        }
+
+        // Se não é candidato existente, buscar formulário com inscrições abertas
+        if (!formData) {
+          const { data: formAberto, error: formError } = await supabase
+            .from('ps_formularios')
+            .select('*')
+            .eq('ativo', true)
+            .eq('inscricoes_abertas', true)
+            .order('criado_em', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (formError || !formAberto) {
+            console.log('Nenhum formulário ativo com inscrições abertas encontrado');
+            return null;
+          }
+          formData = formAberto;
+        }
       }
 
       // Buscar seções do formulário

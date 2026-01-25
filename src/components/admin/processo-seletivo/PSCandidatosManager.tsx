@@ -39,7 +39,7 @@ import {
   Trash2,
   MoreVertical
 } from 'lucide-react';
-import { useProcessoSeletivoAdmin } from '@/hooks/useProcessoSeletivoAdmin';
+import { useProcessoSeletivoAdminComContexto } from '@/contexts/ProcessoSeletivoAdminContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Candidato, CandidatoStatus, Resposta } from '@/hooks/useProcessoSeletivo';
 import { PSRespostasViewer } from './PSRespostasViewer';
@@ -67,7 +67,7 @@ export const PSCandidatosManager: React.FC = () => {
     liberarEtapaFinalTodos,
     excluirCandidato,
     buscarRespostasCandidato
-  } = useProcessoSeletivoAdmin();
+  } = useProcessoSeletivoAdminComContexto();
 
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<CandidatoStatus | 'todos'>('todos');

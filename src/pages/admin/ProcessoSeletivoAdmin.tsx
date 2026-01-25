@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,9 @@ import { PSCandidatosManager } from "@/components/admin/processo-seletivo/PSCand
 import { PSComunicadoForm } from "@/components/admin/processo-seletivo/PSComunicadoForm";
 import { PSEtapaFinalConfig } from "@/components/admin/processo-seletivo/PSEtapaFinalConfig";
 import { PSResultadosManager } from "@/components/admin/processo-seletivo/PSResultadosManager";
+import { PSProcessoSelector } from "@/components/admin/processo-seletivo/PSProcessoSelector";
 import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
+import { ProcessoSeletivoAdminProvider, useProcessoSeletivoAdminContext } from "@/contexts/ProcessoSeletivoAdminContext";
 
 interface AlunoElegivel {
   id: string;
@@ -39,17 +41,71 @@ interface AlunoParticipou {
   turma: string | null;
 }
 
-const ProcessoSeletivoAdmin = () => {
+// Conteúdo interno que usa o contexto
+const ProcessoSeletivoAdminContent = () => {
   const hoje = new Date();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("gerenciar");
   const [activeSection, setActiveSection] = useState("candidatos");
 
+  // Usar o contexto para gerenciar o ID do processo selecionado
+  const { processoSelecionadoId, setProcessoSelecionadoId } = useProcessoSeletivoAdminContext();
+
   const {
+    formularios,
     formularioAtivo,
-    estatisticas
-  } = useProcessoSeletivoAdmin();
+    formularioIdEfetivo,
+    estatisticas,
+    isLoadingFormularios,
+    criarFormularioAsync,
+    arquivarFormulario,
+    desarquivarFormulario,
+    isSalvandoFormulario,
+    isArquivandoFormulario
+  } = useProcessoSeletivoAdmin(processoSelecionadoId);
+
+  // Sincronizar o ID selecionado com o ID efetivo do hook
+  useEffect(() => {
+    if (formularioIdEfetivo && !processoSelecionadoId) {
+      setProcessoSelecionadoId(formularioIdEfetivo);
+    }
+  }, [formularioIdEfetivo, processoSelecionadoId, setProcessoSelecionadoId]);
+
+  // Buscar contagem de candidatos por formulário
+  const { data: candidatosPorFormulario = {} } = useQuery({
+    queryKey: ['ps-candidatos-por-formulario'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ps_candidatos')
+        .select('formulario_id');
+
+      if (error) {
+        console.error('Erro ao buscar candidatos:', error);
+        return {};
+      }
+
+      // Contar candidatos por formulário
+      const contagem: Record<string, number> = {};
+      (data || []).forEach(c => {
+        contagem[c.formulario_id] = (contagem[c.formulario_id] || 0) + 1;
+      });
+      return contagem;
+    },
+    staleTime: 30 * 1000
+  });
+
+  const handleCriarFormulario = async (titulo: string, descricao?: string) => {
+    const resultado = await criarFormularioAsync({
+      titulo,
+      descricao,
+      ativo: true
+    });
+    if (resultado?.id) {
+      setProcessoSelecionadoId(resultado.id);
+    }
+    return resultado;
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -155,12 +211,21 @@ const ProcessoSeletivoAdmin = () => {
           {/* Título */}
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">Processo Seletivo</h1>
-            {formularioAtivo && (
-              <Badge variant="outline" className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                {formularioAtivo.titulo}
-              </Badge>
-            )}
+          </div>
+
+          {/* Seletor de Processo */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <PSProcessoSelector
+              formularios={formularios || []}
+              formularioSelecionadoId={processoSelecionadoId}
+              onSelectFormulario={setProcessoSelecionadoId}
+              onCriarFormulario={handleCriarFormulario}
+              onArquivarFormulario={arquivarFormulario}
+              onDesarquivarFormulario={desarquivarFormulario}
+              isLoading={isLoadingFormularios}
+              isCriando={isSalvandoFormulario}
+              candidatosPorFormulario={candidatosPorFormulario}
+            />
           </div>
 
           {/* Tabs Principais */}
@@ -318,6 +383,15 @@ const ProcessoSeletivoAdmin = () => {
         </div>
       </main>
     </div>
+  );
+};
+
+// Componente wrapper que fornece o contexto
+const ProcessoSeletivoAdmin = () => {
+  return (
+    <ProcessoSeletivoAdminProvider>
+      <ProcessoSeletivoAdminContent />
+    </ProcessoSeletivoAdminProvider>
   );
 };
 

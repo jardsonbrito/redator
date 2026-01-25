@@ -14,7 +14,7 @@ import {
   Settings,
   List
 } from 'lucide-react';
-import { useProcessoSeletivoAdmin } from '@/hooks/useProcessoSeletivoAdmin';
+import { useProcessoSeletivoAdminComContexto } from '@/contexts/ProcessoSeletivoAdminContext';
 import { SecaoComPerguntas, Pergunta, TipoPergunta } from '@/hooks/useProcessoSeletivo';
 import { PSPerguntaEditor } from './PSPerguntaEditor';
 import {
@@ -39,7 +39,7 @@ export const PSFormBuilder: React.FC = () => {
     isSalvandoFormulario,
     toggleInscricoes,
     isToggleInscricoes
-  } = useProcessoSeletivoAdmin();
+  } = useProcessoSeletivoAdminComContexto();
 
   const [activeSection, setActiveSection] = useState<string>('config');
   const [showNovoFormulario, setShowNovoFormulario] = useState(false);

@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Save, Calendar, Clock, Search, Trash2, Edit } from 'lucide-react';
-import { useProcessoSeletivoAdmin } from '@/hooks/useProcessoSeletivoAdmin';
+import { useProcessoSeletivoAdminComContexto } from '@/contexts/ProcessoSeletivoAdminContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -39,7 +39,7 @@ export const PSEtapaFinalConfig: React.FC = () => {
     excluirEtapaFinal,
     isSalvandoEtapaFinal,
     isExcluindoEtapaFinal
-  } = useProcessoSeletivoAdmin();
+  } = useProcessoSeletivoAdminComContexto();
 
   const [form, setForm] = useState({
     tema_id: '',

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { MessageSquare, Save, Link, ExternalLink } from 'lucide-react';
-import { useProcessoSeletivoAdmin } from '@/hooks/useProcessoSeletivoAdmin';
+import { useProcessoSeletivoAdminComContexto } from '@/contexts/ProcessoSeletivoAdminContext';
 
 export const PSComunicadoForm: React.FC = () => {
   const {
@@ -14,7 +14,7 @@ export const PSComunicadoForm: React.FC = () => {
     isLoadingComunicado,
     salvarComunicado,
     isSalvandoComunicado
-  } = useProcessoSeletivoAdmin();
+  } = useProcessoSeletivoAdminComContexto();
 
   const [form, setForm] = useState({
     titulo: '',

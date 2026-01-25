@@ -1,11 +1,12 @@
-import React from 'react';
-import { useProcessoSeletivoCandidato, CandidatoStatus } from '@/hooks/useProcessoSeletivo';
+import React, { useState } from 'react';
+import { useProcessoSeletivoCandidato, useProcessosSeletivosDisponiveis, CandidatoStatus } from '@/hooks/useProcessoSeletivo';
 import { PSFormulario } from './PSFormulario';
 import { PSAguardandoAnalise } from './PSAguardandoAnalise';
 import { PSComunicado } from './PSComunicado';
 import { PSReprovado } from './PSReprovado';
 import { PSRedacao } from './PSRedacao';
 import { PSConcluido } from './PSConcluido';
+import { PSListaProcessos } from './PSListaProcessos';
 import { Loader2 } from 'lucide-react';
 
 interface PSContainerProps {
@@ -18,6 +19,7 @@ interface PSContainerProps {
 /**
  * Container principal do Processo Seletivo para o aluno.
  * Renderiza a tela apropriada baseada no status do candidato.
+ * Suporta múltiplos processos seletivos simultâneos.
  */
 export const PSContainer: React.FC<PSContainerProps> = ({
   userEmail,
@@ -25,6 +27,22 @@ export const PSContainer: React.FC<PSContainerProps> = ({
   userName,
   turma
 }) => {
+  // Estado para armazenar o processo selecionado quando há múltiplos
+  const [processoSelecionadoId, setProcessoSelecionadoId] = useState<string | undefined>(undefined);
+
+  // Verificar se há múltiplos processos disponíveis
+  const {
+    processosDisponiveis,
+    processoInscrito,
+    isLoading: isLoadingProcessos,
+    temMultiplosProcessos
+  } = useProcessosSeletivosDisponiveis(userEmail);
+
+  // Determinar qual ID de formulário usar
+  // Prioridade: 1) Processo onde já está inscrito, 2) Processo selecionado, 3) Único processo disponível
+  const formularioIdEfetivo = processoInscrito?.id || processoSelecionadoId ||
+    (processosDisponiveis.length === 1 ? processosDisponiveis[0]?.id : undefined);
+
   const {
     formulario,
     candidato,
@@ -41,9 +59,29 @@ export const PSContainer: React.FC<PSContainerProps> = ({
     isEnviandoFormulario,
     isEnviandoRedacao,
     verificarJanelaEtapaFinal
-  } = useProcessoSeletivoCandidato(userEmail, userId, userName, turma);
+  } = useProcessoSeletivoCandidato(userEmail, userId, userName, turma, formularioIdEfetivo);
 
-  // Loading state
+  // Loading inicial para verificar processos
+  if (isLoadingProcessos) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Carregando processos seletivos...</p>
+      </div>
+    );
+  }
+
+  // Se há múltiplos processos e o usuário ainda não está inscrito em nenhum e não selecionou um
+  if (temMultiplosProcessos && !processoSelecionadoId) {
+    return (
+      <PSListaProcessos
+        processos={processosDisponiveis}
+        onSelectProcesso={setProcessoSelecionadoId}
+      />
+    );
+  }
+
+  // Loading state do formulário específico
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">

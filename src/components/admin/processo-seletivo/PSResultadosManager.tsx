@@ -42,7 +42,8 @@ import {
   Medal,
   Edit2
 } from 'lucide-react';
-import { useProcessoSeletivoAdmin, RankingCandidato } from '@/hooks/useProcessoSeletivoAdmin';
+import { RankingCandidato } from '@/hooks/useProcessoSeletivoAdmin';
+import { useProcessoSeletivoAdminComContexto } from '@/contexts/ProcessoSeletivoAdminContext';
 import { BolsaConfig, Candidato } from '@/hooks/useProcessoSeletivo';
 import { cn } from '@/lib/utils';
 
@@ -62,7 +63,7 @@ export const PSResultadosManager: React.FC = () => {
     isSalvandoResultado,
     isPublicandoResultados,
     isRecalculandoClassificacoes
-  } = useProcessoSeletivoAdmin();
+  } = useProcessoSeletivoAdminComContexto();
 
   // Estado para configuração de bolsas
   const [bolsas, setBolsas] = useState<BolsaConfig[]>([]);

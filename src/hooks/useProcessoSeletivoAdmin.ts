@@ -83,8 +83,9 @@ export interface EtapaFinalInput {
 
 /**
  * Hook principal para administração do processo seletivo.
+ * @param formularioId - ID do formulário a ser gerenciado. Se não fornecido, usa o primeiro da lista.
  */
-export const useProcessoSeletivoAdmin = () => {
+export const useProcessoSeletivoAdmin = (formularioId?: string) => {
   const queryClient = useQueryClient();
 
   // ============================================
@@ -110,16 +111,19 @@ export const useProcessoSeletivoAdmin = () => {
     staleTime: 30 * 1000
   });
 
-  // Buscar formulário ativo com estrutura completa
+  // Determinar qual formulário usar (passado como parâmetro ou primeiro da lista)
+  const formularioIdEfetivo = formularioId || formularios?.[0]?.id;
+
+  // Buscar formulário selecionado com estrutura completa
   const { data: formularioAtivo, isLoading: isLoadingFormularioAtivo } = useQuery({
-    queryKey: ['ps-admin-formulario-ativo'],
+    queryKey: ['ps-admin-formulario-selecionado', formularioIdEfetivo],
     queryFn: async (): Promise<FormularioCompleto | null> => {
+      if (!formularioIdEfetivo) return null;
+
       const { data: formData, error: formError } = await supabase
         .from('ps_formularios')
         .select('*')
-        .eq('ativo', true)
-        .order('criado_em', { ascending: false })
-        .limit(1)
+        .eq('id', formularioIdEfetivo)
         .single();
 
       if (formError || !formData) {
@@ -151,6 +155,7 @@ export const useProcessoSeletivoAdmin = () => {
 
       return { ...formData, secoes: secoesComPerguntas };
     },
+    enabled: !!formularioIdEfetivo,
     staleTime: 30 * 1000
   });
 
@@ -305,13 +310,7 @@ export const useProcessoSeletivoAdmin = () => {
 
   const criarFormularioMutation = useMutation({
     mutationFn: async (input: FormularioInput) => {
-      // Desativar outros formulários se este for ativo
-      if (input.ativo) {
-        await supabase
-          .from('ps_formularios')
-          .update({ ativo: false })
-          .eq('ativo', true);
-      }
+      // NÃO desativar outros formulários automaticamente - múltiplos processos podem coexistir
 
       const { data, error } = await supabase
         .from('ps_formularios')
@@ -326,10 +325,11 @@ export const useProcessoSeletivoAdmin = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success('Formulário criado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['ps-admin-formularios'] });
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
+      return data;
     },
     onError: () => {
       toast.error('Erro ao criar formulário');
@@ -338,12 +338,7 @@ export const useProcessoSeletivoAdmin = () => {
 
   const atualizarFormularioMutation = useMutation({
     mutationFn: async ({ id, ...input }: FormularioInput & { id: string }) => {
-      if (input.ativo) {
-        await supabase
-          .from('ps_formularios')
-          .update({ ativo: false })
-          .neq('id', id);
-      }
+      // NÃO desativar outros formulários automaticamente - múltiplos processos podem coexistir
 
       const { data, error } = await supabase
         .from('ps_formularios')
@@ -358,7 +353,7 @@ export const useProcessoSeletivoAdmin = () => {
     onSuccess: () => {
       toast.success('Formulário atualizado!');
       queryClient.invalidateQueries({ queryKey: ['ps-admin-formularios'] });
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
     },
     onError: () => {
       toast.error('Erro ao atualizar formulário');
@@ -398,7 +393,7 @@ export const useProcessoSeletivoAdmin = () => {
     },
     onSuccess: () => {
       toast.success('Seção criada!');
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
     },
     onError: () => {
       toast.error('Erro ao criar seção');
@@ -419,7 +414,7 @@ export const useProcessoSeletivoAdmin = () => {
     },
     onSuccess: () => {
       toast.success('Seção atualizada!');
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
     },
     onError: () => {
       toast.error('Erro ao atualizar seção');
@@ -437,7 +432,7 @@ export const useProcessoSeletivoAdmin = () => {
     },
     onSuccess: () => {
       toast.success('Seção excluída!');
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
     },
     onError: () => {
       toast.error('Erro ao excluir seção');
@@ -479,7 +474,7 @@ export const useProcessoSeletivoAdmin = () => {
     },
     onSuccess: () => {
       toast.success('Pergunta criada!');
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
     },
     onError: () => {
       toast.error('Erro ao criar pergunta');
@@ -500,7 +495,7 @@ export const useProcessoSeletivoAdmin = () => {
     },
     onSuccess: () => {
       toast.success('Pergunta atualizada!');
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
     },
     onError: () => {
       toast.error('Erro ao atualizar pergunta');
@@ -518,7 +513,7 @@ export const useProcessoSeletivoAdmin = () => {
     },
     onSuccess: () => {
       toast.success('Pergunta excluída!');
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
     },
     onError: () => {
       toast.error('Erro ao excluir pergunta');
@@ -995,11 +990,84 @@ export const useProcessoSeletivoAdmin = () => {
     },
     onSuccess: (_, inscricoesAbertas) => {
       toast.success(inscricoesAbertas ? 'Inscrições abertas!' : 'Inscrições encerradas!');
-      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
       queryClient.invalidateQueries({ queryKey: ['ps-formulario-ativo'] });
     },
     onError: () => {
       toast.error('Erro ao alterar status das inscrições');
+    }
+  });
+
+  // Mutation para arquivar/excluir formulário
+  const arquivarFormularioMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Verificar se há candidatos associados
+      const { data: candidatosAssociados } = await supabase
+        .from('ps_candidatos')
+        .select('id')
+        .eq('formulario_id', id)
+        .limit(1);
+
+      if (candidatosAssociados && candidatosAssociados.length > 0) {
+        // Se há candidatos, apenas desativa (arquiva)
+        const { error } = await supabase
+          .from('ps_formularios')
+          .update({ ativo: false })
+          .eq('id', id);
+
+        if (error) throw error;
+        return { tipo: 'arquivado' };
+      } else {
+        // Se não há candidatos, pode excluir
+        // Primeiro excluir seções e perguntas
+        const { data: secoes } = await supabase
+          .from('ps_secoes')
+          .select('id')
+          .eq('formulario_id', id);
+
+        if (secoes) {
+          for (const secao of secoes) {
+            await supabase.from('ps_perguntas').delete().eq('secao_id', secao.id);
+          }
+          await supabase.from('ps_secoes').delete().eq('formulario_id', id);
+        }
+
+        const { error } = await supabase
+          .from('ps_formularios')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        return { tipo: 'excluido' };
+      }
+    },
+    onSuccess: (result) => {
+      toast.success(result.tipo === 'arquivado' ? 'Processo arquivado!' : 'Processo excluído!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formularios'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
+    },
+    onError: () => {
+      toast.error('Erro ao arquivar/excluir processo');
+    }
+  });
+
+  // Mutation para desarquivar (ativar) formulário
+  const desarquivarFormularioMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('ps_formularios')
+        .update({ ativo: true })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Processo reativado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formularios'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
+    },
+    onError: () => {
+      toast.error('Erro ao reativar processo');
     }
   });
 
@@ -1020,6 +1088,7 @@ export const useProcessoSeletivoAdmin = () => {
     // Dados
     formularios,
     formularioAtivo,
+    formularioIdEfetivo,
     candidatos,
     comunicado,
     etapaFinal,
@@ -1040,8 +1109,13 @@ export const useProcessoSeletivoAdmin = () => {
 
     // Ações - Formulário
     criarFormulario: criarFormularioMutation.mutate,
+    criarFormularioAsync: criarFormularioMutation.mutateAsync,
     atualizarFormulario: atualizarFormularioMutation.mutate,
+    arquivarFormulario: arquivarFormularioMutation.mutate,
+    desarquivarFormulario: desarquivarFormularioMutation.mutate,
     isSalvandoFormulario: criarFormularioMutation.isPending || atualizarFormularioMutation.isPending,
+    isArquivandoFormulario: arquivarFormularioMutation.isPending,
+    isDesarquivandoFormulario: desarquivarFormularioMutation.isPending,
 
     // Ações - Seções
     criarSecao: criarSecaoMutation.mutate,
