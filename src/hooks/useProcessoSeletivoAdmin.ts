@@ -12,8 +12,31 @@ import {
   TipoPergunta,
   SecaoComPerguntas,
   FormularioCompleto,
-  Resposta
+  Resposta,
+  ResultadoConfig,
+  BolsaConfig
 } from './useProcessoSeletivo';
+
+export interface RankingCandidato {
+  candidato_id: string;
+  nome_aluno: string;
+  email_aluno: string;
+  nota_total: number;
+  classificacao: number;
+}
+
+export interface ResultadoConfigInput {
+  bolsas: BolsaConfig[];
+  resultado_publicado?: boolean;
+}
+
+export interface AtualizarCandidatoResultadoInput {
+  candidatoId: string;
+  mensagem?: string;
+  bolsa?: string;
+  percentual?: number;
+  classificacao?: number;
+}
 
 export interface CandidatoComRespostas extends Candidato {
   respostas?: Resposta[];
@@ -229,6 +252,50 @@ export const useProcessoSeletivoAdmin = () => {
       }));
     },
     enabled: !!etapaFinal?.id,
+    staleTime: 30 * 1000
+  });
+
+  // Buscar configuração de resultado
+  const { data: resultadoConfig, isLoading: isLoadingResultadoConfig } = useQuery({
+    queryKey: ['ps-admin-resultado-config', formularioAtivo?.id],
+    queryFn: async (): Promise<ResultadoConfig | null> => {
+      if (!formularioAtivo?.id) return null;
+
+      const { data, error } = await supabase
+        .from('ps_resultado_config')
+        .select('*')
+        .eq('formulario_id', formularioAtivo.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar configuração de resultado:', error);
+        return null;
+      }
+
+      return data as ResultadoConfig;
+    },
+    enabled: !!formularioAtivo?.id,
+    staleTime: 30 * 1000
+  });
+
+  // Buscar ranking calculado
+  const { data: ranking, isLoading: isLoadingRanking, refetch: refetchRanking } = useQuery({
+    queryKey: ['ps-admin-ranking', formularioAtivo?.id],
+    queryFn: async (): Promise<RankingCandidato[]> => {
+      if (!formularioAtivo?.id) return [];
+
+      const { data, error } = await supabase.rpc('calcular_ranking_processo_seletivo', {
+        p_formulario_id: formularioAtivo.id
+      });
+
+      if (error) {
+        console.error('Erro ao calcular ranking:', error);
+        return [];
+      }
+
+      return (data || []) as RankingCandidato[];
+    },
+    enabled: !!formularioAtivo?.id,
     staleTime: 30 * 1000
   });
 
@@ -771,6 +838,172 @@ export const useProcessoSeletivoAdmin = () => {
   });
 
   // ============================================
+  // MUTATIONS - RESULTADO
+  // ============================================
+
+  const salvarConfigResultadoMutation = useMutation({
+    mutationFn: async (input: ResultadoConfigInput) => {
+      if (!formularioAtivo?.id) throw new Error('Nenhum formulário ativo');
+
+      // Verificar se já existe configuração
+      const { data: existing } = await supabase
+        .from('ps_resultado_config')
+        .select('id')
+        .eq('formulario_id', formularioAtivo.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Atualizar
+        const { error } = await supabase
+          .from('ps_resultado_config')
+          .update({
+            bolsas: input.bolsas,
+            resultado_publicado: input.resultado_publicado ?? false
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Criar
+        const { error } = await supabase
+          .from('ps_resultado_config')
+          .insert({
+            formulario_id: formularioAtivo.id,
+            bolsas: input.bolsas,
+            resultado_publicado: input.resultado_publicado ?? false
+          });
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success('Configuração de bolsas salva!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-resultado-config'] });
+    },
+    onError: () => {
+      toast.error('Erro ao salvar configuração');
+    }
+  });
+
+  const atualizarCandidatoResultadoMutation = useMutation({
+    mutationFn: async (input: AtualizarCandidatoResultadoInput) => {
+      const { error } = await supabase
+        .from('ps_candidatos')
+        .update({
+          mensagem_resultado: input.mensagem,
+          bolsa_conquistada: input.bolsa,
+          percentual_bolsa: input.percentual,
+          classificacao: input.classificacao
+        })
+        .eq('id', input.candidatoId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Candidato atualizado!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-candidatos'] });
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar candidato');
+    }
+  });
+
+  const togglePublicacaoResultadosMutation = useMutation({
+    mutationFn: async (publicar: boolean) => {
+      if (!formularioAtivo?.id) throw new Error('Nenhum formulário ativo');
+
+      // Verificar se já existe configuração
+      const { data: existing } = await supabase
+        .from('ps_resultado_config')
+        .select('id')
+        .eq('formulario_id', formularioAtivo.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('ps_resultado_config')
+          .update({
+            resultado_publicado: publicar,
+            data_publicacao: publicar ? new Date().toISOString() : null
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Criar configuração se não existir
+        const { error } = await supabase
+          .from('ps_resultado_config')
+          .insert({
+            formulario_id: formularioAtivo.id,
+            bolsas: [],
+            resultado_publicado: publicar,
+            data_publicacao: publicar ? new Date().toISOString() : null
+          });
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_, publicar) => {
+      toast.success(publicar ? 'Resultados publicados!' : 'Resultados ocultados');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-resultado-config'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-resultado-config'] });
+    },
+    onError: () => {
+      toast.error('Erro ao alterar publicação');
+    }
+  });
+
+  const recalcularClassificacoesMutation = useMutation({
+    mutationFn: async () => {
+      if (!formularioAtivo?.id) throw new Error('Nenhum formulário ativo');
+
+      // Buscar ranking atualizado
+      const { data: rankingData, error: rankingError } = await supabase.rpc('calcular_ranking_processo_seletivo', {
+        p_formulario_id: formularioAtivo.id
+      });
+
+      if (rankingError) throw rankingError;
+
+      // Atualizar classificação de cada candidato
+      for (const item of (rankingData || []) as RankingCandidato[]) {
+        await supabase
+          .from('ps_candidatos')
+          .update({ classificacao: item.classificacao })
+          .eq('id', item.candidato_id);
+      }
+    },
+    onSuccess: () => {
+      toast.success('Classificações atualizadas!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-candidatos'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-ranking'] });
+    },
+    onError: () => {
+      toast.error('Erro ao recalcular classificações');
+    }
+  });
+
+  const toggleInscricoesMutation = useMutation({
+    mutationFn: async (inscricoesAbertas: boolean) => {
+      if (!formularioAtivo?.id) throw new Error('Nenhum formulário ativo');
+
+      const { error } = await supabase
+        .from('ps_formularios')
+        .update({ inscricoes_abertas: inscricoesAbertas })
+        .eq('id', formularioAtivo.id);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, inscricoesAbertas) => {
+      toast.success(inscricoesAbertas ? 'Inscrições abertas!' : 'Inscrições encerradas!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-ativo'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-formulario-ativo'] });
+    },
+    onError: () => {
+      toast.error('Erro ao alterar status das inscrições');
+    }
+  });
+
+  // ============================================
   // ESTATÍSTICAS
   // ============================================
 
@@ -792,6 +1025,8 @@ export const useProcessoSeletivoAdmin = () => {
     etapaFinal,
     redacoes,
     estatisticas,
+    resultadoConfig,
+    ranking,
 
     // Estados de loading
     isLoadingFormularios,
@@ -800,6 +1035,8 @@ export const useProcessoSeletivoAdmin = () => {
     isLoadingComunicado,
     isLoadingEtapaFinal,
     isLoadingRedacoes,
+    isLoadingResultadoConfig,
+    isLoadingRanking,
 
     // Ações - Formulário
     criarFormulario: criarFormularioMutation.mutate,
@@ -832,6 +1069,20 @@ export const useProcessoSeletivoAdmin = () => {
     salvarEtapaFinal: salvarEtapaFinalMutation.mutate,
     excluirEtapaFinal: excluirEtapaFinalMutation.mutate,
     isSalvandoEtapaFinal: salvarEtapaFinalMutation.isPending,
-    isExcluindoEtapaFinal: excluirEtapaFinalMutation.isPending
+    isExcluindoEtapaFinal: excluirEtapaFinalMutation.isPending,
+
+    // Ações - Resultado
+    salvarConfigResultado: salvarConfigResultadoMutation.mutate,
+    atualizarCandidatoResultado: atualizarCandidatoResultadoMutation.mutate,
+    togglePublicacaoResultados: togglePublicacaoResultadosMutation.mutate,
+    recalcularClassificacoes: recalcularClassificacoesMutation.mutate,
+    refetchRanking,
+    isSalvandoResultado: salvarConfigResultadoMutation.isPending,
+    isPublicandoResultados: togglePublicacaoResultadosMutation.isPending,
+    isRecalculandoClassificacoes: recalcularClassificacoesMutation.isPending,
+
+    // Ações - Inscrições
+    toggleInscricoes: toggleInscricoesMutation.mutate,
+    isToggleInscricoes: toggleInscricoesMutation.isPending
   };
 };

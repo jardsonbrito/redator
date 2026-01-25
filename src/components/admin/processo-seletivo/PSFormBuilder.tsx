@@ -36,7 +36,9 @@ export const PSFormBuilder: React.FC = () => {
     criarPergunta,
     atualizarPergunta,
     excluirPergunta,
-    isSalvandoFormulario
+    isSalvandoFormulario,
+    toggleInscricoes,
+    isToggleInscricoes
   } = useProcessoSeletivoAdmin();
 
   const [activeSection, setActiveSection] = useState<string>('config');
@@ -221,19 +223,41 @@ export const PSFormBuilder: React.FC = () => {
                 <FileText className="h-5 w-5" />
                 <h3 className="font-semibold">{formularioAtivo.titulo}</h3>
               </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={formularioAtivo.ativo}
-                  onCheckedChange={(ativo) =>
-                    atualizarFormulario({ id: formularioAtivo.id, titulo: formularioAtivo.titulo, ativo })
-                  }
-                />
-                <span className="text-sm text-muted-foreground">Ativo</span>
+              <div className="flex items-center gap-4">
+                {/* Toggle de Inscrições */}
+                <div className="flex items-center gap-2 pr-4 border-r border-gray-200">
+                  <Switch
+                    checked={formularioAtivo.inscricoes_abertas}
+                    onCheckedChange={(inscricoesAbertas) => toggleInscricoes(inscricoesAbertas)}
+                    disabled={isToggleInscricoes}
+                  />
+                  <span className={cn(
+                    "text-sm font-medium",
+                    formularioAtivo.inscricoes_abertas ? "text-green-600" : "text-orange-600"
+                  )}>
+                    {formularioAtivo.inscricoes_abertas ? 'Inscrições Abertas' : 'Inscrições Fechadas'}
+                  </span>
+                </div>
+                {/* Toggle Ativo */}
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formularioAtivo.ativo}
+                    onCheckedChange={(ativo) =>
+                      atualizarFormulario({ id: formularioAtivo.id, titulo: formularioAtivo.titulo, ativo })
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">Ativo</span>
+                </div>
               </div>
             </div>
             {formularioAtivo.descricao && (
               <p className="text-muted-foreground text-sm">{formularioAtivo.descricao}</p>
             )}
+            {/* Explicação dos toggles */}
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+              <p><strong>Inscrições:</strong> Controla se novos candidatos podem se inscrever. Candidatos já inscritos continuam tendo acesso mesmo com inscrições fechadas.</p>
+              <p className="mt-1"><strong>Ativo:</strong> Controle geral do formulário. Se desativado, o processo seletivo não aparece para ninguém.</p>
+            </div>
           </div>
 
           {/* Resumo das Seções */}

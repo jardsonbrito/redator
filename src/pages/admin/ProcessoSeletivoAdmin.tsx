@@ -10,7 +10,8 @@ import {
   Users,
   UserCheck,
   Trophy,
-  MessageSquare
+  MessageSquare,
+  Award
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProcessoSeletivoAdmin } from "@/hooks/useProcessoSeletivoAdmin";
@@ -18,6 +19,7 @@ import { PSFormBuilder } from "@/components/admin/processo-seletivo/PSFormBuilde
 import { PSCandidatosManager } from "@/components/admin/processo-seletivo/PSCandidatosManager";
 import { PSComunicadoForm } from "@/components/admin/processo-seletivo/PSComunicadoForm";
 import { PSEtapaFinalConfig } from "@/components/admin/processo-seletivo/PSEtapaFinalConfig";
+import { PSResultadosManager } from "@/components/admin/processo-seletivo/PSResultadosManager";
 import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
 
 interface AlunoElegivel {
@@ -115,6 +117,7 @@ const ProcessoSeletivoAdmin = () => {
     { id: 'candidatos', label: 'Candidatos', icon: Users, badge: estatisticas.aguardandoAnalise },
     { id: 'comunicado', label: 'Comunicado', icon: MessageSquare },
     { id: 'etapa-final', label: 'Etapa Final', icon: Trophy },
+    { id: 'resultados', label: 'Resultados', icon: Award },
     { id: 'elegiveis', label: 'Elegíveis', icon: UserCheck },
   ];
 
@@ -205,6 +208,7 @@ const ProcessoSeletivoAdmin = () => {
               {activeSection === 'candidatos' && <PSCandidatosManager />}
               {activeSection === 'comunicado' && <PSComunicadoForm />}
               {activeSection === 'etapa-final' && <PSEtapaFinalConfig />}
+              {activeSection === 'resultados' && <PSResultadosManager />}
               {activeSection === 'elegiveis' && (
                 <div className="space-y-6">
                   {/* Alunos Elegíveis */}

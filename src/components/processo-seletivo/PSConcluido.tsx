@@ -2,8 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Trophy, FileText, Calendar, Star, X, AlertTriangle, RotateCcw } from 'lucide-react';
-import { Candidato, PSRedacao } from '@/hooks/useProcessoSeletivo';
+import { CheckCircle2, Trophy, FileText, Calendar, Star, X, AlertTriangle, RotateCcw, Award, Medal, MessageSquare } from 'lucide-react';
+import { Candidato, PSRedacao, ResultadoConfig } from '@/hooks/useProcessoSeletivo';
 import { useCancelRedacao } from '@/hooks/useCancelRedacao';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,11 +23,13 @@ import {
 interface PSConcluidoProps {
   candidato: Candidato;
   redacao?: any | null; // Usando any pois agora vem de redacoes_enviadas
+  resultadoConfig?: ResultadoConfig | null;
 }
 
 export const PSConcluido: React.FC<PSConcluidoProps> = ({
   candidato,
-  redacao
+  redacao,
+  resultadoConfig
 }) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -214,6 +216,89 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Card de Resultado (quando publicado) */}
+      {resultadoConfig?.resultado_publicado && candidato.classificacao && (
+        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-green-200/30 rounded-full -translate-y-1/2 translate-x-1/2" />
+
+          <CardHeader className="text-center relative">
+            <div className="flex justify-center mb-2">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                <Award className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-xl text-green-800">
+              Resultado do Processo Seletivo
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-4 relative">
+            {/* Classificação */}
+            <div className="text-center py-4">
+              <div className="inline-flex items-center gap-2 bg-white rounded-full px-6 py-3 shadow-md">
+                <Trophy className={`h-6 w-6 ${
+                  candidato.classificacao === 1 ? 'text-yellow-500' :
+                  candidato.classificacao === 2 ? 'text-gray-400' :
+                  candidato.classificacao === 3 ? 'text-orange-400' : 'text-green-600'
+                }`} />
+                <span className="text-4xl font-bold text-green-800">
+                  {candidato.classificacao}º
+                </span>
+                <span className="text-green-600 font-medium">lugar</span>
+              </div>
+            </div>
+
+            {/* Nota */}
+            {redacao?.nota_total !== null && redacao?.nota_total !== undefined && (
+              <div className="text-center">
+                <p className="text-sm text-green-600 mb-1">Nota obtida</p>
+                <Badge variant="secondary" className="text-2xl font-bold px-4 py-2 bg-white text-green-700">
+                  {redacao.nota_total} pontos
+                </Badge>
+              </div>
+            )}
+
+            {/* Bolsa Conquistada */}
+            {candidato.bolsa_conquistada && (
+              <div className="text-center py-3">
+                <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg px-6 py-3 shadow-lg">
+                  <Medal className="h-6 w-6" />
+                  <div className="text-left">
+                    <p className="text-xs opacity-90">Você conquistou</p>
+                    <p className="font-bold text-lg">{candidato.bolsa_conquistada}</p>
+                  </div>
+                  <Badge className="bg-white/20 text-white text-lg">
+                    {candidato.percentual_bolsa}%
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {/* Mensagem Personalizada */}
+            {candidato.mensagem_resultado && (
+              <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
+                <div className="flex items-start gap-3">
+                  <MessageSquare className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800 mb-1">Mensagem para você:</p>
+                    <p className="text-green-700 whitespace-pre-wrap">
+                      {candidato.mensagem_resultado}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Data de publicação */}
+            {resultadoConfig.data_publicacao && (
+              <p className="text-center text-xs text-green-600">
+                Resultado publicado em: {new Date(resultadoConfig.data_publicacao).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Resumo da Redação */}
       {redacao && (

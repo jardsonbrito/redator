@@ -31,9 +31,11 @@ export const PSContainer: React.FC<PSContainerProps> = ({
     comunicado,
     etapaFinal,
     redacao,
+    resultadoConfig,
     isLoading,
     isLoadingComunicado,
     isLoadingEtapaFinal,
+    isLoadingResultado,
     enviarFormulario,
     enviarRedacao,
     isEnviandoFormulario,
@@ -133,6 +135,7 @@ export const PSContainer: React.FC<PSContainerProps> = ({
         <PSConcluido
           candidato={candidato!}
           redacao={redacao}
+          resultadoConfig={resultadoConfig}
         />
       );
 

@@ -24,6 +24,7 @@ export interface Formulario {
   titulo: string;
   descricao: string | null;
   ativo: boolean;
+  inscricoes_abertas: boolean;
   criado_em: string;
 }
 
@@ -59,6 +60,11 @@ export interface Candidato {
   aprovado_por: string | null;
   motivo_reprovacao: string | null;
   data_conclusao: string | null;
+  // Campos de resultado
+  mensagem_resultado: string | null;
+  bolsa_conquistada: string | null;
+  percentual_bolsa: number | null;
+  classificacao: number | null;
 }
 
 export interface Resposta {
@@ -113,6 +119,22 @@ export interface SecaoComPerguntas extends Secao {
 
 export interface FormularioCompleto extends Formulario {
   secoes: SecaoComPerguntas[];
+}
+
+export interface BolsaConfig {
+  nome: string;
+  percentual: number;
+  vagas: number;
+}
+
+export interface ResultadoConfig {
+  id: string;
+  formulario_id: string;
+  bolsas: BolsaConfig[];
+  resultado_publicado: boolean;
+  data_publicacao: string | null;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 interface ProcessoSeletivoInfo {
@@ -177,19 +199,43 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
 
   // Buscar formulário ativo
   const { data: formulario, isLoading: isLoadingFormulario } = useQuery({
-    queryKey: ['ps-formulario-ativo'],
+    queryKey: ['ps-formulario-ativo', userEmail],
     queryFn: async (): Promise<FormularioCompleto | null> => {
-      const { data: formData, error: formError } = await supabase
-        .from('ps_formularios')
-        .select('*')
-        .eq('ativo', true)
-        .order('criado_em', { ascending: false })
-        .limit(1)
-        .single();
+      // Primeiro, verificar se o usuário já é candidato de algum formulário ativo
+      // Isso permite que candidatos existentes vejam o formulário mesmo com inscricoes_abertas = false
+      let formData = null;
 
-      if (formError || !formData) {
-        console.log('Nenhum formulário ativo encontrado');
-        return null;
+      if (userEmail) {
+        const { data: candidatoExistente } = await supabase
+          .from('ps_candidatos')
+          .select('formulario_id, ps_formularios!inner(*)')
+          .eq('email_aluno', userEmail)
+          .eq('ps_formularios.ativo', true)
+          .order('data_inscricao', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (candidatoExistente?.ps_formularios) {
+          formData = candidatoExistente.ps_formularios as any;
+        }
+      }
+
+      // Se não é candidato existente, buscar formulário com inscrições abertas
+      if (!formData) {
+        const { data: formAberto, error: formError } = await supabase
+          .from('ps_formularios')
+          .select('*')
+          .eq('ativo', true)
+          .eq('inscricoes_abertas', true)
+          .order('criado_em', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (formError || !formAberto) {
+          console.log('Nenhum formulário ativo com inscrições abertas encontrado');
+          return null;
+        }
+        formData = formAberto;
       }
 
       // Buscar seções do formulário
@@ -328,6 +374,29 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
       return data;
     },
     enabled: !!candidato?.id && (candidato?.status === 'etapa_final_liberada' || candidato?.status === 'concluido'),
+    staleTime: 30 * 1000
+  });
+
+  // Buscar configuração de resultado (para saber se foi publicado)
+  const { data: resultadoConfig, isLoading: isLoadingResultado } = useQuery({
+    queryKey: ['ps-resultado-config', formulario?.id],
+    queryFn: async (): Promise<ResultadoConfig | null> => {
+      if (!formulario?.id) return null;
+
+      const { data, error } = await supabase
+        .from('ps_resultado_config')
+        .select('*')
+        .eq('formulario_id', formulario.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar configuração de resultado:', error);
+        return null;
+      }
+
+      return data as ResultadoConfig;
+    },
+    enabled: !!formulario?.id && candidato?.status === 'concluido',
     staleTime: 30 * 1000
   });
 
@@ -490,12 +559,14 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
     comunicado,
     etapaFinal,
     redacao,
+    resultadoConfig,
 
     // Estados de loading
     isLoading: isLoadingFormulario || isLoadingCandidato,
     isLoadingComunicado,
     isLoadingEtapaFinal,
     isLoadingRedacao,
+    isLoadingResultado,
 
     // Ações
     enviarFormulario: enviarFormularioMutation.mutate,
