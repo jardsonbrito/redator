@@ -152,15 +152,16 @@ export const useProcessoSeletivo = (userEmail: string) => {
   const { data: subscription, isLoading: isLoadingSubscription } = useSubscription(userEmail);
 
   const { data: participouData, isLoading: isLoadingParticipacao } = useQuery({
-    queryKey: ['processo-seletivo-participacao', userEmail],
+    queryKey: ['processo-seletivo-participacao', userEmail?.toLowerCase()],
     queryFn: async (): Promise<boolean> => {
       if (!userEmail) return false;
 
       try {
+        const emailNormalizado = userEmail.toLowerCase().trim();
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('participou_processo_seletivo')
-          .eq('email', userEmail)
+          .ilike('email', emailNormalizado)
           .single();
 
         if (error) {
@@ -220,14 +221,15 @@ export const useProcessosSeletivosDisponiveis = (userEmail: string) => {
 
   // Buscar processo onde o usuário já está inscrito (mesmo se inscrições fechadas)
   const { data: processoInscrito, isLoading: isLoadingInscrito } = useQuery({
-    queryKey: ['ps-processo-inscrito', userEmail],
+    queryKey: ['ps-processo-inscrito', userEmail?.toLowerCase()],
     queryFn: async (): Promise<Formulario | null> => {
       if (!userEmail) return null;
 
+      const emailNormalizado = userEmail.toLowerCase().trim();
       const { data: candidatoExistente, error } = await supabase
         .from('ps_candidatos')
         .select('formulario_id, ps_formularios!inner(*)')
-        .eq('email_aluno', userEmail)
+        .ilike('email_aluno', emailNormalizado)
         .eq('ps_formularios.ativo', true)
         .order('data_inscricao', { ascending: false })
         .limit(1)
@@ -286,10 +288,11 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
         // Comportamento padrão: verificar se o usuário já é candidato de algum formulário ativo
         // Isso permite que candidatos existentes vejam o formulário mesmo com inscricoes_abertas = false
         if (userEmail) {
+          const emailNorm = userEmail.toLowerCase().trim();
           const { data: candidatoExistente } = await supabase
             .from('ps_candidatos')
             .select('formulario_id, ps_formularios!inner(*)')
-            .eq('email_aluno', userEmail)
+            .ilike('email_aluno', emailNorm)
             .eq('ps_formularios.ativo', true)
             .order('data_inscricao', { ascending: false })
             .limit(1)
@@ -354,14 +357,15 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
 
   // Buscar candidato existente
   const { data: candidato, isLoading: isLoadingCandidato } = useQuery({
-    queryKey: ['ps-candidato', userEmail, formulario?.id],
+    queryKey: ['ps-candidato', userEmail?.toLowerCase(), formulario?.id],
     queryFn: async (): Promise<Candidato | null> => {
       if (!userEmail || !formulario?.id) return null;
 
+      const emailNormalizado = userEmail.toLowerCase().trim();
       const { data, error } = await supabase
         .from('ps_candidatos')
         .select('*')
-        .eq('email_aluno', userEmail)
+        .ilike('email_aluno', emailNormalizado)
         .eq('formulario_id', formulario.id)
         .single();
 
