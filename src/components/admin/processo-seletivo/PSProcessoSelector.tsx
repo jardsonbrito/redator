@@ -184,6 +184,15 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Botão para criar novo processo (sempre visível) */}
+        <Button
+          onClick={() => setShowNovoProcesso(true)}
+          className="bg-[#3F0077] hover:bg-[#662F96]"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Processo
+        </Button>
+
         {/* Status do processo selecionado */}
         {formularioSelecionado && (
           <div className="flex flex-wrap items-center gap-3">
@@ -239,16 +248,6 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
           </div>
         )}
 
-        {/* Botão de criar novo (quando não há processos) */}
-        {formularios.length === 0 && (
-          <Button
-            onClick={() => setShowNovoProcesso(true)}
-            className="bg-[#3F0077] hover:bg-[#662F96]"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Criar Primeiro Processo
-          </Button>
-        )}
       </div>
 
       {/* Modal para criar novo processo */}
