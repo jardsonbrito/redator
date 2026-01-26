@@ -1,6 +1,7 @@
-
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -12,11 +13,54 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { StudentInboxManager } from "@/components/student/StudentInboxManager";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { isAdmin, user } = useAuth();
   const { studentData } = useStudentAuth();
-  const { elegivel: elegivelProcessoSeletivo } = useProcessoSeletivo(studentData.email || '');
+  const {
+    elegivel: elegivelProcessoSeletivo,
+    pendentePreencher,
+    candidatoStatus
+  } = useProcessoSeletivo(studentData.email || '');
+  const navigate = useNavigate();
+
+  // Estado para o popup de formulário pendente
+  const [showPendingPopup, setShowPendingPopup] = useState(false);
+  const [popupDismissed, setPopupDismissed] = useState(false);
+
+  // Mostrar popup para candidatos que precisam preencher o formulário
+  useEffect(() => {
+    if (pendentePreencher && studentData.userType === 'aluno' && !popupDismissed) {
+      // Verificar se já foi mostrado nesta sessão
+      const sessionKey = `ps-popup-shown-${studentData.email}`;
+      const alreadyShown = sessionStorage.getItem(sessionKey);
+
+      if (!alreadyShown) {
+        setShowPendingPopup(true);
+        sessionStorage.setItem(sessionKey, 'true');
+      }
+    }
+  }, [pendentePreencher, studentData.userType, studentData.email, popupDismissed]);
+
+  const handleGoToProcessoSeletivo = () => {
+    setShowPendingPopup(false);
+    setPopupDismissed(true);
+    navigate('/processo-seletivo');
+  };
+
+  const handleDismissPopup = () => {
+    setShowPendingPopup(false);
+    setPopupDismissed(true);
+  };
 
   // Determina a turma/código do usuário
   let turmaCode = "Visitante";
@@ -26,7 +70,24 @@ const Index = () => {
     turmaCode = "Visitante";
   }
 
-  const menuItems = [
+  // Verifica se o aluno está participando do processo seletivo (qualquer status exceto null)
+  const participandoProcessoSeletivo = elegivelProcessoSeletivo && studentData.userType === 'aluno';
+
+  // Card de Processo Seletivo (definido separadamente para controle de posição)
+  const processoSeletivoCard = {
+    title: "Processo Seletivo",
+    path: "/processo-seletivo",
+    icon: ClipboardList,
+    tooltip: pendentePreencher
+      ? "Complete sua inscrição no processo seletivo de bolsas!"
+      : "Participe do processo seletivo de bolsas.",
+    showAlways: false,
+    showCondition: participandoProcessoSeletivo,
+    highlight: pendentePreencher // Destaque especial se pendente
+  };
+
+  // Cards padrão do menu
+  const baseMenuItems = [
     {
       title: "Temas",
       path: "/temas",
@@ -43,7 +104,7 @@ const Index = () => {
     },
     {
       title: "Exercícios",
-      path: "/exercicios", 
+      path: "/exercicios",
       icon: NotebookPen,
       tooltip: "Pratique com exercícios direcionados.",
       showAlways: true
@@ -138,17 +199,13 @@ const Index = () => {
       icon: Gamepad2,
       tooltip: "Participe de jogos educativos para treinar redação.",
       showAlways: true
-    },
-    // Processo Seletivo - Visível apenas para alunos sem plano ativo e que não participaram anteriormente
-    {
-      title: "Processo seletivo",
-      path: "/processo-seletivo",
-      icon: ClipboardList,
-      tooltip: "Participe do processo seletivo de bolsas.",
-      showAlways: false,
-      showCondition: elegivelProcessoSeletivo && studentData.userType === 'aluno'
     }
   ];
+
+  // Se o aluno está participando do processo seletivo, colocar o card primeiro
+  const menuItems = participandoProcessoSeletivo
+    ? [processoSeletivoCard, ...baseMenuItems]
+    : baseMenuItems;
 
   // Determinar se deve mostrar seção "Minhas Redações" - tanto para alunos quanto visitantes
   const showMinhasRedacoes = (studentData.userType === "aluno" && studentData.turma) || studentData.userType === "visitante";
@@ -191,6 +248,38 @@ const Index = () => {
 
           {/* Gerenciador de mensagens do Inbox */}
           <StudentInboxManager />
+
+          {/* Popup para candidatos que precisam completar o formulário do processo seletivo */}
+          <Dialog open={showPendingPopup} onOpenChange={setShowPendingPopup}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-[#3F0077]">
+                  <AlertCircle className="h-5 w-5" />
+                  Complete sua Inscrição
+                </DialogTitle>
+                <DialogDescription className="text-base pt-2">
+                  Você iniciou sua inscrição no <strong>Processo Seletivo de Bolsas</strong>, mas ainda não preencheu o formulário completo.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-sm text-muted-foreground">
+                  Para participar da seleção, é necessário preencher todas as informações solicitadas no formulário. Clique no botão abaixo para continuar.
+                </p>
+              </div>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button variant="outline" onClick={handleDismissPopup}>
+                  Preencher depois
+                </Button>
+                <Button
+                  onClick={handleGoToProcessoSeletivo}
+                  className="bg-[#3F0077] hover:bg-[#662F96]"
+                >
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Preencher Agora
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </TooltipProvider>
     </ProtectedRoute>

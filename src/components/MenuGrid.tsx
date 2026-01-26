@@ -20,6 +20,7 @@ interface MenuItem {
   showAlways: boolean;
   showCondition?: boolean;
   resourceType?: string;
+  highlight?: boolean; // Destaque especial (ex: processo seletivo pendente)
 }
 
 interface MenuGridProps {
@@ -187,23 +188,34 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                     </div>
                   </div>
                 ) : (
-                  <Link 
-                    to={item.path} 
+                  <Link
+                    to={item.path}
                     onClick={() => handleCardClick(item.title)}
-                    className={`group relative flex flex-col items-center justify-center p-6 ${cardColor.bg} rounded-2xl shadow-lg ${cardColor.hover} transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px]`}
+                    className={`group relative flex flex-col items-center justify-center p-6 rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px] ${
+                      item.highlight
+                        ? 'bg-gradient-to-br from-[#3F0077] to-[#662F96] ring-2 ring-[#3F0077] ring-offset-2 animate-pulse-subtle'
+                        : `${cardColor.bg} ${cardColor.hover}`
+                    }`}
                   >
                     {/* Ícone com estilo flat */}
                     <div className="mb-3">
-                      <item.icon className={`w-8 h-8 ${cardColor.icon}`} />
+                      <item.icon className={`w-8 h-8 ${item.highlight ? 'text-white' : cardColor.icon}`} />
                     </div>
-                    
+
                     {/* Título do card */}
-                    <h3 className={`text-sm font-bold ${cardColor.icon} text-center leading-tight`}>
+                    <h3 className={`text-sm font-bold text-center leading-tight ${item.highlight ? 'text-white' : cardColor.icon}`}>
                       {item.title}
                     </h3>
 
+                    {/* Tag PENDENTE para cards com highlight */}
+                    {item.highlight && (
+                      <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-bounce">
+                        PENDENTE
+                      </span>
+                    )}
+
                     {/* Tag NOVO */}
-                    {shouldShowNewTag(item.title) && (
+                    {!item.highlight && shouldShowNewTag(item.title) && (
                       <span className="absolute top-2 right-2 bg-[#F97316] text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
                         NOVO
                       </span>

@@ -143,6 +143,9 @@ interface ProcessoSeletivoInfo {
   participou: boolean;
   temPlanoAtivo: boolean;
   isLoading: boolean;
+  // Novo: indica se o candidato já se inscreveu mas não preencheu o formulário
+  pendentePreencher: boolean;
+  candidatoStatus: CandidatoStatus | null;
 }
 
 /**
@@ -179,16 +182,54 @@ export const useProcessoSeletivo = (userEmail: string) => {
     enabled: !!userEmail
   });
 
-  const isLoading = isLoadingSubscription || isLoadingParticipacao;
+  // Verificar se existe candidatura pendente (status 'nao_inscrito' = cadastrou mas não preencheu formulário)
+  const { data: candidatoData, isLoading: isLoadingCandidato } = useQuery({
+    queryKey: ['processo-seletivo-candidato-status', userEmail?.toLowerCase()],
+    queryFn: async (): Promise<{ status: CandidatoStatus } | null> => {
+      if (!userEmail) return null;
+
+      try {
+        const emailNormalizado = userEmail.toLowerCase().trim();
+        const { data: candidato, error } = await supabase
+          .from('ps_candidatos')
+          .select('status, ps_formularios!inner(ativo)')
+          .ilike('email_aluno', emailNormalizado)
+          .eq('ps_formularios.ativo', true)
+          .order('data_inscricao', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error || !candidato) {
+          return null;
+        }
+
+        return { status: candidato.status as CandidatoStatus };
+      } catch (error) {
+        console.error('Erro ao verificar status do candidato:', error);
+        return null;
+      }
+    },
+    staleTime: 30 * 1000, // Cache mais curto para atualização rápida
+    enabled: !!userEmail
+  });
+
+  const isLoading = isLoadingSubscription || isLoadingParticipacao || isLoadingCandidato;
   const temPlanoAtivo = subscription?.status === 'Ativo';
   const participou = participouData === true;
-  const elegivel = !temPlanoAtivo && !participou;
+  const candidatoStatus = candidatoData?.status || null;
+  // Pendente de preencher = tem candidatura com status 'nao_inscrito'
+  const pendentePreencher = candidatoStatus === 'nao_inscrito';
+  // Elegível se não tem plano ativo E (não participou OU está pendente de preencher OU está em alguma etapa do processo)
+  const estaParticipando = candidatoStatus !== null && candidatoStatus !== 'concluido' && candidatoStatus !== 'reprovado';
+  const elegivel = !temPlanoAtivo && (!participou || estaParticipando);
 
   return {
     elegivel,
     participou,
     temPlanoAtivo,
-    isLoading
+    isLoading,
+    pendentePreencher,
+    candidatoStatus
   } as ProcessoSeletivoInfo;
 };
 

@@ -101,12 +101,23 @@ const config: Config = {
             opacity: "1"
           }
         },
+        "pulse-subtle": {
+          "0%, 100%": {
+            opacity: "1",
+            boxShadow: "0 0 0 0 rgba(63, 0, 119, 0.4)"
+          },
+          "50%": {
+            opacity: "0.95",
+            boxShadow: "0 0 0 8px rgba(63, 0, 119, 0)"
+          }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
+        "pulse-subtle": "pulse-subtle 2s ease-in-out infinite",
       },
     },
   },
