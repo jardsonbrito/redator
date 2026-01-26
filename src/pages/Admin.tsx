@@ -561,6 +561,9 @@ const Admin = () => {
 
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
+    // Destaque: Processo Seletivo
+    { id: "processo-seletivo", label: "Processo Seletivo", icon: ListChecks, iconColor: "#8B5CF6" },
+
     // Linha 1: Conteúdo Pedagógico Principal
     { id: "temas", label: "Temas", icon: PhosphorBookOpen, iconColor: "#FF6B35" },
     { id: "redacoes", label: "Redações Exemplares", icon: Star, iconColor: "#FFD700" },
@@ -599,9 +602,8 @@ const Admin = () => {
     { id: "exportacao", label: "Exportação", icon: Export, iconColor: "#607D8B" },
     { id: "configuracoes", label: "Configurações", icon: Gear, iconColor: "#795548", chips: ["Conta", "Envios", "Créditos", "Assinatura"] },
 
-    // Linha 9: Motivacional e Seleção
-    { id: "top5", label: "TOP 5", icon: Medal, iconColor: "#FFD700" },
-    { id: "processo-seletivo", label: "Processo seletivo", icon: ListChecks, iconColor: "#8B5CF6" }
+    // Linha 9: Motivacional
+    { id: "top5", label: "TOP 5", icon: Medal, iconColor: "#FFD700" }
   ];
 
   // Verificar parâmetros de query string para definir view inicial
