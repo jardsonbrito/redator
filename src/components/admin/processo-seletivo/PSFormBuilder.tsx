@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Plus,
   FileText,
@@ -12,7 +14,11 @@ import {
   GripVertical,
   Save,
   Settings,
-  List
+  List,
+  Copy,
+  Loader2,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useProcessoSeletivoAdminComContexto } from '@/contexts/ProcessoSeletivoAdminContext';
 import { SecaoComPerguntas, Pergunta, TipoPergunta } from '@/hooks/useProcessoSeletivo';
@@ -22,10 +28,37 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+interface FormularioComSecoes {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  secoes: Array<{
+    id: string;
+    titulo: string;
+    descricao: string | null;
+    perguntas: Array<{
+      id: string;
+      texto: string;
+      tipo: string;
+      obrigatoria: boolean;
+    }>;
+  }>;
+}
 
 export const PSFormBuilder: React.FC = () => {
   const {
+    formularios,
     formularioAtivo,
     isLoadingFormularioAtivo,
     criarFormulario,
@@ -36,6 +69,8 @@ export const PSFormBuilder: React.FC = () => {
     criarPergunta,
     atualizarPergunta,
     excluirPergunta,
+    importarSecoesDeOutroProcesso,
+    isImportandoSecoes,
     isSalvandoFormulario,
     toggleInscricoes,
     isToggleInscricoes
@@ -48,6 +83,139 @@ export const PSFormBuilder: React.FC = () => {
   const [novaSecao, setNovaSecao] = useState({ titulo: '', descricao: '' });
   const [editandoPergunta, setEditandoPergunta] = useState<{ secaoId: string; pergunta?: Pergunta } | null>(null);
   const [secaoSelecionada, setSecaoSelecionada] = useState<string | null>(null);
+
+  // Estados para importação
+  const [showImportar, setShowImportar] = useState(false);
+  const [processoOrigemId, setProcessoOrigemId] = useState<string>('');
+  const [formularioOrigemCompleto, setFormularioOrigemCompleto] = useState<FormularioComSecoes | null>(null);
+  const [secoesParaImportar, setSecoesParaImportar] = useState<string[]>([]);
+  const [loadingFormularioOrigem, setLoadingFormularioOrigem] = useState(false);
+  const [secoesExpandidas, setSecoesExpandidas] = useState<string[]>([]);
+
+  // Outros formulários disponíveis para importação (excluindo o atual)
+  const outrosFormularios = (formularios || []).filter(f => f.id !== formularioAtivo?.id);
+
+  // Buscar detalhes do formulário de origem quando selecionado
+  useEffect(() => {
+    if (!processoOrigemId) {
+      setFormularioOrigemCompleto(null);
+      setSecoesParaImportar([]);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const carregarFormulario = async () => {
+      setLoadingFormularioOrigem(true);
+      try {
+        // Buscar formulário diretamente do supabase
+        const { data: formulario, error: formError } = await (supabase as any)
+          .from('ps_formularios')
+          .select('*')
+          .eq('id', processoOrigemId)
+          .single();
+
+        if (formError) {
+          console.error('Erro ao buscar formulário:', formError);
+          throw formError;
+        }
+
+        const { data: secoes, error: secoesError } = await (supabase as any)
+          .from('ps_secoes')
+          .select('*')
+          .eq('formulario_id', processoOrigemId)
+          .order('ordem', { ascending: true });
+
+        if (secoesError) {
+          console.error('Erro ao buscar seções:', secoesError);
+          throw secoesError;
+        }
+
+        // Buscar perguntas de todas as seções
+        const secoesComPerguntas = await Promise.all(
+          (secoes || []).map(async (secao: any) => {
+            const { data: perguntas } = await (supabase as any)
+              .from('ps_perguntas')
+              .select('*')
+              .eq('secao_id', secao.id)
+              .order('ordem', { ascending: true });
+
+            return {
+              ...secao,
+              perguntas: perguntas || []
+            };
+          })
+        );
+
+        const formCompleto = {
+          ...formulario,
+          secoes: secoesComPerguntas
+        };
+
+        if (!isCancelled && formCompleto) {
+          setFormularioOrigemCompleto(formCompleto as FormularioComSecoes);
+          // Expandir todas as seções por padrão
+          if (formCompleto.secoes && Array.isArray(formCompleto.secoes)) {
+            setSecoesExpandidas(formCompleto.secoes.map((s: any) => s.id));
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar formulário:', error);
+        if (!isCancelled) {
+          setFormularioOrigemCompleto(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoadingFormularioOrigem(false);
+        }
+      }
+    };
+
+    carregarFormulario();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [processoOrigemId]);
+
+  const handleImportarSecoes = () => {
+    if (!formularioAtivo?.id || !processoOrigemId || secoesParaImportar.length === 0) return;
+
+    importarSecoesDeOutroProcesso({
+      formularioOrigemId: processoOrigemId,
+      formularioDestinoId: formularioAtivo.id,
+      secaoIds: secoesParaImportar
+    });
+
+    setShowImportar(false);
+    setProcessoOrigemId('');
+    setSecoesParaImportar([]);
+    setFormularioOrigemCompleto(null);
+  };
+
+  const toggleSecaoExpandida = (secaoId: string) => {
+    setSecoesExpandidas(prev =>
+      prev.includes(secaoId)
+        ? prev.filter(id => id !== secaoId)
+        : [...prev, secaoId]
+    );
+  };
+
+  const toggleSecaoParaImportar = (secaoId: string) => {
+    setSecoesParaImportar(prev =>
+      prev.includes(secaoId)
+        ? prev.filter(id => id !== secaoId)
+        : [...prev, secaoId]
+    );
+  };
+
+  const toggleTodasSecoes = (selecionar: boolean) => {
+    if (selecionar && formularioOrigemCompleto) {
+      setSecoesParaImportar(formularioOrigemCompleto.secoes.map(s => s.id));
+    } else {
+      setSecoesParaImportar([]);
+    }
+  };
 
   const handleCriarFormulario = () => {
     if (!novoFormulario.titulo.trim()) return;
@@ -201,6 +369,17 @@ export const PSFormBuilder: React.FC = () => {
         </div>
 
         <div className="flex gap-2 flex-shrink-0">
+          {outrosFormularios.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowImportar(true)}
+              className="border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white"
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              Importar Seções
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -444,6 +623,180 @@ export const PSFormBuilder: React.FC = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Modal de Importação de Seções */}
+      <Dialog
+        open={showImportar}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowImportar(false);
+            setProcessoOrigemId('');
+            setSecoesParaImportar([]);
+            setFormularioOrigemCompleto(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="h-5 w-5" />
+              Importar Seções de Outro Processo
+            </DialogTitle>
+            <DialogDescription>
+              Selecione um processo seletivo anterior e escolha quais seções deseja copiar para este processo.
+              As perguntas serão copiadas junto com as seções.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
+            {/* Seletor de Processo de Origem */}
+            <div className="space-y-2">
+              <Label>Processo de Origem</Label>
+              <Select
+                value={processoOrigemId}
+                onValueChange={setProcessoOrigemId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um processo seletivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {outrosFormularios.map((form) => (
+                    <SelectItem key={form.id} value={form.id}>
+                      {form.titulo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Loading */}
+            {loadingFormularioOrigem && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Carregando seções...</span>
+              </div>
+            )}
+
+            {/* Lista de Seções para Importar */}
+            {formularioOrigemCompleto && !loadingFormularioOrigem && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Seções Disponíveis ({formularioOrigemCompleto.secoes.length})</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleTodasSecoes(true)}
+                      className="text-xs"
+                    >
+                      Selecionar todas
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleTodasSecoes(false)}
+                      className="text-xs"
+                    >
+                      Limpar seleção
+                    </Button>
+                  </div>
+                </div>
+
+                {formularioOrigemCompleto.secoes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Este processo não possui seções cadastradas.
+                  </p>
+                ) : (
+                  <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                    {formularioOrigemCompleto.secoes.map((secao) => (
+                      <div key={secao.id} className="border rounded-lg bg-white">
+                        <div
+                          className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50"
+                          onClick={() => toggleSecaoExpandida(secao.id)}
+                        >
+                          <Checkbox
+                            checked={secoesParaImportar.includes(secao.id)}
+                            onCheckedChange={() => toggleSecaoParaImportar(secao.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{secao.titulo}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {secao.perguntas.length} pergunta{secao.perguntas.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                          {secoesExpandidas.includes(secao.id) ? (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+
+                        {/* Perguntas da seção (expandido) */}
+                        {secoesExpandidas.includes(secao.id) && secao.perguntas.length > 0 && (
+                          <div className="border-t px-3 py-2 bg-muted/20">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Perguntas:</p>
+                            <ul className="space-y-1">
+                              {secao.perguntas.map((pergunta, idx) => (
+                                <li key={pergunta.id} className="text-xs text-muted-foreground pl-4">
+                                  {idx + 1}. {pergunta.texto}
+                                  {pergunta.obrigatoria && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Resumo da seleção */}
+            {secoesParaImportar.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-700">
+                  <strong>{secoesParaImportar.length}</strong> seção(ões) selecionada(s) para importação
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowImportar(false);
+                setProcessoOrigemId('');
+                setSecoesParaImportar([]);
+                setFormularioOrigemCompleto(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleImportarSecoes}
+              disabled={secoesParaImportar.length === 0 || isImportandoSecoes}
+              className="bg-[#3F0077] hover:bg-[#662F96]"
+            >
+              {isImportandoSecoes ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Importar {secoesParaImportar.length} Seção(ões)
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

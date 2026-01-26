@@ -1085,6 +1085,307 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
     }
   });
 
+  // Mutation para excluir formulário completamente (com todos os dados)
+  const excluirFormularioCompletoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // 1. Buscar todos os candidatos do processo
+      const { data: candidatosDoProcesso, error: candidatosError } = await supabase
+        .from('ps_candidatos')
+        .select('id')
+        .eq('formulario_id', id);
+
+      if (candidatosError) throw candidatosError;
+
+      // 2. Para cada candidato, excluir dados relacionados
+      if (candidatosDoProcesso && candidatosDoProcesso.length > 0) {
+        const candidatoIds = candidatosDoProcesso.map(c => c.id);
+
+        // 2a. Limpar referência em redacoes_enviadas
+        const { error: redacoesEnviadasError } = await supabase
+          .from('redacoes_enviadas')
+          .update({ processo_seletivo_candidato_id: null } as any)
+          .in('processo_seletivo_candidato_id', candidatoIds);
+
+        if (redacoesEnviadasError) {
+          console.error('Erro ao limpar referências em redacoes_enviadas:', redacoesEnviadasError);
+          throw redacoesEnviadasError;
+        }
+
+        // 2b. Excluir redações do PS
+        const { error: psRedacoesError } = await supabase
+          .from('ps_redacoes')
+          .delete()
+          .in('candidato_id', candidatoIds);
+
+        if (psRedacoesError) {
+          console.error('Erro ao excluir ps_redacoes:', psRedacoesError);
+          throw psRedacoesError;
+        }
+
+        // 2c. Excluir respostas dos candidatos
+        const { error: respostasError } = await supabase
+          .from('ps_respostas')
+          .delete()
+          .in('candidato_id', candidatoIds);
+
+        if (respostasError) {
+          console.error('Erro ao excluir ps_respostas:', respostasError);
+          throw respostasError;
+        }
+
+        // 2d. Excluir candidatos
+        const { error: excluirCandidatosError } = await supabase
+          .from('ps_candidatos')
+          .delete()
+          .eq('formulario_id', id);
+
+        if (excluirCandidatosError) {
+          console.error('Erro ao excluir ps_candidatos:', excluirCandidatosError);
+          throw excluirCandidatosError;
+        }
+      }
+
+      // 3. Excluir comunicados
+      const { error: comunicadosError } = await supabase
+        .from('ps_comunicados')
+        .delete()
+        .eq('formulario_id', id);
+
+      if (comunicadosError) {
+        console.error('Erro ao excluir ps_comunicados:', comunicadosError);
+        throw comunicadosError;
+      }
+
+      // 4. Excluir configuração de resultados
+      const { error: resultadoConfigError } = await supabase
+        .from('ps_resultado_config')
+        .delete()
+        .eq('formulario_id', id);
+
+      if (resultadoConfigError) {
+        console.error('Erro ao excluir ps_resultado_config:', resultadoConfigError);
+        throw resultadoConfigError;
+      }
+
+      // 5. Excluir etapa final
+      const { error: etapaFinalError } = await supabase
+        .from('ps_etapa_final')
+        .delete()
+        .eq('formulario_id', id);
+
+      if (etapaFinalError) {
+        console.error('Erro ao excluir ps_etapa_final:', etapaFinalError);
+        throw etapaFinalError;
+      }
+
+      // 6. Buscar seções para excluir perguntas
+      const { data: secoes } = await supabase
+        .from('ps_secoes')
+        .select('id')
+        .eq('formulario_id', id);
+
+      if (secoes && secoes.length > 0) {
+        const secaoIds = secoes.map(s => s.id);
+
+        // 6a. Excluir perguntas
+        const { error: perguntasError } = await supabase
+          .from('ps_perguntas')
+          .delete()
+          .in('secao_id', secaoIds);
+
+        if (perguntasError) {
+          console.error('Erro ao excluir ps_perguntas:', perguntasError);
+          throw perguntasError;
+        }
+      }
+
+      // 7. Excluir seções
+      const { error: secoesError } = await supabase
+        .from('ps_secoes')
+        .delete()
+        .eq('formulario_id', id);
+
+      if (secoesError) {
+        console.error('Erro ao excluir ps_secoes:', secoesError);
+        throw secoesError;
+      }
+
+      // 8. Por fim, excluir o formulário
+      const { error: formularioError } = await supabase
+        .from('ps_formularios')
+        .delete()
+        .eq('id', id);
+
+      if (formularioError) {
+        console.error('Erro ao excluir ps_formularios:', formularioError);
+        throw formularioError;
+      }
+    },
+    onSuccess: () => {
+      toast.success('Processo seletivo excluído permanentemente!');
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formularios'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-candidatos'] });
+    },
+    onError: (error: any) => {
+      console.error('Erro na exclusão completa:', error);
+      const mensagem = error?.message || 'Erro desconhecido';
+      toast.error(`Erro ao excluir processo seletivo: ${mensagem}`);
+    }
+  });
+
+  // ============================================
+  // MUTATION - IMPORTAR SEÇÕES DE OUTRO PROCESSO
+  // ============================================
+
+  const importarSecoesDeOutroProcessoMutation = useMutation({
+    mutationFn: async ({
+      formularioOrigemId,
+      formularioDestinoId,
+      secaoIds
+    }: {
+      formularioOrigemId: string;
+      formularioDestinoId: string;
+      secaoIds: string[];
+    }) => {
+      // Buscar as seções e perguntas do processo de origem
+      const { data: secoesOrigem, error: secoesError } = await supabase
+        .from('ps_secoes')
+        .select('*')
+        .eq('formulario_id', formularioOrigemId)
+        .in('id', secaoIds)
+        .order('ordem', { ascending: true });
+
+      if (secoesError) throw secoesError;
+      if (!secoesOrigem || secoesOrigem.length === 0) {
+        throw new Error('Nenhuma seção encontrada para importar');
+      }
+
+      // Buscar a maior ordem atual no formulário destino
+      const { data: maxOrdemSecao } = await supabase
+        .from('ps_secoes')
+        .select('ordem')
+        .eq('formulario_id', formularioDestinoId)
+        .order('ordem', { ascending: false })
+        .limit(1)
+        .single();
+
+      let ordemSecaoAtual = (maxOrdemSecao?.ordem || 0);
+
+      // Para cada seção, criar a seção e suas perguntas no destino
+      for (const secaoOrigem of secoesOrigem) {
+        ordemSecaoAtual++;
+
+        // Criar a seção no destino
+        const { data: novaSecao, error: novaSecaoError } = await supabase
+          .from('ps_secoes')
+          .insert({
+            formulario_id: formularioDestinoId,
+            titulo: secaoOrigem.titulo,
+            descricao: secaoOrigem.descricao,
+            ordem: ordemSecaoAtual
+          })
+          .select()
+          .single();
+
+        if (novaSecaoError) throw novaSecaoError;
+
+        // Buscar perguntas da seção de origem
+        const { data: perguntasOrigem, error: perguntasError } = await supabase
+          .from('ps_perguntas')
+          .select('*')
+          .eq('secao_id', secaoOrigem.id)
+          .order('ordem', { ascending: true });
+
+        if (perguntasError) throw perguntasError;
+
+        // Criar as perguntas na nova seção
+        if (perguntasOrigem && perguntasOrigem.length > 0) {
+          const perguntasParaInserir = perguntasOrigem.map((p, index) => ({
+            secao_id: novaSecao.id,
+            texto: p.texto,
+            tipo: p.tipo,
+            obrigatoria: p.obrigatoria,
+            ordem: index + 1,
+            opcoes: p.opcoes || [],
+            texto_aceite: p.texto_aceite || null
+          }));
+
+          const { error: insertPerguntasError } = await supabase
+            .from('ps_perguntas')
+            .insert(perguntasParaInserir);
+
+          if (insertPerguntasError) throw insertPerguntasError;
+        }
+      }
+
+      return { secoesImportadas: secoesOrigem.length };
+    },
+    onSuccess: (result) => {
+      toast.success(`${result.secoesImportadas} seção(ões) importada(s) com sucesso!`);
+      queryClient.invalidateQueries({ queryKey: ['ps-admin-formulario-selecionado'] });
+    },
+    onError: (error: any) => {
+      console.error('Erro ao importar seções:', error);
+      toast.error(`Erro ao importar seções: ${error?.message || 'Erro desconhecido'}`);
+    }
+  });
+
+  // Função para buscar formulário completo com seções e perguntas para preview
+  const buscarFormularioCompleto = async (formularioId: string) => {
+    try {
+      const { data: formulario, error: formError } = await (supabase as any)
+        .from('ps_formularios')
+        .select('*')
+        .eq('id', formularioId)
+        .single();
+
+      if (formError) {
+        console.error('Erro ao buscar formulário:', formError);
+        throw formError;
+      }
+
+      const { data: secoes, error: secoesError } = await (supabase as any)
+        .from('ps_secoes')
+        .select('*')
+        .eq('formulario_id', formularioId)
+        .order('ordem', { ascending: true });
+
+      if (secoesError) {
+        console.error('Erro ao buscar seções:', secoesError);
+        throw secoesError;
+      }
+
+      // Buscar perguntas de todas as seções
+      const secoesComPerguntas = await Promise.all(
+        (secoes || []).map(async (secao: any) => {
+          const { data: perguntas, error: perguntasError } = await (supabase as any)
+            .from('ps_perguntas')
+            .select('*')
+            .eq('secao_id', secao.id)
+            .order('ordem', { ascending: true });
+
+          if (perguntasError) {
+            console.error('Erro ao buscar perguntas da seção:', secao.id, perguntasError);
+          }
+
+          return {
+            ...secao,
+            perguntas: perguntas || []
+          };
+        })
+      );
+
+      return {
+        ...formulario,
+        secoes: secoesComPerguntas
+      };
+    } catch (error) {
+      console.error('Erro geral ao buscar formulário completo:', error);
+      throw error;
+    }
+  };
+
   // ============================================
   // ESTATÍSTICAS
   // ============================================
@@ -1127,14 +1428,19 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
     atualizarFormulario: atualizarFormularioMutation.mutate,
     arquivarFormulario: arquivarFormularioMutation.mutate,
     desarquivarFormulario: desarquivarFormularioMutation.mutate,
+    excluirFormularioCompleto: excluirFormularioCompletoMutation.mutate,
     isSalvandoFormulario: criarFormularioMutation.isPending || atualizarFormularioMutation.isPending,
     isArquivandoFormulario: arquivarFormularioMutation.isPending,
     isDesarquivandoFormulario: desarquivarFormularioMutation.isPending,
+    isExcluindoFormulario: excluirFormularioCompletoMutation.isPending,
 
     // Ações - Seções
     criarSecao: criarSecaoMutation.mutate,
     atualizarSecao: atualizarSecaoMutation.mutate,
     excluirSecao: excluirSecaoMutation.mutate,
+    importarSecoesDeOutroProcesso: importarSecoesDeOutroProcessoMutation.mutate,
+    isImportandoSecoes: importarSecoesDeOutroProcessoMutation.isPending,
+    buscarFormularioCompleto,
 
     // Ações - Perguntas
     criarPergunta: criarPerguntaMutation.mutate,

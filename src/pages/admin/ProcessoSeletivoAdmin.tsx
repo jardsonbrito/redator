@@ -67,8 +67,10 @@ const ProcessoSeletivoAdminContent = () => {
     criarFormularioAsync,
     arquivarFormulario,
     desarquivarFormulario,
+    excluirFormularioCompleto,
     isSalvandoFormulario,
-    isArquivandoFormulario
+    isArquivandoFormulario,
+    isExcluindoFormulario
   } = useProcessoSeletivoAdmin(processoSelecionadoId);
 
   // Componente para seção de migração
@@ -130,6 +132,14 @@ const ProcessoSeletivoAdminContent = () => {
       setProcessoSelecionadoId(resultado.id);
     }
     return resultado;
+  };
+
+  const handleExcluirFormulario = (id: string) => {
+    excluirFormularioCompleto(id);
+    // Limpar o ID selecionado após excluir
+    if (processoSelecionadoId === id) {
+      setProcessoSelecionadoId(undefined);
+    }
   };
 
   const handleLogout = async () => {
@@ -249,8 +259,10 @@ const ProcessoSeletivoAdminContent = () => {
               onCriarFormulario={handleCriarFormulario}
               onArquivarFormulario={arquivarFormulario}
               onDesarquivarFormulario={desarquivarFormulario}
+              onExcluirFormulario={handleExcluirFormulario}
               isLoading={isLoadingFormularios}
               isCriando={isSalvandoFormulario}
+              isExcluindo={isExcluindoFormulario}
               candidatosPorFormulario={candidatosPorFormulario}
             />
           </div>

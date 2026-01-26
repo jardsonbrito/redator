@@ -17,7 +17,9 @@ import {
   Loader2,
   Save,
   Link,
-  Copy
+  Copy,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -47,8 +49,10 @@ interface PSProcessoSelectorProps {
   onCriarFormulario: (titulo: string, descricao?: string) => Promise<Formulario | undefined>;
   onArquivarFormulario?: (id: string) => void;
   onDesarquivarFormulario?: (id: string) => void;
+  onExcluirFormulario?: (id: string) => void;
   isLoading?: boolean;
   isCriando?: boolean;
+  isExcluindo?: boolean;
   candidatosPorFormulario?: Record<string, number>;
 }
 
@@ -59,13 +63,17 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
   onCriarFormulario,
   onArquivarFormulario,
   onDesarquivarFormulario,
+  onExcluirFormulario,
   isLoading = false,
   isCriando = false,
+  isExcluindo = false,
   candidatosPorFormulario = {}
 }) => {
   const [showNovoProcesso, setShowNovoProcesso] = useState(false);
   const [novoProcesso, setNovoProcesso] = useState({ titulo: '', descricao: '' });
   const [showConfirmarArquivar, setShowConfirmarArquivar] = useState<string | null>(null);
+  const [showConfirmarExcluir, setShowConfirmarExcluir] = useState<string | null>(null);
+  const [confirmacaoTexto, setConfirmacaoTexto] = useState('');
 
   const formularioSelecionado = formularios.find(f => f.id === formularioSelecionadoId);
 
@@ -96,6 +104,18 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
     }
     setShowConfirmarArquivar(null);
   };
+
+  const handleExcluir = (id: string) => {
+    if (onExcluirFormulario) {
+      onExcluirFormulario(id);
+    }
+    setShowConfirmarExcluir(null);
+    setConfirmacaoTexto('');
+  };
+
+  const formularioParaExcluir = formularios.find(f => f.id === showConfirmarExcluir);
+  const qtdCandidatosExcluir = showConfirmarExcluir ? (candidatosPorFormulario[showConfirmarExcluir] || 0) : 0;
+  const textoConfirmacaoCorreto = formularioParaExcluir?.titulo?.toUpperCase() || '';
 
   const getStatusBadge = (formulario: Formulario) => {
     if (!formulario.ativo) {
@@ -245,6 +265,17 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
                 Reativar
               </Button>
             )}
+            {onExcluirFormulario && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowConfirmarExcluir(formularioSelecionado.id)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir
+              </Button>
+            )}
           </div>
         )}
 
@@ -324,6 +355,80 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
             >
               <Archive className="h-4 w-4 mr-2" />
               Arquivar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmação para excluir permanentemente */}
+      <Dialog
+        open={!!showConfirmarExcluir}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowConfirmarExcluir(null);
+            setConfirmacaoTexto('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir Processo Seletivo
+            </DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <p className="text-destructive font-medium">
+                Esta ação é permanente e não pode ser desfeita!
+              </p>
+              <p>
+                Ao excluir o processo seletivo <strong>"{formularioParaExcluir?.titulo}"</strong>, todos os seguintes dados serão apagados permanentemente:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 bg-destructive/10 p-3 rounded-md">
+                <li><strong>{qtdCandidatosExcluir}</strong> candidato{qtdCandidatosExcluir !== 1 ? 's' : ''} inscrito{qtdCandidatosExcluir !== 1 ? 's' : ''}</li>
+                <li>Todas as respostas do formulário</li>
+                <li>Todas as redações da etapa final</li>
+                <li>Comunicados e configurações</li>
+                <li>Seções e perguntas do formulário</li>
+              </ul>
+              <div className="pt-2">
+                <p className="text-sm mb-2">
+                  Para confirmar, digite <strong>{textoConfirmacaoCorreto}</strong> abaixo:
+                </p>
+                <Input
+                  value={confirmacaoTexto}
+                  onChange={(e) => setConfirmacaoTexto(e.target.value)}
+                  placeholder="Digite o título do processo"
+                  className="border-destructive/50 focus:border-destructive"
+                />
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfirmarExcluir(null);
+                setConfirmacaoTexto('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => showConfirmarExcluir && handleExcluir(showConfirmarExcluir)}
+              disabled={confirmacaoTexto.toUpperCase() !== textoConfirmacaoCorreto || isExcluindo}
+            >
+              {isExcluindo ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Permanentemente
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
