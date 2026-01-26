@@ -456,6 +456,13 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
         return null;
       }
 
+      // Mapear redacao_texto para texto para compatibilidade com o componente
+      if (data) {
+        return {
+          ...data,
+          texto: data.redacao_texto
+        };
+      }
       return data;
     },
     enabled: !!candidato?.id && (candidato?.status === 'etapa_final_liberada' || candidato?.status === 'concluido'),

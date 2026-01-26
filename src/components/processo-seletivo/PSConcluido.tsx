@@ -115,6 +115,100 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
     }
   };
 
+  // Se resultado foi publicado, mostrar apenas o card de resultado
+  if (resultadoConfig?.resultado_publicado) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-green-200/30 rounded-full -translate-y-1/2 translate-x-1/2" />
+
+          <CardHeader className="text-center relative">
+            <div className="flex justify-center mb-2">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                <Award className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-xl text-green-800">
+              Resultado do Processo Seletivo
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-4 relative">
+            {/* Classificação */}
+            {candidato.classificacao ? (
+              <div className="text-center py-4">
+                <div className="inline-flex items-center gap-2 bg-white rounded-full px-6 py-3 shadow-md">
+                  <Trophy className={`h-6 w-6 ${
+                    candidato.classificacao === 1 ? 'text-yellow-500' :
+                    candidato.classificacao === 2 ? 'text-gray-400' :
+                    candidato.classificacao === 3 ? 'text-orange-400' : 'text-green-600'
+                  }`} />
+                  <span className="text-4xl font-bold text-green-800">
+                    {candidato.classificacao}º
+                  </span>
+                  <span className="text-green-600 font-medium">lugar</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-green-700">Aguardando classificação final</p>
+              </div>
+            )}
+
+            {/* Nota */}
+            {redacao?.nota_total !== null && redacao?.nota_total !== undefined && (
+              <div className="text-center">
+                <p className="text-sm text-green-600 mb-1">Nota obtida</p>
+                <Badge variant="secondary" className="text-2xl font-bold px-4 py-2 bg-white text-green-700">
+                  {redacao.nota_total} pontos
+                </Badge>
+              </div>
+            )}
+
+            {/* Bolsa Conquistada */}
+            {candidato.bolsa_conquistada && (
+              <div className="text-center py-3">
+                <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg px-6 py-3 shadow-lg">
+                  <Medal className="h-6 w-6" />
+                  <div className="text-left">
+                    <p className="text-xs opacity-90">Você conquistou</p>
+                    <p className="font-bold text-lg">{candidato.bolsa_conquistada}</p>
+                  </div>
+                  <Badge className="bg-white/20 text-white text-lg">
+                    {candidato.percentual_bolsa}%
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {/* Mensagem Personalizada */}
+            {candidato.mensagem_resultado && (
+              <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
+                <div className="flex items-start gap-3">
+                  <MessageSquare className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800 mb-1">Mensagem para você:</p>
+                    <p className="text-green-700 whitespace-pre-wrap">
+                      {candidato.mensagem_resultado}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Data de publicação */}
+            {resultadoConfig.data_publicacao && (
+              <p className="text-center text-xs text-green-600">
+                Resultado publicado em: {new Date(resultadoConfig.data_publicacao).toLocaleDateString('pt-BR')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Se resultado NÃO foi publicado, mostrar tela de aguardando
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Card de Conclusão */}
@@ -217,95 +311,6 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
         </CardContent>
       </Card>
 
-      {/* Card de Resultado (quando publicado) */}
-      {resultadoConfig?.resultado_publicado && (
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-green-200/30 rounded-full -translate-y-1/2 translate-x-1/2" />
-
-          <CardHeader className="text-center relative">
-            <div className="flex justify-center mb-2">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                <Award className="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <CardTitle className="text-xl text-green-800">
-              Resultado do Processo Seletivo
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="space-y-4 relative">
-            {/* Classificação */}
-            {candidato.classificacao ? (
-              <div className="text-center py-4">
-                <div className="inline-flex items-center gap-2 bg-white rounded-full px-6 py-3 shadow-md">
-                  <Trophy className={`h-6 w-6 ${
-                    candidato.classificacao === 1 ? 'text-yellow-500' :
-                    candidato.classificacao === 2 ? 'text-gray-400' :
-                    candidato.classificacao === 3 ? 'text-orange-400' : 'text-green-600'
-                  }`} />
-                  <span className="text-4xl font-bold text-green-800">
-                    {candidato.classificacao}º
-                  </span>
-                  <span className="text-green-600 font-medium">lugar</span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-green-700">Aguardando classificação final</p>
-              </div>
-            )}
-
-            {/* Nota */}
-            {redacao?.nota_total !== null && redacao?.nota_total !== undefined && (
-              <div className="text-center">
-                <p className="text-sm text-green-600 mb-1">Nota obtida</p>
-                <Badge variant="secondary" className="text-2xl font-bold px-4 py-2 bg-white text-green-700">
-                  {redacao.nota_total} pontos
-                </Badge>
-              </div>
-            )}
-
-            {/* Bolsa Conquistada */}
-            {candidato.bolsa_conquistada && (
-              <div className="text-center py-3">
-                <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg px-6 py-3 shadow-lg">
-                  <Medal className="h-6 w-6" />
-                  <div className="text-left">
-                    <p className="text-xs opacity-90">Você conquistou</p>
-                    <p className="font-bold text-lg">{candidato.bolsa_conquistada}</p>
-                  </div>
-                  <Badge className="bg-white/20 text-white text-lg">
-                    {candidato.percentual_bolsa}%
-                  </Badge>
-                </div>
-              </div>
-            )}
-
-            {/* Mensagem Personalizada */}
-            {candidato.mensagem_resultado && (
-              <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
-                <div className="flex items-start gap-3">
-                  <MessageSquare className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-green-800 mb-1">Mensagem para você:</p>
-                    <p className="text-green-700 whitespace-pre-wrap">
-                      {candidato.mensagem_resultado}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Data de publicação */}
-            {resultadoConfig.data_publicacao && (
-              <p className="text-center text-xs text-green-600">
-                Resultado publicado em: {new Date(resultadoConfig.data_publicacao).toLocaleDateString('pt-BR')}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Resumo da Redação */}
       {redacao && (
         <Card>
@@ -362,26 +367,24 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
         </Card>
       )}
 
-      {/* Informações Finais - só mostra quando resultado não foi publicado */}
-      {!resultadoConfig?.resultado_publicado && (
-        <Card className="border-blue-200 bg-blue-50/50">
-          <CardContent className="py-4 space-y-3">
-            <h4 className="font-medium text-blue-800">E agora?</h4>
-            <p className="text-sm text-blue-700">
-              Sua redação foi registrada com sucesso e seguirá para avaliação.
-            </p>
-            <p className="text-sm text-blue-700">
-              Para acompanhar seu desempenho, acesse o card <strong>Minhas Redações</strong>,
-              onde você poderá visualizar o texto enviado e, posteriormente, a <strong>pontuação obtida</strong>.
-            </p>
-            <p className="text-sm text-blue-700">
-              Além disso, fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
-              pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
-              oficiais sobre o resultado do processo seletivo e os contemplados com as bolsas de estudo.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Informações Finais */}
+      <Card className="border-blue-200 bg-blue-50/50">
+        <CardContent className="py-4 space-y-3">
+          <h4 className="font-medium text-blue-800">E agora?</h4>
+          <p className="text-sm text-blue-700">
+            Sua redação foi registrada com sucesso e seguirá para avaliação.
+          </p>
+          <p className="text-sm text-blue-700">
+            Para acompanhar seu desempenho, acesse o card <strong>Minhas Redações</strong>,
+            onde você poderá visualizar o texto enviado e, posteriormente, a <strong>pontuação obtida</strong>.
+          </p>
+          <p className="text-sm text-blue-700">
+            Além disso, fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
+            pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
+            oficiais sobre o resultado do processo seletivo e os contemplados com as bolsas de estudo.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
