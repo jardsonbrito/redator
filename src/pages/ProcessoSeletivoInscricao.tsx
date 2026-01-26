@@ -228,17 +228,24 @@ export default function ProcessoSeletivoInscricao() {
             <div className="flex justify-center mb-4">
               <CheckCircle2 className="w-16 h-16 text-green-500" />
             </div>
-            <CardTitle className="text-2xl text-green-600">Inscrição Realizada!</CardTitle>
+            <CardTitle className="text-2xl text-green-600">Cadastro Realizado!</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4 pb-6">
             <p className="text-muted-foreground">
-              Sua inscrição no processo seletivo <strong>{formulario.titulo}</strong> foi realizada com sucesso!
+              Seu cadastro no processo seletivo <strong>{formulario.titulo}</strong> foi realizado com sucesso!
             </p>
-            <Alert className="text-left bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-700">Próximos Passos</AlertTitle>
-              <AlertDescription className="text-green-600">
-                Acesse sua conta usando o email <strong>{email}</strong> para preencher o formulário do processo seletivo e acompanhar seu andamento.
+            <Alert className="text-left bg-blue-50 border-blue-200">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertTitle className="text-blue-700">Próximo Passo: Preencher o Formulário</AlertTitle>
+              <AlertDescription className="text-blue-600 space-y-2">
+                <p>
+                  Para completar sua inscrição, você precisa preencher o formulário com seus dados.
+                </p>
+                <ol className="list-decimal list-inside text-sm space-y-1 mt-2">
+                  <li>Acesse sua conta com o email <strong>{email}</strong></li>
+                  <li>Clique no card <strong>"Processo Seletivo"</strong></li>
+                  <li>Preencha todas as informações solicitadas</li>
+                </ol>
               </AlertDescription>
             </Alert>
             <div className="flex flex-col gap-2 pt-2">

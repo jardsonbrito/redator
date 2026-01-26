@@ -106,9 +106,34 @@ export const PSContainer: React.FC<PSContainerProps> = ({
   // Determinar qual tela mostrar baseado no status do candidato
   const status: CandidatoStatus = candidato?.status || 'nao_inscrito';
 
+  // Debug: Log para verificar o estado
+  console.log('🔍 [PSContainer] Estado atual:', {
+    userEmail,
+    formularioId: formulario?.id,
+    formularioTitulo: formulario?.titulo,
+    totalSecoes: formulario?.secoes?.length,
+    candidatoId: candidato?.id,
+    candidatoStatus: candidato?.status,
+    statusUsado: status
+  });
+
   switch (status) {
     case 'nao_inscrito':
-      // Candidato ainda não se inscreveu - mostrar formulário
+      // Candidato ainda não preencheu o formulário - mostrar formulário
+      // Verificar se há seções configuradas
+      if (!formulario.secoes || formulario.secoes.length === 0) {
+        return (
+          <div className="text-center py-16">
+            <h2 className="text-xl font-semibold mb-2 text-primary">Processo Seletivo</h2>
+            <p className="text-muted-foreground mb-4">
+              O formulário de inscrição está sendo configurado.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Por favor, aguarde. Em breve você poderá preencher seus dados.
+            </p>
+          </div>
+        );
+      }
       return (
         <PSFormulario
           formulario={formulario}

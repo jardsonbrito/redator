@@ -223,21 +223,35 @@ export const useProcessosSeletivosDisponiveis = (userEmail: string) => {
   const { data: processoInscrito, isLoading: isLoadingInscrito } = useQuery({
     queryKey: ['ps-processo-inscrito', userEmail?.toLowerCase()],
     queryFn: async (): Promise<Formulario | null> => {
-      if (!userEmail) return null;
+      if (!userEmail) {
+        console.log('🔍 [useProcessosSeletivosDisponiveis] Email não fornecido');
+        return null;
+      }
 
       const emailNormalizado = userEmail.toLowerCase().trim();
+      console.log('🔍 [useProcessosSeletivosDisponiveis] Buscando candidato para email:', emailNormalizado);
+
       const { data: candidatoExistente, error } = await supabase
         .from('ps_candidatos')
-        .select('formulario_id, ps_formularios!inner(*)')
+        .select('formulario_id, status, ps_formularios!inner(*)')
         .ilike('email_aluno', emailNormalizado)
         .eq('ps_formularios.ativo', true)
         .order('data_inscricao', { ascending: false })
         .limit(1)
         .maybeSingle();
 
+      console.log('🔍 [useProcessosSeletivosDisponiveis] Resultado:', { candidatoExistente, error });
+
       if (error || !candidatoExistente) {
+        console.log('🔍 [useProcessosSeletivosDisponiveis] Candidato não encontrado ou erro');
         return null;
       }
+
+      console.log('🔍 [useProcessosSeletivosDisponiveis] Candidato encontrado:', {
+        formularioId: candidatoExistente.formulario_id,
+        status: candidatoExistente.status,
+        formulario: candidatoExistente.ps_formularios
+      });
 
       return candidatoExistente.ps_formularios as unknown as Formulario;
     },
@@ -501,44 +515,79 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
         throw new Error('Dados incompletos para envio');
       }
 
-      // Buscar o UUID do perfil pelo email
-      let profileId: string | null = null;
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', userEmail)
+      const emailNormalizado = userEmail.toLowerCase().trim();
+      let candidatoId: string;
+
+      // Verificar se já existe candidato com status 'nao_inscrito' (cadastrado via link público)
+      const { data: candidatoExistente, error: buscaError } = await supabase
+        .from('ps_candidatos')
+        .select('id, status')
+        .ilike('email_aluno', emailNormalizado)
+        .eq('formulario_id', formulario.id)
         .maybeSingle();
 
-      if (profileError) {
-        console.error('Erro ao buscar perfil:', profileError);
-      } else if (profileData) {
-        profileId = profileData.id;
+      if (buscaError && buscaError.code !== 'PGRST116') {
+        console.error('Erro ao buscar candidato existente:', buscaError);
+        throw new Error('Erro ao verificar candidatura');
       }
 
-      // Criar candidato
-      const { data: novoCandidato, error: candidatoError } = await supabase
-        .from('ps_candidatos')
-        .insert({
-          aluno_id: profileId,
-          email_aluno: userEmail,
-          nome_aluno: userName,
-          turma: turma,
-          status: 'formulario_enviado',
-          formulario_id: formulario.id,
-          data_inscricao: new Date().toISOString()
-        })
-        .select()
-        .single();
+      if (candidatoExistente) {
+        // Candidato já existe - atualizar status para 'formulario_enviado'
+        candidatoId = candidatoExistente.id;
 
-      if (candidatoError) {
-        console.error('Erro ao criar candidato:', candidatoError);
-        throw new Error('Erro ao registrar candidatura');
+        const { error: updateError } = await supabase
+          .from('ps_candidatos')
+          .update({
+            status: 'formulario_enviado',
+            data_inscricao: new Date().toISOString()
+          })
+          .eq('id', candidatoId);
+
+        if (updateError) {
+          console.error('Erro ao atualizar status do candidato:', updateError);
+          throw new Error('Erro ao atualizar candidatura');
+        }
+      } else {
+        // Candidato não existe - criar novo (fluxo antigo para compatibilidade)
+        let profileId: string | null = null;
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .ilike('email', emailNormalizado)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Erro ao buscar perfil:', profileError);
+        } else if (profileData) {
+          profileId = profileData.id;
+        }
+
+        const { data: novoCandidato, error: candidatoError } = await supabase
+          .from('ps_candidatos')
+          .insert({
+            aluno_id: profileId,
+            email_aluno: emailNormalizado,
+            nome_aluno: userName,
+            turma: turma,
+            status: 'formulario_enviado',
+            formulario_id: formulario.id,
+            data_inscricao: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (candidatoError) {
+          console.error('Erro ao criar candidato:', candidatoError);
+          throw new Error('Erro ao registrar candidatura');
+        }
+
+        candidatoId = novoCandidato.id;
       }
 
       // Inserir respostas
       const respostasParaInserir = respostas.map(r => ({
         ...r,
-        candidato_id: novoCandidato.id
+        candidato_id: candidatoId
       }));
 
       const { error: respostasError } = await supabase
@@ -550,7 +599,7 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
         throw new Error('Erro ao salvar respostas do formulário');
       }
 
-      return novoCandidato;
+      return { id: candidatoId };
     },
     onSuccess: () => {
       toast.success('Formulário enviado com sucesso!');
