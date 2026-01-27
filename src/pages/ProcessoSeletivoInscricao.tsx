@@ -47,6 +47,7 @@ export default function ProcessoSeletivoInscricao() {
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [candidatoId, setCandidatoId] = useState<string | null>(null);
 
   // Buscar informações do processo seletivo
@@ -201,7 +202,7 @@ export default function ProcessoSeletivoInscricao() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!nome.trim() || !email.trim()) {
+    if (!nome.trim() || !email.trim() || !whatsapp.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -218,7 +219,8 @@ export default function ProcessoSeletivoInscricao() {
       const { data, error } = await supabase.rpc('cadastrar_candidato_processo_seletivo', {
         p_nome: nome.trim(),
         p_email: email.trim().toLowerCase(),
-        p_formulario_id: formularioId
+        p_formulario_id: formularioId,
+        p_whatsapp: whatsapp.trim()
       });
 
       if (error) {
@@ -560,9 +562,25 @@ export default function ProcessoSeletivoInscricao() {
               </p>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp">WhatsApp *</Label>
+              <Input
+                id="whatsapp"
+                type="tel"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="(00) 00000-0000"
+                required
+                disabled={submitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                Número para contato via WhatsApp
+              </p>
+            </div>
+
             <Button
               type="submit"
-              disabled={!nome.trim() || !email.trim() || submitting}
+              disabled={!nome.trim() || !email.trim() || !whatsapp.trim() || submitting}
               className="w-full bg-[#3F0077] hover:bg-[#662F96] h-11"
             >
               {submitting ? (

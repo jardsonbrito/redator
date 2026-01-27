@@ -234,6 +234,7 @@ export const PSCandidatosManager: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Candidato</TableHead>
+                  <TableHead>WhatsApp</TableHead>
                   <TableHead>Turma</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Data Inscrição</TableHead>
@@ -243,7 +244,7 @@ export const PSCandidatosManager: React.FC = () => {
               <TableBody>
                 {candidatosFiltrados.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nenhum candidato encontrado
                     </TableCell>
                   </TableRow>
@@ -258,6 +259,7 @@ export const PSCandidatosManager: React.FC = () => {
                             <div className="text-sm text-muted-foreground">{candidato.email_aluno}</div>
                           </div>
                         </TableCell>
+                        <TableCell>{candidato.whatsapp || '-'}</TableCell>
                         <TableCell>{candidato.turma || '-'}</TableCell>
                         <TableCell>
                           <Badge className={`${statusConfig.color} text-white`}>

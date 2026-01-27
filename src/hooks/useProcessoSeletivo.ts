@@ -53,6 +53,7 @@ export interface Candidato {
   aluno_id: string | null;
   email_aluno: string;
   nome_aluno: string;
+  whatsapp: string | null;
   turma: string | null;
   status: CandidatoStatus;
   formulario_id: string;
