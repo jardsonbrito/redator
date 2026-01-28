@@ -324,7 +324,11 @@ function UltimosTemasSection({ temas }: { temas: { id: string; frase_tematica: s
           {temas.slice(0, 5).map((tema) => {
             const colors = getEixoColor(tema.eixo_tematico);
             return (
-              <div key={tema.id} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+              <div
+                key={tema.id}
+                className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-default"
+                title={tema.frase_tematica}
+              >
                 <div className={cn("px-2 py-1 rounded text-xs font-medium flex-shrink-0", colors.bg, colors.text)}>
                   {tema.eixo_tematico}
                 </div>
