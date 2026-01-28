@@ -130,6 +130,9 @@ import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
 // Import TOP 5 component
 import { Top5Widget } from "@/components/shared/Top5Widget";
 
+// Import métricas de temas
+import { TemasMetricsPanel } from "@/components/admin/TemasMetricsPanel";
+
 // Import diário components
 import GestaoEtapas from "@/pages/admin/GestaoEtapas";
 import RegistroAulas from "@/pages/admin/RegistroAulas";
@@ -677,15 +680,19 @@ const Admin = () => {
       case "temas":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="list">Listar Temas</TabsTrigger>
               <TabsTrigger value="create">Criar Tema</TabsTrigger>
+              <TabsTrigger value="metrics">Métricas</TabsTrigger>
             </TabsList>
             <TabsContent value="list">
               <TemaList />
             </TabsContent>
             <TabsContent value="create">
               <TemaForm />
+            </TabsContent>
+            <TabsContent value="metrics">
+              <TemasMetricsPanel />
             </TabsContent>
           </Tabs>
         );

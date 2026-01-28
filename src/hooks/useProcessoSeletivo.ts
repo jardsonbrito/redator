@@ -10,7 +10,8 @@ export type CandidatoStatus =
   | 'aprovado_etapa2'
   | 'reprovado'
   | 'etapa_final_liberada'
-  | 'concluido';
+  | 'concluido'
+  | 'migrado';
 
 export type TipoPergunta =
   | 'texto_curto'
