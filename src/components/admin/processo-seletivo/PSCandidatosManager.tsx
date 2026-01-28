@@ -51,7 +51,8 @@ const STATUS_CONFIG: Record<CandidatoStatus, { label: string; color: string; ico
   aprovado_etapa2: { label: 'Aprovado Etapa 2', color: 'bg-green-500', icon: <CheckCircle className="h-3 w-3" /> },
   reprovado: { label: 'Reprovado', color: 'bg-red-500', icon: <XCircle className="h-3 w-3" /> },
   etapa_final_liberada: { label: 'Etapa Final', color: 'bg-blue-500', icon: <Play className="h-3 w-3" /> },
-  concluido: { label: 'Concluído', color: 'bg-purple-500', icon: <Trophy className="h-3 w-3" /> }
+  concluido: { label: 'Concluído', color: 'bg-purple-500', icon: <Trophy className="h-3 w-3" /> },
+  migrado: { label: 'Migrado', color: 'bg-teal-500', icon: <CheckCircle className="h-3 w-3" /> }
 };
 
 export const PSCandidatosManager: React.FC = () => {
