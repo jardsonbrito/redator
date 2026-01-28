@@ -20,6 +20,10 @@ export interface RedacaoCorretor {
   corretor_id_1?: string | null;
   corretor_id_2?: string | null;
   turma?: string; // Added turma property
+  // Campos de congelamento
+  corrigida?: boolean;
+  congelada?: boolean;
+  data_descongelamento?: string | null;
 }
 
 export const useCorretorRedacoes = (corretorEmail: string) => {

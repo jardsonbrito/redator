@@ -4,12 +4,18 @@ import { getTurmaColorClasses } from "./turmaUtils";
 export const estaCongelada = (redacao: {
   data_envio: string;
   corrigida: boolean;
-  congelada?: boolean
+  congelada?: boolean;
+  data_descongelamento?: string | null;
 }): boolean => {
-  // Se já está marcada como congelada no banco, retornar true
-  if (redacao.congelada) return true;
   // Se já foi corrigida, não pode estar congelada
   if (redacao.corrigida) return false;
+
+  // Se foi descongelada por um admin, não está congelada
+  if (redacao.data_descongelamento) return false;
+
+  // Se já está marcada como congelada no banco, retornar true
+  if (redacao.congelada) return true;
+
   // Calcular se o prazo de 7 dias expirou
   const prazoLimite = new Date(redacao.data_envio);
   prazoLimite.setDate(prazoLimite.getDate() + 7);

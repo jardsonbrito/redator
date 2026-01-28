@@ -84,7 +84,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const redacaoCongelada = estaCongelada({
     data_envio: redacao.data_envio,
     corrigida: redacao.corrigida || false,
-    congelada: (redacao as any).congelada
+    congelada: redacao.congelada,
+    data_descongelamento: redacao.data_descongelamento
   });
 
   // Buscar ID e nome do corretor ao carregar
