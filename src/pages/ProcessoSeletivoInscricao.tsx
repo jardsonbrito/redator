@@ -30,6 +30,27 @@ interface FormularioInfo {
   turma_processo: string | null;
 }
 
+// Validar número de WhatsApp brasileiro
+const validarWhatsApp = (numero: string): boolean => {
+  // Remove tudo que não é número
+  const apenasNumeros = numero.replace(/\D/g, '');
+
+  // WhatsApp brasileiro: 10 ou 11 dígitos (DDD + número)
+  // 11 dígitos = DDD (2) + 9 + número (8)
+  // 10 dígitos = DDD (2) + número (8) - formato antigo
+  if (apenasNumeros.length < 10 || apenasNumeros.length > 11) {
+    return false;
+  }
+
+  // Verifica se o DDD é válido (11 a 99)
+  const ddd = parseInt(apenasNumeros.substring(0, 2));
+  if (ddd < 11 || ddd > 99) {
+    return false;
+  }
+
+  return true;
+};
+
 // Estado possível após cadastro
 type EtapaFluxo = 'cadastro' | 'formulario' | 'concluido';
 
@@ -48,6 +69,7 @@ export default function ProcessoSeletivoInscricao() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [whatsappErro, setWhatsappErro] = useState<string | null>(null);
   const [candidatoId, setCandidatoId] = useState<string | null>(null);
 
   // Buscar informações do processo seletivo
@@ -206,6 +228,14 @@ export default function ProcessoSeletivoInscricao() {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
+
+    // Validar WhatsApp
+    if (!validarWhatsApp(whatsapp)) {
+      setWhatsappErro("Digite um número de WhatsApp válido (DDD + número)");
+      toast.error("Número de WhatsApp inválido. Digite com DDD (ex: 11999998888)");
+      return;
+    }
+    setWhatsappErro(null);
 
     if (!formularioId) {
       toast.error("Erro: ID do processo não encontrado");
@@ -525,14 +555,6 @@ export default function ProcessoSeletivoInscricao() {
           )}
         </CardHeader>
         <CardContent className="space-y-6">
-          <Alert className="bg-blue-50 border-blue-200">
-            <UserPlus className="h-4 w-4 text-blue-600" />
-            <AlertTitle className="text-blue-700">Inscrição em uma Etapa</AlertTitle>
-            <AlertDescription className="text-blue-600">
-              Preencha seus dados abaixo. Ao clicar em "Continuar", o formulário completo de inscrição será carregado automaticamente para você preencher.
-            </AlertDescription>
-          </Alert>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome Completo *</Label>
@@ -568,14 +590,22 @@ export default function ProcessoSeletivoInscricao() {
                 id="whatsapp"
                 type="tel"
                 value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
+                onChange={(e) => {
+                  setWhatsapp(e.target.value);
+                  if (whatsappErro) setWhatsappErro(null);
+                }}
                 placeholder="(00) 00000-0000"
                 required
                 disabled={submitting}
+                className={whatsappErro ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
-              <p className="text-xs text-muted-foreground">
-                Número para contato via WhatsApp
-              </p>
+              {whatsappErro ? (
+                <p className="text-xs text-red-500">{whatsappErro}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Número para contato via WhatsApp (com DDD)
+                </p>
+              )}
             </div>
 
             <Button
