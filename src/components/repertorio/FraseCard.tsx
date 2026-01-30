@@ -34,7 +34,7 @@ interface FraseCardProps {
   isAdmin?: boolean;
   podeCurtir?: boolean;
   onCurtir: (fraseId: string) => void;
-  onEditar: (id: string, frase: string, eixo_tematico: EixoTematico) => void;
+  onEditar: (id: string, frase: string, eixo_tematico: EixoTematico, autoria?: string) => void;
   onExcluir: (id: string) => void;
   isCurtindo?: boolean;
 }
@@ -65,8 +65,8 @@ export const FraseCard = ({
     }
   };
 
-  const handleEditar = (novaFrase: string, novoEixo: EixoTematico) => {
-    onEditar(frase.id, novaFrase, novoEixo);
+  const handleEditar = (novaFrase: string, novoEixo: EixoTematico, novaAutoria?: string) => {
+    onEditar(frase.id, novaFrase, novoEixo, novaAutoria);
     setShowEditModal(false);
   };
 
@@ -141,9 +141,16 @@ export const FraseCard = ({
           </div>
 
           {/* Texto da frase */}
-          <p className="text-sm leading-relaxed text-gray-800 min-h-[60px]">
-            "{frase.frase}"
-          </p>
+          <div className="min-h-[60px] space-y-1">
+            <p className="text-sm leading-relaxed text-gray-800">
+              "{frase.frase}"
+            </p>
+            {frase.autoria && (
+              <p className="text-xs text-gray-500 italic">
+                — {frase.autoria}
+              </p>
+            )}
+          </div>
 
           {/* Rodapé: autor, data e curtidas */}
           <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
@@ -190,6 +197,7 @@ export const FraseCard = ({
         initialData={{
           frase: frase.frase,
           eixo_tematico: frase.eixo_tematico,
+          autoria: frase.autoria,
         }}
         isEditing
       />

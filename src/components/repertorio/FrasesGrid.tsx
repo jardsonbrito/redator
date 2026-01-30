@@ -66,7 +66,7 @@ export const FrasesGrid = ({
   }, [frases]);
 
   // Handlers
-  const handleNovaFrase = async (frase: string, eixo_tematico: EixoTematico) => {
+  const handleNovaFrase = async (frase: string, eixo_tematico: EixoTematico, autoria?: string) => {
     if (!usuarioAtualId || !usuarioNome) {
       console.error("Usuário não identificado");
       return;
@@ -78,6 +78,7 @@ export const FrasesGrid = ({
       autor_turma: usuarioTurma || null,
       frase,
       eixo_tematico,
+      autoria: autoria || null,
     });
 
     setShowNovaFraseModal(false);
@@ -88,8 +89,8 @@ export const FrasesGrid = ({
     await toggleCurtida(fraseId, usuarioAtualId);
   };
 
-  const handleEditar = async (id: string, frase: string, eixo_tematico: EixoTematico) => {
-    await editarFrase(id, frase, eixo_tematico);
+  const handleEditar = async (id: string, frase: string, eixo_tematico: EixoTematico, autoria?: string) => {
+    await editarFrase(id, frase, eixo_tematico, autoria);
   };
 
   // Loading skeleton

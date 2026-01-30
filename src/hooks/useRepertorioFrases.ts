@@ -12,6 +12,7 @@ export interface RepertorioFrase {
   autor_turma: string | null;
   frase: string;
   eixo_tematico: EixoTematico;
+  autoria: string | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -30,6 +31,7 @@ export interface NovaFraseInput {
   autor_turma?: string | null;
   frase: string;
   eixo_tematico: EixoTematico;
+  autoria?: string | null;
 }
 
 export interface CurtidasResumo {
@@ -115,6 +117,7 @@ export const useRepertorioFrases = () => {
           autor_turma: input.autor_turma || null,
           frase: input.frase,
           eixo_tematico: input.eixo_tematico,
+          autoria: input.autoria || null,
           ativo: true,
         })
         .select()
@@ -142,14 +145,15 @@ export const useRepertorioFrases = () => {
 
   // Editar frase
   const editarFraseMutation = useMutation({
-    mutationFn: async ({ id, frase, eixo_tematico }: {
+    mutationFn: async ({ id, frase, eixo_tematico, autoria }: {
       id: string;
       frase: string;
       eixo_tematico: EixoTematico;
+      autoria?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('repertorio_frases')
-        .update({ frase, eixo_tematico })
+        .update({ frase, eixo_tematico, autoria: autoria || null })
         .eq('id', id)
         .select()
         .single();
@@ -256,9 +260,10 @@ export const useRepertorioFrases = () => {
   const editarFrase = useCallback(async (
     id: string,
     frase: string,
-    eixo_tematico: EixoTematico
+    eixo_tematico: EixoTematico,
+    autoria?: string | null
   ) => {
-    return editarFraseMutation.mutateAsync({ id, frase, eixo_tematico });
+    return editarFraseMutation.mutateAsync({ id, frase, eixo_tematico, autoria });
   }, [editarFraseMutation]);
 
   const excluirFrase = useCallback(async (id: string) => {

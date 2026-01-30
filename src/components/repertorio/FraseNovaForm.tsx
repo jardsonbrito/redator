@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -24,10 +25,11 @@ import { cn } from "@/lib/utils";
 interface FraseNovaFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (frase: string, eixo_tematico: EixoTematico) => void;
+  onSubmit: (frase: string, eixo_tematico: EixoTematico, autoria?: string) => void;
   initialData?: {
     frase: string;
     eixo_tematico: EixoTematico;
+    autoria?: string | null;
   };
   isEditing?: boolean;
   isSubmitting?: boolean;
@@ -46,12 +48,14 @@ export const FraseNovaForm = ({
 }: FraseNovaFormProps) => {
   const [frase, setFrase] = useState("");
   const [eixoTematico, setEixoTematico] = useState<EixoTematico | "">("");
+  const [autoria, setAutoria] = useState("");
 
   // Reset form quando abrir/fechar ou mudar initialData
   useEffect(() => {
     if (open) {
       setFrase(initialData?.frase || "");
       setEixoTematico(initialData?.eixo_tematico || "");
+      setAutoria(initialData?.autoria || "");
     }
   }, [open, initialData]);
 
@@ -62,7 +66,7 @@ export const FraseNovaForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isValid && eixoTematico) {
-      onSubmit(frase.trim(), eixoTematico as EixoTematico);
+      onSubmit(frase.trim(), eixoTematico as EixoTematico, autoria.trim() || undefined);
     }
   };
 
@@ -138,6 +142,21 @@ export const FraseNovaForm = ({
                 {charCount}/{MAX_LENGTH}
               </p>
             </div>
+          </div>
+
+          {/* Campo de autoria */}
+          <div className="space-y-2">
+            <Label htmlFor="autoria">Autoria / Fonte</Label>
+            <Input
+              id="autoria"
+              placeholder="Ex: Vidas Secas – Graciliano Ramos, Hannah Arendt, IBGE (2022)..."
+              value={autoria}
+              onChange={(e) => setAutoria(e.target.value)}
+              maxLength={150}
+            />
+            <p className="text-xs text-muted-foreground">
+              Identifique a origem da frase (opcional, mas recomendado)
+            </p>
           </div>
 
           {/* Dicas */}
