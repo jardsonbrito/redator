@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Star, Filter, RefreshCw, ArrowLeft, FileText, MessageSquareQuote } from "lucide-react";
+import { Plus, Star, Filter, RefreshCw, ArrowLeft, FileText, MessageSquareQuote, Clapperboard } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -9,6 +9,7 @@ import {
   RepertorioPublicacaoCard,
   RepertorioNovaPublicacaoForm,
   FrasesGrid,
+  ObrasGrid,
 } from "@/components/repertorio";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -219,9 +220,9 @@ const RepertorioOrientado = () => {
           </div>
         </div>
 
-        {/* Tabs para alternar entre Parágrafos e Frases */}
+        {/* Tabs para alternar entre Parágrafos, Frases e Obras */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 bg-purple-100/70">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3 bg-purple-100/70">
             <TabsTrigger
               value="paragrafos"
               className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
@@ -235,6 +236,13 @@ const RepertorioOrientado = () => {
             >
               <MessageSquareQuote className="h-4 w-4" />
               Frases
+            </TabsTrigger>
+            <TabsTrigger
+              value="obras"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
+            >
+              <Clapperboard className="h-4 w-4" />
+              Obras
             </TabsTrigger>
           </TabsList>
 
@@ -406,6 +414,19 @@ const RepertorioOrientado = () => {
               isAdmin={isAdmin}
               podePublicar={podePublicar}
               podeCurtir={podeVotar}
+            />
+          </TabsContent>
+
+          {/* Conteúdo da aba Obras */}
+          <TabsContent value="obras" className="mt-6">
+            <ObrasGrid
+              usuarioAtualId={usuarioAtualId}
+              usuarioNome={usuarioNome}
+              usuarioTurma={studentData.turma}
+              isAdmin={isAdmin}
+              podePublicar={podePublicar}
+              podeCurtir={podeVotar}
+              podeComentarFlag={podeVotar}
             />
           </TabsContent>
         </Tabs>
