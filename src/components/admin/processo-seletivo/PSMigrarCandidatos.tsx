@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -59,11 +59,39 @@ export const PSMigrarCandidatos: React.FC<PSMigrarCandidatosProps> = ({
   const [migrando, setMigrando] = useState(false);
   const [showConfirmacao, setShowConfirmacao] = useState(false);
   const [resultadoMigracao, setResultadoMigracao] = useState<any>(null);
+  const [emailsJaMigrados, setEmailsJaMigrados] = useState<Set<string>>(new Set());
 
-  // Filtrar apenas candidatos concluídos (que finalizaram o processo)
-  const candidatosElegiveis = useMemo(() => {
-    return candidatos.filter(c => c.status === 'concluido');
+  // Buscar emails de alunos que já estão ativos no sistema (com turma definida)
+  useEffect(() => {
+    const buscarAlunosAtivos = async () => {
+      const emailsCandidatos = candidatos
+        .filter(c => c.status === 'concluido')
+        .map(c => c.email_aluno.toLowerCase());
+
+      if (emailsCandidatos.length === 0) return;
+
+      const { data: alunosAtivos } = await supabase
+        .from('profiles')
+        .select('email, turma')
+        .in('email', emailsCandidatos)
+        .not('turma', 'is', null);
+
+      if (alunosAtivos && alunosAtivos.length > 0) {
+        const emails = new Set(alunosAtivos.map(a => a.email?.toLowerCase()).filter(Boolean));
+        setEmailsJaMigrados(emails as Set<string>);
+      }
+    };
+
+    buscarAlunosAtivos();
   }, [candidatos]);
+
+  // Filtrar candidatos concluídos que ainda NÃO foram migrados (nem pelo sistema, nem manualmente)
+  const candidatosElegiveis = useMemo(() => {
+    return candidatos.filter(c =>
+      c.status === 'concluido' &&
+      !emailsJaMigrados.has(c.email_aluno.toLowerCase())
+    );
+  }, [candidatos, emailsJaMigrados]);
 
   // Aplicar filtro de busca
   const candidatosFiltrados = useMemo(() => {
