@@ -182,6 +182,27 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
     staleTime: 30 * 1000
   });
 
+  // Buscar candidatos concluídos que já foram migrados (já existem como alunos ativos com turma)
+  const { data: emailsJaMigrados = [] } = useQuery({
+    queryKey: ['ps-admin-emails-ja-migrados', candidatos],
+    queryFn: async (): Promise<string[]> => {
+      const candidatosConcluidos = candidatos?.filter(c => c.status === 'concluido') || [];
+      if (candidatosConcluidos.length === 0) return [];
+
+      const emails = candidatosConcluidos.map(c => c.email_aluno.toLowerCase());
+
+      const { data: alunosAtivos } = await supabase
+        .from('profiles')
+        .select('email')
+        .in('email', emails)
+        .not('turma', 'is', null);
+
+      return (alunosAtivos || []).map(a => a.email?.toLowerCase()).filter(Boolean) as string[];
+    },
+    enabled: !!candidatos && candidatos.some(c => c.status === 'concluido'),
+    staleTime: 30 * 1000
+  });
+
   // Buscar comunicado ativo
   const { data: comunicado, isLoading: isLoadingComunicado } = useQuery({
     queryKey: ['ps-admin-comunicado', formularioAtivo?.id],
@@ -1390,13 +1411,19 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
   // ESTATÍSTICAS
   // ============================================
 
+  // Calcular candidatos concluídos que ainda não foram migrados (pendentes para migrar)
+  const candidatosPendentesParaMigrar = candidatos?.filter(c =>
+    c.status === 'concluido' &&
+    !emailsJaMigrados.includes(c.email_aluno.toLowerCase())
+  ).length || 0;
+
   const estatisticas = {
     total: candidatos?.length || 0,
     aguardandoAnalise: candidatos?.filter(c => c.status === 'formulario_enviado').length || 0,
     aprovados: candidatos?.filter(c => c.status === 'aprovado_etapa2').length || 0,
     reprovados: candidatos?.filter(c => c.status === 'reprovado').length || 0,
     etapaFinalLiberada: candidatos?.filter(c => c.status === 'etapa_final_liberada').length || 0,
-    concluidos: candidatos?.filter(c => c.status === 'concluido').length || 0
+    concluidos: candidatosPendentesParaMigrar // Agora mostra apenas os pendentes para migrar
   };
 
   return {
