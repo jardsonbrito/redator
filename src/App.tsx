@@ -90,6 +90,7 @@ import SimuladoRedacaoCorrigida from "./pages/SimuladoRedacaoCorrigida";
 import RedacaoRegularDetalhes from "./pages/RedacaoRegularDetalhes";
 import ProcessoSeletivo from "./pages/ProcessoSeletivo";
 import ProcessoSeletivoInscricao from "./pages/ProcessoSeletivoInscricao";
+import RepertorioOrientado from "./pages/RepertorioOrientado";
 import { CustomizePlanSimple } from "./pages/admin/CustomizePlanSimple";
 import { CustomizePlanByName } from "./pages/admin/CustomizePlanByName";
 import { CustomizeStudentPlan } from "./pages/admin/CustomizeStudentPlan";
@@ -146,6 +147,7 @@ function App() {
                   <Route path="/lousa" element={<ProtectedStudentRoute><AlunoLousaList /></ProtectedStudentRoute>} />
                   <Route path="/lousa/:id" element={<ProtectedStudentRoute><LousaResponse /></ProtectedStudentRoute>} />
                   <Route path="/ajuda-rapida" element={<ProtectedStudentRoute><AjudaRapida /></ProtectedStudentRoute>} />
+                  <Route path="/repertorio-orientado" element={<ProtectedStudentRoute><RepertorioOrientado /></ProtectedStudentRoute>} />
                   <Route path="/minhas-conquistas" element={<ProtectedStudentRoute><MinhasConquistas /></ProtectedStudentRoute>} />
                   <Route path="/gamificacao" element={<ProtectedStudentRoute><Gamificacao /></ProtectedStudentRoute>} />
                   <Route path="/diario-online" element={<ProtectedStudentRoute><DiarioOnline /></ProtectedStudentRoute>} />

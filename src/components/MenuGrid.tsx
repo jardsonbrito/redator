@@ -100,7 +100,8 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
       // Funcionalidades que estavam faltando no mapeamento:
       'Top 5': 'top_5',
       'Diário Online': 'diario_online',
-      'Gamificação': 'gamificacao'
+      'Gamificação': 'gamificacao',
+      'Repertório Orientado': 'repertorio_orientado'
     };
     return mapping[title] || '';
   };

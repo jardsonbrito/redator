@@ -19,7 +19,8 @@ const VISITANTE_FEATURES = {
   'diario_online': false,
   'gamificacao': false,
   'top_5': false,
-  'minhas_conquistas': false
+  'minhas_conquistas': false,
+  'repertorio_orientado': false
 };
 
 // Definir funcionalidades padrão por plano
@@ -38,7 +39,8 @@ const DEFAULT_PLAN_FEATURES = {
     'diario_online': true,
     'gamificacao': true,
     'top_5': true,
-    'minhas_conquistas': true
+    'minhas_conquistas': true,
+    'repertorio_orientado': false
   },
   'Lapidação': {
     'temas': true,
@@ -54,7 +56,8 @@ const DEFAULT_PLAN_FEATURES = {
     'diario_online': true,
     'gamificacao': true,
     'top_5': true,
-    'minhas_conquistas': true
+    'minhas_conquistas': true,
+    'repertorio_orientado': true
   },
   'Liderança': {
     'temas': true,
@@ -70,7 +73,8 @@ const DEFAULT_PLAN_FEATURES = {
     'diario_online': true,
     'gamificacao': true,
     'top_5': true,
-    'minhas_conquistas': true
+    'minhas_conquistas': true,
+    'repertorio_orientado': true
   },
   'Bolsista': {
     'temas': true,
@@ -86,7 +90,8 @@ const DEFAULT_PLAN_FEATURES = {
     'diario_online': true,
     'gamificacao': true,
     'top_5': true,
-    'minhas_conquistas': true
+    'minhas_conquistas': true,
+    'repertorio_orientado': false
   }
 };
 

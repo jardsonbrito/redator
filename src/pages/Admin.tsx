@@ -48,7 +48,8 @@ import {
   Gamepad2 as PhosphorGamepad2,
   Award as PhosphorAward,
   Calendar as PhosphorCalendar,
-  ListChecks
+  ListChecks,
+  ChatText
 } from "phosphor-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -594,6 +595,7 @@ const Admin = () => {
     { id: "radar", label: "Radar", icon: ChartPieSlice, iconColor: "#3F51B5" },
     { id: "gamificacao", label: "Gamificação", icon: Trophy, iconColor: "#FFD700" },
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: ChatCircle, iconColor: "#00BCD4" },
+    { id: "repertorio-orientado", label: "Repertório Orientado", icon: ChatText, iconColor: "#8B5CF6" },
 
     // Linha 7: Gestão de Usuários
     { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
@@ -988,6 +990,10 @@ const Admin = () => {
 
       case "ajuda-rapida":
         navigate('/admin/ajuda-rapida');
+        return null;
+
+      case "repertorio-orientado":
+        navigate('/repertorio-orientado');
         return null;
 
       case "exportacao":

@@ -4,7 +4,7 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList, MessageSquareText } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 
@@ -59,6 +59,14 @@ const Student = () => {
       path: "/lousa",
       icon: Presentation,
       tooltip: "Participe de exercícios rápidos criados pelos professores.",
+      showAlways: true
+    },
+    // Repertório Orientado
+    {
+      title: "Repertório Orientado",
+      path: "/repertorio-orientado",
+      icon: MessageSquareText,
+      tooltip: "Publique parágrafos com repertório e receba feedback dos colegas e professores.",
       showAlways: true
     },
     // Linha 3, Coluna 2: Videoteca
