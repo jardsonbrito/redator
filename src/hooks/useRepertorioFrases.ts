@@ -174,12 +174,12 @@ export const useRepertorioFrases = () => {
     },
   });
 
-  // Excluir frase (soft delete - ativo = false)
+  // Excluir frase (delete real)
   const excluirFraseMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('repertorio_frases')
-        .update({ ativo: false })
+        .delete()
         .eq('id', id);
 
       if (error) throw error;
