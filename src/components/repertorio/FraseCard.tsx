@@ -105,7 +105,7 @@ export const FraseCard = ({
             </Badge>
 
             {(podeEditar || podeExcluir) && (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                     <MoreVertical className="h-4 w-4" />
@@ -113,14 +113,22 @@ export const FraseCard = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {podeEditar && (
-                    <DropdownMenuItem onClick={() => setShowEditModal(true)}>
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setShowEditModal(true);
+                      }}
+                    >
                       <Edit2 className="h-4 w-4 mr-2" />
                       Editar
                     </DropdownMenuItem>
                   )}
                   {podeExcluir && (
                     <DropdownMenuItem
-                      onClick={() => setShowDeleteDialog(true)}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setShowDeleteDialog(true);
+                      }}
                       className="text-red-600 focus:text-red-600"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
