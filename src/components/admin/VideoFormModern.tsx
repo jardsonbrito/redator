@@ -8,6 +8,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
+import { ImageSelector } from './ImageSelector';
+
+type ImageValue = {
+  source: 'upload' | 'url';
+  url?: string;
+  file_path?: string;
+  file_size?: number;
+  dimensions?: { width: number; height: number };
+} | null;
 
 interface VideoFormModernProps {
   mode: 'create' | 'edit';
@@ -19,6 +28,11 @@ interface VideoFormModernProps {
     status_publicacao?: 'publicado' | 'rascunho';
     video_url_original?: string;
     youtube_url?: string;
+    cover_source?: 'upload' | 'url' | 'youtube';
+    cover_url?: string;
+    cover_file_path?: string;
+    cover_file_size?: number;
+    cover_dimensions?: { width: number; height: number };
   };
   onCancel?: () => void;
   onSuccess?: () => void;
@@ -34,6 +48,7 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
     eixo_tematico: '',
     status_publicacao: 'publicado' as 'publicado' | 'rascunho',
     video_url_original: '',
+    cover: null as ImageValue,
   });
 
   const [preview, setPreview] = useState({
@@ -77,11 +92,25 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
   // Pré-preencher dados no modo edit
   useEffect(() => {
     if (mode === 'edit' && initialValues) {
+      // Pre-populate cover image
+      let coverValue: ImageValue = null;
+      if (initialValues.cover_source === 'upload' && initialValues.cover_file_path) {
+        coverValue = {
+          source: 'upload',
+          file_path: initialValues.cover_file_path,
+          file_size: initialValues.cover_file_size,
+          dimensions: initialValues.cover_dimensions
+        };
+      } else if (initialValues.cover_source === 'url' && initialValues.cover_url) {
+        coverValue = { source: 'url', url: initialValues.cover_url };
+      }
+
       setFormData({
         titulo: initialValues.titulo || '',
         eixo_tematico: initialValues.eixo_tematico || initialValues.categoria || '',
         status_publicacao: initialValues.status_publicacao || 'publicado',
         video_url_original: initialValues.video_url_original || initialValues.youtube_url || '',
+        cover: coverValue,
       });
 
       // Gerar preview se houver URL
@@ -144,6 +173,15 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
     setLoading(true);
 
     try {
+      // Determinar a thumbnail final (prioridade: capa manual > YouTube automático)
+      let finalThumbnailUrl = preview.thumbnail_url || null;
+      if (formData.cover?.source === 'url' && formData.cover.url) {
+        finalThumbnailUrl = formData.cover.url;
+      } else if (formData.cover?.source === 'upload' && formData.cover.file_path) {
+        const { data: publicData } = supabase.storage.from('videos').getPublicUrl(formData.cover.file_path);
+        finalThumbnailUrl = publicData.publicUrl;
+      }
+
       // Preparar dados para salvar
       const dataToSave = {
         titulo: formData.titulo.trim(),
@@ -153,7 +191,13 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
         platform: preview.platform,
         video_id: preview.video_id,
         embed_url: preview.embed_url,
-        thumbnail_url: preview.thumbnail_url || null,
+        thumbnail_url: finalThumbnailUrl,
+        // Campos de capa
+        cover_source: formData.cover?.source || (preview.thumbnail_url ? 'youtube' : null),
+        cover_url: formData.cover?.source === 'url' ? formData.cover.url : null,
+        cover_file_path: formData.cover?.source === 'upload' ? formData.cover.file_path : null,
+        cover_file_size: formData.cover?.file_size || null,
+        cover_dimensions: formData.cover?.dimensions || null,
         // Manter campos antigos para compatibilidade
         categoria: formData.eixo_tematico.trim(),
         youtube_url: formData.video_url_original.trim(),
@@ -197,6 +241,7 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
           eixo_tematico: '',
           status_publicacao: 'publicado',
           video_url_original: '',
+          cover: null,
         });
         setPreview({ platform: '', video_id: '', embed_url: '', thumbnail_url: '' });
       } else if (onSuccess) {
@@ -316,6 +361,19 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
                       <SelectItem value="rascunho">Rascunho</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Capa/Thumbnail */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <ImageSelector
+                    title="Capa do Vídeo"
+                    description="Faça upload de uma imagem ou cole uma URL. Se não informar, será usada a thumbnail do YouTube automaticamente."
+                    required={false}
+                    value={formData.cover}
+                    onChange={(value) => setFormData({...formData, cover: value})}
+                    minDimensions={{ width: 300, height: 200 }}
+                    bucket="videos"
+                  />
                 </div>
               </div>
             )}
