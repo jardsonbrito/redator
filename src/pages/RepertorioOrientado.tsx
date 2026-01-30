@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Star, Filter, RefreshCw, ArrowLeft } from "lucide-react";
+import { Plus, Star, Filter, RefreshCw, ArrowLeft, FileText, MessageSquareQuote } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -8,6 +8,7 @@ import { useRepertorio, calcularVotosResumo } from "@/hooks/useRepertorio";
 import {
   RepertorioPublicacaoCard,
   RepertorioNovaPublicacaoForm,
+  FrasesGrid,
 } from "@/components/repertorio";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 
 const RepertorioOrientado = () => {
@@ -31,6 +33,7 @@ const RepertorioOrientado = () => {
 
   const [showNovaPublicacaoModal, setShowNovaPublicacaoModal] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [activeTab, setActiveTab] = useState<string>("paragrafos");
 
   // Verificar sessão de admin no localStorage
   const [adminSession, setAdminSession] = useState<{ email: string; nome?: string } | null>(null);
@@ -202,7 +205,7 @@ const RepertorioOrientado = () => {
       )}
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Header com ações */}
+        {/* Header com título */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -210,172 +213,209 @@ const RepertorioOrientado = () => {
             </h1>
             {!isAdmin && (
               <p className="text-muted-foreground">
-                Compartilhe parágrafos com repertório e receba feedback da comunidade
+                Compartilhe parágrafos e frases com repertório para enriquecer suas redações
               </p>
             )}
           </div>
+        </div>
 
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetchPublicacoes()}
+        {/* Tabs para alternar entre Parágrafos e Frases */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 bg-purple-100/70">
+            <TabsTrigger
+              value="paragrafos"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
             >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Atualizar
-            </Button>
+              <FileText className="h-4 w-4" />
+              Parágrafos
+            </TabsTrigger>
+            <TabsTrigger
+              value="frases"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
+            >
+              <MessageSquareQuote className="h-4 w-4" />
+              Frases
+            </TabsTrigger>
+          </TabsList>
 
-            {podePublicar && (
-              <Button onClick={() => setShowNovaPublicacaoModal(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Nova Publicação
-              </Button>
-            )}
-          </div>
-        </div>
+          {/* Conteúdo da aba Parágrafos */}
+          <TabsContent value="paragrafos" className="mt-6 space-y-6">
+            {/* Ações de Parágrafos */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filtrar por tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os tipos</SelectItem>
+                    <SelectItem value="introducao">Introdução</SelectItem>
+                    <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
+                    <SelectItem value="conclusao">Conclusão</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">
+                  {publicacoesFiltradas.length}{" "}
+                  {publicacoesFiltradas.length === 1 ? "publicação" : "publicações"}
+                </span>
+              </div>
 
-        {/* Seção de Destaques */}
-        {destaques.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                Destaques
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex gap-4 pb-4">
-                  {destaques.map((publicacao) => (
-                    <div
-                      key={publicacao.id}
-                      className="w-[350px] flex-shrink-0"
-                    >
-                      <RepertorioPublicacaoCard
-                        publicacao={publicacao}
-                        votos={getVotosPublicacao(publicacao.id)}
-                        comentarios={getComentariosPublicacao(publicacao.id)}
-                        usuarioAtualId={usuarioAtualId}
-                        usuarioNome={usuarioNome}
-                        isAdmin={isAdmin}
-                        isProfessor={isProfessor}
-                        podeVotar={podeVotar}
-                        onVotar={handleVotar}
-                        onEditar={handleEditar}
-                        onExcluir={excluirPublicacao}
-                        onToggleDestaque={toggleDestaque}
-                        onAdicionarComentario={handleAdicionarComentario}
-                        onEditarComentario={editarComentario}
-                        onExcluirComentario={excluirComentario}
-                        isVotando={isVotando}
-                        isComentando={isComentando}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchPublicacoes()}
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Atualizar
+                </Button>
 
-        {/* Filtros */}
-        <div className="flex items-center gap-3">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrar por tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os tipos</SelectItem>
-              <SelectItem value="introducao">Introdução</SelectItem>
-              <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
-              <SelectItem value="conclusao">Conclusão</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">
-            {publicacoesFiltradas.length}{" "}
-            {publicacoesFiltradas.length === 1 ? "publicação" : "publicações"}
-          </span>
-        </div>
+                {podePublicar && (
+                  <Button onClick={() => setShowNovaPublicacaoModal(true)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Novo Parágrafo
+                  </Button>
+                )}
+              </div>
+            </div>
 
-        {/* Feed de Publicações */}
-        {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
+            {/* Seção de Destaques */}
+            {destaques.length > 0 && (
+              <Card>
                 <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                    Destaques
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-8 w-full" />
+                <CardContent>
+                  <ScrollArea className="w-full whitespace-nowrap">
+                    <div className="flex gap-4 pb-4">
+                      {destaques.map((publicacao) => (
+                        <div
+                          key={publicacao.id}
+                          className="w-[350px] flex-shrink-0"
+                        >
+                          <RepertorioPublicacaoCard
+                            publicacao={publicacao}
+                            votos={getVotosPublicacao(publicacao.id)}
+                            comentarios={getComentariosPublicacao(publicacao.id)}
+                            usuarioAtualId={usuarioAtualId}
+                            usuarioNome={usuarioNome}
+                            isAdmin={isAdmin}
+                            isProfessor={isProfessor}
+                            podeVotar={podeVotar}
+                            onVotar={handleVotar}
+                            onEditar={handleEditar}
+                            onExcluir={excluirPublicacao}
+                            onToggleDestaque={toggleDestaque}
+                            onAdicionarComentario={handleAdicionarComentario}
+                            onEditarComentario={editarComentario}
+                            onExcluirComentario={excluirComentario}
+                            isVotando={isVotando}
+                            isComentando={isComentando}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                  </ScrollArea>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        ) : publicacoesFiltradas.length === 0 ? (
-          <Card className="p-12 text-center">
-            <div className="space-y-3">
-              <p className="text-lg font-medium text-gray-900">
-                Nenhuma publicação encontrada
-              </p>
-              <p className="text-muted-foreground">
-                {filtroTipo !== "todos"
-                  ? "Tente mudar o filtro para ver mais publicações."
-                  : "Seja o primeiro a compartilhar um parágrafo com repertório!"}
-              </p>
-              {podePublicar && filtroTipo === "todos" && (
-                <Button
-                  className="mt-4"
-                  onClick={() => setShowNovaPublicacaoModal(true)}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Criar Primeira Publicação
-                </Button>
-              )}
-            </div>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {publicacoesFiltradas.map((publicacao) => (
-              <RepertorioPublicacaoCard
-                key={publicacao.id}
-                publicacao={publicacao}
-                votos={getVotosPublicacao(publicacao.id)}
-                comentarios={getComentariosPublicacao(publicacao.id)}
-                usuarioAtualId={usuarioAtualId}
-                usuarioNome={usuarioNome}
-                isAdmin={isAdmin}
-                isProfessor={isProfessor}
-                podeVotar={podeVotar}
-                onVotar={handleVotar}
-                onEditar={handleEditar}
-                onExcluir={excluirPublicacao}
-                onToggleDestaque={toggleDestaque}
-                onAdicionarComentario={handleAdicionarComentario}
-                onEditarComentario={editarComentario}
-                onExcluirComentario={excluirComentario}
-                isVotando={isVotando}
-                isComentando={isComentando}
-              />
-            ))}
-          </div>
-        )}
+            )}
+
+            {/* Feed de Publicações */}
+            {isLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Card key={i}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-24 w-full" />
+                      <Skeleton className="h-8 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : publicacoesFiltradas.length === 0 ? (
+              <Card className="p-12 text-center">
+                <div className="space-y-3">
+                  <p className="text-lg font-medium text-gray-900">
+                    Nenhuma publicação encontrada
+                  </p>
+                  <p className="text-muted-foreground">
+                    {filtroTipo !== "todos"
+                      ? "Tente mudar o filtro para ver mais publicações."
+                      : "Seja o primeiro a compartilhar um parágrafo com repertório!"}
+                  </p>
+                  {podePublicar && filtroTipo === "todos" && (
+                    <Button
+                      className="mt-4"
+                      onClick={() => setShowNovaPublicacaoModal(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Criar Primeiro Parágrafo
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {publicacoesFiltradas.map((publicacao) => (
+                  <RepertorioPublicacaoCard
+                    key={publicacao.id}
+                    publicacao={publicacao}
+                    votos={getVotosPublicacao(publicacao.id)}
+                    comentarios={getComentariosPublicacao(publicacao.id)}
+                    usuarioAtualId={usuarioAtualId}
+                    usuarioNome={usuarioNome}
+                    isAdmin={isAdmin}
+                    isProfessor={isProfessor}
+                    podeVotar={podeVotar}
+                    onVotar={handleVotar}
+                    onEditar={handleEditar}
+                    onExcluir={excluirPublicacao}
+                    onToggleDestaque={toggleDestaque}
+                    onAdicionarComentario={handleAdicionarComentario}
+                    onEditarComentario={editarComentario}
+                    onExcluirComentario={excluirComentario}
+                    isVotando={isVotando}
+                    isComentando={isComentando}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Conteúdo da aba Frases */}
+          <TabsContent value="frases" className="mt-6">
+            <FrasesGrid
+              usuarioAtualId={usuarioAtualId}
+              usuarioNome={usuarioNome}
+              usuarioTurma={studentData.turma}
+              isAdmin={isAdmin}
+              podePublicar={podePublicar}
+              podeCurtir={podeVotar}
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* Aviso para visitantes */}
         {isVisitante && (
           <Card className="bg-yellow-50 border-yellow-200">
             <CardContent className="py-4">
               <p className="text-sm text-yellow-800 text-center">
-                Você está como visitante. Para publicar e votar, faça login como aluno.
+                Você está como visitante. Para publicar e interagir, faça login como aluno.
               </p>
             </CardContent>
           </Card>
