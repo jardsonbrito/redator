@@ -514,6 +514,46 @@ const Admin = () => {
         badge: alunosParticiparam > 0 ? `${alunosParticiparam} já participaram` : undefined
       };
 
+      // Anotações - buscar quantidade e cores
+      const { data: anotacoes } = await supabase
+        .from('admin_notes')
+        .select('cor, arquivado');
+
+      const anotacoesAtivas = anotacoes?.filter(a => !a.arquivado) || [];
+      const totalAnotacoes = anotacoesAtivas.length;
+
+      // Agrupar por cor e contar
+      const coresCounts: Record<string, number> = {};
+      anotacoesAtivas.forEach(nota => {
+        const cor = nota.cor || 'default';
+        coresCounts[cor] = (coresCounts[cor] || 0) + 1;
+      });
+
+      // Mapear cores para nomes em português (singular e plural)
+      const coresNomes: Record<string, { singular: string; plural: string }> = {
+        default: { singular: 'padrão', plural: 'padrão' },
+        yellow: { singular: 'amarela', plural: 'amarelas' },
+        blue: { singular: 'azul', plural: 'azuis' },
+        green: { singular: 'verde', plural: 'verdes' },
+        red: { singular: 'vermelha', plural: 'vermelhas' },
+        purple: { singular: 'roxa', plural: 'roxas' },
+        pink: { singular: 'rosa', plural: 'rosas' }
+      };
+
+      // Criar texto do badge com as cores
+      const coresBadge = Object.entries(coresCounts)
+        .map(([cor, count]) => {
+          const corInfo = coresNomes[cor] || { singular: cor, plural: cor };
+          const corNome = count > 1 ? corInfo.plural : corInfo.singular;
+          return `${count} ${corNome}`;
+        })
+        .join(' • ');
+
+      data.anotacoes = {
+        info: `${totalAnotacoes} ${totalAnotacoes === 1 ? 'anotação' : 'anotações'}`,
+        badge: coresBadge || undefined
+      };
+
       // Cards limpos - apenas título, sem informações adicionais
       const cardsLimpos = [
         "radar", "professores", "administradores", "exportacao", "top5", "configuracoes"
