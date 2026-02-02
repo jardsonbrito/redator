@@ -122,7 +122,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
   return (
     <Card
       className={cn(
-        'border-gray-200 bg-white hover:shadow-lg transition-all duration-200 cursor-pointer relative',
+        'hover:shadow-lg transition-all duration-200 cursor-pointer relative',
+        colorClass,
         note.fixado && 'ring-2 ring-primary ring-offset-2'
       )}
       onClick={() => onEdit(note)}
