@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import {
   Pin,
   MoreVertical,
   Edit,
@@ -19,6 +26,9 @@ import {
   ExternalLink,
   Image as ImageIcon,
   StickyNote,
+  Download,
+  Copy,
+  X,
 } from 'lucide-react';
 import { AdminNote, getColorClass, formatDate } from '@/types/admin-notes';
 import { cn } from '@/lib/utils';
@@ -38,10 +48,57 @@ export const NotesCard: React.FC<NotesCardProps> = ({
   onTogglePin,
   onToggleArchive,
 }) => {
+  const [showImagesDialog, setShowImagesDialog] = useState(false);
+  const [showLinksDialog, setShowLinksDialog] = useState(false);
+  const { toast } = useToast();
+
   const handleDelete = () => {
     if (window.confirm('Tem certeza que deseja deletar esta anotação?')) {
       onDelete(note.id);
     }
+  };
+
+  const handleDownloadImage = async (imageUrl: string, imageName: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = imageName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Download iniciado',
+        description: 'A imagem está sendo baixada.',
+      });
+    } catch (error) {
+      console.error('Erro ao baixar imagem:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível baixar a imagem.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCopyImageLink = (imageUrl: string) => {
+    navigator.clipboard.writeText(imageUrl);
+    toast({
+      title: 'Link copiado!',
+      description: 'O link da imagem foi copiado para a área de transferência.',
+    });
+  };
+
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast({
+      title: 'Link copiado!',
+      description: 'O link foi copiado para a área de transferência.',
+    });
   };
 
   const colorClass = getColorClass(note.cor);
@@ -52,13 +109,12 @@ export const NotesCard: React.FC<NotesCardProps> = ({
   const getIconColor = (cor: string) => {
     const colorMap: Record<string, string> = {
       default: '#9CA3AF',
-      amarelo: '#F59E0B',
-      verde: '#10B981',
-      azul: '#3B82F6',
-      roxo: '#8B5CF6',
-      rosa: '#EC4899',
-      laranja: '#F97316',
-      vermelho: '#EF4444',
+      yellow: '#F59E0B',
+      green: '#10B981',
+      blue: '#3B82F6',
+      purple: '#8B5CF6',
+      pink: '#EC4899',
+      red: '#EF4444',
     };
     return colorMap[cor] || '#9CA3AF';
   };
@@ -142,7 +198,13 @@ export const NotesCard: React.FC<NotesCardProps> = ({
         {/* Imagens preview - chips style */}
         {hasImages && (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            <div
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowImagesDialog(true);
+              }}
+            >
               <ImageIcon className="w-3 h-3" />
               <span>{note.imagens.length} {note.imagens.length === 1 ? 'imagem' : 'imagens'}</span>
             </div>
@@ -152,7 +214,13 @@ export const NotesCard: React.FC<NotesCardProps> = ({
         {/* Links preview - chips style */}
         {hasLinks && (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+            <div
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-purple-50 text-purple-700 border border-purple-200 cursor-pointer hover:bg-purple-100 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLinksDialog(true);
+              }}
+            >
               <ExternalLink className="w-3 h-3" />
               <span>{note.links.length} {note.links.length === 1 ? 'link' : 'links'}</span>
             </div>
@@ -202,6 +270,103 @@ export const NotesCard: React.FC<NotesCardProps> = ({
           </div>
         </div>
       </CardContent>
+
+      {/* Dialog de visualização de imagens */}
+      <Dialog open={showImagesDialog} onOpenChange={setShowImagesDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Imagens da Anotação</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {note.imagens.map((img, idx) => (
+              <div key={idx} className="border rounded-lg overflow-hidden">
+                <div className="relative aspect-video bg-muted">
+                  <img
+                    src={img.url}
+                    alt={img.nome}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="p-3 space-y-2">
+                  <p className="text-sm font-medium truncate" title={img.nome}>
+                    {img.nome}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {(img.tamanho / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleDownloadImage(img.url, img.nome)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Baixar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleCopyImageLink(img.url)}
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copiar Link
+                    </Button>
+                  </div>
+                  <div className="mt-2 p-2 bg-muted rounded text-xs break-all">
+                    {img.url}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de visualização de links */}
+      <Dialog open={showLinksDialog} onOpenChange={setShowLinksDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Links da Anotação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {note.links.map((link, idx) => (
+              <div key={idx} className="border rounded-lg p-4 space-y-3">
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">{link.titulo}</h4>
+                  {link.descricao && (
+                    <p className="text-xs text-muted-foreground">{link.descricao}</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => window.open(link.url, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Abrir Link
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleCopyLink(link.url)}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar Link
+                  </Button>
+                </div>
+                <div className="p-2 bg-muted rounded text-xs break-all">
+                  {link.url}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

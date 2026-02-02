@@ -103,13 +103,22 @@ const AdminNotes = () => {
 
       const adminId = adminData.id;
       console.log('👤 Admin ID encontrado:', adminId, 'para email:', user.email);
+      console.log('📝 Dados recebidos:', {
+        newImagesCount: newImages?.length || 0,
+        linksCount: data.links.length,
+        links: data.links,
+        imagesToRemoveCount: imagesToRemove?.length || 0
+      });
+
       // Fazer upload das novas imagens
       let uploadedImages: NoteImage[] = [];
       if (newImages && newImages.length > 0) {
+        console.log('📸 Fazendo upload de', newImages.length, 'imagens...');
         const noteId = editingNote?.id || crypto.randomUUID();
         const uploadPromises = newImages.map(file => uploadImage(file, noteId));
         const results = await Promise.all(uploadPromises);
         uploadedImages = results.filter((img): img is NoteImage => img !== null);
+        console.log('✅ Upload concluído. Imagens carregadas:', uploadedImages.length);
       }
 
       // Combinar imagens existentes (que não foram removidas) com novas
@@ -120,11 +129,16 @@ const AdminNotes = () => {
         );
       }
       finalImages = [...finalImages, ...uploadedImages];
+      console.log('🖼️ Total de imagens finais:', finalImages.length);
 
       // Deletar imagens removidas do storage
       if (imagesToRemove && imagesToRemove.length > 0) {
         await Promise.all(imagesToRemove.map(path => deleteImage(path)));
       }
+
+      // Garantir que links seja um array válido
+      const finalLinks = data.links && data.links.length > 0 ? data.links : [];
+      console.log('🔗 Links finais:', finalLinks);
 
       const noteData = {
         titulo: data.titulo,
@@ -132,19 +146,23 @@ const AdminNotes = () => {
         cor: data.cor,
         categoria: data.categoria || null,
         tags: data.tags.length > 0 ? data.tags : null,
-        imagens: finalImages,
-        links: data.links,
+        imagens: finalImages.length > 0 ? finalImages : [],
+        links: finalLinks,
         fixado: data.fixado,
       };
 
+      console.log('💾 Dados da nota a serem salvos:', noteData);
+
       if (editingNote) {
         // Atualizar nota existente
+        console.log('✏️ Atualizando nota existente:', editingNote.id);
         updateNote({
           id: editingNote.id,
           updates: noteData as AdminNoteUpdate,
         });
       } else {
         // Criar nova nota
+        console.log('➕ Criando nova nota');
         createNote({
           admin_id: adminId,
           ...noteData,

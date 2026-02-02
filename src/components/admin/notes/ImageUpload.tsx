@@ -11,7 +11,6 @@ interface ImageUploadProps {
   existingImages?: NoteImage[];
   onRemoveExisting?: (imageUrl: string) => void;
   maxImages?: number;
-  maxFileSize?: number; // em MB
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -19,7 +18,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   existingImages = [],
   onRemoveExisting,
   maxImages = 10,
-  maxFileSize = 5,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -36,18 +34,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       toast({
         title: 'Limite excedido',
         description: `Você pode adicionar no máximo ${maxImages} imagens.`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Validar tamanho dos arquivos
-    const maxBytes = maxFileSize * 1024 * 1024;
-    const invalidFiles = files.filter(file => file.size > maxBytes);
-    if (invalidFiles.length > 0) {
-      toast({
-        title: 'Arquivo muito grande',
-        description: `Os arquivos devem ter no máximo ${maxFileSize}MB.`,
         variant: 'destructive',
       });
       return;
@@ -107,7 +93,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       <div>
         <Label>Imagens {totalImages > 0 && `(${totalImages}/${maxImages})`}</Label>
         <p className="text-xs text-muted-foreground mt-1">
-          Adicione até {maxImages} imagens (máx. {maxFileSize}MB cada)
+          Adicione até {maxImages} imagens (sem limite de tamanho)
         </p>
       </div>
 

@@ -79,13 +79,18 @@ export const useAdminNotes = (filters?: NoteFilters) => {
   // Mutation para criar anotação
   const createNoteMutation = useMutation({
     mutationFn: async (noteData: AdminNoteInsert) => {
+      console.log('📤 useAdminNotes - Dados enviados para criação:', noteData);
       const { data, error } = await supabase
         .from('admin_notes')
         .insert(noteData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ useAdminNotes - Erro ao criar:', error);
+        throw error;
+      }
+      console.log('✅ useAdminNotes - Nota criada:', data);
       return data as AdminNote;
     },
     onSuccess: () => {
@@ -108,6 +113,7 @@ export const useAdminNotes = (filters?: NoteFilters) => {
   // Mutation para atualizar anotação
   const updateNoteMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: AdminNoteUpdate }) => {
+      console.log('📤 useAdminNotes - Atualizando nota:', id, 'com dados:', updates);
       const { data, error } = await supabase
         .from('admin_notes')
         .update(updates)
@@ -115,7 +121,11 @@ export const useAdminNotes = (filters?: NoteFilters) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ useAdminNotes - Erro ao atualizar:', error);
+        throw error;
+      }
+      console.log('✅ useAdminNotes - Nota atualizada:', data);
       return data as AdminNote;
     },
     onSuccess: () => {
