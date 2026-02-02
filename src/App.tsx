@@ -94,6 +94,7 @@ import RepertorioOrientado from "./pages/RepertorioOrientado";
 import { CustomizePlanSimple } from "./pages/admin/CustomizePlanSimple";
 import { CustomizePlanByName } from "./pages/admin/CustomizePlanByName";
 import { CustomizeStudentPlan } from "./pages/admin/CustomizeStudentPlan";
+import AdminNotes from "./pages/admin/AdminNotes";
 
 function App() {
   return (
@@ -169,7 +170,8 @@ function App() {
                   <Route path="/admin/customize-plan/:turmaId" element={<CustomizePlanSimple />} />
                   <Route path="/admin/customize-plan-by-name/:turmaNome" element={<CustomizePlanByName />} />
                   <Route path="/admin/customize-student-plan/:studentId" element={<CustomizeStudentPlan />} />
-                  
+                  <Route path="/admin/anotacoes" element={<AdminNotes />} />
+
                   {/* Rotas do Corretor */}
                   <Route path="/corretor/login" element={<CorretorLogin />} />
                   <Route path="/corretor" element={<CorretorHome />} />
