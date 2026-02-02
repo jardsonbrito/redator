@@ -12,7 +12,8 @@ import {
   Download,
   Settings,
   ShieldCheck,
-  Mail
+  Mail,
+  StickyNote
 } from "lucide-react";
 import {
   BookOpen as PhosphorBookOpen,
@@ -589,6 +590,7 @@ const Admin = () => {
     { id: "avisos", label: "Mural de Avisos", icon: PushPin, iconColor: "#FFC107" },
 
     // Linha 5: Comunicação e Notificações
+    { id: "anotacoes", label: "Anotações", icon: StickyNote, iconColor: "#10B981" },
     { id: "inbox", label: "Inbox", icon: Mail, iconColor: "#FF9800" },
 
     // Linha 6: Análise e Engajamento
@@ -935,6 +937,10 @@ const Admin = () => {
 
       case "inbox":
         return <InboxForm />;
+
+      case "anotacoes":
+        navigate('/admin/anotacoes');
+        return null;
 
       case "alunos":
         const handleAlunoSuccess = () => {

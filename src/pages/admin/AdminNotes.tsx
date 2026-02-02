@@ -93,7 +93,7 @@ const AdminNotes = () => {
 
       // Combinar imagens existentes (que não foram removidas) com novas
       let finalImages: NoteImage[] = [];
-      if (editingNote) {
+      if (editingNote && editingNote.imagens) {
         finalImages = editingNote.imagens.filter(
           img => !imagesToRemove?.includes(img.bucket_path || '')
         );
@@ -107,10 +107,10 @@ const AdminNotes = () => {
 
       const noteData = {
         titulo: data.titulo,
-        conteudo: data.conteudo,
+        conteudo: data.conteudo || null,
         cor: data.cor,
-        categoria: data.categoria || undefined,
-        tags: data.tags.length > 0 ? data.tags : undefined,
+        categoria: data.categoria || null,
+        tags: data.tags.length > 0 ? data.tags : null,
         imagens: finalImages,
         links: data.links,
         fixado: data.fixado,

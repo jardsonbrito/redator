@@ -145,6 +145,62 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_notes: {
+        Row: {
+          id: string
+          admin_id: string
+          titulo: string
+          conteudo: string | null
+          cor: string
+          categoria: string | null
+          tags: string[] | null
+          imagens: Json
+          links: Json
+          fixado: boolean
+          arquivado: boolean
+          criado_em: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          titulo: string
+          conteudo?: string | null
+          cor?: string
+          categoria?: string | null
+          tags?: string[] | null
+          imagens?: Json
+          links?: Json
+          fixado?: boolean
+          arquivado?: boolean
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          titulo?: string
+          conteudo?: string | null
+          cor?: string
+          categoria?: string | null
+          tags?: string[] | null
+          imagens?: Json
+          links?: Json
+          fixado?: boolean
+          arquivado?: boolean
+          criado_em?: string
+          atualizado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       ajuda_rapida_mensagens: {
         Row: {
           aluno_id: string
