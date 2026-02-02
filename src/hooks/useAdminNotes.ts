@@ -13,12 +13,25 @@ export const useAdminNotes = (filters?: NoteFilters) => {
   const { data: notes, isLoading, error, refetch } = useQuery({
     queryKey: ['admin-notes', user?.id, filters],
     queryFn: async () => {
-      if (!user?.id) throw new Error('Usuário não autenticado');
+      if (!user?.id || !user?.email) throw new Error('Usuário não autenticado');
+
+      // Buscar o ID correto da tabela admin_users pelo email
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('email', user.email.toLowerCase())
+        .eq('ativo', true)
+        .single();
+
+      if (adminError || !adminData) {
+        console.error('❌ Erro ao buscar admin_id:', adminError);
+        throw new Error('Admin não encontrado');
+      }
 
       let query = supabase
         .from('admin_notes')
         .select('*')
-        .eq('admin_id', user.id);
+        .eq('admin_id', adminData.id);
 
       // Aplicar filtros
       if (!filters?.incluir_arquivadas) {

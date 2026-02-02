@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,9 +18,11 @@ import {
   Archive,
   StickyNote,
   X,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAdminNotes } from '@/hooks/useAdminNotes';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { NotesCard } from '@/components/admin/NotesCard';
 import { NoteEditor } from '@/components/admin/notes/NoteEditor';
 import {
@@ -38,6 +40,7 @@ import {
 
 const AdminNotes = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<NoteFilters>({
     termo_busca: '',
     categoria: '',
@@ -79,9 +82,27 @@ const AdminNotes = () => {
     newImages?: File[],
     imagesToRemove?: string[]
   ) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('❌ Usuário não autenticado - user.id não existe');
+      return;
+    }
 
     try {
+      // Buscar o ID correto da tabela admin_users pelo email
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('email', user.email?.toLowerCase())
+        .eq('ativo', true)
+        .single();
+
+      if (adminError || !adminData) {
+        console.error('❌ Erro ao buscar admin_id:', adminError);
+        return;
+      }
+
+      const adminId = adminData.id;
+      console.log('👤 Admin ID encontrado:', adminId, 'para email:', user.email);
       // Fazer upload das novas imagens
       let uploadedImages: NoteImage[] = [];
       if (newImages && newImages.length > 0) {
@@ -125,7 +146,7 @@ const AdminNotes = () => {
       } else {
         // Criar nova nota
         createNote({
-          admin_id: user.id,
+          admin_id: adminId,
           ...noteData,
         } as AdminNoteInsert);
       }
@@ -161,23 +182,33 @@ const AdminNotes = () => {
     filters.cor;
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <StickyNote className="h-8 w-8" />
-              Minhas Anotações
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Organize suas ideias com texto, imagens e links
-            </p>
-          </div>
-          <Button onClick={handleOpenNew} size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Nova Anotação
+        <div className="flex flex-col gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/admin')}
+            className="w-fit"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar ao Dashboard
           </Button>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <StickyNote className="h-8 w-8" />
+                Minhas Anotações
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Organize suas ideias com texto, imagens e links
+              </p>
+            </div>
+            <Button onClick={handleOpenNew} size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Nova Anotação
+            </Button>
+          </div>
         </div>
 
         {/* Busca e Filtros */}
@@ -339,16 +370,16 @@ const AdminNotes = () => {
             {notes.length} {notes.length === 1 ? 'anotação' : 'anotações'} {hasActiveFilters && '(filtradas)'}
           </div>
         )}
-      </div>
 
-      {/* Editor Dialog */}
-      <NoteEditor
-        note={editingNote}
-        onSave={handleSave}
-        onCancel={() => setIsEditorOpen(false)}
-        isOpen={isEditorOpen}
-      />
-    </AdminLayout>
+        {/* Editor Dialog */}
+        <NoteEditor
+          note={editingNote}
+          onSave={handleSave}
+          onCancel={() => setIsEditorOpen(false)}
+          isOpen={isEditorOpen}
+        />
+      </div>
+    </div>
   );
 };
 
