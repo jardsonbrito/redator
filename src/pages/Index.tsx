@@ -13,6 +13,7 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { StudentInboxManager } from "@/components/student/StudentInboxManager";
+import { AlertasAtividadesModal } from "@/components/AlertasAtividadesModal";
 import {
   Dialog,
   DialogContent,
@@ -255,6 +256,13 @@ const Index = () => {
 
           {/* Gerenciador de mensagens do Inbox */}
           <StudentInboxManager />
+
+          {/* Modal de alertas de atividades disponíveis */}
+          <AlertasAtividadesModal
+            turma={studentData.turma || null}
+            userType={studentData.userType || 'visitante'}
+            email={studentData.email || ''}
+          />
 
           {/* Popup para candidatos que precisam completar o formulário do processo seletivo */}
           <Dialog open={showPendingPopup} onOpenChange={setShowPendingPopup}>
