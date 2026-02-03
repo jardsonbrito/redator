@@ -1,12 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export type TipoAlertaAula = 'aula_agendada' | 'aula_hoje' | 'aula_ao_vivo';
+
 export interface AlertaAtividade {
-  tipo: 'aula_ao_vivo' | 'exercicio' | 'lousa';
+  tipo: TipoAlertaAula | 'exercicio' | 'lousa';
   id: string;
   titulo: string;
   horario?: string;
+  data?: string;
   path: string;
+  prioridade: number; // 1 = mais urgente
 }
 
 interface UseAlertasAtividadesProps {
@@ -28,50 +32,79 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
       const turmaNormalizada = turma?.toUpperCase().replace('TURMA ', '').trim() || '';
       const isVisitante = userType === 'visitante';
 
-      // 1. Buscar aulas ao vivo ativas para hoje
+      // Função para verificar acesso à turma
+      const temAcessoTurma = (turmasAutorizadas: string[], permiteVisitante: boolean) => {
+        return (
+          (isVisitante && permiteVisitante) ||
+          (!isVisitante && (
+            turmasAutorizadas.includes(turmaNormalizada) ||
+            turmasAutorizadas.includes(`TURMA ${turmaNormalizada}`) ||
+            turmasAutorizadas.includes('Todas') ||
+            turmasAutorizadas.includes('TODAS')
+          ))
+        );
+      };
+
+      // ========================================
+      // 1. AULAS AO VIVO - Três cenários
+      // ========================================
       try {
-        let query = supabase
+        // Buscar todas as aulas ao vivo ativas (futuras e de hoje)
+        const { data: aulasVirtuais } = await supabase
           .from('aulas_virtuais')
-          .select('id, titulo, data_aula, horario_inicio, horario_fim')
+          .select('id, titulo, data_aula, horario_inicio, horario_fim, turmas_autorizadas, permite_visitante, criado_em')
           .eq('ativo', true)
           .eq('eh_aula_ao_vivo', true)
-          .eq('data_aula', hoje)
-          .lte('horario_inicio', horaAtual)
-          .gte('horario_fim', horaAtual);
-
-        const { data: aulasVirtuais } = await query;
+          .gte('data_aula', hoje) // Hoje ou futuro
+          .order('data_aula', { ascending: true });
 
         if (aulasVirtuais) {
           for (const aula of aulasVirtuais) {
-            // Verificar se o aluno tem acesso (por turma ou visitante)
-            const { data: aulaCompleta } = await supabase
-              .from('aulas_virtuais')
-              .select('turmas_autorizadas, permite_visitante')
-              .eq('id', aula.id)
-              .single();
+            const turmasAutorizadas = aula.turmas_autorizadas || [];
+            const permiteVisitante = aula.permite_visitante;
 
-            if (aulaCompleta) {
-              const turmasAutorizadas = aulaCompleta.turmas_autorizadas || [];
-              const permiteVisitante = aulaCompleta.permite_visitante;
+            if (!temAcessoTurma(turmasAutorizadas, permiteVisitante)) {
+              continue;
+            }
 
-              const temAcesso =
-                (isVisitante && permiteVisitante) ||
-                (!isVisitante && (
-                  turmasAutorizadas.includes(turmaNormalizada) ||
-                  turmasAutorizadas.includes(`TURMA ${turmaNormalizada}`) ||
-                  turmasAutorizadas.includes('Todas') ||
-                  turmasAutorizadas.includes('TODAS')
-                ));
+            const dataAula = aula.data_aula;
+            const horaInicio = aula.horario_inicio;
+            const horaFim = aula.horario_fim;
+            const dataFormatada = new Date(dataAula + 'T12:00:00').toLocaleDateString('pt-BR');
 
-              if (temAcesso) {
-                alertas.push({
-                  tipo: 'aula_ao_vivo',
-                  id: aula.id,
-                  titulo: aula.titulo,
-                  horario: `${aula.horario_inicio.slice(0, 5)} - ${aula.horario_fim.slice(0, 5)}`,
-                  path: '/aulas-ao-vivo'
-                });
-              }
+            // Cenário 1: Aula acontecendo AGORA (prioridade máxima)
+            if (dataAula === hoje && horaAtual >= horaInicio && horaAtual <= horaFim) {
+              alertas.push({
+                tipo: 'aula_ao_vivo',
+                id: aula.id,
+                titulo: aula.titulo,
+                horario: `${horaInicio.slice(0, 5)} - ${horaFim.slice(0, 5)}`,
+                path: '/aulas-ao-vivo',
+                prioridade: 1
+              });
+            }
+            // Cenário 2: Aula é HOJE (mas ainda não começou ou já terminou)
+            else if (dataAula === hoje) {
+              alertas.push({
+                tipo: 'aula_hoje',
+                id: aula.id,
+                titulo: aula.titulo,
+                horario: `${horaInicio.slice(0, 5)} - ${horaFim.slice(0, 5)}`,
+                path: '/aulas-ao-vivo',
+                prioridade: 2
+              });
+            }
+            // Cenário 3: Aula AGENDADA para o futuro
+            else if (dataAula > hoje) {
+              alertas.push({
+                tipo: 'aula_agendada',
+                id: aula.id,
+                titulo: aula.titulo,
+                data: dataFormatada,
+                horario: `${horaInicio.slice(0, 5)} - ${horaFim.slice(0, 5)}`,
+                path: '/aulas-ao-vivo',
+                prioridade: 3
+              });
             }
           }
         }
@@ -79,7 +112,9 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
         console.error('Erro ao buscar aulas ao vivo:', error);
       }
 
-      // 2. Buscar exercícios ativos
+      // ========================================
+      // 2. EXERCÍCIOS ATIVOS
+      // ========================================
       try {
         const { data: exercicios } = await supabase
           .from('exercicios')
@@ -102,21 +137,13 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
               const turmasAutorizadas = ex.turmas_autorizadas || [];
               const permiteVisitante = ex.permite_visitante;
 
-              const temAcesso =
-                (isVisitante && permiteVisitante) ||
-                (!isVisitante && (
-                  turmasAutorizadas.includes(turmaNormalizada) ||
-                  turmasAutorizadas.includes(`TURMA ${turmaNormalizada}`) ||
-                  turmasAutorizadas.includes('Todas') ||
-                  turmasAutorizadas.includes('TODAS')
-                ));
-
-              if (temAcesso) {
+              if (temAcessoTurma(turmasAutorizadas, permiteVisitante)) {
                 alertas.push({
                   tipo: 'exercicio',
                   id: ex.id,
                   titulo: ex.titulo,
-                  path: '/exercicios'
+                  path: '/exercicios',
+                  prioridade: 4
                 });
               }
             }
@@ -126,7 +153,9 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
         console.error('Erro ao buscar exercícios:', error);
       }
 
-      // 3. Buscar atividades de lousa ativas
+      // ========================================
+      // 3. ATIVIDADES DE LOUSA ATIVAS
+      // ========================================
       try {
         const { data: lousas } = await supabase
           .from('lousa')
@@ -144,21 +173,13 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
               const turmasLousa = lousa.turmas || [];
               const permiteVisitante = lousa.permite_visitante;
 
-              const temAcesso =
-                (isVisitante && permiteVisitante) ||
-                (!isVisitante && (
-                  turmasLousa.includes(turmaNormalizada) ||
-                  turmasLousa.includes(`TURMA ${turmaNormalizada}`) ||
-                  turmasLousa.includes('Todas') ||
-                  turmasLousa.includes('TODAS')
-                ));
-
-              if (temAcesso) {
+              if (temAcessoTurma(turmasLousa, permiteVisitante)) {
                 alertas.push({
                   tipo: 'lousa',
                   id: lousa.id,
                   titulo: lousa.titulo,
-                  path: '/lousa'
+                  path: '/lousa',
+                  prioridade: 5
                 });
               }
             }
@@ -168,7 +189,8 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
         console.error('Erro ao buscar lousas:', error);
       }
 
-      return alertas;
+      // Ordenar por prioridade (1 = mais urgente)
+      return alertas.sort((a, b) => a.prioridade - b.prioridade);
     },
     enabled: enabled && (!!turma || userType === 'visitante'),
     staleTime: 2 * 60 * 1000, // 2 minutos
