@@ -22,6 +22,10 @@ export interface AulaDiario {
   professor_email?: string;
   created_at: string;
   updated_at: string;
+  // Campos para integração com Aulas Ao Vivo
+  origem_aula_virtual_id?: string;  // Referência à aula virtual de origem
+  eh_aula_online?: boolean;          // Indica se é uma aula online/ao vivo
+  presenca_automatica?: boolean;     // Indica se a presença é automática
 }
 
 export interface PresencaParticipacao {

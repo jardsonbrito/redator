@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Users, UserCheck, UserX } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, Save, Users, UserCheck, UserX, Info, Radio } from 'lucide-react';
 import { usePresencaParticipacao, usePresencaMutation } from '@/hooks/useDiario';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,9 +26,13 @@ interface AlunoPresenca {
 export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
   const [alunosPresenca, setAlunosPresenca] = useState<AlunoPresenca[]>([]);
   const [saving, setSaving] = useState(false);
-  
+
   const { data: presencas, isLoading } = usePresencaParticipacao(aula.id);
   const presencaMutation = usePresencaMutation();
+
+  // Verificar se é uma aula online com presença automática
+  const isAulaOnline = aula.eh_aula_online === true;
+  const isPresencaAutomatica = aula.presenca_automatica === true;
 
   // Buscar alunos da turma com nomes da tabela profiles
   useEffect(() => {
@@ -154,6 +159,19 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
         </CardHeader>
         
         <CardContent className="space-y-4 sm:space-y-6">
+          {/* Alerta para aulas online */}
+          {isAulaOnline && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <Radio className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                <strong>Presença Automática (Aula Ao Vivo)</strong>
+                <br />
+                A presença dos alunos é registrada automaticamente quando eles entram e saem da aula.
+                {isPresencaAutomatica && " Os controles abaixo estão desabilitados."}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Estatísticas */}
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <Card>
@@ -178,11 +196,23 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
 
           {/* Ações em Lote */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={marcarTodosPresentes} className="flex-1 text-sm">
+            <Button
+              variant="outline"
+              onClick={marcarTodosPresentes}
+              className="flex-1 text-sm"
+              disabled={isAulaOnline}
+              title={isAulaOnline ? "Desabilitado para aulas online com presença automática" : ""}
+            >
               <UserCheck className="w-4 h-4 mr-2" />
               Marcar Todos Presentes
             </Button>
-            <Button variant="outline" onClick={desmarcarTodos} className="flex-1 text-sm">
+            <Button
+              variant="outline"
+              onClick={desmarcarTodos}
+              className="flex-1 text-sm"
+              disabled={isAulaOnline}
+              title={isAulaOnline ? "Desabilitado para aulas online com presença automática" : ""}
+            >
               <UserX className="w-4 h-4 mr-2" />
               Desmarcar
             </Button>
@@ -215,20 +245,21 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
                           <Checkbox
                             id={`presente-${aluno.email}`}
                             checked={aluno.presente}
-                            onCheckedChange={(checked) => 
+                            disabled={isAulaOnline}
+                            onCheckedChange={(checked) =>
                               handlePresencaChange(aluno.email, checked as boolean)
                             }
                           />
                         </div>
-                        
+
                         {/* Participação */}
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">Participou</span>
                           <Checkbox
                             id={`participou-${aluno.email}`}
                             checked={aluno.participou}
-                            disabled={!aluno.presente}
-                            onCheckedChange={(checked) => 
+                            disabled={!aluno.presente || isAulaOnline}
+                            onCheckedChange={(checked) =>
                               handleParticipacaoChange(aluno.email, checked as boolean)
                             }
                           />
@@ -258,7 +289,8 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
                           <Checkbox
                             id={`presente-desktop-${aluno.email}`}
                             checked={aluno.presente}
-                            onCheckedChange={(checked) => 
+                            disabled={isAulaOnline}
+                            onCheckedChange={(checked) =>
                               handlePresencaChange(aluno.email, checked as boolean)
                             }
                           />
@@ -269,14 +301,14 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
                             Presente
                           </label>
                         </div>
-                        
+
                         {/* Participação */}
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id={`participou-desktop-${aluno.email}`}
                             checked={aluno.participou}
-                            disabled={!aluno.presente}
-                            onCheckedChange={(checked) => 
+                            disabled={!aluno.presente || isAulaOnline}
+                            onCheckedChange={(checked) =>
                               handleParticipacaoChange(aluno.email, checked as boolean)
                             }
                           />
@@ -299,16 +331,26 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
           {/* Botões de Ação */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
             <Button type="button" variant="outline" onClick={onClose} className="order-2 sm:order-1">
-              Cancelar
+              {isAulaOnline ? 'Fechar' : 'Cancelar'}
             </Button>
-            <Button 
-              onClick={handleSaveAll}
-              disabled={saving}
-              className="flex items-center justify-center gap-2 order-1 sm:order-2"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Salvando...' : 'Salvar Presenças'}
-            </Button>
+            {isAulaOnline ? (
+              <Button
+                disabled
+                className="flex items-center justify-center gap-2 order-1 sm:order-2 bg-blue-100 text-blue-800 cursor-not-allowed"
+              >
+                <Radio className="w-4 h-4" />
+                Presença Automática
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 order-1 sm:order-2"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Salvando...' : 'Salvar Presenças'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

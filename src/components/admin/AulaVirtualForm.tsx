@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
+import { TURMAS_VALIDAS, normalizeTurmaToLetter } from '@/utils/turmaUtils';
+import { Info } from "lucide-react";
 
 const TURMAS = TURMAS_VALIDAS;
 
@@ -34,7 +36,40 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
     eh_aula_ao_vivo: true
   });
 
-  const handleAction = () => {
+  // Função para verificar etapas vigentes para as turmas selecionadas
+  const verificarEtapasVigentes = async (): Promise<{ valido: boolean; turmasSemEtapa: string[] }> => {
+    if (!formData.eh_aula_ao_vivo || formData.turmas_autorizadas.length === 0) {
+      return { valido: true, turmasSemEtapa: [] };
+    }
+
+    const turmasSemEtapa: string[] = [];
+
+    for (const turma of formData.turmas_autorizadas) {
+      const turmaNormalizada = normalizeTurmaToLetter(turma) || turma;
+
+      // Buscar etapa vigente para esta turma na data da aula
+      const { data: etapa } = await supabase
+        .from('etapas_estudo')
+        .select('id')
+        .eq('turma', turmaNormalizada)
+        .eq('ativo', true)
+        .lte('data_inicio', formData.data_aula)
+        .gte('data_fim', formData.data_aula)
+        .limit(1)
+        .maybeSingle();
+
+      if (!etapa) {
+        turmasSemEtapa.push(turma);
+      }
+    }
+
+    return {
+      valido: turmasSemEtapa.length === 0,
+      turmasSemEtapa
+    };
+  };
+
+  const handleAction = async () => {
     // Validações básicas
     if (!formData.titulo.trim()) {
       toast.error('Título é obrigatório');
@@ -64,6 +99,22 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
       toast.error('Horário de início deve ser anterior ao horário de fim');
       setActiveSection('detalhes');
       return;
+    }
+
+    // Validação de etapa vigente (apenas para aulas ao vivo)
+    if (formData.eh_aula_ao_vivo && formData.turmas_autorizadas.length > 0) {
+      setLoading(true);
+      const { valido, turmasSemEtapa } = await verificarEtapasVigentes();
+
+      if (!valido) {
+        setLoading(false);
+        toast.error(
+          `As seguintes turmas não têm etapa configurada para a data ${formData.data_aula}: ${turmasSemEtapa.join(', ')}. Configure as etapas no Diário Online primeiro.`,
+          { duration: 6000 }
+        );
+        setActiveSection('turmas');
+        return;
+      }
     }
 
     handleSubmit();
@@ -236,6 +287,18 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
             {/* Configuração Section */}
             {activeSection === 'configuracao' && (
               <div className="space-y-6">
+                {/* Alerta informativo sobre presença automática */}
+                {formData.eh_aula_ao_vivo && (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800">
+                      <strong>Presença Automática:</strong> Quando "Aula ao vivo" está ativada, a presença dos alunos será
+                      registrada automaticamente no Diário Online quando eles entrarem e saírem da aula.
+                      Certifique-se de que as turmas selecionadas tenham etapas configuradas para a data da aula.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* Link do Meet */}
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
                   <div className="space-y-2">
