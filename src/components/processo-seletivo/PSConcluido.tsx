@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Trophy, FileText, Calendar, Star, X, AlertTriangle, RotateCcw, Award, Medal, MessageSquare } from 'lucide-react';
-import { Candidato, PSRedacao, ResultadoConfig } from '@/hooks/useProcessoSeletivo';
+import { Candidato, PSRedacao, ResultadoConfig, EtapaFinal } from '@/hooks/useProcessoSeletivo';
 import { useCancelRedacao } from '@/hooks/useCancelRedacao';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,12 +24,14 @@ interface PSConcluidoProps {
   candidato: Candidato;
   redacao?: any | null; // Usando any pois agora vem de redacoes_enviadas
   resultadoConfig?: ResultadoConfig | null;
+  etapaFinal?: EtapaFinal | null;
 }
 
 export const PSConcluido: React.FC<PSConcluidoProps> = ({
   candidato,
   redacao,
-  resultadoConfig
+  resultadoConfig,
+  etapaFinal
 }) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -43,11 +45,13 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
     }
   });
 
-  // Verificar se a redação pode ser cancelada (não corrigida)
-  const podeCancelar = redacao && !redacao.corrigida && redacao.nota_total === null;
+  const isMensagemBolsa = etapaFinal?.tipo === 'mensagem_bolsa';
 
-  // Verificar se está em estado inconsistente (concluído mas sem redação)
-  const estadoInconsistente = !redacao && candidato?.status === 'concluido';
+  // Verificar se a redação pode ser cancelada (não corrigida) - não aplicável para mensagem_bolsa
+  const podeCancelar = !isMensagemBolsa && redacao && !redacao.corrigida && redacao.nota_total === null;
+
+  // Verificar se está em estado inconsistente (concluído mas sem redação) - não aplicável para mensagem_bolsa
+  const estadoInconsistente = !isMensagemBolsa && !redacao && candidato?.status === 'concluido';
 
   const handleCancelarEnvio = async () => {
     if (redacao?.id && candidato?.id) {
@@ -312,8 +316,8 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
         </CardContent>
       </Card>
 
-      {/* Resumo da Redação */}
-      {redacao && (
+      {/* Resumo da Redação - não mostrar para mensagem_bolsa */}
+      {!isMensagemBolsa && redacao && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -372,18 +376,33 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
       <Card className="border-blue-200 bg-blue-50/50">
         <CardContent className="py-4 space-y-3">
           <h4 className="font-medium text-blue-800">E agora?</h4>
-          <p className="text-sm text-blue-700">
-            Sua redação foi registrada com sucesso e seguirá para avaliação.
-          </p>
-          <p className="text-sm text-blue-700">
-            Para acompanhar seu desempenho, acesse o card <strong>Minhas Redações</strong>,
-            onde você poderá visualizar o texto enviado e, posteriormente, a <strong>pontuação obtida</strong>.
-          </p>
-          <p className="text-sm text-blue-700">
-            Além disso, fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
-            pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
-            oficiais sobre o resultado do processo seletivo e os contemplados com as bolsas de estudo.
-          </p>
+          {isMensagemBolsa ? (
+            <>
+              <p className="text-sm text-blue-700">
+                Sua participação no processo seletivo foi confirmada com sucesso!
+              </p>
+              <p className="text-sm text-blue-700">
+                Fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
+                pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
+                oficiais sobre os próximos passos.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-blue-700">
+                Sua redação foi registrada com sucesso e seguirá para avaliação.
+              </p>
+              <p className="text-sm text-blue-700">
+                Para acompanhar seu desempenho, acesse o card <strong>Minhas Redações</strong>,
+                onde você poderá visualizar o texto enviado e, posteriormente, a <strong>pontuação obtida</strong>.
+              </p>
+              <p className="text-sm text-blue-700">
+                Além disso, fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
+                pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
+                oficiais sobre o resultado do processo seletivo e os contemplados com as bolsas de estudo.
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -95,14 +95,16 @@ export interface Comunicado {
 export interface EtapaFinal {
   id: string;
   formulario_id: string;
+  tipo: 'redacao' | 'mensagem_bolsa';
   tema_id: string | null;
-  tema_redacao: string;
+  tema_redacao: string | null;
   instrucoes: string | null;
-  data_inicio: string;
-  hora_inicio: string;
-  data_fim: string;
-  hora_fim: string;
+  data_inicio: string | null;
+  hora_inicio: string | null;
+  data_fim: string | null;
+  hora_fim: string | null;
   ativo: boolean;
+  mensagem_bolsa: string | null;
 }
 
 export interface PSRedacao {
@@ -488,7 +490,7 @@ export const useProcessoSeletivoCandidato = (userEmail: string, userId: string, 
 
       return data as EtapaFinal;
     },
-    enabled: !!formulario?.id && candidato?.status === 'etapa_final_liberada',
+    enabled: !!formulario?.id && (candidato?.status === 'etapa_final_liberada' || candidato?.status === 'concluido'),
     staleTime: 30 * 1000
   });
 

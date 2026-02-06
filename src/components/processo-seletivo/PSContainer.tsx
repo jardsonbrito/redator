@@ -5,6 +5,7 @@ import { PSAguardandoAnalise } from './PSAguardandoAnalise';
 import { PSComunicado } from './PSComunicado';
 import { PSReprovado } from './PSReprovado';
 import { PSRedacao } from './PSRedacao';
+import { PSBolsaMensagem } from './PSBolsaMensagem';
 import { PSConcluido } from './PSConcluido';
 import { PSListaProcessos } from './PSListaProcessos';
 import { Loader2 } from 'lucide-react';
@@ -176,12 +177,21 @@ export const PSContainer: React.FC<PSContainerProps> = ({
       );
 
     case 'etapa_final_liberada':
-      // Etapa final liberada - interface de redação
+      // Etapa final liberada - interface de redação ou mensagem de bolsa
       if (isLoadingEtapaFinal) {
         return (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        );
+      }
+      // Verificar tipo da etapa final
+      if (etapaFinal?.tipo === 'mensagem_bolsa') {
+        return (
+          <PSBolsaMensagem
+            candidato={candidato!}
+            etapaFinal={etapaFinal}
+          />
         );
       }
       return (
@@ -206,6 +216,7 @@ export const PSContainer: React.FC<PSContainerProps> = ({
           candidato={candidato!}
           redacao={redacao}
           resultadoConfig={resultadoConfig}
+          etapaFinal={etapaFinal}
         />
       );
 

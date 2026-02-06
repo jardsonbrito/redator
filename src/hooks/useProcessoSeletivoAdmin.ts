@@ -71,14 +71,16 @@ export interface ComunicadoInput {
 }
 
 export interface EtapaFinalInput {
+  tipo?: 'redacao' | 'mensagem_bolsa';
   tema_id?: string;
-  tema_redacao: string;
+  tema_redacao?: string;
   instrucoes?: string;
-  data_inicio: string;
-  hora_inicio: string;
-  data_fim: string;
-  hora_fim: string;
+  data_inicio?: string;
+  hora_inicio?: string;
+  data_fim?: string;
+  hora_fim?: string;
   ativo?: boolean;
+  mensagem_bolsa?: string;
 }
 
 /**
@@ -793,14 +795,16 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
         const { error } = await supabase
           .from('ps_etapa_final')
           .update({
+            tipo: input.tipo || 'redacao',
             tema_id: input.tema_id || null,
-            tema_redacao: input.tema_redacao,
-            instrucoes: input.instrucoes,
-            data_inicio: input.data_inicio,
-            hora_inicio: input.hora_inicio,
-            data_fim: input.data_fim,
-            hora_fim: input.hora_fim,
-            ativo: input.ativo ?? true
+            tema_redacao: input.tema_redacao || null,
+            instrucoes: input.instrucoes || null,
+            data_inicio: input.data_inicio || null,
+            hora_inicio: input.hora_inicio || null,
+            data_fim: input.data_fim || null,
+            hora_fim: input.hora_fim || null,
+            ativo: input.ativo ?? true,
+            mensagem_bolsa: input.mensagem_bolsa || null
           })
           .eq('id', input.id);
 
@@ -811,14 +815,16 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
           .from('ps_etapa_final')
           .insert({
             formulario_id: formularioAtivo.id,
+            tipo: input.tipo || 'redacao',
             tema_id: input.tema_id || null,
-            tema_redacao: input.tema_redacao,
-            instrucoes: input.instrucoes,
-            data_inicio: input.data_inicio,
-            hora_inicio: input.hora_inicio,
-            data_fim: input.data_fim,
-            hora_fim: input.hora_fim,
-            ativo: input.ativo ?? true
+            tema_redacao: input.tema_redacao || null,
+            instrucoes: input.instrucoes || null,
+            data_inicio: input.data_inicio || null,
+            hora_inicio: input.hora_inicio || null,
+            data_fim: input.data_fim || null,
+            hora_fim: input.hora_fim || null,
+            ativo: input.ativo ?? true,
+            mensagem_bolsa: input.mensagem_bolsa || null
           });
 
         if (error) throw error;
