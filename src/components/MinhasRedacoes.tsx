@@ -174,6 +174,7 @@ export const MinhasRedacoes = () => {
             turma
           `)
           .eq('turma', 'visitante')
+          .is('deleted_at', null)
           .order('data_envio', { ascending: false });
         
         console.log('🔍 Query executada para visitantes - resultado:', { data, error });

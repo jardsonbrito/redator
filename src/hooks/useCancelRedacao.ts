@@ -114,6 +114,9 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
 
       console.log('🗑️ Redação marcada como cancelada (soft delete)');
 
+      // 5b. Invalidar cache de redações imediatamente após soft delete
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+
       // 6. Ressarcir créditos se necessário
       let novoSaldoCreditos = profile.creditos || 0;
       if (creditosParaRessarcir > 0) {
@@ -353,6 +356,8 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
         throw new Error('Erro ao cancelar redação');
       }
 
+      // 5b. Invalidar cache de redações imediatamente após soft delete
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
 
       // 6. Ressarcir créditos
       const novoSaldoCreditos = (profile.creditos || 0) + creditosParaRessarcir;
@@ -616,6 +621,9 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
 
       console.log('🗑️ Redação marcada como cancelada (soft delete)');
 
+      // 3b. Invalidar cache de redações imediatamente após soft delete
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+
       // 4. Atualizar status do candidato de volta para 'etapa_final_liberada'
       const { error: updateCandidatoError } = await supabase
         .from('ps_candidatos')
@@ -646,7 +654,7 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       queryClient.invalidateQueries({ queryKey: ['ps-candidato'] });
       queryClient.invalidateQueries({ queryKey: ['ps-redacao'] });
       queryClient.invalidateQueries({ queryKey: ['processo-seletivo-participacao'] });
-      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
 
       toast({
         title: "✅ Envio cancelado",

@@ -96,6 +96,7 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
       queryClient.invalidateQueries({ queryKey: ['ps-redacao'] });
       queryClient.invalidateQueries({ queryKey: ['processo-seletivo-participacao'] });
       queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
 
       toast({
         title: "Pronto para reenviar",

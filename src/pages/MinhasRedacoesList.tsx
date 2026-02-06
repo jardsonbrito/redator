@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { RedacaoEnviadaCard } from "@/components/RedacaoEnviadaCard";
@@ -126,6 +126,7 @@ const MinhasRedacoesList = () => {
 
   const itemsPerPage = 10;
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const navigate = useNavigate();
   const { isRedacaoVisualizada } = useVisualizacoesRealtime();
@@ -133,10 +134,8 @@ const MinhasRedacoesList = () => {
   // Hook para cancelamento de redações
   const { cancelRedacao, cancelRedacaoSimulado, canCancelRedacao, getCreditosACancelar, loading: cancelLoading } = useCancelRedacao({
     onSuccess: () => {
-      // Recarregar a lista após cancelamento com delay maior para capturar logs
-      setTimeout(() => {
-        window.location.reload();
-      }, 5000);
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
     }
   });
 
@@ -203,6 +202,7 @@ const MinhasRedacoesList = () => {
           .select('*')
           .eq('turma', 'visitante')
           .ilike('email_aluno', emailVisitante)
+          .is('deleted_at', null)
           .order('data_envio', { ascending: false });
           
         if (errorVisitantes) {
@@ -247,6 +247,7 @@ const MinhasRedacoesList = () => {
             corretor2:corretores!corretor_id_2(id, nome_completo)
           `)
           .ilike('email_aluno', emailBusca)
+          .is('deleted_at', null)
           .order('data_envio', { ascending: false });
 
         console.log('📋 Redações encontradas para o aluno:', {

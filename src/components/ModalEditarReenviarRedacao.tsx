@@ -130,6 +130,7 @@ export function ModalEditarReenviarRedacao({
       // Invalidar cache do React Query para forçar refetch em TODAS as queries de redações
       queryClient.invalidateQueries({ queryKey: ['corretor-redacoes'] });
       queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
 
       toast({
         title: "✅ Redação reenviada!",
