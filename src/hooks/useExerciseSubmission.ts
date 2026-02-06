@@ -38,6 +38,7 @@ export const useExerciseSubmission = (exerciseId: string) => {
         .select('*')
         .eq('frase_tematica', fraseTematica)
         .ilike('email_aluno', normalizedEmail)
+        .is('deleted_at', null)
         .order('data_envio', { ascending: false })
         .limit(1);
 

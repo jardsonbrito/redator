@@ -77,7 +77,8 @@ export const AtividadeAtiva = () => {
         const { data: redacoesEnviadas, error: redacoesError } = await supabase
           .from('redacoes_exercicio')
           .select('exercicio_id')
-          .ilike('email_aluno', studentData.email.toLowerCase().trim());
+          .ilike('email_aluno', studentData.email.toLowerCase().trim())
+          .is('deleted_at', null);
 
         if (redacoesError) {
           console.error('❌ Erro ao verificar redações enviadas:', redacoesError);

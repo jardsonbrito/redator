@@ -117,11 +117,12 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
 
   const fetchSubmissionsCount = async () => {
     try {
-      // 1. Buscar redações regulares
+      // 1. Buscar redações regulares (excluindo soft-deleted)
       const { count: countRegulares, error: errorRegulares } = await supabase
         .from("redacoes_enviadas")
         .select("*", { count: "exact", head: true })
-        .eq("frase_tematica", tema.frase_tematica);
+        .eq("frase_tematica", tema.frase_tematica)
+        .is("deleted_at", null);
 
       if (errorRegulares) {
         console.error("Erro ao buscar contagem de redações regulares:", errorRegulares);
@@ -137,11 +138,12 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
       let countSimulados = 0;
 
       if (!errorSimulado && simulado?.id) {
-        // 3. Buscar redações do simulado
+        // 3. Buscar redações do simulado (excluindo soft-deleted)
         const { count, error: errorRedacoesSimulado } = await supabase
           .from("redacoes_simulado")
           .select("*", { count: "exact", head: true })
-          .eq("id_simulado", simulado.id);
+          .eq("id_simulado", simulado.id)
+          .is("deleted_at", null);
 
         if (errorRedacoesSimulado) {
           console.error("Erro ao buscar contagem de redações do simulado:", errorRedacoesSimulado);

@@ -80,7 +80,8 @@ export const ExercicioSubmissionsModal = ({
       const { data: redacoesData, error: redacoesError } = await supabase
         .from("redacoes_enviadas")
         .select("email_aluno, nota_total, corrigida, status, aluno_id")
-        .eq("frase_tematica", fraseTematica);
+        .eq("frase_tematica", fraseTematica)
+        .is("deleted_at", null);
 
       console.log('🔍 [ExercicioSubmissionsModal] Redações encontradas:', redacoesData?.length || 0);
       console.log('🔍 [ExercicioSubmissionsModal] Dados brutos de redações:', redacoesData);
@@ -98,7 +99,8 @@ export const ExercicioSubmissionsModal = ({
         const { data: redacoesAlt, error: errorAlt } = await supabase
           .from("redacoes_enviadas")
           .select("email_aluno, nota_total, corrigida, status")
-          .eq("frase_tematica", fraseTematica);
+          .eq("frase_tematica", fraseTematica)
+          .is("deleted_at", null);
 
         if (errorAlt) {
           console.error('❌ [ExercicioSubmissionsModal] Query alternativa também falhou:', errorAlt);

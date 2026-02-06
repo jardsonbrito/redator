@@ -108,6 +108,7 @@ export const MeusSimuladosFixo = ({ turmaCode }: MeusSimuladosFixoProps) => {
           `)
           .ilike('email_aluno', visitanteEmail.toLowerCase().trim())
           .eq('tipo_envio', 'visitante')
+          .is('deleted_at', null)
           .order('data_envio', { ascending: false })
           .limit(3);
         

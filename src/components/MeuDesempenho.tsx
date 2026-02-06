@@ -35,7 +35,8 @@ export const MeuDesempenho = () => {
           .from('redacoes_enviadas')
           .select('nota_total')
           .eq('turma', 'visitante')
-          .ilike('email_aluno', emailVisitante);
+          .ilike('email_aluno', emailVisitante)
+          .is('deleted_at', null);
           
         if (error) {
           console.error('Erro ao buscar redações do visitante:', error);
@@ -70,11 +71,11 @@ export const MeuDesempenho = () => {
         console.error('Erro ao contar redações:', errorContador);
       }
 
-      // Buscar todas as redações para calcular notas (incluindo devolvidas para estatísticas)
+      // Buscar todas as redações para calcular notas (excluindo soft-deleted)
       const [redacoesRegulares, redacoesSimulado, redacoesExercicio] = await Promise.all([
-        supabase.from('redacoes_enviadas').select('nota_total').ilike('email_aluno', emailBusca),
-        supabase.from('redacoes_simulado').select('nota_total').ilike('email_aluno', emailBusca),
-        supabase.from('redacoes_exercicio').select('nota_total').ilike('email_aluno', emailBusca)
+        supabase.from('redacoes_enviadas').select('nota_total').ilike('email_aluno', emailBusca).is('deleted_at', null),
+        supabase.from('redacoes_simulado').select('nota_total').ilike('email_aluno', emailBusca).is('deleted_at', null),
+        supabase.from('redacoes_exercicio').select('nota_total').ilike('email_aluno', emailBusca).is('deleted_at', null)
       ]);
 
       if (redacoesRegulares.error) {

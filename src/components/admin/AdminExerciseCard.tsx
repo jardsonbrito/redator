@@ -74,11 +74,12 @@ export const AdminExerciseCard = ({
 
       const fraseTematica = exercicio.temas.frase_tematica;
 
-      // Buscar redações que têm essa frase temática
+      // Buscar redações que têm essa frase temática (excluindo soft-deleted)
       const { count, error } = await supabase
         .from("redacoes_enviadas")
         .select("*", { count: "exact", head: true })
-        .eq("frase_tematica", fraseTematica);
+        .eq("frase_tematica", fraseTematica)
+        .is("deleted_at", null);
 
       if (error) throw error;
       setSubmissionsCount(count || 0);

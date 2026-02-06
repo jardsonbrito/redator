@@ -82,7 +82,8 @@ export const TemaSubmissionsModal = ({
         const { data: redacoesData, error: redacoesError } = await supabase
           .from("redacoes_simulado")
           .select("email_aluno, nota_final_corretor_1, nota_final_corretor_2, corrigida, turma")
-          .eq("id_simulado", simulado.id);
+          .eq("id_simulado", simulado.id)
+          .is("deleted_at", null);
 
         if (redacoesError) {
           console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações do simulado:', redacoesError);
@@ -177,7 +178,8 @@ export const TemaSubmissionsModal = ({
         const { data: redacoesData, error: redacoesError } = await supabase
           .from("redacoes_enviadas")
           .select("email_aluno, nota_total, corrigida, status")
-          .eq("frase_tematica", fraseTematica);
+          .eq("frase_tematica", fraseTematica)
+          .is("deleted_at", null);
 
         if (redacoesError) {
           console.error('❌ [TemaSubmissionsModal] Erro ao buscar redações regulares:', redacoesError);

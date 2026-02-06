@@ -116,6 +116,9 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
 
       // 5b. Invalidar cache de redações imediatamente após soft delete
       queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacao-enviada'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-home-usuario'] });
 
       // 6. Ressarcir créditos se necessário
       let novoSaldoCreditos = profile.creditos || 0;
@@ -358,6 +361,9 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
 
       // 5b. Invalidar cache de redações imediatamente após soft delete
       queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacao-enviada'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-home-usuario'] });
 
       // 6. Ressarcir créditos
       const novoSaldoCreditos = (profile.creditos || 0) + creditosParaRessarcir;
@@ -623,6 +629,9 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
 
       // 3b. Invalidar cache de redações imediatamente após soft delete
       queryClient.invalidateQueries({ queryKey: ['redacoes-minhas'] });
+      queryClient.invalidateQueries({ queryKey: ['minhas-redacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['redacao-enviada'] });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-home-usuario'] });
 
       // 4. Atualizar status do candidato de volta para 'etapa_final_liberada'
       const { error: updateCandidatoError } = await supabase
