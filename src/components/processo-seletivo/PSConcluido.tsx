@@ -379,12 +379,7 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
           {isMensagemBolsa ? (
             <>
               <p className="text-sm text-blue-700">
-                Sua participação no processo seletivo foi confirmada com sucesso!
-              </p>
-              <p className="text-sm text-blue-700">
-                Fique atento(a) às mensagens publicadas no <strong>grupo da sua turma</strong>,
-                pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
-                oficiais sobre os próximos passos.
+                Para garantir sua vaga, entre em contato pelo botão abaixo.
               </p>
               {etapaFinal?.link_cta && (
                 <div className="pt-2">
