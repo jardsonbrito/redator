@@ -82,42 +82,51 @@ export const PSBolsaMensagem: React.FC<PSBolsaMensagemProps> = ({
             </p>
           </div>
 
-          {/* Botão CTA (WhatsApp) */}
-          {etapaFinal.link_cta && (
-            <a
-              href={etapaFinal.link_cta}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-base font-medium shadow-md transition-colors"
-            >
-              <MessageCircle className="h-5 w-5" />
-              {etapaFinal.texto_botao_cta || 'Falar no WhatsApp'}
-            </a>
+          {/* Botão CTA (WhatsApp) - ao clicar, conclui o processo e abre o link */}
+          {etapaFinal.link_cta ? (
+            <>
+              <button
+                onClick={async () => {
+                  // Abrir o link imediatamente
+                  window.open(etapaFinal.link_cta!, '_blank', 'noopener,noreferrer');
+                  // Concluir o processo em background
+                  await handleConfirmar();
+                }}
+                disabled={isConfirmando}
+                className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-base font-medium shadow-md transition-colors disabled:opacity-50"
+              >
+                <MessageCircle className="h-5 w-5" />
+                {etapaFinal.texto_botao_cta || 'Falar no WhatsApp'}
+              </button>
+              <p className="text-xs text-emerald-600">
+                Ao clicar, seu processo será concluído e você será redirecionado.
+              </p>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={handleConfirmar}
+                disabled={isConfirmando}
+                size="lg"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 text-base shadow-md"
+              >
+                {isConfirmando ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Confirmar e Concluir
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-emerald-600">
+                Ao confirmar, seu processo seletivo será marcado como concluído.
+              </p>
+            </>
           )}
-
-          {/* Botão de confirmar */}
-          <Button
-            onClick={handleConfirmar}
-            disabled={isConfirmando}
-            size="lg"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 text-base shadow-md"
-          >
-            {isConfirmando ? (
-              <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Processando...
-              </>
-            ) : (
-              <>
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Confirmar e Concluir
-              </>
-            )}
-          </Button>
-
-          <p className="text-xs text-emerald-600">
-            Ao confirmar, seu processo seletivo será marcado como concluído.
-          </p>
         </CardContent>
       </Card>
     </div>
