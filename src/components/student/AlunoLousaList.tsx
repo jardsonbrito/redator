@@ -40,8 +40,8 @@ export default function AlunoLousaList() {
     if (!student) return;
 
     try {
-      // Buscar lousas disponíveis para o aluno
-      const { data: lousasData, error: lousasError } = await supabase
+      // Buscar lousas ativas
+      const { data: lousasAtivas, error: lousasError } = await supabase
         .from('lousa')
         .select('*')
         .eq('ativo', true)
@@ -50,8 +50,29 @@ export default function AlunoLousaList() {
 
       if (lousasError) throw lousasError;
 
+      // Buscar lousas onde o aluno já tem resposta (podem estar inativas)
+      const { data: respostasAluno } = await supabase
+        .from('lousa_resposta')
+        .select('lousa_id')
+        .eq('email_aluno', student.email || '');
+
+      const lousaIdsAtivas = new Set((lousasAtivas || []).map(l => l.id));
+      const idsFaltando = [...new Set((respostasAluno || []).map(r => r.lousa_id))]
+        .filter(id => !lousaIdsAtivas.has(id));
+
+      let todasLousas = [...(lousasAtivas || [])];
+
+      // Buscar lousas inativas que o aluno respondeu
+      if (idsFaltando.length > 0) {
+        const { data: lousasInativas } = await supabase
+          .from('lousa')
+          .select('*')
+          .in('id', idsFaltando);
+        todasLousas = [...todasLousas, ...(lousasInativas || [])];
+      }
+
       const lousasComResposta = await Promise.all(
-        (lousasData || []).map(async (lousa) => {
+        todasLousas.map(async (lousa) => {
           // Verificar se o aluno tem acesso à lousa
           // Apenas alunos da turma específica podem ver (sem visitantes)
           const turmaSemPrefixo = student.turma?.replace('Turma ', '');
