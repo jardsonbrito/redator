@@ -81,6 +81,8 @@ export interface EtapaFinalInput {
   hora_fim?: string;
   ativo?: boolean;
   mensagem_bolsa?: string;
+  link_cta?: string;
+  texto_botao_cta?: string;
 }
 
 /**
@@ -804,7 +806,9 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
             data_fim: input.data_fim || null,
             hora_fim: input.hora_fim || null,
             ativo: input.ativo ?? true,
-            mensagem_bolsa: input.mensagem_bolsa || null
+            mensagem_bolsa: input.mensagem_bolsa || null,
+            link_cta: input.link_cta || null,
+            texto_botao_cta: input.texto_botao_cta || null
           })
           .eq('id', input.id);
 
@@ -824,7 +828,9 @@ export const useProcessoSeletivoAdmin = (formularioId?: string) => {
             data_fim: input.data_fim || null,
             hora_fim: input.hora_fim || null,
             ativo: input.ativo ?? true,
-            mensagem_bolsa: input.mensagem_bolsa || null
+            mensagem_bolsa: input.mensagem_bolsa || null,
+            link_cta: input.link_cta || null,
+            texto_botao_cta: input.texto_botao_cta || null
           });
 
         if (error) throw error;

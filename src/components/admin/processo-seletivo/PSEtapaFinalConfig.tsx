@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Save, Calendar, Clock, Search, Trash2, Edit, Gift } from 'lucide-react';
+import { FileText, Save, Calendar, Clock, Search, Trash2, Edit, Gift, ExternalLink } from 'lucide-react';
 import { useProcessoSeletivoAdminComContexto } from '@/contexts/ProcessoSeletivoAdminContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -51,7 +51,9 @@ export const PSEtapaFinalConfig: React.FC = () => {
     data_fim: '',
     hora_fim: '',
     ativo: true,
-    mensagem_bolsa: ''
+    mensagem_bolsa: '',
+    link_cta: '',
+    texto_botao_cta: ''
   });
 
   const [buscaTema, setBuscaTema] = useState('');
@@ -102,7 +104,9 @@ export const PSEtapaFinalConfig: React.FC = () => {
         data_fim: etapaFinal.data_fim || '',
         hora_fim: etapaFinal.hora_fim || '',
         ativo: etapaFinal.ativo,
-        mensagem_bolsa: etapaFinal.mensagem_bolsa || ''
+        mensagem_bolsa: etapaFinal.mensagem_bolsa || '',
+        link_cta: etapaFinal.link_cta || '',
+        texto_botao_cta: etapaFinal.texto_botao_cta || ''
       });
       setIsEditing(true); // Já existe configuração, então está em modo edição
     }
@@ -120,7 +124,9 @@ export const PSEtapaFinalConfig: React.FC = () => {
         data_fim: '',
         hora_fim: '',
         ativo: true,
-        mensagem_bolsa: ''
+        mensagem_bolsa: '',
+        link_cta: '',
+        texto_botao_cta: ''
       });
     }
   }, [etapaFinal]);
@@ -174,6 +180,8 @@ export const PSEtapaFinalConfig: React.FC = () => {
         id: etapaFinal?.id,
         tipo: 'mensagem_bolsa',
         mensagem_bolsa: form.mensagem_bolsa,
+        link_cta: form.link_cta || undefined,
+        texto_botao_cta: form.texto_botao_cta || undefined,
         ativo: form.ativo
       });
     }
@@ -466,6 +474,36 @@ export const PSEtapaFinalConfig: React.FC = () => {
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{form.mensagem_bolsa}</p>
                 </div>
               )}
+
+              {/* Link CTA (WhatsApp ou outro) */}
+              <div className="border-t border-emerald-200 pt-4 space-y-3">
+                <h4 className="font-medium flex items-center gap-2 text-emerald-700">
+                  <ExternalLink className="h-4 w-4" />
+                  Botão de Ação (opcional)
+                </h4>
+                <p className="text-xs text-gray-500">
+                  Adicione um botão com link (ex: WhatsApp) para que o candidato possa entrar em contato após a confirmação.
+                  O botão aparecerá no card de parabéns e também na tela de conclusão.
+                </p>
+                <div>
+                  <Label htmlFor="link_cta">Link do botão (URL)</Label>
+                  <Input
+                    id="link_cta"
+                    value={form.link_cta}
+                    onChange={(e) => setForm({ ...form, link_cta: e.target.value })}
+                    placeholder="https://wa.me/5585992160605?text=Olá!%20Fui%20aprovado(a)..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="texto_botao_cta">Texto do botão</Label>
+                  <Input
+                    id="texto_botao_cta"
+                    value={form.texto_botao_cta}
+                    onChange={(e) => setForm({ ...form, texto_botao_cta: e.target.value })}
+                    placeholder="Falar no WhatsApp"
+                  />
+                </div>
+              </div>
             </div>
           )}
 

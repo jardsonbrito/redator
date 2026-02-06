@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, CheckCircle, Loader2 } from 'lucide-react';
+import { Trophy, CheckCircle, Loader2, MessageCircle } from 'lucide-react';
 import { Candidato, EtapaFinal } from '@/hooks/useProcessoSeletivo';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -81,6 +81,19 @@ export const PSBolsaMensagem: React.FC<PSBolsaMensagemProps> = ({
               {etapaFinal.mensagem_bolsa}
             </p>
           </div>
+
+          {/* Botão CTA (WhatsApp) */}
+          {etapaFinal.link_cta && (
+            <a
+              href={etapaFinal.link_cta}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg text-base font-medium shadow-md transition-colors"
+            >
+              <MessageCircle className="h-5 w-5" />
+              {etapaFinal.texto_botao_cta || 'Falar no WhatsApp'}
+            </a>
+          )}
 
           {/* Botão de confirmar */}
           <Button

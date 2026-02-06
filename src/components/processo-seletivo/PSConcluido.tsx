@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Trophy, FileText, Calendar, Star, X, AlertTriangle, RotateCcw, Award, Medal, MessageSquare } from 'lucide-react';
+import { CheckCircle2, Trophy, FileText, Calendar, Star, X, AlertTriangle, RotateCcw, Award, Medal, MessageSquare, MessageCircle } from 'lucide-react';
 import { Candidato, PSRedacao, ResultadoConfig, EtapaFinal } from '@/hooks/useProcessoSeletivo';
 import { useCancelRedacao } from '@/hooks/useCancelRedacao';
 import { useQueryClient } from '@tanstack/react-query';
@@ -386,6 +386,19 @@ export const PSConcluido: React.FC<PSConcluidoProps> = ({
                 pois será por esse canal que a equipe do Laboratório do Redator divulgará as informações
                 oficiais sobre os próximos passos.
               </p>
+              {etapaFinal?.link_cta && (
+                <div className="pt-2">
+                  <a
+                    href={etapaFinal.link_cta}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-colors"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    {etapaFinal.texto_botao_cta || 'Falar no WhatsApp'}
+                  </a>
+                </div>
+              )}
             </>
           ) : (
             <>

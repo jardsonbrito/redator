@@ -105,6 +105,8 @@ export interface EtapaFinal {
   hora_fim: string | null;
   ativo: boolean;
   mensagem_bolsa: string | null;
+  link_cta: string | null;
+  texto_botao_cta: string | null;
 }
 
 export interface PSRedacao {
