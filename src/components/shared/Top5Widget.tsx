@@ -23,6 +23,43 @@ const getTurmaColors = (turmaLetter: string) => {
   return colors[turmaLetter] || colors['N/A'];
 };
 
+// Resolve nomes genéricos ("Aluno", vazio) buscando nome real na tabela profiles
+const resolveGenericNames = async (
+  items: Array<{ nome_aluno: string; email_aluno: string; [key: string]: any }>
+) => {
+  const genericItems = items.filter(
+    item => !item.nome_aluno || item.nome_aluno.trim() === "Aluno" || item.nome_aluno.trim() === ""
+  );
+
+  if (genericItems.length === 0) return items;
+
+  const emails = [...new Set(genericItems.map(item => item.email_aluno?.toLowerCase()).filter(Boolean))];
+  if (emails.length === 0) return items;
+
+  const { data: profilesData } = await supabase
+    .from('profiles')
+    .select('email, nome')
+    .in('email', emails)
+    .eq('user_type', 'aluno');
+
+  if (!profilesData || profilesData.length === 0) return items;
+
+  const nomesMap: Record<string, string> = {};
+  profilesData.forEach(p => {
+    if (p.email && p.nome) nomesMap[p.email.toLowerCase()] = p.nome;
+  });
+
+  return items.map(item => {
+    if (!item.nome_aluno || item.nome_aluno.trim() === "Aluno" || item.nome_aluno.trim() === "") {
+      const nomeResolvido = nomesMap[item.email_aluno?.toLowerCase()];
+      if (nomeResolvido) {
+        return { ...item, nome_aluno: nomeResolvido };
+      }
+    }
+    return item;
+  });
+};
+
 interface Top5WidgetProps {
   showHeader?: boolean;
   variant?: "student" | "corretor" | "admin";
@@ -161,12 +198,16 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         console.log(`🔍 Após filtro por mês: ${notasComTurma.length} registros`);
       }
       
-      // Agrupar por aluno (só a mais recente de cada)
+      // Resolver nomes genéricos ("Aluno") buscando nome real na tabela profiles
+      notasComTurma = await resolveGenericNames(notasComTurma);
+
+      // Agrupar por aluno (usando email como chave para evitar duplicatas por nome genérico)
       const alunosUnicos = new Map();
       notasComTurma.forEach(nota => {
-        if (!alunosUnicos.has(nota.nome_aluno) || 
-            new Date(nota.data_envio) > new Date(alunosUnicos.get(nota.nome_aluno).data_envio)) {
-          alunosUnicos.set(nota.nome_aluno, nota);
+        const chave = nota.email_aluno?.toLowerCase() || nota.nome_aluno;
+        if (!alunosUnicos.has(chave) ||
+            new Date(nota.data_envio) > new Date(alunosUnicos.get(chave).data_envio)) {
+          alunosUnicos.set(chave, nota);
         }
       });
       
@@ -227,7 +268,7 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
       const { data, error } = await supabase
         .from('redacoes_enviadas')
         .select('data_envio')
-        .eq('tipo_envio', 'regular')
+        .in('tipo_envio', ['regular', 'exercicio'])
         .eq('corrigida', true)
         .not('nota_total', 'is', null);
 
@@ -448,7 +489,8 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
           .eq('corrigida', true);
 
         if (selectedType === "regular") {
-          query = query.eq('tipo_envio', 'regular');
+          // Incluir exercícios no ranking Regular (redações de exercício são essencialmente regulares)
+          query = query.in('tipo_envio', ['regular', 'exercicio']);
         } else if (selectedType === "avulsa") {
           query = query.eq('tipo_envio', 'avulsa');
         }
@@ -513,6 +555,9 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
         }));
       }
       
+      // Resolver nomes genéricos ("Aluno") buscando nome real na tabela profiles
+      processedData = await resolveGenericNames(processedData);
+
       // Agora todas as queries já incluem o campo turma diretamente
       let processedDataComplete = processedData;
 
@@ -536,20 +581,21 @@ export const Top5Widget = ({ showHeader = true, variant = "student", turmaFilter
       // Agrupar por aluno, mantendo apenas a maior nota de cada um
       const melhoresNotasPorAluno = new Map();
       processedDataComplete.forEach(item => {
-        const nomeAluno = item.nome_aluno;
-        const notaAtual = selectedType === "simulado" ? Number(item.nota_total) : Number(item.nota_total);
-        
-        if (!melhoresNotasPorAluno.has(nomeAluno)) {
-          melhoresNotasPorAluno.set(nomeAluno, item);
+        // Agrupar por email (evita merge incorreto de alunos com nome genérico "Aluno")
+        const chaveAluno = item.email_aluno?.toLowerCase() || item.nome_aluno;
+        const notaAtual = Number(item.nota_total);
+
+        if (!melhoresNotasPorAluno.has(chaveAluno)) {
+          melhoresNotasPorAluno.set(chaveAluno, item);
         } else {
-          const itemExistente = melhoresNotasPorAluno.get(nomeAluno);
-          const notaExistente = selectedType === "simulado" ? Number(itemExistente.nota_total) : Number(itemExistente.nota_total);
-          
+          const itemExistente = melhoresNotasPorAluno.get(chaveAluno);
+          const notaExistente = Number(itemExistente.nota_total);
+
           // Se a nota atual é maior, ou igual mas mais recente, substituir
-          if (notaAtual > notaExistente || 
-              (notaAtual === notaExistente && 
+          if (notaAtual > notaExistente ||
+              (notaAtual === notaExistente &&
                new Date(item.data_envio).getTime() > new Date(itemExistente.data_envio).getTime())) {
-            melhoresNotasPorAluno.set(nomeAluno, item);
+            melhoresNotasPorAluno.set(chaveAluno, item);
           }
         }
       });
