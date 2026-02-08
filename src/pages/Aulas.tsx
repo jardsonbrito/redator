@@ -161,56 +161,64 @@ const Aulas = () => {
     setFilteredAulas(filtered);
   };
 
-  const handleAssistirAula = async (aula: Aula) => {
-    // Marcar como assistida primeiro (se for vídeo gravado)
-    if (aula.video_id || aula.embed_url || aula.video_url_original) {
-      await markAsWatched(aula.id, aula.titulo);
-    }
-    
-    // Determinar a melhor URL para abrir
+  const handleAssistirAula = (aula: Aula) => {
+    // Determinar a melhor URL para abrir (SÍNCRONO - antes de qualquer await)
     let videoUrl = '';
-    
-    // Priorizar embed_url ou video_url_original
-    if (aula.embed_url) {
-      videoUrl = aula.embed_url;
-    } else if (aula.video_url_original) {
+
+    // Priorizar video_url_original ou link_conteudo (URLs de assistir)
+    // embed_url (youtube.com/embed/...) causa Erro 153 ao abrir diretamente
+    if (aula.video_url_original) {
       videoUrl = aula.video_url_original;
     } else if (aula.link_conteudo) {
-      // Verificar se é uma URL do YouTube e convertê-la se necessário
-      const youtubeMatch = aula.link_conteudo.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-      if (youtubeMatch && youtubeMatch[1]) {
-        // Converter para formato embed que funciona melhor
-        videoUrl = `https://www.youtube.com/watch?v=${youtubeMatch[1]}`;
+      videoUrl = aula.link_conteudo;
+    } else if (aula.embed_url) {
+      // Converter embed URL para URL de assistir
+      const embedMatch = aula.embed_url.match(/youtube\.com\/embed\/([^?&#]+)/);
+      if (embedMatch && embedMatch[1]) {
+        videoUrl = `https://www.youtube.com/watch?v=${embedMatch[1]}`;
       } else {
-        videoUrl = aula.link_conteudo;
+        videoUrl = aula.embed_url;
       }
     }
 
-    if (videoUrl) {
-      try {
-        // Abrir em nova aba
-        const newWindow = window.open(videoUrl, '_blank', 'noopener,noreferrer');
-        if (!newWindow) {
-          toast({
-            title: "Bloqueador de pop-up detectado",
-            description: "Por favor, permita pop-ups para este site ou tente novamente.",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error('Erro ao abrir vídeo:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível abrir o vídeo. Tente novamente.",
-          variant: "destructive"
-        });
-      }
-    } else {
+    // Normalizar URLs do YouTube para formato watch (evita Erro 153)
+    const youtubeEmbedMatch = videoUrl.match(/youtube\.com\/embed\/([^?&#]+)/);
+    if (youtubeEmbedMatch && youtubeEmbedMatch[1]) {
+      videoUrl = `https://www.youtube.com/watch?v=${youtubeEmbedMatch[1]}`;
+    }
+
+    if (!videoUrl) {
       toast({
         title: "Erro",
         description: "Link do vídeo não disponível.",
         variant: "destructive"
       });
+      return;
+    }
+
+    // Abrir em nova aba SINCRONAMENTE (no contexto direto do clique)
+    // Isso evita o bloqueio de pop-up pelo navegador
+    try {
+      const newWindow = window.open(videoUrl, '_blank', 'noopener,noreferrer');
+      if (!newWindow) {
+        toast({
+          title: "Bloqueador de pop-up detectado",
+          description: "Por favor, permita pop-ups para este site ou tente novamente.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao abrir vídeo:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir o vídeo. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+
+    // Marcar como assistida DEPOIS de abrir (async, não bloqueia a abertura)
+    if (aula.video_id || aula.embed_url || aula.video_url_original) {
+      markAsWatched(aula.id, aula.titulo);
     }
   };
 
