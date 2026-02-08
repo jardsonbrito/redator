@@ -235,7 +235,8 @@ export const RedacaoFormUnificado = ({
 
       const { data, error } = await supabase.rpc('verificar_redacao_pendente_corretor', {
         p_email_aluno: emailCredito,
-        p_corretor_id: corretorId
+        p_corretor_id: corretorId,
+        p_tipo_envio: tipoEnvio
       });
 
       if (error) {
