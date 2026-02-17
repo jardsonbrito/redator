@@ -190,16 +190,16 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
       }
 
       // ========================================
-      // 4. TEMAS RECÉM-PUBLICADOS (últimas 72h)
+      // 4. TEMAS RECÉM-PUBLICADOS (últimos 7 dias)
       // ========================================
       try {
-        const tresDiasAtras = new Date(agora.getTime() - 72 * 60 * 60 * 1000).toISOString();
+        const seteDiasAtras = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
         const { data: temas } = await supabase
           .from('temas')
           .select('id, frase_tematica, published_at')
           .eq('status', 'publicado')
-          .gte('published_at', tresDiasAtras)
+          .gte('published_at', seteDiasAtras)
           .order('published_at', { ascending: false });
 
         if (temas) {
