@@ -70,8 +70,8 @@ const getStorageKey = (email: string, tipo: string, id: string): string => {
       // Aula agendada: mostrar uma vez (até ser vista)
       return `alerta-${email}-${tipo}-${id}`;
     case 'tema':
-      // Tema: mostrar uma vez (até ser visto)
-      return `alerta-${email}-${tipo}-${id}`;
+      // Tema: mostrar uma vez por dia (no primeiro acesso do dia)
+      return `alerta-${email}-${tipo}-${id}-${hoje}`;
     default:
       // Exercícios e Lousa: mostrar uma vez por dia
       return `alerta-${email}-${tipo}-${id}-${hoje}`;
@@ -86,6 +86,7 @@ export function AlertasAtividadesModal({ turma, userType, email }: AlertasAtivid
   const { data: alertas, isLoading } = useAlertasAtividades({
     turma,
     userType,
+    email,
     enabled: !!email,
   });
 

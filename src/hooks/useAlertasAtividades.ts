@@ -16,12 +16,13 @@ export interface AlertaAtividade {
 interface UseAlertasAtividadesProps {
   turma: string | null;
   userType: string;
+  email?: string;
   enabled?: boolean;
 }
 
-export function useAlertasAtividades({ turma, userType, enabled = true }: UseAlertasAtividadesProps) {
+export function useAlertasAtividades({ turma, userType, email, enabled = true }: UseAlertasAtividadesProps) {
   return useQuery({
-    queryKey: ['alertas_atividades', turma, userType],
+    queryKey: ['alertas_atividades', turma, userType, email],
     queryFn: async (): Promise<AlertaAtividade[]> => {
       const alertas: AlertaAtividade[] = [];
       const agora = new Date();
@@ -190,20 +191,39 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
       }
 
       // ========================================
-      // 4. TEMAS RECÉM-PUBLICADOS (últimos 7 dias)
+      // 4. TEMAS RECÉM-PUBLICADOS (últimos 5 dias)
       // ========================================
       try {
-        const seteDiasAtras = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const cincoDiasAtras = new Date(agora.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString();
 
         const { data: temas } = await supabase
           .from('temas')
           .select('id, frase_tematica, published_at')
           .eq('status', 'publicado')
-          .gte('published_at', seteDiasAtras)
+          .gte('published_at', cincoDiasAtras)
           .order('published_at', { ascending: false });
 
-        if (temas) {
+        if (temas && temas.length > 0) {
+          // Buscar frases temáticas sobre as quais o aluno já escreveu
+          let frasesJaEscritas = new Set<string>();
+          if (email) {
+            const { data: redacoes } = await supabase
+              .from('redacoes_enviadas')
+              .select('frase_tematica')
+              .eq('email_aluno', email)
+              .is('deleted_at', null);
+
+            if (redacoes) {
+              frasesJaEscritas = new Set(redacoes.map(r => r.frase_tematica).filter(Boolean));
+            }
+          }
+
           for (const tema of temas) {
+            // Não alertar se o aluno já escreveu sobre este tema
+            if (tema.frase_tematica && frasesJaEscritas.has(tema.frase_tematica)) {
+              continue;
+            }
+
             const dataPublicacao = tema.published_at
               ? new Date(tema.published_at).toLocaleDateString('pt-BR')
               : undefined;
