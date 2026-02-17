@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export type TipoAlertaAula = 'aula_agendada' | 'aula_hoje' | 'aula_ao_vivo';
 
 export interface AlertaAtividade {
-  tipo: TipoAlertaAula | 'exercicio' | 'lousa';
+  tipo: TipoAlertaAula | 'exercicio' | 'lousa' | 'tema';
   id: string;
   titulo: string;
   horario?: string;
@@ -187,6 +187,39 @@ export function useAlertasAtividades({ turma, userType, enabled = true }: UseAle
         }
       } catch (error) {
         console.error('Erro ao buscar lousas:', error);
+      }
+
+      // ========================================
+      // 4. TEMAS RECÉM-PUBLICADOS (últimas 72h)
+      // ========================================
+      try {
+        const tresDiasAtras = new Date(agora.getTime() - 72 * 60 * 60 * 1000).toISOString();
+
+        const { data: temas } = await supabase
+          .from('temas')
+          .select('id, frase_tematica, published_at')
+          .eq('status', 'publicado')
+          .gte('published_at', tresDiasAtras)
+          .order('published_at', { ascending: false });
+
+        if (temas) {
+          for (const tema of temas) {
+            const dataPublicacao = tema.published_at
+              ? new Date(tema.published_at).toLocaleDateString('pt-BR')
+              : undefined;
+
+            alertas.push({
+              tipo: 'tema',
+              id: tema.id,
+              titulo: tema.frase_tematica || 'Novo tema disponível',
+              data: dataPublicacao,
+              path: `/temas/${tema.id}`,
+              prioridade: 6
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar temas recentes:', error);
       }
 
       // Ordenar por prioridade (1 = mais urgente)

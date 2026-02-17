@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Video, NotebookPen, Presentation, Bell, ChevronRight, Calendar, Radio } from 'lucide-react';
+import { Video, NotebookPen, Presentation, Bell, ChevronRight, Calendar, Radio, PenLine } from 'lucide-react';
 import { useAlertasAtividades, AlertaAtividade } from '@/hooks/useAlertasAtividades';
 
 interface AlertasAtividadesModalProps {
@@ -25,6 +25,7 @@ const ICON_MAP: Record<string, typeof Video> = {
   aula_agendada: Video,
   exercicio: NotebookPen,
   lousa: Presentation,
+  tema: PenLine,
 };
 
 const LABEL_MAP: Record<string, string> = {
@@ -33,6 +34,7 @@ const LABEL_MAP: Record<string, string> = {
   aula_agendada: 'Agendada',
   exercicio: 'Exercício',
   lousa: 'Lousa',
+  tema: 'Novo Tema',
 };
 
 const COLOR_MAP: Record<string, string> = {
@@ -41,6 +43,7 @@ const COLOR_MAP: Record<string, string> = {
   aula_agendada: 'bg-blue-100 text-blue-800 border-blue-200',
   exercicio: 'bg-green-100 text-green-800 border-green-200',
   lousa: 'bg-purple-100 text-purple-800 border-purple-200',
+  tema: 'bg-amber-100 text-amber-800 border-amber-200',
 };
 
 const CARD_COLOR_MAP: Record<string, string> = {
@@ -49,6 +52,7 @@ const CARD_COLOR_MAP: Record<string, string> = {
   aula_agendada: 'border-blue-200 bg-blue-50',
   exercicio: 'border-green-200 bg-green-50',
   lousa: 'border-purple-200 bg-purple-50',
+  tema: 'border-amber-200 bg-amber-50',
 };
 
 // Função para gerar chave de armazenamento baseada no tipo de alerta
@@ -64,6 +68,9 @@ const getStorageKey = (email: string, tipo: string, id: string): string => {
       return `alerta-${email}-${tipo}-${id}-${hoje}`;
     case 'aula_agendada':
       // Aula agendada: mostrar uma vez (até ser vista)
+      return `alerta-${email}-${tipo}-${id}`;
+    case 'tema':
+      // Tema: mostrar uma vez (até ser visto)
       return `alerta-${email}-${tipo}-${id}`;
     default:
       // Exercícios e Lousa: mostrar uma vez por dia
@@ -165,6 +172,15 @@ export function AlertasAtividadesModal({ turma, userType, email }: AlertasAtivid
             <p className="font-medium text-sm">{alerta.titulo}</p>
             <p className="text-xs text-muted-foreground">
               {alerta.data} às {alerta.horario}
+            </p>
+          </>
+        );
+      case 'tema':
+        return (
+          <>
+            <p className="font-medium text-sm">{alerta.titulo}</p>
+            <p className="text-xs text-muted-foreground">
+              Novo tema disponível — escreva sua redação!
             </p>
           </>
         );
