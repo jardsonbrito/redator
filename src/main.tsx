@@ -7,6 +7,16 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import App from './App.tsx';
 import './index.css';
 
+// Desabilitar todos os logs do console em produção
+if (import.meta.env.PROD) {
+  const noop = () => {};
+  console.log = noop;
+  console.warn = noop;
+  console.error = noop;
+  console.info = noop;
+  console.debug = noop;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
