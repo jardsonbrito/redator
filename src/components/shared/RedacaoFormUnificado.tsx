@@ -15,6 +15,7 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { gerarImagemA4DeTexto, validarImagemGerada, gerarNomeArquivoA4, contarPalavras } from "@/utils/gerarImagemA4";
 import { getTurmaCode, normalizeTurmaToLetter } from "@/utils/turmaUtils";
+import { corrigirOrientacaoImagem } from "@/utils/corrigirOrientacaoImagem";
 
 interface RedacaoFormUnificadoProps {
   // Configurações do formulário
@@ -68,6 +69,7 @@ export const RedacaoFormUnificado = ({
   const [redacaoManuscrita, setRedacaoManuscrita] = useState<File | null>(null);
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [tipoRedacao, setTipoRedacao] = useState<"manuscrita" | "digitada">("digitada");
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [corretores, setCorretores] = useState<any[]>([]);
   const [loadingCorretores, setLoadingCorretores] = useState(true);
 
@@ -294,34 +296,53 @@ export const RedacaoFormUnificado = ({
     setSelectedCorretores(newSelected);
   };
 
-  // Upload de arquivo
-  const handleRedacaoManuscritaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload de arquivo — com correção automática de orientação para imagens
+  const handleRedacaoManuscritaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Verificar tamanho (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "O arquivo deve ter no máximo 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!file) return;
 
-      // Verificar tipo
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-      if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: "Tipo de arquivo não suportado",
-          description: "Use apenas JPG, PNG ou PDF.",
-          variant: "destructive",
-        });
-        return;
-      }
+    // Verificar tamanho (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "O arquivo deve ter no máximo 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    // Verificar tipo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Tipo de arquivo não suportado",
+        description: "Use apenas JPG, PNG ou PDF.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Revogar URL anterior para evitar vazamento de memória
+    if (redacaoManuscritaUrl) {
+      URL.revokeObjectURL(redacaoManuscritaUrl);
+      setRedacaoManuscritaUrl(null);
+    }
+
+    // PDFs não precisam de correção de orientação
+    if (file.type === 'application/pdf') {
       setRedacaoManuscrita(file);
-      const url = URL.createObjectURL(file);
-      setRedacaoManuscritaUrl(url);
+      setRedacaoManuscritaUrl(URL.createObjectURL(file));
+      return;
+    }
+
+    // Corrigir orientação da imagem (EXIF + landscape → portrait)
+    setIsProcessingImage(true);
+    try {
+      const fileCorrigido = await corrigirOrientacaoImagem(file);
+      setRedacaoManuscrita(fileCorrigido);
+      setRedacaoManuscritaUrl(URL.createObjectURL(fileCorrigido));
+    } finally {
+      setIsProcessingImage(false);
     }
   };
 
@@ -744,8 +765,15 @@ export const RedacaoFormUnificado = ({
                   Somente JPG, PNG ou PDF (máx. 5MB)
                 </p>
 
+                {/* Feedback de processamento de orientação */}
+                {isProcessingImage && (
+                  <div className="mt-4 text-sm text-purple-700 font-medium animate-pulse">
+                    Ajustando orientação da imagem...
+                  </div>
+                )}
+
                 {/* Preview do arquivo */}
-                {redacaoManuscritaUrl && (
+                {!isProcessingImage && redacaoManuscritaUrl && (
                   <div className="relative mt-4 max-w-md mx-auto">
                     {redacaoManuscrita?.type === 'application/pdf' ? (
                       <div className="bg-white rounded-lg border p-4">
@@ -845,9 +873,9 @@ export const RedacaoFormUnificado = ({
           <Button
             type="submit"
             className="w-full text-white bg-purple-600 hover:bg-purple-700 rounded-xl py-3 text-lg font-semibold mt-6"
-            disabled={isSubmitting || (userType === "aluno" && !isProcessoSeletivo && (creditsLoading || credits < requiredCredits))}
+            disabled={isSubmitting || isProcessingImage || (userType === "aluno" && !isProcessoSeletivo && (creditsLoading || credits < requiredCredits))}
           >
-            {isSubmitting ? "Enviando..." : isProcessoSeletivo ? "Enviar Redação do Processo Seletivo" : "Enviar Redação"}
+            {isSubmitting ? "Enviando..." : isProcessingImage ? "Processando imagem..." : isProcessoSeletivo ? "Enviar Redação do Processo Seletivo" : "Enviar Redação"}
           </Button>
         </form>
       </CardContent>
