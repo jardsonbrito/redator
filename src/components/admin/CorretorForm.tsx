@@ -3,9 +3,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { FileImage, FileText } from "lucide-react";
 
 interface CorretorFormProps {
   onSuccess?: () => void;
@@ -17,13 +19,15 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
   const [formData, setFormData] = useState({
     nome_completo: corretorEditando?.nome_completo || "",
     email: corretorEditando?.email || "",
+    aceita_manuscrita: corretorEditando?.aceita_manuscrita ?? true,
+    aceita_digitada: corretorEditando?.aceita_digitada ?? true,
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.nome_completo.trim() || !formData.email.trim()) {
       toast({
         title: "Erro de validação",
@@ -33,16 +37,26 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
       return;
     }
 
+    if (!formData.aceita_manuscrita && !formData.aceita_digitada) {
+      toast({
+        title: "Configuração inválida",
+        description: "O corretor precisa aceitar pelo menos um tipo de redação.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (corretorEditando) {
-        // Atualizar corretor existente
         const { error } = await supabase
           .from("corretores")
           .update({
             nome_completo: formData.nome_completo.trim(),
             email: formData.email.trim().toLowerCase(),
+            aceita_manuscrita: formData.aceita_manuscrita,
+            aceita_digitada: formData.aceita_digitada,
           })
           .eq("id", corretorEditando.id);
 
@@ -53,12 +67,13 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
           description: "Os dados do corretor foram atualizados.",
         });
       } else {
-        // Criar novo corretor
         const { error } = await supabase
           .from("corretores")
           .insert({
             nome_completo: formData.nome_completo.trim(),
             email: formData.email.trim().toLowerCase(),
+            aceita_manuscrita: formData.aceita_manuscrita,
+            aceita_digitada: formData.aceita_digitada,
           });
 
         if (error) throw error;
@@ -69,12 +84,7 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
         });
       }
 
-      // Limpar formulário
-      setFormData({
-        nome_completo: "",
-        email: "",
-      });
-
+      setFormData({ nome_completo: "", email: "", aceita_manuscrita: true, aceita_digitada: true });
       onSuccess?.();
       onCancelEdit?.();
     } catch (error: any) {
@@ -90,10 +100,7 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
   };
 
   const handleCancel = () => {
-    setFormData({
-      nome_completo: "",
-      email: "",
-    });
+    setFormData({ nome_completo: "", email: "", aceita_manuscrita: true, aceita_digitada: true });
     onCancelEdit?.();
   };
 
@@ -127,6 +134,39 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
               placeholder="Digite o e-mail do corretor"
               required
             />
+          </div>
+
+          {/* Tipos de redação aceitos */}
+          <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+            <Label className="text-sm font-semibold">Tipos de redação aceitos</Label>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileImage className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">Manuscrita / Foto</span>
+              </div>
+              <Switch
+                checked={formData.aceita_manuscrita}
+                onCheckedChange={(val) => setFormData(prev => ({ ...prev, aceita_manuscrita: val }))}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">Digitada</span>
+              </div>
+              <Switch
+                checked={formData.aceita_digitada}
+                onCheckedChange={(val) => setFormData(prev => ({ ...prev, aceita_digitada: val }))}
+              />
+            </div>
+
+            {!formData.aceita_manuscrita && !formData.aceita_digitada && (
+              <p className="text-xs text-destructive mt-1">
+                Habilite pelo menos um tipo para que o corretor receba redações.
+              </p>
+            )}
           </div>
 
           <div className="flex gap-2">

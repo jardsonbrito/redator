@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,8 +70,18 @@ export const RedacaoFormUnificado = ({
   const [redacaoManuscritaUrl, setRedacaoManuscritaUrl] = useState<string | null>(null);
   const [tipoRedacao, setTipoRedacao] = useState<"manuscrita" | "digitada">("digitada");
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [corretores, setCorretores] = useState<any[]>([]);
+  // todosCorretores: lista filtrada por turma mas ainda NÃO filtrada por tipo de redação
+  const [todosCorretores, setTodosCorretores] = useState<any[]>([]);
   const [loadingCorretores, setLoadingCorretores] = useState(true);
+
+  // Corretores compatíveis com o tipo de redação selecionado pelo aluno
+  const corretores = useMemo(() => {
+    return todosCorretores.filter((c) => {
+      if (tipoRedacao === "manuscrita") return c.aceita_manuscrita !== false;
+      if (tipoRedacao === "digitada")   return c.aceita_digitada   !== false;
+      return true;
+    });
+  }, [todosCorretores, tipoRedacao]);
 
   // Determinar tipo de usuário e envio
   const userType = localStorage.getItem("userType");
@@ -146,7 +156,7 @@ export const RedacaoFormUnificado = ({
     try {
       const { data, error } = await supabase
         .from('corretores')
-        .select('id, nome_completo, email, turmas_autorizadas')
+        .select('id, nome_completo, email, turmas_autorizadas, aceita_manuscrita, aceita_digitada')
         .eq('ativo', true)
         .eq('visivel_no_formulario', true)
         .order('nome_completo');
@@ -196,8 +206,8 @@ export const RedacaoFormUnificado = ({
         }
       }
 
-      console.log('🔍 DEBUG RedacaoFormUnificado - Corretores filtrados:', corretoresFiltrados);
-      setCorretores(corretoresFiltrados);
+      console.log('🔍 DEBUG RedacaoFormUnificado - Corretores filtrados por turma:', corretoresFiltrados);
+      setTodosCorretores(corretoresFiltrados);
     } catch (error: any) {
       console.error('Erro ao buscar corretores:', error);
       toast({
@@ -723,6 +733,8 @@ export const RedacaoFormUnificado = ({
               value={tipoRedacao}
               onValueChange={(value: "manuscrita" | "digitada") => {
                 setTipoRedacao(value);
+                // Limpar corretores selecionados: a lista de compatíveis pode mudar
+                setSelectedCorretores([]);
                 if (value === "manuscrita") {
                   setRedacaoTexto("");
                   setPalavras(0);
@@ -846,6 +858,12 @@ export const RedacaoFormUnificado = ({
             </h3>
             {loadingCorretores ? (
               <p className="text-sm text-gray-500">Carregando corretores...</p>
+            ) : corretores.length === 0 ? (
+              <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Nenhum corretor disponível para redações{" "}
+                {tipoRedacao === "manuscrita" ? "manuscritas / foto" : "digitadas"} no momento.
+                Tente selecionar o outro tipo de envio ou aguarde a disponibilidade.
+              </p>
             ) : (
               <div className="space-y-2">
                 {corretores.map((corretor) => (

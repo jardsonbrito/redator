@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, UserCheck, UserX, MoreVertical, Eye, EyeOff } from "lucide-react";
+import { Edit, Trash2, UserCheck, UserX, MoreVertical, Eye, EyeOff, FileImage, FileText } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +33,8 @@ interface Corretor {
   ativo: boolean;
   visivel_no_formulario: boolean;
   turmas_autorizadas: string[] | null;
+  aceita_manuscrita: boolean;
+  aceita_digitada: boolean;
   criado_em: string;
   atualizado_em: string;
 }
@@ -189,6 +191,34 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{corretor.email}</p>
+
+                  {/* Tipos de redação aceitos */}
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground">Aceita:</span>
+                    {corretor.aceita_manuscrita ? (
+                      <Badge variant="outline" className="text-xs gap-1 border-blue-300 text-blue-700">
+                        <FileImage className="w-3 h-3" />
+                        Manuscrita
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs gap-1 border-gray-200 text-gray-400 line-through">
+                        <FileImage className="w-3 h-3" />
+                        Manuscrita
+                      </Badge>
+                    )}
+                    {corretor.aceita_digitada ? (
+                      <Badge variant="outline" className="text-xs gap-1 border-purple-300 text-purple-700">
+                        <FileText className="w-3 h-3" />
+                        Digitada
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs gap-1 border-gray-200 text-gray-400 line-through">
+                        <FileText className="w-3 h-3" />
+                        Digitada
+                      </Badge>
+                    )}
+                  </div>
+
                   {corretor.visivel_no_formulario && corretor.turmas_autorizadas && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Turmas: {corretor.turmas_autorizadas.map(t => formatTurmaDisplay(t)).join(", ")}

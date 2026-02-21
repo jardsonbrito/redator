@@ -590,6 +590,8 @@ export type Database = {
       }
       corretores: {
         Row: {
+          aceita_digitada: boolean
+          aceita_manuscrita: boolean
           ativo: boolean
           atualizado_em: string
           criado_em: string
@@ -599,6 +601,8 @@ export type Database = {
           visivel_no_formulario: boolean
         }
         Insert: {
+          aceita_digitada?: boolean
+          aceita_manuscrita?: boolean
           ativo?: boolean
           atualizado_em?: string
           criado_em?: string
@@ -608,6 +612,8 @@ export type Database = {
           visivel_no_formulario?: boolean
         }
         Update: {
+          aceita_digitada?: boolean
+          aceita_manuscrita?: boolean
           ativo?: boolean
           atualizado_em?: string
           criado_em?: string
