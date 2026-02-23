@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { syncToBlog } from '@/utils/blogSync';
 
 interface RedacaoFormProps {
   mode?: 'create' | 'edit';
@@ -16,9 +18,15 @@ interface RedacaoFormProps {
 
 export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }: RedacaoFormProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(mode === 'edit');
   const [activeSection, setActiveSection] = useState<string>('imagem');
+
+  // Blog sync state
+  const [publicarNoBlog, setPublicarNoBlog] = useState(false);
+  const [blogPostId, setBlogPostId] = useState<string | null>(null);
+  const [syncingBlog, setSyncingBlog] = useState(false);
 
   const [formData, setFormData] = useState({
     frase_tematica: '',
@@ -51,6 +59,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             autor: data.autor || '',
             foto_autor: data.foto_autor || ''
           });
+          setPublicarNoBlog(data.publicar_no_blog ?? false);
+          setBlogPostId(data.blog_post_id ?? null);
         } catch (error: any) {
           toast({
             title: "❌ Erro",
@@ -93,7 +103,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
         });
       } else {
         // Create new redacao
-        const { error } = await supabase
+        const { data: insertedData, error } = await supabase
           .from('redacoes')
           .insert([{
             frase_tematica: formData.frase_tematica.trim(),
@@ -105,7 +115,9 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             foto_autor: formData.foto_autor.trim() || null,
             nota_total: 1000, // Redação exemplar
             data_envio: new Date().toISOString()
-          }]);
+          }])
+          .select('id')
+          .single();
 
         if (error) throw error;
 
@@ -113,6 +125,12 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           title: "✅ Sucesso!",
           description: "Redação exemplar criada com sucesso.",
         });
+
+        // Sync com blog se toggle ativado
+        if (publicarNoBlog && user?.email && insertedData?.id) {
+          const syncResult = await syncToBlog({ adminEmail: user.email, table: 'redacoes', recordId: insertedData.id, action: 'sync' });
+          if (syncResult.success && syncResult.blogPostId) setBlogPostId(syncResult.blogPostId);
+        }
 
         // Clear form
         setFormData({
@@ -124,6 +142,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           autor: '',
           foto_autor: ''
         });
+        setPublicarNoBlog(false);
+        setBlogPostId(null);
       }
 
       onSuccess && onSuccess();
@@ -138,6 +158,42 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     }
   };
 
+  // ── Blog sync helpers ──────────────────────────────────────────────────────
+  const handleToggleBlog = async () => {
+    if (!user?.email || !redacaoId) return;
+    setSyncingBlog(true);
+    const action = publicarNoBlog ? 'unsync' : 'sync';
+    const result = await syncToBlog({ adminEmail: user.email, table: 'redacoes', recordId: redacaoId, action });
+    if (result.success) {
+      if (action === 'sync') {
+        setPublicarNoBlog(true);
+        if (result.blogPostId) setBlogPostId(result.blogPostId);
+        toast({ title: '✅ Sincronizado', description: 'Redação publicada no blog com sucesso.' });
+      } else {
+        setPublicarNoBlog(false);
+        setBlogPostId(null);
+        toast({ title: 'Blog', description: 'Redação arquivada no blog.' });
+      }
+    } else {
+      toast({ title: '❌ Erro ao sincronizar', description: result.error, variant: 'destructive' });
+    }
+    setSyncingBlog(false);
+  };
+
+  const handleResync = async () => {
+    if (!user?.email || !redacaoId) return;
+    setSyncingBlog(true);
+    const result = await syncToBlog({ adminEmail: user.email, table: 'redacoes', recordId: redacaoId, action: 'sync' });
+    if (result.success) {
+      if (result.blogPostId) setBlogPostId(result.blogPostId);
+      toast({ title: '✅ Re-sincronizado', description: 'Blog atualizado com os dados mais recentes.' });
+    } else {
+      toast({ title: '❌ Erro', description: result.error, variant: 'destructive' });
+    }
+    setSyncingBlog(false);
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
   const sections = [
     { id: 'imagem', label: 'Capa' },
     { id: 'frase', label: 'Frase Temática' },
@@ -146,6 +202,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     { id: 'foto_autor', label: 'Foto do Autor' },
     { id: 'texto', label: 'Texto da Redação' },
     { id: 'dica', label: 'Dica de Escrita' },
+    { id: 'blog', label: 'Blog' },
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -322,6 +379,74 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
                   onChange={(e) => setFormData({...formData, pdf_url: e.target.value})}
                   className="text-sm"
                 />
+              </div>
+            )}
+
+            {/* Blog Section */}
+            {activeSection === 'blog' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                {mode === 'create' ? (
+                  <p className="text-sm text-gray-500">
+                    Salve a redação primeiro para ativar a sincronização com o blog.
+                  </p>
+                ) : (
+                  <>
+                    {/* Toggle publicar */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Publicar no Blog</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Sincroniza esta redação exemplar com o laboratoriodoredator.com
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleToggleBlog}
+                        disabled={syncingBlog}
+                        className={cn(
+                          'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50',
+                          publicarNoBlog ? 'bg-[#3F0077]' : 'bg-gray-200'
+                        )}
+                        aria-pressed={publicarNoBlog}
+                      >
+                        <span
+                          className={cn(
+                            'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                            publicarNoBlog ? 'translate-x-6' : 'translate-x-1'
+                          )}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Status */}
+                    {syncingBlog && (
+                      <p className="text-xs text-gray-500">Sincronizando...</p>
+                    )}
+
+                    {publicarNoBlog && blogPostId && !syncingBlog && (
+                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div>
+                          <p className="text-xs font-medium text-green-800">Publicado no blog</p>
+                          <p className="text-xs text-green-600">ID: {blogPostId}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleResync}
+                          disabled={syncingBlog}
+                          className="text-xs text-[#3F0077] hover:underline disabled:opacity-50"
+                        >
+                          Re-sincronizar
+                        </button>
+                      </div>
+                    )}
+
+                    {!publicarNoBlog && !syncingBlog && (
+                      <p className="text-xs text-gray-400">
+                        Ative o toggle para publicar esta redação exemplar no blog.
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             )}
 

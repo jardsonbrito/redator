@@ -10,6 +10,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ImageSelector } from './ImageSelector';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { syncToBlog } from '@/utils/blogSync';
 
 type ImageValue = {
   source: 'upload' | 'url';
@@ -63,11 +65,17 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
   // All hooks must be at the top level and in the same order every render
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(mode === 'edit');
   const [activeSection, setActiveSection] = useState<string>('capinha');
   const [actionType, setActionType] = useState<ActionType>('save');
+
+  // Blog sync state
+  const [publicarNoBlog, setPublicarNoBlog] = useState(false);
+  const [blogPostId, setBlogPostId] = useState<string | null>(null);
+  const [syncingBlog, setSyncingBlog] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     frase_tematica: '',
@@ -115,6 +123,10 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
 
           // Salvar dados originais para preservar datas de publicação
           setOriginalThemeData(data);
+
+          // Carregar estado de sync com o blog
+          setPublicarNoBlog(data.publicar_no_blog ?? false);
+          setBlogPostId(data.blog_post_id ?? null);
 
           // Pre-populate cover image
           let coverValue: ImageValue = null;
@@ -531,6 +543,47 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
     }
   };
 
+  // ── Blog sync helpers ──────────────────────────────────────────────────────
+  const isEligibleToSync = originalThemeData?.status === 'publicado';
+  const eligibilityMsg = mode === 'create'
+    ? 'Salve o tema primeiro para ativar a sincronização.'
+    : 'Publique o tema antes de sincronizar com o blog.';
+
+  const handleToggleBlog = async () => {
+    if (!user?.email || !temaId) return;
+    setSyncingBlog(true);
+    const action = publicarNoBlog ? 'unsync' : 'sync';
+    const result = await syncToBlog({ adminEmail: user.email, table: 'temas', recordId: temaId, action });
+    if (result.success) {
+      if (action === 'sync') {
+        setPublicarNoBlog(true);
+        if (result.blogPostId) setBlogPostId(result.blogPostId);
+        toast({ title: '✅ Sincronizado', description: 'Tema publicado no blog com sucesso.' });
+      } else {
+        setPublicarNoBlog(false);
+        setBlogPostId(null);
+        toast({ title: 'Blog', description: 'Tema arquivado no blog.' });
+      }
+    } else {
+      toast({ title: '❌ Erro ao sincronizar', description: result.error, variant: 'destructive' });
+    }
+    setSyncingBlog(false);
+  };
+
+  const handleResync = async () => {
+    if (!user?.email || !temaId) return;
+    setSyncingBlog(true);
+    const result = await syncToBlog({ adminEmail: user.email, table: 'temas', recordId: temaId, action: 'sync' });
+    if (result.success) {
+      if (result.blogPostId) setBlogPostId(result.blogPostId);
+      toast({ title: '✅ Re-sincronizado', description: 'Blog atualizado com os dados mais recentes.' });
+    } else {
+      toast({ title: '❌ Erro', description: result.error, variant: 'destructive' });
+    }
+    setSyncingBlog(false);
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
   if (loadingData) {
     return <div className="text-center py-4">Carregando dados do tema...</div>;
   }
@@ -545,6 +598,7 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
     { id: 'motivador3', label: 'Texto Motivador III' },
     { id: 'motivador4', label: 'Texto Motivador IV' },
     { id: 'motivador5', label: 'Texto Motivador V' },
+    { id: 'blog', label: 'Blog' },
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -1133,6 +1187,62 @@ export const TemaForm = ({ mode = 'create', temaId, onCancel, onSuccess }: TemaF
                 )}
               </div>
             </div>
+            )}
+
+            {/* Seção Blog */}
+            {activeSection === 'blog' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                {(mode === 'create' || !isEligibleToSync) ? (
+                  <p className="text-sm text-gray-500">{eligibilityMsg}</p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Publicar no Blog</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Sincroniza este tema com o laboratoriodoredator.com
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleToggleBlog}
+                        disabled={syncingBlog}
+                        className={cn(
+                          'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                          publicarNoBlog ? 'bg-[#3F0077]' : 'bg-gray-200',
+                          syncingBlog && 'opacity-50 cursor-not-allowed'
+                        )}
+                        aria-pressed={publicarNoBlog}
+                      >
+                        <span
+                          className={cn(
+                            'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                            publicarNoBlog ? 'translate-x-5' : 'translate-x-0'
+                          )}
+                        />
+                      </button>
+                    </div>
+                    {syncingBlog && (
+                      <p className="text-sm text-[#3F0077]">Sincronizando com o blog...</p>
+                    )}
+                    {publicarNoBlog && blogPostId && !syncingBlog && (
+                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <span className="text-sm text-green-700">✓ Sincronizado com o blog</span>
+                        <button
+                          type="button"
+                          onClick={handleResync}
+                          className="text-xs text-green-700 underline hover:no-underline"
+                        >
+                          Re-sincronizar
+                        </button>
+                      </div>
+                    )}
+                    {publicarNoBlog && !blogPostId && !syncingBlog && (
+                      <p className="text-sm text-amber-600">Aguardando sincronização...</p>
+                    )}
+                  </>
+                )}
+              </div>
             )}
 
             {/* Loading indicator */}

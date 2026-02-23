@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { ImageSelector } from './ImageSelector';
+import { useAuth } from '@/hooks/useAuth';
+import { syncToBlog } from '@/utils/blogSync';
 
 type ImageValue = {
   source: 'upload' | 'url';
@@ -33,6 +35,8 @@ interface VideoFormModernProps {
     cover_file_path?: string;
     cover_file_size?: number;
     cover_dimensions?: { width: number; height: number };
+    publicar_no_blog?: boolean;
+    blog_post_id?: string | null;
   };
   onCancel?: () => void;
   onSuccess?: () => void;
@@ -42,6 +46,12 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Blog sync state
+  const [publicarNoBlog, setPublicarNoBlog] = useState(initialValues?.publicar_no_blog ?? false);
+  const [blogPostId, setBlogPostId] = useState<string | null>(initialValues?.blog_post_id ?? null);
+  const [syncingBlog, setSyncingBlog] = useState(false);
 
   const [formData, setFormData] = useState({
     titulo: '',
@@ -112,6 +122,9 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
         video_url_original: initialValues.video_url_original || initialValues.youtube_url || '',
         cover: coverValue,
       });
+
+      setPublicarNoBlog(initialValues.publicar_no_blog ?? false);
+      setBlogPostId(initialValues.blog_post_id ?? null);
 
       // Gerar preview se houver URL
       const url = initialValues.video_url_original || initialValues.youtube_url;
@@ -256,9 +269,49 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
     }
   };
 
+  // ── Blog sync helpers ──────────────────────────────────────────────────────
+  const isEligibleToSync = formData.status_publicacao === 'publicado';
+  const videoId = mode === 'edit' ? initialValues?.id : undefined;
+
+  const handleToggleBlog = async () => {
+    if (!user?.email || !videoId) return;
+    setSyncingBlog(true);
+    const action = publicarNoBlog ? 'unsync' : 'sync';
+    const result = await syncToBlog({ adminEmail: user.email, table: 'videos', recordId: videoId, action });
+    if (result.success) {
+      if (action === 'sync') {
+        setPublicarNoBlog(true);
+        if (result.blogPostId) setBlogPostId(result.blogPostId);
+        toast.success('Vídeo publicado no blog com sucesso.');
+      } else {
+        setPublicarNoBlog(false);
+        setBlogPostId(null);
+        toast.success('Vídeo arquivado no blog.');
+      }
+    } else {
+      toast.error(result.error ?? 'Erro ao sincronizar com o blog.');
+    }
+    setSyncingBlog(false);
+  };
+
+  const handleResync = async () => {
+    if (!user?.email || !videoId) return;
+    setSyncingBlog(true);
+    const result = await syncToBlog({ adminEmail: user.email, table: 'videos', recordId: videoId, action: 'sync' });
+    if (result.success) {
+      if (result.blogPostId) setBlogPostId(result.blogPostId);
+      toast.success('Blog atualizado com os dados mais recentes.');
+    } else {
+      toast.error(result.error ?? 'Erro ao re-sincronizar.');
+    }
+    setSyncingBlog(false);
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
   const sections = [
     { id: 'detalhes', label: 'Detalhes' },
     { id: 'conteudo', label: 'Conteúdo' },
+    { id: 'blog', label: 'Blog' },
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -416,6 +469,66 @@ export const VideoFormModern = ({ mode, initialValues, onCancel, onSuccess }: Vi
                       </div>
                     )}
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Seção Blog */}
+            {activeSection === 'blog' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                {(mode === 'create' || !isEligibleToSync) ? (
+                  <p className="text-sm text-gray-500">
+                    {mode === 'create'
+                      ? 'Salve o vídeo primeiro para ativar a sincronização com o blog.'
+                      : 'Defina o status como "Publicado" para sincronizar com o blog.'}
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">Publicar no Blog</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Sincroniza este vídeo com o laboratoriodoredator.com
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleToggleBlog}
+                        disabled={syncingBlog}
+                        className={cn(
+                          'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+                          publicarNoBlog ? 'bg-[#3F0077]' : 'bg-gray-200',
+                          syncingBlog && 'opacity-50 cursor-not-allowed'
+                        )}
+                        aria-pressed={publicarNoBlog}
+                      >
+                        <span
+                          className={cn(
+                            'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                            publicarNoBlog ? 'translate-x-5' : 'translate-x-0'
+                          )}
+                        />
+                      </button>
+                    </div>
+                    {syncingBlog && (
+                      <p className="text-sm text-[#3F0077]">Sincronizando com o blog...</p>
+                    )}
+                    {publicarNoBlog && blogPostId && !syncingBlog && (
+                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <span className="text-sm text-green-700">✓ Sincronizado com o blog</span>
+                        <button
+                          type="button"
+                          onClick={handleResync}
+                          className="text-xs text-green-700 underline hover:no-underline"
+                        >
+                          Re-sincronizar
+                        </button>
+                      </div>
+                    )}
+                    {publicarNoBlog && !blogPostId && !syncingBlog && (
+                      <p className="text-sm text-amber-600">Aguardando sincronização...</p>
+                    )}
+                  </>
                 )}
               </div>
             )}
