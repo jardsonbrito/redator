@@ -65,19 +65,21 @@ export const useAdminTemasFilters = () => {
 
         if (temasError) throw temasError;
 
-        // Buscar todas as frases temáticas de simulados
+        // Buscar tema_ids de simulados (chave estrangeira correta)
         const { data: simulados, error: simuladosError } = await supabase
           .from('simulados')
-          .select('frase_tematica');
+          .select('tema_id');
 
         if (simuladosError) throw simuladosError;
 
-        const frasesSimulados = new Set(simulados?.map(s => s.frase_tematica) || []);
+        const temaIdsSimulados = new Set(
+          simulados?.map(s => s.tema_id).filter(Boolean) || []
+        );
 
         return (temasData || []).map((t: any) => ({
           ...t,
           frase_tematica: t.frase_tematica || 'Tema sem título',
-          is_simulado: frasesSimulados.has(t.frase_tematica),
+          is_simulado: temaIdsSimulados.has(t.id),
         }));
       } catch (e) {
         console.error('Erro ao buscar temas admin:', e);

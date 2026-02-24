@@ -128,11 +128,11 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
         console.error("Erro ao buscar contagem de redações regulares:", errorRegulares);
       }
 
-      // 2. Verificar se existe simulado com essa frase temática
+      // 2. Verificar se existe simulado com esse tema_id (chave estrangeira correta)
       const { data: simulado, error: errorSimulado } = await supabase
         .from("simulados")
         .select("id")
-        .eq("frase_tematica", tema.frase_tematica)
+        .eq("tema_id", tema.id)
         .maybeSingle();
 
       let countSimulados = 0;
