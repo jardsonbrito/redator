@@ -147,7 +147,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const validationResult = adminResponse as unknown as AdminValidationResponse;
 
       if (!adminError && validationResult?.success && validationResult.admin) {
-        const adminUser = {
+        // Criar sessão real no Supabase Auth para que auth.email() funcione nas RLS policies
+        const { data: authData, error: authSignInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+
+        if (authSignInError) {
+          console.warn('⚠️ Supabase Auth signIn falhou:', authSignInError.message);
+        }
+
+        const adminUser = authData?.user ?? ({
           id: validationResult.admin.id,
           email: validationResult.admin.email,
           aud: 'authenticated',
@@ -156,26 +166,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           created_at: new Date().toISOString(),
           user_metadata: { nome_completo: validationResult.admin.nome_completo },
           app_metadata: { provider: 'admin_direct' }
-        } as any;
+        } as any);
 
-        const adminSession = {
+        const adminSession = authData?.session ?? ({
           user: adminUser,
           access_token: `admin_session_${Date.now()}`,
           token_type: 'bearer',
           expires_in: 86400,
           expires_at: Math.floor(Date.now() / 1000) + 86400,
           refresh_token: `admin_refresh_${Date.now()}`
-        } as any;
+        } as any);
 
         setSession(adminSession);
         setUser(adminUser);
         setIsAdmin(true);
 
         localStorage.setItem('admin_session', JSON.stringify({
-          email: adminUser.email,
-          id: adminUser.id,
+          email: validationResult.admin.email,
+          id: validationResult.admin.id,
           nome_completo: validationResult.admin.nome_completo,
-          expires_at: adminSession.expires_at
+          expires_at: Math.floor(Date.now() / 1000) + 86400
         }));
 
         setLoading(false);
