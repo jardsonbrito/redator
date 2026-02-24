@@ -194,60 +194,34 @@ const Admin = () => {
         badge: redacoesAgendadas > 0 ? `${redacoesAgendadas} agendadas` : undefined
       };
 
-      // Redações Enviadas - testar query mais ampla primeiro
-      const { data: todasRedacoes, error: todasError } = await supabase
+      // Redações Enviadas - regulares não corrigidas (status corrigida=false, exceto devolvida=retornou ao aluno)
+      const { data: redacoesEnviadas } = await supabase
         .from('redacoes_enviadas')
-        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida')
-        .is('deleted_at', null)  // Filtrar soft deletes
-        .order('data_envio', { ascending: false })
-        .limit(10);
+        .select('id, corretor_id_1')
+        .is('deleted_at', null)
+        .eq('corrigida', false)
+        .neq('status', 'devolvida');
 
-
-      // Buscar especificamente as 3 redações mencionadas
-      const { data: redacoesEspecificas, error: especificasError } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida, data_envio')
-        .is('deleted_at', null)  // Filtrar soft deletes
-        .or('nome_aluno.ilike.%lara%,nome_aluno.ilike.%kauani%,nome_aluno.ilike.%anne%,nome_aluno.ilike.%isabele%,nome_aluno.ilike.%renam%');
-
-
-      // Query original com log detalhado
-      const { data: redacoesEnviadas, error: redacoesError } = await supabase
-        .from('redacoes_enviadas')
-        .select('id, status, corretor_id_1, nome_aluno, email_aluno, corrigida')
-        .is('deleted_at', null)  // Filtrar soft deletes
+      // Redações de simulado não corrigidas
+      const { count: countSimuladosPendentes } = await supabase
+        .from('redacoes_simulado')
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
         .eq('corrigida', false);
 
-      console.log('🔍 Query redações NÃO corrigidas (todas):', {
-        total: redacoesEnviadas?.length,
-        redacoesEnviadas,
-        redacoesError
-      });
+      const aguardando = (redacoesEnviadas?.length || 0) + (countSimuladosPendentes || 0);
 
-      // Filtrar apenas aguardando e em_correcao
-      const redacoesAguardando = redacoesEnviadas?.filter(r =>
-        r.status === 'aguardando' || r.status === 'em_correcao'
-      ) || [];
+      // Agrupar por corretor (apenas redações regulares atribuídas)
+      const corretoresIds = [...new Set(redacoesEnviadas?.map(r => r.corretor_id_1).filter(Boolean) || [])];
+      const { data: corretoresRedacoes } = corretoresIds.length > 0
+        ? await supabase.from('corretores').select('id, nome').in('id', corretoresIds)
+        : { data: [] };
 
-
-      const aguardando = redacoesAguardando.length;
-
-      // Buscar nomes dos corretores separadamente para evitar problemas de join
-      const corretoresIds = [...new Set(redacoesAguardando.map(r => r.corretor_id_1).filter(Boolean))];
-      const { data: corretoresRedacoes } = await supabase
-        .from('corretores')
-        .select('id, nome')
-        .in('id', corretoresIds);
-
-      // Agrupar apenas por corretores ATRIBUÍDOS (ignorar não atribuídas)
-      const redacoesAtribuidas = redacoesAguardando.filter(r => r.corretor_id_1);
-      const porCorretor = redacoesAtribuidas.reduce((acc: Record<string, number>, r: any) => {
+      const porCorretor = (redacoesEnviadas || []).filter(r => r.corretor_id_1).reduce((acc: Record<string, number>, r: any) => {
         const corretor = corretoresRedacoes?.find(c => c.id === r.corretor_id_1);
-        if (corretor?.nome) {
-          acc[corretor.nome] = (acc[corretor.nome] || 0) + 1;
-        }
+        if (corretor?.nome) acc[corretor.nome] = (acc[corretor.nome] || 0) + 1;
         return acc;
-      }, {}) || {};
+      }, {});
 
       const corretorInfo = Object.keys(porCorretor).length > 0
         ? Object.entries(porCorretor).map(([nome, count]) => `${nome}: ${count}`).join(', ')
@@ -255,7 +229,7 @@ const Admin = () => {
 
       data["redacoes-enviadas"] = {
         info: `${aguardando} aguardando`,
-        badge: corretorInfo, // Só mostra se houver redações atribuídas a corretores
+        badge: corretorInfo,
         badgeVariant: aguardando > 0 ? "destructive" : undefined
       };
 
