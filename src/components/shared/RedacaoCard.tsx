@@ -38,6 +38,7 @@ interface RedacaoCardActions {
   onVerRedacao?: (id: string) => void;
   onCancelarEnvio?: (id: string) => void;
   onEditarReenviar?: (id: string) => void;
+  canCancelarEnvio?: boolean; // Controla visibilidade do botão de cancelamento
 }
 
 interface RedacaoCardProps {
@@ -196,7 +197,7 @@ export const RedacaoCard = ({ redacao, actions, className = '' }: RedacaoCardPro
                   <Edit className="w-4 h-4 mr-2" />
                   Editar e Reenviar
                 </Button>
-              ) : (
+              ) : actions.canCancelarEnvio !== false ? (
                 <Button
                   onClick={() => actions.onCancelarEnvio?.(redacao.id)}
                   variant="destructive"
@@ -205,7 +206,7 @@ export const RedacaoCard = ({ redacao, actions, className = '' }: RedacaoCardPro
                   <X className="w-4 h-4 mr-2" />
                   Cancelar Envio
                 </Button>
-              )}
+              ) : null}
             </>
           ) : (
             <>

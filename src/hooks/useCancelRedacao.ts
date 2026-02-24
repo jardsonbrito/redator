@@ -307,13 +307,22 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
       // 1. Buscar a redação de simulado e verificar se pode ser cancelada
       const { data: redacao, error: redacaoError } = await supabase
         .from('redacoes_simulado')
-        .select('*')
+        .select('*, simulados(data_fim, hora_fim)')
         .eq('id', redacaoId)
         .eq('email_aluno', normalizedEmail)
         .single();
 
       if (redacaoError || !redacao) {
         throw new Error('Redação não encontrada ou não pertence ao usuário');
+      }
+
+      // 1b. Verificar se o simulado ainda está ativo (não encerrado)
+      const simuladoInfo = (redacao as any).simulados;
+      if (simuladoInfo?.data_fim && simuladoInfo?.hora_fim) {
+        const dataFimSimulado = new Date(`${simuladoInfo.data_fim}T${simuladoInfo.hora_fim}`);
+        if (dataFimSimulado <= new Date()) {
+          throw new Error('Não é possível cancelar: o simulado já foi encerrado');
+        }
       }
 
       // 2. Verificar se ainda pode ser cancelada

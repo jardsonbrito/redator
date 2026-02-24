@@ -807,6 +807,10 @@ const MinhasRedacoesList = () => {
                 key={redacao.id}
                 redacao={redacao}
                 actions={{
+                  // Simulados não permitem cancelamento nesta lista — o cancelamento
+                  // de simulado é feito pelo card do simulado (SimuladoCardPadrao)
+                  // somente enquanto o simulado está ativo (não encerrado).
+                  canCancelarEnvio: redacao.tipo_envio !== 'simulado',
                   onVerRedacao: (id) => {
                     if (redacao.status === 'devolvida') {
                       handleViewRedacao(redacao);

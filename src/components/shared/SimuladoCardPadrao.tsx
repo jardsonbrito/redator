@@ -203,10 +203,12 @@ export const SimuladoCardPadrao = ({ simulado, perfil, actions, className = '' }
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Determinar se pode cancelar redação
+  // Quando o simulado está encerrado, o cancelamento não é permitido
   const podeCancelar = perfil === 'aluno' &&
                        simulado.hasSubmitted &&
                        simulado.redacaoData &&
-                       canCancelRedacao(simulado.redacaoData);
+                       canCancelRedacao(simulado.redacaoData) &&
+                       !isEncerrado;
 
   // Determinar se o card é clicável (remover clicabilidade para alunos que já enviaram redação)
   const isClickable = (perfil === 'aluno' && isAtivo) ||
