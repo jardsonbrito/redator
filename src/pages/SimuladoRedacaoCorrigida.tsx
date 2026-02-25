@@ -11,6 +11,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useNavigationContext } from "@/hooks/useNavigationContext";
+import { verificarDivergencia } from "@/utils/simuladoDivergencia";
+import { AlertTriangle } from "lucide-react";
 
 // Interface para representar uma redação de simulado
 interface RedacaoSimulado {
@@ -80,6 +82,7 @@ const SimuladoRedacaoCorrigida = () => {
   const { setBreadcrumbs, setPageTitle } = useNavigationContext();
   const [redacoesCorretor, setRedacoesCorretor] = useState<RedacaoSimulado[]>([]);
   const [selectedCorretor, setSelectedCorretor] = useState<number>(1);
+  const [emDiscrepancia, setEmDiscrepancia] = useState(false);
 
   // Query para buscar as redações do simulado do aluno
   const { data: redacoesSimulado, isLoading, error } = useQuery({
@@ -111,6 +114,16 @@ const SimuladoRedacaoCorrigida = () => {
       }
 
       const redacaoOriginal = redacao[0];
+
+      // Bloquear exibição se há discrepância pendente de resolução pelo admin
+      if (!redacaoOriginal.corrigida) {
+        const div = verificarDivergencia(redacaoOriginal);
+        if (div?.temDivergencia) {
+          setEmDiscrepancia(true);
+          return [];
+        }
+      }
+      setEmDiscrepancia(false);
 
       // Buscar nomes dos corretores
       const idsCorretores: string[] = [];
@@ -245,6 +258,37 @@ const SimuladoRedacaoCorrigida = () => {
             <StudentHeader pageTitle="Carregando..." />
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <div className="text-center">Carregando sua redação corrigida...</div>
+            </main>
+          </div>
+        </TooltipProvider>
+      </ProtectedRoute>
+    );
+  }
+
+  if (emDiscrepancia) {
+    return (
+      <ProtectedRoute>
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
+            <StudentHeader pageTitle="Correção em Revisão" />
+            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <Button onClick={() => navigate('/simulados')} variant="outline" className="mb-4">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar para Simulados
+              </Button>
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                    Correção em revisão
+                  </h2>
+                  <p className="text-gray-600">
+                    Os corretores apresentaram notas com discrepância. O administrador está
+                    revisando para garantir o resultado mais justo para você.
+                    Em breve sua correção estará disponível.
+                  </p>
+                </CardContent>
+              </Card>
             </main>
           </div>
         </TooltipProvider>
