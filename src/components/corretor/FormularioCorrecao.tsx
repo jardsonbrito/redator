@@ -239,11 +239,12 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
 
   const salvarCorrecao = async (status: 'incompleta' | 'corrigida') => {
     setLoading(true);
-    
+
     try {
       const tabela = `redacoes_${redacao.tipo_redacao === 'regular' ? 'enviadas' : redacao.tipo_redacao}`;
       const prefixo = redacao.eh_corretor_1 ? 'corretor_1' : 'corretor_2';
       const notaTotal = calcularNotaTotal();
+      let motivoNaoFinalizado: 'aguardando_outro' | 'divergencia' | null = null;
 
       const updateData: any = {
         [`c1_${prefixo}`]: notas.c1,
@@ -268,9 +269,11 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
 
           if (redacaoAtual) {
             const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
-            const outroTemNotas = (redacaoAtual[`nota_final_${outroCorretor}`] ?? 0) > 0;
+            // Exige que o outro corretor também tenha finalizado (clicado "Finalizar"),
+            // não apenas salvo como rascunho (incompleta).
+            const outroFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
 
-            if (outroTemNotas) {
+            if (outroFinalizou) {
               // Monta o estado atualizado com as novas notas para checar divergência
               const { verificarDivergencia } = await import('@/utils/simuladoDivergencia');
               const redacaoComNovasNotas = {
@@ -286,13 +289,19 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
               const div = verificarDivergencia(redacaoComNovasNotas);
 
               if (div && !div.temDivergencia) {
-                // Sem divergência → finaliza e libera nota ao aluno
+                // Ambos finalizaram e sem divergência → libera nota ao aluno
                 updateData.corrigida = true;
                 updateData.data_correcao = new Date().toISOString();
+              } else {
+                // Divergência detectada
+                motivoNaoFinalizado = 'divergencia';
               }
-              // Se há divergência, salva as notas mas NÃO finaliza.
-              // O admin visualizará a discrepância no painel.
+            } else {
+              // O outro corretor ainda não finalizou → aguardando
+              motivoNaoFinalizado = 'aguardando_outro';
             }
+            // Se o outro ainda não finalizou, apenas salva esta correção como 'corrigida'
+            // (marcando que este corretor terminou sua parte). O aluno não vê a nota ainda.
           }
         } else {
           // Redações regulares e exercícios: comportamento original
@@ -333,23 +342,37 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
       if (error) throw error;
 
       const foiConcluida = updateData.corrigida === true;
-      const houveDiscrepancia = status === 'corrigida' &&
-        redacao.tipo_redacao === 'simulado' &&
-        !foiConcluida;
 
-      toast({
-        title: foiConcluida
-          ? "Correção finalizada!"
-          : houveDiscrepancia
-            ? "Notas salvas — discrepância detectada"
-            : "Correção salva!",
-        description: foiConcluida
-          ? `Redação de ${redacao.nome_aluno} finalizada com nota ${notaTotal}/1000. Nota liberada ao aluno.`
-          : houveDiscrepancia
-            ? `Há discrepância entre as notas dos dois corretores. O admin visualizará isso no painel e entrará em contato para alinhamento.`
-            : "Você pode continuar a correção mais tarde.",
-        variant: houveDiscrepancia ? 'destructive' : 'default',
-      });
+      const toastConfig = (() => {
+        if (foiConcluida) {
+          return {
+            title: "Correção finalizada!",
+            description: `Redação de ${redacao.nome_aluno} finalizada com nota ${notaTotal}/1000. Nota liberada ao aluno.`,
+            variant: 'default' as const,
+          };
+        }
+        if (motivoNaoFinalizado === 'divergencia') {
+          return {
+            title: "Notas salvas — discrepância detectada",
+            description: "Há discrepância entre as notas dos dois corretores. O admin visualizará isso no painel e entrará em contato para alinhamento.",
+            variant: 'destructive' as const,
+          };
+        }
+        if (motivoNaoFinalizado === 'aguardando_outro') {
+          return {
+            title: "Sua parte está concluída!",
+            description: "Correção salva. A nota só será liberada ao aluno quando o outro corretor também finalizar. Se não houver discrepância, a liberação será automática.",
+            variant: 'default' as const,
+          };
+        }
+        return {
+          title: "Correção salva!",
+          description: "Você pode continuar a correção mais tarde.",
+          variant: 'default' as const,
+        };
+      })();
+
+      toast(toastConfig);
 
       onSucesso();
     } catch (error: any) {
