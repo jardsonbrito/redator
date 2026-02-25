@@ -280,12 +280,11 @@ const SimuladoRedacaoCorrigida = () => {
                 <CardContent className="p-8 text-center">
                   <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
                   <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                    Correção em revisão
+                    Correção em revisão.
                   </h2>
                   <p className="text-gray-600">
-                    Os corretores apresentaram notas com discrepância. O administrador está
-                    revisando para garantir o resultado mais justo para você.
-                    Em breve sua correção estará disponível.
+                    Sua redação está sendo revisada por terceiro corretor, pois houve
+                    discrepância entre as pontuações atribuídas pelos corretores 1 e 2.
                   </p>
                 </CardContent>
               </Card>
