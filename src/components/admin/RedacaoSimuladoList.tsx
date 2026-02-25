@@ -5,14 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Eye, Edit, CheckCircle, Calendar, User, Mail, RotateCcw, Copy, Trash2, MoreVertical } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Eye, Trash2, MoreVertical, CheckCircle, AlertTriangle, BarChart2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -22,35 +21,115 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
-import { TURMAS_VALIDAS, TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import {
+  verificarDivergencia,
+  calcularNotasFinais,
+  ResultadoDivergencia
+} from "@/utils/simuladoDivergencia";
+
+// ── tipos ─────────────────────────────────────────────────────────────────────
+
+interface RedacaoSimulado {
+  id: string;
+  id_simulado: string;
+  nome_aluno: string;
+  email_aluno: string;
+  turma: string;
+  texto: string;
+  redacao_manuscrita_url?: string | null;
+  data_envio: string;
+  corrigida: boolean | null;
+  nota_total: number | null;
+  nota_c1: number | null;
+  nota_c2: number | null;
+  nota_c3: number | null;
+  nota_c4: number | null;
+  nota_c5: number | null;
+  // corretor 1
+  corretor_id_1: string | null;
+  status_corretor_1: string | null;
+  c1_corretor_1: number | null;
+  c2_corretor_1: number | null;
+  c3_corretor_1: number | null;
+  c4_corretor_1: number | null;
+  c5_corretor_1: number | null;
+  nota_final_corretor_1: number | null;
+  // corretor 2
+  corretor_id_2: string | null;
+  status_corretor_2: string | null;
+  c1_corretor_2: number | null;
+  c2_corretor_2: number | null;
+  c3_corretor_2: number | null;
+  c4_corretor_2: number | null;
+  c5_corretor_2: number | null;
+  nota_final_corretor_2: number | null;
+  // joins
+  simulados: { titulo: string; frase_tematica: string };
+  corretor_1: { nome_completo: string } | null;
+  corretor_2: { nome_completo: string } | null;
+}
+
+// ── helpers de status ─────────────────────────────────────────────────────────
+
+type StatusLabel = 'Concluída' | 'Pronto p/ Finalizar' | 'Divergência' | 'Parcial' | 'Pendente';
+
+interface StatusInfo {
+  label: StatusLabel;
+  color: string;
+  divergencia: ResultadoDivergencia | null;
+}
+
+function calcularStatus(r: RedacaoSimulado): StatusInfo {
+  if (r.corrigida) {
+    return { label: 'Concluída', color: 'bg-green-600', divergencia: null };
+  }
+
+  // Checa divergência assim que ambos tiverem notas (independente do status)
+  const div = verificarDivergencia(r);
+
+  if (div !== null) {
+    if (div.temDivergencia) {
+      return { label: 'Divergência', color: 'bg-red-500', divergencia: div };
+    }
+    return { label: 'Pronto p/ Finalizar', color: 'bg-blue-500', divergencia: div };
+  }
+
+  // Um dos dois tem notas, o outro ainda não
+  const tem1 = (r.nota_final_corretor_1 ?? 0) > 0 && !!r.corretor_id_1;
+  const tem2 = (r.nota_final_corretor_2 ?? 0) > 0 && !!r.corretor_id_2;
+  if ((tem1 || tem2) && r.corretor_id_1 && r.corretor_id_2) {
+    return { label: 'Parcial', color: 'bg-yellow-500', divergencia: null };
+  }
+
+  return { label: 'Pendente', color: 'bg-gray-400', divergencia: null };
+}
+
+// ── componente principal ──────────────────────────────────────────────────────
 
 const RedacaoSimuladoList = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filtroTurma, setFiltroTurma] = useState<string>("todas");
-  const [filtroStatus, setFiltroStatus] = useState<string>("todas");
-  const [filtroSimulado, setFiltroSimulado] = useState<string>("todos");
-  const [filtroCorretor, setFiltroCorretor] = useState<string>("todos");
+
+  // filtros
+  const [filtroTurma, setFiltroTurma] = useState("todas");
+  const [filtroStatus, setFiltroStatus] = useState("todas");
+  const [filtroSimulado, setFiltroSimulado] = useState("todos");
+  const [filtroCorretor, setFiltroCorretor] = useState("todos");
   const [buscaNome, setBuscaNome] = useState("");
-  const [redacaoSelecionada, setRedacaoSelecionada] = useState<any>(null);
-  const [redacaoVisualizacao, setRedacaoVisualizacao] = useState<any>(null);
-  const [duplicandoRedacao, setDuplicandoRedacao] = useState<any>(null);
-  const [redacaoParaExcluir, setRedacaoParaExcluir] = useState<any>(null);
-  const [novoCorretor, setNovoCorretor] = useState("");
-  const [notas, setNotas] = useState({
-    nota_c1: 0,
-    nota_c2: 0,
-    nota_c3: 0,
-    nota_c4: 0,
-    nota_c5: 0
-  });
-  const [comentarioPedagogico, setComentarioPedagogico] = useState("");
+
+  // modais
+  const [redacaoVisualizacao, setRedacaoVisualizacao] = useState<RedacaoSimulado | null>(null);
+  const [redacaoNotas, setRedacaoNotas] = useState<RedacaoSimulado | null>(null);
+  const [redacaoParaExcluir, setRedacaoParaExcluir] = useState<RedacaoSimulado | null>(null);
+  const [redacaoParaFinalizar, setRedacaoParaFinalizar] = useState<RedacaoSimulado | null>(null);
+
+  // ── queries ──
 
   const { data: redacoes, isLoading } = useQuery({
     queryKey: ['redacoes-simulado'],
     queryFn: async () => {
-      // Buscar redações
-      const { data: redacoesData, error: redacoesError } = await supabase
+      const { data: redacoesData, error } = await supabase
         .from('redacoes_simulado')
         .select(`
           *,
@@ -60,38 +139,25 @@ const RedacaoSimuladoList = () => {
         `)
         .order('data_envio', { ascending: false });
 
-      if (redacoesError) throw redacoesError;
+      if (error) throw error;
 
-      // Buscar emails únicos dos alunos
-      const emailsUnicos = [...new Set(redacoesData?.map(r => r.email_aluno))];
-
-      // Buscar profiles dos alunos
-      const { data: profilesData, error: profilesError } = await supabase
+      // Enriquecer com nome/turma do profile
+      const emails = [...new Set(redacoesData?.map(r => r.email_aluno) ?? [])];
+      const { data: profiles } = await supabase
         .from('profiles')
         .select('email, nome, turma')
-        .in('email', emailsUnicos);
+        .in('email', emails);
 
-      if (profilesError) {
-        console.error('Erro ao buscar profiles:', profilesError);
-        // Continuar sem os profiles
-      }
+      const profileMap = new Map((profiles ?? []).map(p => [p.email, p]));
 
-      // Criar mapa de email -> profile para lookup rápido
-      const profilesMap = new Map(
-        profilesData?.map(p => [p.email, p]) || []
-      );
-
-      // Processar dados para usar o nome real do aluno e turma do profile
-      const processedData = redacoesData?.map(redacao => {
-        const profile = profilesMap.get(redacao.email_aluno);
+      return (redacoesData ?? []).map(r => {
+        const p = profileMap.get(r.email_aluno);
         return {
-          ...redacao,
-          nome_aluno: profile?.nome || redacao.nome_aluno,
-          turma: profile?.turma || redacao.turma
-        };
+          ...r,
+          nome_aluno: p?.nome ?? r.nome_aluno,
+          turma: p?.turma ?? r.turma,
+        } as RedacaoSimulado;
       });
-
-      return processedData;
     }
   });
 
@@ -103,7 +169,6 @@ const RedacaoSimuladoList = () => {
         .select('*')
         .eq('ativo', true)
         .order('nome_completo');
-      
       if (error) throw error;
       return data;
     }
@@ -117,360 +182,143 @@ const RedacaoSimuladoList = () => {
         .select('id, titulo')
         .eq('ativo', true)
         .order('criado_em', { ascending: false });
-      
       if (error) throw error;
       return data;
     }
   });
 
-  const duplicarRedacao = useMutation({
-    mutationFn: async ({ redacaoId, novoCorretorId }: { redacaoId: string, novoCorretorId: string }) => {
-      // Buscar dados da redação original
-      const { data: redacaoOriginal, error: fetchError } = await supabase
-        .from('redacoes_simulado')
-        .select('*')
-        .eq('id', redacaoId)
-        .single();
+  // ── mutations ──
 
-      if (fetchError) throw fetchError;
-
-      // Criar nova entrada duplicada
-      const { data, error } = await supabase
-        .from('redacoes_simulado')
-        .insert([{
-          id_simulado: redacaoOriginal.id_simulado,
-          nome_aluno: redacaoOriginal.nome_aluno,
-          email_aluno: redacaoOriginal.email_aluno,
-          texto: redacaoOriginal.texto,
-          turma: redacaoOriginal.turma,
-          data_envio: redacaoOriginal.data_envio,
-          user_id: redacaoOriginal.user_id,
-          corretor_id_1: novoCorretorId,
-          status_corretor_1: 'pendente'
-        }]);
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Redação duplicada com sucesso!",
-        description: "Uma nova entrada foi criada para o corretor selecionado.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['redacoes-simulado'] });
-      setDuplicandoRedacao(null);
-      setNovoCorretor("");
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao duplicar redação",
-        description: "Não foi possível criar a duplicata.",
-        variant: "destructive",
-      });
-      console.error("Erro ao duplicar redação:", error);
-    }
-  });
-
-  const corrigirRedacao = useMutation({
-    mutationFn: async ({ id, dadosCorrecao }: { id: string, dadosCorrecao: any }) => {
-      const notaTotal = [
-        dadosCorrecao.nota_c1,
-        dadosCorrecao.nota_c2,
-        dadosCorrecao.nota_c3,
-        dadosCorrecao.nota_c4,
-        dadosCorrecao.nota_c5
-      ].reduce((acc: number, nota: any) => {
-        const notaNum = typeof nota === 'number' ? nota : parseInt(nota) || 0;
-        return acc + notaNum;
-      }, 0);
-      
-      const { data, error } = await supabase
-        .from('redacoes_simulado')
-        .update({
-          nota_c1: dadosCorrecao.nota_c1,
-          nota_c2: dadosCorrecao.nota_c2,
-          nota_c3: dadosCorrecao.nota_c3,
-          nota_c4: dadosCorrecao.nota_c4,
-          nota_c5: dadosCorrecao.nota_c5,
-          comentario_pedagogico: dadosCorrecao.comentario_pedagogico,
-          nota_total: notaTotal,
-          corrigida: true,
-          data_correcao: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Redação corrigida com sucesso!",
-        description: "A correção foi salva e está disponível para o aluno.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['redacoes-simulado'] });
-      setRedacaoSelecionada(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao corrigir redação",
-        description: "Não foi possível salvar a correção.",
-        variant: "destructive",
-      });
-      console.error("Erro ao corrigir redação:", error);
-    }
-  });
-
-  const excluirRedacao = useMutation({
-    mutationFn: async (id: string) => {
+  const finalizarMutation = useMutation({
+    mutationFn: async (redacao: RedacaoSimulado) => {
+      const notas = calcularNotasFinais(redacao);
       const { error } = await supabase
         .from('redacoes_simulado')
-        .delete()
-        .eq('id', id);
-      
+        .update({
+          nota_c1: notas.nota_c1,
+          nota_c2: notas.nota_c2,
+          nota_c3: notas.nota_c3,
+          nota_c4: notas.nota_c4,
+          nota_c5: notas.nota_c5,
+          nota_total: notas.nota_total,
+          corrigida: true,
+          data_correcao: new Date().toISOString(),
+        })
+        .eq('id', redacao.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({
-        title: "Redação excluída com sucesso!",
-      });
+      toast({ title: "Redação finalizada!", description: "Nota liberada para o aluno." });
       queryClient.invalidateQueries({ queryKey: ['redacoes-simulado'] });
+      setRedacaoParaFinalizar(null);
     },
-    onError: (error) => {
-      toast({
-        title: "Erro ao excluir redação",
-        description: "Não foi possível excluir a redação.",
-        variant: "destructive",
-      });
-      console.error("Erro ao excluir redação:", error);
+    onError: () => {
+      toast({ title: "Erro ao finalizar", variant: "destructive" });
     }
   });
 
-  const handleCorrigir = () => {
-    if (!redacaoSelecionada) return;
-    
-    corrigirRedacao.mutate({
-      id: redacaoSelecionada.id,
-      dadosCorrecao: {
-        ...notas,
-        comentario_pedagogico: comentarioPedagogico
-      }
-    });
-  };
-
-  const handleDuplicar = () => {
-    if (!duplicandoRedacao || !novoCorretor) return;
-    
-    duplicarRedacao.mutate({
-      redacaoId: duplicandoRedacao.id,
-      novoCorretorId: novoCorretor
-    });
-  };
-
-  const abrirCorrecao = (redacao: any) => {
-    setRedacaoSelecionada(redacao);
-    setNotas({
-      nota_c1: redacao.nota_c1 || 0,
-      nota_c2: redacao.nota_c2 || 0,
-      nota_c3: redacao.nota_c3 || 0,
-      nota_c4: redacao.nota_c4 || 0,
-      nota_c5: redacao.nota_c5 || 0
-    });
-    setComentarioPedagogico(redacao.comentario_pedagogico || "");
-  };
-
-  const abrirVisualizacao = (redacao: any) => {
-    setRedacaoVisualizacao(redacao);
-  };
-
-  const abrirDuplicacao = (redacao: any) => {
-    setDuplicandoRedacao(redacao);
-    setNovoCorretor("");
-  };
-
-  const confirmarExclusao = (redacao: any) => {
-    setRedacaoParaExcluir(redacao);
-  };
-
-  const handleExcluir = () => {
-    if (redacaoParaExcluir) {
-      excluirRedacao.mutate(redacaoParaExcluir.id);
+  const excluirMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('redacoes_simulado').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Redação excluída." });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-simulado'] });
       setRedacaoParaExcluir(null);
+    },
+    onError: () => {
+      toast({ title: "Erro ao excluir", variant: "destructive" });
     }
+  });
+
+  // ── filtragem ──
+
+  const redacoesFiltradas = (redacoes ?? []).filter(r => {
+    const info = calcularStatus(r);
+    const matchTurma = filtroTurma === 'todas' || r.turma === filtroTurma;
+    const matchSimulado = filtroSimulado === 'todos' || r.id_simulado === filtroSimulado;
+    const matchCorretor = filtroCorretor === 'todos' ||
+      r.corretor_id_1 === filtroCorretor || r.corretor_id_2 === filtroCorretor;
+    const matchNome = buscaNome === '' ||
+      r.nome_aluno.toLowerCase().includes(buscaNome.toLowerCase()) ||
+      r.email_aluno.toLowerCase().includes(buscaNome.toLowerCase());
+
+    let matchStatus = true;
+    if (filtroStatus === 'pendentes') matchStatus = info.label === 'Pendente' || info.label === 'Parcial';
+    else if (filtroStatus === 'divergencia') matchStatus = info.label === 'Divergência';
+    else if (filtroStatus === 'prontas') matchStatus = info.label === 'Pronto p/ Finalizar';
+    else if (filtroStatus === 'concluidas') matchStatus = info.label === 'Concluída';
+
+    return matchTurma && matchSimulado && matchCorretor && matchNome && matchStatus;
+  });
+
+  // ── render helpers ──
+
+  const truncateName = (name: string, max = 3) => {
+    const words = name.split(' ');
+    return words.length <= max ? name : words.slice(0, max).join(' ');
   };
 
   const truncateText = (text: string, maxWords: number) => {
     const words = text.split(' ');
-    if (words.length <= maxWords) return text;
-    return words.slice(0, maxWords).join(' ') + '...';
+    return words.length <= maxWords ? text : words.slice(0, maxWords).join(' ') + '...';
   };
 
-  const truncateName = (name: string, maxWords: number = 3) => {
-    const words = name.split(' ');
-    if (words.length <= maxWords) return name;
-    return words.slice(0, maxWords).join(' ');
-  };
-
-  // Expandir redações para múltiplas entradas (corretor 1 e corretor 2)
-  const redacoesExpandidas = redacoes?.flatMap(redacao => {
-    const entradas = [];
-    
-    // Entrada para corretor 1
-    if (redacao.corretor_id_1) {
-      entradas.push({
-        ...redacao,
-        corretor_atual: redacao.corretor_1?.nome_completo || 'Não atribuído',
-        corretor_id_atual: redacao.corretor_id_1,
-        status_atual: redacao.status_corretor_1 || 'pendente',
-        tipo_corretor: 'corretor_1'
-      });
-    }
-    
-    // Entrada para corretor 2
-    if (redacao.corretor_id_2) {
-      entradas.push({
-        ...redacao,
-        corretor_atual: redacao.corretor_2?.nome_completo || 'Não atribuído',
-        corretor_id_atual: redacao.corretor_id_2,
-        status_atual: redacao.status_corretor_2 || 'pendente',
-        tipo_corretor: 'corretor_2'
-      });
-    }
-    
-    // Se não tem nenhum corretor, mostrar como pendente
-    if (!redacao.corretor_id_1 && !redacao.corretor_id_2) {
-      entradas.push({
-        ...redacao,
-        corretor_atual: 'Não atribuído',
-        corretor_id_atual: null,
-        status_atual: 'pendente',
-        tipo_corretor: null
-      });
-    }
-    
-    return entradas;
-  }) || [];
-
-  // Filtrar redações expandidas
-  const redacoesFiltradas = redacoesExpandidas?.filter(redacao => {
-    const matchTurma = filtroTurma === "todas" || redacao.turma === filtroTurma;
-    const matchStatus = filtroStatus === "todas" ||
-      (filtroStatus === "corrigidas" && redacao.status_atual === 'corrigida') ||
-      (filtroStatus === "pendentes" && redacao.status_atual === 'pendente') ||
-      (filtroStatus === "incompleta" && redacao.status_atual === 'incompleta');
-    const matchSimulado = filtroSimulado === "todos" || redacao.id_simulado === filtroSimulado;
-    const matchCorretor = filtroCorretor === "todos" || redacao.corretor_id_atual === filtroCorretor;
-    const matchNome = buscaNome === "" ||
-      redacao.nome_aluno.toLowerCase().includes(buscaNome.toLowerCase()) ||
-      redacao.email_aluno.toLowerCase().includes(buscaNome.toLowerCase());
-
-    return matchTurma && matchStatus && matchSimulado && matchCorretor && matchNome;
-  });
-
-  // Criar mapeamento de números únicos por aluno
-  const alunosUnicos = [...new Set(redacoesFiltradas?.map(redacao =>
-    `${redacao.nome_aluno}|${redacao.email_aluno}`
-  ))];
-
-  const numerosPorAluno = new Map<string, number>();
-  alunosUnicos.forEach((chaveAluno, index) => {
-    numerosPorAluno.set(chaveAluno, index + 1);
-  });
-
-  // Adicionar número do aluno às redações filtradas
-  const redacoesComNumero = redacoesFiltradas?.map(redacao => ({
-    ...redacao,
-    numero_aluno: numerosPorAluno.get(`${redacao.nome_aluno}|${redacao.email_aluno}`) || 0
-  }));
-
-  const turmasDisponiveis = TODAS_TURMAS; // ['A', 'B', 'C', 'D', 'E', 'VISITANTE']
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'corrigida':
-        return <Badge className="bg-green-500 text-white">Corrigida</Badge>;
-      case 'incompleta':
-        return <Badge className="bg-orange-500 text-white">Incompleta</Badge>;
-      case 'pendente':
-        return <Badge className="bg-yellow-500 text-white">Pendente</Badge>;
-      default:
-        return <Badge variant="secondary">Aguardando</Badge>;
-    }
-  };
-
-  if (isLoading) {
-    return <div className="text-center py-8">Carregando redações...</div>;
-  }
+  if (isLoading) return <div className="text-center py-8">Carregando redações...</div>;
 
   return (
     <div className="space-y-6">
+      {/* ── cabeçalho ── */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-redator-primary">Redações de Simulados</h2>
         <Badge variant="outline" className="text-sm">
-          {redacoesComNumero?.length || 0} entrada(s) encontrada(s)
+          {redacoesFiltradas.length} redação(ões) encontrada(s)
         </Badge>
       </div>
 
-      {/* Filtros */}
+      {/* ── filtros ── */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <CardHeader><CardTitle className="text-lg">Filtros</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label>Buscar por nome/email</Label>
-              <Input
-                placeholder="Digite nome ou email..."
-                value={buscaNome}
-                onChange={(e) => setBuscaNome(e.target.value)}
-              />
+              <Input placeholder="Nome ou email..." value={buscaNome} onChange={e => setBuscaNome(e.target.value)} />
             </div>
-            
             <div>
               <Label>Turma</Label>
               <Select value={filtroTurma} onValueChange={setFiltroTurma}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Todas as turmas</SelectItem>
-                  {turmasDisponiveis.map(turma => (
-                    <SelectItem key={turma} value={turma}>
-                      {formatTurmaDisplay(turma)}
-                    </SelectItem>
+                  {TODAS_TURMAS.map(t => (
+                    <SelectItem key={t} value={t}>{formatTurmaDisplay(t)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
             <div>
               <Label>Status</Label>
               <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todas">Todas</SelectItem>
-                  <SelectItem value="pendentes">Pendentes</SelectItem>
-                  <SelectItem value="incompleta">Incompletas</SelectItem>
-                  <SelectItem value="corrigidas">Corrigidas</SelectItem>
+                  <SelectItem value="todas">Todos</SelectItem>
+                  <SelectItem value="pendentes">Pendentes / Parciais</SelectItem>
+                  <SelectItem value="divergencia">Com Divergência</SelectItem>
+                  <SelectItem value="prontas">Prontas p/ Finalizar</SelectItem>
+                  <SelectItem value="concluidas">Concluídas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label>Corretor</Label>
               <Select value={filtroCorretor} onValueChange={setFiltroCorretor}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos os corretores</SelectItem>
-                  {corretores?.map(corretor => (
-                    <SelectItem key={corretor.id} value={corretor.id}>
-                      {corretor.nome_completo}
-                    </SelectItem>
+                  {(corretores ?? []).map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome_completo}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -478,121 +326,134 @@ const RedacaoSimuladoList = () => {
           </div>
 
           {/* Tags de simulados */}
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2">
             <Button
-              variant={filtroSimulado === "todos" ? "default" : "outline"}
+              variant={filtroSimulado === 'todos' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setFiltroSimulado("todos")}
+              onClick={() => setFiltroSimulado('todos')}
             >
               Todos
             </Button>
-            {simulados?.map(simulado => (
+            {(simulados ?? []).map(s => (
               <Button
-                key={simulado.id}
-                variant={filtroSimulado === simulado.id ? "default" : "outline"}
+                key={s.id}
+                variant={filtroSimulado === s.id ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFiltroSimulado(simulado.id)}
+                onClick={() => setFiltroSimulado(s.id)}
               >
-                {simulado.titulo}
+                {s.titulo}
               </Button>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabela de redações */}
+      {/* ── tabela principal ── */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[60px]">#</TableHead>
-                <TableHead>Aluno</TableHead>
+                <TableHead className="w-[40px]">#</TableHead>
+                <TableHead>Aluno / Tema</TableHead>
                 <TableHead>Turma</TableHead>
-                <TableHead>Tema</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead>Corretor</TableHead>
+                <TableHead>Corretores</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
+                <TableHead className="text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {!redacoesComNumero || redacoesComNumero.length === 0 ? (
+              {redacoesFiltradas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    <p className="text-gray-500">Nenhuma redação encontrada com os filtros aplicados.</p>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    Nenhuma redação encontrada com os filtros aplicados.
                   </TableCell>
                 </TableRow>
               ) : (
-                redacoesComNumero.map((redacao) => (
-                  <TableRow key={`${redacao.id}-${redacao.tipo_corretor || 'single'}`}>
-                    <TableCell className="text-center">
-                      <div className="font-bold text-lg text-redator-primary">
-                        {redacao.numero_aluno}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">
-                        {truncateName(redacao.nome_aluno, 3)}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {redacao.email_aluno}
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Badge variant="outline">
-                        {formatTurmaDisplay(redacao.turma)}
-                      </Badge>
-                    </TableCell>
-                    
-                    <TableCell>
-                      <div className="max-w-[200px]">
-                        {truncateText(redacao.simulados.frase_tematica, 4)}
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>
-                      {format(new Date(redacao.data_envio), "dd/MM/yy", { locale: ptBR })}
-                    </TableCell>
-                    
-                    <TableCell>
-                      <div className="font-medium text-sm">
-                        {redacao.corretor_atual}
-                      </div>
-                    </TableCell>
-                    
-                    <TableCell>
-                      {getStatusBadge(redacao.status_atual)}
-                    </TableCell>
-                    
-                    <TableCell>
-                      <div className="flex justify-center">
+                redacoesFiltradas.map((r, idx) => {
+                  const info = calcularStatus(r);
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-bold text-center text-redator-primary">{idx + 1}</TableCell>
+
+                      <TableCell>
+                        <div className="font-medium">{truncateName(r.nome_aluno)}</div>
+                        <div className="text-xs text-gray-500">{truncateText(r.simulados.frase_tematica, 5)}</div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge variant="outline">{formatTurmaDisplay(r.turma)}</Badge>
+                      </TableCell>
+
+                      <TableCell className="text-sm">
+                        {format(new Date(r.data_envio), 'dd/MM/yy', { locale: ptBR })}
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="text-xs space-y-0.5">
+                          {r.corretor_1 && (
+                            <div className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                              <span>{truncateName(r.corretor_1.nome_completo, 2)}</span>
+                              <span className={`text-[10px] px-1 rounded ${r.status_corretor_1 === 'corrigida' ? 'bg-green-100 text-green-700' : r.status_corretor_1 === 'incompleta' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>
+                                {r.status_corretor_1 === 'corrigida' ? 'ok' : r.status_corretor_1 === 'incompleta' ? 'incompl.' : 'pend.'}
+                              </span>
+                            </div>
+                          )}
+                          {r.corretor_2 && (
+                            <div className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" />
+                              <span>{truncateName(r.corretor_2.nome_completo, 2)}</span>
+                              <span className={`text-[10px] px-1 rounded ${r.status_corretor_2 === 'corrigida' ? 'bg-green-100 text-green-700' : r.status_corretor_2 === 'incompleta' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'}`}>
+                                {r.status_corretor_2 === 'corrigida' ? 'ok' : r.status_corretor_2 === 'incompleta' ? 'incompl.' : 'pend.'}
+                              </span>
+                            </div>
+                          )}
+                          {!r.corretor_id_1 && !r.corretor_id_2 && (
+                            <span className="text-gray-400">Nenhum corretor</span>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge className={`${info.color} text-white text-xs`}>
+                          {info.label === 'Divergência' && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
+                          {info.label === 'Concluída' && <CheckCircle className="w-3 h-3 mr-1 inline" />}
+                          {info.label}
+                        </Badge>
+                        {r.corrigida && r.nota_total != null && (
+                          <div className="text-xs text-gray-500 mt-1">Nota: {r.nota_total}</div>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200"
-                            >
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => abrirVisualizacao(redacao)}>
+                            <DropdownMenuItem onClick={() => setRedacaoVisualizacao(r)}>
                               <Eye className="w-4 h-4 mr-2" />
-                              Visualizar
+                              Visualizar redação
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => abrirDuplicacao(redacao)}>
-                              <Copy className="w-4 h-4 mr-2" />
-                              Duplicar
+                            <DropdownMenuItem onClick={() => setRedacaoNotas(r)}>
+                              <BarChart2 className="w-4 h-4 mr-2" />
+                              Ver notas dos corretores
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => abrirCorrecao(redacao)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              {redacao.status_atual === 'corrigida' ? "Editar" : "Corrigir"}
-                            </DropdownMenuItem>
+                            {info.label === 'Pronto p/ Finalizar' && (
+                              <DropdownMenuItem
+                                onClick={() => setRedacaoParaFinalizar(r)}
+                                className="text-blue-600 focus:text-blue-600 font-medium"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Finalizar e liberar nota
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
-                              onClick={() => confirmarExclusao(redacao)}
+                              onClick={() => setRedacaoParaExcluir(r)}
                               className="text-red-600 focus:text-red-600"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -600,34 +461,29 @@ const RedacaoSimuladoList = () => {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Modal de Visualização */}
+      {/* ── modal visualização ── */}
       <Dialog open={!!redacaoVisualizacao} onOpenChange={() => setRedacaoVisualizacao(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Redação - {redacaoVisualizacao?.nome_aluno}</DialogTitle>
+            <DialogTitle>Redação – {redacaoVisualizacao?.nome_aluno}</DialogTitle>
           </DialogHeader>
           {redacaoVisualizacao && (
-            <div className="mt-4">
-              <div className="bg-gray-50 p-4 rounded mb-4">
-                <h3 className="font-bold text-redator-primary mb-2">
-                  {redacaoVisualizacao.simulados.frase_tematica}
-                </h3>
+            <div className="mt-4 space-y-4">
+              <div className="bg-gray-50 p-4 rounded">
+                <p className="font-semibold text-redator-primary">{redacaoVisualizacao.simulados.frase_tematica}</p>
               </div>
-
-              {/* Renderizar redação manuscrita ou digitada */}
               {redacaoVisualizacao.redacao_manuscrita_url ? (
                 <div className="bg-white p-4 border rounded">
-                  <p className="text-sm text-gray-600 mb-4">Redação manuscrita enviada em foto:</p>
                   <img
                     src={redacaoVisualizacao.redacao_manuscrita_url}
                     alt="Redação manuscrita"
@@ -636,8 +492,8 @@ const RedacaoSimuladoList = () => {
                   />
                 </div>
               ) : (
-                <div className="bg-white p-4 border rounded whitespace-pre-wrap">
-                  {redacaoVisualizacao.texto || "Texto da redação não disponível."}
+                <div className="bg-white p-4 border rounded whitespace-pre-wrap text-sm">
+                  {redacaoVisualizacao.texto || 'Texto não disponível.'}
                 </div>
               )}
             </div>
@@ -645,163 +501,167 @@ const RedacaoSimuladoList = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Duplicação */}
-      <Dialog open={!!duplicandoRedacao} onOpenChange={() => setDuplicandoRedacao(null)}>
-        <DialogContent className="max-w-md">
+      {/* ── modal notas dos corretores ── */}
+      <Dialog open={!!redacaoNotas} onOpenChange={() => setRedacaoNotas(null)}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Duplicar Redação para Novo Corretor</DialogTitle>
+            <DialogTitle>Notas dos Corretores – {redacaoNotas?.nome_aluno}</DialogTitle>
           </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label>Corretor atual (não editável)</Label>
-              <Input 
-                value={duplicandoRedacao?.corretor_atual || 'Não atribuído'} 
-                disabled
-                className="bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <Label>Novo corretor</Label>
-              <Select value={novoCorretor} onValueChange={setNovoCorretor}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um corretor..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {corretores?.filter(c => c.id !== duplicandoRedacao?.corretor_id_atual).map(corretor => (
-                    <SelectItem key={corretor.id} value={corretor.id}>
-                      {corretor.nome_completo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setDuplicandoRedacao(null)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleDuplicar}
-                disabled={!novoCorretor || duplicarRedacao.isPending}
-                className="bg-redator-primary"
-              >
-                {duplicarRedacao.isPending ? "Duplicando..." : "Confirmar"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Confirmação de Exclusão */}
-      <Dialog open={!!redacaoParaExcluir} onOpenChange={() => setRedacaoParaExcluir(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Tem certeza de que deseja excluir a redação de <strong>{redacaoParaExcluir?.nome_aluno}</strong>?
-            </p>
-
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-800">
-                <strong>Atenção:</strong> Esta ação não pode ser desfeita. A redação será permanentemente removida do sistema.
-              </p>
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setRedacaoParaExcluir(null)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleExcluir}
-                disabled={excluirRedacao.isPending}
-              >
-                {excluirRedacao.isPending ? "Excluindo..." : "Confirmar Exclusão"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Correção */}
-      <Dialog open={!!redacaoSelecionada} onOpenChange={() => setRedacaoSelecionada(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Correção - {redacaoSelecionada?.nome_aluno}</DialogTitle>
-          </DialogHeader>
-          
-          {redacaoSelecionada && (
-            <Tabs defaultValue="redacao" className="mt-4">
-              <TabsList>
-                <TabsTrigger value="redacao">Redação</TabsTrigger>
-                <TabsTrigger value="correcao">Correção</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="redacao">
-                <div className="bg-gray-50 p-4 rounded mb-4">
-                  <h3 className="font-bold text-redator-primary">{redacaoSelecionada.simulados.frase_tematica}</h3>
-                </div>
-                <div className="bg-white p-4 border rounded whitespace-pre-wrap max-h-96 overflow-y-auto">
-                  {redacaoSelecionada.texto}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="correcao" className="space-y-4">
-                <div className="grid grid-cols-5 gap-4">
-                  {[1, 2, 3, 4, 5].map(num => (
-                    <div key={num}>
-                      <Label>Competência {num}</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="200"
-                        step="20"
-                        value={notas[`nota_c${num}` as keyof typeof notas]}
-                        onChange={(e) => setNotas({
-                          ...notas,
-                          [`nota_c${num}`]: parseInt(e.target.value) || 0
-                        })}
-                      />
+          {redacaoNotas && (() => {
+            const div = verificarDivergencia(redacaoNotas);
+            const temAmbos = !!redacaoNotas.corretor_id_1 && !!redacaoNotas.corretor_id_2;
+            return (
+              <div className="mt-4 space-y-4">
+                {div?.temDivergencia && (
+                  <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold text-red-700">Divergência detectada</p>
+                      <p className="text-sm text-red-600">
+                        Diferença total: <strong>{div.diferencaTotal} pts</strong> (limite: 100 pts).
+                        Entre em contato com as corretoras para alinhamento antes de finalizar.
+                      </p>
                     </div>
-                  ))}
-                </div>
-                
-                <div>
-                  <Label>Comentário Pedagógico</Label>
-                  <Textarea
-                    value={comentarioPedagogico}
-                    onChange={(e) => setComentarioPedagogico(e.target.value)}
-                    placeholder="Digite sua correção pedagógica detalhada..."
-                    className="min-h-[200px]"
-                  />
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <div className="text-lg font-bold">
-                    Nota Total: {Object.values(notas).reduce((acc: number, nota: any) => acc + parseInt(nota), 0)}
                   </div>
-                  <Button 
-                    onClick={handleCorrigir}
-                    disabled={corrigirRedacao.isPending}
-                    className="bg-redator-primary"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    {corrigirRedacao.isPending ? "Salvando..." : "Salvar Correção"}
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
+                )}
+
+                {!div && !redacaoNotas.corrigida && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                    Aguardando conclusão de {!temAmbos ? 'atribuição de corretores' : 'correção por ambos os corretores'}.
+                  </div>
+                )}
+
+                {redacaoNotas.corrigida && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Redação finalizada. Nota total: <strong>{redacaoNotas.nota_total}</strong>
+                  </div>
+                )}
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Competência</TableHead>
+                      <TableHead className="text-center">
+                        {redacaoNotas.corretor_1?.nome_completo ?? 'Corretor 1'}
+                      </TableHead>
+                      <TableHead className="text-center">
+                        {redacaoNotas.corretor_2?.nome_completo ?? 'Corretor 2'}
+                      </TableHead>
+                      {div && <TableHead className="text-center">Diferença</TableHead>}
+                      {redacaoNotas.corrigida && <TableHead className="text-center">Nota Final</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[1, 2, 3, 4, 5].map(i => {
+                      const n1 = (redacaoNotas as any)[`c${i}_corretor_1`];
+                      const n2 = (redacaoNotas as any)[`c${i}_corretor_2`];
+                      const notaFinal = (redacaoNotas as any)[`nota_c${i}`];
+                      const divC = div?.competencias.find(c => c.competencia === i);
+                      const ehDivergente = divC?.temDivergencia ?? false;
+                      return (
+                        <TableRow key={i} className={ehDivergente ? 'bg-red-50' : ''}>
+                          <TableCell className="font-medium">
+                            C{i}
+                            {ehDivergente && <AlertTriangle className="w-3 h-3 text-red-500 inline ml-1" />}
+                          </TableCell>
+                          <TableCell className="text-center">{n1 ?? '–'}</TableCell>
+                          <TableCell className="text-center">{n2 ?? '–'}</TableCell>
+                          {div && (
+                            <TableCell className={`text-center font-semibold ${ehDivergente ? 'text-red-600' : 'text-gray-600'}`}>
+                              {divC ? divC.diferenca : '–'}
+                            </TableCell>
+                          )}
+                          {redacaoNotas.corrigida && (
+                            <TableCell className="text-center font-semibold">{notaFinal ?? '–'}</TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                    {/* linha totais */}
+                    <TableRow className="font-bold border-t-2">
+                      <TableCell>Total</TableCell>
+                      <TableCell className="text-center">{redacaoNotas.nota_final_corretor_1 ?? '–'}</TableCell>
+                      <TableCell className="text-center">{redacaoNotas.nota_final_corretor_2 ?? '–'}</TableCell>
+                      {div && (
+                        <TableCell className={`text-center ${div.diferencaTotal > 100 ? 'text-red-600' : 'text-gray-700'}`}>
+                          {div.diferencaTotal}
+                        </TableCell>
+                      )}
+                      {redacaoNotas.corrigida && (
+                        <TableCell className="text-center">{redacaoNotas.nota_total ?? '–'}</TableCell>
+                      )}
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
+
+      {/* ── confirmação finalizar ── */}
+      <AlertDialog open={!!redacaoParaFinalizar} onOpenChange={() => setRedacaoParaFinalizar(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-blue-500" />
+              Finalizar correção
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a finalizar a correção da redação de{' '}
+              <strong>{redacaoParaFinalizar?.nome_aluno}</strong>.
+              <br /><br />
+              A nota final será calculada como a <strong>média das pontuações dos dois corretores</strong>{' '}
+              por competência e ficará visível para o aluno.
+              <br /><br />
+              {redacaoParaFinalizar && (() => {
+                const n = calcularNotasFinais(redacaoParaFinalizar);
+                return (
+                  <span className="block mt-2 text-sm font-medium text-gray-700">
+                    Nota final calculada: {n.nota_total} / 1000
+                    &nbsp;(C1:{n.nota_c1} C2:{n.nota_c2} C3:{n.nota_c3} C4:{n.nota_c4} C5:{n.nota_c5})
+                  </span>
+                );
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => redacaoParaFinalizar && finalizarMutation.mutate(redacaoParaFinalizar)}
+              disabled={finalizarMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {finalizarMutation.isPending ? 'Finalizando...' : 'Confirmar e Liberar Nota'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── confirmação excluir ── */}
+      <AlertDialog open={!!redacaoParaExcluir} onOpenChange={() => setRedacaoParaExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir a redação de{' '}
+              <strong>{redacaoParaExcluir?.nome_aluno}</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => redacaoParaExcluir && excluirMutation.mutate(redacaoParaExcluir.id)}
+              disabled={excluirMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {excluirMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -6,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Eye, User, GraduationCap, Star } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Search, Eye, User, GraduationCap, Star, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
+import { verificarDivergencia } from "@/utils/simuladoDivergencia";
 
 interface RedacaoSimulado {
   id: string;
@@ -48,7 +50,16 @@ const CorretorSimuladoRedacoes = () => {
   const { simuladoId } = useParams();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedDivergencia, setExpandedDivergencia] = useState<Set<string>>(new Set());
   const { corretor } = useCorretorAuth();
+
+  const toggleDivergencia = (id: string) => {
+    setExpandedDivergencia(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const { data: redacoes, isLoading, error } = useQuery({
     queryKey: ['corretor-simulado-redacoes', simuladoId],
@@ -90,14 +101,20 @@ const CorretorSimuladoRedacoes = () => {
     const temCorretor1 = !!redacao.corretor_id_1;
     const temCorretor2 = !!redacao.corretor_id_2;
 
+    // Se ambos finalizaram, verificar divergência
+    if (temCorretor1 && temCorretor2 && corrigida1 && corrigida2) {
+      const div = verificarDivergencia(redacao);
+      if (div?.temDivergencia) return { label: 'Divergência', color: 'bg-red-500' };
+      return { label: 'Aguardando Admin', color: 'bg-blue-500' };
+    }
+
     if (temCorretor1 && temCorretor2) {
-      if (corrigida1 && corrigida2) return { label: 'Corrigida', color: 'bg-green-600' };
       if (corrigida1 || corrigida2) return { label: 'Parcial', color: 'bg-yellow-600' };
       return { label: 'Pendente', color: 'bg-gray-500' };
     } else if (temCorretor1) {
-      return corrigida1 ? { label: 'Corrigida', color: 'bg-green-600' } : { label: 'Pendente', color: 'bg-gray-500' };
+      return corrigida1 ? { label: 'Aguardando Admin', color: 'bg-blue-500' } : { label: 'Pendente', color: 'bg-gray-500' };
     } else if (temCorretor2) {
-      return corrigida2 ? { label: 'Corrigida', color: 'bg-green-600' } : { label: 'Pendente', color: 'bg-gray-500' };
+      return corrigida2 ? { label: 'Aguardando Admin', color: 'bg-blue-500' } : { label: 'Pendente', color: 'bg-gray-500' };
     }
     return { label: 'Sem Corretor', color: 'bg-red-500' };
   };
@@ -216,10 +233,88 @@ const CorretorSimuladoRedacoes = () => {
               const status = getStatusGeral(redacao);
               const notaFinal = getNotaFinalConsolidada(redacao);
               const notasCompetencias = getNotasCompetencias(redacao);
+              const div = verificarDivergencia(redacao);
+              const isDivergente = div?.temDivergencia ?? false;
+              const mostrarDetalhes = expandedDivergencia.has(redacao.id);
+
+              // Determinar qual corretor é baseado no ID logado
+              let corretorNumero: number | null = null;
+              if (corretor?.id === redacao.corretor_id_1) {
+                corretorNumero = 1;
+              } else if (corretor?.id === redacao.corretor_id_2) {
+                corretorNumero = 2;
+              } else {
+                corretorNumero = redacao.corretor_id_1 ? 1 : 2;
+              }
 
               return (
-                <Card key={redacao.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card
+                  key={redacao.id}
+                  className={`hover:shadow-md transition-shadow ${isDivergente ? 'border-red-300' : ''}`}
+                >
+                  <CardContent className="p-6 space-y-3">
+                    {/* Alerta de divergência */}
+                    {isDivergente && (
+                      <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-700">Divergência detectada</p>
+                          <p className="text-xs text-red-600">
+                            Diferença total de <strong>{div!.diferencaTotal} pts</strong> entre os dois corretores.
+                            Entre em contato com o admin para alinhamento.
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 h-7 px-2"
+                          onClick={() => toggleDivergencia(redacao.id)}
+                        >
+                          {mostrarDetalhes ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <span className="text-xs ml-1">Comparar notas</span>
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Tabela comparativa de notas – visível quando expandido */}
+                    {isDivergente && mostrarDetalhes && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="text-xs">Competência</TableHead>
+                              <TableHead className="text-xs text-center">Corretor 1</TableHead>
+                              <TableHead className="text-xs text-center">Corretor 2</TableHead>
+                              <TableHead className="text-xs text-center">Diferença</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {div!.competencias.map(c => (
+                              <TableRow key={c.competencia} className={c.temDivergencia ? 'bg-red-50' : ''}>
+                                <TableCell className="text-xs font-medium">
+                                  C{c.competencia}
+                                  {c.temDivergencia && <AlertTriangle className="w-3 h-3 text-red-500 inline ml-1" />}
+                                </TableCell>
+                                <TableCell className="text-xs text-center">{c.nota_c1}</TableCell>
+                                <TableCell className="text-xs text-center">{c.nota_c2}</TableCell>
+                                <TableCell className={`text-xs text-center font-semibold ${c.temDivergencia ? 'text-red-600' : 'text-gray-600'}`}>
+                                  {c.diferenca}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow className="font-bold border-t">
+                              <TableCell className="text-xs">Total</TableCell>
+                              <TableCell className="text-xs text-center">{div!.nota_final_1}</TableCell>
+                              <TableCell className="text-xs text-center">{div!.nota_final_2}</TableCell>
+                              <TableCell className={`text-xs text-center font-bold ${div!.diferencaTotal > 100 ? 'text-red-600' : 'text-gray-700'}`}>
+                                {div!.diferencaTotal}
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start lg:items-center">
                       {/* Informações do aluno */}
                       <div className="lg:col-span-4">
@@ -239,6 +334,7 @@ const CorretorSimuladoRedacoes = () => {
                       {/* Status */}
                       <div className="lg:col-span-2">
                         <Badge className={`${status.color} text-white`}>
+                          {status.label === 'Divergência' && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
                           {status.label}
                         </Badge>
                       </div>
@@ -265,18 +361,6 @@ const CorretorSimuladoRedacoes = () => {
                       <div className="lg:col-span-2">
                         <Button
                           onClick={() => {
-                            // Determinar qual corretor é baseado no ID logado
-                            let corretorNumero = null;
-                            if (corretor?.id === redacao.corretor_id_1) {
-                              corretorNumero = 1;
-                            } else if (corretor?.id === redacao.corretor_id_2) {
-                              corretorNumero = 2;
-                            } else {
-                              // Fallback: usar o primeiro corretor disponível
-                              corretorNumero = redacao.corretor_id_1 ? 1 : 2;
-                            }
-
-                            // Navegar para a página com o sufixo correto do corretor
                             const redacaoUrlId = `${redacao.id}-corretor${corretorNumero}`;
                             navigate(`/redacoes/manuscrita/${redacaoUrlId}?origem=corretor`);
                           }}

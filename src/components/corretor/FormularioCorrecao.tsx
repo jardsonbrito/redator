@@ -256,25 +256,64 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
       };
 
       if (status === 'corrigida') {
-        let redacaoAtualQuery;
-        
-        if (tabela === 'redacoes_enviadas') {
-          redacaoAtualQuery = supabase.from('redacoes_enviadas').select('*').eq('id', redacao.id).single();
-        } else if (tabela === 'redacoes_simulado') {
-          redacaoAtualQuery = supabase.from('redacoes_simulado').select('*').eq('id', redacao.id).single();
+        if (tabela === 'redacoes_simulado') {
+          // Para simulado: verifica se o outro corretor já tem notas.
+          // Se sim, checa divergência com as notas que estão sendo salvas agora.
+          // Se não houver divergência, finaliza direto (corrigida=true).
+          const { data: redacaoAtual } = await supabase
+            .from('redacoes_simulado')
+            .select('*')
+            .eq('id', redacao.id)
+            .single();
+
+          if (redacaoAtual) {
+            const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
+            const outroTemNotas = (redacaoAtual[`nota_final_${outroCorretor}`] ?? 0) > 0;
+
+            if (outroTemNotas) {
+              // Monta o estado atualizado com as novas notas para checar divergência
+              const { verificarDivergencia } = await import('@/utils/simuladoDivergencia');
+              const redacaoComNovasNotas = {
+                ...redacaoAtual,
+                [`c1_${prefixo}`]: notas.c1,
+                [`c2_${prefixo}`]: notas.c2,
+                [`c3_${prefixo}`]: notas.c3,
+                [`c4_${prefixo}`]: notas.c4,
+                [`c5_${prefixo}`]: notas.c5,
+                [`nota_final_${prefixo}`]: notaTotal,
+              };
+
+              const div = verificarDivergencia(redacaoComNovasNotas);
+
+              if (div && !div.temDivergencia) {
+                // Sem divergência → finaliza e libera nota ao aluno
+                updateData.corrigida = true;
+                updateData.data_correcao = new Date().toISOString();
+              }
+              // Se há divergência, salva as notas mas NÃO finaliza.
+              // O admin visualizará a discrepância no painel.
+            }
+          }
         } else {
-          redacaoAtualQuery = supabase.from('redacoes_exercicio').select('*').eq('id', redacao.id).single();
-        }
+          // Redações regulares e exercícios: comportamento original
+          let redacaoAtualQuery;
 
-        const { data: redacaoAtual } = await redacaoAtualQuery;
+          if (tabela === 'redacoes_enviadas') {
+            redacaoAtualQuery = supabase.from('redacoes_enviadas').select('*').eq('id', redacao.id).single();
+          } else {
+            redacaoAtualQuery = supabase.from('redacoes_exercicio').select('*').eq('id', redacao.id).single();
+          }
 
-        if (redacaoAtual) {
-          const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
-          const outroCorretorFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
-          
-          if (!redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`] || outroCorretorFinalizou) {
-            updateData.corrigida = true;
-            updateData.data_correcao = new Date().toISOString();
+          const { data: redacaoAtual } = await redacaoAtualQuery;
+
+          if (redacaoAtual) {
+            const outroCorretor = redacao.eh_corretor_1 ? 'corretor_2' : 'corretor_1';
+            const outroCorretorFinalizou = redacaoAtual[`status_${outroCorretor}`] === 'corrigida';
+
+            if (!redacaoAtual[`corretor_id_${outroCorretor === 'corretor_1' ? '1' : '2'}`] || outroCorretorFinalizou) {
+              updateData.corrigida = true;
+              updateData.data_correcao = new Date().toISOString();
+            }
           }
         }
       }
@@ -293,11 +332,23 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
 
       if (error) throw error;
 
+      const foiConcluida = updateData.corrigida === true;
+      const houveDiscrepancia = status === 'corrigida' &&
+        redacao.tipo_redacao === 'simulado' &&
+        !foiConcluida;
+
       toast({
-        title: status === 'corrigida' ? "Correção finalizada!" : "Correção salva!",
-        description: status === 'corrigida' 
-          ? `Redação de ${redacao.nome_aluno} foi corrigida com nota ${notaTotal}/1000.`
-          : "Você pode continuar a correção mais tarde.",
+        title: foiConcluida
+          ? "Correção finalizada!"
+          : houveDiscrepancia
+            ? "Notas salvas — discrepância detectada"
+            : "Correção salva!",
+        description: foiConcluida
+          ? `Redação de ${redacao.nome_aluno} finalizada com nota ${notaTotal}/1000. Nota liberada ao aluno.`
+          : houveDiscrepancia
+            ? `Há discrepância entre as notas dos dois corretores. O admin visualizará isso no painel e entrará em contato para alinhamento.`
+            : "Você pode continuar a correção mais tarde.",
+        variant: houveDiscrepancia ? 'destructive' : 'default',
       });
 
       onSucesso();
