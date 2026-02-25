@@ -96,8 +96,8 @@ function calcularStatus(r: RedacaoSimulado): StatusInfo {
   }
 
   // Um dos dois tem notas, o outro ainda não
-  const tem1 = (r.nota_final_corretor_1 ?? 0) > 0 && !!r.corretor_id_1;
-  const tem2 = (r.nota_final_corretor_2 ?? 0) > 0 && !!r.corretor_id_2;
+  const tem1 = r.nota_final_corretor_1 != null && !!r.corretor_id_1;
+  const tem2 = r.nota_final_corretor_2 != null && !!r.corretor_id_2;
   if ((tem1 || tem2) && r.corretor_id_1 && r.corretor_id_2) {
     return { label: 'Parcial', color: 'bg-yellow-500', divergencia: null };
   }

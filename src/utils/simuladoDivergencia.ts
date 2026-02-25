@@ -53,8 +53,8 @@ export function verificarDivergencia(
   const ambosTemNotas =
     !!redacao.corretor_id_1 &&
     !!redacao.corretor_id_2 &&
-    (redacao.nota_final_corretor_1 ?? 0) > 0 &&
-    (redacao.nota_final_corretor_2 ?? 0) > 0;
+    redacao.nota_final_corretor_1 != null &&
+    redacao.nota_final_corretor_2 != null;
 
   if (!ambosTemNotas) return null;
 
