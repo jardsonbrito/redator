@@ -72,7 +72,7 @@ interface RedacaoSimulado {
 
 // ── helpers de status ─────────────────────────────────────────────────────────
 
-type StatusLabel = 'Concluída' | 'Pronto p/ Finalizar' | 'Divergência' | 'Parcial' | 'Pendente';
+type StatusLabel = 'Concluída' | 'Pronto p/ Finalizar' | 'Discrepância' | 'Parcial' | 'Pendente';
 
 interface StatusInfo {
   label: StatusLabel;
@@ -90,7 +90,7 @@ function calcularStatus(r: RedacaoSimulado): StatusInfo {
 
   if (div !== null) {
     if (div.temDivergencia) {
-      return { label: 'Divergência', color: 'bg-red-500', divergencia: div };
+      return { label: 'Discrepância', color: 'bg-red-500', divergencia: div };
     }
     return { label: 'Pronto p/ Finalizar', color: 'bg-blue-500', divergencia: div };
   }
@@ -309,7 +309,7 @@ const RedacaoSimuladoList = () => {
                 <SelectContent>
                   <SelectItem value="todas">Todos</SelectItem>
                   <SelectItem value="pendentes">Pendentes / Parciais</SelectItem>
-                  <SelectItem value="divergencia">Com Divergência</SelectItem>
+                  <SelectItem value="divergencia">Com Discrepância</SelectItem>
                   <SelectItem value="prontas">Prontas p/ Finalizar</SelectItem>
                   <SelectItem value="concluidas">Concluídas</SelectItem>
                 </SelectContent>
@@ -422,7 +422,7 @@ const RedacaoSimuladoList = () => {
 
                       <TableCell>
                         <Badge className={`${info.color} text-white text-xs`}>
-                          {info.label === 'Divergência' && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
+                          {info.label === 'Discrepância' && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
                           {info.label === 'Concluída' && <CheckCircle className="w-3 h-3 mr-1 inline" />}
                           {info.label}
                         </Badge>
@@ -520,7 +520,7 @@ const RedacaoSimuladoList = () => {
                   <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-semibold text-red-700">Divergência detectada</p>
+                      <p className="font-semibold text-red-700">Discrepância detectada</p>
                       <p className="text-sm text-red-600">
                         Diferença total: <strong>{div.diferencaTotal} pts</strong> (limite: 100 pts).
                         Entre em contato com as corretoras para alinhamento antes de finalizar.

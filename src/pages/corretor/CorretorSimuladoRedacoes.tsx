@@ -104,7 +104,7 @@ const CorretorSimuladoRedacoes = () => {
     // Se ambos finalizaram, verificar divergência
     if (temCorretor1 && temCorretor2 && corrigida1 && corrigida2) {
       const div = verificarDivergencia(redacao);
-      if (div?.temDivergencia) return { label: 'Divergência', color: 'bg-red-500' };
+      if (div?.temDivergencia) return { label: 'Discrepância', color: 'bg-red-500' };
       return { label: 'Aguardando Admin', color: 'bg-blue-500' };
     }
 
@@ -258,7 +258,7 @@ const CorretorSimuladoRedacoes = () => {
                       <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                         <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-red-700">Divergência detectada</p>
+                          <p className="text-sm font-semibold text-red-700">Discrepância detectada</p>
                           <p className="text-xs text-red-600">
                             Diferença total de <strong>{div!.diferencaTotal} pts</strong> entre os dois corretores.
                             Entre em contato com o admin para alinhamento.
@@ -334,7 +334,7 @@ const CorretorSimuladoRedacoes = () => {
                       {/* Status */}
                       <div className="lg:col-span-2">
                         <Badge className={`${status.color} text-white`}>
-                          {status.label === 'Divergência' && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
+                          {status.label === 'Discrepância' && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
                           {status.label}
                         </Badge>
                       </div>
