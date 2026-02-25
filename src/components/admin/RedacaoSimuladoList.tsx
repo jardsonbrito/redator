@@ -203,6 +203,10 @@ const RedacaoSimuladoList = () => {
           nota_total: notas.nota_total,
           corrigida: true,
           data_correcao: new Date().toISOString(),
+          // Marcar ambos os corretores como finalizados para refletir corretamente
+          // no painel do corretor (aba Corrigidas) e na visão do aluno
+          status_corretor_1: 'corrigida',
+          status_corretor_2: 'corrigida',
         })
         .eq('id', redacao.id);
       if (error) throw error;
