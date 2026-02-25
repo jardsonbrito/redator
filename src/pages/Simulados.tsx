@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Calendar, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoStatus";
+import { verificarDivergencia } from "@/utils/simuladoDivergencia";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { StudentHeader } from "@/components/StudentHeader";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
@@ -179,6 +180,9 @@ const SimuladoWithSubmissionWrapper = ({ simulado, navigate }: { simulado: any; 
 
     if (corretor2Id !== null && corretor2Id !== undefined) {
       if (status1 === 'corrigida' && status2 === 'corrigida' && nota1 !== null && nota2 !== null) {
+        // Não mostrar nota se há discrepância — admin precisa resolver primeiro
+        const div = verificarDivergencia(redacaoData);
+        if (div?.temDivergencia) return null;
         return (nota1 + nota2) / 2;
       }
       return null;
