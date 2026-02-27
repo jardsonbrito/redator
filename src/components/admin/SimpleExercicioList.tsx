@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Calendar } from "lucide-react";
 import { ExercicioForm } from "./ExercicioForm";
 import { AdminExerciseCard } from "./AdminExerciseCard";
 
@@ -39,6 +40,18 @@ export const SimpleExercicioList = () => {
   const [error, setError] = useState<string | null>(null);
   const [exercicioEditando, setExercicioEditando] = useState<Exercicio | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
+
+  const exerciciosFiltrados = useMemo(() => {
+    if (!apenasAnoAtual) return exercicios;
+    return exercicios.filter(ex => {
+      const dataRef = ex.data_inicio || ex.criado_em;
+      if (!dataRef) return true;
+      const d = new Date(dataRef);
+      return !isNaN(d.getTime()) && d.getFullYear() === anoAtual;
+    });
+  }, [exercicios, apenasAnoAtual, anoAtual]);
 
   const fetchExercicios = async () => {
     try {
@@ -167,6 +180,14 @@ export const SimpleExercicioList = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Exercícios Cadastrados</h2>
         <div className="flex gap-2">
+          <Button
+            variant={apenasAnoAtual ? "default" : "outline"}
+            size="sm"
+            onClick={() => setApenasAnoAtual(!apenasAnoAtual)}
+          >
+            <Calendar className="w-3 h-3 mr-1" />
+            {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+          </Button>
           <Button onClick={() => setShowForm(true)} variant="default" size="sm">
             Novo Exercício
           </Button>
@@ -176,7 +197,7 @@ export const SimpleExercicioList = () => {
         </div>
       </div>
 
-      {exercicios.length === 0 ? (
+      {exerciciosFiltrados.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">Nenhum exercício encontrado.</p>
@@ -184,7 +205,7 @@ export const SimpleExercicioList = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {exercicios.map((exercicio) => (
+          {exerciciosFiltrados.map((exercicio) => (
             <AdminExerciseCard
               key={exercicio.id}
               exercicio={exercicio}

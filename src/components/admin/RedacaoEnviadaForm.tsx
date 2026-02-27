@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Search, Calendar } from "lucide-react";
 import { useRedacoesEnviadas, RedacaoEnviada } from "@/hooks/useRedacoesEnviadas";
 import { RedacaoViewForm } from "./RedacaoViewForm";
 import { RedacaoListTable } from "./RedacaoListTable";
@@ -35,6 +35,9 @@ export const RedacaoEnviadaForm = () => {
   const [filtroCorretor, setFiltroCorretor] = useState<string>("todos");
   const [filtroMes, setFiltroMes] = useState<string>(""); // vazio significa "mês atual"
   const [buscaNome, setBuscaNome] = useState("");
+
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
 
   // Consulta para buscar corretores ativos
   const { data: corretores } = useQuery({
@@ -78,6 +81,11 @@ export const RedacaoEnviadaForm = () => {
   // Determinar mês padrão (atual ou mais recente disponível)
   const mesAtual = format(new Date(), 'yyyy-MM');
   const mesDefault = mesesDisponiveis.includes(mesAtual) ? mesAtual : (mesesDisponiveis[mesesDisponiveis.length - 1] || mesAtual);
+
+  // Filtrar chips de mês por ano quando ativo
+  const mesesFiltrados = apenasAnoAtual
+    ? mesesDisponiveis.filter(m => m.startsWith(`${anoAtual}-`))
+    : mesesDisponiveis;
 
   // Inicializar filtro de mês se ainda não foi definido
   useEffect(() => {
@@ -226,18 +234,32 @@ export const RedacaoEnviadaForm = () => {
           {/* Chips mensais para seleção rápida */}
           <div className="flex flex-wrap gap-2 mt-4">
             <Button
+              variant={apenasAnoAtual ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                const novoValor = !apenasAnoAtual;
+                setApenasAnoAtual(novoValor);
+                if (novoValor && filtroMes !== "todos" && filtroMes !== "" && !filtroMes.startsWith(`${anoAtual}-`)) {
+                  setFiltroMes(mesDefault);
+                }
+              }}
+            >
+              <Calendar className="w-3 h-3 mr-1" />
+              {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+            </Button>
+            <Button
               variant={filtroMes === "todos" ? "default" : "outline"}
               size="sm"
               onClick={() => setFiltroMes("todos")}
             >
               Todos os meses
             </Button>
-            {mesesDisponiveis.map(mes => {
+            {mesesFiltrados.map(mes => {
               // Criar data no primeiro dia do mês para evitar problemas de timezone
               const [ano, mes_num] = mes.split('-');
               const dataDoMes = new Date(parseInt(ano), parseInt(mes_num) - 1, 1);
               const nomeDoMes = format(dataDoMes, 'LLLL yyyy', { locale: ptBR });
-              
+
               return (
                 <Button
                   key={mes}

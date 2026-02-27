@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search } from "lucide-react";
+import { Search, Calendar } from "lucide-react";
 import { ExercicioForm } from "./ExercicioForm";
 import { AdminExerciseCard } from "./AdminExerciseCard";
 
@@ -43,6 +44,8 @@ export const ExercicioList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
   const [editingExercise, setEditingExercise] = useState<Exercicio | null>(null);
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
 
   const tiposDisponiveis = [
     'Google Forms',
@@ -55,7 +58,7 @@ export const ExercicioList = () => {
 
   useEffect(() => {
     filterExercicios();
-  }, [exercicios, searchTerm, tipoFilter]);
+  }, [exercicios, searchTerm, tipoFilter, apenasAnoAtual]);
 
   const fetchExercicios = async () => {
     try {
@@ -88,6 +91,15 @@ export const ExercicioList = () => {
 
   const filterExercicios = () => {
     let filtered = exercicios;
+
+    if (apenasAnoAtual) {
+      filtered = filtered.filter(exercicio => {
+        const dataRef = exercicio.data_inicio || exercicio.criado_em;
+        if (!dataRef) return true;
+        const d = new Date(dataRef);
+        return !isNaN(d.getTime()) && d.getFullYear() === anoAtual;
+      });
+    }
 
     if (searchTerm) {
       filtered = filtered.filter(exercicio =>
@@ -189,6 +201,16 @@ export const ExercicioList = () => {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Button
+              variant={apenasAnoAtual ? "default" : "outline"}
+              size="sm"
+              onClick={() => setApenasAnoAtual(!apenasAnoAtual)}
+            >
+              <Calendar className="w-3 h-3 mr-1" />
+              {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Eye, Trash2, MoreVertical, CheckCircle, AlertTriangle, BarChart2 } from "lucide-react";
+import { Eye, Trash2, MoreVertical, CheckCircle, AlertTriangle, BarChart2, Calendar } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -117,6 +117,9 @@ const RedacaoSimuladoList = () => {
   const [filtroSimulado, setFiltroSimulado] = useState("todos");
   const [filtroCorretor, setFiltroCorretor] = useState("todos");
   const [buscaNome, setBuscaNome] = useState("");
+  const [filtroMes, setFiltroMes] = useState<string>("");
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
 
   // modais
   const [redacaoVisualizacao, setRedacaoVisualizacao] = useState<RedacaoSimulado | null>(null);
@@ -127,9 +130,9 @@ const RedacaoSimuladoList = () => {
   // ── queries ──
 
   const { data: redacoes, isLoading } = useQuery({
-    queryKey: ['redacoes-simulado'],
+    queryKey: ['redacoes-simulado', apenasAnoAtual],
     queryFn: async () => {
-      const { data: redacoesData, error } = await supabase
+      let query = supabase
         .from('redacoes_simulado')
         .select(`
           *,
@@ -138,6 +141,14 @@ const RedacaoSimuladoList = () => {
           corretor_2:corretores!corretor_id_2(nome_completo)
         `)
         .order('data_envio', { ascending: false });
+
+      if (apenasAnoAtual) {
+        query = query
+          .gte('data_envio', `${anoAtual}-01-01`)
+          .lt('data_envio', `${anoAtual + 1}-01-01`);
+      }
+
+      const { data: redacoesData, error } = await query;
 
       if (error) throw error;
 
@@ -236,6 +247,45 @@ const RedacaoSimuladoList = () => {
     }
   });
 
+  // ── simulados visíveis — apenas os que têm redações no período buscado ──
+
+  const simuladosVisiveis = useMemo(() => {
+    const idsNaView = new Set((redacoes ?? []).map(r => r.id_simulado));
+    return (simulados ?? []).filter(s => idsNaView.has(s.id));
+  }, [redacoes, simulados]);
+
+  // ── meses disponíveis (client-side, derivado dos dados já buscados) ──
+
+  const mesesDisponiveis = useMemo(() => {
+    if (!(redacoes ?? []).length) return [];
+    const set = Array.from(new Set(
+      (redacoes ?? [])
+        .filter(r => r.data_envio)
+        .map(r => {
+          const d = new Date(r.data_envio);
+          if (isNaN(d.getTime())) return null;
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        })
+        .filter(Boolean) as string[]
+    ));
+    return set.sort((a, b) => a.localeCompare(b));
+  }, [redacoes]);
+
+  const mesAtual = format(new Date(), 'yyyy-MM');
+  const mesDefault = mesesDisponiveis.includes(mesAtual)
+    ? mesAtual
+    : (mesesDisponiveis[mesesDisponiveis.length - 1] || mesAtual);
+
+  const mesesFiltrados = apenasAnoAtual
+    ? mesesDisponiveis.filter(m => m.startsWith(`${anoAtual}-`))
+    : mesesDisponiveis;
+
+  useEffect(() => {
+    if (filtroMes === '' && mesesDisponiveis.length > 0) {
+      setFiltroMes(mesDefault);
+    }
+  }, [filtroMes, mesesDisponiveis, mesDefault]);
+
   // ── filtragem ──
 
   const redacoesFiltradas = (redacoes ?? []).filter(r => {
@@ -254,7 +304,13 @@ const RedacaoSimuladoList = () => {
     else if (filtroStatus === 'prontas') matchStatus = info.label === 'Pronto p/ Finalizar';
     else if (filtroStatus === 'concluidas') matchStatus = info.label === 'Concluída';
 
-    return matchTurma && matchSimulado && matchCorretor && matchNome && matchStatus;
+    const matchMes = filtroMes === 'todos' || (() => {
+      const d = new Date(r.data_envio);
+      if (isNaN(d.getTime())) return false;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === filtroMes;
+    })();
+
+    return matchTurma && matchSimulado && matchCorretor && matchNome && matchStatus && matchMes;
   });
 
   // ── render helpers ──
@@ -329,7 +385,54 @@ const RedacaoSimuladoList = () => {
             </div>
           </div>
 
-          {/* Tags de simulados */}
+          {/* Chips mensais */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={apenasAnoAtual ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                const novoValor = !apenasAnoAtual;
+                setApenasAnoAtual(novoValor);
+                if (novoValor && filtroMes !== 'todos' && filtroMes !== '' && !filtroMes.startsWith(`${anoAtual}-`)) {
+                  setFiltroMes(mesDefault);
+                }
+                // resetar simulado se não pertencer à nova view
+                if (novoValor && filtroSimulado !== 'todos') {
+                  const idsAnoAtual = new Set((redacoes ?? [])
+                    .filter(r => new Date(r.data_envio).getFullYear() === anoAtual)
+                    .map(r => r.id_simulado));
+                  if (!idsAnoAtual.has(filtroSimulado)) setFiltroSimulado('todos');
+                }
+              }}
+            >
+              <Calendar className="w-3 h-3 mr-1" />
+              {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+            </Button>
+            <Button
+              variant={filtroMes === 'todos' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFiltroMes('todos')}
+            >
+              Todos os meses
+            </Button>
+            {mesesFiltrados.map(mes => {
+              const [ano, mes_num] = mes.split('-');
+              const dataDoMes = new Date(parseInt(ano), parseInt(mes_num) - 1, 1);
+              const nomeDoMes = format(dataDoMes, 'LLLL yyyy', { locale: ptBR });
+              return (
+                <Button
+                  key={mes}
+                  variant={filtroMes === mes ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFiltroMes(mes)}
+                >
+                  {nomeDoMes}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Tags de simulados (apenas os presentes na view atual) */}
           <div className="flex flex-wrap gap-2">
             <Button
               variant={filtroSimulado === 'todos' ? 'default' : 'outline'}
@@ -338,7 +441,7 @@ const RedacaoSimuladoList = () => {
             >
               Todos
             </Button>
-            {(simulados ?? []).map(s => (
+            {simuladosVisiveis.map(s => (
               <Button
                 key={s.id}
                 variant={filtroSimulado === s.id ? 'default' : 'outline'}
