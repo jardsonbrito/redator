@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal, LogIn, CheckSquare, ChevronDown, ArrowRightLeft } from "lucide-react";
+import { Edit, Trash2, Search, UserX, UserCheck, Users, Info, MoreHorizontal, LogIn, CheckSquare, ChevronDown, ArrowRightLeft, AlertTriangle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -56,6 +56,9 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [showTurmaModal, setShowTurmaModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedNewTurma, setSelectedNewTurma] = useState<string>("");
+  const [alunoParaExcluirDefinitivo, setAlunoParaExcluirDefinitivo] = useState<Aluno | null>(null);
+  const [confirmEmailInput, setConfirmEmailInput] = useState("");
+  const [isDeletingDefinitivo, setIsDeletingDefinitivo] = useState(false);
   const { toast } = useToast();
 
   const fetchAlunos = async () => {
@@ -192,9 +195,10 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
 
     // Filtrar por turma
     if (activeTurma === "AGUARDANDO") {
-      // Aba especial: alunos das turmas A-E SEM plano ativo
+      // Aba especial: turma literal 'AGUARDANDO' (ano anterior) OU turmas A-H sem plano ativo
       filtered = filtered.filter(aluno =>
-        turmasComPlano.includes(aluno.turma) && !aluno.temPlanoAtivo
+        aluno.turma === 'AGUARDANDO' ||
+        (turmasComPlano.includes(aluno.turma) && !aluno.temPlanoAtivo)
       );
     } else if (activeTurma !== "todos") {
       if (turmasComPlano.includes(activeTurma)) {
@@ -235,9 +239,10 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
       }
     });
 
-    // Contar alunos aguardando reativação (turmas A-E sem plano)
+    // Contar alunos aguardando: turma literal 'AGUARDANDO' OU turmas A-H sem plano ativo
     contador['AGUARDANDO'] = alunos.filter(aluno =>
-      turmasComPlano.includes(aluno.turma) && !aluno.temPlanoAtivo
+      aluno.turma === 'AGUARDANDO' ||
+      (turmasComPlano.includes(aluno.turma) && !aluno.temPlanoAtivo)
     ).length;
 
     return contador;
@@ -290,6 +295,58 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         description: error.message || "Ocorreu um erro inesperado.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleDeleteDefinitivo = async () => {
+    if (!alunoParaExcluirDefinitivo) return;
+
+    if (confirmEmailInput.toLowerCase() !== alunoParaExcluirDefinitivo.email.toLowerCase()) {
+      toast({
+        title: "E-mail incorreto",
+        description: "O e-mail digitado não confere. Verifique e tente novamente.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsDeletingDefinitivo(true);
+    try {
+      const { data, error } = await supabase.rpc('delete_aluno_aguardando', {
+        p_aluno_id: alunoParaExcluirDefinitivo.id,
+        p_email: alunoParaExcluirDefinitivo.email
+      });
+
+      if (error) throw error;
+
+      const resumo = data as {
+        redacoes_enviadas_excluidas: number;
+        redacoes_simulado_excluidas: number;
+        redacoes_exercicio_excluidas: number;
+        lousa_respostas_excluidas: number;
+      };
+
+      const totalRedacoes =
+        (resumo.redacoes_enviadas_excluidas ?? 0) +
+        (resumo.redacoes_simulado_excluidas ?? 0) +
+        (resumo.redacoes_exercicio_excluidas ?? 0);
+
+      toast({
+        title: "Aluno excluído definitivamente",
+        description: `${alunoParaExcluirDefinitivo.nome} removido. ${totalRedacoes} redação(ões) e ${resumo.lousa_respostas_excluidas ?? 0} resposta(s) de lousa apagadas.`
+      });
+
+      setAlunoParaExcluirDefinitivo(null);
+      setConfirmEmailInput("");
+      fetchAlunos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir aluno",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeletingDefinitivo(false);
     }
   };
 
@@ -390,42 +447,51 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
     }
   };
 
+  // Helper: identifica se o aluno está no estado AGUARDANDO (literal ou computado)
+  const isAlunoAguardando = (aluno: Aluno) =>
+    aluno.tipo === 'aluno' && (
+      aluno.turma === 'AGUARDANDO' ||
+      (!aluno.temPlanoAtivo && (TURMAS_VALIDAS as readonly string[]).includes(aluno.turma))
+    );
+
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return;
 
     const selectedItems = alunos.filter(a => selectedIds.has(a.id));
-    const visitantes = selectedItems.filter(a => a.tipo === 'visitante');
-    const alunosRegulares = selectedItems.filter(a => a.tipo === 'aluno');
+    const visitantes         = selectedItems.filter(a => a.tipo === 'visitante');
+    const alunosAguardando   = selectedItems.filter(isAlunoAguardando);
+    const alunosAtivos       = selectedItems.filter(a => a.tipo === 'aluno' && !isAlunoAguardando(a));
 
     setIsDeleting(true);
     try {
-      // Excluir visitantes e seus dados
+      // 1. Visitantes: apaga redacoes_enviadas + sessão
       for (const visitante of visitantes) {
-        // Excluir redações do visitante
-        await supabase
-          .from('redacoes_enviadas')
-          .delete()
-          .eq('email_aluno', visitante.email);
-
-        // Excluir sessão do visitante
-        await supabase
-          .from('visitante_sessoes')
-          .delete()
-          .eq('id', visitante.id);
+        await supabase.from('redacoes_enviadas').delete().eq('email_aluno', visitante.email);
+        await supabase.from('visitante_sessoes').delete().eq('id', visitante.id);
       }
 
-      // Excluir alunos regulares
-      if (alunosRegulares.length > 0) {
-        const alunoIds = alunosRegulares.map(a => a.id);
-        await supabase
+      // 2. Alunos AGUARDANDO: exclusão definitiva via RPC (limpa todas as tabelas)
+      for (const aluno of alunosAguardando) {
+        const { error } = await supabase.rpc('delete_aluno_aguardando', {
+          p_aluno_id: aluno.id,
+          p_email: aluno.email
+        });
+        if (error) throw error;
+      }
+
+      // 3. Alunos ativos: exclusão simples do profile (CASCADE cuida do resto)
+      if (alunosAtivos.length > 0) {
+        const { error } = await supabase
           .from('profiles')
           .delete()
-          .in('id', alunoIds);
+          .in('id', alunosAtivos.map(a => a.id));
+        if (error) throw error;
       }
 
+      const total = selectedIds.size;
       toast({
         title: "Exclusão concluída",
-        description: `${selectedIds.size} ${selectedIds.size === 1 ? 'item excluído' : 'itens excluídos'} com sucesso.`
+        description: `${total} ${total === 1 ? 'item excluído' : 'itens excluídos'} com sucesso.`
       });
 
       setSelectedIds(new Set());
@@ -696,6 +762,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
               onShowMigrarModal={handleShowMigrarModal}
               onShowLoginModal={setLoginModalAluno}
               onDeleteVisitante={handleDeleteVisitante}
+              onDeleteDefinitivo={setAlunoParaExcluirDefinitivo}
               selectedIds={selectedIds}
               onSelectItem={handleSelectItem}
               onSelectAll={handleSelectAll}
@@ -717,6 +784,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                 onShowMigrarModal={handleShowMigrarModal}
                 onShowLoginModal={setLoginModalAluno}
                 onDeleteVisitante={handleDeleteVisitante}
+                onDeleteDefinitivo={setAlunoParaExcluirDefinitivo}
                 selectedIds={selectedIds}
                 onSelectItem={handleSelectItem}
                 onSelectAll={handleSelectAll}
@@ -834,17 +902,103 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de Exclusão Definitiva (aluno AGUARDANDO) */}
+      <Dialog
+        open={!!alunoParaExcluirDefinitivo}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAlunoParaExcluirDefinitivo(null);
+            setConfirmEmailInput("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir Aluno Definitivamente
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é <strong>permanente e irreversível</strong>. Todos os dados do aluno serão apagados: redações enviadas, correções, notas, histórico de exercícios e o cadastro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3 space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm space-y-1">
+              <div><span className="font-medium">Aluno:</span> {alunoParaExcluirDefinitivo?.nome}</div>
+              <div><span className="font-medium">E-mail:</span> {alunoParaExcluirDefinitivo?.email}</div>
+              <div><span className="font-medium">Turma:</span> {alunoParaExcluirDefinitivo?.turma}</div>
+            </div>
+            <div>
+              <Label htmlFor="confirm-email-definitivo" className="text-sm font-medium">
+                Digite o e-mail do aluno para confirmar:
+              </Label>
+              <Input
+                id="confirm-email-definitivo"
+                type="email"
+                placeholder={alunoParaExcluirDefinitivo?.email}
+                value={confirmEmailInput}
+                onChange={(e) => setConfirmEmailInput(e.target.value)}
+                className="mt-2"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAlunoParaExcluirDefinitivo(null);
+                setConfirmEmailInput("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDeleteDefinitivo}
+              disabled={
+                isDeletingDefinitivo ||
+                confirmEmailInput.toLowerCase() !== (alunoParaExcluirDefinitivo?.email ?? "").toLowerCase()
+              }
+              className="bg-red-700 hover:bg-red-800 text-white"
+            >
+              {isDeletingDefinitivo ? "Excluindo..." : "Excluir Definitivamente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal de Confirmação de Exclusão em Massa */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão em lote</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'itens'}?
-              <br /><br />
-              <strong className="text-red-600">Atenção:</strong> Para visitantes, todas as redações enviadas também serão excluídas.
-              <br /><br />
-              Esta ação não pode ser desfeita.
+            <AlertDialogDescription asChild>
+              <div>
+                <p>
+                  Tem certeza que deseja excluir{' '}
+                  <strong>{selectedIds.size} {selectedIds.size === 1 ? 'item' : 'itens'}</strong>?
+                </p>
+                {(() => {
+                  const selecionados = alunos.filter(a => selectedIds.has(a.id));
+                  const qtdAguardando = selecionados.filter(isAlunoAguardando).length;
+                  const qtdVisitantes = selecionados.filter(a => a.tipo === 'visitante').length;
+                  return (
+                    <div className="mt-3 space-y-2 text-sm">
+                      {qtdAguardando > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded p-2 text-red-800">
+                          <strong>⚠ {qtdAguardando} aluno(s) AGUARDANDO:</strong> exclusão permanente com todos os dados — redações, correções, histórico e cadastro.
+                        </div>
+                      )}
+                      {qtdVisitantes > 0 && (
+                        <div className="bg-orange-50 border border-orange-200 rounded p-2 text-orange-800">
+                          <strong>{qtdVisitantes} visitante(s):</strong> redações enviadas também serão excluídas.
+                        </div>
+                      )}
+                      <p className="text-red-600 font-medium">Esta ação não pode ser desfeita.</p>
+                    </div>
+                  );
+                })()}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -877,6 +1031,7 @@ interface AlunoTableProps {
   onShowMigrarModal: (visitante: Aluno) => void;
   onShowLoginModal: (aluno: Aluno) => void;
   onDeleteVisitante: (visitante: Aluno) => void;
+  onDeleteDefinitivo: (aluno: Aluno) => void;
   selectedIds: Set<string>;
   onSelectItem: (id: string, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
@@ -895,6 +1050,7 @@ const AlunoTable = ({
   onShowMigrarModal,
   onShowLoginModal,
   onDeleteVisitante,
+  onDeleteDefinitivo,
   selectedIds,
   onSelectItem,
   onSelectAll
@@ -1021,46 +1177,65 @@ const AlunoTable = ({
                       </>
                     ) : (
                       // Ações para alunos regulares
-                      <>
-                        <DropdownMenuItem onClick={() => onShowLoginModal(aluno)}>
-                          <LogIn className="mr-2 h-4 w-4" />
-                          Ver Login
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onEdit(aluno);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onToggleStatus(aluno)}>
-                          {aluno.ativo ? (
-                            <>
-                              <UserX className="mr-2 h-4 w-4" />
-                              Desativar
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="mr-2 h-4 w-4" />
-                              Ativar
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome}?`)) {
-                              onDelete(aluno);
-                            }
-                          }}
-                          className="text-red-600 focus:text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </>
+                      (() => {
+                        const isAguardando =
+                          aluno.turma === 'AGUARDANDO' ||
+                          (!aluno.temPlanoAtivo && (TURMAS_VALIDAS as readonly string[]).includes(aluno.turma));
+                        return (
+                          <>
+                            <DropdownMenuItem onClick={() => onShowLoginModal(aluno)}>
+                              <LogIn className="mr-2 h-4 w-4" />
+                              Ver Login
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onEdit(aluno);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onToggleStatus(aluno)}>
+                              {aluno.ativo ? (
+                                <>
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Desativar
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Ativar
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome}?`)) {
+                                  onDelete(aluno);
+                                }
+                              }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                            {isAguardando && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => onDeleteDefinitivo(aluno)}
+                                  className="text-red-800 focus:text-red-800 font-semibold"
+                                >
+                                  <AlertTriangle className="mr-2 h-4 w-4" />
+                                  Excluir Definitivamente
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
