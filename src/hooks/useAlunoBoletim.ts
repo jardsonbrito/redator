@@ -203,11 +203,12 @@ async function fetchBoletimData(
 
     supabase
       .from("lousa_resposta")
-      .select("id, lousa_id, submitted_at, nota")
+      .select("id, lousa_id, submitted_at, nota, created_at")
       .eq("email_aluno", email)
-      .not("submitted_at", "is", null)
-      .gte("submitted_at", monthStart)
-      .lte("submitted_at", monthEnd),
+      .or(
+        `and(submitted_at.gte.${monthStart},submitted_at.lte.${monthEnd}),` +
+        `and(submitted_at.is.null,created_at.gte.${monthStart},created_at.lte.${monthEnd})`
+      ),
 
     supabase
       .from("student_feature_event")
@@ -289,7 +290,7 @@ async function fetchBoletimData(
   const lousas: LousaBoletim[] = Array.from(lousasMap.values()).map((l) => ({
     id: l.id,
     lousa_id: l.lousa_id,
-    submitted_at: l.submitted_at!,
+    submitted_at: (l.submitted_at ?? (l as any).created_at)!,
     nota: l.nota,
   }));
 
