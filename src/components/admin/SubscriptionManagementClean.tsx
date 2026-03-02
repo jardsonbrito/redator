@@ -58,6 +58,7 @@ export const SubscriptionManagementClean = () => {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // Estados do formulário de edição
   const [editForm, setEditForm] = useState({
@@ -399,7 +400,10 @@ export const SubscriptionManagementClean = () => {
                         <TableCell>
                           <div className="flex gap-2">
                             {/* Menu de três pontos */}
-                            <DropdownMenu>
+                            <DropdownMenu
+                              open={openDropdownId === student.id}
+                              onOpenChange={(open) => setOpenDropdownId(open ? student.id : null)}
+                            >
                               <DropdownMenuTrigger asChild>
                                 <Button size="sm" variant="outline">
                                   <MoreVertical className="h-4 w-4" />
@@ -407,9 +411,9 @@ export const SubscriptionManagementClean = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    openEditDialog(student);
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    setTimeout(() => openEditDialog(student), 100);
                                   }}
                                 >
                                   <Edit2 className="h-4 w-4 mr-2" />
@@ -418,7 +422,10 @@ export const SubscriptionManagementClean = () => {
 
                                   {subscription && (
                                     <DropdownMenuItem
-                                      onClick={() => deleteSubscription(subscription.id)}
+                                      onClick={() => {
+                                        setOpenDropdownId(null);
+                                        deleteSubscription(subscription.id);
+                                      }}
                                       className="text-red-600"
                                     >
                                       <Trash2 className="h-4 w-4 mr-2" />
@@ -428,6 +435,7 @@ export const SubscriptionManagementClean = () => {
 
                                   <DropdownMenuItem
                                     onClick={() => {
+                                      setOpenDropdownId(null);
                                       navigate(`/admin/customize-student-plan/${student.id}`);
                                     }}
                                   >
@@ -436,11 +444,13 @@ export const SubscriptionManagementClean = () => {
                                   </DropdownMenuItem>
 
                                   <DropdownMenuItem
-                                    onSelect={(e) => {
-                                      e.preventDefault();
-                                      setSelectedStudent(student);
-                                      loadSubscriptionHistory(student.id);
-                                      setHistoryDialogOpen(true);
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      setTimeout(() => {
+                                        setSelectedStudent(student);
+                                        loadSubscriptionHistory(student.id);
+                                        setHistoryDialogOpen(true);
+                                      }, 100);
                                     }}
                                   >
                                     <History className="h-4 w-4 mr-2" />

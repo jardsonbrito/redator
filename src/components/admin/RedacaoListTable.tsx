@@ -42,6 +42,7 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
   const [selectedRedacao, setSelectedRedacao] = useState<RedacaoEnviada | null>(null);
   const [selectedCorretor, setSelectedCorretor] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -239,7 +240,10 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                 </TableCell>
                 <TableCell className="w-[8%]">
                   <div className="flex justify-center">
-                    <DropdownMenu>
+                    <DropdownMenu
+                      open={openDropdownId === redacao.id}
+                      onOpenChange={(open) => setOpenDropdownId(open ? redacao.id : null)}
+                    >
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -250,18 +254,27 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onView(redacao)}>
+                        <DropdownMenuItem onClick={() => {
+                          setOpenDropdownId(null);
+                          onView(redacao);
+                        }}>
                           <Eye className="w-4 h-4 mr-2" />
                           Visualizar
                         </DropdownMenuItem>
                         {redacao.corrigida && (
-                          <DropdownMenuItem onClick={() => downloadRedacaoCorrigida(redacao)}>
+                          <DropdownMenuItem onClick={() => {
+                            setOpenDropdownId(null);
+                            downloadRedacaoCorrigida(redacao);
+                          }}>
                             <Download className="w-4 h-4 mr-2" />
                             Download PDF
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem
-                          onClick={() => handleRotateCorretor(redacao)}
+                          onClick={() => {
+                            setOpenDropdownId(null);
+                            setTimeout(() => handleRotateCorretor(redacao), 100);
+                          }}
                           disabled={redacao.corrigida}
                         >
                           <RotateCcw className="w-4 h-4 mr-2" />
@@ -269,7 +282,10 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                         </DropdownMenuItem>
                         {estaCongelada(redacao) && (
                           <DropdownMenuItem
-                            onClick={() => handleDescongelar(redacao)}
+                            onClick={() => {
+                              setOpenDropdownId(null);
+                              handleDescongelar(redacao);
+                            }}
                             className="text-cyan-600 focus:text-cyan-600"
                             disabled={loading}
                           >
@@ -278,7 +294,10 @@ export const RedacaoListTable = ({ redacoes, onView, onDelete, onRefresh }: Reda
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem
-                          onClick={() => handleDeleteClick(redacao)}
+                          onClick={() => {
+                            setOpenDropdownId(null);
+                            setTimeout(() => handleDeleteClick(redacao), 100);
+                          }}
                           className="text-red-600 focus:text-red-600"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />

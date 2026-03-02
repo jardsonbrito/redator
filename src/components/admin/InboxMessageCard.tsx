@@ -200,8 +200,8 @@ export function InboxMessageCard({
               <DropdownMenuContent align="end" className="w-56 shadow-lg border border-gray-200">
                 <DropdownMenuItem
                   onClick={() => {
-                    setShowViewDialog(true);
                     setDropdownOpen(false);
+                    setTimeout(() => setShowViewDialog(true), 100);
                   }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
@@ -211,8 +211,8 @@ export function InboxMessageCard({
                 {message.recipients && message.recipients.total > 0 && (
                   <DropdownMenuItem
                     onClick={() => {
-                      onViewRecipients?.(message.id, message.message);
                       setDropdownOpen(false);
+                      onViewRecipients?.(message.id, message.message);
                     }}
                     className="flex items-center cursor-pointer hover:bg-purple-50 transition-colors text-purple-700"
                   >
@@ -222,8 +222,8 @@ export function InboxMessageCard({
                 )}
                 <DropdownMenuItem
                   onClick={() => {
-                    onEdit?.(message);
                     setDropdownOpen(false);
+                    onEdit?.(message);
                   }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
@@ -232,8 +232,8 @@ export function InboxMessageCard({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    onDuplicate?.(message);
                     setDropdownOpen(false);
+                    onDuplicate?.(message);
                   }}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
                 >
@@ -242,8 +242,8 @@ export function InboxMessageCard({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    onReopen?.(message.id);
                     setDropdownOpen(false);
+                    onReopen?.(message.id);
                   }}
                   disabled={isReopening}
                   className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
@@ -253,8 +253,8 @@ export function InboxMessageCard({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    setShowDeleteDialog(true);
                     setDropdownOpen(false);
+                    setTimeout(() => setShowDeleteDialog(true), 100);
                   }}
                   className="flex items-center cursor-pointer hover:bg-red-50 text-red-600 transition-colors"
                 >

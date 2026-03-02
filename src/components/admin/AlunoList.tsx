@@ -55,6 +55,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [showTurmaModal, setShowTurmaModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [bulkDropdownOpen, setBulkDropdownOpen] = useState(false);
   const [selectedNewTurma, setSelectedNewTurma] = useState<string>("");
   const [alunoParaExcluirDefinitivo, setAlunoParaExcluirDefinitivo] = useState<Aluno | null>(null);
   const [confirmEmailInput, setConfirmEmailInput] = useState("");
@@ -708,7 +709,7 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
               />
             </div>
             {selectedIds.size > 0 && (
-              <DropdownMenu>
+              <DropdownMenu open={bulkDropdownOpen} onOpenChange={setBulkDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="default"
@@ -722,22 +723,34 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => setShowTurmaModal(true)}>
+                  <DropdownMenuItem onClick={() => {
+                    setBulkDropdownOpen(false);
+                    setTimeout(() => setShowTurmaModal(true), 100);
+                  }}>
                     <ArrowRightLeft className="mr-2 h-4 w-4" />
                     Mudar Turma
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleActivateSelected}>
+                  <DropdownMenuItem onClick={() => {
+                    setBulkDropdownOpen(false);
+                    handleActivateSelected();
+                  }}>
                     <UserCheck className="mr-2 h-4 w-4 text-green-600" />
                     Ativar Selecionados
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDeactivateSelected}>
+                  <DropdownMenuItem onClick={() => {
+                    setBulkDropdownOpen(false);
+                    handleDeactivateSelected();
+                  }}>
                     <UserX className="mr-2 h-4 w-4 text-orange-600" />
                     Desativar Selecionados
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => setShowDeleteConfirm(true)}
+                    onClick={() => {
+                      setBulkDropdownOpen(false);
+                      setTimeout(() => setShowDeleteConfirm(true), 100);
+                    }}
                     className="text-red-600 focus:text-red-600"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -1055,6 +1068,7 @@ const AlunoTable = ({
   onSelectItem,
   onSelectAll
 }: AlunoTableProps) => {
+  const [openRowDropdownId, setOpenRowDropdownId] = useState<string | null>(null);
   const allSelected = alunos.length > 0 && alunos.every(a => selectedIds.has(a.id));
   const someSelected = alunos.some(a => selectedIds.has(a.id)) && !allSelected;
   if (loading) {
@@ -1145,7 +1159,10 @@ const AlunoTable = ({
                 </div>
               </TableCell>
               <TableCell className="text-right p-2">
-                <DropdownMenu>
+                <DropdownMenu
+                  open={openRowDropdownId === aluno.id}
+                  onOpenChange={(open) => setOpenRowDropdownId(open ? aluno.id : null)}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreHorizontal className="h-4 w-4" />
@@ -1155,16 +1172,23 @@ const AlunoTable = ({
                     {aluno.tipo === 'visitante' ? (
                       // Ações para visitantes
                       <>
-                        <DropdownMenuItem onClick={() => onShowVisitanteInfo(aluno)}>
+                        <DropdownMenuItem onClick={() => {
+                          setOpenRowDropdownId(null);
+                          setTimeout(() => onShowVisitanteInfo(aluno), 100);
+                        }}>
                           <Info className="mr-2 h-4 w-4" />
                           Ver Informações
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onShowMigrarModal(aluno)}>
+                        <DropdownMenuItem onClick={() => {
+                          setOpenRowDropdownId(null);
+                          setTimeout(() => onShowMigrarModal(aluno), 100);
+                        }}>
                           <UserCheck className="mr-2 h-4 w-4" />
                           Migrar para Aluno
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
+                            setOpenRowDropdownId(null);
                             if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome} e TODOS os seus dados (incluindo redações enviadas)?`)) {
                               onDeleteVisitante(aluno);
                             }
@@ -1183,21 +1207,26 @@ const AlunoTable = ({
                           (!aluno.temPlanoAtivo && (TURMAS_VALIDAS as readonly string[]).includes(aluno.turma));
                         return (
                           <>
-                            <DropdownMenuItem onClick={() => onShowLoginModal(aluno)}>
+                            <DropdownMenuItem onClick={() => {
+                              setOpenRowDropdownId(null);
+                              setTimeout(() => onShowLoginModal(aluno), 100);
+                            }}>
                               <LogIn className="mr-2 h-4 w-4" />
                               Ver Login
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                onEdit(aluno);
+                              onClick={() => {
+                                setOpenRowDropdownId(null);
+                                setTimeout(() => onEdit(aluno), 100);
                               }}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onToggleStatus(aluno)}>
+                            <DropdownMenuItem onClick={() => {
+                              setOpenRowDropdownId(null);
+                              onToggleStatus(aluno);
+                            }}>
                               {aluno.ativo ? (
                                 <>
                                   <UserX className="mr-2 h-4 w-4" />
@@ -1212,6 +1241,7 @@ const AlunoTable = ({
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
+                                setOpenRowDropdownId(null);
                                 if (window.confirm(`Tem certeza que deseja excluir ${aluno.nome}?`)) {
                                   onDelete(aluno);
                                 }
@@ -1225,7 +1255,10 @@ const AlunoTable = ({
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onClick={() => onDeleteDefinitivo(aluno)}
+                                  onClick={() => {
+                                    setOpenRowDropdownId(null);
+                                    setTimeout(() => onDeleteDefinitivo(aluno), 100);
+                                  }}
                                   className="text-red-800 focus:text-red-800 font-semibold"
                                 >
                                   <AlertTriangle className="mr-2 h-4 w-4" />

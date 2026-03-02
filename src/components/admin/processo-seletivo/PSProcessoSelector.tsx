@@ -73,6 +73,7 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
   const [novoProcesso, setNovoProcesso] = useState({ titulo: '', descricao: '' });
   const [showConfirmarArquivar, setShowConfirmarArquivar] = useState<string | null>(null);
   const [showConfirmarExcluir, setShowConfirmarExcluir] = useState<string | null>(null);
+  const [selectorDropdownOpen, setSelectorDropdownOpen] = useState(false);
   const [confirmacaoTexto, setConfirmacaoTexto] = useState('');
 
   const formularioSelecionado = formularios.find(f => f.id === formularioSelecionadoId);
@@ -140,7 +141,7 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
     <div className="space-y-4">
       {/* Seletor de Processo */}
       <div className="flex flex-wrap items-center gap-3">
-        <DropdownMenu>
+        <DropdownMenu open={selectorDropdownOpen} onOpenChange={setSelectorDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
@@ -195,7 +196,10 @@ export const PSProcessoSelector: React.FC<PSProcessoSelectorProps> = ({
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => setShowNovoProcesso(true)}
+              onClick={() => {
+                setSelectorDropdownOpen(false);
+                setTimeout(() => setShowNovoProcesso(true), 100);
+              }}
               className="text-primary cursor-pointer"
             >
               <Plus className="h-4 w-4 mr-2" />

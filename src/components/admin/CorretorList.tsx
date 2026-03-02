@@ -15,7 +15,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -49,6 +48,9 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
   const [loading, setLoading] = useState(true);
   const [turmasDialogOpen, setTurmasDialogOpen] = useState(false);
   const [corretorSelecionado, setCorretorSelecionado] = useState<Corretor | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [deleteTargetCorretor, setDeleteTargetCorretor] = useState<Corretor | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { toast } = useToast();
 
   const fetchCorretores = async () => {
@@ -230,19 +232,28 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                 </div>
                 
                 <div className="flex gap-2">
-                  <DropdownMenu>
+                  <DropdownMenu
+                    open={openDropdownId === corretor.id}
+                    onOpenChange={(open) => setOpenDropdownId(open ? corretor.id : null)}
+                  >
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem onClick={() => onEdit?.(corretor)}>
+                      <DropdownMenuItem onClick={() => {
+                        setOpenDropdownId(null);
+                        onEdit?.(corretor);
+                      }}>
                         <Edit className="w-4 h-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
-                      
-                      <DropdownMenuItem onClick={() => handleToggleStatus(corretor)}>
+
+                      <DropdownMenuItem onClick={() => {
+                        setOpenDropdownId(null);
+                        handleToggleStatus(corretor);
+                      }}>
                         {corretor.ativo ? (
                           <>
                             <UserX className="w-4 h-4 mr-2" />
@@ -256,7 +267,10 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                         )}
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem onClick={() => handleToggleVisibilityInForm(corretor)}>
+                      <DropdownMenuItem onClick={() => {
+                        setOpenDropdownId(null);
+                        handleToggleVisibilityInForm(corretor);
+                      }}>
                         {corretor.visivel_no_formulario ? (
                           <>
                             <EyeOff className="w-4 h-4 mr-2" />
@@ -270,32 +284,17 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
                         )}
                       </DropdownMenuItem>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem 
-                            onSelect={(e) => e.preventDefault()}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja excluir o corretor "{corretor.nome_completo}"? 
-                              Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(corretor)}>
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => {
+                          setOpenDropdownId(null);
+                          setDeleteTargetCorretor(corretor);
+                          setTimeout(() => setShowDeleteDialog(true), 100);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -310,7 +309,6 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
           open={turmasDialogOpen}
           onOpenChange={(open) => {
             setTurmasDialogOpen(open);
-            // Limpar o corretor selecionado quando o dialog é fechado
             if (!open) {
               setTimeout(() => {
                 setCorretorSelecionado(null);
@@ -321,6 +319,26 @@ export const CorretorList = ({ refresh, onEdit }: CorretorListProps) => {
           onSuccess={fetchCorretores}
         />
       )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o corretor "{deleteTargetCorretor?.nome_completo}"?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (deleteTargetCorretor) handleDelete(deleteTargetCorretor);
+            }}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

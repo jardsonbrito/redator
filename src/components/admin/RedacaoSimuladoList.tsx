@@ -126,6 +126,7 @@ const RedacaoSimuladoList = () => {
   const [redacaoNotas, setRedacaoNotas] = useState<RedacaoSimulado | null>(null);
   const [redacaoParaExcluir, setRedacaoParaExcluir] = useState<RedacaoSimulado | null>(null);
   const [redacaoParaFinalizar, setRedacaoParaFinalizar] = useState<RedacaoSimulado | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // ── queries ──
 
@@ -535,24 +536,36 @@ const RedacaoSimuladoList = () => {
                       </TableCell>
 
                       <TableCell className="text-center">
-                        <DropdownMenu>
+                        <DropdownMenu
+                          open={openDropdownId === r.id}
+                          onOpenChange={(open) => setOpenDropdownId(open ? r.id : null)}
+                        >
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setRedacaoVisualizacao(r)}>
+                            <DropdownMenuItem onClick={() => {
+                              setOpenDropdownId(null);
+                              setTimeout(() => setRedacaoVisualizacao(r), 100);
+                            }}>
                               <Eye className="w-4 h-4 mr-2" />
                               Visualizar redação
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setRedacaoNotas(r)}>
+                            <DropdownMenuItem onClick={() => {
+                              setOpenDropdownId(null);
+                              setTimeout(() => setRedacaoNotas(r), 100);
+                            }}>
                               <BarChart2 className="w-4 h-4 mr-2" />
                               Ver notas dos corretores
                             </DropdownMenuItem>
                             {info.label === 'Pronto p/ Finalizar' && (
                               <DropdownMenuItem
-                                onClick={() => setRedacaoParaFinalizar(r)}
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  setTimeout(() => setRedacaoParaFinalizar(r), 100);
+                                }}
                                 className="text-blue-600 focus:text-blue-600 font-medium"
                               >
                                 <CheckCircle className="w-4 h-4 mr-2" />
@@ -560,7 +573,10 @@ const RedacaoSimuladoList = () => {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
-                              onClick={() => setRedacaoParaExcluir(r)}
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                setTimeout(() => setRedacaoParaExcluir(r), 100);
+                              }}
                               className="text-red-600 focus:text-red-600"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />

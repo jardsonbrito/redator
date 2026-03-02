@@ -79,6 +79,7 @@ export const PSCandidatosManager: React.FC = () => {
   const [motivoReprovacao, setMotivoReprovacao] = useState('');
   const [loadingRespostas, setLoadingRespostas] = useState(false);
   const [showExcluir, setShowExcluir] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const candidatosFiltrados = (candidatos || []).filter(c => {
     const matchBusca = busca === '' ||
@@ -274,7 +275,10 @@ export const PSCandidatosManager: React.FC = () => {
                             : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
+                          <DropdownMenu
+                            open={openDropdownId === candidato.id}
+                            onOpenChange={(open) => setOpenDropdownId(open ? candidato.id : null)}
+                          >
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
@@ -285,7 +289,10 @@ export const PSCandidatosManager: React.FC = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleVerRespostas(candidato)}>
+                              <DropdownMenuItem onClick={() => {
+                                setOpenDropdownId(null);
+                                setTimeout(() => handleVerRespostas(candidato), 100);
+                              }}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 Ver Respostas
                               </DropdownMenuItem>
@@ -294,7 +301,10 @@ export const PSCandidatosManager: React.FC = () => {
                                 <>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
-                                    onClick={() => handleAprovar(candidato)}
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleAprovar(candidato);
+                                    }}
                                     className="text-green-600 focus:text-green-600"
                                   >
                                     <CheckCircle className="mr-2 h-4 w-4" />
@@ -302,8 +312,9 @@ export const PSCandidatosManager: React.FC = () => {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => {
+                                      setOpenDropdownId(null);
                                       setCandidatoSelecionado(candidato);
-                                      setShowReprovar(true);
+                                      setTimeout(() => setShowReprovar(true), 100);
                                     }}
                                     className="text-red-600 focus:text-red-600"
                                   >
@@ -317,7 +328,10 @@ export const PSCandidatosManager: React.FC = () => {
                                 <>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
-                                    onClick={() => handleLiberarEtapaFinal(candidato)}
+                                    onClick={() => {
+                                      setOpenDropdownId(null);
+                                      handleLiberarEtapaFinal(candidato);
+                                    }}
                                     className="text-blue-600 focus:text-blue-600"
                                   >
                                     <Play className="mr-2 h-4 w-4" />
@@ -329,8 +343,9 @@ export const PSCandidatosManager: React.FC = () => {
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => {
+                                  setOpenDropdownId(null);
                                   setCandidatoSelecionado(candidato);
-                                  setShowExcluir(true);
+                                  setTimeout(() => setShowExcluir(true), 100);
                                 }}
                                 className="text-red-600 focus:text-red-600"
                               >
