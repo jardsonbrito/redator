@@ -913,21 +913,17 @@ const Admin = () => {
                 Acompanhe aqui o desempenho geral dos alunos nos exercícios e redações corrigidas.
               </p>
             </div>
-            <Tabs defaultValue="monitoramento" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="monitoramento">Monitoramento</TabsTrigger>
-                <TabsTrigger value="exercicios">Dados de Exercícios</TabsTrigger>
-                <TabsTrigger value="redacoes">Redações Corrigidas</TabsTrigger>
+            <Tabs defaultValue="alunos" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="alunos">Alunos</TabsTrigger>
+                <TabsTrigger value="exercicios">Importar Exercícios</TabsTrigger>
               </TabsList>
-              <TabsContent value="monitoramento" className="space-y-6">
+              <TabsContent value="alunos" className="space-y-6">
                 <MonitoramentoPage />
               </TabsContent>
               <TabsContent value="exercicios" className="space-y-6">
                 <RadarUpload />
                 <RadarList />
-              </TabsContent>
-              <TabsContent value="redacoes">
-                <RadarRedacoes />
               </TabsContent>
             </Tabs>
           </div>

@@ -1,16 +1,15 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, FileSpreadsheet, Users, TrendingUp, Loader2 } from "lucide-react";
+import { Users, TrendingUp, Loader2, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { AlunoBoletimSheet } from "@/components/admin/AlunoBoletimSheet";
 
 interface StudentActivity {
   profile_id: string;
@@ -23,14 +22,6 @@ interface StudentActivity {
   gravadas_assistidas: number;
 }
 
-interface StudentDetail {
-  data_hora: string;
-  tipo: string;
-  acao: string;
-  entity_id: string;
-  metadata: any;
-}
-
 // Turmas geradas dinamicamente a partir do utils
 const TURMAS = TODAS_TURMAS.map(turma => formatTurmaDisplay(turma));
 
@@ -41,8 +32,8 @@ export const MonitoramentoPage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedStudent, setSelectedStudent] = useState<StudentActivity | null>(null);
   const [students, setStudents] = useState<StudentActivity[]>([]);
-  const [studentDetails, setStudentDetails] = useState<StudentDetail[]>([]);
   const [loading, setLoading] = useState(false);
+  const [boletimOpen, setBoletimOpen] = useState(false);
 
   // Debounce para os filtros
   const [filterTimeout, setFilterTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -75,14 +66,6 @@ export const MonitoramentoPage = () => {
     };
   }, [debouncedLoadStudents]);
 
-  // Carregar detalhes do aluno selecionado
-  useEffect(() => {
-    if (selectedStudent) {
-      loadStudentDetails();
-    } else {
-      setStudentDetails([]);
-    }
-  }, [selectedStudent, selectedMonth, selectedYear]);
 
   const loadStudents = async () => {
     if (!selectedTurma) return;
@@ -238,101 +221,10 @@ export const MonitoramentoPage = () => {
     }
   };
 
-  const loadStudentDetails = async () => {
-    if (!selectedStudent) return;
-
-    setLoading(true);
-    try {
-      // Consultar diretamente a tabela student_feature_event
-      const { data, error } = await supabase
-        .from('student_feature_event')
-        .select(`
-          occurred_at,
-          feature,
-          action,
-          entity_id,
-          metadata
-        `)
-        .eq('student_email', selectedStudent.student_email)
-        .eq('class_name', selectedTurma)
-        .eq('month', selectedMonth)
-        .eq('year', selectedYear)
-        .order('occurred_at', { ascending: false });
-
-      if (error) throw error;
-
-      const formattedData: StudentDetail[] = (data || []).map(item => ({
-        data_hora: new Date(item.occurred_at).toLocaleString('pt-BR', {
-          timeZone: 'America/Fortaleza',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        tipo: item.feature === 'essay_regular' ? 'Redação (Regular)' :
-              item.feature === 'essay_simulado' ? 'Redação (Simulado)' :
-              item.feature === 'lousa' ? 'Lousa' :
-              item.feature === 'live' ? 'Aula ao Vivo' :
-              item.feature === 'gravada' ? 'Aula Gravada' : item.feature,
-        acao: item.action === 'submitted' ? 'Enviado' :
-              item.action === 'opened' ? 'Aberta' :
-              item.action === 'completed' ? 'Concluída' :
-              item.action === 'participated' ? 'Participei' :
-              item.action === 'not_participated' ? 'Não participei' :
-              item.action === 'watched' ? 'Assistiu' : item.action,
-        entity_id: item.entity_id || '',
-        metadata: item.metadata
-      }));
-
-      setStudentDetails(formattedData);
-    } catch (error) {
-      console.error('Erro ao carregar detalhes do aluno:', error);
-      toast({
-        title: "Erro", 
-        description: "Erro ao carregar detalhes do aluno",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const exportToCSV = () => {
-    if (!selectedStudent || studentDetails.length === 0) {
-      toast({
-        title: "Aviso",
-        description: "Selecione um aluno com atividades para exportar",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const csvContent = [
-      ['Data/Hora', 'Tipo', 'Ação', 'ID da Entidade'],
-      ...studentDetails.map(detail => [
-        detail.data_hora,
-        detail.tipo,
-        detail.acao,
-        detail.entity_id || ''
-      ])
-    ].map(row => row.join(',')).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `atividades_${selectedStudent.nome}_${selectedMonth}_${selectedYear}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "Sucesso",
-      description: "Relatório exportado com sucesso",
-    });
-  };
+  function handleAbrirBoletim(student: StudentActivity) {
+    setSelectedStudent(student);
+    setBoletimOpen(true);
+  }
 
   const getMonthName = (month: number) => {
     const months = [
@@ -472,40 +364,35 @@ export const MonitoramentoPage = () => {
             ) : (
               <div className="space-y-2">
                 {students.map((student) => (
-                  <Card 
+                  <Card
                     key={student.profile_id}
-                    className={`transition-colors ${
-                      selectedStudent?.profile_id === student.profile_id 
-                        ? 'border-primary bg-primary/5' 
-                        : 'hover:bg-muted/50'
-                    }`}
+                    className="cursor-pointer transition-colors hover:bg-muted/50 hover:border-primary/40"
+                    onClick={() => handleAbrirBoletim(student)}
                   >
                     <CardContent className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h4 className="font-medium">{student.nome}</h4>
+                      <div className="flex justify-between items-center gap-4">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <h4 className="font-medium truncate">{student.nome}</h4>
                         </div>
-                        <div className="grid grid-cols-5 gap-2 text-sm">
-                          <div className="text-center">
+                        <div className="flex items-center gap-4 text-sm shrink-0">
+                          <div className="text-center hidden sm:block">
                             <div className="font-semibold">{student.essays_regular}</div>
                             <div className="text-xs text-muted-foreground">Regular</div>
                           </div>
-                          <div className="text-center">
+                          <div className="text-center hidden sm:block">
                             <div className="font-semibold">{student.essays_simulado}</div>
                             <div className="text-xs text-muted-foreground">Simulado</div>
                           </div>
-                          <div className="text-center">
+                          <div className="text-center hidden md:block">
                             <div className="font-semibold">{student.lousas_concluidas}</div>
                             <div className="text-xs text-muted-foreground">Lousa</div>
                           </div>
-                          <div className="text-center">
+                          <div className="text-center hidden md:block">
                             <div className="font-semibold">{student.lives_participei}</div>
                             <div className="text-xs text-muted-foreground">Ao Vivo</div>
                           </div>
-                          <div className="text-center">
-                            <div className="font-semibold">{student.gravadas_assistidas}</div>
-                            <div className="text-xs text-muted-foreground">Gravadas</div>
-                          </div>
+                          <span className="text-xs text-primary font-medium">Ver boletim →</span>
                         </div>
                       </div>
                     </CardContent>
@@ -517,83 +404,13 @@ export const MonitoramentoPage = () => {
         </Card>
       )}
 
-      {/* Detalhes do Aluno */}
-      {selectedStudent && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              <span>Detalhes - {selectedStudent.nome}</span>
-              <Button onClick={exportToCSV} variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Cards de resumo */}
-            <div className="grid grid-cols-5 gap-4 mb-6">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">{selectedStudent.essays_regular}</div>
-                  <div className="text-sm text-muted-foreground">Redações Regular</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{selectedStudent.essays_simulado}</div>
-                  <div className="text-sm text-muted-foreground">Redações Simulado</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-purple-600">{selectedStudent.lousas_concluidas}</div>
-                  <div className="text-sm text-muted-foreground">Lousa Concluída</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-orange-600">{selectedStudent.lives_participei}</div>
-                  <div className="text-sm text-muted-foreground">Live Participei</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-red-600">{selectedStudent.gravadas_assistidas}</div>
-                  <div className="text-sm text-muted-foreground">Gravadas Assistidas</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Tabela de eventos */}
-            {studentDetails.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data/Hora</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Ação</TableHead>
-                    <TableHead>ID da Entidade</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentDetails.map((detail, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{detail.data_hora}</TableCell>
-                      <TableCell>{detail.tipo}</TableCell>
-                      <TableCell>{detail.acao}</TableCell>
-                      <TableCell className="font-mono text-sm">{detail.entity_id || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhuma atividade registrada para este aluno no período selecionado
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <AlunoBoletimSheet
+        open={boletimOpen}
+        onOpenChange={setBoletimOpen}
+        email={selectedStudent?.student_email ?? null}
+        turma={selectedTurma || null}
+        nomeAluno={selectedStudent?.nome ?? ""}
+      />
     </div>
   );
 };
