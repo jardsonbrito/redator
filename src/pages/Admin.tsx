@@ -92,7 +92,6 @@ import { InboxForm } from "@/components/admin/InboxForm";
 // Import radar components
 import { RadarUpload } from "@/components/admin/RadarUpload";
 import { RadarList } from "@/components/admin/RadarList";
-import { RadarRedacoes } from "@/components/admin/RadarRedacoes";
 import { MonitoramentoPage } from "@/components/admin/MonitoramentoPage";
 import { AulaVirtualForm } from "@/components/admin/AulaVirtualForm";
 import { AulaVirtualList } from "@/components/admin/AulaVirtualList";

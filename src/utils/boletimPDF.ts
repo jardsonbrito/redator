@@ -13,7 +13,6 @@ const MARGIN = 18;
 const PAGE_W = 210;
 const PAGE_H = 297;
 const CONTENT_W = PAGE_W - MARGIN * 2;
-const LINE_H = 6;
 const BRAND_COLOR: [number, number, number] = [63, 81, 179]; // #3F51B5
 const ACCENT_COLOR: [number, number, number] = [99, 102, 241]; // #6366f1
 const GRAY: [number, number, number] = [100, 100, 100];
