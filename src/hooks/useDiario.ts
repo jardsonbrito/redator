@@ -418,7 +418,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           .from('aulas_diario')
           .select('id, turma')
           .in('turma', possiveisTurmas)
-          .eq('etapa_id', etapa.id);
+          .eq('etapa_id', etapa.id)
+          .is('origem_aula_virtual_id', null); // Excluir entradas criadas por aulas ao vivo (contadas em totalAulasVirtuais)
 
         // Buscar presença do aluno nessas aulas do diário
         const aulaIds = aulas?.map(a => a.id) || [];
