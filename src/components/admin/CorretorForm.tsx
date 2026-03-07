@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,19 @@ export const CorretorForm = ({ onSuccess, corretorEditando, onCancelEdit }: Corr
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (corretorEditando) {
+      setFormData({
+        nome_completo: corretorEditando.nome_completo || "",
+        email: corretorEditando.email || "",
+        aceita_manuscrita: corretorEditando.aceita_manuscrita ?? true,
+        aceita_digitada: corretorEditando.aceita_digitada ?? true,
+      });
+    } else {
+      setFormData({ nome_completo: "", email: "", aceita_manuscrita: true, aceita_digitada: true });
+    }
+  }, [corretorEditando]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
