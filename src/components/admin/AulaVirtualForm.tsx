@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,9 +18,18 @@ interface AulaVirtualFormProps {
   onSuccess?: () => void;
 }
 
+type AulaDisponivel = { id: string; titulo: string; data_aula: string };
+
+const formatarData = (data: string) => {
+  if (!data) return '';
+  const [y, m, d] = data.split('-');
+  return `${d}/${m}/${y}`;
+};
+
 export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
+  const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -33,8 +43,24 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
     abrir_aba_externa: false,
     permite_visitante: false,
     ativo: true,
-    eh_aula_ao_vivo: true
+    eh_aula_ao_vivo: true,
+    eh_repeticao: false,
+    aula_mae_id: null as string | null,
   });
+
+  useEffect(() => {
+    const carregarAulas = async () => {
+      const { data } = await (supabase
+        .from('aulas_virtuais')
+        .select('id, titulo, data_aula')
+        .eq('eh_aula_ao_vivo', true)
+        .eq('ativo', true)
+        .is('aula_mae_id', null)
+        .order('data_aula', { ascending: false }) as any);
+      setAulasDisponiveis((data || []) as AulaDisponivel[]);
+    };
+    carregarAulas();
+  }, []);
 
   // Função para verificar etapas vigentes para as turmas selecionadas
   const verificarEtapasVigentes = async (): Promise<{ valido: boolean; turmasSemEtapa: string[] }> => {
@@ -101,8 +127,15 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
       return;
     }
 
-    // Validação de etapa vigente (apenas para aulas ao vivo)
-    if (formData.eh_aula_ao_vivo && formData.turmas_autorizadas.length > 0) {
+    if (formData.eh_aula_ao_vivo && formData.eh_repeticao && !formData.aula_mae_id) {
+      toast.error('Selecione a aula original para criar uma repetição');
+      setActiveSection('configuracao');
+      return;
+    }
+
+    // Validação de etapa vigente (apenas para aulas ao vivo que NÃO são repetições)
+    // Repetições não criam entrada no diário, então a etapa não é necessária
+    if (formData.eh_aula_ao_vivo && !formData.eh_repeticao && formData.turmas_autorizadas.length > 0) {
       setLoading(true);
       const { valido, turmasSemEtapa } = await verificarEtapasVigentes();
 
@@ -136,7 +169,8 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
         abrir_aba_externa: formData.abrir_aba_externa,
         permite_visitante: formData.permite_visitante,
         ativo: formData.ativo,
-        eh_aula_ao_vivo: formData.eh_aula_ao_vivo
+        eh_aula_ao_vivo: formData.eh_aula_ao_vivo,
+        aula_mae_id: (formData.eh_aula_ao_vivo && formData.eh_repeticao) ? formData.aula_mae_id : null,
       };
 
       const { error } = await supabase
@@ -160,7 +194,9 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
         abrir_aba_externa: false,
         permite_visitante: false,
         ativo: true,
-        eh_aula_ao_vivo: true
+        eh_aula_ao_vivo: true,
+        eh_repeticao: false,
+        aula_mae_id: null,
       });
       setActiveSection('detalhes');
 
@@ -335,9 +371,52 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
                       </div>
                       <Switch
                         checked={formData.eh_aula_ao_vivo}
-                        onCheckedChange={(checked) => setFormData({...formData, eh_aula_ao_vivo: checked})}
+                        onCheckedChange={(checked) => setFormData({
+                          ...formData,
+                          eh_aula_ao_vivo: checked,
+                          eh_repeticao: checked ? formData.eh_repeticao : false,
+                          aula_mae_id: checked ? formData.aula_mae_id : null,
+                        })}
                       />
                     </div>
+
+                    {formData.eh_aula_ao_vivo && (
+                      <div className="flex items-center justify-between p-4 border border-orange-200 bg-orange-50 rounded-lg">
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium">Repetição de outra aula</div>
+                          <div className="text-xs text-gray-500">Alunos presentes em qualquer sessão terão presença contabilizada</div>
+                        </div>
+                        <Switch
+                          checked={formData.eh_repeticao}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData,
+                            eh_repeticao: checked,
+                            aula_mae_id: checked ? formData.aula_mae_id : null,
+                          })}
+                        />
+                      </div>
+                    )}
+
+                    {formData.eh_aula_ao_vivo && formData.eh_repeticao && (
+                      <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg space-y-2">
+                        <label className="text-sm font-medium">Aula original (sessão principal)</label>
+                        <Select
+                          value={formData.aula_mae_id || ''}
+                          onValueChange={(value) => setFormData({...formData, aula_mae_id: value || null})}
+                        >
+                          <SelectTrigger className="text-sm bg-white">
+                            <SelectValue placeholder="Selecione a aula original..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {aulasDisponiveis.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.titulo} — {formatarData(a.data_aula)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-0.5">

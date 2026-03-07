@@ -447,27 +447,50 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
         let presencasVirtuais = 0;
 
         try {
-          // Buscar aulas virtuais do período da etapa para a turma do aluno
-          // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade
-          const { data: aulasVirtuais } = await supabase
+          // Buscar aulas virtuais do período com aula_mae_id para agrupamento pedagógico
+          // Repetições da mesma aula são agrupadas e contam como 1 unidade pedagógica
+          const { data: rawAulas } = await supabase
             .from('aulas_virtuais')
-            .select('id')
+            .select('id, aula_mae_id')
             .eq('ativo', true)
             .gte('data_aula', etapa.data_inicio)
             .lt('data_aula', etapa.data_fim + 'T23:59:59')
             .or(`turmas_autorizadas.cs.{"${turmaNormalizada}"},turmas_autorizadas.cs.{"TURMA ${turmaNormalizada}"},turmas_autorizadas.cs.{"Turma ${turmaNormalizada}"},turmas_autorizadas.cs.{"Todas"}`);
 
-          if (aulasVirtuais && aulasVirtuais.length > 0) {
-            totalAulasVirtuais = aulasVirtuais.length;
+          const aulasVirtuais = (rawAulas || []) as { id: string; aula_mae_id: string | null }[];
 
+          if (aulasVirtuais.length > 0) {
+            // Agrupar: aulas raiz (aula_mae_id IS NULL) são unidades pedagógicas independentes
+            // Repetições (aula_mae_id NOT NULL) se juntam ao grupo da aula mãe
+            const grupos: Record<string, string[]> = {};
+            for (const aula of aulasVirtuais.filter(a => !a.aula_mae_id)) {
+              grupos[aula.id] = [aula.id];
+            }
+            for (const aula of aulasVirtuais.filter(a => !!a.aula_mae_id)) {
+              if (grupos[aula.aula_mae_id!]) {
+                grupos[aula.aula_mae_id!].push(aula.id);
+              } else {
+                // Aula mãe fora do período — tratar como unidade independente
+                grupos[aula.id] = [aula.id];
+              }
+            }
+
+            totalAulasVirtuais = Object.keys(grupos).length;
+
+            const todosIds = aulasVirtuais.map(a => a.id);
             const { data: presencasAulasVirtuais } = await supabase
               .from('presenca_aulas')
-              .select('entrada_at')
+              .select('aula_id')
               .eq('email_aluno', alunoEmail.toLowerCase())
-              .in('aula_id', aulasVirtuais.map(a => a.id))
+              .in('aula_id', todosIds)
               .not('entrada_at', 'is', null);
 
-            presencasVirtuais = presencasAulasVirtuais?.length || 0;
+            const idsComPresenca = new Set(presencasAulasVirtuais?.map(p => p.aula_id) || []);
+
+            // Contar grupos onde o aluno tem presença em qualquer sessão
+            presencasVirtuais = Object.values(grupos).filter(ids =>
+              ids.some(id => idsComPresenca.has(id))
+            ).length;
           }
         } catch (error) {
           console.error('Erro ao buscar aulas virtuais:', error);
