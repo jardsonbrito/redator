@@ -171,6 +171,7 @@ export function AlunoBoletimSheet({
       <SheetContent
         side="right"
         className="w-full sm:max-w-2xl lg:max-w-3xl p-0 flex flex-col"
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {/* Header fixo */}
         <SheetHeader className="px-5 pt-5 pb-3 border-b shrink-0">
