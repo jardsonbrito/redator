@@ -196,7 +196,7 @@ async function fetchBoletimData(
 
     supabase
       .from("aulas_virtuais")
-      .select("id, data_aula")
+      .select("id, data_aula, aula_mae_id")
       .contains("turmas_autorizadas", [turma])
       .gte("data_aula", dateStart)
       .lte("data_aula", dateEnd),
@@ -310,8 +310,29 @@ async function fetchBoletimData(
   }));
 
   // --- Métricas ---
-  const totalPresencas = presencas.length;
-  const totalAulasNoPeriodo = (aulasRes.data || []).length;
+  // Agrupar aulas virtuais por unidade pedagógica:
+  // repetições (aula_mae_id != null) se juntam ao grupo da aula mãe
+  const rawAulasList = (aulasRes.data || []) as { id: string; aula_mae_id: string | null }[];
+  const gruposAulas: Record<string, string[]> = {};
+  for (const a of rawAulasList.filter(a => !a.aula_mae_id)) {
+    gruposAulas[a.id] = [a.id];
+  }
+  for (const a of rawAulasList.filter(a => !!a.aula_mae_id)) {
+    if (gruposAulas[a.aula_mae_id!]) {
+      gruposAulas[a.aula_mae_id!].push(a.id);
+    } else {
+      // Aula mãe fora do período — tratar como unidade independente
+      gruposAulas[a.id] = [a.id];
+    }
+  }
+  const totalAulasNoPeriodo = Object.keys(gruposAulas).length;
+
+  // Presença por unidade pedagógica: basta ter entrada em qualquer sessão do grupo
+  const idsComPresenca = new Set(presencas.map(p => p.aula_id));
+  const totalPresencas = Object.values(gruposAulas).filter(ids =>
+    ids.some(id => idsComPresenca.has(id))
+  ).length;
+
   const taxaFrequencia =
     totalAulasNoPeriodo > 0
       ? Math.round((totalPresencas / totalAulasNoPeriodo) * 1000) / 10
