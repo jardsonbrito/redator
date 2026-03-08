@@ -17,7 +17,6 @@ import {
   Search,
   Filter,
   Archive,
-  StickyNote,
   X,
 } from 'lucide-react';
 import { useAdminNotes } from '@/hooks/useAdminNotes';
@@ -224,22 +223,11 @@ const AdminNotes = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <StickyNote className="h-8 w-8" />
-                Minhas Anotações
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Organize suas ideias com texto, imagens e links
-              </p>
-            </div>
-            <Button onClick={handleOpenNew} size="lg">
-              <Plus className="mr-2 h-5 w-5" />
-              Nova Anotação
-            </Button>
-          </div>
+        <div className="flex justify-end">
+          <Button onClick={handleOpenNew} size="lg">
+            <Plus className="mr-2 h-5 w-5" />
+            Nova Anotação
+          </Button>
         </div>
 
         {/* Busca e Filtros */}
