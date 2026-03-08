@@ -461,8 +461,9 @@ const Admin = () => {
       // Processo Seletivo - alunos elegíveis e que já participaram
       const { data: profilesProcesso } = await supabase
         .from('profiles')
-        .select('id, email, participou_processo_seletivo')
-        .eq('user_type', 'aluno');
+        .select('id, email, turma, participou_processo_seletivo')
+        .eq('user_type', 'aluno')
+        .neq('turma', 'VISITANTE');
 
       // Buscar alunos com assinatura ativa
       const { data: assinaturasAtivas } = await supabase
