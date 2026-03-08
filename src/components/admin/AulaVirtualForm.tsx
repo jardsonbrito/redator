@@ -127,6 +127,14 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
       return;
     }
 
+    // Aviso se a data/hora da aula já passou
+    if (formData.eh_aula_ao_vivo && formData.data_aula && formData.horario_fim) {
+      const dataHoraFim = new Date(formData.data_aula + 'T' + formData.horario_fim);
+      if (dataHoraFim < new Date()) {
+        toast.warning('Atenção: a data/hora desta aula já passou. O card ficará com status "Encerrada" imediatamente.', { duration: 6000 });
+      }
+    }
+
     if (formData.eh_aula_ao_vivo && formData.eh_repeticao && !formData.aula_mae_id) {
       toast.error('Selecione a aula original para criar uma repetição');
       setActiveSection('configuracao');

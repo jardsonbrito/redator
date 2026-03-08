@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -18,7 +19,6 @@ import {
   Archive,
   StickyNote,
   X,
-  ArrowLeft,
 } from 'lucide-react';
 import { useAdminNotes } from '@/hooks/useAdminNotes';
 import { useAuth } from '@/hooks/useAuth';
@@ -202,16 +202,23 @@ const AdminNotes = () => {
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-2">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin" className="text-primary font-medium">
+                Dashboard
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-foreground">Anotações</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         {/* Header */}
         <div className="flex flex-col gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/admin')}
-            className="w-fit"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar ao Dashboard
-          </Button>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">

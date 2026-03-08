@@ -170,7 +170,7 @@ const ProcessoSeletivoAdminContent = () => {
       const alunosComPlanoAtivo = new Set(assinaturasAtivas?.map(a => a.aluno_id) || []);
 
       return (profiles || [])
-        .filter(p => !alunosComPlanoAtivo.has(p.id))
+        .filter(p => !alunosComPlanoAtivo.has(p.id) && p.turma !== 'VISITANTE')
         .map(p => ({
           id: p.id,
           nome: p.nome,
