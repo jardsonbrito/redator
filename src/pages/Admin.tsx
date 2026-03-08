@@ -488,10 +488,19 @@ const Admin = () => {
         badge: alunosParticiparam > 0 ? `${alunosParticiparam} já participaram` : undefined
       };
 
-      // Anotações - buscar quantidade e cores
-      const { data: anotacoes } = await supabase
-        .from('admin_notes')
-        .select('cor, arquivado');
+      // Anotações - buscar quantidade e cores (apenas do admin logado)
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('email', (user?.email || '').toLowerCase())
+        .single();
+
+      const { data: anotacoes } = adminData
+        ? await supabase
+            .from('admin_notes')
+            .select('cor, arquivado')
+            .eq('admin_id', adminData.id)
+        : { data: [] };
 
       const anotacoesAtivas = anotacoes?.filter(a => !a.arquivado) || [];
       const totalAnotacoes = anotacoesAtivas.length;
