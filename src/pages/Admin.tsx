@@ -299,8 +299,9 @@ const Admin = () => {
         .from('aulas_virtuais')
         .select('*');
 
+      const hojeDataStr = hoje.toISOString().split('T')[0];
       const aulasAgendadas = aulasVirtuais?.filter(a => {
-        return a.data_aula && new Date(a.data_aula) > hoje;
+        return a.data_aula && a.data_aula >= hojeDataStr;
       }).length || 0;
 
       data["salas-virtuais"] = {
