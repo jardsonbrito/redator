@@ -299,7 +299,7 @@ const Admin = () => {
         .from('aulas_virtuais')
         .select('*');
 
-      const hojeDataStr = hoje.toISOString().split('T')[0];
+      const hojeDataStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
       const aulasAgendadas = aulasVirtuais?.filter(a => {
         return a.data_aula && a.data_aula >= hojeDataStr;
       }).length || 0;
