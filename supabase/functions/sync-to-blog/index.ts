@@ -1,298 +1,310 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const BLOG_AUTHOR_ID = "b4550901-7631-4183-8fc7-484c31545966"; // Jardson Brito
+
+// ─── Utilitários ─────────────────────────────────────────────────────────────
+
+function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .substring(0, 90);
 }
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+function buildSlug(title: string, id: string): string {
+  return `${slugify(title)}-${id.replace(/-/g, "").substring(0, 8)}`;
+}
+
+function mapStatus(appStatus: string | null | undefined): string {
+  return appStatus === "publicado" || appStatus === "published" ? "published" : "draft";
+}
+
+function textToHtml(text: string): string {
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  return normalized
+    .split(/\n+/)
+    .filter((p) => p.trim())
+    .map((p) => `<p style="text-indent:1.25em">${p.trim()}</p>`)
+    .join("");
+}
+
+/**
+ * Detecta o tipo de plataforma de vídeo pela URL.
+ * Retorna: 'youtube' | 'instagram' | 'vimeo' | 'other'
+ */
+function detectVideoType(url: string): string {
+  if (!url) return "other";
+  if (/youtube\.com|youtu\.be/.test(url)) return "youtube";
+  if (/instagram\.com/.test(url)) return "instagram";
+  if (/vimeo\.com/.test(url)) return "vimeo";
+  return "other";
+}
+
+/**
+ * Extrai o ID do vídeo do YouTube de qualquer formato de URL.
+ * Retorna null para URLs não-YouTube.
+ */
+function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /[?&]v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /embed\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
   }
+  return null;
+}
+
+/**
+ * Extrai o shortcode de um reel/post do Instagram.
+ * Ex: https://www.instagram.com/reel/DQU289fkZmj/ → DQU289fkZmj
+ */
+function extractInstagramShortcode(url: string): string | null {
+  const m = url.match(/instagram\.com\/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+// ─── Validação de elegibilidade ──────────────────────────────────────────────
+
+function validateEligibility(
+  table: string,
+  record: Record<string, unknown>
+): string | null {
+  if (table === "temas") {
+    if (!(record.frase_tematica as string)?.trim()) return "Tema sem frase temática.";
+    const hasTexto = [1,2,3,4,5].some((i) => (record[`texto_${i}`] as string)?.trim());
+    if (!hasTexto) return "Tema precisa de ao menos um texto motivador para ser publicado no blog.";
+    if (record.status !== "publicado") return "Tema não está publicado. Publique-o antes de sincronizar com o blog.";
+  }
+  if (table === "videos") {
+    if (!(record.titulo as string)?.trim()) return "Vídeo sem título.";
+    if (!(record.youtube_url as string)?.trim()) return "Vídeo sem URL.";
+    if (record.status_publicacao !== "publicado") return "Vídeo não está publicado. Publique-o antes de sincronizar com o blog.";
+  }
+  if (table === "redacoes") {
+    if (!(record.autor as string)?.trim()) return "Redação sem autor — apenas redações exemplares podem ser sincronizadas.";
+    if (!(record.frase_tematica as string)?.trim()) return "Redação sem frase temática.";
+    if (!(record.conteudo as string)?.trim()) return "Redação sem conteúdo.";
+  }
+  return null;
+}
+
+// ─── Payloads ────────────────────────────────────────────────────────────────
+
+function buildTemaPayload(record: Record<string, unknown>, supabaseUrl: string) {
+  const dadosExtra: Record<string, unknown> = {
+    fraseTematica: record.frase_tematica,
+    eixoTematico: record.eixo_tematico,
+    source_table: "temas",
+    source_id: record.id,
+  };
+
+  for (let i = 1; i <= 5; i++) {
+    const texto = record[`texto_${i}`] as string | null;
+    const fonte = record[`texto_${i}_fonte`] as string | null;
+    if (texto?.trim()) {
+      // FIX BUG 1: aplicar textToHtml para preservar múltiplos parágrafos
+      const textoHtml = textToHtml(texto);
+      dadosExtra[`motivador${i}`] = fonte ? `${textoHtml}<p><br></p><p>${fonte}</p>` : textoHtml;
+    }
+    const imgUrl = (record[`motivator${i}_url`] as string | null) ||
+      (i === 4 ? (record.imagem_texto_4_url as string | null) : null);
+    // FIX BUG 1 (imagem do motivador): também construir URL a partir do file_path
+    const imgFilePath = record[`motivator${i}_file_path`] as string | null;
+    const resolvedImgUrl = imgUrl ||
+      (imgFilePath ? `${supabaseUrl}/storage/v1/object/public/themes/${imgFilePath}` : null);
+    if (resolvedImgUrl) dadosExtra[`motivador${i}Url`] = resolvedImgUrl;
+  }
+
+  // FIX BUG 2: usar cover_file_path quando cover_url está vazio
+  const coverUrl = (record.cover_url as string | null) ||
+    (record.cover_file_path
+      ? `${supabaseUrl}/storage/v1/object/public/themes/${record.cover_file_path}`
+      : null);
+
+  return {
+    title: record.frase_tematica as string,
+    slug: buildSlug(record.frase_tematica as string, record.id as string),
+    content: "",
+    featured_image_url: coverUrl,
+    author_id: BLOG_AUTHOR_ID,
+    tipo: "tema",
+    status: mapStatus(record.status as string),
+    published_at: (record.published_at as string | null) ?? null,
+    dados_extra: dadosExtra,
+  };
+}
+
+function buildVideoPayload(record: Record<string, unknown>) {
+  const url = (record.youtube_url as string) ?? "";
+  const tipoVideo = detectVideoType(url);
+  const youtubeId = tipoVideo === "youtube" ? extractYouTubeId(url) : null;
+  const instagramShortcode = tipoVideo === "instagram" ? extractInstagramShortcode(url) : null;
+
+  return {
+    title: record.titulo as string,
+    slug: buildSlug(record.titulo as string, record.id as string),
+    content: "",
+    featured_image_url:
+      (record.thumbnail_url as string | null) ?? (record.cover_url as string | null) ?? null,
+    author_id: BLOG_AUTHOR_ID,
+    tipo: "video",
+    status: mapStatus(record.status_publicacao as string),
+    published_at: (record.created_at as string | null) ?? null,
+    dados_extra: {
+      linkVideo: url,
+      tipoVideo,
+      youtubeId,
+      instagramShortcode,
+      eixoTematico: record.eixo_tematico ?? null,
+      categoria: record.categoria ?? null,
+      source_table: "videos",
+      source_id: record.id,
+    },
+  };
+}
+
+function buildRedacaoPayload(record: Record<string, unknown>) {
+  const conteudoHtml = textToHtml((record.conteudo as string) ?? "");
+  const dadosExtra: Record<string, unknown> = {
+    fraseTematica: record.frase_tematica,
+    eixoTematico: record.eixo_tematico ?? null,
+    textoRedacao: conteudoHtml,
+    dicaDeEscrita: record.dica_de_escrita ?? null,
+    autor: record.autor,
+    fotoAutor: record.foto_autor ?? null,
+    source_table: "redacoes",
+    source_id: record.id,
+  };
+  if (record.nota_total) dadosExtra.notaTotal = record.nota_total;
+  return {
+    title: record.frase_tematica as string,
+    slug: buildSlug(record.frase_tematica as string, record.id as string),
+    content: conteudoHtml,
+    featured_image_url: (record.pdf_url as string | null) ?? null,
+    author_id: BLOG_AUTHOR_ID,
+    tipo: "redacao_exemplar",
+    status: "published",
+    published_at: new Date().toISOString(),
+    dados_extra: dadosExtra,
+  };
+}
+
+// ─── Handler principal ────────────────────────────────────────────────────────
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+
+  const jsonHeaders = { ...CORS_HEADERS, "Content-Type": "application/json" };
 
   try {
-    const { table, record_id, action } = await req.json()
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const appClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const blogClient = createClient(Deno.env.get("BLOG_SUPABASE_URL")!, Deno.env.get("BLOG_SERVICE_ROLE_KEY")!);
 
-    // Validar parâmetros
-    if (!table || !record_id || !action) {
-      throw new Error('Missing required parameters: table, record_id, action')
+    // 1. Validar token
+    const rawToken = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+    if (!rawToken) return new Response(JSON.stringify({ error: "Token ausente." }), { status: 401, headers: jsonHeaders });
+
+    const { data: tokenRecord, error: tokenErr } = await appClient
+      .from("admin_sync_tokens").select("id, used, expires_at").eq("token", rawToken).maybeSingle();
+
+    if (tokenErr || !tokenRecord)
+      return new Response(JSON.stringify({ error: "Token inválido." }), { status: 401, headers: jsonHeaders });
+    if (tokenRecord.used || new Date(tokenRecord.expires_at) < new Date())
+      return new Response(JSON.stringify({ error: "Token expirado ou já utilizado." }), { status: 401, headers: jsonHeaders });
+
+    await appClient.from("admin_sync_tokens").update({ used: true }).eq("id", tokenRecord.id);
+
+    // 2. Parse body
+    const { table, record_id, action } = await req.json() as {
+      table: "temas" | "videos" | "redacoes"; record_id: string; action: "sync" | "unsync";
+    };
+    if (!table || !record_id || !action)
+      return new Response(JSON.stringify({ error: "Parâmetros obrigatórios ausentes." }), { status: 400, headers: jsonHeaders });
+    if (!["temas","videos","redacoes"].includes(table))
+      return new Response(JSON.stringify({ error: "Tabela inválida." }), { status: 400, headers: jsonHeaders });
+
+    // 3. Buscar registro
+    const { data: record, error: recordErr } = await appClient.from(table).select("*").eq("id", record_id).maybeSingle();
+    if (recordErr || !record)
+      return new Response(JSON.stringify({ error: "Registro não encontrado." }), { status: 404, headers: jsonHeaders });
+
+    // 4. Unsync
+    if (action === "unsync") {
+      const blogPostId = record.blog_post_id as string | null;
+      if (blogPostId)
+        await blogClient.from("posts").update({ status: "archived", updated_at: new Date().toISOString() }).eq("id", blogPostId);
+      await appClient.from(table).update({ publicar_no_blog: false, blog_post_id: null }).eq("id", record_id);
+      return new Response(JSON.stringify({ success: true, message: "Post arquivado no blog." }), { headers: jsonHeaders });
     }
 
-    if (!['temas', 'videos', 'redacoes'].includes(table)) {
-      throw new Error(`Invalid table: ${table}`)
-    }
+    // 5. Elegibilidade
+    const eligibilityError = validateEligibility(table, record);
+    if (eligibilityError)
+      return new Response(JSON.stringify({ error: eligibilityError }), { status: 422, headers: jsonHeaders });
 
-    if (!['sync', 'unsync'].includes(action)) {
-      throw new Error(`Invalid action: ${action}`)
-    }
+    // 6. Payload
+    let payload: Record<string, unknown>;
+    if (table === "temas") payload = buildTemaPayload(record, supabaseUrl);
+    else if (table === "videos") payload = buildVideoPayload(record);
+    else payload = buildRedacaoPayload(record);
+    payload.updated_at = new Date().toISOString();
 
-    // Extrair e validar token do header Authorization
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new Error('Missing or invalid Authorization header')
-    }
-    const token = authHeader.replace('Bearer ', '')
-
-    // Cliente Supabase do App (Redator)
-    const appSupabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
-
-    // Validar token efêmero
-    const { data: tokenData, error: tokenError } = await appSupabase
-      .from('admin_sync_tokens')
-      .select('*')
-      .eq('token', token)
-      .eq('used', false)
-      .gt('expires_at', new Date().toISOString())
-      .single()
-
-    if (tokenError || !tokenData) {
-      throw new Error('Invalid or expired token')
-    }
-
-    // Marcar token como usado
-    await appSupabase
-      .from('admin_sync_tokens')
-      .update({ used: true })
-      .eq('id', tokenData.id)
-
-    // Cliente Supabase do Blog
-    const blogSupabase = createClient(
-      Deno.env.get('BLOG_SUPABASE_URL') ?? '',
-      Deno.env.get('BLOG_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
-
-    // Buscar registro no App
-    const { data: record, error: recordError } = await appSupabase
-      .from(table)
-      .select('*')
-      .eq('id', record_id)
-      .single()
-
-    if (recordError || !record) {
-      throw new Error(`Record not found in ${table}`)
-    }
-
-    if (action === 'unsync') {
-      // Arquivar post no blog
-      if (record.blog_post_id) {
-        await blogSupabase
-          .from('posts')
-          .update({ status: 'archived' })
-          .eq('id', record.blog_post_id)
-
-        // Limpar blog_post_id no App
-        await appSupabase
-          .from(table)
-          .update({
-            blog_post_id: null,
-            publicar_no_blog: false
-          })
-          .eq('id', record_id)
-      }
-
-      return new Response(
-        JSON.stringify({ success: true, action: 'unsync' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Ação: sync
-    let payload: any = {}
-    let tipo = ''
-    let title = ''
-    let slug = ''
-    let content = ''
-    let featuredImage = ''
-    let dadosExtra: any = {}
-
-    // Construir payload baseado no tipo de tabela
-    if (table === 'temas') {
-      if (record.status !== 'publicado') {
-        throw new Error('Tema must have status "publicado" to sync')
-      }
-
-      tipo = 'tema'
-      title = record.frase_tematica
-      slug = generateSlug(title, record.id)
-      featuredImage = record.cover_url || ''
-
-      // Montar textos motivadores no content
-      const textos = []
-      if (record.texto_1) textos.push(`<div class="texto-motivador"><h3>Texto 1</h3>${record.texto_1}</div>`)
-      if (record.texto_2) textos.push(`<div class="texto-motivador"><h3>Texto 2</h3>${record.texto_2}</div>`)
-      if (record.texto_3) textos.push(`<div class="texto-motivador"><h3>Texto 3</h3>${record.texto_3}</div>`)
-      if (record.texto_4) textos.push(`<div class="texto-motivador"><h3>Texto 4</h3>${record.texto_4}</div>`)
-      if (record.texto_5) textos.push(`<div class="texto-motivador"><h3>Texto 5</h3>${record.texto_5}</div>`)
-      content = textos.join('\n\n')
-
-      dadosExtra = {
-        eixoTematico: record.eixo_tematico,
-        motivador1: record.texto_1,
-        motivador2: record.texto_2,
-        motivador3: record.texto_3,
-        motivador4: record.texto_4,
-        motivador5: record.texto_5,
-        motivador4Url: record.motivator4_url,
-        source_table: 'temas',
-        source_id: record.id
-      }
-
-    } else if (table === 'videos') {
-      if (record.status_publicacao !== 'publicado') {
-        throw new Error('Video must have status_publicacao "publicado" to sync')
-      }
-
-      tipo = 'video'
-      title = record.titulo
-      slug = generateSlug(title, record.id)
-      featuredImage = record.cover_url || record.thumbnail_url || ''
-      content = `<p>Assista ao vídeo completo.</p>`
-
-      dadosExtra = {
-        linkVideo: record.youtube_url,
-        tipoVideo: record.platform || 'youtube',
-        youtubeId: record.video_id,
-        autor: record.autor || '',
-        source_table: 'videos',
-        source_id: record.id
-      }
-
-    } else if (table === 'redacoes') {
-      tipo = 'redacao_exemplar'
-      title = record.frase_tematica || 'Redação Exemplar'
-      slug = generateSlug(title, record.id)
-
-      // Texto da redação com indentação
-      content = record.conteudo
-        ? `<div class="redacao-texto">${addIndentToParagraphs(record.conteudo)}</div>`
-        : ''
-
-      dadosExtra = {
-        textoRedacao: content,
-        eixoTematico: record.eixo_tematico || '',
-        autor: record.autor || '',
-        fotoAutor: record.foto_autor || '',
-        source_table: 'redacoes',
-        source_id: record.id
-      }
-    }
-
-    // Verificar se já existe post com mesmo source_id (idempotência)
-    let blogPostId = record.blog_post_id
+    // 7. Idempotência
+    let blogPostId = record.blog_post_id as string | null;
     if (!blogPostId) {
-      const { data: existingPost } = await blogSupabase
-        .from('posts')
-        .select('id')
-        .eq('dados_extra->>source_id', record.id)
-        .eq('dados_extra->>source_table', table)
-        .single()
-
-      if (existingPost) {
-        blogPostId = existingPost.id
+      const { data: existing } = await blogClient.from("posts").select("id")
+        .filter("dados_extra->>source_id", "eq", record_id).maybeSingle();
+      if (existing) {
+        blogPostId = existing.id as string;
+        await appClient.from(table).update({ blog_post_id: blogPostId }).eq("id", record_id);
       }
     }
 
-    payload = {
-      title,
-      slug,
-      content,
-      excerpt: title.substring(0, 200),
-      featured_image_url: featuredImage,
-      author_id: Deno.env.get('BLOG_AUTHOR_ID') || '0503de5c-f9f9-49a1-89be-a89edc4c60be',
-      tipo,
-      status: 'published',
-      published_at: new Date().toISOString(),
-      dados_extra: dadosExtra,
-      comments_enabled: true
-    }
-
-    // Upsert no Blog
-    let blogResult
+    // 8. Upsert
+    let finalBlogPostId: string;
     if (blogPostId) {
-      // UPDATE
-      const { data, error } = await blogSupabase
-        .from('posts')
-        .update(payload)
-        .eq('id', blogPostId)
-        .select()
-        .single()
-
-      if (error) throw error
-      blogResult = data
+      const updatePayload = { ...payload };
+      if (updatePayload.status === "draft") delete updatePayload.status;
+      const { data: updated, error: updateErr } = await blogClient.from("posts").update(updatePayload).eq("id", blogPostId).select("id");
+      if (updateErr) throw updateErr;
+      if (updated && updated.length > 0) {
+        finalBlogPostId = blogPostId;
+      } else {
+        // Post foi deletado do Blog — criar novo
+        console.warn(`[sync-to-blog] blog_post_id ${blogPostId} não existe mais no Blog. Criando novo post.`);
+        const { data: inserted, error: insertErr } = await blogClient.from("posts").insert(payload).select("id").single();
+        if (insertErr) throw insertErr;
+        finalBlogPostId = inserted.id as string;
+      }
     } else {
-      // INSERT
-      const { data, error } = await blogSupabase
-        .from('posts')
-        .insert(payload)
-        .select()
-        .single()
-
-      if (error) throw error
-      blogResult = data
-      blogPostId = data.id
+      const { data: inserted, error: insertErr } = await blogClient.from("posts").insert(payload).select("id").single();
+      if (insertErr) throw insertErr;
+      finalBlogPostId = inserted.id as string;
     }
 
-    // Atualizar blog_post_id no App
-    await appSupabase
-      .from(table)
-      .update({
-        blog_post_id: blogPostId,
-        publicar_no_blog: true
-      })
-      .eq('id', record_id)
+    // 9. Salvar blog_post_id no App
+    await appClient.from(table).update({ blog_post_id: finalBlogPostId, publicar_no_blog: true }).eq("id", record_id);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        action: 'sync',
-        blog_post_id: blogPostId,
-        blog_post_slug: slug
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-
-  } catch (error) {
-    console.error('Error in sync-to-blog:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
+    return new Response(JSON.stringify({ success: true, blog_post_id: finalBlogPostId }), { headers: jsonHeaders });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro interno.";
+    console.error("[sync-to-blog]", message);
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
   }
-})
-
-// Utilitários
-function generateSlug(title: string, id: string): string {
-  const slug = title
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .substring(0, 60)
-
-  return `${slug}-${id.substring(0, 8)}`
-}
-
-function addIndentToParagraphs(html: string): string {
-  return html.replace(/<p>/g, '<p style="text-indent: 2.5rem;">')
-}
+});
