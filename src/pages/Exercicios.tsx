@@ -49,14 +49,14 @@ const Exercicios = () => {
   } = useStudentAuth();
   const navigate = useNavigate();
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
-  
+
   // Configurar título da página
   usePageTitle('Exercícios');
   const [filteredExercicios, setFilteredExercicios] = useState<Exercicio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [tipoFilter, setTipoFilter] = useState("");
-  const tiposDisponiveis = ['Google Forms', 'Redação com Frase Temática'];
+  const tiposDisponiveis = ['Google Forms', 'Redação com Frase Temática', 'Produção Guiada'];
   useEffect(() => {
     fetchExercicios();
   }, []);
@@ -144,6 +144,8 @@ const Exercicios = () => {
       }
     } else if (exercicio.tipo === 'Redação com Frase Temática' && exercicio.tema_id) {
       navigate(`/temas/${exercicio.tema_id}?exercicio=${exercicio.id}`);
+    } else if (exercicio.tipo === 'Produção Guiada') {
+      navigate(`/exercicios/${exercicio.id}/producao-guiada`);
     }
   };
   const fetchExercicios = async () => {
@@ -290,6 +292,7 @@ const Exercicios = () => {
           </div>
         </main>
       </div>
+
     </TooltipProvider>
   </ProtectedRoute>;
 };

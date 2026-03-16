@@ -66,19 +66,25 @@ export const AdminExerciseCard = ({
 
   const fetchSubmissionsCount = async () => {
     try {
-      // Buscar a frase temática do tema vinculado ao exercício
+      if (exercicio.tipo === 'Produção Guiada') {
+        const { count, error } = await supabase
+          .from("redacoes_exercicio")
+          .select("*", { count: "exact", head: true })
+          .eq("exercicio_id", exercicio.id);
+        if (error) throw error;
+        setSubmissionsCount(count || 0);
+        return;
+      }
+
       if (!exercicio.temas?.frase_tematica) {
         setSubmissionsCount(0);
         return;
       }
 
-      const fraseTematica = exercicio.temas.frase_tematica;
-
-      // Buscar redações que têm essa frase temática (excluindo soft-deleted)
       const { count, error } = await supabase
         .from("redacoes_enviadas")
         .select("*", { count: "exact", head: true })
-        .eq("frase_tematica", fraseTematica)
+        .eq("frase_tematica", exercicio.temas.frase_tematica)
         .is("deleted_at", null);
 
       if (error) throw error;
@@ -211,8 +217,8 @@ export const AdminExerciseCard = ({
           {/* Rodapé com contador e menu de ações */}
           <div className="pt-3 border-t border-gray-200">
             <div className="flex items-center justify-between">
-              {/* Contador de envios - clicável apenas para Redação com Frase Temática */}
-              {exercicio.tipo === 'Redação com Frase Temática' ? (
+              {/* Contador de envios - clicável para Redação e Produção Guiada */}
+              {(exercicio.tipo === 'Redação com Frase Temática' || exercicio.tipo === 'Produção Guiada') ? (
                 <button
                   onClick={() => setShowSubmissionsModal(true)}
                   className="flex items-center gap-2 text-sm hover:bg-purple-50 px-2 py-1 rounded-md transition-colors group"
@@ -261,10 +267,10 @@ export const AdminExerciseCard = ({
                       Visualizar exercício
                     </DropdownMenuItem>
                   )}
-                  {exercicio.tipo === 'Redação com Frase Temática' && (
+                  {(exercicio.tipo === 'Redação com Frase Temática' || exercicio.tipo === 'Produção Guiada') && (
                     <DropdownMenuItem onClick={() => {
                       setDropdownOpen(false);
-                      setShowSubmissionsModal(true);
+                      setTimeout(() => setShowSubmissionsModal(true), 100);
                     }} className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors">
                       <FileText className="mr-2 h-4 w-4" />
                       Alunos que Enviaram
@@ -288,6 +294,7 @@ export const AdminExerciseCard = ({
       {/* Modal de lista de alunos que enviaram */}
       <ExercicioSubmissionsModal
         isOpen={showSubmissionsModal}
+        exercicioTipo={exercicio.tipo}
         onClose={() => setShowSubmissionsModal(false)}
         exercicioId={exercicio.id}
         exercicioTitulo={exercicio.titulo}

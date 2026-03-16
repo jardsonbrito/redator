@@ -24,6 +24,8 @@ export interface RedacaoCorretor {
   corrigida?: boolean;
   congelada?: boolean;
   data_descongelamento?: string | null;
+  // Tipo do exercício pai — preenchido apenas quando tipo_redacao === 'exercicio'
+  exercicio_tipo?: string | null;
 }
 
 export const useCorretorRedacoes = (corretorEmail: string) => {
@@ -39,11 +41,11 @@ export const useCorretorRedacoes = (corretorEmail: string) => {
 
       if (error) throw error;
 
-      // Type cast the data to ensure compatibility
       const redacoesFormatadas = (data || []).map(item => ({
         ...item,
         tipo_redacao: item.tipo_redacao as string,
-        status_minha_correcao: item.status_minha_correcao as 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida' | 'devolvida'
+        status_minha_correcao: item.status_minha_correcao as 'pendente' | 'em_correcao' | 'incompleta' | 'corrigida' | 'devolvida',
+        exercicio_tipo: (item as any).exercicio_tipo ?? null,
       }));
 
       return redacoesFormatadas;

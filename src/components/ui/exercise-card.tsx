@@ -1,9 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, ExternalLink, FileText, Calendar, Users } from "lucide-react";
+import { Clock, ExternalLink, FileText, Calendar, CheckCircle, Hourglass } from "lucide-react";
 import { pickCoverImage, getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useExerciseSubmission } from "@/hooks/useExerciseSubmission";
 
 interface ExerciseCardProps {
@@ -50,8 +51,11 @@ export function ExerciseCard({
   onDelete,
   onToggleStatus
 }: ExerciseCardProps) {
+  const navigate = useNavigate();
   // Hook para verificar se o aluno já participou do exercício
   const { data: submissionData } = useExerciseSubmission(exercise.id);
+  const submissionDetails = submissionData?.submissionDetails;
+  const isProducaoGuiada = exercise.tipo === 'Produção Guiada';
 
   // Implementar sistema de múltiplas fontes de imagem com fallback automático
   const imageSources = pickCoverImage({
@@ -278,8 +282,31 @@ export function ExerciseCard({
                     </Button>
                   )}
 
-                  {/* Durante o período - já enviou */}
-                  {availability.status === 'disponivel' && submissionData?.hasSubmitted && (
+                  {/* Produção Guiada - já enviou (disponível ou encerrada) */}
+                  {isProducaoGuiada && submissionData?.hasSubmitted && availability.status !== 'agendado' && (
+                    <div className="space-y-2">
+                      {submissionDetails?.corrigida ? (
+                        <div className="flex items-center gap-1.5 text-sm text-green-700 font-medium">
+                          <CheckCircle className="w-4 h-4" />
+                          Corrigida — Nota: {submissionDetails.nota_total ?? '—'}/1000
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-sm text-amber-600">
+                          <Hourglass className="w-4 h-4" />
+                          Aguardando correção
+                        </div>
+                      )}
+                      <Button
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                        onClick={() => navigate(`/exercicios/${exercise.id}/producao-guiada`)}
+                      >
+                        Ver minha atividade
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Outros tipos - durante o período - já enviou */}
+                  {!isProducaoGuiada && availability.status === 'disponivel' && submissionData?.hasSubmitted && (
                     <Button
                       className="w-full bg-blue-600 text-white font-semibold"
                       disabled
@@ -288,8 +315,8 @@ export function ExerciseCard({
                     </Button>
                   )}
 
-                  {/* Após o período - com envio */}
-                  {availability.status === 'encerrado' && submissionData?.hasSubmitted && (
+                  {/* Outros tipos - após o período - com envio */}
+                  {!isProducaoGuiada && availability.status === 'encerrado' && submissionData?.hasSubmitted && (
                     <Button
                       className="w-full bg-blue-600 text-white font-semibold"
                       disabled

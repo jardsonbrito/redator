@@ -19,6 +19,7 @@ import Biblioteca from "./pages/Biblioteca";
 import RedacoesExemplar from "./pages/RedacoesExemplar";
 import Top5 from "./pages/Top5";
 import Exercicios from "./pages/Exercicios";
+import ProducaoGuiadaPage from "./pages/ProducaoGuiadaPage";
 import EnvieRedacao from "./pages/EnvieRedacao";
 import MinhasRedacoesList from "./pages/MinhasRedacoesList";
 import AlunoLousaList from "./components/student/AlunoLousaList";
@@ -127,6 +128,7 @@ function App() {
                   <Route path="/simulados/:simuladoId/redacao-corrigida" element={<ProtectedStudentRoute><SimuladoRedacaoCorrigida /></ProtectedStudentRoute>} />
                   <Route path="/processo-seletivo" element={<ProtectedStudentRoute><ProcessoSeletivo /></ProtectedStudentRoute>} />
                   <Route path="/exercicios" element={<ProtectedStudentRoute><Exercicios /></ProtectedStudentRoute>} />
+                  <Route path="/exercicios/:id/producao-guiada" element={<ProtectedStudentRoute><ProducaoGuiadaPage /></ProtectedStudentRoute>} />
                   <Route path="/envie-redacao" element={<ProtectedStudentRoute><EnvieRedacao /></ProtectedStudentRoute>} />
                   <Route path="/minhas-redacoes" element={<ProtectedStudentRoute><MinhasRedacoesList /></ProtectedStudentRoute>} />
                   <Route path="/minhas-redacoes/:redacaoId" element={<ProtectedStudentRoute><RedacaoRegularDetalhes /></ProtectedStudentRoute>} />

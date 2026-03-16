@@ -2,6 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "./useStudentAuth";
 
+export interface ExerciseSubmissionDetails {
+  id: string;
+  data_envio: string | null;
+  status_corretor_1: string | null;
+  corrigida: boolean;
+  nota_total: number | null;
+  data_correcao: string | null;
+  comentario_admin: string | null;
+  redacao_texto: string | null;
+}
+
 export const useExerciseSubmission = (exerciseId: string) => {
   const { studentData } = useStudentAuth();
 
@@ -9,30 +20,36 @@ export const useExerciseSubmission = (exerciseId: string) => {
     queryKey: ['exercise-submission', exerciseId, studentData.email],
     queryFn: async () => {
       if (!studentData.email) {
-        return { hasSubmitted: false };
+        return { hasSubmitted: false, submissionDetails: null as ExerciseSubmissionDetails | null };
       }
 
-      // Normalizar email para busca (remover espaços e converter para lowercase)
       const normalizedEmail = studentData.email.toLowerCase().trim();
 
-      // Primeiro, buscar a frase_tematica do exercício
+      // 1. Verificar em redacoes_exercicio (cobre Produção Guiada e qualquer tipo direto)
+      const { data: exercicioSubmission } = await supabase
+        .from('redacoes_exercicio')
+        .select('id, data_envio, status_corretor_1, corrigida, nota_total, data_correcao, comentario_admin, redacao_texto')
+        .eq('exercicio_id', exerciseId)
+        .ilike('email_aluno', normalizedEmail)
+        .limit(1);
+
+      if (exercicioSubmission && exercicioSubmission.length > 0) {
+        return { hasSubmitted: true, submissionData: exercicioSubmission[0], submissionDetails: exercicioSubmission[0] as ExerciseSubmissionDetails };
+      }
+
+      // 2. Fallback: verificar em redacoes_enviadas via frase_tematica (Redação com Frase Temática)
       const { data: exerciseData, error: exerciseError } = await supabase
         .from('exercicios')
-        .select(`
-          tema_id,
-          temas!inner(frase_tematica)
-        `)
+        .select(`tema_id, temas!inner(frase_tematica)`)
         .eq('id', exerciseId)
         .single();
 
       if (exerciseError || !exerciseData?.temas?.frase_tematica) {
-        console.error('Erro ao buscar dados do exercício:', exerciseError);
         return { hasSubmitted: false };
       }
 
       const fraseTematica = exerciseData.temas.frase_tematica;
 
-      // Buscar se existe redação para esta frase temática e email
       const { data, error } = await supabase
         .from('redacoes_enviadas')
         .select('*')
@@ -44,18 +61,11 @@ export const useExerciseSubmission = (exerciseId: string) => {
 
       if (error) {
         console.error('Erro ao verificar submissão do exercício:', error);
-        return { hasSubmitted: false };
+        return { hasSubmitted: false, submissionDetails: null as ExerciseSubmissionDetails | null };
       }
 
-      // Extrair o primeiro item se houver dados
       const submissionData = data && data.length > 0 ? data[0] : null;
-
-      const result = {
-        hasSubmitted: !!submissionData,
-        submissionData: submissionData
-      };
-
-      return result;
+      return { hasSubmitted: !!submissionData, submissionData, submissionDetails: null as ExerciseSubmissionDetails | null };
     },
     enabled: !!studentData.email && !!exerciseId
   });

@@ -113,6 +113,20 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
           .single();
         data = result.data;
         error = result.error;
+      } else if (redacao.tipo_redacao === 'exercicio' && redacao.exercicio_tipo === 'Produção Guiada') {
+        // Produção Guiada: nota final já calculada e armazenada em nota_total
+        const result = await supabase
+          .from('redacoes_exercicio')
+          .select('nota_total')
+          .eq('id', redacao.id)
+          .single();
+        if (!result.error && result.data) {
+          setNotasRedacoes(prev => ({
+            ...prev,
+            [redacao.id]: { c1: null, c2: null, c3: null, c4: null, c5: null, total: result.data.nota_total }
+          }));
+        }
+        return;
       } else if (redacao.tipo_redacao === 'exercicio') {
         const result = await supabase
           .from('redacoes_exercicio')
@@ -218,7 +232,18 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
           {/* Exibir notas para redações corrigidas */}
           {redacao.status_minha_correcao === 'corrigida' && (
             <div className="mb-2">
-              {notasRedacoes[redacao.id] ? (
+              {redacao.exercicio_tipo === 'Produção Guiada' ? (
+                /* Produção Guiada: exibe só nota final (sem C1-C5) */
+                notasRedacoes[redacao.id] ? (
+                  <div className="font-semibold text-purple-700 bg-purple-100 inline-block px-2 py-1 rounded text-xs sm:text-sm">
+                    Nota final: {notasRedacoes[redacao.id].total ?? 0}/1000
+                  </div>
+                ) : (
+                  <div className="text-xs sm:text-sm text-muted-foreground italic">
+                    Nota ainda não disponível
+                  </div>
+                )
+              ) : notasRedacoes[redacao.id] ? (
                 <div className="text-xs sm:text-sm">
                   <div className="flex flex-wrap gap-1 sm:gap-2 mb-1">
                     <span className="text-red-600">C1: {notasRedacoes[redacao.id].c1 ?? 0}</span>

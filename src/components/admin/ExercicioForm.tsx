@@ -3,12 +3,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { uploadExerciseCover, getEffectiveCover, validateExercisePeriod } from "@/utils/exerciseUtils";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 
@@ -18,6 +19,12 @@ interface Tema {
   eixo_tematico: string;
   cover_url?: string;
   cover_file_path?: string;
+}
+
+interface CriterioForm {
+  id?: string;
+  nome: string;
+  ordem: number;
 }
 
 interface ExercicioEditando {
@@ -37,6 +44,7 @@ interface ExercicioEditando {
   hora_inicio?: string;
   data_fim?: string;
   hora_fim?: string;
+  enunciado?: string;
 }
 
 interface ExercicioFormProps {
@@ -72,9 +80,15 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
   const [temaSearch, setTemaSearch] = useState("");
   const [showTemaDropdown, setShowTemaDropdown] = useState(false);
 
+  const [enunciado, setEnunciado] = useState("");
+  const [criterios, setCriterios] = useState<CriterioForm[]>([]);
+  const [enunciadoBloqueado, setEnunciadoBloqueado] = useState(false);
+  const [criteriosBloqueados, setCriteriosBloqueados] = useState(false);
+
   const tiposDisponiveis = [
     'Google Forms',
-    'Redação com Frase Temática'
+    'Redação com Frase Temática',
+    'Produção Guiada',
   ];
 
   const turmasDisponiveis = TURMAS_VALIDAS;
@@ -103,6 +117,7 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
           setHoraInicio(exercicioEditando.hora_inicio || "");
           setDataFim(exercicioEditando.data_fim || "");
           setHoraFim(exercicioEditando.hora_fim || "");
+          setEnunciado(exercicioEditando.enunciado || "");
 
           // Se tem tema_id, buscar o tema para mostrar na busca
           if (exercicioEditando.tema_id && temas.length > 0) {
@@ -110,6 +125,29 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
             if (tema) {
               setTemaSearch(tema.frase_tematica);
             }
+          }
+
+          // Se for Produção Guiada: carregar critérios e verificar se há submissões
+          if (exercicioEditando.tipo === 'Produção Guiada') {
+            const [criteriosRes, submissoesRes] = await Promise.all([
+              supabase
+                .from("producao_guiada_criterios")
+                .select("id, nome, ordem")
+                .eq("exercicio_id", exercicioEditando.id)
+                .order("ordem"),
+              supabase
+                .from("redacoes_exercicio")
+                .select("id", { count: "exact", head: true })
+                .eq("exercicio_id", exercicioEditando.id),
+            ]);
+
+            if (criteriosRes.data) {
+              setCriterios(criteriosRes.data.map(c => ({ id: c.id, nome: c.nome, ordem: c.ordem })));
+            }
+
+            const temSubmissoes = (submissoesRes.count ?? 0) > 0;
+            setEnunciadoBloqueado(temSubmissoes);
+            setCriteriosBloqueados(temSubmissoes);
           }
         } catch (error: any) {
           toast.error("Erro ao carregar dados do exercício: " + error.message);
@@ -148,6 +186,15 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
       toast.error("Erro ao carregar temas");
     }
   };
+
+  const addCriterio = () =>
+    setCriterios(prev => [...prev, { nome: "", ordem: prev.length }]);
+
+  const removeCriterio = (index: number) =>
+    setCriterios(prev => prev.filter((_, i) => i !== index).map((c, i) => ({ ...c, ordem: i })));
+
+  const updateCriterioNome = (index: number, nome: string) =>
+    setCriterios(prev => prev.map((c, i) => i === index ? { ...c, nome } : c));
 
   const handleTurmaChange = (turma: string, checked: boolean) => {
     if (checked) {
@@ -205,6 +252,21 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
       return;
     }
 
+    if (tipo === 'Produção Guiada') {
+      if (!enunciado.trim()) {
+        toast.error("O enunciado é obrigatório para Produção Guiada.");
+        return;
+      }
+      if (criterios.length === 0) {
+        toast.error("Adicione pelo menos um critério de avaliação.");
+        return;
+      }
+      if (criterios.some(c => !c.nome.trim())) {
+        toast.error("Todos os critérios precisam ter nome.");
+        return;
+      }
+    }
+
     if (tipo === 'Redação com Frase Temática' && !temaId) {
       // Tentar encontrar tema por correspondência exata
       const temaEncontrado = temas.find(t => t.frase_tematica === temaSearch);
@@ -242,37 +304,60 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
         tema_id: tipo === 'Redação com Frase Temática' ? temaId : null,
         cover_url: finalCoverUrl || null,
         cover_upload_path: finalCoverUploadPath || null,
-        // Manter compatibilidade com campo legado
         imagem_capa_url: tipo === 'Google Forms' ? (imagemCapaUrl || null) : null,
         turmas_autorizadas: turmasAutorizadas,
         permite_visitante: permiteVisitante,
         ativo,
         abrir_aba_externa: abrirAbaExterna,
-        // Agendamento agora é obrigatório para todos os tipos
         data_inicio: dataInicio,
         hora_inicio: horaInicio,
         data_fim: dataFim,
-        hora_fim: horaFim
+        hora_fim: horaFim,
+        enunciado: tipo === 'Produção Guiada' ? enunciado.trim() : null,
       };
 
       let error;
+      let savedExercicioId: string | null = null;
 
       if (exercicioEditando) {
-        // Atualizar exercício existente
         const result = await supabase
           .from("exercicios")
           .update(exercicioData)
           .eq("id", exercicioEditando.id);
         error = result.error;
+        savedExercicioId = exercicioEditando.id;
       } else {
-        // Criar novo exercício
         const result = await supabase
           .from("exercicios")
-          .insert(exercicioData);
+          .insert(exercicioData)
+          .select("id")
+          .single();
         error = result.error;
+        savedExercicioId = result.data?.id ?? null;
       }
 
       if (error) throw error;
+
+      // Salvar critérios para Produção Guiada
+      if (tipo === 'Produção Guiada' && savedExercicioId && !criteriosBloqueados) {
+        // Replace-all: apaga os antigos e insere os novos
+        const { error: deleteError } = await supabase
+          .from("producao_guiada_criterios")
+          .delete()
+          .eq("exercicio_id", savedExercicioId);
+        if (deleteError) throw deleteError;
+
+        const { error: insertError } = await supabase
+          .from("producao_guiada_criterios")
+          .insert(
+            criterios.map((c, i) => ({
+              exercicio_id: savedExercicioId,
+              nome: c.nome.trim(),
+              ordem: i,
+            }))
+          );
+        if (insertError) throw insertError;
+      }
 
       toast.success(exercicioEditando ? "Exercício atualizado com sucesso!" : "Exercício criado com sucesso!");
       
@@ -300,6 +385,10 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
         setHoraFim("");
         setTemaSearch("");
         setShowTemaDropdown(false);
+        setEnunciado("");
+        setCriterios([]);
+        setEnunciadoBloqueado(false);
+        setCriteriosBloqueados(false);
       }
 
     } catch (error) {
@@ -488,6 +577,86 @@ export const ExercicioForm = ({ mode = 'create', exercicioEditando, onSuccess, o
                         ⚠️ Digite mais caracteres ou clique em um tema da lista para selecionar
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Produção Guiada: enunciado e critérios */}
+                {tipo === 'Produção Guiada' && (
+                  <div className="space-y-4 mt-2">
+                    {/* Aviso de bloqueio */}
+                    {enunciadoBloqueado && (
+                      <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span>Há respostas enviadas para este exercício. O enunciado e os critérios não podem ser alterados.</span>
+                      </div>
+                    )}
+
+                    {/* Enunciado */}
+                    <div>
+                      <Label className="text-sm font-medium mb-1 block">Enunciado da atividade</Label>
+                      <Textarea
+                        value={enunciado}
+                        onChange={(e) => setEnunciado(e.target.value)}
+                        placeholder="Digite o enunciado da atividade..."
+                        rows={6}
+                        readOnly={enunciadoBloqueado}
+                        className={cn(
+                          "text-sm resize-none",
+                          enunciadoBloqueado && "bg-gray-50 text-gray-500 cursor-not-allowed"
+                        )}
+                      />
+                    </div>
+
+                    {/* Critérios */}
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">Critérios de avaliação</Label>
+                      <div className="space-y-2">
+                        {criterios.map((c, i) => (
+                          <div key={i} className="flex gap-2 items-center">
+                            <Input
+                              value={c.nome}
+                              onChange={(e) => updateCriterioNome(i, e.target.value)}
+                              placeholder={`Critério ${i + 1}`}
+                              readOnly={criteriosBloqueados}
+                              className={cn(
+                                "text-sm",
+                                criteriosBloqueados && "bg-gray-50 text-gray-500 cursor-not-allowed"
+                              )}
+                            />
+                            {!criteriosBloqueados && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeCriterio(i)}
+                                className="shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {!criteriosBloqueados && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addCriterio}
+                          className="mt-2 flex items-center gap-1 text-sm"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Adicionar critério
+                        </Button>
+                      )}
+
+                      {criterios.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          {criterios.length} {criterios.length === 1 ? 'critério' : 'critérios'} · Nota máxima: {criterios.length * 200} pts · Nota final convertida para 0–1000
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
