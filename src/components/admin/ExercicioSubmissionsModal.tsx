@@ -29,6 +29,7 @@ interface SubmissionData {
   aluno_id: string | null;
   redacao_texto: string | null;
   data_envio: string | null;
+  ciente?: boolean;
 }
 
 interface ExercicioSubmissionsModalProps {
@@ -81,7 +82,24 @@ export const ExercicioSubmissionsModal = ({
           aluno_id: null,
           redacao_texto: r.redacao_texto,
           data_envio: r.data_envio,
-        })).sort((a, b) => {
+          ciente: false,
+        }));
+
+        // Verificar ciência para submissões devolvidas
+        const devolvidas = mappedData.filter(m => m.status === "devolvida");
+        if (devolvidas.length > 0) {
+          const { data: visualizacoes } = await supabase
+            .from("redacao_devolucao_visualizacoes")
+            .select("redacao_id, email_aluno")
+            .in("redacao_id", devolvidas.map(d => d.id));
+
+          if (visualizacoes) {
+            const cienteSet = new Set(visualizacoes.map(v => v.redacao_id));
+            mappedData.forEach(m => { if (cienteSet.has(m.id)) m.ciente = true; });
+          }
+        }
+
+        mappedData.sort((a, b) => {
           if (a.corrigida && !b.corrigida) return -1;
           if (!a.corrigida && b.corrigida) return 1;
           if (a.corrigida && b.corrigida) return (b.nota_total ?? 0) - (a.nota_total ?? 0);
@@ -257,8 +275,8 @@ export const ExercicioSubmissionsModal = ({
                       </TableCell>
                       <TableCell className="text-center">
                         {submission.status === 'devolvida' ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-orange-100 text-orange-700">
-                            Devolvida
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${submission.ciente ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {submission.ciente ? 'Devolvida — Ciente' : 'Devolvida'}
                           </span>
                         ) : submission.corrigida ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-green-100 text-green-800">
@@ -279,7 +297,7 @@ export const ExercicioSubmissionsModal = ({
                             className="text-xs h-7 px-2 border-purple-200 text-purple-700 hover:bg-purple-50"
                           >
                             <Edit className="w-3 h-3 mr-1" />
-                            {submission.corrigida ? "Ver/Editar" : "Corrigir"}
+                            {submission.corrigida ? "Ver/Editar" : submission.status === 'devolvida' ? "Devolver/Editar" : "Corrigir"}
                           </Button>
                         </TableCell>
                       )}

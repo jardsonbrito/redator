@@ -11,6 +11,7 @@ export interface ExerciseSubmissionDetails {
   data_correcao: string | null;
   comentario_admin: string | null;
   redacao_texto: string | null;
+  motivo_devolucao: string | null;
 }
 
 export const useExerciseSubmission = (exerciseId: string) => {
@@ -28,7 +29,7 @@ export const useExerciseSubmission = (exerciseId: string) => {
       // 1. Verificar em redacoes_exercicio (cobre Produção Guiada e qualquer tipo direto)
       const { data: exercicioSubmission } = await supabase
         .from('redacoes_exercicio')
-        .select('id, data_envio, status_corretor_1, corrigida, nota_total, data_correcao, comentario_admin, redacao_texto')
+        .select('id, data_envio, status_corretor_1, corrigida, nota_total, data_correcao, comentario_admin, redacao_texto, motivo_devolucao')
         .eq('exercicio_id', exerciseId)
         .ilike('email_aluno', normalizedEmail)
         .limit(1);

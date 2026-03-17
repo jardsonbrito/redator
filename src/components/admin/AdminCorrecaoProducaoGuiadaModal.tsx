@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, BookOpen, ClipboardList, ArrowLeft, Copy, Check } from "lucide-react";
+import { Loader2, BookOpen, ClipboardList, ArrowLeft, Copy, Check, RotateCcw } from "lucide-react";
 
 interface Criterio {
   id: string;
@@ -54,6 +54,8 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  const [showDevolverModal, setShowDevolverModal] = useState(false);
+  const [motivoDevolucao, setMotivoDevolucao] = useState("");
 
   const somaObtida = Object.values(notasPorCriterio).reduce((acc, n) => acc + n, 0);
   const somaMaxima = criterios.length * MAX_POR_CRITERIO;
@@ -149,6 +151,34 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
       setTimeout(() => setCopiado(false), 2500);
     } catch {
       toast.error("Não foi possível copiar. Tente manualmente.");
+    }
+  };
+
+  const handleDevolver = async () => {
+    if (!submissao || !motivoDevolucao.trim()) return;
+    setSaving(true);
+    try {
+      await supabase
+        .from("redacoes_exercicio")
+        .update({
+          status_corretor_1: "devolvida",
+          motivo_devolucao: motivoDevolucao.trim(),
+          corrigida: false,
+          nota_total: null,
+          data_correcao: null,
+        })
+        .eq("id", submissao.id);
+
+      toast.success("Atividade devolvida ao aluno.");
+      setShowDevolverModal(false);
+      setMotivoDevolucao("");
+      onSucesso();
+      onClose();
+    } catch (err) {
+      console.error("Erro ao devolver atividade:", err);
+      toast.error("Erro ao devolver a atividade.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -249,6 +279,7 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -256,9 +287,9 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
             Corrigir atividade — {exercicioTitulo}
           </DialogTitle>
           {submissao && (
-            <p className="text-sm text-gray-600 mt-1">
-              {submissao.nome_aluno} · {submissao.email_aluno}
-              {submissao.turma ? ` · ${submissao.turma}` : ""}
+            <p className="text-sm mt-1">
+              <span className="font-semibold text-purple-700">{submissao.nome_aluno}</span>
+              {submissao.turma ? <span className="text-gray-500"> · Turma {submissao.turma}</span> : ""}
             </p>
           )}
         </DialogHeader>
@@ -401,6 +432,19 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
               </Button>
             </div>
 
+            {/* Botão Devolver */}
+            <div className="pt-1 border-t border-gray-100">
+              <Button
+                variant="ghost"
+                onClick={() => setShowDevolverModal(true)}
+                disabled={saving}
+                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 text-sm"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Devolver ao aluno
+              </Button>
+            </div>
+
             {!todosCriteriosPreenchidos && criterios.length > 0 && (
               <p className="text-xs text-amber-600 text-center">
                 Selecione a nota de todos os {criterios.length}{" "}
@@ -411,5 +455,53 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Dialog de devolução */}
+    <Dialog open={showDevolverModal} onOpenChange={(open) => { if (!open) { setShowDevolverModal(false); setMotivoDevolucao(""); } }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <RotateCcw className="w-5 h-5" />
+            Devolver atividade ao aluno
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-gray-600">
+            A atividade será devolvida ao aluno para ajustes. Ele poderá reeditar e reenviar após confirmar ciência.
+          </p>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">
+              Motivo da devolução <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              value={motivoDevolucao}
+              onChange={(e) => setMotivoDevolucao(e.target.value)}
+              placeholder="Explique ao aluno o que precisa ser ajustado..."
+              rows={4}
+              className="text-sm resize-none"
+            />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button
+              variant="outline"
+              onClick={() => { setShowDevolverModal(false); setMotivoDevolucao(""); }}
+              disabled={saving}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDevolver}
+              disabled={saving || !motivoDevolucao.trim()}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+              Confirmar devolução
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };

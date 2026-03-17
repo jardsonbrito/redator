@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, ExternalLink, FileText, Calendar, CheckCircle, Hourglass } from "lucide-react";
+import { Clock, ExternalLink, FileText, Calendar, CheckCircle, Hourglass, RotateCcw } from "lucide-react";
 import { pickCoverImage, getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -289,6 +289,11 @@ export function ExerciseCard({
                         <div className="flex items-center gap-1.5 text-sm text-green-700 font-medium">
                           <CheckCircle className="w-4 h-4" />
                           Corrigida — Nota: {submissionDetails.nota_total ?? '—'}/1000
+                        </div>
+                      ) : submissionDetails?.status_corretor_1 === 'devolvida' ? (
+                        <div className="flex items-center gap-1.5 text-sm text-red-600 font-medium">
+                          <RotateCcw className="w-4 h-4" />
+                          Devolvida — ajustes necessários
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-sm text-amber-600">
