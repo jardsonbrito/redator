@@ -16,6 +16,7 @@ interface MonthlyActivity {
   year: number;
   essays_regular: number;
   essays_simulado: number;
+  exercises_producao_guiada: number;
   lousas_concluidas: number;
   lives_participei: number;
   gravadas_assistidas: number;
@@ -69,10 +70,11 @@ export const MinhasConquistas = () => {
           const monthActivity = await loadMonthlyActivity(emailBusca, month, year);
           
           // Só adicionar se houver alguma atividade no mês
-          const hasActivity = monthActivity.essays_regular > 0 || 
-                             monthActivity.essays_simulado > 0 || 
-                             monthActivity.lousas_concluidas > 0 || 
-                             monthActivity.lives_participei > 0 || 
+          const hasActivity = monthActivity.essays_regular > 0 ||
+                             monthActivity.essays_simulado > 0 ||
+                             monthActivity.exercises_producao_guiada > 0 ||
+                             monthActivity.lousas_concluidas > 0 ||
+                             monthActivity.lives_participei > 0 ||
                              monthActivity.gravadas_assistidas > 0;
           
           if (hasActivity) {
@@ -131,13 +133,15 @@ export const MinhasConquistas = () => {
         .eq('email_aluno', emailBusca)
         .gte('data_envio', monthStart.toISOString())
         .lt('data_envio', monthEnd.toISOString())
-        .is('devolvida_por', null)
+        .neq('status_corretor_1', 'devolvida')
     ]);
 
     // === CONTAR REDAÇÕES ===
     const regularesFiltradas = (redacoesRegulares.data || []).filter(r => r.status !== 'devolvida');
-    const regularCount = regularesFiltradas.length + (redacoesExercicio.data || []).length;
+    const regularCount = regularesFiltradas.length;
     const simuladoCount = (redacoesSimulado.data || []).length;
+    // Produção Guiada é exercício, não redação — contado separadamente
+    const pgCount = (redacoesExercicio.data || []).length;
 
     // === OUTRAS ATIVIDADES ===
     
@@ -178,6 +182,7 @@ export const MinhasConquistas = () => {
     return {
       essays_regular: regularCount,
       essays_simulado: simuladoCount,
+      exercises_producao_guiada: pgCount,
       lousas_concluidas: lousasConcluidas,
       lives_participei: livesParticipadas,
       gravadas_assistidas: gravadasAssistidas
@@ -228,6 +233,23 @@ export const MinhasConquistas = () => {
               )}
             </div>
           </div>
+
+          {/* Exercícios */}
+          {activity.exercises_producao_guiada > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <PenTool className="h-4 w-4 text-indigo-500" />
+                Exercícios
+              </div>
+              <div className="space-y-2 pl-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Realizados</span>
+                  <span className="font-semibold text-indigo-600">{activity.exercises_producao_guiada}</span>
+                </div>
+                <Progress value={getProgressValue(activity.exercises_producao_guiada)} className="h-2 bg-indigo-100" />
+              </div>
+            </div>
+          )}
 
           {/* Ao vivo */}
           <div className="space-y-3">

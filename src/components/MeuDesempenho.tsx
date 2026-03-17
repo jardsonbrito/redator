@@ -71,11 +71,10 @@ export const MeuDesempenho = () => {
         console.error('Erro ao contar redações:', errorContador);
       }
 
-      // Buscar todas as redações para calcular notas (excluindo soft-deleted)
-      const [redacoesRegulares, redacoesSimulado, redacoesExercicio] = await Promise.all([
+      // Buscar notas de redações (excluindo Produção Guiada que é exercício, não redação)
+      const [redacoesRegulares, redacoesSimulado] = await Promise.all([
         supabase.from('redacoes_enviadas').select('nota_total').ilike('email_aluno', emailBusca).is('deleted_at', null),
         supabase.from('redacoes_simulado').select('nota_total').ilike('email_aluno', emailBusca).is('deleted_at', null),
-        supabase.from('redacoes_exercicio').select('nota_total').ilike('email_aluno', emailBusca).is('deleted_at', null)
       ]);
 
       if (redacoesRegulares.error) {
@@ -84,15 +83,11 @@ export const MeuDesempenho = () => {
       if (redacoesSimulado.error) {
         console.error('Erro ao buscar redações de simulado:', redacoesSimulado.error);
       }
-      if (redacoesExercicio.error) {
-        console.error('Erro ao buscar redações de exercício:', redacoesExercicio.error);
-      }
 
-      // Combinar todas as notas válidas
+      // Combinar notas válidas (apenas redações, excluindo exercícios)
       const todasNotas = [
         ...(redacoesRegulares.data || []),
-        ...(redacoesSimulado.data || []),
-        ...(redacoesExercicio.data || [])
+        ...(redacoesSimulado.data || [])
       ].map(r => r.nota_total).filter(nota => nota !== null && nota !== undefined);
 
       console.log(`📊 Contador de redações enviadas (excluindo devolvidas): ${contadorRedacoes || 0} para ${emailBusca}`);
