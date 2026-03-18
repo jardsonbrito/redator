@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useRepertorioLaboratorio, LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
 import { getEixoColors } from '@/utils/eixoTematicoCores';
-import { Pencil, Trash2, User, Loader2, Plus } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, Eye, EyeOff, Plus, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface LaboratorioTableProps {
@@ -22,33 +27,175 @@ interface LaboratorioTableProps {
   onNova?: () => void;
 }
 
+// Card individual com dropdown de ações — padrão TemaCard
+function LaboratorioAdminCard({
+  aula,
+  onEditar,
+  onExcluir,
+  onToggleAtivo,
+}: {
+  aula: LaboratorioAula;
+  onEditar: (aula: LaboratorioAula) => void;
+  onExcluir: (aula: LaboratorioAula) => void;
+  onToggleAtivo: (aula: LaboratorioAula) => void;
+}) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  return (
+    <div className="group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Imagem do autor */}
+      <div className="aspect-square w-full bg-purple-50 overflow-hidden relative">
+        {aula.imagem_autor_url ? (
+          <img
+            src={aula.imagem_autor_url}
+            alt={`Foto de ${aula.nome_autor}`}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-20 h-20 rounded-full bg-purple-200 flex items-center justify-center">
+              <User className="h-10 w-10 text-purple-500" />
+            </div>
+          </div>
+        )}
+
+        {/* Badge de status sobreposto */}
+        {!aula.ativo && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="outline" className="bg-white/90 text-gray-500 border-gray-300 text-xs">
+              Inativa
+            </Badge>
+          </div>
+        )}
+
+        {/* Menu 3-pontinhos sobreposto no canto superior direito */}
+        <div className="absolute top-2 right-2">
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full bg-white/90 hover:bg-white shadow-sm"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4 text-gray-600" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-44 shadow-lg border border-gray-200"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              {/* Editar — abre Dialog, precisa fechar dropdown antes com setTimeout */}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDropdownOpen(false);
+                  setTimeout(() => onEditar(aula), 100);
+                }}
+                className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+
+              {/* Toggle ativo — sem dialog, sem setTimeout */}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDropdownOpen(false);
+                  onToggleAtivo(aula);
+                }}
+                className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                {aula.ativo ? (
+                  <>
+                    <EyeOff className="h-4 w-4 mr-2" />
+                    Desativar
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ativar
+                  </>
+                )}
+              </DropdownMenuItem>
+
+              {/* Excluir — abre AlertDialog, precisa fechar dropdown antes com setTimeout */}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDropdownOpen(false);
+                  setTimeout(() => onExcluir(aula), 100);
+                }}
+                className="flex items-center cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600 transition-colors"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Conteúdo */}
+      <div className="p-4 space-y-3">
+        <div>
+          <h3 className="font-bold text-gray-900 text-base leading-tight">{aula.titulo}</h3>
+          <p className="text-sm text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+            {aula.subtitulo}
+          </p>
+        </div>
+
+        {aula.eixos.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {aula.eixos.slice(0, 3).map((eixo) => {
+              const colors = getEixoColors(eixo);
+              return (
+                <Badge
+                  key={eixo}
+                  variant="outline"
+                  className={`${colors.bg} ${colors.text} ${colors.border} text-xs px-2 py-0.5`}
+                >
+                  {eixo}
+                </Badge>
+              );
+            })}
+            {aula.eixos.length > 3 && (
+              <span className="text-xs text-gray-400">+{aula.eixos.length - 3}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Componente principal
 export function LaboratorioTable({ onEditar, onNova }: LaboratorioTableProps) {
-  const { todasAulas, isLoadingAdmin, toggleAtivo, excluirAula, isExcluindo } =
-    useRepertorioLaboratorio();
+  const { todasAulas, isLoadingAdmin, toggleAtivo, excluirAula } = useRepertorioLaboratorio();
 
   const [confirmExcluir, setConfirmExcluir] = useState<LaboratorioAula | null>(null);
-  const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
-  const handleToggleAtivo = async (aula: LaboratorioAula) => {
-    await toggleAtivo(aula.id, !aula.ativo);
+  const handleToggleAtivo = (aula: LaboratorioAula) => {
+    toggleAtivo(aula.id, !aula.ativo);
   };
 
   const handleExcluir = async () => {
     if (!confirmExcluir) return;
-    setExcluindoId(confirmExcluir.id);
-    try {
-      await excluirAula(confirmExcluir.id);
-    } finally {
-      setExcluindoId(null);
-      setConfirmExcluir(null);
-    }
+    await excluirAula(confirmExcluir.id);
+    setConfirmExcluir(null);
   };
 
   if (isLoadingAdmin) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-lg" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="space-y-3">
+            <Skeleton className="aspect-square w-full rounded-xl" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-full" />
+          </div>
         ))}
       </div>
     );
@@ -80,118 +227,34 @@ export function LaboratorioTable({ onEditar, onNova }: LaboratorioTableProps) {
 
   return (
     <>
-      <div className="space-y-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {todasAulas.map((aula) => (
-          <div
+          <LaboratorioAdminCard
             key={aula.id}
-            className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
-              aula.ativo ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-70'
-            }`}
-          >
-            {/* Imagem */}
-            <div className="w-10 h-10 rounded-lg overflow-hidden bg-purple-50 border border-gray-200 shrink-0">
-              {aula.imagem_autor_url ? (
-                <img
-                  src={aula.imagem_autor_url}
-                  alt={aula.nome_autor}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <User className="h-5 w-5 text-purple-300" />
-                </div>
-              )}
-            </div>
-
-            {/* Info principal */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start gap-2 flex-wrap">
-                <span className="font-semibold text-gray-900 text-sm truncate">{aula.titulo}</span>
-                {!aula.ativo && (
-                  <Badge variant="outline" className="text-xs text-gray-400 border-gray-200">
-                    Inativa
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 truncate mt-0.5">{aula.subtitulo}</p>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {aula.eixos.slice(0, 3).map((eixo) => {
-                  const colors = getEixoColors(eixo);
-                  return (
-                    <Badge
-                      key={eixo}
-                      variant="outline"
-                      className={`${colors.bg} ${colors.text} ${colors.border} text-[10px] px-1.5 py-0`}
-                    >
-                      {eixo}
-                    </Badge>
-                  );
-                })}
-                {aula.eixos.length > 3 && (
-                  <span className="text-[10px] text-gray-400">+{aula.eixos.length - 3}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Ações */}
-            <div className="flex items-center gap-3 shrink-0">
-              {/* Toggle ativo */}
-              <div className="flex items-center gap-1.5">
-                <Switch
-                  checked={aula.ativo}
-                  onCheckedChange={() => handleToggleAtivo(aula)}
-                  className="data-[state=checked]:bg-purple-600"
-                />
-                <span className="text-xs text-gray-500 hidden sm:inline">
-                  {aula.ativo ? 'Ativa' : 'Inativa'}
-                </span>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onEditar(aula)}
-                className="h-8 w-8 text-gray-500 hover:text-blue-600"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setTimeout(() => setConfirmExcluir(aula), 100);
-                }}
-                className="h-8 w-8 text-gray-500 hover:text-red-600"
-                disabled={excluindoId === aula.id}
-              >
-                {excluindoId === aula.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
+            aula={aula}
+            onEditar={onEditar}
+            onExcluir={setConfirmExcluir}
+            onToggleAtivo={handleToggleAtivo}
+          />
         ))}
       </div>
 
-      {/* AlertDialog de confirmação de exclusão */}
-      <AlertDialog open={!!confirmExcluir} onOpenChange={(open) => !open && setConfirmExcluir(null)}>
+      {/* AlertDialog de exclusão — FORA do DropdownMenu para evitar conflito de focus trap */}
+      <AlertDialog
+        open={!!confirmExcluir}
+        onOpenChange={(open) => !open && setConfirmExcluir(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir aula?</AlertDialogTitle>
             <AlertDialogDescription>
-              A aula "<strong>{confirmExcluir?.titulo}</strong>" será permanentemente removida, incluindo a
-              imagem do autor. Esta ação não pode ser desfeita.
+              A aula <strong>"{confirmExcluir?.titulo}"</strong> será permanentemente removida,
+              incluindo a imagem do autor. Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleExcluir}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={handleExcluir} className="bg-red-600 hover:bg-red-700">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
