@@ -54,7 +54,9 @@ interface ObraCardProps {
     titulo: string,
     criador: string,
     sinopse: string,
-    eixo_tematico: EixoTematico
+    eixo_tematico: EixoTematico,
+    capaFile: File | null,
+    removerCapa: boolean
   ) => void;
   onExcluir: (id: string) => void;
   onAdicionarComentario: (obraId: string, comentario: string) => void;
@@ -121,9 +123,11 @@ export const ObraCard = ({
     titulo: string,
     criador: string,
     sinopse: string,
-    eixo_tematico: EixoTematico
+    eixo_tematico: EixoTematico,
+    capaFile: File | null,
+    removerCapa: boolean
   ) => {
-    onEditar(obra.id, tipo_obra, titulo, criador, sinopse, eixo_tematico);
+    onEditar(obra.id, tipo_obra, titulo, criador, sinopse, eixo_tematico, capaFile, removerCapa);
     setShowEditModal(false);
   };
 
@@ -168,6 +172,17 @@ export const ObraCard = ({
       >
         {/* Gradiente de fundo sutil */}
         <div className={cn("absolute inset-0 bg-gradient-to-br opacity-30", colors.gradient)} />
+
+        {/* Imagem de capa */}
+        {obra.capa_url && (
+          <div className="w-full aspect-[4/3] overflow-hidden">
+            <img
+              src={obra.capa_url}
+              alt={`Capa de ${obra.titulo}`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
 
         <CardContent className="relative p-4 space-y-3">
           {/* Header: Tipo de obra + Eixo + Menu */}
@@ -425,6 +440,7 @@ export const ObraCard = ({
           criador: obra.criador,
           sinopse: obra.sinopse,
           eixo_tematico: obra.eixo_tematico,
+          capa_url: obra.capa_url,
         }}
         isEditing
       />

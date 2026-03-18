@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2, Upload, X, ImageIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +31,9 @@ interface ObraNovaFormProps {
     titulo: string,
     criador: string,
     sinopse: string,
-    eixo_tematico: EixoTematico
+    eixo_tematico: EixoTematico,
+    capaFile: File | null,
+    removerCapa: boolean
   ) => void;
   initialData?: {
     tipo_obra: TipoObra;
@@ -39,6 +41,7 @@ interface ObraNovaFormProps {
     criador: string;
     sinopse: string;
     eixo_tematico: EixoTematico;
+    capa_url?: string | null;
   };
   isEditing?: boolean;
   isSubmitting?: boolean;
@@ -78,6 +81,10 @@ export const ObraNovaForm = ({
   const [criador, setCriador] = useState("");
   const [sinopse, setSinopse] = useState("");
   const [eixoTematico, setEixoTematico] = useState<EixoTematico | "">("");
+  const [capaPreview, setCapaPreview] = useState<string | null>(null);
+  const [capaFile, setCapaFile] = useState<File | null>(null);
+  const [removerCapa, setRemoverCapa] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form quando abrir/fechar ou mudar initialData
   useEffect(() => {
@@ -87,6 +94,9 @@ export const ObraNovaForm = ({
       setCriador(initialData?.criador || "");
       setSinopse(initialData?.sinopse || "");
       setEixoTematico(initialData?.eixo_tematico || "");
+      setCapaPreview(initialData?.capa_url || null);
+      setCapaFile(null);
+      setRemoverCapa(false);
     }
   }, [open, initialData]);
 
@@ -105,6 +115,24 @@ export const ObraNovaForm = ({
     isSinopseValid &&
     eixoTematico !== "";
 
+  const handleCapaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    setCapaFile(file);
+    setRemoverCapa(false);
+    const reader = new FileReader();
+    reader.onloadend = () => setCapaPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoverCapa = () => {
+    setCapaFile(null);
+    setCapaPreview(null);
+    setRemoverCapa(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isValid && tipoObra && eixoTematico) {
@@ -113,7 +141,9 @@ export const ObraNovaForm = ({
         titulo.trim(),
         criador.trim(),
         sinopse.trim(),
-        eixoTematico as EixoTematico
+        eixoTematico as EixoTematico,
+        capaFile,
+        removerCapa
       );
     }
   };
@@ -274,6 +304,54 @@ export const ObraNovaForm = ({
               )}>
                 {sinopseLength}/{MAX_SINOPSE}
               </p>
+            </div>
+          </div>
+
+          {/* Imagem de capa */}
+          <div className="space-y-2">
+            <Label>Imagem de capa <span className="text-gray-400 font-normal">(opcional)</span></Label>
+            <div className="flex items-start gap-4">
+              <div className="w-24 h-32 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0">
+                {capaPreview ? (
+                  <img src={capaPreview} alt="Preview da capa" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon className="h-8 w-8 text-gray-300" />
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCapaChange}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  {capaPreview ? 'Trocar imagem' : 'Selecionar imagem'}
+                </Button>
+                {capaPreview && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoverCapa}
+                    className="gap-1 text-gray-400 hover:text-red-500"
+                  >
+                    <X className="h-3 w-3" />
+                    Remover
+                  </Button>
+                )}
+                <p className="text-xs text-gray-400">
+                  JPG, PNG ou WebP · Máx 5MB · Aparece no topo do card
+                </p>
+              </div>
             </div>
           </div>
 

@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/select";
 import { ObraCard } from "./ObraCard";
 import { ObraNovaForm } from "./ObraNovaForm";
-import { useRepertorioObras, NovaObraInput, TIPOS_OBRA, TipoObra } from "@/hooks/useRepertorioObras";
+import { useRepertorioObras, NovaObraInput, TIPOS_OBRA, TipoObra, converterCapaParaWebP, uploadCapaObra } from "@/hooks/useRepertorioObras";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { EIXOS_TEMATICOS, EixoTematico, getEixoColors } from "@/utils/eixoTematicoCores";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +52,7 @@ export const ObrasGrid = ({
   podeCurtir = true,
   podeComentarFlag = true,
 }: ObrasGridProps) => {
+  const queryClient = useQueryClient();
   const [showNovaObraModal, setShowNovaObraModal] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
   const [filtroEixo, setFiltroEixo] = useState<string>("todos");
@@ -108,14 +111,16 @@ export const ObrasGrid = ({
     titulo: string,
     criador: string,
     sinopse: string,
-    eixo_tematico: EixoTematico
+    eixo_tematico: EixoTematico,
+    capaFile: File | null,
+    _removerCapa: boolean
   ) => {
     if (!usuarioAtualId || !usuarioNome) {
       console.error("Usuário não identificado");
       return;
     }
 
-    await criarObra({
+    const novaObra = await criarObra({
       autor_id: usuarioAtualId,
       autor_nome: usuarioNome,
       autor_turma: usuarioTurma || null,
@@ -125,6 +130,18 @@ export const ObrasGrid = ({
       sinopse,
       eixo_tematico,
     });
+
+    // Upload da capa após criação
+    if (capaFile && novaObra?.id) {
+      try {
+        const blob = await converterCapaParaWebP(capaFile);
+        const url = await uploadCapaObra(novaObra.id, blob);
+        await supabase.from('repertorio_obras').update({ capa_url: url }).eq('id', novaObra.id);
+        queryClient.invalidateQueries({ queryKey: ['repertorio-obras'] });
+      } catch (err) {
+        console.error('Erro ao enviar capa:', err);
+      }
+    }
 
     setShowNovaObraModal(false);
   };
@@ -140,9 +157,24 @@ export const ObrasGrid = ({
     titulo: string,
     criador: string,
     sinopse: string,
-    eixo_tematico: EixoTematico
+    eixo_tematico: EixoTematico,
+    capaFile: File | null,
+    removerCapa: boolean
   ) => {
-    await editarObra(id, tipo_obra, titulo, criador, sinopse, eixo_tematico);
+    let capa_url: string | null | undefined = undefined;
+
+    if (capaFile) {
+      try {
+        const blob = await converterCapaParaWebP(capaFile);
+        capa_url = await uploadCapaObra(id, blob);
+      } catch (err) {
+        console.error('Erro ao enviar capa:', err);
+      }
+    } else if (removerCapa) {
+      capa_url = null;
+    }
+
+    await editarObra(id, tipo_obra, titulo, criador, sinopse, eixo_tematico, capa_url);
   };
 
   const handleAdicionarComentario = async (obraId: string, comentario: string) => {

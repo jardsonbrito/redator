@@ -4,6 +4,40 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EixoTematico } from '@/utils/eixoTematicoCores';
 
+// ==================== UTILITÁRIOS DE IMAGEM ====================
+
+export const converterCapaParaWebP = (file: File): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext('2d')!.drawImage(img, 0, 0);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(url);
+          blob ? resolve(blob) : reject(new Error('Falha ao converter imagem'));
+        },
+        'image/webp',
+        0.85
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Falha ao carregar imagem')); };
+    img.src = url;
+  });
+
+export const uploadCapaObra = async (obraId: string, blob: Blob): Promise<string> => {
+  const path = `obras/${obraId}/capa.webp`;
+  const { error } = await supabase.storage
+    .from('laboratorio-imagens')
+    .upload(path, blob, { upsert: true, contentType: 'image/webp' });
+  if (error) throw error;
+  const { data } = supabase.storage.from('laboratorio-imagens').getPublicUrl(path);
+  return `${data.publicUrl}?t=${Date.now()}`;
+};
+
 // Tipos de obra disponíveis
 export const TIPOS_OBRA = [
   'Livro',
@@ -29,6 +63,7 @@ export interface RepertorioObra {
   criador: string;
   sinopse: string;
   eixo_tematico: EixoTematico;
+  capa_url: string | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -60,6 +95,7 @@ export interface NovaObraInput {
   criador: string;
   sinopse: string;
   eixo_tematico: EixoTematico;
+  capa_url?: string | null;
 }
 
 export interface CurtidasObraResumo {
@@ -220,17 +256,18 @@ export const useRepertorioObras = () => {
 
   // Editar obra
   const editarObraMutation = useMutation({
-    mutationFn: async ({ id, tipo_obra, titulo, criador, sinopse, eixo_tematico }: {
+    mutationFn: async ({ id, tipo_obra, titulo, criador, sinopse, eixo_tematico, capa_url }: {
       id: string;
       tipo_obra: TipoObra;
       titulo: string;
       criador: string;
       sinopse: string;
       eixo_tematico: EixoTematico;
+      capa_url?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('repertorio_obras')
-        .update({ tipo_obra, titulo, criador, sinopse, eixo_tematico })
+        .update({ tipo_obra, titulo, criador, sinopse, eixo_tematico, ...(capa_url !== undefined && { capa_url }) })
         .eq('id', id)
         .select()
         .single();
@@ -432,9 +469,10 @@ export const useRepertorioObras = () => {
     titulo: string,
     criador: string,
     sinopse: string,
-    eixo_tematico: EixoTematico
+    eixo_tematico: EixoTematico,
+    capa_url?: string | null
   ) => {
-    return editarObraMutation.mutateAsync({ id, tipo_obra, titulo, criador, sinopse, eixo_tematico });
+    return editarObraMutation.mutateAsync({ id, tipo_obra, titulo, criador, sinopse, eixo_tematico, capa_url });
   }, [editarObraMutation]);
 
   const excluirObra = useCallback(async (id: string) => {
