@@ -31,10 +31,10 @@ export const converterCapaParaWebP = (file: File): Promise<Blob> =>
 export const uploadCapaObra = async (obraId: string, blob: Blob): Promise<string> => {
   const path = `obras/${obraId}/capa.webp`;
   const { error } = await supabase.storage
-    .from('laboratorio-imagens')
+    .from('laboratorio-autores')
     .upload(path, blob, { upsert: true, contentType: 'image/webp' });
   if (error) throw error;
-  const { data } = supabase.storage.from('laboratorio-imagens').getPublicUrl(path);
+  const { data } = supabase.storage.from('laboratorio-autores').getPublicUrl(path);
   return `${data.publicUrl}?t=${Date.now()}`;
 };
 
