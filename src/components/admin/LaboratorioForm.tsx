@@ -59,6 +59,8 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
   const [tipoParagrafo, setTipoParagrafo] = useState<string>('introducao');
   const [temasSugeridos, setTemasSugeridos] = useState<{ id: string; frase_tematica: string }[]>([]);
   const [temasBusca, setTemasBusca] = useState('');
+  const [frasesManuais, setFrasesManuais] = useState<string[]>([]);
+  const [fraseManualInput, setFraseManualInput] = useState('');
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [uploadingImagem, setUploadingImagem] = useState(false);
@@ -141,6 +143,10 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
       setTipoParagrafo('introducao');
       setTemasSugeridos([]);
       setTemasBusca('');
+      setFrasesManuais([]);
+      setFraseManualInput('');
+      setFrasesManuais(aulaParaEditar?.frases_tematicas_manuais ?? []);
+      setFraseManualInput('');
       setImagemPreview(null);
       setImagemFile(null);
     }
@@ -212,6 +218,7 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
       tipo_paragrafo: tipoParagrafo,
       imagem_autor_url: imagemUrl,
       temas_sugeridos: temasSugeridos.map((t) => t.id),
+      frases_tematicas_manuais: frasesManuais,
     };
 
     try {
@@ -551,6 +558,75 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
                 </div>
               )}
             </div>
+
+            {/* Divisor entre tipo A e tipo B */}
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span>ou adicione frases temáticas avulsas</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Frases manuais já adicionadas */}
+            {frasesManuais.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {frasesManuais.map((frase, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+                  >
+                    <span className="text-sm text-amber-900 flex-1 min-w-0 line-clamp-2 leading-snug">
+                      {frase}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFrasesManuais((prev) => prev.filter((_, i) => i !== idx))}
+                      className="shrink-0 text-amber-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Input de nova frase manual */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Digite uma frase temática avulsa e pressione Adicionar..."
+                value={fraseManualInput}
+                onChange={(e) => setFraseManualInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const frase = fraseManualInput.trim();
+                    if (frase && !frasesManuais.includes(frase)) {
+                      setFrasesManuais((prev) => [...prev, frase]);
+                      setFraseManualInput('');
+                    }
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={() => {
+                  const frase = fraseManualInput.trim();
+                  if (frase && !frasesManuais.includes(frase)) {
+                    setFrasesManuais((prev) => [...prev, frase]);
+                    setFraseManualInput('');
+                  }
+                }}
+              >
+                Adicionar
+              </Button>
+            </div>
+            <p className="text-xs text-gray-400">
+              Frases avulsas levam o aluno para <strong>Enviar Redação — Tema Livre</strong> com a frase já preenchida.
+            </p>
           </div>
 
           <DialogFooter>

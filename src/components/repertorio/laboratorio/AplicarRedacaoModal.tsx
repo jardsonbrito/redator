@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { LaboratorioAula, LaboratorioContexto, LABORATORIO_CONTEXTO_KEY } from '@/hooks/useRepertorioLaboratorio';
-import { PenLine, BookText, ChevronRight, Loader2 } from 'lucide-react';
+import { PenLine, BookText, ChevronRight, Loader2, FileEdit } from 'lucide-react';
 
 interface Tema {
   id: string;
@@ -74,6 +74,21 @@ export function AplicarRedacaoModal({ open, onOpenChange, aula }: AplicarRedacao
     navigate(`/temas/${tema.id}`);
   };
 
+  const handleAplicarFraseManual = (frase: string) => {
+    salvarContexto({
+      laboratorio_id: aula.id,
+      titulo: aula.titulo,
+      nome_autor: aula.nome_autor,
+      obra_referencia: aula.obra_referencia,
+      paragrafo_modelo: aula.paragrafo_modelo,
+    });
+    onOpenChange(false);
+    navigate(`/envie-redacao?tema=${encodeURIComponent(frase)}&fonte=laboratorio`);
+  };
+
+  const frasesManuais = aula.frases_tematicas_manuais ?? [];
+  const temAlgumaOpcao = temIds.length > 0 || frasesManuais.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -109,8 +124,8 @@ export function AplicarRedacaoModal({ open, onOpenChange, aula }: AplicarRedacao
             </Button>
           </div>
 
-          {/* Opção 2: Temas sugeridos pelo professor */}
-          {temIds.length > 0 && (
+          {/* Opção 2: Temas sugeridos + Frases manuais */}
+          {temAlgumaOpcao && (
             <>
               <div className="flex items-center gap-3 text-xs text-gray-400">
                 <div className="flex-1 h-px bg-gray-200" />
@@ -131,13 +146,14 @@ export function AplicarRedacaoModal({ open, onOpenChange, aula }: AplicarRedacao
                   </div>
                 </div>
 
-                {isLoadingTemas ? (
-                  <div className="flex justify-center py-3">
-                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {temasSugeridos.map((tema) => (
+                <div className="flex flex-col gap-2">
+                  {/* Tipo A — temas do banco */}
+                  {isLoadingTemas ? (
+                    <div className="flex justify-center py-3">
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                    </div>
+                  ) : (
+                    temasSugeridos.map((tema) => (
                       <button
                         key={tema.id}
                         onClick={() => handleAplicarTema(tema)}
@@ -148,9 +164,23 @@ export function AplicarRedacaoModal({ open, onOpenChange, aula }: AplicarRedacao
                         </span>
                         <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
                       </button>
-                    ))}
-                  </div>
-                )}
+                    ))
+                  )}
+
+                  {/* Tipo B — frases manuais (tema livre) */}
+                  {frasesManuais.map((frase, idx) => (
+                    <button
+                      key={`manual-${idx}`}
+                      onClick={() => handleAplicarFraseManual(frase)}
+                      className="w-full text-left px-3 py-2.5 rounded-lg border border-amber-200 bg-amber-50 text-sm text-amber-900 hover:bg-amber-100 hover:border-amber-300 transition-colors flex items-center justify-between gap-2"
+                    >
+                      <span className="flex-1 min-w-0 line-clamp-2 leading-snug">
+                        {frase}
+                      </span>
+                      <FileEdit className="h-4 w-4 shrink-0 text-amber-400" />
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}

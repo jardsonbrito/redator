@@ -38,6 +38,12 @@ const EnvieRedacao = () => {
       { label: 'Exercícios', href: '/exercicios' },
       { label: 'Enviar Redação' }
     ]);
+  } else if (fonte === 'laboratorio') {
+    useBreadcrumbs([
+      { label: 'Início', href: '/app' },
+      { label: 'Repertório Orientado', href: '/repertorio-orientado' },
+      { label: 'Enviar Redação' }
+    ]);
   } else {
     useBreadcrumbs([
       { label: 'Início', href: '/app' },
@@ -53,7 +59,8 @@ const EnvieRedacao = () => {
 
   // Verificar se acesso ao tema livre está desabilitado
   const isFreeTopicAccess = !temaFromUrl && !exercicioFromUrl;
-  const isFreeTopicDisabled = isFreeTopicAccess && settings && settings.free_topic_enabled === false;
+  const isFromLaboratorio = fonte === 'laboratorio';
+  const isFreeTopicDisabled = isFreeTopicAccess && !isFromLaboratorio && settings && settings.free_topic_enabled === false;
 
   // Verificar se tema livre está desabilitado
   if (isFreeTopicDisabled) {
@@ -104,7 +111,7 @@ const EnvieRedacao = () => {
             )}
             <RedacaoFormUnificado
               fraseTematica={temaFromUrl ? decodeURIComponent(temaFromUrl) : ""}
-              readOnlyFraseTematica={fonte === 'tema' || isProcessoSeletivo}
+              readOnlyFraseTematica={fonte === 'tema' || fonte === 'laboratorio' || isProcessoSeletivo}
               fonte={isProcessoSeletivo ? 'processo_seletivo' : fonte}
               exercicioId={exercicioFromUrl}
               processoSeletivoCandidatoId={processoSeletivoCandidatoId}
