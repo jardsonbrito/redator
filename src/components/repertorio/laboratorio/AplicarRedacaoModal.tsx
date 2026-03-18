@@ -1,4 +1,3 @@
-import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -8,16 +7,14 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { LaboratorioAula, LaboratorioContexto, LABORATORIO_CONTEXTO_KEY } from '@/hooks/useRepertorioLaboratorio';
-import { PenLine, Search, BookText, ChevronRight, Loader2 } from 'lucide-react';
+import { PenLine, BookText, ChevronRight, Loader2 } from 'lucide-react';
 
 interface Tema {
   id: string;
   frase_tematica: string;
-  eixo_tematico?: string | null;
 }
 
 interface AplicarRedacaoModalProps {
@@ -28,35 +25,24 @@ interface AplicarRedacaoModalProps {
 
 export function AplicarRedacaoModal({ open, onOpenChange, aula }: AplicarRedacaoModalProps) {
   const navigate = useNavigate();
-  const [buscaTema, setBuscaTema] = useState('');
-  const [temaSelecionado, setTemaSelecionado] = useState<Tema | null>(null);
+  const temIds = aula.temas_sugeridos ?? [];
 
-  const { data: temas = [], isLoading: isLoadingTemas } = useQuery({
-    queryKey: ['temas-laboratorio-autocomplete'],
+  const { data: temasSugeridos = [], isLoading: isLoadingTemas } = useQuery({
+    queryKey: ['temas-laboratorio-sugeridos', temIds],
     queryFn: async (): Promise<Tema[]> => {
+      if (temIds.length === 0) return [];
       const { data, error } = await supabase
         .from('temas')
-        .select('id, frase_tematica, eixo_tematico')
-        .eq('status', 'publicado')
-        .order('created_at', { ascending: false });
-
+        .select('id, frase_tematica')
+        .in('id', temIds);
       if (error) throw error;
-      return (data || []) as Tema[];
+      // Manter a ordem definida pelo admin
+      const map = new Map((data || []).map((t: Tema) => [t.id, t]));
+      return temIds.map((id) => map.get(id)).filter(Boolean) as Tema[];
     },
-    enabled: open,
+    enabled: open && temIds.length > 0,
     staleTime: 1000 * 60 * 5,
   });
-
-  const temasFiltrados = useMemo(() => {
-    if (!buscaTema.trim()) return temas.slice(0, 8);
-    const termo = buscaTema.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return temas
-      .filter((t) => {
-        const frase = t.frase_tematica.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return frase.includes(termo);
-      })
-      .slice(0, 8);
-  }, [temas, buscaTema]);
 
   const salvarContexto = (contexto: LaboratorioContexto) => {
     localStorage.setItem(LABORATORIO_CONTEXTO_KEY, JSON.stringify(contexto));
@@ -74,19 +60,18 @@ export function AplicarRedacaoModal({ open, onOpenChange, aula }: AplicarRedacao
     navigate('/exercicios');
   };
 
-  const handleAplicarTema = () => {
-    if (!temaSelecionado) return;
+  const handleAplicarTema = (tema: Tema) => {
     salvarContexto({
       laboratorio_id: aula.id,
       titulo: aula.titulo,
       nome_autor: aula.nome_autor,
       obra_referencia: aula.obra_referencia,
       paragrafo_modelo: aula.paragrafo_modelo,
-      tema_id: temaSelecionado.id,
-      frase_tematica_tema: temaSelecionado.frase_tematica,
+      tema_id: tema.id,
+      frase_tematica_tema: tema.frase_tematica,
     });
     onOpenChange(false);
-    navigate(`/temas/${temaSelecionado.id}`);
+    navigate(`/temas/${tema.id}`);
   };
 
   return (
@@ -100,7 +85,7 @@ export function AplicarRedacaoModal({ open, onOpenChange, aula }: AplicarRedacao
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Opção 1: Usar na minha redação (sem tema específico) */}
+          {/* Opção 1: Ir para exercícios (Produção Guiada) */}
           <div className="rounded-lg border border-gray-200 p-4 space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center shrink-0 mt-0.5">
@@ -124,78 +109,51 @@ export function AplicarRedacaoModal({ open, onOpenChange, aula }: AplicarRedacao
             </Button>
           </div>
 
-          {/* Divisor */}
-          <div className="flex items-center gap-3 text-xs text-gray-400">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span>ou</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          {/* Opção 2: Aplicar em um tema específico */}
-          <div className="rounded-lg border border-gray-200 p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                <BookText className="h-4 w-4 text-blue-600" />
+          {/* Opção 2: Temas sugeridos pelo professor */}
+          {temIds.length > 0 && (
+            <>
+              <div className="flex items-center gap-3 text-xs text-gray-400">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span>ou pratique com um tema</span>
+                <div className="flex-1 h-px bg-gray-200" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 text-sm">Aplicar em um tema</p>
-                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                  Selecione um tema da plataforma e escreva sua redação com o repertório já na memória.
-                </p>
-              </div>
-            </div>
 
-            {/* Busca de temas */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar tema..."
-                value={buscaTema}
-                onChange={(e) => {
-                  setBuscaTema(e.target.value);
-                  setTemaSelecionado(null);
-                }}
-                className="pl-9 text-sm"
-              />
-            </div>
+              <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                    <BookText className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm">Temas sugeridos</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                      Escolha um tema e escreva sua redação com o repertório já na memória.
+                    </p>
+                  </div>
+                </div>
 
-            {/* Lista de temas */}
-            {isLoadingTemas ? (
-              <div className="flex justify-center py-3">
-                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-              </div>
-            ) : (
-              <div className="max-h-44 overflow-y-auto space-y-1 rounded-md">
-                {temasFiltrados.length === 0 ? (
-                  <p className="text-xs text-gray-400 text-center py-3">Nenhum tema encontrado</p>
+                {isLoadingTemas ? (
+                  <div className="flex justify-center py-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                  </div>
                 ) : (
-                  temasFiltrados.map((tema) => (
-                    <button
-                      key={tema.id}
-                      onClick={() => setTemaSelecionado(tema)}
-                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                        temaSelecionado?.id === tema.id
-                          ? 'bg-blue-100 text-blue-800 font-medium'
-                          : 'hover:bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      {tema.frase_tematica}
-                    </button>
-                  ))
+                  <div className="flex flex-col gap-2">
+                    {temasSugeridos.map((tema) => (
+                      <button
+                        key={tema.id}
+                        onClick={() => handleAplicarTema(tema)}
+                        className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-800 transition-colors flex items-center justify-between gap-2"
+                      >
+                        <span className="flex-1 min-w-0 line-clamp-2 leading-snug">
+                          {tema.frase_tematica}
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-            )}
-
-            <Button
-              onClick={handleAplicarTema}
-              disabled={!temaSelecionado}
-              size="sm"
-              className="w-full gap-2"
-            >
-              {temaSelecionado ? `Ir para "${temaSelecionado.frase_tematica.slice(0, 30)}..."` : 'Selecione um tema'}
-              {temaSelecionado && <ChevronRight className="h-4 w-4" />}
-            </Button>
-          </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

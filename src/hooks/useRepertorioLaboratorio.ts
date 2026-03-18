@@ -18,6 +18,7 @@ export interface LaboratorioAula {
   paragrafo_modelo: string;
   imagem_autor_url: string | null;
   observacao_paragrafo: string | null;
+  temas_sugeridos: string[];
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -35,6 +36,7 @@ export interface NovaAulaInput {
   paragrafo_modelo: string;
   observacao_paragrafo?: string | null;
   imagem_autor_url?: string | null;
+  temas_sugeridos?: string[];
 }
 
 // Contexto passado para a Produção Guiada via localStorage
@@ -208,6 +210,7 @@ export const useRepertorioLaboratorio = () => {
           paragrafo_modelo: input.paragrafo_modelo,
           observacao_paragrafo: input.observacao_paragrafo || null,
           imagem_autor_url: input.imagem_autor_url || null,
+          temas_sugeridos: input.temas_sugeridos ?? [],
           ativo: true,
         })
         .select()
@@ -243,6 +246,7 @@ export const useRepertorioLaboratorio = () => {
           paragrafo_modelo: input.paragrafo_modelo,
           observacao_paragrafo: input.observacao_paragrafo ?? null,
           imagem_autor_url: input.imagem_autor_url ?? undefined,
+          temas_sugeridos: input.temas_sugeridos ?? [],
         })
         .eq('id', id)
         .select()

@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,7 +25,7 @@ import {
   uploadImagemAutor,
 } from '@/hooks/useRepertorioLaboratorio';
 import { EIXOS_TEMATICOS, getEixoColors } from '@/utils/eixoTematicoCores';
-import { Upload, X, Loader2, User } from 'lucide-react';
+import { Upload, X, Loader2, User, Search } from 'lucide-react';
 
 const schema = z.object({
   titulo: z.string().min(2, 'Mínimo 2 caracteres').max(100, 'Máximo 100 caracteres'),
@@ -56,6 +56,8 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
   const isSaving = isCriando || isEditando;
 
   const [eixosSelecionados, setEixosSelecionados] = useState<string[]>([]);
+  const [temasSugeridos, setTemasSugeridos] = useState<{ id: string; frase_tematica: string }[]>([]);
+  const [temasBusca, setTemasBusca] = useState('');
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [uploadingImagem, setUploadingImagem] = useState(false);
@@ -87,13 +89,22 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
       setEixosSelecionados(aulaParaEditar.eixos || []);
       setImagemPreview(aulaParaEditar.imagem_autor_url || null);
       setImagemFile(null);
+      // Preencher temas sugeridos salvos
+      const ids = aulaParaEditar.temas_sugeridos || [];
+      if (ids.length > 0 && todosTemasOptions.length > 0) {
+        setTemasSugeridos(todosTemasOptions.filter((t) => ids.includes(t.id)));
+      } else {
+        setTemasSugeridos([]);
+      }
     } else if (!open) {
       reset({});
       setEixosSelecionados([]);
+      setTemasSugeridos([]);
+      setTemasBusca('');
       setImagemPreview(null);
       setImagemFile(null);
     }
-  }, [aulaParaEditar, open, reset]);
+  }, [aulaParaEditar, open, reset, todosTemasOptions]);
 
   const toggleEixo = (eixo: string) => {
     setEixosSelecionados((prev) =>
@@ -159,6 +170,7 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
       eixos: eixosSelecionados,
       observacao_paragrafo: values.observacao_paragrafo || null,
       imagem_autor_url: imagemUrl,
+      temas_sugeridos: temasSugeridos.map((t) => t.id),
     };
 
     try {
@@ -194,6 +206,43 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
     } catch {
       // Erros já tratados nas mutations
     }
+  };
+
+  // Query de temas publicados para seleção
+  const { data: todosTemasOptions = [] } = useQuery({
+    queryKey: ['temas-admin-select'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('temas')
+        .select('id, frase_tematica')
+        .eq('status', 'publicado')
+        .order('frase_tematica', { ascending: true });
+      if (error) throw error;
+      return (data || []) as { id: string; frase_tematica: string }[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const temasFiltrados = useMemo(() => {
+    const ids = new Set(temasSugeridos.map((t) => t.id));
+    if (!temasBusca.trim()) return todosTemasOptions.filter((t) => !ids.has(t.id)).slice(0, 6);
+    const termo = temasBusca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return todosTemasOptions
+      .filter((t) => {
+        if (ids.has(t.id)) return false;
+        const frase = t.frase_tematica.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return frase.includes(termo);
+      })
+      .slice(0, 6);
+  }, [todosTemasOptions, temasBusca, temasSugeridos]);
+
+  const adicionarTema = (tema: { id: string; frase_tematica: string }) => {
+    setTemasSugeridos((prev) => [...prev, tema]);
+    setTemasBusca('');
+  };
+
+  const removerTema = (id: string) => {
+    setTemasSugeridos((prev) => prev.filter((t) => t.id !== id));
   };
 
   const isLoading = isSaving || uploadingImagem;
@@ -407,6 +456,71 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
               <p className="text-xs text-gray-400">
                 Esse texto aparece abaixo do parágrafo na aula do aluno como comentário do professor.
               </p>
+            </div>
+          </div>
+
+          {/* Seção 4: Temas sugeridos para prática */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-purple-700 uppercase tracking-wide border-b border-purple-100 pb-1">
+              4. Temas para prática
+            </h3>
+            <p className="text-xs text-gray-500">
+              O aluno verá esses temas ao clicar em "Aplicar em uma redação" na tela 3 da aula.
+            </p>
+
+            {/* Temas já selecionados */}
+            {temasSugeridos.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {temasSugeridos.map((tema) => (
+                  <div
+                    key={tema.id}
+                    className="flex items-center justify-between gap-2 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2"
+                  >
+                    <span className="text-sm text-purple-900 flex-1 min-w-0 line-clamp-1">
+                      {tema.frase_tematica}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removerTema(tema.id)}
+                      className="shrink-0 text-purple-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Busca de temas */}
+            <div className="space-y-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar tema por frase temática..."
+                  value={temasBusca}
+                  onChange={(e) => setTemasBusca(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                />
+              </div>
+              {(temasBusca.trim() || temasFiltrados.length > 0) && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden divide-y divide-gray-100">
+                  {temasFiltrados.length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-3">Nenhum tema encontrado</p>
+                  ) : (
+                    temasFiltrados.map((tema) => (
+                      <button
+                        key={tema.id}
+                        type="button"
+                        onClick={() => adicionarTema(tema)}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-800 transition-colors"
+                      >
+                        {tema.frase_tematica}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
