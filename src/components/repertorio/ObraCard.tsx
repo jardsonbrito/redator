@@ -101,6 +101,7 @@ export const ObraCard = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [sinopseExpandida, setSinopseExpandida] = useState(false);
   const [novoComentario, setNovoComentario] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
@@ -245,9 +246,17 @@ export const ObraCard = ({
           </div>
 
           {/* Sinopse */}
-          <p className="text-sm leading-relaxed text-gray-700 line-clamp-4">
-            {obra.sinopse}
-          </p>
+          <div>
+            <p className={cn("text-sm leading-relaxed text-gray-700", !sinopseExpandida && "line-clamp-4")}>
+              {obra.sinopse}
+            </p>
+            <button
+              onClick={() => setSinopseExpandida(v => !v)}
+              className="mt-1 text-xs font-medium text-purple-600 hover:text-purple-800 transition-colors"
+            >
+              {sinopseExpandida ? "Mostrar menos" : "Ler mais"}
+            </button>
+          </div>
             </div>{/* fim flex-1 */}
           </div>{/* fim flex container imagem+conteúdo */}
 
