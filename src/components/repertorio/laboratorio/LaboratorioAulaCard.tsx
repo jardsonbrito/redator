@@ -13,7 +13,10 @@ export function LaboratorioAulaCard({ aula }: LaboratorioAulaCardProps) {
 
   return (
     <button
-      onClick={() => navigate(`/repertorio-orientado/laboratorio/${aula.id}`)}
+      onClick={() => {
+        sessionStorage.removeItem(`lab_step_${aula.id}`);
+        navigate(`/repertorio-orientado/laboratorio/${aula.id}`);
+      }}
       className="group w-full text-left bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-purple-200 transition-all duration-200 overflow-hidden"
     >
       {/* Imagem do autor */}
