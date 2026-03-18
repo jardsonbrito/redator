@@ -56,6 +56,7 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
   const isSaving = isCriando || isEditando;
 
   const [eixosSelecionados, setEixosSelecionados] = useState<string[]>([]);
+  const [tipoParagrafo, setTipoParagrafo] = useState<string>('introducao');
   const [temasSugeridos, setTemasSugeridos] = useState<{ id: string; frase_tematica: string }[]>([]);
   const [temasBusca, setTemasBusca] = useState('');
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
@@ -124,6 +125,7 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
         observacao_paragrafo: aulaParaEditar.observacao_paragrafo ?? '',
       });
       setEixosSelecionados(aulaParaEditar.eixos || []);
+      setTipoParagrafo(aulaParaEditar.tipo_paragrafo || 'introducao');
       setImagemPreview(aulaParaEditar.imagem_autor_url || null);
       setImagemFile(null);
       // Preencher temas sugeridos salvos
@@ -136,6 +138,7 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
     } else if (!open) {
       reset({});
       setEixosSelecionados([]);
+      setTipoParagrafo('introducao');
       setTemasSugeridos([]);
       setTemasBusca('');
       setImagemPreview(null);
@@ -206,6 +209,7 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
       ...values,
       eixos: eixosSelecionados,
       observacao_paragrafo: values.observacao_paragrafo || null,
+      tipo_paragrafo: tipoParagrafo,
       imagem_autor_url: imagemUrl,
       temas_sugeridos: temasSugeridos.map((t) => t.id),
     };
@@ -425,6 +429,31 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
             <h3 className="text-sm font-semibold text-purple-700 uppercase tracking-wide border-b border-purple-100 pb-1">
               3. Parágrafo Modelo
             </h3>
+
+            {/* Tipo de parágrafo */}
+            <div className="space-y-1.5">
+              <Label>Tipo de parágrafo *</Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'introducao', label: 'Parágrafo introdutório' },
+                  { value: 'argumentativo', label: 'Parágrafo argumentativo' },
+                  { value: 'conclusao', label: 'Parágrafo de conclusão' },
+                ].map((tipo) => (
+                  <button
+                    key={tipo.value}
+                    type="button"
+                    onClick={() => setTipoParagrafo(tipo.value)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                      tipoParagrafo === tipo.value
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-700'
+                    }`}
+                  >
+                    {tipo.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="paragrafo_modelo">Parágrafo ENEM *</Label>

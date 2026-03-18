@@ -20,6 +20,21 @@ import {
 import { useRepertorioLaboratorio, LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
 import { getEixoColors } from '@/utils/eixoTematicoCores';
 import { MoreVertical, Pencil, Trash2, Eye, EyeOff, Plus, User } from 'lucide-react';
+
+const TIPO_PARAGRAFO_MAP: Record<string, { label: string; className: string }> = {
+  introducao:    { label: 'Introdutório',   className: 'bg-blue-600 text-white' },
+  argumentativo: { label: 'Argumentativo',  className: 'bg-purple-600 text-white' },
+  conclusao:     { label: 'Conclusão',      className: 'bg-green-600 text-white' },
+};
+
+function TipoParagrafoTag({ tipo }: { tipo: string }) {
+  const info = TIPO_PARAGRAFO_MAP[tipo] ?? { label: tipo, className: 'bg-gray-600 text-white' };
+  return (
+    <span className={`absolute bottom-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${info.className}`}>
+      {info.label}
+    </span>
+  );
+}
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface LaboratorioTableProps {
@@ -67,6 +82,9 @@ function LaboratorioAdminCard({
             </Badge>
           </div>
         )}
+
+        {/* Tag tipo de parágrafo */}
+        {aula.tipo_paragrafo && <TipoParagrafoTag tipo={aula.tipo_paragrafo} />}
 
         {/* Menu 3-pontinhos sobreposto no canto superior direito */}
         <div className="absolute top-2 right-2">

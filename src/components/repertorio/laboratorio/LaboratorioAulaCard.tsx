@@ -4,6 +4,12 @@ import { getEixoColors } from '@/utils/eixoTematicoCores';
 import { LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
 import { User } from 'lucide-react';
 
+const TIPO_PARAGRAFO_MAP: Record<string, { label: string; className: string }> = {
+  introducao:    { label: 'Introdutório',   className: 'bg-blue-600 text-white' },
+  argumentativo: { label: 'Argumentativo',  className: 'bg-purple-600 text-white' },
+  conclusao:     { label: 'Conclusão',      className: 'bg-green-600 text-white' },
+};
+
 interface LaboratorioAulaCardProps {
   aula: LaboratorioAula;
 }
@@ -34,6 +40,16 @@ export function LaboratorioAulaCard({ aula }: LaboratorioAulaCardProps) {
             </div>
           </div>
         )}
+
+        {/* Tag tipo de parágrafo */}
+        {aula.tipo_paragrafo && (() => {
+          const info = TIPO_PARAGRAFO_MAP[aula.tipo_paragrafo] ?? { label: aula.tipo_paragrafo, className: 'bg-gray-600 text-white' };
+          return (
+            <span className={`absolute bottom-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${info.className}`}>
+              {info.label}
+            </span>
+          );
+        })()}
 
         {/* Overlay sutil no hover */}
         <div className="absolute inset-0 bg-purple-900/0 group-hover:bg-purple-900/10 transition-colors duration-200" />
