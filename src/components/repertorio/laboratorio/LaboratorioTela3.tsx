@@ -10,8 +10,18 @@ interface LaboratorioTela3Props {
   onConcluir: () => void;
 }
 
+function contarPalavras(texto: string): number {
+  return texto.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function contarPeriodos(texto: string): number {
+  return (texto.match(/[^.!?]*[.!?]+/g) || []).filter((s) => s.trim().length > 0).length;
+}
+
 export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3Props) {
   const [modalOpen, setModalOpen] = useState(false);
+  const palavras = contarPalavras(aula.paragrafo_modelo);
+  const periodos = contarPeriodos(aula.paragrafo_modelo);
 
   return (
     <div className="py-8 px-4">
@@ -30,10 +40,20 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
         </div>
 
         {/* Parágrafo em destaque */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sm:p-8">
-          <p className="text-gray-800 text-base sm:text-lg leading-[1.9] font-light tracking-wide">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <p className="text-gray-800 text-base sm:text-lg leading-[1.9] font-light tracking-wide p-6 sm:p-8">
             {aula.paragrafo_modelo}
           </p>
+          {/* Contadores */}
+          <div className="border-t border-gray-100 px-6 py-3 flex gap-6 bg-gray-50">
+            <span className="text-xs text-gray-500">
+              <span className="font-semibold text-gray-800">{palavras}</span> palavras
+            </span>
+            <span className="text-xs text-gray-500">
+              <span className="font-semibold text-gray-800">{periodos}</span>{' '}
+              {periodos === 1 ? 'período sintático' : 'períodos sintáticos'}
+            </span>
+          </div>
         </div>
 
         {/* Observação didática do professor */}
