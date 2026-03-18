@@ -173,18 +173,20 @@ export const ObraCard = ({
         {/* Gradiente de fundo sutil */}
         <div className={cn("absolute inset-0 bg-gradient-to-br opacity-30", colors.gradient)} />
 
-        {/* Imagem de capa */}
-        {obra.capa_url && (
-          <div className="w-full aspect-[4/3] overflow-hidden">
-            <img
-              src={obra.capa_url}
-              alt={`Capa de ${obra.titulo}`}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-
         <CardContent className="relative p-4 space-y-3">
+          {/* Layout: imagem à esquerda (se houver) + conteúdo à direita */}
+          <div className={cn("flex gap-3", obra.capa_url ? "items-start" : "")}>
+            {obra.capa_url && (
+              <div className="w-20 shrink-0 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                <img
+                  src={obra.capa_url}
+                  alt={`Capa de ${obra.titulo}`}
+                  className="w-full aspect-[2/3] object-cover"
+                />
+              </div>
+            )}
+
+            <div className="flex-1 min-w-0 space-y-3">
           {/* Header: Tipo de obra + Eixo + Menu */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -246,6 +248,8 @@ export const ObraCard = ({
           <p className="text-sm leading-relaxed text-gray-700 line-clamp-4">
             {obra.sinopse}
           </p>
+            </div>{/* fim flex-1 */}
+          </div>{/* fim flex container imagem+conteúdo */}
 
           {/* Autor da publicação e data */}
           <div className="flex items-center gap-2 pt-2 border-t border-gray-200/50">
