@@ -50,12 +50,13 @@ import {
   Award as PhosphorAward,
   Calendar as PhosphorCalendar,
   ListChecks,
-  ChatText
+  Article
 } from "phosphor-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DetailedDashboardCard } from "@/components/admin/DetailedDashboardCard";
 import { getExerciseAvailability } from "@/utils/exerciseUtils";
+import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 
 // Import existing admin components with correct named imports
 import { TemaForm } from "@/components/admin/TemaForm";
@@ -98,15 +99,6 @@ import { AulaVirtualList } from "@/components/admin/AulaVirtualList";
 import { AulaVirtualEditForm } from "@/components/admin/AulaVirtualEditForm";
 import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
-// Ícone customizado que usa a logo do projeto (compatível com a API phosphor-react)
-const LogoIcon = ({ size = 32 }: { size?: number; color?: string; weight?: string }) => (
-  <img
-    src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
-    alt=""
-    style={{ width: size, height: size }}
-    className="rounded-lg"
-  />
-);
 
 // Import aluno components
 import { AlunoFormModern } from "@/components/admin/AlunoFormModern";
@@ -548,6 +540,22 @@ const Admin = () => {
         badge: coresBadge || undefined
       };
 
+      // Laboratório de Repertório - contar aulas ativas por tipo_paragrafo
+      const { data: labAulas } = await supabase
+        .from('repertorio_laboratorio')
+        .select('tipo_paragrafo')
+        .eq('ativo', true);
+
+      const labTotal = labAulas?.length || 0;
+      const labIntro = labAulas?.filter(a => a.tipo_paragrafo === 'introducao').length || 0;
+      const labArg = labAulas?.filter(a => a.tipo_paragrafo === 'argumentativo').length || 0;
+      const labConc = labAulas?.filter(a => a.tipo_paragrafo === 'conclusao').length || 0;
+
+      data.laboratorio = {
+        info: `${labTotal} ${labTotal === 1 ? 'aula publicada' : 'aulas publicadas'}`,
+        badge: labTotal > 0 ? `${labIntro} intro · ${labArg} arg · ${labConc} conc` : undefined
+      };
+
       // Cards limpos - apenas título, sem informações adicionais
       const cardsLimpos = [
         "radar", "professores", "administradores", "exportacao", "top5", "configuracoes"
@@ -631,8 +639,8 @@ const Admin = () => {
     { id: "radar", label: "Radar", icon: ChartPieSlice, iconColor: "#3F51B5" },
     { id: "gamificacao", label: "Gamificação", icon: Trophy, iconColor: "#FFD700" },
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: ChatCircle, iconColor: "#00BCD4" },
-    { id: "repertorio-orientado", label: "Repertório Orientado", icon: ChatText, iconColor: "#8B5CF6" },
-    { id: "laboratorio", label: "Laboratório", icon: LogoIcon, iconColor: "#7C3AED" },
+    { id: "repertorio-orientado", label: "Repertório Orientado", icon: Article, iconColor: "#8B5CF6" },
+    { id: "laboratorio", label: "Laboratório", icon: LaboratorioIcon, iconColor: "#7C3AED" },
 
     // Linha 7: Gestão de Usuários
     { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },

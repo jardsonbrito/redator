@@ -4,6 +4,7 @@ import { LaboratorioForm } from '@/components/admin/LaboratorioForm';
 import { LaboratorioTable } from '@/components/admin/LaboratorioTable';
 import { LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
 import { Plus } from 'lucide-react';
+import { LaboratorioIcon } from '@/components/icons/LaboratorioIcon';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
 
 const RepertorioLaboratorio = () => {
@@ -33,7 +34,7 @@ const RepertorioLaboratorio = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <img src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" alt="" className="h-6 w-6 rounded-sm" />
+                <LaboratorioIcon className="h-6 w-6" />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-foreground leading-tight">Painel Administrativo</h1>

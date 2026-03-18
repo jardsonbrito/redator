@@ -14,6 +14,7 @@ import {
   ObrasGrid,
 } from "@/components/repertorio";
 import { LaboratorioList } from "@/components/repertorio/laboratorio/LaboratorioList";
+import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { LaboratorioTable } from "@/components/admin/LaboratorioTable";
 import { LaboratorioForm } from "@/components/admin/LaboratorioForm";
 import { LaboratorioAula } from "@/hooks/useRepertorioLaboratorio";
@@ -280,11 +281,7 @@ const RepertorioOrientado = () => {
               value="laboratorio"
               className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
             >
-              <img
-                src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
-                alt=""
-                className="h-4 w-4 rounded-sm"
-              />
+              <LaboratorioIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Laboratório</span>
             </TabsTrigger>
           </TabsList>

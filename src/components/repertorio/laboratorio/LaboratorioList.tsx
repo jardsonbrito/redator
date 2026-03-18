@@ -1,6 +1,7 @@
 import { useRepertorioLaboratorio } from '@/hooks/useRepertorioLaboratorio';
 import { LaboratorioAulaCard } from './LaboratorioAulaCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LaboratorioIcon } from '@/components/icons/LaboratorioIcon';
 
 export function LaboratorioList() {
   const { aulas, isLoading } = useRepertorioLaboratorio();
@@ -23,11 +24,7 @@ export function LaboratorioList() {
   if (aulas.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-        <img
-          src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
-          alt=""
-          className="w-14 h-14 rounded-xl opacity-70"
-        />
+        <LaboratorioIcon className="w-14 h-14 opacity-40 text-purple-400" />
         <div className="space-y-1">
           <p className="font-medium text-gray-700">Nenhuma aula disponível</p>
           <p className="text-sm text-gray-400">

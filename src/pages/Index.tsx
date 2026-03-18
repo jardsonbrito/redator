@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, MessageSquareText } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -120,7 +120,7 @@ const Index = () => {
     {
       title: "Repertório Orientado",
       path: "/repertorio-orientado",
-      icon: MessageSquareText,
+      icon: Library,
       tooltip: "Publique parágrafos com repertório e receba feedback dos colegas e professores.",
       showAlways: true
     },
