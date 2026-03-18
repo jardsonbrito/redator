@@ -33,6 +33,7 @@ import {
   BarChart3,
   Loader2,
   Calendar,
+  Library,
 } from "lucide-react";
 import {
   LineChart,
@@ -300,6 +301,13 @@ export function AlunoBoletimSheet({
                     value={data.metricas.totalLousas.toString()}
                     color="#14b8a6"
                     icon={BookOpen}
+                  />
+                  <MetricCard
+                    label="Repertório"
+                    value={(data.metricas.totalRepertorio ?? 0).toString()}
+                    sub={`${data.metricas.repertorioDetalhe?.paragrafos ?? 0} par. · ${data.metricas.repertorioDetalhe?.frases ?? 0} frases · ${data.metricas.repertorioDetalhe?.obras ?? 0} obras`}
+                    color="#f97316"
+                    icon={Library}
                   />
                 </div>
 
@@ -572,7 +580,8 @@ export function AlunoBoletimSheet({
                 {data.metricas.totalRedacoes === 0 &&
                   data.metricas.totalExercicios === 0 &&
                   data.metricas.totalPresencas === 0 &&
-                  data.metricas.totalLousas === 0 && (
+                  data.metricas.totalLousas === 0 &&
+                  data.metricas.totalRepertorio === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                       <BarChart3 className="h-8 w-8 opacity-30" />
                       <p className="text-sm">Nenhuma atividade registrada neste período</p>

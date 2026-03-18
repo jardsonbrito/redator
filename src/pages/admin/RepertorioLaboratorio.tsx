@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LaboratorioForm } from '@/components/admin/LaboratorioForm';
 import { LaboratorioTable } from '@/components/admin/LaboratorioTable';
 import { LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
 
 const RepertorioLaboratorio = () => {
-  const navigate = useNavigate();
   const [formOpen, setFormOpen] = useState(false);
   const [aulaParaEditar, setAulaParaEditar] = useState<LaboratorioAula | null>(null);
 
@@ -29,23 +28,32 @@ const RepertorioLaboratorio = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Voltar ao Dashboard
-            </Button>
-            <div className="h-6 w-px bg-gray-300" />
-            <div className="flex items-center gap-2">
-              <img
-                src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
-                alt=""
-                className="h-7 w-7 rounded-lg"
-              />
-              <h1 className="text-lg font-semibold text-gray-900">Laboratório de Repertório</h1>
+      <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <img src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" alt="" className="h-6 w-6 rounded-sm" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-foreground leading-tight">Painel Administrativo</h1>
+                <p className="text-xs text-muted-foreground">Sistema de Gestão</p>
+              </div>
             </div>
           </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin" className="text-primary font-medium">Dashboard</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Laboratório de Repertório</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
         </div>
       </header>
 

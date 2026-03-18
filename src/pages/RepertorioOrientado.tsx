@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Star, Filter, RefreshCw, ArrowLeft, FileText, MessageSquareQuote, Clapperboard } from "lucide-react";
+import { Plus, Star, Filter, RefreshCw, FileText, MessageSquareQuote, Clapperboard } from "lucide-react";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { StudentHeader } from "@/components/StudentHeader";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
@@ -204,26 +205,32 @@ const RepertorioOrientado = () => {
     <div className="min-h-screen bg-background">
       {/* Header condicional - Admin ou Student */}
       {isAdmin ? (
-        <header className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/admin')}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Voltar ao Dashboard
-              </Button>
-              <div className="h-6 w-px bg-gray-300" />
-              <h1 className="text-lg font-semibold text-gray-900">
-                Repertório Orientado
-              </h1>
-              <span className="text-sm text-purple-600 font-medium bg-purple-100 px-2 py-1 rounded">
-                Visualização Admin
-              </span>
+        <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <img src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" alt="" className="h-6 w-6 rounded-sm" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-foreground leading-tight">Painel Administrativo</h1>
+                  <p className="text-xs text-muted-foreground">Sistema de Gestão</p>
+                </div>
+              </div>
             </div>
+          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/admin" className="text-primary font-medium">Dashboard</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>Repertório Orientado</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
         </header>
       ) : (

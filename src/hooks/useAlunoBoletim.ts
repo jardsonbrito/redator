@@ -61,6 +61,12 @@ export interface MetricasBoletim {
     regular: number | null;
     simulado: number | null;
   };
+  totalRepertorio: number;
+  repertorioDetalhe: {
+    paragrafos: number;
+    frases: number;
+    obras: number;
+  };
 }
 
 export interface EvolucaoNota {
@@ -151,7 +157,7 @@ async function fetchBoletimData(
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("nome, sobrenome, email, turma, creditos, data_aprovacao")
+      .select("id, nome, sobrenome, email, turma, creditos, data_aprovacao")
       .eq("email", email)
       .single(),
 
@@ -217,6 +223,37 @@ async function fetchBoletimData(
       .eq("month", mes)
       .eq("year", ano)
       .order("occurred_at", { ascending: false }),
+  ]);
+
+  const autorId: string | null = (perfilRes.data as any)?.id ?? null;
+
+  const [repParagrafosRes, repFrasesRes, repObrasRes] = await Promise.all([
+    autorId
+      ? supabase
+          .from("repertorio_publicacoes")
+          .select("id", { count: "exact", head: true })
+          .eq("autor_id", autorId)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd)
+      : Promise.resolve({ count: 0, error: null }),
+
+    autorId
+      ? supabase
+          .from("repertorio_frases")
+          .select("id", { count: "exact", head: true })
+          .eq("autor_id", autorId)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd)
+      : Promise.resolve({ count: 0, error: null }),
+
+    autorId
+      ? supabase
+          .from("repertorio_obras")
+          .select("id", { count: "exact", head: true })
+          .eq("autor_id", autorId)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd)
+      : Promise.resolve({ count: 0, error: null }),
   ]);
 
   // --- Montar arrays de redações ---
@@ -344,6 +381,12 @@ async function fetchBoletimData(
     simulado: calcularMedia(redacoesSimulado.map((r) => r.nota_total)),
   };
 
+  const repertorioDetalhe = {
+    paragrafos: repParagrafosRes.count ?? 0,
+    frases: repFrasesRes.count ?? 0,
+    obras: repObrasRes.count ?? 0,
+  };
+
   const metricas: MetricasBoletim = {
     totalRedacoes: todasRedacoes.length,
     mediaGeral,
@@ -354,6 +397,8 @@ async function fetchBoletimData(
     taxaFrequencia,
     creditos: perfilRes.data?.creditos ?? null,
     mediaPorTipo,
+    totalRepertorio: repertorioDetalhe.paragrafos + repertorioDetalhe.frases + repertorioDetalhe.obras,
+    repertorioDetalhe,
   };
 
   // --- Evolução de notas (redações com nota, ordenadas por data) ---
@@ -389,6 +434,7 @@ async function fetchBoletimData(
     { tipo: "Exercícios", total: exercicios.length, cor: "#8b5cf6" },
     { tipo: "Aulas ao Vivo", total: totalPresencas, cor: "#f59e0b" },
     { tipo: "Lousas", total: lousas.length, cor: "#10b981" },
+    { tipo: "Repertório", total: metricas.totalRepertorio, cor: "#f97316" },
   ];
 
   return {

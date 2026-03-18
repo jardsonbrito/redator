@@ -180,11 +180,18 @@ function drawMetricCards(doc: jsPDF, metricas: MetricasBoletim, y: number): numb
       value: metricas.totalLousas.toString(),
       color: [20, 184, 166] as [number, number, number],
     },
+    {
+      label: "Repertório",
+      value: metricas.totalRepertorio.toString(),
+      color: [249, 115, 22] as [number, number, number],
+    },
   ];
 
-  for (let row = 0; row < 2; row++) {
+  const numRows = Math.ceil(cards.length / 3);
+  for (let row = 0; row < numRows; row++) {
     for (let col = 0; col < 3; col++) {
       const card = cards[row * 3 + col];
+      if (!card) continue;
       const cx = MARGIN + col * (cardW + gap);
       const cy = y + row * (cardH + gap);
 
@@ -207,7 +214,7 @@ function drawMetricCards(doc: jsPDF, metricas: MetricasBoletim, y: number): numb
   }
 
   // Médias por tipo (abaixo dos cards)
-  const rowBottom = y + 2 * (cardH + gap) + 4;
+  const rowBottom = y + numRows * (cardH + gap) + 4;
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...GRAY);
