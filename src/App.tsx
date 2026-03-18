@@ -92,6 +92,8 @@ import RedacaoRegularDetalhes from "./pages/RedacaoRegularDetalhes";
 import ProcessoSeletivo from "./pages/ProcessoSeletivo";
 import ProcessoSeletivoInscricao from "./pages/ProcessoSeletivoInscricao";
 import RepertorioOrientado from "./pages/RepertorioOrientado";
+import { LaboratorioAulaView } from "./components/repertorio/laboratorio/LaboratorioAula";
+import RepertorioLaboratorio from "./pages/admin/RepertorioLaboratorio";
 import { CustomizePlanSimple } from "./pages/admin/CustomizePlanSimple";
 import { CustomizePlanByName } from "./pages/admin/CustomizePlanByName";
 import { CustomizeStudentPlan } from "./pages/admin/CustomizeStudentPlan";
@@ -151,6 +153,7 @@ function App() {
                   <Route path="/lousa/:id" element={<ProtectedStudentRoute><LousaResponse /></ProtectedStudentRoute>} />
                   <Route path="/ajuda-rapida" element={<ProtectedStudentRoute><AjudaRapida /></ProtectedStudentRoute>} />
                   <Route path="/repertorio-orientado" element={<ProtectedStudentRoute><RepertorioOrientado /></ProtectedStudentRoute>} />
+                  <Route path="/repertorio-orientado/laboratorio/:id" element={<ProtectedStudentRoute><LaboratorioAulaView /></ProtectedStudentRoute>} />
                   <Route path="/minhas-conquistas" element={<ProtectedStudentRoute><MinhasConquistas /></ProtectedStudentRoute>} />
                   <Route path="/gamificacao" element={<ProtectedStudentRoute><Gamificacao /></ProtectedStudentRoute>} />
                   <Route path="/diario-online" element={<ProtectedStudentRoute><DiarioOnline /></ProtectedStudentRoute>} />
@@ -173,6 +176,7 @@ function App() {
                   <Route path="/admin/customize-plan-by-name/:turmaNome" element={<CustomizePlanByName />} />
                   <Route path="/admin/customize-student-plan/:studentId" element={<CustomizeStudentPlan />} />
                   <Route path="/admin/anotacoes" element={<AdminNotes />} />
+                  <Route path="/admin/laboratorio" element={<RepertorioLaboratorio />} />
 
                   {/* Rotas do Corretor */}
                   <Route path="/corretor/login" element={<CorretorLogin />} />

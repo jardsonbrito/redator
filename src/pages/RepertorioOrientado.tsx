@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Star, Filter, RefreshCw, ArrowLeft, FileText, MessageSquareQuote, Clapperboard } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
@@ -11,6 +12,10 @@ import {
   FrasesGrid,
   ObrasGrid,
 } from "@/components/repertorio";
+import { LaboratorioList } from "@/components/repertorio/laboratorio/LaboratorioList";
+import { LaboratorioTable } from "@/components/admin/LaboratorioTable";
+import { LaboratorioForm } from "@/components/admin/LaboratorioForm";
+import { LaboratorioAula } from "@/hooks/useRepertorioLaboratorio";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -28,13 +33,33 @@ import { useNavigate } from "react-router-dom";
 const RepertorioOrientado = () => {
   usePageTitle("Repertório Orientado");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const { studentData, isStudentLoggedIn } = useStudentAuth();
   const { isAdmin: isAdminAuth, user: adminUser } = useAuth();
 
   const [showNovaPublicacaoModal, setShowNovaPublicacaoModal] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
-  const [activeTab, setActiveTab] = useState<string>("paragrafos");
+  const [activeTab, setActiveTab] = useState<string>(
+    searchParams.get("tab") || "paragrafos"
+  );
+
+  // Estado do formulário de lab (admin inline)
+  const [labFormOpen, setLabFormOpen] = useState(false);
+  const [labAulaParaEditar, setLabAulaParaEditar] = useState<LaboratorioAula | null>(null);
+
+  const handleLabNovaAula = () => {
+    setLabAulaParaEditar(null);
+    setLabFormOpen(true);
+  };
+  const handleLabEditar = (aula: LaboratorioAula) => {
+    setLabAulaParaEditar(aula);
+    setTimeout(() => setLabFormOpen(true), 100);
+  };
+  const handleLabCloseForm = (open: boolean) => {
+    setLabFormOpen(open);
+    if (!open) setLabAulaParaEditar(null);
+  };
 
   // Verificar sessão de admin no localStorage
   const [adminSession, setAdminSession] = useState<{ email: string; nome?: string } | null>(null);
@@ -222,27 +247,38 @@ const RepertorioOrientado = () => {
 
         {/* Tabs para alternar entre Parágrafos, Frases e Obras */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 bg-purple-100/70">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-purple-100/70">
             <TabsTrigger
               value="paragrafos"
               className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
             >
               <FileText className="h-4 w-4" />
-              Parágrafos
+              <span className="hidden sm:inline">Parágrafos</span>
             </TabsTrigger>
             <TabsTrigger
               value="frases"
               className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
             >
               <MessageSquareQuote className="h-4 w-4" />
-              Frases
+              <span className="hidden sm:inline">Frases</span>
             </TabsTrigger>
             <TabsTrigger
               value="obras"
               className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
             >
               <Clapperboard className="h-4 w-4" />
-              Obras
+              <span className="hidden sm:inline">Obras</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="laboratorio"
+              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
+            >
+              <img
+                src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
+                alt=""
+                className="h-4 w-4 rounded-sm"
+              />
+              <span className="hidden sm:inline">Laboratório</span>
             </TabsTrigger>
           </TabsList>
 
@@ -429,6 +465,29 @@ const RepertorioOrientado = () => {
               podeComentarFlag={podeVotar}
             />
           </TabsContent>
+
+          {/* Conteúdo da aba Laboratório */}
+          <TabsContent value="laboratorio" className="mt-6">
+            {isAdmin ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Aulas cadastradas</h2>
+                    <p className="text-sm text-gray-500">
+                      Cada aula percorre 3 etapas: Contexto → Repertório → Aplicação.
+                    </p>
+                  </div>
+                  <Button onClick={handleLabNovaAula} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Nova aula
+                  </Button>
+                </div>
+                <LaboratorioTable onEditar={handleLabEditar} onNova={handleLabNovaAula} />
+              </div>
+            ) : (
+              <LaboratorioList />
+            )}
+          </TabsContent>
         </Tabs>
 
         {/* Aviso para visitantes */}
@@ -450,6 +509,15 @@ const RepertorioOrientado = () => {
         onSubmit={handleNovaPublicacao}
         isSubmitting={isCriando}
       />
+
+      {/* Form de aula do Laboratório (admin inline) */}
+      {isAdmin && (
+        <LaboratorioForm
+          open={labFormOpen}
+          onOpenChange={handleLabCloseForm}
+          aulaParaEditar={labAulaParaEditar}
+        />
+      )}
     </div>
   );
 };

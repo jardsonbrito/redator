@@ -98,6 +98,16 @@ import { AulaVirtualList } from "@/components/admin/AulaVirtualList";
 import { AulaVirtualEditForm } from "@/components/admin/AulaVirtualEditForm";
 import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
+// Ícone customizado que usa a logo do projeto (compatível com a API phosphor-react)
+const LogoIcon = ({ size = 32 }: { size?: number; color?: string; weight?: string }) => (
+  <img
+    src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
+    alt=""
+    style={{ width: size, height: size }}
+    className="rounded-lg"
+  />
+);
+
 // Import aluno components
 import { AlunoFormModern } from "@/components/admin/AlunoFormModern";
 
@@ -622,6 +632,7 @@ const Admin = () => {
     { id: "gamificacao", label: "Gamificação", icon: Trophy, iconColor: "#FFD700" },
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: ChatCircle, iconColor: "#00BCD4" },
     { id: "repertorio-orientado", label: "Repertório Orientado", icon: ChatText, iconColor: "#8B5CF6" },
+    { id: "laboratorio", label: "Laboratório", icon: LogoIcon, iconColor: "#7C3AED" },
 
     // Linha 7: Gestão de Usuários
     { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
@@ -1020,6 +1031,10 @@ const Admin = () => {
 
       case "repertorio-orientado":
         navigate('/repertorio-orientado');
+        return null;
+
+      case "laboratorio":
+        navigate('/admin/laboratorio');
         return null;
 
       case "exportacao":

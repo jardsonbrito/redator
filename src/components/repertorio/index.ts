@@ -13,3 +13,8 @@ export { FrasesGrid } from './FrasesGrid';
 export { ObraCard } from './ObraCard';
 export { ObraNovaForm } from './ObraNovaForm';
 export { ObrasGrid } from './ObrasGrid';
+
+// Componentes do Laboratório
+export { LaboratorioList } from './laboratorio/LaboratorioList';
+export { LaboratorioAulaCard } from './laboratorio/LaboratorioAulaCard';
+export { LaboratorioAulaView } from './laboratorio/LaboratorioAula';
