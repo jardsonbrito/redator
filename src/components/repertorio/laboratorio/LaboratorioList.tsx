@@ -39,23 +39,10 @@ export function LaboratorioList() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Cabeçalho da aba */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">
-          Laboratório de Repertório
-        </h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Aprenda a transformar repertório em argumento com aulas guiadas em 3 etapas.
-        </p>
-      </div>
-
-      {/* Grade de cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {aulas.map((aula) => (
-          <LaboratorioAulaCard key={aula.id} aula={aula} />
-        ))}
-      </div>
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      {aulas.map((aula) => (
+        <LaboratorioAulaCard key={aula.id} aula={aula} />
+      ))}
     </div>
   );
 }

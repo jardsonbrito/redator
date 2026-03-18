@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { getEixoColors } from '@/utils/eixoTematicoCores';
 import { LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
-import { User, ChevronRight } from 'lucide-react';
+import { User } from 'lucide-react';
 
 interface LaboratorioAulaCardProps {
   aula: LaboratorioAula;
@@ -69,15 +69,11 @@ export function LaboratorioAulaCard({ aula }: LaboratorioAulaCardProps) {
           </div>
         )}
 
-        {/* Rodapé com indicador de 3 telas */}
-        <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-          <div className="flex items-center gap-1">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="w-1.5 h-1.5 rounded-full bg-purple-200" />
-            ))}
-            <span className="text-xs text-gray-400 ml-1">3 etapas</span>
-          </div>
-          <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-0.5 transition-all" />
+        {/* Botão de acesso */}
+        <div className="pt-1">
+          <span className="block w-full text-center text-xs font-semibold py-1.5 rounded-lg bg-purple-600 text-white group-hover:bg-purple-700 transition-colors">
+            Ver aula
+          </span>
         </div>
       </div>
     </button>

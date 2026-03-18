@@ -473,9 +473,6 @@ const RepertorioOrientado = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">Aulas cadastradas</h2>
-                    <p className="text-sm text-gray-500">
-                      Cada aula percorre 3 etapas: Contexto → Repertório → Aplicação.
-                    </p>
                   </div>
                   <Button onClick={handleLabNovaAula} className="gap-2">
                     <Plus className="h-4 w-4" />
