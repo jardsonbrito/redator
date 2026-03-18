@@ -72,6 +72,43 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
     resolver: zodResolver(schema),
   });
 
+  // Query de temas publicados para seleção (deve vir antes do useEffect que a usa)
+  const { data: todosTemasOptions = [] } = useQuery({
+    queryKey: ['temas-admin-select'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('temas')
+        .select('id, frase_tematica')
+        .eq('status', 'publicado')
+        .order('frase_tematica', { ascending: true });
+      if (error) throw error;
+      return (data || []) as { id: string; frase_tematica: string }[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const temasFiltrados = useMemo(() => {
+    const ids = new Set(temasSugeridos.map((t) => t.id));
+    if (!temasBusca.trim()) return todosTemasOptions.filter((t) => !ids.has(t.id)).slice(0, 6);
+    const termo = temasBusca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return todosTemasOptions
+      .filter((t) => {
+        if (ids.has(t.id)) return false;
+        const frase = t.frase_tematica.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return frase.includes(termo);
+      })
+      .slice(0, 6);
+  }, [todosTemasOptions, temasBusca, temasSugeridos]);
+
+  const adicionarTema = (tema: { id: string; frase_tematica: string }) => {
+    setTemasSugeridos((prev) => [...prev, tema]);
+    setTemasBusca('');
+  };
+
+  const removerTema = (id: string) => {
+    setTemasSugeridos((prev) => prev.filter((t) => t.id !== id));
+  };
+
   // Preencher formulário ao editar
   useEffect(() => {
     if (aulaParaEditar && open) {
@@ -206,43 +243,6 @@ export function LaboratorioForm({ open, onOpenChange, aulaParaEditar, onSuccess 
     } catch {
       // Erros já tratados nas mutations
     }
-  };
-
-  // Query de temas publicados para seleção
-  const { data: todosTemasOptions = [] } = useQuery({
-    queryKey: ['temas-admin-select'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('temas')
-        .select('id, frase_tematica')
-        .eq('status', 'publicado')
-        .order('frase_tematica', { ascending: true });
-      if (error) throw error;
-      return (data || []) as { id: string; frase_tematica: string }[];
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const temasFiltrados = useMemo(() => {
-    const ids = new Set(temasSugeridos.map((t) => t.id));
-    if (!temasBusca.trim()) return todosTemasOptions.filter((t) => !ids.has(t.id)).slice(0, 6);
-    const termo = temasBusca.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return todosTemasOptions
-      .filter((t) => {
-        if (ids.has(t.id)) return false;
-        const frase = t.frase_tematica.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return frase.includes(termo);
-      })
-      .slice(0, 6);
-  }, [todosTemasOptions, temasBusca, temasSugeridos]);
-
-  const adicionarTema = (tema: { id: string; frase_tematica: string }) => {
-    setTemasSugeridos((prev) => [...prev, tema]);
-    setTemasBusca('');
-  };
-
-  const removerTema = (id: string) => {
-    setTemasSugeridos((prev) => prev.filter((t) => t.id !== id));
   };
 
   const isLoading = isSaving || uploadingImagem;
