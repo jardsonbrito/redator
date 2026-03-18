@@ -17,9 +17,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useNavigate } from 'react-router-dom';
 import { useRepertorioLaboratorio, LaboratorioAula } from '@/hooks/useRepertorioLaboratorio';
 import { getEixoColors } from '@/utils/eixoTematicoCores';
-import { MoreVertical, Pencil, Trash2, Eye, EyeOff, Plus, User } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, Eye, EyeOff, Plus, User, GraduationCap } from 'lucide-react';
+import { LaboratorioIcon } from '@/components/icons/LaboratorioIcon';
 
 const TIPO_PARAGRAFO_MAP: Record<string, { label: string; className: string }> = {
   introducao:    { label: 'Introdutório',   className: 'bg-blue-600 text-white' },
@@ -55,6 +57,7 @@ function LaboratorioAdminCard({
   onToggleAtivo: (aula: LaboratorioAula) => void;
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -104,6 +107,20 @@ function LaboratorioAdminCard({
               className="w-44 shadow-lg border border-gray-200"
               onCloseAutoFocus={(e) => e.preventDefault()}
             >
+              {/* Ver como aluno — navegação simples, sem dialog */}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  setDropdownOpen(false);
+                  sessionStorage.removeItem(`lab_step_${aula.id}`);
+                  navigate(`/repertorio-orientado/laboratorio/${aula.id}`);
+                }}
+                className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <GraduationCap className="h-4 w-4 mr-2" />
+                Ver como aluno
+              </DropdownMenuItem>
+
               {/* Editar — abre Dialog, precisa fechar dropdown antes com setTimeout */}
               <DropdownMenuItem
                 onClick={(e) => {
@@ -222,11 +239,7 @@ export function LaboratorioTable({ onEditar, onNova }: LaboratorioTableProps) {
   if (todasAulas.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4 text-center border-2 border-dashed border-gray-200 rounded-xl bg-white">
-        <img
-          src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png"
-          alt=""
-          className="w-14 h-14 rounded-xl opacity-60"
-        />
+        <LaboratorioIcon className="w-14 h-14 opacity-40 text-purple-400" />
         <div className="space-y-1">
           <p className="font-semibold text-gray-700">Você ainda não criou nenhuma aula</p>
           <p className="text-sm text-gray-400">
