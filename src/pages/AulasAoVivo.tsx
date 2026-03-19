@@ -12,6 +12,7 @@ import { SkeletonCard } from "@/components/ui/skeleton-card";
 import { getMyAttendanceStatus, registrarEntrada, registrarSaida, AttendanceStatus } from "@/utils/attendanceHelpers";
 import { computeStatus } from "@/utils/aulaStatus";
 import { AulaCardPadrao } from "@/components/shared/AulaCardPadrao";
+import { JustificativaAusenciaModal } from "@/components/shared/JustificativaAusenciaModal";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 
 interface AulaAoVivo {
@@ -44,6 +45,10 @@ const AulasAoVivo = () => {
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadingOperations, setLoadingOperations] = useState<Record<string, boolean>>({});
+
+  // Justificativas: { aulaId: { texto, criadoEm } | null }
+  const [justificativaMap, setJustificativaMap] = useState<Record<string, { texto: string; criadoEm: string } | null>>({});
+  const [justificativaModalAulaId, setJustificativaModalAulaId] = useState<string | null>(null);
 
   const fetchAulas = async () => {
     try {
@@ -107,6 +112,9 @@ const AulasAoVivo = () => {
       for (const aula of aulasAutorizadas) {
         await fetchAttendanceStatus(aula.id);
       }
+
+      // Buscar justificativas do aluno para aulas encerradas
+      await fetchJustificativas(aulasAutorizadas.map(a => a.id));
     } catch (error: any) {
       console.error('Erro ao carregar aulas:', error);
       toast.error('Erro ao carregar aulas ao vivo');
@@ -127,6 +135,47 @@ const AulasAoVivo = () => {
     } catch (error) {
       console.error('Error fetching attendance status:', error);
     }
+  };
+
+  const fetchJustificativas = async (aulaIds: string[]) => {
+    if (aulaIds.length === 0) return;
+
+    const userType = localStorage.getItem('userType');
+    let email: string | null = null;
+    if (userType === 'aluno') {
+      try { email = JSON.parse(localStorage.getItem('alunoData') || '{}').email; } catch { /* noop */ }
+    } else if (userType === 'visitante') {
+      try { email = JSON.parse(localStorage.getItem('visitanteData') || '{}').email; } catch { /* noop */ }
+    }
+    if (!email) return;
+
+    try {
+      const { data } = await supabase
+        .from('justificativas_ausencia')
+        .select('aula_id, justificativa, criado_em')
+        .eq('email_aluno', email.toLowerCase())
+        .in('aula_id', aulaIds);
+
+      const map: Record<string, { texto: string; criadoEm: string } | null> = {};
+      aulaIds.forEach(id => { map[id] = null; });
+      (data || []).forEach((row: any) => {
+        map[row.aula_id] = { texto: row.justificativa, criadoEm: row.criado_em };
+      });
+      setJustificativaMap(map);
+    } catch (err) {
+      console.error('Erro ao buscar justificativas:', err);
+    }
+  };
+
+  const handleJustificarAusencia = (aulaId: string) => {
+    setJustificativaModalAulaId(aulaId);
+  };
+
+  const handleJustificativaEnviada = (aulaId: string, texto: string) => {
+    setJustificativaMap(prev => ({
+      ...prev,
+      [aulaId]: { texto, criadoEm: new Date().toISOString() },
+    }));
   };
 
   const handleRegistrarEntrada = async (sessionId: string) => {
@@ -291,10 +340,12 @@ const AulasAoVivo = () => {
                     perfil="aluno"
                     attendanceStatus={attendanceStatus}
                     loadingOperation={loadingOperations[aula.id]}
+                    justificativaEnviada={!!justificativaMap[aula.id]}
                     actions={{
                       onEntrarAula: () => window.open(aula.link_meet, '_blank'),
                       onRegistrarEntrada: () => handleRegistrarEntrada(aula.id),
-                      onRegistrarSaida: () => handleRegistrarSaida(aula.id)
+                      onRegistrarSaida: () => handleRegistrarSaida(aula.id),
+                      onJustificarAusencia: handleJustificarAusencia,
                     }}
                   />
                 );
@@ -303,6 +354,21 @@ const AulasAoVivo = () => {
           )}
         </div>
       </main>
+
+      {/* Modal de justificativa de ausência */}
+      {justificativaModalAulaId && (() => {
+        const aulaModal = aulas.find(a => a.id === justificativaModalAulaId);
+        return (
+          <JustificativaAusenciaModal
+            isOpen={true}
+            onClose={() => setJustificativaModalAulaId(null)}
+            aulaId={justificativaModalAulaId}
+            aulaTitulo={aulaModal?.titulo ?? ''}
+            justificativaExistente={justificativaMap[justificativaModalAulaId] ?? null}
+            onEnviado={(texto) => handleJustificativaEnviada(justificativaModalAulaId, texto)}
+          />
+        );
+      })()}
     </div>
   );
 };

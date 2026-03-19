@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, Users, MoreHorizontal, Video, ExternalLink, LogIn, LogOut, BarChart3, Edit, Power, PowerOff, Trash2 } from 'lucide-react';
+import { Clock, Users, MoreHorizontal, Video, ExternalLink, LogIn, LogOut, BarChart3, Edit, Power, PowerOff, Trash2, FileText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,7 @@ interface AulaCardActions {
   onEditar?: (id: string) => void;
   onDesativar?: (id: string) => void;
   onExcluir?: (id: string) => void;
+  onJustificarAusencia?: (id: string) => void;
 }
 
 interface AulaCardPadraoProps {
@@ -47,9 +48,10 @@ interface AulaCardPadraoProps {
   actions?: AulaCardActions;
   attendanceStatus?: 'presente' | 'ausente' | 'entrada_registrada' | 'saida_registrada';
   loadingOperation?: boolean;
+  justificativaEnviada?: boolean;
 }
 
-export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ausente', loadingOperation }: AulaCardPadraoProps) => {
+export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ausente', loadingOperation, justificativaEnviada }: AulaCardPadraoProps) => {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
 
   const getStatusAula = () => {
@@ -298,6 +300,37 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   <ExternalLink className="w-4 h-4 mr-2" />
                   {getButtonText()}
                 </Button>
+
+                {/* Botão de justificativa — apenas para aulas encerradas onde o aluno está ausente */}
+                {aula.eh_aula_ao_vivo && status === 'encerrada' && attendanceStatus === 'ausente' && (
+                  <div className="space-y-2">
+                    {justificativaEnviada ? (
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-100 text-blue-800 text-xs flex-1 justify-center py-1.5">
+                          ✓ Justificativa enviada — Falta justificada
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => actions?.onJustificarAusencia?.(aula.id)}
+                        >
+                          Ver
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-amber-300 text-amber-800 hover:bg-amber-50"
+                        onClick={() => actions?.onJustificarAusencia?.(aula.id)}
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Justificar ausência
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 {/* Botões de entrada/saída ou status */}
                 {aula.eh_aula_ao_vivo && status !== 'encerrada' && (
