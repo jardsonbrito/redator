@@ -8,15 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Clock, Users, Download } from "lucide-react";
 
-interface PresencaRecord {
-  id: string;
-  nome_aluno: string;
-  email_aluno: string;
-  turma: string;
-  entrada_at: string | null;
-  saida_at: string | null;
-  aluno_id: string | null;
-}
 
 interface FrequenciaAluno {
   nome: string;
