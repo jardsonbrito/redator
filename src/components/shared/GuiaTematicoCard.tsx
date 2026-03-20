@@ -44,7 +44,7 @@ export function GuiaTematicoCard({ guia }: GuiaTematicoCardProps) {
 
         {/* Frase temática */}
         <p className="text-sm font-semibold text-gray-900 line-clamp-3 leading-snug flex-1">
-          {guia.frase_tematica}
+          "{guia.frase_tematica}"
         </p>
       </div>
 
