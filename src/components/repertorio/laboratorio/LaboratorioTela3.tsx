@@ -49,14 +49,8 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
             </span>
           </div>
 
-          {/* Corpo com linhas pautadas */}
-          <div
-            className="relative bg-white"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(to bottom, transparent, transparent calc(1.9em - 1px), #e5e7eb calc(1.9em - 1px), #e5e7eb 1.9em)',
-            }}
-          >
+          {/* Corpo — papel limpo com margem lateral */}
+          <div className="relative bg-white">
             {/* Margem esquerda decorativa */}
             <div
               className="absolute top-0 bottom-0 left-10 w-px bg-rose-200 opacity-60"
@@ -64,7 +58,7 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
             />
 
             <p
-              className="relative text-gray-800 text-base leading-[1.9] font-light tracking-wide text-justify pl-14 pr-6 sm:pr-8 py-[0.95em]"
+              className="relative text-gray-800 text-base leading-[1.9] font-light tracking-wide text-justify pl-14 pr-6 sm:pr-8 py-5"
               style={{ textIndent: '2em' }}
             >
               {aula.paragrafo_modelo}
