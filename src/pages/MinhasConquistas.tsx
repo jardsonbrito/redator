@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Trophy, FileText, Video, Users, PenTool } from "lucide-react";
+import { Calendar, Trophy, FileText, Video, Users, PenTool, Map } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ interface MonthlyActivity {
   lousas_concluidas: number;
   lives_participei: number;
   gravadas_assistidas: number;
+  guias_concluidos: number;
 }
 
 // Função para classificar tipo de redação de forma consistente
@@ -75,7 +76,8 @@ export const MinhasConquistas = () => {
                              monthActivity.exercises_producao_guiada > 0 ||
                              monthActivity.lousas_concluidas > 0 ||
                              monthActivity.lives_participei > 0 ||
-                             monthActivity.gravadas_assistidas > 0;
+                             monthActivity.gravadas_assistidas > 0 ||
+                             monthActivity.guias_concluidos > 0;
           
           if (hasActivity) {
             activities.push({
@@ -179,13 +181,24 @@ export const MinhasConquistas = () => {
 
     const gravadasAssistidas = [...new Set((eventosGravadas || []).map(e => e.entity_id))].length;
 
+    // Buscar guias temáticos concluídos
+    const { data: guiasConcluidos } = await (supabase as any)
+      .from('guias_tematicos_conclusoes')
+      .select('id')
+      .eq('aluno_email', emailBusca)
+      .gte('concluded_at', monthStart.toISOString())
+      .lt('concluded_at', monthEnd.toISOString());
+
+    const guiasConcluídosCount = (guiasConcluidos as any[] || []).length;
+
     return {
       essays_regular: regularCount,
       essays_simulado: simuladoCount,
       exercises_producao_guiada: pgCount,
       lousas_concluidas: lousasConcluidas,
       lives_participei: livesParticipadas,
-      gravadas_assistidas: gravadasAssistidas
+      gravadas_assistidas: gravadasAssistidas,
+      guias_concluidos: guiasConcluídosCount
     };
   };
 
@@ -293,7 +306,7 @@ export const MinhasConquistas = () => {
               <PenTool className="h-4 w-4 text-purple-500" />
               Lousa
             </div>
-            
+
             <div className="space-y-2 pl-6">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Concluídas</span>
@@ -304,6 +317,23 @@ export const MinhasConquistas = () => {
               )}
             </div>
           </div>
+
+          {/* Guia Temático */}
+          {activity.guias_concluidos > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Map className="h-4 w-4 text-violet-500" />
+                Guia Temático
+              </div>
+              <div className="space-y-2 pl-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Concluídos</span>
+                  <span className="font-semibold text-violet-600">{activity.guias_concluidos}</span>
+                </div>
+                <Progress value={getProgressValue(activity.guias_concluidos)} className="h-2 bg-violet-100" />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

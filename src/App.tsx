@@ -98,6 +98,9 @@ import { CustomizePlanSimple } from "./pages/admin/CustomizePlanSimple";
 import { CustomizePlanByName } from "./pages/admin/CustomizePlanByName";
 import { CustomizeStudentPlan } from "./pages/admin/CustomizeStudentPlan";
 import AdminNotes from "./pages/admin/AdminNotes";
+import GuiaTematico from "./pages/GuiaTematico";
+import { GuiaTematicoView } from "./components/guia-tematico/GuiaTematicoView";
+import GuiaTematicoAdmin from "./pages/admin/GuiaTematicoAdmin";
 
 function App() {
   return (
@@ -152,6 +155,8 @@ function App() {
                   <Route path="/lousa" element={<ProtectedStudentRoute><AlunoLousaList /></ProtectedStudentRoute>} />
                   <Route path="/lousa/:id" element={<ProtectedStudentRoute><LousaResponse /></ProtectedStudentRoute>} />
                   <Route path="/ajuda-rapida" element={<ProtectedStudentRoute><AjudaRapida /></ProtectedStudentRoute>} />
+                  <Route path="/guia-tematico" element={<ProtectedStudentRoute><GuiaTematico /></ProtectedStudentRoute>} />
+                  <Route path="/guia-tematico/:id" element={<ProtectedStudentRoute><GuiaTematicoView /></ProtectedStudentRoute>} />
                   <Route path="/repertorio-orientado" element={<ProtectedStudentRoute><RepertorioOrientado /></ProtectedStudentRoute>} />
                   <Route path="/repertorio-orientado/laboratorio/:id" element={<ProtectedStudentRoute><LaboratorioAulaView /></ProtectedStudentRoute>} />
                   <Route path="/minhas-conquistas" element={<ProtectedStudentRoute><MinhasConquistas /></ProtectedStudentRoute>} />
@@ -177,6 +182,7 @@ function App() {
                   <Route path="/admin/customize-student-plan/:studentId" element={<CustomizeStudentPlan />} />
                   <Route path="/admin/anotacoes" element={<AdminNotes />} />
                   <Route path="/admin/laboratorio" element={<RepertorioLaboratorio />} />
+                  <Route path="/admin/guia-tematico" element={<GuiaTematicoAdmin />} />
 
                   {/* Rotas do Corretor */}
                   <Route path="/corretor/login" element={<CorretorLogin />} />

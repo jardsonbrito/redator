@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -94,6 +94,13 @@ const Index = () => {
       path: "/temas",
       icon: BookOpen,
       tooltip: "Explore propostas de redação organizadas por eixo temático.",
+      showAlways: true
+    },
+    {
+      title: "Guia Temático",
+      path: "/guia-tematico",
+      icon: Map,
+      tooltip: "Percorra um roteiro completo de aprofundamento sobre a frase temática.",
       showAlways: true
     },
     {

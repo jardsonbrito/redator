@@ -13,7 +13,8 @@ import {
   Settings,
   ShieldCheck,
   Mail,
-  StickyNote
+  StickyNote,
+  Map
 } from "lucide-react";
 import {
   BookOpen as PhosphorBookOpen,
@@ -556,6 +557,25 @@ const Admin = () => {
         badge: labTotal > 0 ? `${labIntro} intro · ${labArg} arg · ${labConc} conc` : undefined
       };
 
+      // Guia Temático - contar guias ativos e total
+      const { data: guiasAtivos } = await (supabase as any)
+        .from('guias_tematicos')
+        .select('id')
+        .eq('ativo', true);
+
+      const { data: guiasTodos } = await (supabase as any)
+        .from('guias_tematicos')
+        .select('id');
+
+      const guiasAtivoCount = guiasAtivos?.length || 0;
+      const guiasTodosCount = guiasTodos?.length || 0;
+      const guiasInativoCount = guiasTodosCount - guiasAtivoCount;
+
+      data['guia-tematico'] = {
+        info: `${guiasAtivoCount} ${guiasAtivoCount === 1 ? 'guia ativo' : 'guias ativos'}`,
+        badge: guiasInativoCount > 0 ? `${guiasInativoCount} inativo${guiasInativoCount > 1 ? 's' : ''}` : undefined
+      };
+
       // Cards limpos - apenas título, sem informações adicionais
       const cardsLimpos = [
         "radar", "professores", "administradores", "exportacao", "top5", "configuracoes"
@@ -641,6 +661,7 @@ const Admin = () => {
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: ChatCircle, iconColor: "#00BCD4" },
     { id: "repertorio-orientado", label: "Repertório Orientado", icon: Article, iconColor: "#8B5CF6" },
     { id: "laboratorio", label: "Laboratório", icon: LaboratorioIcon, iconColor: "#7C3AED" },
+    { id: "guia-tematico", label: "Guia Temático", icon: Map, iconColor: "#7C3AED" },
 
     // Linha 7: Gestão de Usuários
     { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
@@ -1043,6 +1064,10 @@ const Admin = () => {
 
       case "laboratorio":
         navigate('/admin/laboratorio');
+        return null;
+
+      case "guia-tematico":
+        navigate('/admin/guia-tematico');
         return null;
 
       case "exportacao":
