@@ -191,15 +191,15 @@ export const MinhasConquistas = () => {
 
     const gravadasAssistidas = [...new Set((eventosGravadas || []).map(e => e.entity_id))].length;
 
-    // Buscar guias temáticos concluídos
+    // Buscar guias temáticos concluídos (distinct por guia_id)
     const { data: guiasConcluidos } = await (supabase as any)
       .from('guias_tematicos_conclusoes')
-      .select('id')
+      .select('guia_id')
       .eq('aluno_email', emailBusca)
       .gte('concluded_at', monthStart.toISOString())
       .lt('concluded_at', monthEnd.toISOString());
 
-    const guiasCount = (guiasConcluidos || []).length;
+    const guiasCount = new Set((guiasConcluidos || []).map((r: any) => r.guia_id)).size;
 
     // Buscar repertório orientado (parágrafo + frases + obras) por autor_id
     let repertorioTotal = 0;

@@ -78,10 +78,10 @@ export function GuiaTematicoView() {
     const email = studentData?.email?.toLowerCase().trim();
     if (id && email) {
       try {
-        await (supabase as any).from('guias_tematicos_conclusoes').insert({
-          aluno_email: email,
-          guia_id: id,
-        });
+        await (supabase as any).from('guias_tematicos_conclusoes').upsert(
+          { aluno_email: email, guia_id: id },
+          { onConflict: 'aluno_email,guia_id', ignoreDuplicates: true }
+        );
       } catch {
         // Não bloqueia a UX em caso de erro
       }

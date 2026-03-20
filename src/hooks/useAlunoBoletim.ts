@@ -230,7 +230,7 @@ async function fetchBoletimData(
 
   const guiasConcluídosRes = await (supabase as any)
     .from('guias_tematicos_conclusoes')
-    .select('id', { count: 'exact', head: true })
+    .select('guia_id')
     .eq('aluno_email', email)
     .gte('concluded_at', monthStart)
     .lte('concluded_at', monthEnd);
@@ -407,7 +407,7 @@ async function fetchBoletimData(
     mediaPorTipo,
     totalRepertorio: repertorioDetalhe.paragrafos + repertorioDetalhe.frases + repertorioDetalhe.obras,
     repertorioDetalhe,
-    totalGuiasConcluidos: guiasConcluídosRes.count ?? 0,
+    totalGuiasConcluidos: new Set((guiasConcluídosRes.data || []).map((r: any) => r.guia_id)).size,
   };
 
   // --- Evolução de notas (redações com nota, ordenadas por data) ---
