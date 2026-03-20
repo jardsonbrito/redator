@@ -39,12 +39,39 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
           </p>
         </div>
 
-        {/* Parágrafo em destaque */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <p className="text-gray-800 text-base sm:text-lg leading-[1.9] font-light tracking-wide p-6 sm:p-8">
-            {aula.paragrafo_modelo}
-          </p>
-          {/* Contadores */}
+        {/* Parágrafo — estilo folha de redação */}
+        <div className="rounded-xl overflow-hidden shadow-sm border border-gray-200">
+          {/* Cabeçalho da folha */}
+          <div className="bg-gray-50 border-b border-gray-200 px-5 py-2.5 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-purple-400" />
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-widest">
+              Parágrafo
+            </span>
+          </div>
+
+          {/* Corpo com linhas pautadas */}
+          <div
+            className="relative bg-white"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(to bottom, transparent, transparent calc(1.9em - 1px), #e5e7eb calc(1.9em - 1px), #e5e7eb 1.9em)',
+            }}
+          >
+            {/* Margem esquerda decorativa */}
+            <div
+              className="absolute top-0 bottom-0 left-10 w-px bg-rose-200 opacity-60"
+              aria-hidden="true"
+            />
+
+            <p
+              className="relative text-gray-800 text-base leading-[1.9] font-light tracking-wide text-justify pl-14 pr-6 sm:pr-8 py-[0.95em]"
+              style={{ textIndent: '2em' }}
+            >
+              {aula.paragrafo_modelo}
+            </p>
+          </div>
+
+          {/* Rodapé com contadores */}
           <div className="border-t border-gray-100 px-6 py-3 flex gap-6 bg-gray-50">
             <span className="text-xs text-gray-500">
               <span className="font-semibold text-gray-800">{palavras}</span> palavras
@@ -56,15 +83,24 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
           </div>
         </div>
 
-        {/* Observação didática do professor */}
+        {/* Comentário do professor — separação reforçada */}
         {aula.observacao_paragrafo && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-2">
-            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
-              Comentário do professor
-            </p>
-            <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap">
-              {aula.observacao_paragrafo}
-            </p>
+          <div className="relative">
+            {/* Conector visual */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400 bg-white px-2">análise do professor</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-2">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                Comentário
+              </p>
+              <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap">
+                {aula.observacao_paragrafo}
+              </p>
+            </div>
           </div>
         )}
 
@@ -83,7 +119,6 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
           </Button>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            {/* Botão principal: Aplicar em uma redação */}
             <Button
               onClick={() => setModalOpen(true)}
               size="lg"
@@ -93,7 +128,6 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
               Aplicar em uma redação
             </Button>
 
-            {/* Concluir aula */}
             <Button
               variant="outline"
               size="lg"
@@ -107,7 +141,6 @@ export function LaboratorioTela3({ aula, onBack, onConcluir }: LaboratorioTela3P
         </div>
       </div>
 
-      {/* Modal de aplicação */}
       <AplicarRedacaoModal
         open={modalOpen}
         onOpenChange={setModalOpen}
