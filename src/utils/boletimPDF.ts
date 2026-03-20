@@ -185,6 +185,11 @@ function drawMetricCards(doc: jsPDF, metricas: MetricasBoletim, y: number): numb
       value: metricas.totalRepertorio.toString(),
       color: [249, 115, 22] as [number, number, number],
     },
+    {
+      label: "Guia Temático",
+      value: (metricas.totalGuiasConcluidos ?? 0).toString(),
+      color: [124, 58, 237] as [number, number, number],
+    },
   ];
 
   const numRows = Math.ceil(cards.length / 3);

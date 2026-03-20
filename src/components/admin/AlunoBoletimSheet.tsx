@@ -34,6 +34,7 @@ import {
   Loader2,
   Calendar,
   Library,
+  Map,
 } from "lucide-react";
 import {
   LineChart,
@@ -308,6 +309,13 @@ export function AlunoBoletimSheet({
                     sub={`${data.metricas.repertorioDetalhe?.paragrafos ?? 0} par. · ${data.metricas.repertorioDetalhe?.frases ?? 0} frases · ${data.metricas.repertorioDetalhe?.obras ?? 0} obras`}
                     color="#f97316"
                     icon={Library}
+                  />
+                  <MetricCard
+                    label="Guia Temático"
+                    value={(data.metricas.totalGuiasConcluidos ?? 0).toString()}
+                    sub="guias concluídos"
+                    color="#7c3aed"
+                    icon={Map}
                   />
                 </div>
 

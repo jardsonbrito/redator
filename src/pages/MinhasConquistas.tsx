@@ -21,6 +21,7 @@ interface MonthlyActivity {
   lives_participei: number;
   gravadas_assistidas: number;
   guias_concluidos: number;
+  repertorio_total: number;
 }
 
 // Função para classificar tipo de redação de forma consistente
@@ -52,23 +53,31 @@ export const MinhasConquistas = () => {
     setLoading(true);
     try {
       const emailBusca = studentData.email.toLowerCase().trim();
-      
+
+      // Buscar o ID do perfil (necessário para consultar repertório)
+      const { data: perfilData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', emailBusca)
+        .single();
+      const autorId: string | null = (perfilData as any)?.id ?? null;
+
       // Buscar todos os meses com atividades a partir de julho/2025
       const startYear = 2025;
       const startMonth = 7; // Julho
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth() + 1;
-      
+
       const activities: MonthlyActivity[] = [];
-      
+
       // Gerar todos os meses desde julho/2025 até o mês atual
       for (let year = startYear; year <= currentYear; year++) {
         const monthStart = year === startYear ? startMonth : 1;
         const monthEnd = year === currentYear ? currentMonth : 12;
-        
+
         for (let month = monthStart; month <= monthEnd; month++) {
-          const monthActivity = await loadMonthlyActivity(emailBusca, month, year);
+          const monthActivity = await loadMonthlyActivity(emailBusca, month, year, autorId);
           
           // Só adicionar se houver alguma atividade no mês
           const hasActivity = monthActivity.essays_regular > 0 ||
@@ -77,7 +86,8 @@ export const MinhasConquistas = () => {
                              monthActivity.lousas_concluidas > 0 ||
                              monthActivity.lives_participei > 0 ||
                              monthActivity.gravadas_assistidas > 0 ||
-                             monthActivity.guias_concluidos > 0;
+                             monthActivity.guias_concluidos > 0 ||
+                             monthActivity.repertorio_total > 0;
           
           if (hasActivity) {
             activities.push({
@@ -109,7 +119,7 @@ export const MinhasConquistas = () => {
     }
   };
 
-  const loadMonthlyActivity = async (emailBusca: string, month: number, year: number) => {
+  const loadMonthlyActivity = async (emailBusca: string, month: number, year: number, autorId: string | null = null) => {
     // Calcular janela mensal com timezone Fortaleza
     const baseDate = toZonedTime(new Date(year, month - 1, 1), 'America/Fortaleza');
     const monthStart = startOfMonth(baseDate);
@@ -189,7 +199,27 @@ export const MinhasConquistas = () => {
       .gte('concluded_at', monthStart.toISOString())
       .lt('concluded_at', monthEnd.toISOString());
 
-    const guiasConcluídosCount = (guiasConcluidos as any[] || []).length;
+    const guiasCount = (guiasConcluidos || []).length;
+
+    // Buscar repertório orientado (parágrafo + frases + obras) por autor_id
+    let repertorioTotal = 0;
+    if (autorId) {
+      const [repPar, repFrases, repObras] = await Promise.all([
+        supabase.from('repertorio_publicacoes').select('id', { count: 'exact', head: true })
+          .eq('autor_id', autorId)
+          .gte('created_at', monthStart.toISOString())
+          .lt('created_at', monthEnd.toISOString()),
+        supabase.from('repertorio_frases').select('id', { count: 'exact', head: true })
+          .eq('autor_id', autorId)
+          .gte('created_at', monthStart.toISOString())
+          .lt('created_at', monthEnd.toISOString()),
+        supabase.from('repertorio_obras').select('id', { count: 'exact', head: true })
+          .eq('autor_id', autorId)
+          .gte('created_at', monthStart.toISOString())
+          .lt('created_at', monthEnd.toISOString()),
+      ]);
+      repertorioTotal = (repPar.count ?? 0) + (repFrases.count ?? 0) + (repObras.count ?? 0);
+    }
 
     return {
       essays_regular: regularCount,
@@ -198,7 +228,8 @@ export const MinhasConquistas = () => {
       lousas_concluidas: lousasConcluidas,
       lives_participei: livesParticipadas,
       gravadas_assistidas: gravadasAssistidas,
-      guias_concluidos: guiasConcluídosCount
+      guias_concluidos: guiasCount,
+      repertorio_total: repertorioTotal,
     };
   };
 
@@ -317,6 +348,23 @@ export const MinhasConquistas = () => {
               )}
             </div>
           </div>
+
+          {/* Repertório Orientado */}
+          {activity.repertorio_total > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <PenTool className="h-4 w-4 text-orange-500" />
+                Repertório Orientado
+              </div>
+              <div className="space-y-2 pl-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Publicados</span>
+                  <span className="font-semibold text-orange-600">{activity.repertorio_total}</span>
+                </div>
+                <Progress value={getProgressValue(activity.repertorio_total)} className="h-2 bg-orange-100" />
+              </div>
+            </div>
+          )}
 
           {/* Guia Temático */}
           {activity.guias_concluidos > 0 && (

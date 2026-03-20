@@ -67,6 +67,7 @@ export interface MetricasBoletim {
     frases: number;
     obras: number;
   };
+  totalGuiasConcluidos: number;
 }
 
 export interface EvolucaoNota {
@@ -226,6 +227,13 @@ async function fetchBoletimData(
   ]);
 
   const autorId: string | null = (perfilRes.data as any)?.id ?? null;
+
+  const guiasConcluídosRes = await (supabase as any)
+    .from('guias_tematicos_conclusoes')
+    .select('id', { count: 'exact', head: true })
+    .eq('aluno_email', email)
+    .gte('concluded_at', monthStart)
+    .lte('concluded_at', monthEnd);
 
   const [repParagrafosRes, repFrasesRes, repObrasRes] = await Promise.all([
     autorId
@@ -399,6 +407,7 @@ async function fetchBoletimData(
     mediaPorTipo,
     totalRepertorio: repertorioDetalhe.paragrafos + repertorioDetalhe.frases + repertorioDetalhe.obras,
     repertorioDetalhe,
+    totalGuiasConcluidos: guiasConcluídosRes.count ?? 0,
   };
 
   // --- Evolução de notas (redações com nota, ordenadas por data) ---
