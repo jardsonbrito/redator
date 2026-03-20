@@ -155,7 +155,7 @@ function GuiaTematicoAdminCard({
           </span>
         </div>
         <p className="text-sm font-semibold text-gray-900 line-clamp-3 leading-snug">
-          {guia.frase_tematica}
+          "{guia.frase_tematica}"
         </p>
       </div>
     </div>
