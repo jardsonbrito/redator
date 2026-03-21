@@ -1,7 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, ExternalLink, FileText, Calendar, CheckCircle, Hourglass, RotateCcw } from "lucide-react";
+import { Clock, ExternalLink, FileText, Calendar, CheckCircle, Hourglass, RotateCcw, User } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { pickCoverImage, getExerciseAvailability, formatExercisePeriod } from "@/utils/exerciseUtils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -286,27 +288,73 @@ export function ExerciseCard({
                   {isProducaoGuiada && submissionData?.hasSubmitted && availability.status !== 'agendado' && (
                     <div className="space-y-2">
                       {submissionDetails?.corrigida ? (
-                        <div className="flex items-center gap-1.5 text-sm text-green-700 font-medium">
-                          <CheckCircle className="w-4 h-4" />
-                          Corrigida — Nota: {submissionDetails.nota_total ?? '—'}/1000
-                        </div>
-                      ) : submissionDetails?.status_corretor_1 === 'devolvida' ? (
-                        <div className="flex items-center gap-1.5 text-sm text-red-600 font-medium">
-                          <RotateCcw className="w-4 h-4" />
-                          Devolvida — ajustes necessários
+                        <div className="space-y-3">
+                          {/* Datas */}
+                          <div className="space-y-1.5">
+                            {submissionDetails.data_envio && (
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                <span>
+                                  <span className="font-medium">Enviado:</span>{" "}
+                                  {format(new Date(submissionDetails.data_envio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </span>
+                              </div>
+                            )}
+                            {submissionDetails.data_correcao && (
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <CheckCircle className="w-3.5 h-3.5 shrink-0 text-green-600" />
+                                <span>
+                                  <span className="font-medium">Corrigido:</span>{" "}
+                                  {format(new Date(submissionDetails.data_correcao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Nota em destaque */}
+                          {submissionDetails.nota_total !== null && submissionDetails.nota_total !== undefined && (
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                              <p className="text-xs font-medium text-green-700 mb-0.5">Sua nota</p>
+                              <p className="text-2xl font-bold text-green-800 leading-none">
+                                {submissionDetails.nota_total}
+                                <span className="text-sm font-normal text-green-600 ml-1">/ 1000</span>
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Badge + botão */}
+                          <Badge className="bg-green-600 text-white text-xs px-2 py-1 flex items-center gap-1 w-fit">
+                            <CheckCircle className="w-3 h-3" />
+                            Corrigida
+                          </Badge>
+                          <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                            onClick={() => navigate(`/exercicios/${exercise.id}/producao-guiada`)}
+                          >
+                            Ver minha atividade
+                          </Button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-sm text-amber-600">
-                          <Hourglass className="w-4 h-4" />
-                          Aguardando correção
+                        <div className="space-y-2">
+                          {submissionDetails?.status_corretor_1 === 'devolvida' ? (
+                            <div className="flex items-center gap-1.5 text-sm text-red-600 font-medium">
+                              <RotateCcw className="w-4 h-4" />
+                              Devolvida — ajustes necessários
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-sm text-amber-600">
+                              <Hourglass className="w-4 h-4" />
+                              Aguardando correção
+                            </div>
+                          )}
+                          <Button
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                            onClick={() => navigate(`/exercicios/${exercise.id}/producao-guiada`)}
+                          >
+                            Ver minha atividade
+                          </Button>
                         </div>
                       )}
-                      <Button
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold"
-                        onClick={() => navigate(`/exercicios/${exercise.id}/producao-guiada`)}
-                      >
-                        Ver minha atividade
-                      </Button>
                     </div>
                   )}
 

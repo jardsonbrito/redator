@@ -11,7 +11,7 @@ import { useVisualizacaoRedacao } from "@/hooks/useVisualizacaoRedacao";
 import { toast } from "sonner";
 import {
   Loader2, ArrowLeft, BookOpen, ClipboardList, Info,
-  CheckCircle, Hourglass, RotateCcw, AlertCircle, CheckCircle2,
+  CheckCircle, Hourglass, RotateCcw, AlertCircle, CheckCircle2, GraduationCap,
 } from "lucide-react";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { format } from "date-fns";
@@ -22,6 +22,8 @@ interface Criterio {
   nome: string;
   ordem: number;
 }
+
+const MAX_POR_CRITERIO = 200;
 
 interface ExercicioInfo {
   titulo: string;
@@ -55,6 +57,7 @@ const ProducaoGuiadaPage = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [entendiSucesso, setEntendiSucesso] = useState(false);
+  const [notasCriterios, setNotasCriterios] = useState<Record<string, number>>({});
 
   usePageTitle("Produção Guiada");
 
@@ -104,6 +107,20 @@ const ProducaoGuiadaPage = () => {
       if (submissaoRes.data) {
         const sub = submissaoRes.data as SubmissaoInfo;
         setSubmissao(sub);
+
+        // Se corrigida, buscar notas por critério para a Vista pedagógica
+        if (sub.corrigida) {
+          const { data: notasData } = await supabase
+            .from("producao_guiada_notas_criterios")
+            .select("criterio_id, nota")
+            .eq("resposta_id", sub.id);
+
+          if (notasData && notasData.length > 0) {
+            const notasMap: Record<string, number> = {};
+            notasData.forEach(n => { notasMap[n.criterio_id] = n.nota; });
+            setNotasCriterios(notasMap);
+          }
+        }
 
         // Se devolvida, verificar se o aluno já viu a devolução
         if (sub.status_corretor_1 === "devolvida" && email) {
@@ -434,23 +451,101 @@ const ProducaoGuiadaPage = () => {
                 </div>
 
                 {submissao.corrigida ? (
-                  <div className="bg-white rounded-2xl border border-green-200 shadow-md p-6 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-green-700 uppercase tracking-wide">
-                      <CheckCircle className="w-4 h-4" />
-                      Atividade corrigida
-                    </div>
+                  <div className="bg-white rounded-2xl border border-purple-100 shadow-md p-6 space-y-5">
+                    {/* Cabeçalho */}
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-500">Corrigida em: {formatarData(submissao.data_correcao)}</p>
-                      <span className="text-3xl font-bold text-green-700">
-                        {submissao.nota_total ?? "—"}
-                        <span className="text-base font-normal text-green-500">/1000</span>
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-semibold text-purple-700 uppercase tracking-wide">
+                          Vista pedagógica
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400">
+                        Corrigida em: {formatarData(submissao.data_correcao)}
                       </span>
                     </div>
-                    {submissao.comentario_admin && (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800">
-                        <p className="font-medium mb-1">Comentário do corretor:</p>
-                        <p className="leading-relaxed whitespace-pre-wrap">{submissao.comentario_admin}</p>
+
+                    <div className="border-t border-gray-100" />
+
+                    {/* Nota final */}
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Nota final</p>
+                      <div className="flex items-end gap-3 mb-3">
+                        <span className="text-4xl font-bold text-gray-900 leading-none">
+                          {submissao.nota_total ?? "—"}
+                        </span>
+                        <span className="text-base text-gray-400 mb-0.5">/ 1000</span>
                       </div>
+                      {submissao.nota_total !== null && (
+                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              (submissao.nota_total / 1000) >= 0.8 ? "bg-green-500" :
+                              (submissao.nota_total / 1000) >= 0.5 ? "bg-amber-400" : "bg-red-400"
+                            }`}
+                            style={{ width: `${Math.round((submissao.nota_total / 1000) * 100)}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Critérios dinâmicos */}
+                    {criterios.length > 0 && Object.keys(notasCriterios).length > 0 && (
+                      <>
+                        <div className="border-t border-gray-100" />
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4">
+                            Avaliação por critério
+                          </p>
+                          <div className="space-y-4">
+                            {criterios.map((c, i) => {
+                              const nota = notasCriterios[c.id];
+                              const temNota = nota !== undefined;
+                              const pct = temNota ? Math.round((nota / MAX_POR_CRITERIO) * 100) : 0;
+                              return (
+                                <div key={c.id} className="space-y-1.5">
+                                  <div className="flex items-baseline justify-between gap-4">
+                                    <p className="text-sm text-gray-800 leading-snug">
+                                      <span className="text-gray-400 text-xs font-medium mr-1.5">{i + 1}.</span>
+                                      {c.nome}
+                                    </p>
+                                    <span className="text-sm font-semibold text-gray-700 shrink-0 tabular-nums">
+                                      {temNota ? nota : "—"}
+                                      <span className="text-xs font-normal text-gray-400"> / {MAX_POR_CRITERIO}</span>
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    {temNota && (
+                                      <div
+                                        className={`h-full rounded-full ${
+                                          pct >= 80 ? "bg-green-400" :
+                                          pct >= 50 ? "bg-amber-400" : "bg-red-400"
+                                        }`}
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Comentário pedagógico */}
+                    {submissao.comentario_admin && (
+                      <>
+                        <div className="border-t border-gray-100" />
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                            Orientações do professor
+                          </p>
+                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            {submissao.comentario_admin}
+                          </p>
+                        </div>
+                      </>
                     )}
                   </div>
                 ) : (
