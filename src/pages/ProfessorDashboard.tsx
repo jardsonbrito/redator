@@ -75,7 +75,7 @@ export const ProfessorDashboard = () => {
       // Saudação: apenas primeiro nome
       const greet = document.querySelector(".header__greet");
       if (greet && greet.textContent) {
-        let text = greet.textContent.trim();
+        const text = greet.textContent.trim();
         if (text.toLowerCase().startsWith("olá")) {
           // Se contém email, extrair parte antes do @
           if (text.includes("@")) {

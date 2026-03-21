@@ -268,7 +268,7 @@ const MinhasRedacoesList = () => {
         const todasRedacoes: RedacaoTurma[] = [];
 
         // Buscar temas correspondentes às frases temáticas das redações
-        let temasMap = new Map();
+        const temasMap = new Map();
         if (redacoesRegulares && redacoesRegulares.length > 0) {
           const frasesTemáticas = [...new Set(redacoesRegulares.map((r: any) => r.frase_tematica))];
 
@@ -731,7 +731,7 @@ const MinhasRedacoesList = () => {
     const maxVisiblePages = 5;
     
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
     
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);

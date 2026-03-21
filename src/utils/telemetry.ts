@@ -6,7 +6,6 @@ export type AdminEvent =
 export function trackAdminEvent(name: AdminEvent["name"], payload: any) {
   // Minimal telemetry: console log (can be replaced by Supabase insert later)
   try {
-    // eslint-disable-next-line no-console
     console.log(`[telemetry] ${name}`, payload);
   } catch {
     // noop

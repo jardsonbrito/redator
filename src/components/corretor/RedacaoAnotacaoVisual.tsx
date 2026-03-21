@@ -579,7 +579,7 @@ const RedacaoAnotacaoVisual = forwardRef<RedacaoAnotacaoVisualRef, RedacaoAnotac
 
   // Inicializar Annotorious
   useEffect(() => {
-    let cleanupFunctions: (() => void)[] = [];
+    const cleanupFunctions: (() => void)[] = [];
 
     const initAnnotorious = () => {
       if (!imageRef.current || !imageDimensions.width) {

@@ -200,7 +200,7 @@ export const VideoList = () => {
             }
 
             // Determinar URL do vídeo
-            let videoUrl = video.video_url_original || video.youtube_url;
+            const videoUrl = video.video_url_original || video.youtube_url;
 
             // Determinar se é novo baseado na data (últimos 7 dias)
             const isNovo = video.created_at ?

@@ -18,7 +18,7 @@ export const converterCapaParaWebP = (file: File): Promise<Blob> =>
       canvas.toBlob(
         (blob) => {
           URL.revokeObjectURL(url);
-          blob ? resolve(blob) : reject(new Error('Falha ao converter imagem'));
+          if (blob) { resolve(blob); } else { reject(new Error('Falha ao converter imagem')); }
         },
         'image/webp',
         0.85

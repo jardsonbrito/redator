@@ -46,7 +46,7 @@ const Simulados = () => {
 const { data: simulados, isLoading } = useQuery({
   queryKey: ['simulados', turmaCode, studentData.email],
   queryFn: async () => {
-    let query = supabase
+    const query = supabase
       .from('simulados')
       .select('*')
       .eq('ativo', true);

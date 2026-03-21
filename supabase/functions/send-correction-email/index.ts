@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     }
 
     // Usar nome do corretor diretamente (sem buscar no banco)
-    let nomeCorretor = corretor_nome;
+    const nomeCorretor = corretor_nome;
 
     let correctionUrl = 'https://redator.laboratoriodoredator.com';
     

@@ -380,27 +380,21 @@ export const useCancelRedacao = (options?: CancelRedacaoOptions) => {
 
       // ESTRATÉGIA 1: Usar refund_credits_on_cancel (mesma função do cancelamento regular)
       let creditosFoiRessarcido = false;
-      try {
+      const { data: refundResult, error: refundError } = await supabase
+        .rpc('refund_credits_on_cancel', {
+          p_user_id: profile.id,
+          p_amount: creditosParaRessarcir,
+          p_reason: 'Ressarcimento por cancelamento de redação de simulado'
+        });
 
-        const { data: refundResult, error: refundError } = await supabase
-          .rpc('refund_credits_on_cancel', {
-            p_user_id: profile.id,
-            p_amount: creditosParaRessarcir,
-            p_reason: 'Ressarcimento por cancelamento de redação de simulado'
-          });
+      if (refundError) {
+        throw new Error(`Falha no ressarcimento: ${refundError.message}`);
+      }
 
-        if (refundError) {
-          throw new Error(`Falha no ressarcimento: ${refundError.message}`);
-        }
-
-        if (refundResult === true) {
-          creditosFoiRessarcido = true;
-        } else {
-          throw new Error(`Função de refund retornou valor inválido: ${refundResult}`);
-        }
-      } catch (refundErr) {
-        // Re-lançar o erro para tentar fallback
-        throw refundErr;
+      if (refundResult === true) {
+        creditosFoiRessarcido = true;
+      } else {
+        throw new Error(`Função de refund retornou valor inválido: ${refundResult}`);
       }
 
       // ESTRATÉGIA 2: Se falhou, usar update direto múltiplas vezes

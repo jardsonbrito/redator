@@ -135,7 +135,7 @@ export const AdminAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }: 
     
     try {
       // Usar perfil já carregado ou buscar user.id
-      let userId = userProfile?.id || user?.id;
+      const userId = userProfile?.id || user?.id;
       
       if (!userId) {
         console.error('❌ Perfil do admin não encontrado para upload');

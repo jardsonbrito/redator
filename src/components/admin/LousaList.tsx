@@ -76,7 +76,7 @@ export default function LousaList() {
       const lousasWithPendingCount = await Promise.all(
         (lousasData || []).map(async (lousa) => {
           // Since corretor_id doesn't exist in the schema, set to null
-          let corretorNome = null;
+          const corretorNome = null;
 
           // Count pending responses
           const { count, error: countError } = await supabase

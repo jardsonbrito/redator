@@ -146,7 +146,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
         setBlogPostId(null);
       }
 
-      onSuccess && onSuccess();
+      onSuccess?.();
     } catch (error: any) {
       toast({
         title: "❌ Erro",
