@@ -337,9 +337,12 @@ export function ExerciseCard({
                       ) : (
                         <div className="space-y-2">
                           {submissionDetails?.status_corretor_1 === 'devolvida' ? (
-                            <div className="flex items-center gap-1.5 text-sm text-red-600 font-medium">
-                              <RotateCcw className="w-4 h-4" />
-                              Devolvida — ajustes necessários
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1.5 text-sm text-red-600 font-medium">
+                                <RotateCcw className="w-4 h-4" />
+                                Devolvida
+                              </div>
+                              <p className="text-xs text-red-500 pl-5">Refaça o exercício</p>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 text-sm text-amber-600">

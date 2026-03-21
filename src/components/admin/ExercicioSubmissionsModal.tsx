@@ -282,8 +282,8 @@ export const ExercicioSubmissionsModal = ({
                       </TableCell>
                       <TableCell className="text-center">
                         {submission.status === 'reenviado' ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                            Reenviado
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                            Aguardando 2ª correção
                           </span>
                         ) : submission.status === 'devolvida' ? (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${submission.ciente ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
@@ -308,7 +308,7 @@ export const ExercicioSubmissionsModal = ({
                             className="text-xs h-7 px-2 border-purple-200 text-purple-700 hover:bg-purple-50"
                           >
                             <Edit className="w-3 h-3 mr-1" />
-                            {submission.corrigida ? "Ver/Editar" : submission.status === 'reenviado' ? "Recorrigir" : submission.status === 'devolvida' ? "Devolver/Editar" : "Corrigir"}
+                            {submission.corrigida ? "Ver/Editar" : submission.status === 'devolvida' ? "Devolver/Editar" : "Corrigir"}
                           </Button>
                         </TableCell>
                       )}

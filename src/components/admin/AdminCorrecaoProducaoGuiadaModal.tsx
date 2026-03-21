@@ -59,8 +59,11 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
 
   const somaObtida = Object.values(notasPorCriterio).reduce((acc, n) => acc + n, 0);
   const somaMaxima = criterios.length * MAX_POR_CRITERIO;
+  // Escalonar para múltiplos de 40 (intervalos de 40 em 40, máx 1000).
+  // Fórmula: round para o intervalo mais próximo dentre os 25 possíveis (1000/40),
+  // depois multiplica por 40. Garante resultado sempre em {0,40,80,...,960,1000}.
   const notaFinal = somaMaxima > 0
-    ? Math.min(1000, Math.round((somaObtida / somaMaxima) * 1000))
+    ? Math.min(1000, Math.round((somaObtida / somaMaxima) * 25) * 40)
     : 0;
   const todosCriteriosPreenchidos =
     criterios.length > 0 && criterios.every(c => notasPorCriterio[c.id] !== undefined);
@@ -168,6 +171,14 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
           data_correcao: null,
         })
         .eq("id", submissao.id);
+
+      // Limpar registro de visualização anterior para que o aluno veja
+      // o botão "Entendi" com o novo motivo (evita herdar ciência de devolução anterior)
+      await supabase
+        .from("redacao_devolucao_visualizacoes")
+        .delete()
+        .eq("redacao_id", submissao.id)
+        .eq("tabela_origem", "redacoes_exercicio");
 
       toast.success("Atividade devolvida ao aluno.");
       setShowDevolverModal(false);

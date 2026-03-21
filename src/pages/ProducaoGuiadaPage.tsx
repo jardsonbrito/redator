@@ -179,7 +179,7 @@ const ProducaoGuiadaPage = () => {
 
       if (error) throw error;
 
-      toast.success("Atividade enviada com sucesso!");
+      toast.success("Atividade enviada com sucesso!", { duration: 1500 });
       await carregarDados();
     } catch (err) {
       console.error("Erro ao enviar atividade:", err);
@@ -195,24 +195,33 @@ const ProducaoGuiadaPage = () => {
       return;
     }
 
+    const emailAluno = studentData.email?.toLowerCase().trim() ?? "";
+    if (!emailAluno) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/aluno-login");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from("redacoes_exercicio")
-        .update({
-          redacao_texto: resposta.trim(),
-          status_corretor_1: "reenviado",
-          corrigida: false,
-          nota_total: null,
-          data_correcao: null,
-          motivo_devolucao: null,
-          data_envio: new Date().toISOString(),
-        })
-        .eq("id", submissao.id);
+      const { data: sucesso, error } = await supabase.rpc(
+        "reenviar_atividade_producao_guiada",
+        {
+          p_redacao_id: submissao.id,
+          p_email_aluno: emailAluno,
+          p_novo_texto: resposta.trim(),
+        }
+      );
 
       if (error) throw error;
 
-      toast.success("Atividade reenviada com sucesso!");
+      if (!sucesso) {
+        toast.error("Não foi possível reenviar. A atividade pode já ter sido processada. Atualize a página.");
+        await carregarDados();
+        return;
+      }
+
+      toast.success("Atividade reenviada com sucesso!", { duration: 1500 });
       setResposta("");
       setCiente(false);
       setJaVisualizouDB(false);
@@ -284,11 +293,6 @@ const ProducaoGuiadaPage = () => {
             ) : isDevolvida_semCiencia ? (
               /* ── Modo devolução — aguardando ciência do aluno ── */
               <div className="space-y-6">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-md p-6">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-1">{exercicio?.titulo}</h1>
-                  <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">Produção Guiada</p>
-                </div>
-
                 {/* Banner de devolução */}
                 <div className="bg-red-50 border border-red-200 rounded-2xl shadow-md p-6 space-y-4">
                   <div className="flex items-center gap-2 text-red-700 font-semibold">
@@ -301,12 +305,6 @@ const ProducaoGuiadaPage = () => {
                   </p>
                   <div className="bg-white border-l-4 border-red-400 rounded-lg p-4 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
                     {submissao?.motivo_devolucao || "Motivo não especificado."}
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex items-start gap-2">
-                    <Info className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>
-                      <strong>Próximos passos:</strong> Corrija os pontos indicados e reenvie sua atividade para nova avaliação.
-                    </span>
                   </div>
 
                   {entendiSucesso ? (
