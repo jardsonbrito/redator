@@ -11,7 +11,7 @@ import { useVisualizacaoRedacao } from "@/hooks/useVisualizacaoRedacao";
 import { toast } from "sonner";
 import {
   Loader2, ArrowLeft, BookOpen, ClipboardList, Info,
-  CheckCircle, Hourglass, RotateCcw, AlertCircle, CheckCircle2, GraduationCap,
+  CheckCircle, Hourglass, RotateCcw, AlertCircle, CheckCircle2, ChevronDown,
 } from "lucide-react";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { format } from "date-fns";
@@ -58,6 +58,7 @@ const ProducaoGuiadaPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [entendiSucesso, setEntendiSucesso] = useState(false);
   const [notasCriterios, setNotasCriterios] = useState<Record<string, number>>({});
+  const [detalheAberto, setDetalheAberto] = useState(false);
 
   usePageTitle("Produção Guiada");
 
@@ -405,8 +406,164 @@ const ProducaoGuiadaPage = () => {
                 </Button>
               </div>
 
+            ) : submissao && submissao.corrigida ? (
+              /* ── Modo correção — Vista pedagógica em primeiro plano ── */
+              <div className="space-y-5">
+
+                {/* BLOCO 1: Vista pedagógica */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-md p-6 space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Vista pedagógica</h2>
+                    <p className="text-xs text-gray-400 mt-1">Corrigida em: {formatarData(submissao.data_correcao)}</p>
+                  </div>
+
+                  <div className="border-t border-gray-100" />
+
+                  {/* Nota final */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">Nota final</p>
+                    <div className="flex items-end gap-3 mb-3">
+                      <span className="text-5xl font-bold text-gray-900 leading-none tabular-nums">
+                        {submissao.nota_total ?? "—"}
+                      </span>
+                      <span className="text-lg text-gray-400 mb-1">/ 1000</span>
+                    </div>
+                    {submissao.nota_total !== null && (
+                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            (submissao.nota_total / 1000) >= 0.8 ? "bg-green-500" :
+                            (submissao.nota_total / 1000) >= 0.5 ? "bg-amber-400" : "bg-red-400"
+                          }`}
+                          style={{ width: `${Math.round((submissao.nota_total / 1000) * 100)}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Avaliação por critério — dinâmica */}
+                  {criterios.length > 0 && Object.keys(notasCriterios).length > 0 && (
+                    <>
+                      <div className="border-t border-gray-100" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-4">
+                          Avaliação por critério
+                        </p>
+                        <div className="space-y-4">
+                          {criterios.map((c, i) => {
+                            const nota = notasCriterios[c.id];
+                            const temNota = nota !== undefined;
+                            const pct = temNota ? Math.round((nota / MAX_POR_CRITERIO) * 100) : 0;
+                            return (
+                              <div key={c.id} className="space-y-1.5">
+                                <div className="flex items-baseline justify-between gap-4">
+                                  <p className="text-sm text-gray-800 leading-snug">
+                                    <span className="text-gray-400 text-xs font-medium mr-1.5">{i + 1}.</span>
+                                    {c.nome}
+                                  </p>
+                                  <span className="text-sm font-semibold text-gray-700 shrink-0 tabular-nums">
+                                    {temNota ? nota : "—"}
+                                    <span className="text-xs font-normal text-gray-400"> / {MAX_POR_CRITERIO}</span>
+                                  </span>
+                                </div>
+                                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  {temNota && (
+                                    <div
+                                      className={`h-full rounded-full ${
+                                        pct >= 80 ? "bg-green-400" :
+                                        pct >= 50 ? "bg-amber-400" : "bg-red-400"
+                                      }`}
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Devolutiva do professor */}
+                  {submissao.comentario_admin && (
+                    <>
+                      <div className="border-t border-gray-100" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
+                          Devolutiva do professor
+                        </p>
+                        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                          {submissao.comentario_admin}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* BLOCO 2: Sua produção textual */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-md p-6 space-y-3">
+                  <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Sua produção textual</p>
+                  <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap min-h-[80px]">
+                    {submissao.redacao_texto || <span className="text-gray-400 italic">Sem texto registrado.</span>}
+                  </p>
+                  <p className="text-xs text-gray-400">Enviado em: {formatarData(submissao.data_envio)}</p>
+                </div>
+
+                {/* BLOCO 3: Detalhes da atividade (secundário, expansível) */}
+                {(exercicio?.enunciado || criterios.length > 0) && (
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <button
+                      onClick={() => setDetalheAberto(v => !v)}
+                      className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700">{exercicio?.titulo}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Produção Guiada · detalhes da atividade</p>
+                      </div>
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${detalheAberto ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {detalheAberto && (
+                      <div className="px-6 pb-6 space-y-4 border-t border-gray-100">
+                        {exercicio?.enunciado && (
+                          <div className="pt-4 space-y-2">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                              <BookOpen className="w-3.5 h-3.5 text-purple-500" />
+                              Enunciado
+                            </div>
+                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{exercicio.enunciado}</p>
+                          </div>
+                        )}
+
+                        {criterios.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                              <ClipboardList className="w-3.5 h-3.5 text-purple-500" />
+                              Critérios de avaliação
+                            </div>
+                            <ul className="space-y-1.5">
+                              {criterios.map((c, i) => (
+                                <li key={c.id} className="flex items-start gap-2.5 text-sm text-gray-600">
+                                  <span className="mt-0.5 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-semibold shrink-0">
+                                    {i + 1}
+                                  </span>
+                                  {c.nome}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
             ) : submissao ? (
-              /* ── Modo visualização pós-envio (aguardando ou corrigida) ── */
+              /* ── Modo visualização pós-envio (aguardando correção) ── */
               <div className="space-y-6">
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-md p-6">
                   <h1 className="text-2xl font-bold text-gray-900 mb-1">{exercicio?.titulo}</h1>
@@ -443,120 +600,20 @@ const ProducaoGuiadaPage = () => {
                 )}
 
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-md p-6 space-y-3">
-                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Sua resposta</div>
+                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Sua produção textual</div>
                   <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap min-h-[80px]">
                     {submissao.redacao_texto || <span className="text-gray-400 italic">Sem texto registrado.</span>}
                   </p>
                   <p className="text-xs text-gray-400">Enviado em: {formatarData(submissao.data_envio)}</p>
                 </div>
 
-                {submissao.corrigida ? (
-                  <div className="bg-white rounded-2xl border border-purple-100 shadow-md p-6 space-y-5">
-                    {/* Cabeçalho */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <GraduationCap className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-semibold text-purple-700 uppercase tracking-wide">
-                          Vista pedagógica
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        Corrigida em: {formatarData(submissao.data_correcao)}
-                      </span>
-                    </div>
-
-                    <div className="border-t border-gray-100" />
-
-                    {/* Nota final */}
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Nota final</p>
-                      <div className="flex items-end gap-3 mb-3">
-                        <span className="text-4xl font-bold text-gray-900 leading-none">
-                          {submissao.nota_total ?? "—"}
-                        </span>
-                        <span className="text-base text-gray-400 mb-0.5">/ 1000</span>
-                      </div>
-                      {submissao.nota_total !== null && (
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              (submissao.nota_total / 1000) >= 0.8 ? "bg-green-500" :
-                              (submissao.nota_total / 1000) >= 0.5 ? "bg-amber-400" : "bg-red-400"
-                            }`}
-                            style={{ width: `${Math.round((submissao.nota_total / 1000) * 100)}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Critérios dinâmicos */}
-                    {criterios.length > 0 && Object.keys(notasCriterios).length > 0 && (
-                      <>
-                        <div className="border-t border-gray-100" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4">
-                            Avaliação por critério
-                          </p>
-                          <div className="space-y-4">
-                            {criterios.map((c, i) => {
-                              const nota = notasCriterios[c.id];
-                              const temNota = nota !== undefined;
-                              const pct = temNota ? Math.round((nota / MAX_POR_CRITERIO) * 100) : 0;
-                              return (
-                                <div key={c.id} className="space-y-1.5">
-                                  <div className="flex items-baseline justify-between gap-4">
-                                    <p className="text-sm text-gray-800 leading-snug">
-                                      <span className="text-gray-400 text-xs font-medium mr-1.5">{i + 1}.</span>
-                                      {c.nome}
-                                    </p>
-                                    <span className="text-sm font-semibold text-gray-700 shrink-0 tabular-nums">
-                                      {temNota ? nota : "—"}
-                                      <span className="text-xs font-normal text-gray-400"> / {MAX_POR_CRITERIO}</span>
-                                    </span>
-                                  </div>
-                                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                    {temNota && (
-                                      <div
-                                        className={`h-full rounded-full ${
-                                          pct >= 80 ? "bg-green-400" :
-                                          pct >= 50 ? "bg-amber-400" : "bg-red-400"
-                                        }`}
-                                        style={{ width: `${pct}%` }}
-                                      />
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Comentário pedagógico */}
-                    {submissao.comentario_admin && (
-                      <>
-                        <div className="border-t border-gray-100" />
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                            Orientações do professor
-                          </p>
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                            {submissao.comentario_admin}
-                          </p>
-                        </div>
-                      </>
-                    )}
+                <div className="bg-white rounded-2xl border border-amber-200 shadow-md p-6">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-amber-600">
+                    <Hourglass className="w-4 h-4" />
+                    Aguardando correção
                   </div>
-                ) : (
-                  <div className="bg-white rounded-2xl border border-amber-200 shadow-md p-6">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-600">
-                      <Hourglass className="w-4 h-4" />
-                      Aguardando correção
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Sua atividade foi recebida e será corrigida em breve.</p>
-                  </div>
-                )}
+                  <p className="text-xs text-gray-500 mt-1">Sua atividade foi recebida e será corrigida em breve.</p>
+                </div>
               </div>
 
             ) : (
