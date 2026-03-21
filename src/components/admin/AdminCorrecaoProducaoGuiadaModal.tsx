@@ -119,8 +119,8 @@ export const AdminCorrecaoProducaoGuiadaModal = ({
         setComentario(redacaoData.comentario_admin);
       }
 
-      // Marcar como em_correcao se ainda pendente
-      if (redacaoData?.status_corretor_1 === "pendente") {
+      // Marcar como em_correcao se ainda pendente ou reenviado
+      if (redacaoData?.status_corretor_1 === "pendente" || redacaoData?.status_corretor_1 === "reenviado") {
         await supabase
           .from("redacoes_exercicio")
           .update({ status_corretor_1: "em_correcao" })

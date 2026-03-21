@@ -183,7 +183,7 @@ const ProducaoGuiadaPage = () => {
         .from("redacoes_exercicio")
         .update({
           redacao_texto: resposta.trim(),
-          status_corretor_1: "pendente",
+          status_corretor_1: "reenviado",
           corrigida: false,
           nota_total: null,
           data_correcao: null,

@@ -247,9 +247,19 @@ const Admin = () => {
         return availability.status === 'disponivel';
       }).length || 0;
 
+      // Contar submissões aguardando correção (inclui reenvios após devolução)
+      const { count: aguardandoCorrecao } = await supabase
+        .from('redacoes_exercicio')
+        .select('*', { count: 'exact', head: true })
+        .in('status_corretor_1', ['pendente', 'em_correcao', 'reenviado'])
+        .eq('corrigida', false);
+
+      const totalAguardando = aguardandoCorrecao ?? 0;
+      const pluralDisp = exerciciosDisponiveis === 1 ? 'disponível' : 'disponíveis';
+
       data.exercicios = {
-        info: `${exerciciosDisponiveis} disponíveis`,
-        badge: undefined
+        info: `${totalAguardando} aguardando correção`,
+        badge: `${exerciciosDisponiveis} ${pluralDisp}`
       };
 
       // Simulados - quantos agendados (futuros baseado na data_inicio)

@@ -57,6 +57,7 @@ export const AdminExerciseCard = ({
   onDelete
 }: AdminExerciseCardProps) => {
   const [submissionsCount, setSubmissionsCount] = useState<number>(0);
+  const [pendingCount, setPendingCount] = useState<number>(0);
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -67,17 +68,27 @@ export const AdminExerciseCard = ({
   const fetchSubmissionsCount = async () => {
     try {
       if (exercicio.tipo === 'Produção Guiada') {
-        const { count, error } = await supabase
-          .from("redacoes_exercicio")
-          .select("*", { count: "exact", head: true })
-          .eq("exercicio_id", exercicio.id);
+        const [{ count: total, error }, { count: pending }] = await Promise.all([
+          supabase
+            .from("redacoes_exercicio")
+            .select("*", { count: "exact", head: true })
+            .eq("exercicio_id", exercicio.id),
+          supabase
+            .from("redacoes_exercicio")
+            .select("*", { count: "exact", head: true })
+            .eq("exercicio_id", exercicio.id)
+            .in("status_corretor_1", ["pendente", "em_correcao", "reenviado"])
+            .eq("corrigida", false),
+        ]);
         if (error) throw error;
-        setSubmissionsCount(count || 0);
+        setSubmissionsCount(total || 0);
+        setPendingCount(pending || 0);
         return;
       }
 
       if (!exercicio.temas?.frase_tematica) {
         setSubmissionsCount(0);
+        setPendingCount(0);
         return;
       }
 
@@ -89,9 +100,11 @@ export const AdminExerciseCard = ({
 
       if (error) throw error;
       setSubmissionsCount(count || 0);
+      setPendingCount(0);
     } catch (error) {
       console.error("Erro ao buscar contagem de envios:", error);
       setSubmissionsCount(0);
+      setPendingCount(0);
     }
   };
 
@@ -219,16 +232,28 @@ export const AdminExerciseCard = ({
             <div className="flex items-center justify-between">
               {/* Contador de envios - clicável para Redação e Produção Guiada */}
               {(exercicio.tipo === 'Redação com Frase Temática' || exercicio.tipo === 'Produção Guiada') ? (
-                <button
-                  onClick={() => setShowSubmissionsModal(true)}
-                  className="flex items-center gap-2 text-sm hover:bg-purple-50 px-2 py-1 rounded-md transition-colors group"
-                >
-                  <FileText className="w-4 h-4 text-purple-600 group-hover:text-purple-700" />
-                  <span className="font-medium text-gray-700 group-hover:text-purple-700">Enviaram:</span>
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold group-hover:bg-purple-200">
-                    {submissionsCount}
-                  </Badge>
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowSubmissionsModal(true)}
+                    className="flex items-center gap-2 text-sm hover:bg-purple-50 px-2 py-1 rounded-md transition-colors group"
+                  >
+                    <FileText className="w-4 h-4 text-purple-600 group-hover:text-purple-700" />
+                    <span className="font-medium text-gray-700 group-hover:text-purple-700">Enviaram:</span>
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 font-semibold group-hover:bg-purple-200">
+                      {submissionsCount}
+                    </Badge>
+                  </button>
+                  {exercicio.tipo === 'Produção Guiada' && pendingCount > 0 && (
+                    <button
+                      onClick={() => setShowSubmissionsModal(true)}
+                      className="flex items-center gap-1.5 text-sm hover:bg-amber-50 px-2 py-1 rounded-md transition-colors group"
+                    >
+                      <Badge className="bg-amber-100 text-amber-700 font-semibold group-hover:bg-amber-200 border-0">
+                        {pendingCount} aguardam
+                      </Badge>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="text-xs text-gray-500 flex items-center gap-1">
                   <span>📅</span>

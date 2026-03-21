@@ -99,9 +99,16 @@ export const ExercicioSubmissionsModal = ({
           }
         }
 
+        const getPrioridadePG = (s: SubmissionData) => {
+          if (s.status === 'reenviado') return 0;
+          if (!s.corrigida && s.status !== 'devolvida') return 1;
+          if (s.status === 'devolvida') return 2;
+          return 3; // corrigida
+        };
         mappedData.sort((a, b) => {
-          if (a.corrigida && !b.corrigida) return -1;
-          if (!a.corrigida && b.corrigida) return 1;
+          const pa = getPrioridadePG(a);
+          const pb = getPrioridadePG(b);
+          if (pa !== pb) return pa - pb;
           if (a.corrigida && b.corrigida) return (b.nota_total ?? 0) - (a.nota_total ?? 0);
           return a.nome_aluno.localeCompare(b.nome_aluno);
         });
@@ -274,7 +281,11 @@ export const ExercicioSubmissionsModal = ({
                         {submission.turma || "Sem turma"}
                       </TableCell>
                       <TableCell className="text-center">
-                        {submission.status === 'devolvida' ? (
+                        {submission.status === 'reenviado' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                            Reenviado
+                          </span>
+                        ) : submission.status === 'devolvida' ? (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${submission.ciente ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                             {submission.ciente ? 'Devolvida — Ciente' : 'Devolvida'}
                           </span>
@@ -297,7 +308,7 @@ export const ExercicioSubmissionsModal = ({
                             className="text-xs h-7 px-2 border-purple-200 text-purple-700 hover:bg-purple-50"
                           >
                             <Edit className="w-3 h-3 mr-1" />
-                            {submission.corrigida ? "Ver/Editar" : submission.status === 'devolvida' ? "Devolver/Editar" : "Corrigir"}
+                            {submission.corrigida ? "Ver/Editar" : submission.status === 'reenviado' ? "Recorrigir" : submission.status === 'devolvida' ? "Devolver/Editar" : "Corrigir"}
                           </Button>
                         </TableCell>
                       )}
