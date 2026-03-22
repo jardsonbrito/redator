@@ -39,22 +39,14 @@ const Jarvis = () => {
       try {
         setLoadingDisponibilidade(true);
 
-        // Buscar mensagens do sistema primeiro
-        const { data: systemMessages } = await supabase
+        // Buscar mensagem do sistema
+        const { data: msgData } = await supabase
           .from('jarvis_system_config')
-          .select('chave, valor')
-          .in('chave', ['mensagem_sem_config', 'mensagem_erro_verificacao']);
+          .select('valor')
+          .eq('chave', 'mensagem_sistema')
+          .single();
 
-        const messages: any = {
-          mensagem_sem_config: 'O Jarvis está sendo configurado pela equipe pedagógica. Em breve esta funcionalidade estará disponível!',
-          mensagem_erro_verificacao: 'Não foi possível carregar o Jarvis no momento. Tente novamente em instantes.'
-        };
-
-        if (systemMessages && systemMessages.length > 0) {
-          systemMessages.forEach(item => {
-            messages[item.chave] = item.valor;
-          });
-        }
+        const mensagemPadrao = msgData?.valor || 'Esta funcionalidade está temporariamente indisponível.';
 
         // Verificar configuração ativa
         const { data, error } = await supabase
@@ -64,13 +56,9 @@ const Jarvis = () => {
           .single();
 
         if (error) {
-          // Se não há configuração ativa (PGRST116), usar mensagem_sem_config
-          // Para outros erros, usar mensagem_erro_verificacao
+          // Usar a mensagem do sistema para qualquer erro
           setDisponivel(false);
-          const mensagemFinal = error.code === 'PGRST116'
-            ? messages.mensagem_sem_config
-            : messages.mensagem_erro_verificacao;
-          setMensagemIndisponibilidade(mensagemFinal);
+          setMensagemIndisponibilidade(mensagemPadrao);
           return;
         }
 
@@ -154,8 +142,7 @@ const Jarvis = () => {
             <div className="max-w-2xl mx-auto">
               <Alert className="border-amber-200 bg-amber-50">
                 <Lock className="h-5 w-5 text-amber-600" />
-                <AlertDescription className="text-amber-900 space-y-3">
-                  <p className="font-semibold text-lg">Funcionalidade em Desenvolvimento</p>
+                <AlertDescription className="text-amber-900">
                   <p className="whitespace-pre-line">{mensagemIndisponibilidade}</p>
                 </AlertDescription>
               </Alert>
