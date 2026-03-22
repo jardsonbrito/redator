@@ -52,6 +52,13 @@ export const JarvisConfigManagement = () => {
   const [editingConfig, setEditingConfig] = useState<JarvisConfig | null>(null);
   const [viewingPrompt, setViewingPrompt] = useState<string | null>(null);
 
+  // System messages state
+  const [systemMessages, setSystemMessages] = useState({
+    mensagem_sem_config: '',
+    mensagem_erro_verificacao: ''
+  });
+  const [loadingMessages, setLoadingMessages] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     nome: '',
@@ -69,6 +76,7 @@ export const JarvisConfigManagement = () => {
 
   useEffect(() => {
     loadConfigs();
+    loadSystemMessages();
   }, []);
 
   const loadConfigs = async () => {
@@ -90,6 +98,64 @@ export const JarvisConfigManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSystemMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('jarvis_system_config')
+        .select('chave, valor')
+        .in('chave', ['mensagem_sem_config', 'mensagem_erro_verificacao']);
+
+      if (error) throw error;
+
+      if (data) {
+        const messages: any = {};
+        data.forEach(item => {
+          messages[item.chave] = item.valor;
+        });
+        setSystemMessages(messages);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar mensagens do sistema:', error);
+    }
+  };
+
+  const saveSystemMessages = async () => {
+    try {
+      setLoadingMessages(true);
+
+      // Atualizar mensagem_sem_config
+      const { error: error1 } = await supabase
+        .from('jarvis_system_config')
+        .update({ valor: systemMessages.mensagem_sem_config, atualizado_em: new Date().toISOString() })
+        .eq('chave', 'mensagem_sem_config');
+
+      if (error1) throw error1;
+
+      // Atualizar mensagem_erro_verificacao
+      const { error: error2 } = await supabase
+        .from('jarvis_system_config')
+        .update({ valor: systemMessages.mensagem_erro_verificacao, atualizado_em: new Date().toISOString() })
+        .eq('chave', 'mensagem_erro_verificacao');
+
+      if (error2) throw error2;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Mensagens atualizadas com sucesso!',
+        className: 'border-green-200 bg-green-50 text-green-900'
+      });
+    } catch (error) {
+      console.error('Erro ao salvar mensagens:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao salvar mensagens do sistema',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingMessages(false);
     }
   };
 
@@ -397,6 +463,66 @@ REGRAS OBRIGATÓRIAS:
               ))
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Card de Mensagens do Sistema */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings2 className="h-5 w-5" />
+            Mensagens do Sistema
+          </CardTitle>
+          <CardDescription>
+            Personalize as mensagens exibidas aos alunos em diferentes situações
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="mensagem_sem_config">
+              Mensagem quando não há configuração ativa
+            </Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Exibida quando não existe nenhuma configuração ativa do Jarvis
+            </p>
+            <Textarea
+              id="mensagem_sem_config"
+              value={systemMessages.mensagem_sem_config}
+              onChange={(e) =>
+                setSystemMessages({
+                  ...systemMessages,
+                  mensagem_sem_config: e.target.value,
+                })
+              }
+              rows={4}
+              placeholder="Digite a mensagem que aparecerá quando não houver configuração..."
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="mensagem_erro_verificacao">
+              Mensagem quando há erro ao carregar
+            </Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Exibida quando ocorre um erro ao tentar verificar a disponibilidade
+            </p>
+            <Textarea
+              id="mensagem_erro_verificacao"
+              value={systemMessages.mensagem_erro_verificacao}
+              onChange={(e) =>
+                setSystemMessages({
+                  ...systemMessages,
+                  mensagem_erro_verificacao: e.target.value,
+                })
+              }
+              rows={3}
+              placeholder="Digite a mensagem de erro..."
+            />
+          </div>
+
+          <Button onClick={saveSystemMessages} disabled={loadingMessages}>
+            {loadingMessages ? 'Salvando...' : 'Salvar Mensagens'}
+          </Button>
         </CardContent>
       </Card>
 

@@ -38,6 +38,25 @@ const Jarvis = () => {
     const verificarDisponibilidade = async () => {
       try {
         setLoadingDisponibilidade(true);
+
+        // Buscar mensagens do sistema primeiro
+        const { data: systemMessages } = await supabase
+          .from('jarvis_system_config')
+          .select('chave, valor')
+          .in('chave', ['mensagem_sem_config', 'mensagem_erro_verificacao']);
+
+        const messages: any = {
+          mensagem_sem_config: 'O Jarvis está sendo configurado pela equipe pedagógica. Em breve esta funcionalidade estará disponível!',
+          mensagem_erro_verificacao: 'Não foi possível carregar o Jarvis no momento. Tente novamente em instantes.'
+        };
+
+        if (systemMessages) {
+          systemMessages.forEach(item => {
+            messages[item.chave] = item.valor;
+          });
+        }
+
+        // Verificar configuração ativa
         const { data, error } = await supabase
           .from('jarvis_config')
           .select('disponivel_alunos, mensagem_indisponibilidade')
@@ -46,9 +65,11 @@ const Jarvis = () => {
 
         if (error) {
           console.error('Erro ao verificar disponibilidade:', error);
-          // Por segurança, bloquear se não conseguir verificar
+          // Se não há configuração ativa, usar mensagem personalizada
           setDisponivel(false);
-          setMensagemIndisponibilidade('Não foi possível verificar a disponibilidade do Jarvis no momento.');
+          setMensagemIndisponibilidade(
+            error.code === 'PGRST116' ? messages.mensagem_sem_config : messages.mensagem_erro_verificacao
+          );
           return;
         }
 
