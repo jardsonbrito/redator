@@ -140,7 +140,6 @@ import { TemasMetricsPanel } from "@/components/admin/TemasMetricsPanel";
 
 // Import componentes Jarvis
 import { JarvisConfigManagement } from "@/components/admin/JarvisConfigManagement";
-import { OpenAIBillingCard } from "@/components/admin/OpenAIBillingCard";
 import { JarvisCreditManagementBulk } from "@/components/admin/JarvisCreditManagementBulk";
 
 // Import diário components
@@ -1113,7 +1112,6 @@ const Admin = () => {
               <JarvisCreditManagementBulk />
             </TabsContent>
             <TabsContent value="configuracoes" className="space-y-6">
-              <OpenAIBillingCard />
               <JarvisConfigManagement />
             </TabsContent>
             <TabsContent value="analises" className="space-y-6">
