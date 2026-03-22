@@ -414,6 +414,7 @@ const Jarvis = () => {
               </Card>
             </div>
           </div>
+          )}
         </main>
       </div>
     </ProtectedRoute>
