@@ -159,50 +159,6 @@ const Jarvis = () => {
                   <p className="whitespace-pre-line">{mensagemIndisponibilidade}</p>
                 </AlertDescription>
               </Alert>
-
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-purple-600" />
-                    O que é o Jarvis?
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    O Jarvis é seu assistente pedagógico pessoal, desenvolvido para ajudar você a melhorar sua escrita de forma prática e objetiva.
-                  </p>
-                  <div className="grid gap-3">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium">Diagnóstico Preciso</p>
-                        <p className="text-sm text-muted-foreground">Identifica problemas específicos no seu texto</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium">Explicação Pedagógica</p>
-                        <p className="text-sm text-muted-foreground">Ensina por que algo precisa ser melhorado</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium">Sugestões Práticas</p>
-                        <p className="text-sm text-muted-foreground">Orienta como reescrever de forma mais eficaz</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium">Versão Melhorada</p>
-                        <p className="text-sm text-muted-foreground">Mostra como seu texto ficaria reformulado</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
