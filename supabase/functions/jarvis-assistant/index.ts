@@ -46,8 +46,6 @@ Deno.serve(async (req) => {
 
     // 3. Parse request
     const { texto, userEmail }: JarvisRequest = await req.json();
-    console.log('📧 Email:', userEmail);
-    console.log('📝 Texto:', texto.substring(0, 100) + '...');
 
     if (!texto || !userEmail) {
       return new Response(
@@ -55,6 +53,9 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('📧 Email:', userEmail);
+    console.log('📝 Texto:', texto.substring(0, 100) + '...');
 
     // 4. Buscar usuário
     const { data: user, error: userError } = await supabaseClient
@@ -104,25 +105,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 7. Verificar rate limit
-    const { data: canProceed } = await supabaseClient
-      .rpc('check_jarvis_rate_limit', {
-        p_user_id: user.id,
-        p_limite_hora: config.limite_consultas_hora
-      });
-
-    if (!canProceed) {
-      console.warn('⏱️ Rate limit atingido');
-      return new Response(
-        JSON.stringify({
-          error: `Limite de ${config.limite_consultas_hora} consultas por hora atingido`,
-          limite_hora: config.limite_consultas_hora
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // 8. Verificar créditos suficientes (sem consumir ainda)
+    // 7. Verificar créditos suficientes (sem consumir ainda)
     if ((user.jarvis_creditos || 0) < 1) {
       return new Response(
         JSON.stringify({
