@@ -50,7 +50,7 @@ const Jarvis = () => {
           mensagem_erro_verificacao: 'Não foi possível carregar o Jarvis no momento. Tente novamente em instantes.'
         };
 
-        if (systemMessages) {
+        if (systemMessages && systemMessages.length > 0) {
           systemMessages.forEach(item => {
             messages[item.chave] = item.valor;
           });
@@ -64,12 +64,13 @@ const Jarvis = () => {
           .single();
 
         if (error) {
-          console.error('Erro ao verificar disponibilidade:', error);
-          // Se não há configuração ativa, usar mensagem personalizada
+          // Se não há configuração ativa (PGRST116), usar mensagem_sem_config
+          // Para outros erros, usar mensagem_erro_verificacao
           setDisponivel(false);
-          setMensagemIndisponibilidade(
-            error.code === 'PGRST116' ? messages.mensagem_sem_config : messages.mensagem_erro_verificacao
-          );
+          const mensagemFinal = error.code === 'PGRST116'
+            ? messages.mensagem_sem_config
+            : messages.mensagem_erro_verificacao;
+          setMensagemIndisponibilidade(mensagemFinal);
           return;
         }
 
