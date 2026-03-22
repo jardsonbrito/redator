@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -89,6 +89,13 @@ const Index = () => {
 
   // Cards padrão do menu
   const baseMenuItems = [
+    {
+      title: "Jarvis",
+      path: "/jarvis",
+      icon: Bot,
+      tooltip: "Assistente pedagógico para melhorar sua escrita - 1 crédito por análise.",
+      showAlways: true
+    },
     {
       title: "Temas",
       path: "/temas",

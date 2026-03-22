@@ -101,7 +101,8 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
       'Top 5': 'top_5',
       'Diário Online': 'diario_online',
       'Gamificação': 'gamificacao',
-      'Repertório Orientado': 'repertorio_orientado'
+      'Repertório Orientado': 'repertorio_orientado',
+      'Jarvis': 'jarvis'
     };
     return mapping[title] || '';
   };
@@ -138,7 +139,7 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           const isPlanFeatureDisabled = functionalityName && !isFeatureEnabled(functionalityName);
 
           // Funcionalidades que sempre devem estar disponíveis (não controladas por plano)
-          const alwaysAvailableFeatures = ['ajuda_rapida', 'minhas_redacoes'];
+          const alwaysAvailableFeatures = ['ajuda_rapida', 'minhas_redacoes', 'jarvis'];
           const isAlwaysAvailable = alwaysAvailableFeatures.includes(functionalityName || '');
 
           // Verificação de funcionalidades (logs de debug removidos para produção)

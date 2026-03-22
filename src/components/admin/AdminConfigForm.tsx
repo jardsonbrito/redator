@@ -332,7 +332,7 @@ export const AdminConfigForm = () => {
           <AppSettingsForm />
         </TabsContent>
 
-        <TabsContent value="credits">
+        <TabsContent value="credits" className="space-y-6">
           <CreditManagement />
         </TabsContent>
 

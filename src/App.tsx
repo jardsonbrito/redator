@@ -101,6 +101,7 @@ import AdminNotes from "./pages/admin/AdminNotes";
 import GuiaTematico from "./pages/GuiaTematico";
 import { GuiaTematicoView } from "./components/guia-tematico/GuiaTematicoView";
 import GuiaTematicoAdmin from "./pages/admin/GuiaTematicoAdmin";
+import Jarvis from "./pages/Jarvis";
 
 function App() {
   return (
@@ -157,6 +158,7 @@ function App() {
                   <Route path="/ajuda-rapida" element={<ProtectedStudentRoute><AjudaRapida /></ProtectedStudentRoute>} />
                   <Route path="/guia-tematico" element={<ProtectedStudentRoute><GuiaTematico /></ProtectedStudentRoute>} />
                   <Route path="/guia-tematico/:id" element={<ProtectedStudentRoute><GuiaTematicoView /></ProtectedStudentRoute>} />
+                  <Route path="/jarvis" element={<ProtectedStudentRoute><Jarvis /></ProtectedStudentRoute>} />
                   <Route path="/repertorio-orientado" element={<ProtectedStudentRoute><RepertorioOrientado /></ProtectedStudentRoute>} />
                   <Route path="/repertorio-orientado/laboratorio/:id" element={<ProtectedStudentRoute><LaboratorioAulaView /></ProtectedStudentRoute>} />
                   <Route path="/minhas-conquistas" element={<ProtectedStudentRoute><MinhasConquistas /></ProtectedStudentRoute>} />

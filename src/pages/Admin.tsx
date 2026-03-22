@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Mail,
   StickyNote,
-  Map
+  Map,
+  Bot
 } from "lucide-react";
 import {
   BookOpen as PhosphorBookOpen,
@@ -136,6 +137,10 @@ import { Top5Widget } from "@/components/shared/Top5Widget";
 
 // Import métricas de temas
 import { TemasMetricsPanel } from "@/components/admin/TemasMetricsPanel";
+
+// Import componentes Jarvis
+import { JarvisConfigManagement } from "@/components/admin/JarvisConfigManagement";
+import { JarvisCreditManagementBulk } from "@/components/admin/JarvisCreditManagementBulk";
 
 // Import diário components
 import GestaoEtapas from "@/pages/admin/GestaoEtapas";
@@ -586,6 +591,32 @@ const Admin = () => {
         badge: guiasInativoCount > 0 ? `${guiasInativoCount} inativo${guiasInativoCount > 1 ? 's' : ''}` : undefined
       };
 
+      // Jarvis - estatísticas de uso
+      const { data: jarvisInteractions } = await supabase
+        .from('jarvis_interactions')
+        .select('id, created_at');
+
+      const { data: jarvisConfigs } = await supabase
+        .from('jarvis_config')
+        .select('id, ativo, versao');
+
+      const totalInteracoes = jarvisInteractions?.length || 0;
+      const configAtiva = jarvisConfigs?.find(c => c.ativo);
+      const totalConfigs = jarvisConfigs?.length || 0;
+
+      // Interações nas últimas 24h
+      const umDiaAtras = new Date(hoje.getTime() - 24 * 60 * 60 * 1000);
+      const interacoesRecentes = jarvisInteractions?.filter(i =>
+        new Date(i.created_at) >= umDiaAtras
+      ).length || 0;
+
+      data.jarvis = {
+        info: `${totalInteracoes} ${totalInteracoes === 1 ? 'análise' : 'análises'} realizadas`,
+        badge: configAtiva
+          ? `v${configAtiva.versao} ativa • ${interacoesRecentes} hoje • ${totalConfigs} configs`
+          : `${totalConfigs} configurações`
+      };
+
       // Cards limpos - apenas título, sem informações adicionais
       const cardsLimpos = [
         "radar", "professores", "administradores", "exportacao", "top5", "configuracoes"
@@ -638,6 +669,9 @@ const Admin = () => {
 
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
+    // PRIMEIRO: Jarvis - Assistente Pedagógico
+    { id: "jarvis", label: "Jarvis", icon: Bot, iconColor: "#7C3AED", chips: ["Créditos", "Configurações", "Análises"] },
+
     // Destaque: Processo Seletivo
     { id: "processo-seletivo", label: "Processo Seletivo", icon: ListChecks, iconColor: "#8B5CF6" },
 
@@ -1064,6 +1098,37 @@ const Admin = () => {
           </div>
         );
 
+      case "jarvis":
+        const subtabJarvis = searchParams.get('subtab');
+
+        return (
+          <Tabs defaultValue={subtabJarvis || "creditos"} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="creditos">Créditos</TabsTrigger>
+              <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
+              <TabsTrigger value="analises">Análises</TabsTrigger>
+            </TabsList>
+            <TabsContent value="creditos" className="space-y-6">
+              <JarvisCreditManagementBulk />
+            </TabsContent>
+            <TabsContent value="configuracoes" className="space-y-6">
+              <JarvisConfigManagement />
+            </TabsContent>
+            <TabsContent value="analises" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Análises do Jarvis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Painel de visualização das análises realizadas pelo Jarvis (em breve).
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        );
+
       case "ajuda-rapida":
         navigate('/admin/ajuda-rapida');
         return null;
@@ -1165,8 +1230,24 @@ const Admin = () => {
                   chipColor={item.iconColor}
                   onClick={() => setActiveView(item.id)}
                   onChipClick={(chipIndex, chipValue) => {
+                    // Handle Jarvis chips
+                    if (item.id === "jarvis") {
+                      const subtabMap: Record<string, string> = {
+                        "Créditos": "creditos",
+                        "Configurações": "configuracoes",
+                        "Análises": "analises"
+                      };
+                      const subtab = subtabMap[chipValue];
+                      if (subtab) {
+                        setActiveView("jarvis");
+                        const newParams = new URLSearchParams();
+                        newParams.set('view', 'jarvis');
+                        newParams.set('subtab', subtab);
+                        navigate(`?${newParams.toString()}`);
+                      }
+                    }
                     // Handle Diário Online chips
-                    if (item.id === "diario") {
+                    else if (item.id === "diario") {
                       const subtabMap: Record<string, string> = {
                         "Etapas": "etapas",
                         "Aulas": "aulas",
