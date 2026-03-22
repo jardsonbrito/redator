@@ -122,32 +122,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 8. Consumir crédito JARVIS ANTES de chamar IA
-    console.log('💳 Consumindo 1 crédito Jarvis...');
-
-    const { data: newJarvisCredits, error: creditError } = await supabaseClient
-      .rpc('consume_jarvis_credit', { target_user_id: user.id });
-
-    if (creditError) {
-      console.error('❌ Erro ao consumir crédito:', creditError);
-
-      // Verificar se é erro de créditos insuficientes
-      if (creditError.message?.includes('insuficientes')) {
-        return new Response(
-          JSON.stringify({
-            error: 'Créditos Jarvis insuficientes',
-            creditos_atuais: user.jarvis_creditos || 0
-          }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      throw creditError;
+    // 8. Verificar créditos suficientes (sem consumir ainda)
+    if ((user.jarvis_creditos || 0) < 1) {
+      return new Response(
+        JSON.stringify({
+          error: 'Créditos Jarvis insuficientes',
+          creditos_atuais: user.jarvis_creditos || 0
+        }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log(`✅ Crédito consumido. Novos créditos: ${newJarvisCredits}`);
-
-    // 9. Chamar OpenAI API
+    // 9. Chamar OpenAI API (crédito só é consumido após resposta válida)
     console.log('🤖 Chamando OpenAI...');
     const startTime = Date.now();
 
@@ -186,7 +172,7 @@ Deno.serve(async (req) => {
     const content = openaiData.choices[0].message.content;
     const aiResponse: JarvisResponse = JSON.parse(content);
 
-    if (!aiResponse.diagnostico || !aiResponse.explicacao ||
+    if (!aiResponse.diagnostico ||
         !aiResponse.sugestao_reescrita || !aiResponse.versao_melhorada) {
       console.error('❌ Resposta incompleta da IA:', aiResponse);
       throw new Error('Resposta da IA incompleta - faltam campos obrigatórios');
@@ -194,7 +180,31 @@ Deno.serve(async (req) => {
 
     console.log('✅ Resposta validada com sucesso');
 
-    // 11. Calcular métricas
+    // 11. Consumir crédito — somente após resposta válida da IA
+    console.log('💳 Consumindo 1 crédito Jarvis...');
+
+    const { data: newJarvisCredits, error: creditError } = await supabaseClient
+      .rpc('consume_jarvis_credit', { target_user_id: user.id });
+
+    if (creditError) {
+      console.error('❌ Erro ao consumir crédito:', creditError);
+
+      if (creditError.message?.includes('insuficientes')) {
+        return new Response(
+          JSON.stringify({
+            error: 'Créditos Jarvis insuficientes',
+            creditos_atuais: user.jarvis_creditos || 0
+          }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      throw creditError;
+    }
+
+    console.log(`✅ Crédito consumido. Novos créditos: ${newJarvisCredits}`);
+
+    // 13. Calcular métricas
     const palavrasMelhoradas = aiResponse.versao_melhorada.split(/\s+/).length;
     const expansaoExcessiva = palavrasMelhoradas > palavras * 1.5;
     const tokensInput = openaiData.usage?.prompt_tokens || 0;
@@ -212,7 +222,7 @@ Deno.serve(async (req) => {
       custo: `$${custoEstimado.toFixed(6)}`
     });
 
-    // 12. Salvar interação
+    // 14. Salvar interação
     const { error: saveError } = await supabaseClient
       .from('jarvis_interactions')
       .insert({
@@ -244,7 +254,7 @@ Deno.serve(async (req) => {
       console.log('💾 Interação salva com sucesso');
     }
 
-    // 13. Retornar resposta estruturada
+    // 15. Retornar resposta estruturada
     return new Response(
       JSON.stringify({
         success: true,

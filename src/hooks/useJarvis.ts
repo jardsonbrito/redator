@@ -86,7 +86,13 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
 
       if (error) {
         console.error('❌ Erro ao chamar Edge Function:', error);
-        throw error;
+        // Extrair mensagem real do body da resposta (FunctionsHttpError)
+        let mensagemReal: string | null = null;
+        try {
+          const body = await (error as any).context?.json?.();
+          mensagemReal = body?.error ?? null;
+        } catch { /* ignora */ }
+        throw new Error(mensagemReal ?? error.message);
       }
 
       if (!data.success) {

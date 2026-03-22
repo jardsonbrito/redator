@@ -1103,28 +1103,15 @@ const Admin = () => {
 
         return (
           <Tabs defaultValue={subtabJarvis || "creditos"} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="creditos">Créditos</TabsTrigger>
               <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
-              <TabsTrigger value="analises">Análises</TabsTrigger>
             </TabsList>
             <TabsContent value="creditos" className="space-y-6">
               <JarvisCreditManagementBulk />
             </TabsContent>
             <TabsContent value="configuracoes" className="space-y-6">
               <JarvisConfigManagement />
-            </TabsContent>
-            <TabsContent value="analises" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Análises do Jarvis</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Painel de visualização das análises realizadas pelo Jarvis (em breve).
-                  </p>
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         );
