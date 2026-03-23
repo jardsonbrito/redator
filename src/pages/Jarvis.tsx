@@ -7,46 +7,110 @@ import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useJarvis } from "@/hooks/useJarvis";
 import { useJarvisHistorico } from "@/hooks/useJarvisHistorico";
+import { useJarvisModos } from "@/hooks/useJarvisModos";
+import type { CampoResposta } from "@/hooks/useJarvisModos";
+import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
 import {
   Loader2, Copy, CheckCircle2, AlertCircle, FileEdit,
   Sparkles, Lock, History, ChevronDown, ChevronUp,
+  Mic, MicOff, Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
-type JarvisView = 'novo-texto' | 'analise' | 'historico';
+// ── Mapa de cores para cards de resposta ─────────────────────────
+const COR_CLASSES: Record<string, { border: string; bg: string; title: string }> = {
+  blue:   { border: 'border-blue-500',   bg: 'bg-blue-50',   title: 'text-blue-700'   },
+  purple: { border: 'border-purple-500', bg: 'bg-purple-50', title: 'text-purple-700' },
+  green:  { border: 'border-green-500',  bg: 'bg-green-50',  title: 'text-green-700'  },
+  amber:  { border: 'border-amber-500',  bg: 'bg-amber-50',  title: 'text-amber-700'  },
+  gray:   { border: 'border-gray-400',   bg: 'bg-gray-50',   title: 'text-gray-600'   },
+};
 
-const VIEWS = [
-  { id: 'novo-texto' as JarvisView, label: 'Novo texto',  icon: FileEdit  },
-  { id: 'analise'    as JarvisView, label: 'Análise',     icon: Sparkles  },
-  { id: 'historico'  as JarvisView, label: 'Histórico',   icon: History   },
-];
+const COR_ICON: Record<string, React.ElementType> = {
+  blue:   AlertCircle,
+  purple: FileEdit,
+  green:  CheckCircle2,
+  amber:  AlertCircle,
+  gray:   FileEdit,
+};
 
+// ── Card genérico de resposta ─────────────────────────────────────
+const CardResposta = ({
+  campo,
+  valor,
+  onCopy,
+}: {
+  campo: CampoResposta;
+  valor: string;
+  onCopy: (texto: string) => void;
+}) => {
+  const cor = campo.cor ?? 'gray';
+  const classes = COR_CLASSES[cor] ?? COR_CLASSES.gray;
+  const Icon = COR_ICON[cor] ?? FileEdit;
+
+  return (
+    <div className={`border-l-4 ${classes.border} ${classes.bg} p-4 rounded-r`}>
+      <h4 className={`font-semibold ${classes.title} flex items-center gap-2 mb-2 text-sm`}>
+        <Icon className="w-4 h-4" />
+        {campo.rotulo}
+      </h4>
+      <div className="space-y-1">
+        {valor.split(/\n|(?=Erro\s+\d+:)/).filter(l => l.trim()).map((linha, i) => (
+          <p key={i} className="text-sm text-gray-700">{linha.trim()}</p>
+        ))}
+      </div>
+      {campo.copiavel && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onCopy(valor)}
+          className={`mt-3 border-current ${classes.title} hover:opacity-80 h-7 text-xs`}
+        >
+          <Copy className="w-3 h-3 mr-1" />
+          Copiar
+        </Button>
+      )}
+    </div>
+  );
+};
+
+// ── Componente principal ──────────────────────────────────────────
 const Jarvis = () => {
   usePageTitle("Jarvis - Assistente de Escrita");
   const { studentData } = useStudentAuth();
   const { toast } = useToast();
 
-  const [activeView, setActiveView]   = useState<JarvisView>('novo-texto');
-  const [textoInput, setTextoInput]   = useState("");
-  const [wordCount,  setWordCount]    = useState(0);
-  const [expandedId, setExpandedId]   = useState<string | null>(null);
+  // activeView: ID de um modo (string) ou 'historico'
+  const [activeView, setActiveView] = useState<string>('');
+  const [textoInput, setTextoInput] = useState("");
+  const [wordCount,  setWordCount]  = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [disponivel,               setDisponivel]               = useState(true);
   const [mensagemIndisponibilidade, setMensagemIndisponibilidade] = useState("");
   const [loadingDisponibilidade,   setLoadingDisponibilidade]   = useState(true);
 
   const {
-    analisar, isLoading, currentResponse, currentMetadata, credits, clearResponse,
+    analisar, isLoading, currentResponse, currentModo, currentMetadata, credits, clearResponse,
   } = useJarvis(studentData?.email || "");
 
   const { historico, loading: loadingHistorico, refreshHistorico } =
     useJarvisHistorico(studentData?.email || "");
 
-  // Verificar disponibilidade ao carregar
+  const { modos, loading: loadingModos } = useJarvisModos();
+
+  // Seleciona o primeiro modo ao carregar
+  useEffect(() => {
+    if (modos.length > 0 && !activeView) {
+      setActiveView(modos[0].id);
+    }
+  }, [modos, activeView]);
+
+  // Verificar disponibilidade
   useEffect(() => {
     const verificar = async () => {
       try {
@@ -95,25 +159,38 @@ const Jarvis = () => {
     setWordCount(texto.trim() ? palavras : 0);
   };
 
+  const { isRecording, isSupported, toggleRecording, stopRecording } =
+    useVoiceTranscription(handleTextoChange, textoInput);
+
+  const handleLimparTexto = () => {
+    stopRecording();
+    handleTextoChange("");
+  };
+
+  const modoAtivo = modos.find(m => m.id === activeView) ?? null;
+  const isHistorico = activeView === 'historico';
+
+  const handleModoClick = (modoId: string) => {
+    setActiveView(modoId);
+    clearResponse();
+  };
+
   const handleSubmit = async () => {
+    stopRecording();
     if (!textoInput.trim()) {
-      toast({ title: "Texto vazio", description: "Digite algo para análise", variant: "destructive" });
+      toast({ title: "Texto vazio", description: "Digite algo para continuar", variant: "destructive" });
       return;
     }
-    const result = await analisar(textoInput);
+    if (!modoAtivo) {
+      toast({ title: "Selecione um modo", description: "Escolha uma ação antes de acionar o Jarvis", variant: "destructive" });
+      return;
+    }
+    const result = await analisar(textoInput, modoAtivo.id);
     if (result) {
       setTextoInput("");
       setWordCount(0);
-      setActiveView('analise');
       refreshHistorico();
     }
-  };
-
-  const handleNovaAnalise = () => {
-    setTextoInput("");
-    setWordCount(0);
-    clearResponse();
-    setActiveView('novo-texto');
   };
 
   const handleCopyText = (texto: string) => {
@@ -134,12 +211,32 @@ const Jarvis = () => {
   const truncateText = (text: string, max = 90) =>
     text.length <= max ? text : text.substring(0, max) + '...';
 
+  const resolverCampos = (item: typeof historico[number]): CampoResposta[] => {
+    if (item.modo_campos_resposta && item.modo_campos_resposta.length > 0) {
+      return item.modo_campos_resposta;
+    }
+    return [
+      { chave: 'diagnostico',        rotulo: 'Diagnóstico',    cor: 'blue'   },
+      { chave: 'sugestao_reescrita', rotulo: 'Como Melhorar',  cor: 'purple' },
+      { chave: 'versao_melhorada',   rotulo: 'Versão Lapidada', cor: 'green', copiavel: true },
+    ];
+  };
+
+  const resolverValorHistorico = (item: typeof historico[number], chave: string): string => {
+    if (item.resposta_json && item.resposta_json[chave]) return item.resposta_json[chave];
+    if (chave === 'diagnostico')        return item.diagnostico        ?? '';
+    if (chave === 'sugestao_reescrita') return item.sugestao_reescrita ?? '';
+    if (chave === 'versao_melhorada')   return item.versao_melhorada   ?? '';
+    return '';
+  };
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
         <StudentHeader pageTitle="Jarvis - Assistente de Escrita" />
 
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
           {/* Header */}
           <div className="flex items-center justify-center mb-8">
             <div className="flex items-center gap-4">
@@ -165,50 +262,116 @@ const Jarvis = () => {
           ) : (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
-              {/* ── Chips de navegação ── */}
-              <div className="flex gap-2 p-4 border-b border-gray-100 overflow-x-auto">
-                {VIEWS.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setActiveView(id)}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2",
-                      activeView === id
-                        ? "bg-indigo-700 text-white"
-                        : "bg-indigo-100 text-indigo-700 hover:bg-indigo-700 hover:text-white"
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {label}
-                  </button>
-                ))}
+              {/* ── Navegação: modos + histórico ── */}
+              <div className="flex items-center gap-2 p-4 border-b border-gray-100 overflow-x-auto">
+                {loadingModos ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-indigo-400" />
+                ) : (
+                  <>
+                    {modos.map((modo) => (
+                      <button
+                        key={modo.id}
+                        type="button"
+                        onClick={() => handleModoClick(modo.id)}
+                        className={cn(
+                          "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                          activeView === modo.id
+                            ? "bg-indigo-700 text-white"
+                            : "bg-indigo-100 text-indigo-700 hover:bg-indigo-700 hover:text-white"
+                        )}
+                      >
+                        {modo.label}
+                      </button>
+                    ))}
+
+                    {/* Separador visual */}
+                    <div className="flex-1" />
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveView('historico')}
+                      className={cn(
+                        "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2",
+                        isHistorico
+                          ? "bg-indigo-700 text-white"
+                          : "bg-indigo-100 text-indigo-700 hover:bg-indigo-700 hover:text-white"
+                      )}
+                    >
+                      <History className="w-4 h-4" />
+                      Histórico
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="p-6">
 
                 {/* ════════════════════════════════
-                    VIEW: Novo texto
+                    VIEW: Modo ativo (entrada + resultado inline)
                 ════════════════════════════════ */}
-                {activeView === 'novo-texto' && (
+                {!isHistorico && modoAtivo && (
                   <div className="space-y-4">
-                    <Textarea
-                      placeholder="Cole ou digite seu texto aqui..."
-                      value={textoInput}
-                      onChange={(e) => handleTextoChange(e.target.value)}
-                      rows={10}
-                      className="resize-none text-base"
-                      disabled={isLoading}
-                    />
 
+                    {/* Textarea com microfone */}
+                    <div className="relative">
+                      <Textarea
+                        placeholder="Cole ou digite seu texto aqui..."
+                        value={textoInput}
+                        onChange={(e) => handleTextoChange(e.target.value)}
+                        rows={10}
+                        className="resize-none text-base pb-10"
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={toggleRecording}
+                        disabled={!isSupported || isLoading}
+                        title={
+                          !isSupported
+                            ? "Seu navegador não suporta reconhecimento de voz"
+                            : isRecording
+                            ? "Parar gravação"
+                            : "Ditar texto por voz"
+                        }
+                        className={cn(
+                          "absolute bottom-2 right-2 p-2 rounded-full transition-colors",
+                          isRecording
+                            ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
+                            : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                          (!isSupported || isLoading) && "opacity-40 cursor-not-allowed"
+                        )}
+                      >
+                        {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    {isRecording && (
+                      <p className="text-xs text-red-500 font-medium animate-pulse">
+                        Jarvis está ouvindo...
+                      </p>
+                    )}
+
+                    {/* Barra de ações */}
                     <div className="flex justify-between items-center">
-                      <span className={cn(
-                        "text-sm font-medium",
-                        wordCount > 500 ? 'text-red-600' :
-                        wordCount > 400 ? 'text-amber-600' : 'text-gray-500'
-                      )}>
-                        {wordCount}/500 palavras
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "text-sm font-medium",
+                          wordCount > 500 ? 'text-red-600' :
+                          wordCount > 400 ? 'text-amber-600' : 'text-gray-500'
+                        )}>
+                          {wordCount}/500 palavras
+                        </span>
+                        {textoInput && (
+                          <button
+                            type="button"
+                            onClick={handleLimparTexto}
+                            className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Limpar texto
+                          </button>
+                        )}
+                      </div>
 
                       <Button
                         onClick={handleSubmit}
@@ -218,111 +381,54 @@ const Jarvis = () => {
                         {isLoading ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analisando...</>
                         ) : (
-                          <><Sparkles className="mr-2 h-4 w-4" />Obter Análise (1 crédito)</>
+                          <><Sparkles className="mr-2 h-4 w-4" />Acionar Jarvis</>
                         )}
                       </Button>
                     </div>
 
-                    {/* Créditos + aviso discreto */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-3xl font-bold text-indigo-600">{credits}</span>
-                        <div className="leading-tight">
-                          <p className="text-sm font-medium text-gray-700">Seus créditos</p>
-                          <p className="text-xs text-gray-400">Cada análise consome 1 crédito</p>
-                        </div>
+                    {/* Créditos */}
+                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                      <span className="text-3xl font-bold text-indigo-600">{credits}</span>
+                      <div className="leading-tight">
+                        <p className="text-sm font-medium text-gray-700">Seus créditos</p>
+                        <p className="text-xs text-gray-400">Cada análise consome 1 crédito</p>
                       </div>
-
-                      <p className="text-xs text-gray-400 max-w-xs text-right leading-relaxed">
-                        O Jarvis mantém o sentido original do seu texto e propõe ajustes
-                        para torná-lo mais claro, correto e adequado ao padrão ENEM.
-                      </p>
                     </div>
-                  </div>
-                )}
 
-                {/* ════════════════════════════════
-                    VIEW: Análise
-                ════════════════════════════════ */}
-                {activeView === 'analise' && (
-                  <div className="space-y-5">
-                    {currentResponse ? (
-                      <>
+                    {/* Resultado inline — aparece logo abaixo após acionar */}
+                    {currentResponse && currentModo && (
+                      <div className="space-y-4 pt-2 border-t border-gray-100">
                         <div className="flex justify-between items-center">
-                          <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
-                            <Sparkles className="w-4 h-4 text-indigo-600" />
-                            Análise Pedagógica
-                          </h3>
-                          <Button onClick={handleNovaAnalise} variant="outline" size="sm">
-                            Nova análise
-                          </Button>
-                        </div>
-
-                        {/* Diagnóstico */}
-                        <div className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r">
-                          <h4 className="font-semibold text-blue-700 flex items-center gap-2 mb-2 text-sm">
-                            <AlertCircle className="w-4 h-4" />
-                            Diagnóstico
-                          </h4>
-                          <div className="space-y-1">
-                            {currentResponse.diagnostico
-                              .split('\n')
-                              .filter(l => l.trim())
-                              .map((linha, i) => (
-                                <p key={i} className="text-sm text-gray-700">{linha}</p>
-                              ))}
-                          </div>
-                        </div>
-
-                        {/* Como Melhorar */}
-                        <div className="border-l-4 border-purple-500 bg-purple-50 p-4 rounded-r">
-                          <h4 className="font-semibold text-purple-700 flex items-center gap-2 mb-2 text-sm">
-                            <FileEdit className="w-4 h-4" />
-                            Como Melhorar
-                          </h4>
-                          <p className="text-sm text-gray-700">{currentResponse.sugestao_reescrita}</p>
-                        </div>
-
-                        {/* Versão Lapidada */}
-                        <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r">
-                          <h4 className="font-semibold text-green-700 flex items-center gap-2 mb-2 text-sm">
-                            <CheckCircle2 className="w-4 h-4" />
-                            Versão Lapidada
-                          </h4>
-                          <p className="text-sm text-gray-700 italic mb-3">
-                            "{currentResponse.versao_melhorada}"
+                          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                            Resultado — {currentModo.label}
                           </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCopyText(currentResponse.versao_melhorada)}
-                            className="border-green-500 text-green-700 hover:bg-green-100"
+                          <button
+                            type="button"
+                            onClick={clearResponse}
+                            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                           >
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copiar
-                          </Button>
+                            Fechar
+                          </button>
                         </div>
 
-                        {/* Metadados mínimos */}
+                        {currentModo.campos_resposta.map((campo) => (
+                          <CardResposta
+                            key={campo.chave}
+                            campo={campo}
+                            valor={currentResponse[campo.chave] ?? ''}
+                            onCopy={handleCopyText}
+                          />
+                        ))}
+
                         {currentMetadata && (
                           <p className="text-xs text-gray-400">
                             Original: {currentMetadata.palavras_original} palavras
-                            {' · '}
-                            Lapidada: {currentMetadata.palavras_melhorada} palavras
+                            {currentMetadata.palavras_melhorada != null && (
+                              <> · Resposta: {currentMetadata.palavras_melhorada} palavras</>
+                            )}
                           </p>
                         )}
-                      </>
-                    ) : (
-                      <div className="text-center py-12 text-gray-400">
-                        <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                        <p className="text-sm">Nenhuma análise em andamento.</p>
-                        <Button
-                          variant="link"
-                          className="text-indigo-600 mt-1"
-                          onClick={() => setActiveView('novo-texto')}
-                        >
-                          Ir para Novo texto
-                        </Button>
                       </div>
                     )}
                   </div>
@@ -331,11 +437,11 @@ const Jarvis = () => {
                 {/* ════════════════════════════════
                     VIEW: Histórico
                 ════════════════════════════════ */}
-                {activeView === 'historico' && (
+                {isHistorico && (
                   <div className="space-y-3">
                     <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
                       <History className="w-4 h-4 text-indigo-600" />
-                      Histórico de análises
+                      Histórico
                     </h3>
 
                     {loadingHistorico ? (
@@ -349,79 +455,62 @@ const Jarvis = () => {
                       </div>
                     ) : (
                       <div className="divide-y divide-gray-100">
-                        {historico.map((item) => (
-                          <div key={item.id} className="py-3">
-                            {/* Linha compacta clicável */}
-                            <button
-                              type="button"
-                              className="w-full text-left"
-                              onClick={() =>
-                                setExpandedId(expandedId === item.id ? null : item.id)
-                              }
-                            >
-                              <div className="flex justify-between items-start gap-3">
-                                <p className="text-sm text-gray-700 flex-1">
-                                  {truncateText(item.texto_original)}
-                                </p>
-                                <div className="flex items-center gap-3 shrink-0 text-xs text-gray-400">
-                                  <span>{item.palavras_original} palavras</span>
-                                  <span>{formatDate(item.created_at)}</span>
-                                  {expandedId === item.id
-                                    ? <ChevronUp className="w-4 h-4" />
-                                    : <ChevronDown className="w-4 h-4" />
-                                  }
-                                </div>
-                              </div>
-                            </button>
-
-                            {/* Detalhe expandido */}
-                            {expandedId === item.id && (
-                              <div className="mt-4 space-y-3">
-                                {/* Texto original */}
-                                <div className="bg-gray-50 border border-gray-100 p-3 rounded">
-                                  <p className="text-xs font-medium text-gray-400 mb-1">Texto original</p>
-                                  <p className="text-sm text-gray-600">{item.texto_original}</p>
-                                </div>
-
-                                {/* Diagnóstico */}
-                                <div className="border-l-4 border-blue-500 bg-blue-50 p-3 rounded-r">
-                                  <p className="text-xs font-semibold text-blue-700 mb-1">Diagnóstico</p>
-                                  <div className="space-y-1">
-                                    {item.diagnostico
-                                      .split('\n')
-                                      .filter(l => l.trim())
-                                      .map((linha, i) => (
-                                        <p key={i} className="text-sm text-gray-700">{linha}</p>
-                                      ))}
+                        {historico.map((item) => {
+                          const campos = resolverCampos(item);
+                          return (
+                            <div key={item.id} className="py-3">
+                              <button
+                                type="button"
+                                className="w-full text-left"
+                                onClick={() =>
+                                  setExpandedId(expandedId === item.id ? null : item.id)
+                                }
+                              >
+                                <div className="flex justify-between items-start gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-gray-700">
+                                      {truncateText(item.texto_original)}
+                                    </p>
+                                    {item.modo_label && (
+                                      <span className="inline-block mt-1 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">
+                                        {item.modo_label}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3 shrink-0 text-xs text-gray-400">
+                                    <span>{item.palavras_original} palavras</span>
+                                    <span>{formatDate(item.created_at)}</span>
+                                    {expandedId === item.id
+                                      ? <ChevronUp className="w-4 h-4" />
+                                      : <ChevronDown className="w-4 h-4" />
+                                    }
                                   </div>
                                 </div>
+                              </button>
 
-                                {/* Como Melhorar */}
-                                <div className="border-l-4 border-purple-500 bg-purple-50 p-3 rounded-r">
-                                  <p className="text-xs font-semibold text-purple-700 mb-1">Como Melhorar</p>
-                                  <p className="text-sm text-gray-700">{item.sugestao_reescrita}</p>
+                              {expandedId === item.id && (
+                                <div className="mt-4 space-y-3">
+                                  <div className="bg-gray-50 border border-gray-100 p-3 rounded">
+                                    <p className="text-xs font-medium text-gray-400 mb-1">Texto original</p>
+                                    <p className="text-sm text-gray-600">{item.texto_original}</p>
+                                  </div>
+                                  {campos.map((campo) => {
+                                    const valor = resolverValorHistorico(item, campo.chave);
+                                    if (!valor) return null;
+                                    return (
+                                      <CardResposta
+                                        key={campo.chave}
+                                        campo={campo}
+                                        valor={valor}
+                                        onCopy={handleCopyText}
+                                      />
+                                    );
+                                  })}
                                 </div>
-
-                                {/* Versão Lapidada */}
-                                <div className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r">
-                                  <p className="text-xs font-semibold text-green-700 mb-1">Versão Lapidada</p>
-                                  <p className="text-sm text-gray-700 italic mb-2">
-                                    "{item.versao_melhorada}"
-                                  </p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleCopyText(item.versao_melhorada)}
-                                    className="border-green-500 text-green-700 hover:bg-green-100 h-7 text-xs"
-                                  >
-                                    <Copy className="w-3 h-3 mr-1" />
-                                    Copiar
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

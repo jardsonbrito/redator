@@ -141,6 +141,7 @@ import { TemasMetricsPanel } from "@/components/admin/TemasMetricsPanel";
 // Import componentes Jarvis
 import { JarvisConfigManagement } from "@/components/admin/JarvisConfigManagement";
 import { JarvisCreditManagementBulk } from "@/components/admin/JarvisCreditManagementBulk";
+import { JarvisModosManagement } from "@/components/admin/JarvisModosManagement";
 
 // Import diário components
 import GestaoEtapas from "@/pages/admin/GestaoEtapas";
@@ -670,7 +671,7 @@ const Admin = () => {
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
     // PRIMEIRO: Jarvis - Assistente Pedagógico
-    { id: "jarvis", label: "Jarvis", icon: Bot, iconColor: "#7C3AED", chips: ["Créditos", "Configurações", "Análises"] },
+    { id: "jarvis", label: "Jarvis", icon: Bot, iconColor: "#7C3AED", chips: ["Créditos", "Modos", "Parâmetros", "Análises"] },
 
     // Destaque: Processo Seletivo
     { id: "processo-seletivo", label: "Processo Seletivo", icon: ListChecks, iconColor: "#8B5CF6" },
@@ -1103,12 +1104,16 @@ const Admin = () => {
 
         return (
           <Tabs defaultValue={subtabJarvis || "creditos"} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="creditos">Créditos</TabsTrigger>
-              <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
+              <TabsTrigger value="modos">Modos</TabsTrigger>
+              <TabsTrigger value="configuracoes">Parâmetros</TabsTrigger>
             </TabsList>
             <TabsContent value="creditos" className="space-y-6">
               <JarvisCreditManagementBulk />
+            </TabsContent>
+            <TabsContent value="modos" className="space-y-6">
+              <JarvisModosManagement />
             </TabsContent>
             <TabsContent value="configuracoes" className="space-y-6">
               <JarvisConfigManagement />
@@ -1221,7 +1226,8 @@ const Admin = () => {
                     if (item.id === "jarvis") {
                       const subtabMap: Record<string, string> = {
                         "Créditos": "creditos",
-                        "Configurações": "configuracoes",
+                        "Modos": "modos",
+                        "Parâmetros": "configuracoes",
                         "Análises": "analises"
                       };
                       const subtab = subtabMap[chipValue];

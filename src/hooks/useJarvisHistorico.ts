@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { CampoResposta } from '@/hooks/useJarvisModos';
 
 export interface JarvisHistoricoItem {
   id: string;
   texto_original: string;
-  diagnostico: string;
-  sugestao_reescrita: string;
-  versao_melhorada: string;
+  // Campos legados do modo "analisar" (podem ser null em modos futuros)
+  diagnostico: string | null;
+  sugestao_reescrita: string | null;
+  versao_melhorada: string | null;
+  // Resposta genérica (presente em todas as interações novas)
+  resposta_json: Record<string, string> | null;
   palavras_original: number;
-  palavras_melhorada: number;
+  palavras_melhorada: number | null;
+  // Info do modo
+  modo_id: string | null;
+  modo_nome: string | null;
+  modo_label: string | null;
+  modo_campos_resposta: CampoResposta[] | null;
   created_at: string;
 }
 

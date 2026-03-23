@@ -339,7 +339,7 @@ REGRAS OBRIGATÓRIAS:
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings2 className="h-5 w-5" />
-            Configurações do Jarvis
+            Parâmetros do Jarvis
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -359,10 +359,10 @@ REGRAS OBRIGATÓRIAS:
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Settings2 className="h-5 w-5" />
-                Configurações do Jarvis
+                Parâmetros do Jarvis
               </CardTitle>
               <CardDescription className="mt-2">
-                Gerencie prompts, modelos e parâmetros do assistente pedagógico
+                Modelo, temperatura, limites e disponibilidade para os alunos. Os prompts são gerenciados na aba Modos.
               </CardDescription>
             </div>
             <Button onClick={() => setShowCreateDialog(true)}>
@@ -412,6 +412,7 @@ REGRAS OBRIGATÓRIAS:
                         size="sm"
                         variant="outline"
                         onClick={() => setViewingPrompt(config.system_prompt)}
+                        className="hidden"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -616,22 +617,6 @@ REGRAS OBRIGATÓRIAS:
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="system_prompt">System Prompt (Instruções para a IA)</Label>
-              <Textarea
-                id="system_prompt"
-                value={formData.system_prompt}
-                onChange={(e) =>
-                  setFormData({ ...formData, system_prompt: e.target.value })
-                }
-                rows={15}
-                className="font-mono text-sm"
-                placeholder="Digite as instruções completas para o Jarvis..."
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Este prompt é enviado para a OpenAI em cada requisição. Seja claro e específico.
-              </p>
-            </div>
 
             <div className="border-t pt-4 space-y-4">
               <h4 className="font-semibold text-sm">Disponibilidade para Alunos</h4>

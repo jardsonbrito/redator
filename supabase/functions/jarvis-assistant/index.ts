@@ -9,13 +9,7 @@ const corsHeaders = {
 interface JarvisRequest {
   texto: string;
   userEmail: string;
-}
-
-interface JarvisResponse {
-  diagnostico: string;
-  explicacao: string;
-  sugestao_reescrita: string;
-  versao_melhorada: string;
+  modo_id?: string; // opcional — fallback para o modo "analisar" se ausente
 }
 
 interface OpenAIMessage {
@@ -24,7 +18,6 @@ interface OpenAIMessage {
 }
 
 Deno.serve(async (req) => {
-  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -32,20 +25,17 @@ Deno.serve(async (req) => {
   try {
     console.log('🤖 Jarvis Assistant - Iniciando processamento');
 
-    // 1. Setup Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // 2. Verificar OpenAI API Key
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY não configurada');
     }
 
-    // 3. Parse request
-    const { texto, userEmail }: JarvisRequest = await req.json();
+    const { texto, userEmail, modo_id }: JarvisRequest = await req.json();
 
     if (!texto || !userEmail) {
       return new Response(
@@ -55,9 +45,9 @@ Deno.serve(async (req) => {
     }
 
     console.log('📧 Email:', userEmail);
-    console.log('📝 Texto:', texto.substring(0, 100) + '...');
+    console.log('🎯 Modo ID:', modo_id ?? '(não informado — usando fallback)');
 
-    // 4. Buscar usuário
+    // ── Buscar usuário por email (sem Supabase Auth) ──────────────
     const { data: user, error: userError } = await supabaseClient
       .from('profiles')
       .select('id, jarvis_creditos, nome, email')
@@ -73,9 +63,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('👤 Usuário:', user.nome, '| Créditos Jarvis:', user.jarvis_creditos);
+    console.log('👤 Usuário:', user.nome, '| Créditos:', user.jarvis_creditos);
 
-    // 5. Buscar configuração ativa
+    // ── Buscar configuração global ────────────────────────────────
     const { data: config, error: configError } = await supabaseClient
       .rpc('get_active_jarvis_config')
       .single();
@@ -88,9 +78,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('⚙️ Config:', config.model, '| Versão:', config.versao);
+    // ── Buscar modo ───────────────────────────────────────────────
+    // Se modo_id não foi enviado (clientes antigos), usa o modo "analisar".
+    let modoQuery = supabaseClient
+      .from('jarvis_modos')
+      .select('id, nome, label, system_prompt, campos_resposta')
+      .eq('ativo', true);
 
-    // 6. Validar limite de palavras
+    if (modo_id) {
+      modoQuery = modoQuery.eq('id', modo_id);
+    } else {
+      modoQuery = modoQuery.eq('nome', 'analisar');
+    }
+
+    const { data: modo, error: modoError } = await modoQuery.single();
+
+    if (modoError || !modo) {
+      console.error('❌ Modo não encontrado:', modoError);
+      return new Response(
+        JSON.stringify({ error: 'Modo do Jarvis não encontrado ou inativo' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('⚙️ Config:', config.model, '| Modo:', modo.nome, '(', modo.label, ')');
+
+    // ── Validar limite de palavras ────────────────────────────────
     const palavras = texto.trim().split(/\s+/).length;
     console.log('📊 Palavras:', palavras, '| Limite:', config.limite_palavras_entrada);
 
@@ -105,7 +118,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 7. Verificar créditos suficientes (sem consumir ainda)
+    // ── Verificar créditos ────────────────────────────────────────
     if ((user.jarvis_creditos || 0) < 1) {
       return new Response(
         JSON.stringify({
@@ -116,12 +129,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 9. Chamar OpenAI API (crédito só é consumido após resposta válida)
-    console.log('🤖 Chamando OpenAI...');
+    // ── Chamar OpenAI com o prompt do modo ────────────────────────
+    console.log('🤖 Chamando OpenAI com prompt do modo:', modo.nome);
     const startTime = Date.now();
 
     const messages: OpenAIMessage[] = [
-      { role: 'system', content: config.system_prompt },
+      { role: 'system', content: modo.system_prompt },
       { role: 'user', content: `Analise este texto:\n\n${texto}` }
     ];
 
@@ -133,7 +146,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: config.model,
-        messages: messages,
+        messages,
         temperature: config.temperatura,
         max_tokens: config.max_tokens,
         response_format: { type: "json_object" }
@@ -151,104 +164,103 @@ Deno.serve(async (req) => {
 
     console.log(`⏱️ Tempo de resposta: ${responseTime}ms`);
 
-    // 10. Parsear e validar resposta
+    // ── Parsear e validar resposta conforme campos_resposta do modo ─
     const content = openaiData.choices[0].message.content;
-    const aiResponse: JarvisResponse = JSON.parse(content);
+    const aiResponse: Record<string, string> = JSON.parse(content);
 
-    if (!aiResponse.diagnostico ||
-        !aiResponse.sugestao_reescrita || !aiResponse.versao_melhorada) {
-      console.error('❌ Resposta incompleta da IA:', aiResponse);
-      throw new Error('Resposta da IA incompleta - faltam campos obrigatórios');
+    const camposEsperados: string[] = (modo.campos_resposta as any[]).map((c: any) => c.chave);
+    const camposFaltando = camposEsperados.filter(c => !aiResponse[c]);
+
+    if (camposFaltando.length > 0) {
+      console.error('❌ Resposta incompleta da IA. Campos faltando:', camposFaltando);
+      throw new Error(`Resposta da IA incompleta — campos ausentes: ${camposFaltando.join(', ')}`);
     }
 
-    console.log('✅ Resposta validada com sucesso');
+    console.log('✅ Resposta validada. Campos presentes:', camposEsperados.join(', '));
 
-    // 11. Consumir crédito — somente após resposta válida da IA
+    // ── Consumir crédito após resposta válida ─────────────────────
     console.log('💳 Consumindo 1 crédito Jarvis...');
-
     const { data: newJarvisCredits, error: creditError } = await supabaseClient
       .rpc('consume_jarvis_credit', { target_user_id: user.id });
 
     if (creditError) {
       console.error('❌ Erro ao consumir crédito:', creditError);
-
       if (creditError.message?.includes('insuficientes')) {
         return new Response(
-          JSON.stringify({
-            error: 'Créditos Jarvis insuficientes',
-            creditos_atuais: user.jarvis_creditos || 0
-          }),
+          JSON.stringify({ error: 'Créditos Jarvis insuficientes', creditos_atuais: user.jarvis_creditos || 0 }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
       throw creditError;
     }
 
     console.log(`✅ Crédito consumido. Novos créditos: ${newJarvisCredits}`);
 
-    // 13. Calcular métricas
-    const palavrasMelhoradas = aiResponse.versao_melhorada.split(/\s+/).length;
-    const expansaoExcessiva = palavrasMelhoradas > palavras * 1.5;
-    const tokensInput = openaiData.usage?.prompt_tokens || 0;
-    const tokensOutput = openaiData.usage?.completion_tokens || 0;
-    const tokensTotal = openaiData.usage?.total_tokens || 0;
+    // ── Métricas ──────────────────────────────────────────────────
+    const palavrasMelhoradas = aiResponse['versao_melhorada']
+      ? aiResponse['versao_melhorada'].split(/\s+/).length
+      : null;
+    const expansaoExcessiva = palavrasMelhoradas != null
+      ? palavrasMelhoradas > palavras * 1.5
+      : false;
 
-    // Custo estimado (gpt-4o-mini: $0.00015 input, $0.00060 output)
+    const tokensInput  = openaiData.usage?.prompt_tokens     || 0;
+    const tokensOutput = openaiData.usage?.completion_tokens || 0;
+    const tokensTotal  = openaiData.usage?.total_tokens      || 0;
     const custoEstimado = (tokensInput * 0.00015 / 1000) + (tokensOutput * 0.00060 / 1000);
 
-    console.log('📊 Métricas:', {
-      palavrasOriginais: palavras,
-      palavrasMelhoradas,
-      expansaoExcessiva,
-      tokens: tokensTotal,
-      custo: `$${custoEstimado.toFixed(6)}`
-    });
-
-    // 14. Salvar interação
+    // ── Salvar interação ──────────────────────────────────────────
     const { error: saveError } = await supabaseClient
       .from('jarvis_interactions')
       .insert({
-        user_id: user.id,
-        texto_original: texto,
-        palavras_original: palavras,
-        diagnostico: aiResponse.diagnostico,
-        explicacao: aiResponse.explicacao,
-        sugestao_reescrita: aiResponse.sugestao_reescrita,
-        versao_melhorada: aiResponse.versao_melhorada,
+        user_id:            user.id,
+        modo_id:            modo.id,
+        texto_original:     texto,
+        palavras_original:  palavras,
+        resposta_json:      aiResponse,
+        // Campos específicos do modo "analisar" para retrocompatibilidade
+        diagnostico:        aiResponse['diagnostico']        ?? null,
+        explicacao:         aiResponse['explicacao']         ?? null,
+        sugestao_reescrita: aiResponse['sugestao_reescrita'] ?? null,
+        versao_melhorada:   aiResponse['versao_melhorada']   ?? null,
         palavras_melhorada: palavrasMelhoradas,
-        config_version_id: config.id,
-        model_used: config.model,
-        temperatura: config.temperatura,
-        tokens_input: tokensInput,
-        tokens_output: tokensOutput,
-        tokens_total: tokensTotal,
-        tempo_resposta_ms: responseTime,
-        custo_estimado: custoEstimado,
+        config_version_id:  config.id,
+        model_used:         config.model,
+        temperatura:        config.temperatura,
+        tokens_input:       tokensInput,
+        tokens_output:      tokensOutput,
+        tokens_total:       tokensTotal,
+        tempo_resposta_ms:  responseTime,
+        custo_estimado:     custoEstimado,
         expansao_excessiva: expansaoExcessiva,
-        possivel_problema: expansaoExcessiva,
+        possivel_problema:  expansaoExcessiva,
         creditos_consumidos: 1
       });
 
     if (saveError) {
-      console.error('⚠️ Erro ao salvar interação:', saveError);
-      // Não falha a requisição por isso
+      console.error('⚠️ Erro ao salvar interação (não bloqueia resposta):', saveError);
     } else {
       console.log('💾 Interação salva com sucesso');
     }
 
-    // 15. Retornar resposta estruturada
+    // ── Resposta ──────────────────────────────────────────────────
     return new Response(
       JSON.stringify({
         success: true,
         jarvis_creditos_restantes: newJarvisCredits,
         resposta: aiResponse,
+        modo: {
+          id:              modo.id,
+          nome:            modo.nome,
+          label:           modo.label,
+          campos_resposta: modo.campos_resposta,
+        },
         metadados: {
-          palavras_original: palavras,
+          palavras_original:  palavras,
           palavras_melhorada: palavrasMelhoradas,
-          tempo_resposta_ms: responseTime,
-          modelo: config.model,
-          tokens_usados: tokensTotal,
+          tempo_resposta_ms:  responseTime,
+          modelo:             config.model,
+          tokens_usados:      tokensTotal,
           custo_estimado_usd: custoEstimado
         }
       }),
@@ -257,7 +269,6 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Erro na função jarvis-assistant:', error);
-
     return new Response(
       JSON.stringify({
         error: 'Erro interno do servidor',

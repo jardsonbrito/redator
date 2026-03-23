@@ -2,17 +2,18 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useJarvisCredits } from '@/hooks/useJarvisCredits';
+import type { CampoResposta } from '@/hooks/useJarvisModos';
 
-export interface JarvisResponse {
-  diagnostico: string;
-  explicacao: string;
-  sugestao_reescrita: string;
-  versao_melhorada: string;
+export interface JarvisModoInfo {
+  id: string;
+  nome: string;
+  label: string;
+  campos_resposta: CampoResposta[];
 }
 
 export interface JarvisMetadata {
   palavras_original: number;
-  palavras_melhorada: number;
+  palavras_melhorada: number | null;
   tempo_resposta_ms: number;
   modelo: string;
   tokens_usados?: number;
@@ -20,9 +21,10 @@ export interface JarvisMetadata {
 }
 
 interface UseJarvisReturn {
-  analisar: (texto: string) => Promise<JarvisResponse | null>;
+  analisar: (texto: string, modoId: string) => Promise<Record<string, string> | null>;
   isLoading: boolean;
-  currentResponse: JarvisResponse | null;
+  currentResponse: Record<string, string> | null;
+  currentModo: JarvisModoInfo | null;
   currentMetadata: JarvisMetadata | null;
   credits: number;
   clearResponse: () => void;
@@ -30,19 +32,15 @@ interface UseJarvisReturn {
 
 export const useJarvis = (userEmail: string): UseJarvisReturn => {
   const [isLoading, setIsLoading] = useState(false);
-  const [currentResponse, setCurrentResponse] = useState<JarvisResponse | null>(null);
+  const [currentResponse, setCurrentResponse] = useState<Record<string, string> | null>(null);
+  const [currentModo, setCurrentModo] = useState<JarvisModoInfo | null>(null);
   const [currentMetadata, setCurrentMetadata] = useState<JarvisMetadata | null>(null);
   const { toast } = useToast();
   const { credits, refreshCredits } = useJarvisCredits(userEmail);
 
-  const analisar = async (texto: string): Promise<JarvisResponse | null> => {
-    // Validações básicas
+  const analisar = async (texto: string, modoId: string): Promise<Record<string, string> | null> => {
     if (!texto.trim()) {
-      toast({
-        title: "Texto vazio",
-        description: "Digite algo para análise",
-        variant: "destructive"
-      });
+      toast({ title: "Texto vazio", description: "Digite algo para análise", variant: "destructive" });
       return null;
     }
 
@@ -78,15 +76,14 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
     setIsLoading(true);
 
     try {
-      console.log('🤖 Enviando texto para análise Jarvis...');
+      console.log('🤖 Enviando texto para análise Jarvis... Modo:', modoId);
 
       const { data, error } = await supabase.functions.invoke('jarvis-assistant', {
-        body: { texto, userEmail }
+        body: { texto, userEmail, modo_id: modoId }
       });
 
       if (error) {
         console.error('❌ Erro ao chamar Edge Function:', error);
-        // Extrair mensagem real do body da resposta (FunctionsHttpError)
         let mensagemReal: string | null = null;
         try {
           const body = await (error as any).context?.json?.();
@@ -102,6 +99,7 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
       console.log('✅ Resposta recebida:', data);
 
       setCurrentResponse(data.resposta);
+      setCurrentModo(data.modo);
       setCurrentMetadata(data.metadados);
 
       toast({
@@ -110,10 +108,8 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
         className: "border-green-200 bg-green-50 text-green-900"
       });
 
-      // Atualizar créditos
       await refreshCredits();
 
-      // Disparar evento personalizado
       window.dispatchEvent(new CustomEvent('jarvis-credits-updated', {
         detail: {
           userEmail: userEmail.toLowerCase().trim(),
@@ -140,13 +136,9 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
         errorMessage = 'Seu texto excede o limite de 500 palavras.';
       }
 
-      toast({
-        title: errorTitle,
-        description: errorMessage,
-        variant: "destructive"
-      });
-
+      toast({ title: errorTitle, description: errorMessage, variant: "destructive" });
       return null;
+
     } finally {
       setIsLoading(false);
     }
@@ -154,6 +146,7 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
 
   const clearResponse = () => {
     setCurrentResponse(null);
+    setCurrentModo(null);
     setCurrentMetadata(null);
   };
 
@@ -161,6 +154,7 @@ export const useJarvis = (userEmail: string): UseJarvisReturn => {
     analisar,
     isLoading,
     currentResponse,
+    currentModo,
     currentMetadata,
     credits,
     clearResponse
