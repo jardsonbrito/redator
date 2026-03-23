@@ -38,6 +38,7 @@ interface JarvisConfig {
   limite_palavras_entrada: number;
   limite_consultas_hora: number;
   peso_distribuicao: number;
+  valor_por_interacao: number | null;
   disponivel_alunos: boolean;
   mensagem_indisponibilidade: string;
   criado_em: string;
@@ -53,8 +54,9 @@ export const JarvisConfigManagement = () => {
   const [viewingPrompt, setViewingPrompt] = useState<string | null>(null);
 
   // System messages state
-  const [mensagemSistema, setMensagemSistema] = useState('');
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [mensagemSistema,      setMensagemSistema]      = useState('');
+  const [mensagemSemCreditos,  setMensagemSemCreditos]  = useState('');
+  const [loadingMessages,      setLoadingMessages]      = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -67,6 +69,7 @@ export const JarvisConfigManagement = () => {
     limite_palavras_entrada: 500,
     limite_consultas_hora: 5,
     peso_distribuicao: 0,
+    valor_por_interacao: '',
     disponivel_alunos: false,
     mensagem_indisponibilidade: 'Esta funcionalidade estará disponível em breve. Estamos trabalhando em melhorias para oferecer a melhor experiência de aprendizado!',
   });
@@ -102,17 +105,19 @@ export const JarvisConfigManagement = () => {
     try {
       const { data, error } = await supabase
         .from('jarvis_system_config')
-        .select('valor')
-        .eq('chave', 'mensagem_sistema')
-        .single();
+        .select('chave, valor')
+        .in('chave', ['mensagem_sistema', 'mensagem_sem_creditos']);
 
       if (error) throw error;
 
       if (data) {
-        setMensagemSistema(data.valor);
+        const msgSistema   = data.find(m => m.chave === 'mensagem_sistema');
+        const msgSemCred   = data.find(m => m.chave === 'mensagem_sem_creditos');
+        if (msgSistema)  setMensagemSistema(msgSistema.valor);
+        if (msgSemCred)  setMensagemSemCreditos(msgSemCred.valor);
       }
     } catch (error) {
-      console.error('Erro ao carregar mensagem do sistema:', error);
+      console.error('Erro ao carregar mensagens do sistema:', error);
     }
   };
 
@@ -120,23 +125,28 @@ export const JarvisConfigManagement = () => {
     try {
       setLoadingMessages(true);
 
-      const { error } = await supabase
-        .from('jarvis_system_config')
-        .update({ valor: mensagemSistema, atualizado_em: new Date().toISOString() })
-        .eq('chave', 'mensagem_sistema');
+      const now = new Date().toISOString();
 
-      if (error) throw error;
+      const [r1, r2] = await Promise.all([
+        supabase.from('jarvis_system_config')
+          .upsert({ chave: 'mensagem_sistema',     valor: mensagemSistema,     atualizado_em: now }, { onConflict: 'chave' }),
+        supabase.from('jarvis_system_config')
+          .upsert({ chave: 'mensagem_sem_creditos', valor: mensagemSemCreditos, atualizado_em: now }, { onConflict: 'chave' }),
+      ]);
+
+      if (r1.error) throw r1.error;
+      if (r2.error) throw r2.error;
 
       toast({
         title: 'Sucesso',
-        description: 'Mensagem atualizada com sucesso!',
+        description: 'Mensagens atualizadas com sucesso!',
         className: 'border-green-200 bg-green-50 text-green-900'
       });
     } catch (error) {
-      console.error('Erro ao salvar mensagem:', error);
+      console.error('Erro ao salvar mensagens:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao salvar mensagem do sistema',
+        description: 'Erro ao salvar mensagens do sistema',
         variant: 'destructive',
       });
     } finally {
@@ -178,6 +188,7 @@ REGRAS OBRIGATÓRIAS:
       limite_palavras_entrada: 500,
       limite_consultas_hora: 5,
       peso_distribuicao: 0,
+      valor_por_interacao: '',
       disponivel_alunos: false,
       mensagem_indisponibilidade: 'Esta funcionalidade estará disponível em breve. Estamos trabalhando em melhorias para oferecer a melhor experiência de aprendizado!',
     });
@@ -200,6 +211,7 @@ REGRAS OBRIGATÓRIAS:
         versao: nextVersion,
         ativo: false,
         ...formData,
+        valor_por_interacao: formData.valor_por_interacao ? parseFloat(formData.valor_por_interacao) : null,
       });
 
       if (error) throw error;
@@ -230,6 +242,7 @@ REGRAS OBRIGATÓRIAS:
         .from('jarvis_config')
         .update({
           ...formData,
+          valor_por_interacao: formData.valor_por_interacao ? parseFloat(formData.valor_por_interacao) : null,
           atualizado_em: new Date().toISOString(),
         })
         .eq('id', editingConfig.id);
@@ -328,6 +341,7 @@ REGRAS OBRIGATÓRIAS:
       limite_palavras_entrada: config.limite_palavras_entrada,
       limite_consultas_hora: config.limite_consultas_hora,
       peso_distribuicao: config.peso_distribuicao,
+      valor_por_interacao: config.valor_por_interacao?.toString() ?? '',
       disponivel_alunos: config.disponivel_alunos,
       mensagem_indisponibilidade: config.mensagem_indisponibilidade,
     });
@@ -405,6 +419,9 @@ REGRAS OBRIGATÓRIAS:
                         <span>Max tokens: {config.max_tokens}</span>
                         <span>Limite: {config.limite_palavras_entrada} palavras</span>
                         <span>Rate: {config.limite_consultas_hora}/hora</span>
+                        {config.valor_por_interacao != null && config.valor_por_interacao > 0 && (
+                          <span>Valor: R$ {config.valor_por_interacao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/interação</span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -463,13 +480,13 @@ REGRAS OBRIGATÓRIAS:
             Personalize as mensagens exibidas aos alunos em diferentes situações
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div>
             <Label htmlFor="mensagem_sistema">
-              Mensagem do Sistema
+              Mensagem quando indisponível
             </Label>
             <p className="text-sm text-muted-foreground mb-2">
-              Esta mensagem será exibida aos alunos quando o Jarvis estiver indisponível
+              Exibida aos alunos quando o Jarvis estiver desativado
             </p>
             <Textarea
               id="mensagem_sistema"
@@ -480,8 +497,24 @@ REGRAS OBRIGATÓRIAS:
             />
           </div>
 
+          <div>
+            <Label htmlFor="mensagem_sem_creditos">
+              Mensagem quando sem créditos
+            </Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Exibida em pop-up quando o aluno tenta usar o Jarvis sem créditos disponíveis
+            </p>
+            <Textarea
+              id="mensagem_sem_creditos"
+              value={mensagemSemCreditos}
+              onChange={(e) => setMensagemSemCreditos(e.target.value)}
+              rows={4}
+              placeholder="Ex: Você não possui créditos disponíveis. Fale com seu professor..."
+            />
+          </div>
+
           <Button onClick={saveSystemMessages} disabled={loadingMessages}>
-            {loadingMessages ? 'Salvando...' : 'Salvar Mensagem'}
+            {loadingMessages ? 'Salvando...' : 'Salvar Mensagens'}
           </Button>
         </CardContent>
       </Card>
@@ -586,7 +619,7 @@ REGRAS OBRIGATÓRIAS:
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="limite_palavras">Limite de Palavras</Label>
                 <Input
@@ -611,6 +644,23 @@ REGRAS OBRIGATÓRIAS:
                     setFormData({
                       ...formData,
                       limite_consultas_hora: parseInt(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="valor_por_interacao">Valor por Interação (R$)</Label>
+                <Input
+                  id="valor_por_interacao"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ex: 0.35"
+                  value={formData.valor_por_interacao}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      valor_por_interacao: e.target.value,
                     })
                   }
                 />

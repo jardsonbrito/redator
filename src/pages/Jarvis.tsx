@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StudentHeader } from "@/components/StudentHeader";
@@ -19,6 +19,15 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 // ── Mapa de cores para cards de resposta ─────────────────────────
@@ -59,7 +68,7 @@ const CardResposta = ({
         {campo.rotulo}
       </h4>
       <div className="space-y-1">
-        {valor.split(/\n|(?=Erro\s+\d+:)/).filter(l => l.trim()).map((linha, i) => (
+        {valor.split(/\n|(?<=\.)\s+(?=\S)|(?=Erro\s+\d+:)/).filter(l => l.trim()).map((linha, i) => (
           <p key={i} className="text-sm text-gray-700">{linha.trim()}</p>
         ))}
       </div>
@@ -93,6 +102,9 @@ const Jarvis = () => {
   const [disponivel,               setDisponivel]               = useState(true);
   const [mensagemIndisponibilidade, setMensagemIndisponibilidade] = useState("");
   const [loadingDisponibilidade,   setLoadingDisponibilidade]   = useState(true);
+  const [valorPorInteracao,        setValorPorInteracao]        = useState<number | null>(null);
+  const [mensagemSemCreditos,      setMensagemSemCreditos]      = useState("Você não possui créditos disponíveis para usar o Jarvis.");
+  const [modalSemCreditos,         setModalSemCreditos]         = useState(false);
 
   const {
     analisar, isLoading, currentResponse, currentModo, currentMetadata, credits, clearResponse,
@@ -102,6 +114,9 @@ const Jarvis = () => {
     useJarvisHistorico(studentData?.email || "");
 
   const { modos, loading: loadingModos } = useJarvisModos();
+
+  const resultRef = useRef<HTMLDivElement>(null);
+  const showResult = !!currentResponse && !isLoading;
 
   // Seleciona o primeiro modo ao carregar
   useEffect(() => {
@@ -116,18 +131,24 @@ const Jarvis = () => {
       try {
         setLoadingDisponibilidade(true);
 
-        const { data: msgData } = await supabase
+        const { data: msgs } = await supabase
           .from('jarvis_system_config')
-          .select('valor')
-          .eq('chave', 'mensagem_sistema')
-          .single();
+          .select('chave, valor')
+          .in('chave', ['mensagem_sistema', 'mensagem_sem_creditos']);
 
         const mensagemPadrao =
-          msgData?.valor || 'Esta funcionalidade está temporariamente indisponível.';
+          msgs?.find(m => m.chave === 'mensagem_sistema')?.valor
+          || 'Esta funcionalidade está temporariamente indisponível.';
+
+        const msgSemCred =
+          msgs?.find(m => m.chave === 'mensagem_sem_creditos')?.valor
+          || 'Você não possui créditos disponíveis para usar o Jarvis.';
+
+        setMensagemSemCreditos(msgSemCred);
 
         const { data, error } = await supabase
           .from('jarvis_config')
-          .select('disponivel_alunos, mensagem_indisponibilidade')
+          .select('disponivel_alunos, mensagem_indisponibilidade, valor_por_interacao')
           .eq('ativo', true)
           .single();
 
@@ -139,9 +160,8 @@ const Jarvis = () => {
 
         if (data) {
           setDisponivel(data.disponivel_alunos);
-          setMensagemIndisponibilidade(
-            data.mensagem_indisponibilidade || 'Esta funcionalidade está temporariamente indisponível.'
-          );
+          setMensagemIndisponibilidade(mensagemPadrao);
+          setValorPorInteracao(data.valor_por_interacao ?? null);
         }
       } catch {
         setDisponivel(false);
@@ -152,6 +172,13 @@ const Jarvis = () => {
     };
     verificar();
   }, []);
+
+  // Scroll automático para o resultado ao exibir resposta
+  useEffect(() => {
+    if (showResult) {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showResult]);
 
   const handleTextoChange = (texto: string) => {
     setTextoInput(texto);
@@ -177,6 +204,10 @@ const Jarvis = () => {
 
   const handleSubmit = async () => {
     stopRecording();
+    if (credits < 1) {
+      setModalSemCreditos(true);
+      return;
+    }
     if (!textoInput.trim()) {
       toast({ title: "Texto vazio", description: "Digite algo para continuar", variant: "destructive" });
       return;
@@ -291,14 +322,14 @@ const Jarvis = () => {
                       type="button"
                       onClick={() => setActiveView('historico')}
                       className={cn(
-                        "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2",
+                        "px-3 sm:px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2",
                         isHistorico
                           ? "bg-indigo-700 text-white"
                           : "bg-indigo-100 text-indigo-700 hover:bg-indigo-700 hover:text-white"
                       )}
                     >
                       <History className="w-4 h-4" />
-                      Histórico
+                      <span className="hidden sm:inline">Histórico</span>
                     </button>
                   </>
                 )}
@@ -307,97 +338,93 @@ const Jarvis = () => {
               <div className="p-6">
 
                 {/* ════════════════════════════════
-                    VIEW: Modo ativo (entrada + resultado inline)
+                    VIEW: Modo ativo (entrada ou resultado)
                 ════════════════════════════════ */}
                 {!isHistorico && modoAtivo && (
                   <div className="space-y-4">
 
-                    {/* Textarea com microfone */}
-                    <div className="relative">
-                      <Textarea
-                        placeholder="Cole ou digite seu texto aqui..."
-                        value={textoInput}
-                        onChange={(e) => handleTextoChange(e.target.value)}
-                        rows={10}
-                        className="resize-none text-base pb-10"
-                        disabled={isLoading}
-                      />
-                      <button
-                        type="button"
-                        onClick={toggleRecording}
-                        disabled={!isSupported || isLoading}
-                        title={
-                          !isSupported
-                            ? "Seu navegador não suporta reconhecimento de voz"
-                            : isRecording
-                            ? "Parar gravação"
-                            : "Ditar texto por voz"
-                        }
-                        className={cn(
-                          "absolute bottom-2 right-2 p-2 rounded-full transition-colors",
-                          isRecording
-                            ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
-                            : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
-                          (!isSupported || isLoading) && "opacity-40 cursor-not-allowed"
-                        )}
-                      >
-                        {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                      </button>
-                    </div>
-
-                    {isRecording && (
-                      <p className="text-xs text-red-500 font-medium animate-pulse">
-                        Jarvis está ouvindo...
-                      </p>
-                    )}
-
-                    {/* Barra de ações */}
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <span className={cn(
-                          "text-sm font-medium",
-                          wordCount > 500 ? 'text-red-600' :
-                          wordCount > 400 ? 'text-amber-600' : 'text-gray-500'
-                        )}>
-                          {wordCount}/500 palavras
-                        </span>
-                        {textoInput && (
+                    {/* ── Bloco de entrada — visível quando não há resultado ── */}
+                    {!showResult && (
+                      <>
+                        {/* Textarea com microfone */}
+                        <div className="relative">
+                          <Textarea
+                            placeholder="Cole ou digite seu texto aqui..."
+                            value={textoInput}
+                            onChange={(e) => handleTextoChange(e.target.value)}
+                            rows={10}
+                            className="resize-none text-base pb-10"
+                            disabled={isLoading}
+                          />
                           <button
                             type="button"
-                            onClick={handleLimparTexto}
-                            className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                            onClick={toggleRecording}
+                            disabled={!isSupported || isLoading}
+                            title={
+                              !isSupported
+                                ? "Seu navegador não suporta reconhecimento de voz"
+                                : isRecording
+                                ? "Parar gravação"
+                                : "Ditar texto por voz"
+                            }
+                            className={cn(
+                              "absolute bottom-2 right-2 p-2 rounded-full transition-colors",
+                              isRecording
+                                ? "bg-red-100 text-red-600 animate-pulse hover:bg-red-200"
+                                : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600",
+                              (!isSupported || isLoading) && "opacity-40 cursor-not-allowed"
+                            )}
                           >
-                            <Trash2 className="w-3 h-3" />
-                            Limpar texto
+                            {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                           </button>
+                        </div>
+
+                        {isRecording && (
+                          <p className="text-xs text-red-500 font-medium animate-pulse">
+                            Jarvis está ouvindo...
+                          </p>
                         )}
-                      </div>
 
-                      <Button
-                        onClick={handleSubmit}
-                        disabled={isLoading || !textoInput.trim() || wordCount > 500 || credits < 1}
-                        className="bg-indigo-600 hover:bg-indigo-700"
-                      >
-                        {isLoading ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analisando...</>
-                        ) : (
-                          <><Sparkles className="mr-2 h-4 w-4" />Acionar Jarvis</>
-                        )}
-                      </Button>
-                    </div>
+                        {/* Barra de ações */}
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <span className={cn(
+                              "text-sm font-medium",
+                              wordCount > 500 ? 'text-red-600' :
+                              wordCount > 400 ? 'text-amber-600' : 'text-gray-500'
+                            )}>
+                              {wordCount}/500 palavras
+                            </span>
+                            {textoInput && (
+                              <button
+                                type="button"
+                                onClick={handleLimparTexto}
+                                className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Limpar texto
+                              </button>
+                            )}
+                          </div>
 
-                    {/* Créditos */}
-                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                      <span className="text-3xl font-bold text-indigo-600">{credits}</span>
-                      <div className="leading-tight">
-                        <p className="text-sm font-medium text-gray-700">Seus créditos</p>
-                        <p className="text-xs text-gray-400">Cada análise consome 1 crédito</p>
-                      </div>
-                    </div>
+                          <Button
+                            onClick={handleSubmit}
+                            disabled={isLoading || !textoInput.trim() || wordCount > 500}
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            {isLoading ? (
+                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analisando...</>
+                            ) : (
+                              <><Sparkles className="mr-2 h-4 w-4" />Acionar Jarvis</>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
 
-                    {/* Resultado inline — aparece logo abaixo após acionar */}
-                    {currentResponse && currentModo && (
-                      <div className="space-y-4 pt-2 border-t border-gray-100">
+                    {/* ── Bloco de resultado — ocupa o primeiro plano após resposta ── */}
+                    {showResult && currentModo && (
+                      <div ref={resultRef} className="space-y-4">
                         <div className="flex justify-between items-center">
                           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
@@ -429,8 +456,32 @@ const Jarvis = () => {
                             )}
                           </p>
                         )}
+
+                        <Button
+                          variant="outline"
+                          onClick={clearResponse}
+                          className="w-full border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                        >
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          Nova interação
+                        </Button>
                       </div>
                     )}
+
+                    {/* ── Créditos — sempre visíveis ── */}
+                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                      <span className="text-3xl font-bold text-indigo-600">{credits}</span>
+                      <div className="leading-tight">
+                        <p className="text-sm font-medium text-gray-700">Seus créditos</p>
+                        <p className="text-xs text-gray-400">Cada interação consome 1 crédito</p>
+                        {valorPorInteracao !== null && valorPorInteracao > 0 && (
+                          <p className="text-xs text-gray-400">
+                            Valor por interação: R$ {valorPorInteracao.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
                   </div>
                 )}
 
@@ -512,6 +563,23 @@ const Jarvis = () => {
           )}
         </main>
       </div>
+
+      {/* Modal: aluno sem créditos */}
+      <AlertDialog open={modalSemCreditos} onOpenChange={setModalSemCreditos}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Créditos insuficientes</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line text-sm">
+              {mensagemSemCreditos}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setModalSemCreditos(false)}>
+              Entendido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ProtectedRoute>
   );
 };
