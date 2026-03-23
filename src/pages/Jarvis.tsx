@@ -439,11 +439,6 @@ const Jarvis = () => {
                 ════════════════════════════════ */}
                 {isHistorico && (
                   <div className="space-y-3">
-                    <h3 className="font-semibold text-gray-700 flex items-center gap-2 text-sm">
-                      <History className="w-4 h-4 text-indigo-600" />
-                      Histórico
-                    </h3>
-
                     {loadingHistorico ? (
                       <div className="flex justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />
@@ -490,10 +485,6 @@ const Jarvis = () => {
 
                               {expandedId === item.id && (
                                 <div className="mt-4 space-y-3">
-                                  <div className="bg-gray-50 border border-gray-100 p-3 rounded">
-                                    <p className="text-xs font-medium text-gray-400 mb-1">Texto original</p>
-                                    <p className="text-sm text-gray-600">{item.texto_original}</p>
-                                  </div>
                                   {campos.map((campo) => {
                                     const valor = resolverValorHistorico(item, campo.chave);
                                     if (!valor) return null;
