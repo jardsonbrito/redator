@@ -166,7 +166,40 @@ Deno.serve(async (req) => {
 
     // ── Parsear e validar resposta conforme campos_resposta do modo ─
     const content = openaiData.choices[0].message.content;
-    const aiResponse: Record<string, string> = JSON.parse(content);
+    const aiRaw: Record<string, unknown> = JSON.parse(content);
+
+    // Normaliza todos os valores para string simples, independente do que a IA retornar
+    function normalizarParaString(valor: unknown): string {
+      if (typeof valor === 'string') return valor;
+      if (valor === null || valor === undefined) return '';
+      if (Array.isArray(valor)) {
+        return valor.map((item: unknown) => {
+          if (typeof item === 'string') return item;
+          if (item && typeof item === 'object') {
+            const obj = item as Record<string, unknown>;
+            // Extrai campos textuais comuns usados pela IA em diagnósticos estruturados
+            const partes: string[] = [];
+            if (obj['subcategoria']) partes.push(String(obj['subcategoria']));
+            if (obj['explicação'] || obj['explicacao']) partes.push(String(obj['explicação'] ?? obj['explicacao']));
+            if (obj['trecho']) partes.push(`Trecho: "${obj['trecho']}"`);
+            return partes.length > 0 ? partes.join(' — ') : JSON.stringify(item);
+          }
+          return String(item);
+        }).filter(Boolean).join('\n');
+      }
+      if (typeof valor === 'object') {
+        const obj = valor as Record<string, unknown>;
+        return Object.entries(obj)
+          .map(([, v]) => normalizarParaString(v))
+          .filter(Boolean).join('\n');
+      }
+      return String(valor);
+    }
+
+    const aiResponse: Record<string, string> = {};
+    for (const [chave, val] of Object.entries(aiRaw)) {
+      aiResponse[chave] = normalizarParaString(val);
+    }
 
     const camposEsperados: string[] = (modo.campos_resposta as any[]).map((c: any) => c.chave);
     const camposFaltando = camposEsperados.filter(c => !aiResponse[c]);

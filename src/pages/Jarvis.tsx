@@ -68,8 +68,9 @@ const CardResposta = ({
         {campo.rotulo}
       </h4>
       <div className="space-y-1">
-        {valor.split(/\n|(?<=\.)\s+(?=\S)|(?=Erro\s+\d+:)/).filter(l => l.trim()).map((linha, i) => (
-          <p key={i} className="text-sm text-gray-700">{linha.trim()}</p>
+        {(typeof valor === 'string' ? valor : typeof valor === 'object' && valor !== null ? JSON.stringify(valor, null, 2) : String(valor ?? ''))
+          .split(/\n|(?=Erro\s+\d+:)/).filter(l => l.trim()).map((linha, i) => (
+          <p key={i} className="text-sm text-gray-700">{linha}</p>
         ))}
       </div>
       {campo.copiavel && (
