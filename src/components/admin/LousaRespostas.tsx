@@ -40,6 +40,31 @@ interface LousaRespostasProps {
   lousa: Lousa;
 }
 
+function formatarRespostaLousa(conteudo: string): React.ReactNode {
+  // Divide por "Exercício N" mantendo o delimitador
+  const partes = conteudo.split(/(?=Exercício\s+\d+)/i);
+
+  return partes.map((parte, i) => {
+    const exercicioMatch = parte.match(/^(Exercício\s+\d+)\s*([\s\S]*)/i);
+    if (exercicioMatch) {
+      const titulo = exercicioMatch[1];
+      const resto = exercicioMatch[2].trim();
+      // Divide itens por padrão "N.N " no início
+      const itens = resto.split(/(?=\d+\.\d+\s)/);
+      return (
+        <div key={i} className="space-y-1">
+          <p className="font-semibold text-sm text-primary">{titulo}</p>
+          {itens.map((item, j) => item.trim() ? (
+            <p key={j} className="text-sm pl-2 border-l-2 border-muted">{item.trim()}</p>
+          ) : null)}
+        </div>
+      );
+    }
+    // Texto sem padrão de exercício — renderiza como parágrafo simples
+    return parte.trim() ? <p key={i} className="text-sm">{parte.trim()}</p> : null;
+  });
+}
+
 const correcaoSchema = z.object({
   comentario_professor: z.string().min(1, 'Comentário é obrigatório'),
   nota: z.number().min(0, 'Nota deve ser entre 0 e 10').max(10, 'Nota deve ser entre 0 e 10')
@@ -356,8 +381,10 @@ export default function LousaRespostas({ lousa }: LousaRespostasProps) {
             <div className="space-y-4">
               <div>
                 <h4 className="font-semibold mb-2">Resposta do Aluno:</h4>
-                <div className="bg-background border p-4 rounded min-h-[100px]">
-                  {correctingResposta.conteudo || (
+                <div className="bg-background border p-4 rounded min-h-[100px] space-y-3">
+                  {correctingResposta.conteudo ? (
+                    formatarRespostaLousa(correctingResposta.conteudo)
+                  ) : (
                     <span className="text-muted-foreground italic">
                       Nenhuma resposta enviada ainda
                     </span>
