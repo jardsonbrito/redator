@@ -27,8 +27,6 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('@supabase')) return 'supabase';
             if (id.includes('@radix-ui')) return 'radix';
             if (id.includes('@tanstack')) return 'query';
-            if (id.includes('react-router')) return 'router';
-            if (id.includes('react-dom') || id.includes('react/')) return 'react';
             return 'vendor';
           }
         },
