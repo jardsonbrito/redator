@@ -22,6 +22,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      refetchOnWindowFocus: false, // não re-busca ao trocar de aba
       retry: (failureCount, error) => {
         // Não tentar novamente em caso de erro de autenticação
         if (error && typeof error === 'object' && 'status' in error) {

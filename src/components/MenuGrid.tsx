@@ -6,7 +6,6 @@ import { LucideIcon, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { UnlockModal } from "./UnlockModal";
 import { useTurmaERestrictions } from "@/hooks/useTurmaERestrictions";
-import { useNewContentTags } from "@/hooks/useNewContentTags";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -33,7 +32,6 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
   const [selectedResource, setSelectedResource] = useState('');
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState(0);
   const { isBlockedResource } = useTurmaERestrictions();
-  const { shouldShowNewTag, handleCardClick } = useNewContentTags();
   const { buscarMensagensNaoLidasAluno } = useAjudaRapida();
   const { studentData } = useStudentAuth();
   const { settings } = useAppSettings();
@@ -192,7 +190,6 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                 ) : (
                   <Link
                     to={item.path}
-                    onClick={() => handleCardClick(item.title)}
                     className={`group relative flex flex-col items-center justify-center p-6 rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px] ${
                       item.highlight
                         ? 'bg-gradient-to-br from-[#3F0077] to-[#662F96] ring-2 ring-[#3F0077] ring-offset-2 animate-pulse-subtle'
@@ -213,13 +210,6 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
                     {item.highlight && (
                       <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-bounce">
                         PENDENTE
-                      </span>
-                    )}
-
-                    {/* Tag NOVO */}
-                    {!item.highlight && shouldShowNewTag(item.title) && (
-                      <span className="absolute top-2 right-2 bg-[#F97316] text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
-                        NOVO
                       </span>
                     )}
 

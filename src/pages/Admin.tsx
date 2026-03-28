@@ -309,9 +309,19 @@ const Admin = () => {
         return true;
       }).length || 0;
 
+      // Lousa - respostas aguardando correção
+      const { count: lousaRespostasPendentes } = await supabase
+        .from('lousa_resposta')
+        .select('*', { count: 'exact', head: true })
+        .is('nota', null)
+        .not('conteudo', 'is', null);
+
+      const totalLousaPendentes = lousaRespostasPendentes ?? 0;
+      const pluralLousaDisp = lousasDisponiveis === 1 ? 'disponível' : 'disponíveis';
+
       data.lousa = {
-        info: `${lousasDisponiveis} disponíveis`,
-        badge: undefined
+        info: `${totalLousaPendentes} aguardando correção`,
+        badge: `${lousasDisponiveis} ${pluralLousaDisp}`
       };
 
       // Aula ao Vivo (salas-virtuais) - quantas agendadas
