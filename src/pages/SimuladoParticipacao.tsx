@@ -9,38 +9,9 @@ import { computeSimuladoStatus, getSimuladoStatusInfo } from "@/utils/simuladoSt
 import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { renderTextWithParagraphs } from '@/utils/textUtils';
-import { getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
+import { MotivatorWithImage } from '@/components/shared/MotivatorWithImage';
 
-// Função para extrair e separar fonte do texto
-const extrairFonteDoTexto = (texto: string) => {
-  if (!texto) return { textoLimpo: '', fonte: '' };
 
-  // Padrões para detectar fonte no final do texto
-  const padroesFonte = [
-    /\n\s*(Fonte:\s*.+?)$/i,
-    /\n\s*(Disponível em:\s*.+?)$/i,
-    /\n\s*(Fonte -\s*.+?)$/i,
-    /\n\s*(Disponível em -\s*.+?)$/i,
-    /\n\s*(FONTE:\s*.+?)$/i,
-    /\n\s*(DISPONÍVEL EM:\s*.+?)$/i
-  ];
-
-  let textoLimpo = texto;
-  let fonte = '';
-
-  // Tentar cada padrão para encontrar a fonte
-  for (const padrao of padroesFonte) {
-    const match = texto.match(padrao);
-    if (match) {
-      fonte = match[1].trim();
-      textoLimpo = texto.replace(padrao, '').trim();
-      break;
-    }
-  }
-
-  return { textoLimpo, fonte };
-};
 import { useNavigationContext } from "@/hooks/useNavigationContext";
 import { RedacaoFormUnificado } from "@/components/shared/RedacaoFormUnificado";
 
@@ -222,93 +193,63 @@ const SimuladoParticipacao = () => {
                   </div>
 
                   {/* TEXTOS MOTIVADORES */}
-
-                  {simulado.temas.texto_1 && (() => {
-                    const { textoLimpo, fonte } = extrairFonteDoTexto(simulado.temas.texto_1);
-                    return (
-                      <div className="bg-white rounded-lg p-6 border border-gray-200">
-                        <h4 className="font-semibold text-primary mb-3">Texto 1</h4>
-                        <div className="text-gray-700 leading-relaxed text-sm">
-                          {renderTextWithParagraphs(textoLimpo)}
-                        </div>
-                        {fonte && (
-                          <div className="text-right mt-3 pt-2 border-t border-gray-100">
-                            <p className="text-xs text-gray-500 italic">
-                              {fonte}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {simulado.temas.texto_2 && (() => {
-                    const { textoLimpo, fonte } = extrairFonteDoTexto(simulado.temas.texto_2);
-                    return (
-                      <div className="bg-white rounded-lg p-6 border border-gray-200">
-                        <h4 className="font-semibold text-primary mb-3">Texto 2</h4>
-                        <div className="text-gray-700 leading-relaxed text-sm">
-                          {renderTextWithParagraphs(textoLimpo)}
-                        </div>
-                        {fonte && (
-                          <div className="text-right mt-3 pt-2 border-t border-gray-100">
-                            <p className="text-xs text-gray-500 italic">
-                              {fonte}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {simulado.temas.texto_3 && (() => {
-                    const { textoLimpo, fonte } = extrairFonteDoTexto(simulado.temas.texto_3);
-                    return (
-                      <div className="bg-white rounded-lg p-6 border border-gray-200">
-                        <h4 className="font-semibold text-primary mb-3">Texto 3</h4>
-                        <div className="text-gray-700 leading-relaxed text-sm">
-                          {renderTextWithParagraphs(textoLimpo)}
-                        </div>
-                        {fonte && (
-                          <div className="text-right mt-3 pt-2 border-t border-gray-100">
-                            <p className="text-xs text-gray-500 italic">
-                              {fonte}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-
-                  {/* TEXTO MOTIVADOR IV (IMAGEM) - Numeração dinâmica baseada nos textos existentes */}
                   {(() => {
-                    // Usar a função correta para resolver a URL do Texto 4
-                    const imagemMotivador = getTemaMotivatorIVUrl(simulado.temas);
-
-                    if (imagemMotivador) {
-                      const textosVerbais = [simulado.temas.texto_1, simulado.temas.texto_2, simulado.temas.texto_3].filter(Boolean);
-                      const numeroTextoImagem = textosVerbais.length + 1;
-
-                      return (
-                        <div className="bg-white rounded-lg p-6 border border-gray-200">
-                          <h4 className="font-semibold text-primary mb-3">Texto {numeroTextoImagem}</h4>
-                          <div className="rounded-lg overflow-hidden">
-                            <img
-                              src={imagemMotivador}
-                              alt={`Texto ${numeroTextoImagem} - Charge/Infográfico`}
-                              className="w-full h-auto"
-                              onError={(e) => {
-                                console.error('Erro ao carregar imagem do Texto 4:', imagemMotivador);
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
+                    let textoCounter = 1;
+                    const tema = simulado.temas;
+                    return (
+                      <>
+                        <MotivatorWithImage
+                          text={tema.texto_1}
+                          fonte={tema.texto_1_fonte}
+                          imageSource={tema.motivator1_source}
+                          imageUrl={tema.motivator1_url}
+                          imageFilePath={tema.motivator1_file_path}
+                          imagePosition={tema.motivator1_image_position}
+                          motivatorNumber={textoCounter++}
+                          imageClassName="max-w-2xl mx-auto h-auto"
+                        />
+                        <MotivatorWithImage
+                          text={tema.texto_2}
+                          fonte={tema.texto_2_fonte}
+                          imageSource={tema.motivator2_source}
+                          imageUrl={tema.motivator2_url}
+                          imageFilePath={tema.motivator2_file_path}
+                          imagePosition={tema.motivator2_image_position}
+                          motivatorNumber={textoCounter++}
+                          imageClassName="max-w-2xl mx-auto h-auto"
+                        />
+                        <MotivatorWithImage
+                          text={tema.texto_3}
+                          fonte={tema.texto_3_fonte}
+                          imageSource={tema.motivator3_source}
+                          imageUrl={tema.motivator3_url}
+                          imageFilePath={tema.motivator3_file_path}
+                          imagePosition={tema.motivator3_image_position}
+                          motivatorNumber={textoCounter++}
+                          imageClassName="max-w-2xl mx-auto h-auto"
+                        />
+                        <MotivatorWithImage
+                          text={tema.texto_4}
+                          fonte={tema.texto_4_fonte}
+                          imageSource={tema.motivator4_source}
+                          imageUrl={tema.motivator4_url}
+                          imageFilePath={tema.motivator4_file_path}
+                          imagePosition={tema.motivator4_image_position}
+                          motivatorNumber={textoCounter++}
+                          imageClassName="max-w-2xl mx-auto h-auto"
+                        />
+                        <MotivatorWithImage
+                          text={tema.texto_5}
+                          fonte={tema.texto_5_fonte}
+                          imageSource={tema.motivator5_source}
+                          imageUrl={tema.motivator5_url}
+                          imageFilePath={tema.motivator5_file_path}
+                          imagePosition={tema.motivator5_image_position}
+                          motivatorNumber={textoCounter++}
+                          imageClassName="max-w-2xl mx-auto h-auto"
+                        />
+                      </>
+                    );
                   })()}
 
                 </CardContent>

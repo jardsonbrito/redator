@@ -11,6 +11,7 @@ interface MotivatorWithImageProps {
   imageFilePath?: string | null;
   imagePosition?: string | null;
   motivatorNumber: number;
+  imageClassName?: string;
 }
 
 export const MotivatorWithImage = ({
@@ -20,7 +21,8 @@ export const MotivatorWithImage = ({
   imageUrl,
   imageFilePath,
   imagePosition = 'after',
-  motivatorNumber
+  motivatorNumber,
+  imageClassName = 'w-full h-auto'
 }: MotivatorWithImageProps) => {
   // Get image URL (from file path or direct URL)
   const getImageUrl = () => {
@@ -72,7 +74,7 @@ export const MotivatorWithImage = ({
           <img
             src={finalImageUrl}
             alt={`Imagem do Texto ${motivatorNumber}`}
-            className="w-full h-auto"
+            className={imageClassName}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.style.display = 'none';
