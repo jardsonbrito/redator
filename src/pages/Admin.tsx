@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { computeSimuladoStatus } from "@/utils/simuladoStatus";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
@@ -275,11 +276,9 @@ const Admin = () => {
         .select('*')
         .eq('ativo', true);
 
-      const simuladosAgendados = simulados?.filter(s => {
-        if (!s.data_inicio) return false;
-        const dataInicio = new Date(s.data_inicio);
-        return dataInicio > hoje;
-      }).length || 0;
+      const simuladosAgendados = simulados?.filter(s =>
+        computeSimuladoStatus(s) === 'agendado'
+      ).length || 0;
 
       data.simulados = {
         info: `${simuladosAgendados} agendados`,
