@@ -590,76 +590,53 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       </div>
 
       {/* Redação em Imagem - Prioriza imagem gerada (digitada→A4) ou manuscrita */}
-      {((redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url) && (() => {
-        const urlRedacao = (redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url;
-        const isPdf = urlRedacao?.toLowerCase().includes('.pdf');
-        return (
-          <Card className="w-full">
-            <CardHeader className="pb-3">
-              <div className="flex items-baseline justify-between">
-                <div className="flex items-baseline gap-3">
-                  <CardTitle className="text-lg">
-                    {(redacao as any).redacao_imagem_gerada_url ? 'Redação digitalizada' : isPdf ? 'Redação em PDF' : 'Redação Manuscrita'}
-                  </CardTitle>
-                  {(redacao as any).contagem_palavras ? (
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {(redacao as any).contagem_palavras} palavras
-                    </span>
-                  ) : (
-                    console.log('Contador não exibido - contagem_palavras:', (redacao as any).contagem_palavras, 'redacao completa:', redacao)
-                  )}
-                </div>
-                {(redacao as any).redacao_imagem_gerada_url && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const conteudo = `Aluno: ${redacao.nome_aluno}\nTema: ${redacao.frase_tematica}\n\nTexto:\n${redacao.texto}`;
-                      navigator.clipboard.writeText(conteudo);
-                      toast({
-                        title: "Copiado!",
-                        description: "Texto da redação copiado para a área de transferência.",
-                      });
-                    }}
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copiar redação
-                  </Button>
+      {((redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url) && (
+        <Card className="w-full">
+          <CardHeader className="pb-3">
+            <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-3">
+                <CardTitle className="text-lg">
+                  {(redacao as any).redacao_imagem_gerada_url ? 'Redação digitalizada' : 'Redação Manuscrita'}
+                </CardTitle>
+                {(redacao as any).contagem_palavras ? (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {(redacao as any).contagem_palavras} palavras
+                  </span>
+                ) : (
+                  console.log('Contador não exibido - contagem_palavras:', (redacao as any).contagem_palavras, 'redacao completa:', redacao)
                 )}
               </div>
-            </CardHeader>
-            <CardContent className={isPdf ? "p-4" : "p-0 m-0 overflow-hidden"}>
-              {isPdf ? (
-                <div className="space-y-3">
-                  <iframe
-                    src={urlRedacao}
-                    className="w-full border rounded"
-                    style={{ height: '70vh' }}
-                    title="Redação em PDF"
-                  />
-                  <a
-                    href={urlRedacao}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 underline"
-                  >
-                    Abrir PDF em nova aba
-                  </a>
-                </div>
-              ) : (
-                <RedacaoAnotacaoVisual
-                  imagemUrl={urlRedacao}
-                  redacaoId={redacao.id}
-                  corretorId={corretorId}
-                  ehCorretor1={redacao.eh_corretor_1}
-                  ehCorretor2={redacao.eh_corretor_2}
-                  statusMinhaCorrecao={redacao.status_minha_correcao}
-                />
+              {(redacao as any).redacao_imagem_gerada_url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const conteudo = `Aluno: ${redacao.nome_aluno}\nTema: ${redacao.frase_tematica}\n\nTexto:\n${redacao.texto}`;
+                    navigator.clipboard.writeText(conteudo);
+                    toast({
+                      title: "Copiado!",
+                      description: "Texto da redação copiado para a área de transferência.",
+                    });
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar redação
+                </Button>
               )}
-            </CardContent>
-          </Card>
-        );
-      })()}
+            </div>
+          </CardHeader>
+          <CardContent className="p-0 m-0 overflow-hidden">
+            <RedacaoAnotacaoVisual
+              imagemUrl={(redacao as any).redacao_imagem_gerada_url || redacao.redacao_manuscrita_url}
+              redacaoId={redacao.id}
+              corretorId={corretorId}
+              ehCorretor1={redacao.eh_corretor_1}
+              ehCorretor2={redacao.eh_corretor_2}
+              statusMinhaCorrecao={redacao.status_minha_correcao}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Redação Digitada - Texto puro (exibir APENAS se não houver NENHUMA imagem) */}
       {!(redacao as any).redacao_imagem_gerada_url && !redacao.redacao_manuscrita_url && (

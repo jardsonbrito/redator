@@ -321,12 +321,21 @@ export const RedacaoFormUnificado = ({
       return;
     }
 
-    // Verificar tipo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    // Verificar tipo — PDF não é aceito pois o sistema de correção requer imagem
+    if (file.type === 'application/pdf') {
+      toast({
+        title: "Formato não aceito",
+        description: "A redação deve ser enviada como foto (JPG ou PNG). Tire uma foto da sua redação manuscrita e envie no formato de imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
       toast({
         title: "Tipo de arquivo não suportado",
-        description: "Use apenas JPG, PNG ou PDF.",
+        description: "Use apenas JPG ou PNG.",
         variant: "destructive",
       });
       return;
@@ -336,13 +345,6 @@ export const RedacaoFormUnificado = ({
     if (redacaoManuscritaUrl) {
       URL.revokeObjectURL(redacaoManuscritaUrl);
       setRedacaoManuscritaUrl(null);
-    }
-
-    // PDFs não precisam de correção de orientação
-    if (file.type === 'application/pdf') {
-      setRedacaoManuscrita(file);
-      setRedacaoManuscritaUrl(URL.createObjectURL(file));
-      return;
     }
 
     // Corrigir orientação da imagem (EXIF + landscape → portrait)
@@ -761,7 +763,7 @@ export const RedacaoFormUnificado = ({
               <CardContent className="p-4 text-center border-2 border-dashed border-purple-400 rounded-xl">
                 <input
                   type="file"
-                  accept="image/png, image/jpeg, application/pdf"
+                  accept="image/png, image/jpeg"
                   className="hidden"
                   id="upload-file"
                   onChange={handleRedacaoManuscritaChange}
@@ -774,7 +776,7 @@ export const RedacaoFormUnificado = ({
                   Selecionar arquivo da redação
                 </label>
                 <p className="text-xs text-gray-500 mt-1">
-                  Somente JPG, PNG ou PDF (máx. 5MB)
+                  Somente JPG ou PNG (máx. 5MB)
                 </p>
 
                 {/* Feedback de processamento de orientação */}
