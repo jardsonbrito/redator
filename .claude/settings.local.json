@@ -74,7 +74,8 @@
       "Bash(grep -r \"textos_motivadores\\\\|texto.*motivador\" \"/c/Users/jards/OneDrive\\\\Área de Trabalho/Site/redator/src\" --include=\"*.ts\" --include=\"*.tsx\" 2>/dev/null -l | head -10)",
       "Bash(npx vite:*)",
       "Bash(taskkill /F /IM node.exe)",
-      "Bash(cmd /c \"taskkill /F /IM node.exe\")"
+      "Bash(cmd /c \"taskkill /F /IM node.exe\")",
+      "Bash(rm:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
