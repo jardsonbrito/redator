@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check, AlertTriangle, Info } from "lucide-react";
 import { estaCongelada } from "@/utils/redacaoUtils";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
@@ -78,6 +78,8 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [temaCompleto, setTemaCompleto] = useState<any>(null);
   const [corretorId, setCorretorId] = useState<string>('');
   const [corretorNome, setCorretorNome] = useState<string>('');
+  const [parUtilizado, setParUtilizado] = useState<string | null>(null);
+  const [redacaoFinalizada, setRedacaoFinalizada] = useState(false);
   const { toast } = useToast();
 
   // Verificar se a redação está congelada (prazo de 7 dias expirado)
@@ -182,11 +184,15 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       } else if (redacao.tipo_redacao === 'simulado') {
         const result = await supabase
           .from('redacoes_simulado')
-          .select(colunas)
+          .select(colunas + ', par_utilizado, corrigida')
           .eq('id', redacao.id)
           .single();
         data = result.data;
         error = result.error;
+        if (result.data) {
+          setParUtilizado(result.data.par_utilizado || null);
+          setRedacaoFinalizada(result.data.corrigida || false);
+        }
       } else if (redacao.tipo_redacao === 'exercicio') {
         const result = await supabase
           .from('redacoes_exercicio')
@@ -500,6 +506,21 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
             O prazo de 7 dias para correção expirou. Esta redação está congelada e não pode ser corrigida até que um administrador a desbloqueie.
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Aviso: discrepância e nota não utilizada */}
+      {redacaoFinalizada && parUtilizado != null &&
+        ((redacao.eh_corretor_1 && parUtilizado === '2_admin') ||
+         (!redacao.eh_corretor_1 && parUtilizado === '1_admin')) && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-300 rounded-lg">
+          <Info className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-800">Houve discrepância nesta redação</p>
+            <p className="text-sm text-amber-700 mt-1">
+              Após a terceira correção realizada pela coordenação, <strong>sua avaliação não compôs a nota final</strong>. A nota oficial do aluno foi calculada com base no par de avaliadores mais próximos entre os corretores e a coordenação.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Vista Pedagógica */}
