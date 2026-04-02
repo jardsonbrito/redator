@@ -290,7 +290,13 @@ const RedacaoSimuladoList = () => {
       ) {
         throw new Error('Terceira correção bloqueada: ambos os corretores precisam ter finalizado.');
       }
-      if (redacao.status_terceira_correcao !== 'pendente') {
+      // Aceita 'pendente' (gravado pelo corretor) ou null (constraint impediu o update intermediário)
+      // Bloqueia apenas se já foi salva, concluída ou a redação já está corrigida
+      const estadoInvalido =
+        redacao.status_terceira_correcao === 'salva' ||
+        redacao.status_terceira_correcao === 'concluida' ||
+        redacao.corrigida === true;
+      if (estadoInvalido) {
         throw new Error('Terceira correção bloqueada: estado inválido para esta operação.');
       }
 
