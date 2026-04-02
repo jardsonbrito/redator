@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Search, Eye, User, GraduationCap, Star, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Search, Eye, User, GraduationCap, Star, AlertTriangle, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { verificarDivergencia } from "@/utils/simuladoDivergencia";
@@ -39,6 +39,10 @@ interface RedacaoSimulado {
   c4_corretor_2?: number | null;
   c5_corretor_2?: number | null;
   nota_final_corretor_2?: number | null;
+  // Terceira correção
+  par_utilizado?: string | null;
+  status_terceira_correcao?: string | null;
+  corrigida?: boolean | null;
   // Dados do simulado
   simulados?: {
     frase_tematica: string;
@@ -96,12 +100,20 @@ const CorretorSimuladoRedacoes = () => {
 
   // Função para calcular status geral da redação
   const getStatusGeral = (redacao: RedacaoSimulado) => {
+    if (redacao.corrigida) return { label: 'Concluída', color: 'bg-green-600' };
+
+    if (redacao.status_terceira_correcao === 'salva') {
+      return { label: 'Aguardando Liberação', color: 'bg-orange-500' };
+    }
+    if (redacao.status_terceira_correcao === 'pendente') {
+      return { label: 'Discrepância', color: 'bg-red-500' };
+    }
+
     const corrigida1 = redacao.status_corretor_1 === 'corrigida';
     const corrigida2 = redacao.status_corretor_2 === 'corrigida';
     const temCorretor1 = !!redacao.corretor_id_1;
     const temCorretor2 = !!redacao.corretor_id_2;
 
-    // Se ambos finalizaram, verificar divergência
     if (temCorretor1 && temCorretor2 && corrigida1 && corrigida2) {
       const div = verificarDivergencia(redacao);
       if (div?.temDivergencia) return { label: 'Discrepância', color: 'bg-red-500' };
@@ -117,6 +129,15 @@ const CorretorSimuladoRedacoes = () => {
       return corrigida2 ? { label: 'Aguardando Admin', color: 'bg-blue-500' } : { label: 'Pendente', color: 'bg-gray-500' };
     }
     return { label: 'Sem Corretor', color: 'bg-red-500' };
+  };
+
+  // Verifica se a nota deste corretor não foi utilizada no par final
+  const getNotaNaoUtilizada = (redacao: RedacaoSimulado, meuNumero: number | null): boolean => {
+    if (!redacao.corrigida || !redacao.par_utilizado || !meuNumero) return false;
+    // Se o par não inclui o slot deste corretor, sua nota não foi utilizada
+    if (meuNumero === 1 && redacao.par_utilizado === '2_admin') return true;
+    if (meuNumero === 2 && redacao.par_utilizado === '1_admin') return true;
+    return false;
   };
 
   // Função para calcular nota final consolidada
@@ -247,21 +268,36 @@ const CorretorSimuladoRedacoes = () => {
                 corretorNumero = redacao.corretor_id_1 ? 1 : 2;
               }
 
+              const notaNaoUtilizada = getNotaNaoUtilizada(redacao, corretorNumero);
+
               return (
                 <Card
                   key={redacao.id}
-                  className={`hover:shadow-md transition-shadow ${isDivergente ? 'border-red-300' : ''}`}
+                  className={`hover:shadow-md transition-shadow ${isDivergente && !redacao.status_terceira_correcao ? 'border-red-300' : ''}`}
                 >
                   <CardContent className="p-6 space-y-3">
-                    {/* Alerta de divergência */}
-                    {isDivergente && (
+                    {/* Aviso: nota não utilizada no par final */}
+                    {notaNaoUtilizada && (
+                      <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-amber-700">Avaliação não compôs a nota final</p>
+                          <p className="text-xs text-amber-600">
+                            Para esta redação, a nota final foi calculada a partir das avaliações mais próximas entre os três avaliadores. Sua nota original está preservada, mas não foi utilizada na composição do resultado oficial.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Alerta de divergência (somente enquanto pendente) */}
+                    {isDivergente && !redacao.status_terceira_correcao && (
                       <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                         <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
                         <div className="flex-1">
                           <p className="text-sm font-semibold text-red-700">Discrepância detectada</p>
                           <p className="text-xs text-red-600">
                             Diferença total de <strong>{div!.diferencaTotal} pts</strong> entre os dois corretores.
-                            Entre em contato com o admin para alinhamento.
+                            O coordenador realizará a terceira correção.
                           </p>
                         </div>
                         <Button
@@ -276,8 +312,8 @@ const CorretorSimuladoRedacoes = () => {
                       </div>
                     )}
 
-                    {/* Tabela comparativa de notas – visível quando expandido */}
-                    {isDivergente && mostrarDetalhes && (
+                    {/* Tabela comparativa de notas – visível quando expandido e ainda pendente */}
+                    {isDivergente && !redacao.status_terceira_correcao && mostrarDetalhes && (
                       <div className="border rounded-lg overflow-hidden">
                         <Table>
                           <TableHeader>

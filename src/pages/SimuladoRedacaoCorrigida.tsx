@@ -82,7 +82,8 @@ const SimuladoRedacaoCorrigida = () => {
   const { setBreadcrumbs, setPageTitle } = useNavigationContext();
   const [redacoesCorretor, setRedacoesCorretor] = useState<RedacaoSimulado[]>([]);
   const [selectedCorretor, setSelectedCorretor] = useState<number>(1);
-  const [emDiscrepancia, setEmDiscrepancia] = useState(false);
+  // Estado de bloqueio: null = não bloqueado | 'aguardando' | 'em_revisao'
+  const [estadoBloqueio, setEstadoBloqueio] = useState<null | 'aguardando' | 'em_revisao'>(null);
 
   // Query para buscar as redações do simulado do aluno
   const { data: redacoesSimulado, isLoading, error } = useQuery({
@@ -115,15 +116,30 @@ const SimuladoRedacaoCorrigida = () => {
 
       const redacaoOriginal = redacao[0];
 
-      // Bloquear exibição se há discrepância pendente de resolução pelo admin
+      // Bloquear exibição enquanto a nota não foi liberada (corrigida = false)
       if (!redacaoOriginal.corrigida) {
-        const div = verificarDivergencia(redacaoOriginal);
-        if (div?.temDivergencia) {
-          setEmDiscrepancia(true);
+        // Discrepância detectada ou em processo de terceira correção
+        const statusTerceira = redacaoOriginal.status_terceira_correcao;
+        if (statusTerceira === 'pendente' || statusTerceira === 'salva') {
+          setEstadoBloqueio('em_revisao');
           return [];
         }
+        // Ambos finalizaram mas admin ainda não liberou (sem discrepância)
+        const div = verificarDivergencia(redacaoOriginal);
+        if (div && !div.temDivergencia) {
+          setEstadoBloqueio('aguardando');
+          return [];
+        }
+        // Divergência ainda não gravada no campo (edge case)
+        if (div?.temDivergencia) {
+          setEstadoBloqueio('em_revisao');
+          return [];
+        }
+        // Aguardando corretores
+        setEstadoBloqueio('aguardando');
+        return [];
       }
-      setEmDiscrepancia(false);
+      setEstadoBloqueio(null);
 
       // Buscar nomes dos corretores
       const idsCorretores: string[] = [];
@@ -265,12 +281,26 @@ const SimuladoRedacaoCorrigida = () => {
     );
   }
 
-  if (emDiscrepancia) {
+  if (estadoBloqueio !== null) {
+    const config = estadoBloqueio === 'em_revisao'
+      ? {
+          pageTitle: 'Correção em Revisão',
+          icon: <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />,
+          titulo: 'Correção em revisão',
+          mensagem: 'Sua redação está em processo de revisão. A nota será disponibilizada assim que o processo for concluído.',
+        }
+      : {
+          pageTitle: 'Aguardando Resultado',
+          icon: <AlertTriangle className="w-12 h-12 text-blue-400 mx-auto mb-4" />,
+          titulo: 'Aguardando resultado',
+          mensagem: 'Sua redação está sendo corrigida. A nota será disponibilizada em breve.',
+        };
+
     return (
       <ProtectedRoute>
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-purple-50 to-violet-100">
-            <StudentHeader pageTitle="Correção em Revisão" />
+            <StudentHeader pageTitle={config.pageTitle} />
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <Button onClick={() => navigate('/simulados')} variant="outline" className="mb-4">
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -278,13 +308,12 @@ const SimuladoRedacaoCorrigida = () => {
               </Button>
               <Card>
                 <CardContent className="p-8 text-center">
-                  <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+                  {config.icon}
                   <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                    Correção em revisão.
+                    {config.titulo}
                   </h2>
                   <p className="text-gray-600">
-                    Sua redação está sendo revisada por terceiro corretor, pois houve
-                    discrepância entre as pontuações atribuídas pelos corretores 1 e 2.
+                    {config.mensagem}
                   </p>
                 </CardContent>
               </Card>

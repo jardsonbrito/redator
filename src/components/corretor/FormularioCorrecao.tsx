@@ -289,11 +289,12 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
               const div = verificarDivergencia(redacaoComNovasNotas);
 
               if (div && !div.temDivergencia) {
-                // Ambos finalizaram e sem divergência → libera nota ao aluno
+                // Ambos finalizaram e sem divergência → libera nota ao aluno (Opção A)
                 updateData.corrigida = true;
                 updateData.data_correcao = new Date().toISOString();
-              } else {
-                // Divergência detectada
+              } else if (div && div.temDivergencia) {
+                // Discrepância detectada → encaminha para terceira correção pelo admin
+                updateData.status_terceira_correcao = 'pendente';
                 motivoNaoFinalizado = 'divergencia';
               }
             } else {
@@ -354,7 +355,7 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         if (motivoNaoFinalizado === 'divergencia') {
           return {
             title: "Notas salvas — discrepância detectada",
-            description: "Há discrepância entre as notas dos dois corretores. O admin visualizará isso no painel e entrará em contato para alinhamento.",
+            description: "Há discrepância entre as avaliações dos dois corretores. A redação será encaminhada para terceira correção pelo coordenador. O aluno não verá a nota até a conclusão desse processo.",
             variant: 'destructive' as const,
           };
         }

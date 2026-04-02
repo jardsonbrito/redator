@@ -2598,14 +2598,19 @@ export type Database = {
           audio_url: string | null
           audio_url_corretor_1: string | null
           audio_url_corretor_2: string | null
+          c1_admin: number | null
           c1_corretor_1: number | null
           c1_corretor_2: number | null
+          c2_admin: number | null
           c2_corretor_1: number | null
           c2_corretor_2: number | null
+          c3_admin: number | null
           c3_corretor_1: number | null
           c3_corretor_2: number | null
+          c4_admin: number | null
           c4_corretor_1: number | null
           c4_corretor_2: number | null
+          c5_admin: number | null
           c5_corretor_1: number | null
           c5_corretor_2: number | null
           comentario_c1_corretor_1: string | null
@@ -2628,6 +2633,7 @@ export type Database = {
           data_correcao: string | null
           data_devolucao: string | null
           data_envio: string
+          data_terceira_correcao: string | null
           devolvida_por: string | null
           elogios_pontos_atencao_corretor_1: string | null
           elogios_pontos_atencao_corretor_2: string | null
@@ -2643,9 +2649,11 @@ export type Database = {
           nota_c3: number | null
           nota_c4: number | null
           nota_c5: number | null
+          nota_final_admin: number | null
           nota_final_corretor_1: number | null
           nota_final_corretor_2: number | null
           nota_total: number | null
+          par_utilizado: string | null
           redacao_manuscrita_url: string | null
           render_height: number | null
           render_image_url: string | null
@@ -2653,6 +2661,7 @@ export type Database = {
           render_width: number | null
           status_corretor_1: string | null
           status_corretor_2: string | null
+          status_terceira_correcao: string | null
           texto: string
           thumb_url: string | null
           turma: string
@@ -2662,14 +2671,19 @@ export type Database = {
           audio_url?: string | null
           audio_url_corretor_1?: string | null
           audio_url_corretor_2?: string | null
+          c1_admin?: number | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
           c2_corretor_1?: number | null
           c2_corretor_2?: number | null
           c3_corretor_1?: number | null
+          c2_admin?: number | null
+          c3_admin?: number | null
           c3_corretor_2?: number | null
+          c4_admin?: number | null
           c4_corretor_1?: number | null
           c4_corretor_2?: number | null
+          c5_admin?: number | null
           c5_corretor_1?: number | null
           c5_corretor_2?: number | null
           comentario_c1_corretor_1?: string | null
@@ -2692,6 +2706,7 @@ export type Database = {
           data_correcao?: string | null
           data_devolucao?: string | null
           data_envio?: string
+          data_terceira_correcao?: string | null
           devolvida_por?: string | null
           elogios_pontos_atencao_corretor_1?: string | null
           elogios_pontos_atencao_corretor_2?: string | null
@@ -2707,9 +2722,11 @@ export type Database = {
           nota_c3?: number | null
           nota_c4?: number | null
           nota_c5?: number | null
+          nota_final_admin?: number | null
           nota_final_corretor_1?: number | null
           nota_final_corretor_2?: number | null
           nota_total?: number | null
+          par_utilizado?: string | null
           redacao_manuscrita_url?: string | null
           render_height?: number | null
           render_image_url?: string | null
@@ -2717,6 +2734,7 @@ export type Database = {
           render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          status_terceira_correcao?: string | null
           texto: string
           thumb_url?: string | null
           turma: string
@@ -2726,14 +2744,19 @@ export type Database = {
           audio_url?: string | null
           audio_url_corretor_1?: string | null
           audio_url_corretor_2?: string | null
+          c1_admin?: number | null
           c1_corretor_1?: number | null
           c1_corretor_2?: number | null
+          c2_admin?: number | null
           c2_corretor_1?: number | null
           c2_corretor_2?: number | null
+          c3_admin?: number | null
           c3_corretor_1?: number | null
           c3_corretor_2?: number | null
+          c4_admin?: number | null
           c4_corretor_1?: number | null
           c4_corretor_2?: number | null
+          c5_admin?: number | null
           c5_corretor_1?: number | null
           c5_corretor_2?: number | null
           comentario_c1_corretor_1?: string | null
@@ -2756,6 +2779,7 @@ export type Database = {
           data_correcao?: string | null
           data_devolucao?: string | null
           data_envio?: string
+          data_terceira_correcao?: string | null
           devolvida_por?: string | null
           elogios_pontos_atencao_corretor_1?: string | null
           elogios_pontos_atencao_corretor_2?: string | null
@@ -2771,9 +2795,11 @@ export type Database = {
           nota_c3?: number | null
           nota_c4?: number | null
           nota_c5?: number | null
+          nota_final_admin?: number | null
           nota_final_corretor_1?: number | null
           nota_final_corretor_2?: number | null
           nota_total?: number | null
+          par_utilizado?: string | null
           redacao_manuscrita_url?: string | null
           render_height?: number | null
           render_image_url?: string | null
@@ -2781,6 +2807,7 @@ export type Database = {
           render_width?: number | null
           status_corretor_1?: string | null
           status_corretor_2?: string | null
+          status_terceira_correcao?: string | null
           texto?: string
           thumb_url?: string | null
           turma?: string

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Eye, Trash2, MoreVertical, CheckCircle, AlertTriangle, BarChart2, Calendar } from "lucide-react";
+import { Eye, Trash2, MoreVertical, CheckCircle, AlertTriangle, BarChart2, Calendar, ClipboardEdit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -25,6 +25,8 @@ import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
 import {
   verificarDivergencia,
   calcularNotasFinais,
+  calcularParMaisProximo,
+  calcularNotasFinaisPorPar,
   ResultadoDivergencia
 } from "@/utils/simuladoDivergencia";
 
@@ -64,6 +66,16 @@ interface RedacaoSimulado {
   c4_corretor_2: number | null;
   c5_corretor_2: number | null;
   nota_final_corretor_2: number | null;
+  // terceira correção
+  c1_admin: number | null;
+  c2_admin: number | null;
+  c3_admin: number | null;
+  c4_admin: number | null;
+  c5_admin: number | null;
+  nota_final_admin: number | null;
+  status_terceira_correcao: string | null;
+  data_terceira_correcao: string | null;
+  par_utilizado: string | null;
   // joins
   simulados: { titulo: string; frase_tematica: string };
   corretor_1: { nome_completo: string } | null;
@@ -72,7 +84,13 @@ interface RedacaoSimulado {
 
 // ── helpers de status ─────────────────────────────────────────────────────────
 
-type StatusLabel = 'Concluída' | 'Pronto p/ Finalizar' | 'Discrepância' | 'Parcial' | 'Pendente';
+type StatusLabel =
+  | 'Concluída'
+  | 'Pronto p/ Finalizar'
+  | 'Discrepância Pendente'
+  | 'Terceira Salva'
+  | 'Parcial'
+  | 'Pendente';
 
 interface StatusInfo {
   label: StatusLabel;
@@ -85,12 +103,24 @@ function calcularStatus(r: RedacaoSimulado): StatusInfo {
     return { label: 'Concluída', color: 'bg-green-600', divergencia: null };
   }
 
-  // Checa divergência assim que ambos tiverem notas (independente do status)
+  // Terceira correção já salva pelo admin — aguardando liberação explícita
+  if (r.status_terceira_correcao === 'salva') {
+    return { label: 'Terceira Salva', color: 'bg-orange-500', divergencia: null };
+  }
+
+  // Discrepância detectada, terceira correção ainda não realizada
+  if (r.status_terceira_correcao === 'pendente') {
+    return { label: 'Discrepância Pendente', color: 'bg-red-500', divergencia: verificarDivergencia(r) };
+  }
+
+  // Ambos finalizaram — verificar se há divergência (guarda: exige status='corrigida')
   const div = verificarDivergencia(r);
 
   if (div !== null) {
+    // Se chegou aqui sem status_terceira_correcao, a divergência foi detectada
+    // mas o campo ainda não foi gravado (edge case de race condition). Exibe como pendente.
     if (div.temDivergencia) {
-      return { label: 'Discrepância', color: 'bg-red-500', divergencia: div };
+      return { label: 'Discrepância Pendente', color: 'bg-red-500', divergencia: div };
     }
     return { label: 'Pronto p/ Finalizar', color: 'bg-blue-500', divergencia: div };
   }
@@ -126,6 +156,8 @@ const RedacaoSimuladoList = () => {
   const [redacaoNotas, setRedacaoNotas] = useState<RedacaoSimulado | null>(null);
   const [redacaoParaExcluir, setRedacaoParaExcluir] = useState<RedacaoSimulado | null>(null);
   const [redacaoParaFinalizar, setRedacaoParaFinalizar] = useState<RedacaoSimulado | null>(null);
+  const [redacaoTerceiraCorrecao, setRedacaoTerceiraCorrecao] = useState<RedacaoSimulado | null>(null);
+  const [notasAdmin, setNotasAdmin] = useState({ c1: 0, c2: 0, c3: 0, c4: 0, c5: 0 });
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // ── queries ──
@@ -203,6 +235,23 @@ const RedacaoSimuladoList = () => {
 
   const finalizarMutation = useMutation({
     mutationFn: async (redacao: RedacaoSimulado) => {
+      // Caminho com discrepância: terceira correção já salva → libera com notas já calculadas
+      if (redacao.status_terceira_correcao === 'salva') {
+        const { error } = await supabase
+          .from('redacoes_simulado')
+          .update({
+            corrigida: true,
+            data_correcao: new Date().toISOString(),
+            status_corretor_1: 'corrigida',
+            status_corretor_2: 'corrigida',
+            status_terceira_correcao: 'concluida',
+          })
+          .eq('id', redacao.id);
+        if (error) throw error;
+        return;
+      }
+
+      // Caminho sem discrepância: calcula média dos dois corretores
       const notas = calcularNotasFinais(redacao);
       const { error } = await supabase
         .from('redacoes_simulado')
@@ -213,10 +262,9 @@ const RedacaoSimuladoList = () => {
           nota_c4: notas.nota_c4,
           nota_c5: notas.nota_c5,
           nota_total: notas.nota_total,
+          par_utilizado: '1_2',
           corrigida: true,
           data_correcao: new Date().toISOString(),
-          // Marcar ambos os corretores como finalizados para refletir corretamente
-          // no painel do corretor (aba Corrigidas) e na visão do aluno
           status_corretor_1: 'corrigida',
           status_corretor_2: 'corrigida',
         })
@@ -230,6 +278,79 @@ const RedacaoSimuladoList = () => {
     },
     onError: () => {
       toast({ title: "Erro ao finalizar", variant: "destructive" });
+    }
+  });
+
+  const terceiraCorrecaoMutation = useMutation({
+    mutationFn: async ({ redacao, notas }: { redacao: RedacaoSimulado; notas: typeof notasAdmin }) => {
+      // Guarda de aplicação: trava independente da UI
+      if (
+        redacao.status_corretor_1 !== 'corrigida' ||
+        redacao.status_corretor_2 !== 'corrigida'
+      ) {
+        throw new Error('Terceira correção bloqueada: ambos os corretores precisam ter finalizado.');
+      }
+      if (redacao.status_terceira_correcao !== 'pendente') {
+        throw new Error('Terceira correção bloqueada: estado inválido para esta operação.');
+      }
+
+      const notaFinalAdmin = notas.c1 + notas.c2 + notas.c3 + notas.c4 + notas.c5;
+
+      // Calcular par mais próximo já neste momento para salvar junto
+      const N1 = redacao.nota_final_corretor_1 ?? 0;
+      const N2 = redacao.nota_final_corretor_2 ?? 0;
+      const N3 = notaFinalAdmin;
+      const par = calcularParMaisProximo(N1, N2, N3);
+
+      // Calcular notas finais por competência com base no par escolhido
+      const redacaoComAdmin = {
+        ...redacao,
+        c1_admin: notas.c1,
+        c2_admin: notas.c2,
+        c3_admin: notas.c3,
+        c4_admin: notas.c4,
+        c5_admin: notas.c5,
+        nota_final_admin: notaFinalAdmin,
+      };
+      const notasFinais = calcularNotasFinaisPorPar(redacaoComAdmin, par);
+
+      const { error } = await supabase
+        .from('redacoes_simulado')
+        .update({
+          c1_admin: notas.c1,
+          c2_admin: notas.c2,
+          c3_admin: notas.c3,
+          c4_admin: notas.c4,
+          c5_admin: notas.c5,
+          nota_final_admin: notaFinalAdmin,
+          par_utilizado: par,
+          nota_c1: notasFinais.nota_c1,
+          nota_c2: notasFinais.nota_c2,
+          nota_c3: notasFinais.nota_c3,
+          nota_c4: notasFinais.nota_c4,
+          nota_c5: notasFinais.nota_c5,
+          nota_total: notasFinais.nota_total,
+          status_terceira_correcao: 'salva',
+          data_terceira_correcao: new Date().toISOString(),
+        })
+        .eq('id', redacao.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Terceira correção salva!",
+        description: "Para liberar a nota ao aluno, use a ação 'Finalizar e liberar nota'.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['redacoes-simulado'] });
+      setRedacaoTerceiraCorrecao(null);
+      setNotasAdmin({ c1: 0, c2: 0, c3: 0, c4: 0, c5: 0 });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Erro ao salvar terceira correção",
+        description: err?.message || "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
     }
   });
 
@@ -301,7 +422,7 @@ const RedacaoSimuladoList = () => {
 
     let matchStatus = true;
     if (filtroStatus === 'pendentes') matchStatus = info.label === 'Pendente' || info.label === 'Parcial';
-    else if (filtroStatus === 'divergencia') matchStatus = info.label === 'Divergência';
+    else if (filtroStatus === 'divergencia') matchStatus = info.label === 'Discrepância Pendente' || info.label === 'Terceira Salva';
     else if (filtroStatus === 'prontas') matchStatus = info.label === 'Pronto p/ Finalizar';
     else if (filtroStatus === 'concluidas') matchStatus = info.label === 'Concluída';
 
@@ -366,7 +487,7 @@ const RedacaoSimuladoList = () => {
                 <SelectContent>
                   <SelectItem value="todas">Todos</SelectItem>
                   <SelectItem value="pendentes">Pendentes / Parciais</SelectItem>
-                  <SelectItem value="divergencia">Com Discrepância</SelectItem>
+                  <SelectItem value="divergencia">Com Discrepância / Terceira Correção</SelectItem>
                   <SelectItem value="prontas">Prontas p/ Finalizar</SelectItem>
                   <SelectItem value="concluidas">Concluídas</SelectItem>
                 </SelectContent>
@@ -526,7 +647,7 @@ const RedacaoSimuladoList = () => {
 
                       <TableCell>
                         <Badge className={`${info.color} text-white text-xs`}>
-                          {info.label === 'Discrepância' && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
+                          {(info.label === 'Discrepância Pendente') && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
                           {info.label === 'Concluída' && <CheckCircle className="w-3 h-3 mr-1 inline" />}
                           {info.label}
                         </Badge>
@@ -560,7 +681,20 @@ const RedacaoSimuladoList = () => {
                               <BarChart2 className="w-4 h-4 mr-2" />
                               Ver notas dos corretores
                             </DropdownMenuItem>
-                            {info.label === 'Pronto p/ Finalizar' && (
+                            {info.label === 'Discrepância Pendente' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  setNotasAdmin({ c1: 0, c2: 0, c3: 0, c4: 0, c5: 0 });
+                                  setTimeout(() => setRedacaoTerceiraCorrecao(r), 100);
+                                }}
+                                className="text-red-600 focus:text-red-600 font-medium"
+                              >
+                                <ClipboardEdit className="w-4 h-4 mr-2" />
+                                Realizar terceira correção
+                              </DropdownMenuItem>
+                            )}
+                            {(info.label === 'Pronto p/ Finalizar' || info.label === 'Terceira Salva') && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setOpenDropdownId(null);
@@ -626,52 +760,85 @@ const RedacaoSimuladoList = () => {
 
       {/* ── modal notas dos corretores ── */}
       <Dialog open={!!redacaoNotas} onOpenChange={() => setRedacaoNotas(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Notas dos Corretores – {redacaoNotas?.nome_aluno}</DialogTitle>
           </DialogHeader>
           {redacaoNotas && (() => {
             const div = verificarDivergencia(redacaoNotas);
             const temAmbos = !!redacaoNotas.corretor_id_1 && !!redacaoNotas.corretor_id_2;
+            const temTerceira = !!redacaoNotas.nota_final_admin;
+            const par = redacaoNotas.par_utilizado as '1_2' | '1_admin' | '2_admin' | null;
+            const nomePar: Record<string, string> = {
+              '1_2': `${redacaoNotas.corretor_1?.nome_completo ?? 'Corretor 1'} + ${redacaoNotas.corretor_2?.nome_completo ?? 'Corretor 2'}`,
+              '1_admin': `${redacaoNotas.corretor_1?.nome_completo ?? 'Corretor 1'} + Admin`,
+              '2_admin': `${redacaoNotas.corretor_2?.nome_completo ?? 'Corretor 2'} + Admin`,
+            };
             return (
               <div className="mt-4 space-y-4">
-                {div?.temDivergencia && (
+                {/* Status informativo */}
+                {redacaoNotas.status_terceira_correcao === 'pendente' && (
                   <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-semibold text-red-700">Discrepância detectada</p>
+                      <p className="font-semibold text-red-700">Discrepância — terceira correção pendente</p>
                       <p className="text-sm text-red-600">
-                        Diferença total: <strong>{div.diferencaTotal} pts</strong> (limite: 100 pts).
-                        Entre em contato com as corretoras para alinhamento antes de finalizar.
+                        Diferença total: <strong>{div?.diferencaTotal ?? '–'} pts</strong>.
+                        Use a ação "Realizar terceira correção" para prosseguir.
                       </p>
                     </div>
                   </div>
                 )}
-
-                {!div && !redacaoNotas.corrigida && (
+                {redacaoNotas.status_terceira_correcao === 'salva' && (
+                  <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <ClipboardEdit className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold text-orange-700">Terceira correção salva — aguardando liberação</p>
+                      <p className="text-sm text-orange-600">
+                        Par utilizado na média final: <strong>{par ? nomePar[par] : '–'}</strong>.
+                        Use "Finalizar e liberar nota" para liberar ao aluno.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {!div && !redacaoNotas.corrigida && !redacaoNotas.status_terceira_correcao && (
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
                     Aguardando conclusão de {!temAmbos ? 'atribuição de corretores' : 'correção por ambos os corretores'}.
                   </div>
                 )}
-
                 {redacaoNotas.corrigida && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
-                    Redação finalizada. Nota total: <strong>{redacaoNotas.nota_total}</strong>
+                    <span>
+                      Redação finalizada. Nota total: <strong>{redacaoNotas.nota_total}</strong>
+                      {par && (
+                        <span className="ml-2 text-green-600">
+                          (par: {nomePar[par]})
+                        </span>
+                      )}
+                    </span>
                   </div>
                 )}
 
+                {/* Tabela de notas */}
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Competência</TableHead>
-                      <TableHead className="text-center">
+                      <TableHead className={`text-center ${par === '1_2' || par === '1_admin' ? 'bg-green-50' : ''}`}>
                         {redacaoNotas.corretor_1?.nome_completo ?? 'Corretor 1'}
+                        {par === '1_2' || par === '1_admin' ? ' ✓' : ''}
                       </TableHead>
-                      <TableHead className="text-center">
+                      <TableHead className={`text-center ${par === '1_2' || par === '2_admin' ? 'bg-green-50' : ''}`}>
                         {redacaoNotas.corretor_2?.nome_completo ?? 'Corretor 2'}
+                        {par === '1_2' || par === '2_admin' ? ' ✓' : ''}
                       </TableHead>
-                      {div && <TableHead className="text-center">Diferença</TableHead>}
+                      {temTerceira && (
+                        <TableHead className={`text-center ${par === '1_admin' || par === '2_admin' ? 'bg-green-50' : ''}`}>
+                          Admin (3º){par === '1_admin' || par === '2_admin' ? ' ✓' : ''}
+                        </TableHead>
+                      )}
+                      {(div && !redacaoNotas.status_terceira_correcao) && <TableHead className="text-center">Diferença</TableHead>}
                       {redacaoNotas.corrigida && <TableHead className="text-center">Nota Final</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -679,18 +846,22 @@ const RedacaoSimuladoList = () => {
                     {[1, 2, 3, 4, 5].map(i => {
                       const n1 = (redacaoNotas as any)[`c${i}_corretor_1`];
                       const n2 = (redacaoNotas as any)[`c${i}_corretor_2`];
+                      const nAdm = (redacaoNotas as any)[`c${i}_admin`];
                       const notaFinal = (redacaoNotas as any)[`nota_c${i}`];
                       const divC = div?.competencias.find(c => c.competencia === i);
                       const ehDivergente = divC?.temDivergencia ?? false;
                       return (
-                        <TableRow key={i} className={ehDivergente ? 'bg-red-50' : ''}>
+                        <TableRow key={i} className={ehDivergente && !redacaoNotas.status_terceira_correcao ? 'bg-red-50' : ''}>
                           <TableCell className="font-medium">
                             C{i}
-                            {ehDivergente && <AlertTriangle className="w-3 h-3 text-red-500 inline ml-1" />}
+                            {ehDivergente && !redacaoNotas.status_terceira_correcao && <AlertTriangle className="w-3 h-3 text-red-500 inline ml-1" />}
                           </TableCell>
-                          <TableCell className="text-center">{n1 ?? '–'}</TableCell>
-                          <TableCell className="text-center">{n2 ?? '–'}</TableCell>
-                          {div && (
+                          <TableCell className={`text-center ${par === '1_2' || par === '1_admin' ? 'bg-green-50' : ''}`}>{n1 ?? '–'}</TableCell>
+                          <TableCell className={`text-center ${par === '1_2' || par === '2_admin' ? 'bg-green-50' : ''}`}>{n2 ?? '–'}</TableCell>
+                          {temTerceira && (
+                            <TableCell className={`text-center ${par === '1_admin' || par === '2_admin' ? 'bg-green-50' : ''}`}>{nAdm ?? '–'}</TableCell>
+                          )}
+                          {(div && !redacaoNotas.status_terceira_correcao) && (
                             <TableCell className={`text-center font-semibold ${ehDivergente ? 'text-red-600' : 'text-gray-600'}`}>
                               {divC ? divC.diferenca : '–'}
                             </TableCell>
@@ -704,9 +875,12 @@ const RedacaoSimuladoList = () => {
                     {/* linha totais */}
                     <TableRow className="font-bold border-t-2">
                       <TableCell>Total</TableCell>
-                      <TableCell className="text-center">{redacaoNotas.nota_final_corretor_1 ?? '–'}</TableCell>
-                      <TableCell className="text-center">{redacaoNotas.nota_final_corretor_2 ?? '–'}</TableCell>
-                      {div && (
+                      <TableCell className={`text-center ${par === '1_2' || par === '1_admin' ? 'bg-green-50' : ''}`}>{redacaoNotas.nota_final_corretor_1 ?? '–'}</TableCell>
+                      <TableCell className={`text-center ${par === '1_2' || par === '2_admin' ? 'bg-green-50' : ''}`}>{redacaoNotas.nota_final_corretor_2 ?? '–'}</TableCell>
+                      {temTerceira && (
+                        <TableCell className={`text-center ${par === '1_admin' || par === '2_admin' ? 'bg-green-50' : ''}`}>{redacaoNotas.nota_final_admin ?? '–'}</TableCell>
+                      )}
+                      {(div && !redacaoNotas.status_terceira_correcao) && (
                         <TableCell className={`text-center ${div.diferencaTotal > 100 ? 'text-red-600' : 'text-gray-700'}`}>
                           {div.diferencaTotal}
                         </TableCell>
@@ -723,30 +897,166 @@ const RedacaoSimuladoList = () => {
         </DialogContent>
       </Dialog>
 
+      {/* ── modal terceira correção ── */}
+      <Dialog
+        open={!!redacaoTerceiraCorrecao}
+        onOpenChange={() => setRedacaoTerceiraCorrecao(null)}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardEdit className="w-5 h-5 text-red-500" />
+              Terceira Correção – {redacaoTerceiraCorrecao?.nome_aluno}
+            </DialogTitle>
+          </DialogHeader>
+          {redacaoTerceiraCorrecao && (() => {
+            const div = verificarDivergencia(redacaoTerceiraCorrecao);
+            const opcoesNota = [0, 40, 80, 120, 160, 200];
+            const totalAdmin = notasAdmin.c1 + notasAdmin.c2 + notasAdmin.c3 + notasAdmin.c4 + notasAdmin.c5;
+            const todasPreenchidas = ['c1','c2','c3','c4','c5'].every(k => (notasAdmin as any)[k] > 0 || (notasAdmin as any)[k] === 0);
+
+            // Preview do par mais próximo com as notas atuais do admin
+            const N1 = redacaoTerceiraCorrecao.nota_final_corretor_1 ?? 0;
+            const N2 = redacaoTerceiraCorrecao.nota_final_corretor_2 ?? 0;
+            const parPreview = calcularParMaisProximo(N1, N2, totalAdmin);
+            const nomesPreview: Record<string, string> = {
+              '1_2': `${redacaoTerceiraCorrecao.corretor_1?.nome_completo ?? 'Corretor 1'} + ${redacaoTerceiraCorrecao.corretor_2?.nome_completo ?? 'Corretor 2'}`,
+              '1_admin': `${redacaoTerceiraCorrecao.corretor_1?.nome_completo ?? 'Corretor 1'} + Admin`,
+              '2_admin': `${redacaoTerceiraCorrecao.corretor_2?.nome_completo ?? 'Corretor 2'} + Admin`,
+            };
+
+            return (
+              <div className="mt-4 space-y-4">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  <strong>Discrepância detectada.</strong> Insira sua avaliação por competência abaixo.
+                  A nota final será a média das duas avaliações mais próximas entre os três avaliadores.
+                </div>
+
+                {/* Tabela comparativa: corretores 1 e 2 */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Competência</TableHead>
+                      <TableHead className="text-center">{redacaoTerceiraCorrecao.corretor_1?.nome_completo ?? 'Corretor 1'}</TableHead>
+                      <TableHead className="text-center">{redacaoTerceiraCorrecao.corretor_2?.nome_completo ?? 'Corretor 2'}</TableHead>
+                      <TableHead className="text-center text-red-600">Diferença</TableHead>
+                      <TableHead className="text-center text-purple-700 font-semibold">Sua nota (Admin)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[1, 2, 3, 4, 5].map(i => {
+                      const n1 = (redacaoTerceiraCorrecao as any)[`c${i}_corretor_1`] ?? 0;
+                      const n2 = (redacaoTerceiraCorrecao as any)[`c${i}_corretor_2`] ?? 0;
+                      const diferenca = Math.abs(n1 - n2);
+                      const chave = `c${i}` as keyof typeof notasAdmin;
+                      return (
+                        <TableRow key={i} className={diferenca > 80 ? 'bg-red-50' : ''}>
+                          <TableCell className="font-medium">
+                            C{i}
+                            {diferenca > 80 && <AlertTriangle className="w-3 h-3 text-red-500 inline ml-1" />}
+                          </TableCell>
+                          <TableCell className="text-center">{n1}</TableCell>
+                          <TableCell className="text-center">{n2}</TableCell>
+                          <TableCell className={`text-center font-semibold ${diferenca > 80 ? 'text-red-600' : 'text-gray-600'}`}>{diferenca}</TableCell>
+                          <TableCell className="text-center">
+                            <Select
+                              value={notasAdmin[chave].toString()}
+                              onValueChange={(v) => setNotasAdmin(prev => ({ ...prev, [chave]: parseInt(v) }))}
+                            >
+                              <SelectTrigger className="h-8 w-20 mx-auto">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {opcoesNota.map(n => (
+                                  <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    <TableRow className="font-bold border-t-2">
+                      <TableCell>Total</TableCell>
+                      <TableCell className="text-center">{redacaoTerceiraCorrecao.nota_final_corretor_1 ?? '–'}</TableCell>
+                      <TableCell className="text-center">{redacaoTerceiraCorrecao.nota_final_corretor_2 ?? '–'}</TableCell>
+                      <TableCell className={`text-center ${(div?.diferencaTotal ?? 0) > 100 ? 'text-red-600' : 'text-gray-700'}`}>
+                        {div?.diferencaTotal ?? '–'}
+                      </TableCell>
+                      <TableCell className="text-center text-purple-700 font-bold">{totalAdmin}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+
+                {/* Preview do par */}
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                  <strong>Par mais próximo (prévia):</strong> {nomesPreview[parPreview]}
+                  <span className="ml-2 text-blue-500">(pode mudar ao confirmar)</span>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button variant="outline" onClick={() => setRedacaoTerceiraCorrecao(null)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={() => terceiraCorrecaoMutation.mutate({ redacao: redacaoTerceiraCorrecao, notas: notasAdmin })}
+                    disabled={terceiraCorrecaoMutation.isPending || !todasPreenchidas}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {terceiraCorrecaoMutation.isPending ? 'Salvando...' : 'Salvar terceira correção'}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       {/* ── confirmação finalizar ── */}
       <AlertDialog open={!!redacaoParaFinalizar} onOpenChange={() => setRedacaoParaFinalizar(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-blue-500" />
-              Finalizar correção
+              Finalizar e liberar nota
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está prestes a finalizar a correção da redação de{' '}
-              <strong>{redacaoParaFinalizar?.nome_aluno}</strong>.
-              <br /><br />
-              A nota final será calculada como a <strong>média das pontuações dos dois corretores</strong>{' '}
-              por competência e ficará visível para o aluno.
-              <br /><br />
-              {redacaoParaFinalizar && (() => {
-                const n = calcularNotasFinais(redacaoParaFinalizar);
-                return (
-                  <span className="block mt-2 text-sm font-medium text-gray-700">
-                    Nota final calculada: {n.nota_total} / 1000
-                    &nbsp;(C1:{n.nota_c1} C2:{n.nota_c2} C3:{n.nota_c3} C4:{n.nota_c4} C5:{n.nota_c5})
-                  </span>
-                );
-              })()}
+            <AlertDialogDescription asChild>
+              <div>
+                <p>
+                  Você está prestes a liberar a nota da redação de{' '}
+                  <strong>{redacaoParaFinalizar?.nome_aluno}</strong>.{' '}
+                  Esta ação ficará visível para o aluno.
+                </p>
+                {redacaoParaFinalizar && (() => {
+                  const ehTerceira = redacaoParaFinalizar.status_terceira_correcao === 'salva';
+                  if (ehTerceira) {
+                    const par = redacaoParaFinalizar.par_utilizado as '1_2' | '1_admin' | '2_admin';
+                    const nomePar: Record<string, string> = {
+                      '1_2': `${redacaoParaFinalizar.corretor_1?.nome_completo ?? 'Corretor 1'} + ${redacaoParaFinalizar.corretor_2?.nome_completo ?? 'Corretor 2'}`,
+                      '1_admin': `${redacaoParaFinalizar.corretor_1?.nome_completo ?? 'Corretor 1'} + Admin`,
+                      '2_admin': `${redacaoParaFinalizar.corretor_2?.nome_completo ?? 'Corretor 2'} + Admin`,
+                    };
+                    return (
+                      <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded text-sm text-orange-800 space-y-1">
+                        <p><strong>Caminho:</strong> terceira correção realizada.</p>
+                        <p><strong>Par utilizado:</strong> {par ? nomePar[par] : '–'}</p>
+                        <p><strong>Nota final calculada:</strong> {redacaoParaFinalizar.nota_total} / 1000
+                          {' '}(C1:{redacaoParaFinalizar.nota_c1} C2:{redacaoParaFinalizar.nota_c2} C3:{redacaoParaFinalizar.nota_c3} C4:{redacaoParaFinalizar.nota_c4} C5:{redacaoParaFinalizar.nota_c5})
+                        </p>
+                      </div>
+                    );
+                  }
+                  const n = calcularNotasFinais(redacaoParaFinalizar);
+                  return (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 space-y-1">
+                      <p><strong>Caminho:</strong> sem discrepância — média dos dois corretores.</p>
+                      <p><strong>Nota final calculada:</strong> {n.nota_total} / 1000
+                        {' '}(C1:{n.nota_c1} C2:{n.nota_c2} C3:{n.nota_c3} C4:{n.nota_c4} C5:{n.nota_c5})
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
