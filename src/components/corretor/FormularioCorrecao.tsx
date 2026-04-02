@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
-import { ArrowLeft, Save, CheckCircle, Download } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle, Download, Info } from "lucide-react";
 import jsPDF from 'jspdf';
 
 interface FormularioCorrecaoProps {
@@ -27,6 +27,8 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
   const [loading, setLoading] = useState(false);
   const [loadingCorrecao, setLoadingCorrecao] = useState(true);
   const [manuscritaUrl, setManuscritaUrl] = useState<string | null>(null);
+  const [parUtilizado, setParUtilizado] = useState<string | null>(null);
+  const [redacaoFinalizada, setRedacaoFinalizada] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,6 +63,10 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
           c5: data[`c5_${prefixo}`] || 0,
         });
         setManuscritaUrl(data.redacao_manuscrita_url || null);
+        if (tabela === 'redacoes_simulado') {
+          setParUtilizado(data.par_utilizado || null);
+          setRedacaoFinalizada(data.corrigida || false);
+        }
       }
     } catch (error: any) {
       console.error("Erro ao carregar correção:", error);
@@ -394,6 +400,13 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
     return <div>Carregando correção...</div>;
   }
 
+  // Aviso: nota deste corretor não compôs o par final
+  const notaNaoUtilizada =
+    redacaoFinalizada &&
+    parUtilizado != null &&
+    ((redacao.eh_corretor_1 && parUtilizado === '2_admin') ||
+     (!redacao.eh_corretor_1 && parUtilizado === '1_admin'));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -403,6 +416,18 @@ export const FormularioCorrecao = ({ redacao, corretorEmail, onVoltar, onSucesso
         </Button>
         <h1 className="text-2xl font-bold">Vista Pedagógica - Correção</h1>
       </div>
+
+      {notaNaoUtilizada && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-300 rounded-lg">
+          <Info className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-800">Houve discrepância nesta redação</p>
+            <p className="text-sm text-amber-700 mt-1">
+              Após a terceira correção realizada pela coordenação, <strong>sua avaliação não compôs a nota final</strong>. A nota oficial do aluno foi calculada com base no par de avaliadores mais próximos.
+            </p>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>

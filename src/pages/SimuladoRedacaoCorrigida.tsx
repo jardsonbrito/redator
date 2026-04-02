@@ -73,6 +73,15 @@ interface RedacaoSimulado {
   // Campos necessários para o RedacaoEnviadaCard
   created_at?: string;
   observacoes_coordenacao?: string;
+  // Terceira correção
+  par_utilizado?: string | null;
+  status_terceira_correcao?: string | null;
+  c1_admin?: number | null;
+  c2_admin?: number | null;
+  c3_admin?: number | null;
+  c4_admin?: number | null;
+  c5_admin?: number | null;
+  nota_final_admin?: number | null;
 }
 
 const SimuladoRedacaoCorrigida = () => {
@@ -164,8 +173,15 @@ const SimuladoRedacaoCorrigida = () => {
       // Processar as correções em entradas separadas
       const redacoesProcessadas: RedacaoSimulado[] = [];
 
+      // Determina quais avaliadores exibir com base no par_utilizado
+      // Quando par está definido (terceira correção concluída), exibe apenas o par usado
+      const par = redacaoOriginal.par_utilizado as '1_2' | '1_admin' | '2_admin' | null;
+      const mostrarCorretor1 = !par || par === '1_2' || par === '1_admin';
+      const mostrarCorretor2 = !par || par === '1_2' || par === '2_admin';
+      const mostrarAdmin = par === '1_admin' || par === '2_admin';
+
       // Corretor 1
-      if (redacaoOriginal.corretor_id_1) {
+      if (redacaoOriginal.corretor_id_1 && mostrarCorretor1) {
         const statusCorretor1 = redacaoOriginal.status_corretor_1 || 'pendente';
         redacoesProcessadas.push({
           ...redacaoOriginal,
@@ -178,18 +194,15 @@ const SimuladoRedacaoCorrigida = () => {
           corrigida: statusCorretor1 === 'corrigida',
           corretor: nomesCorretores[redacaoOriginal.corretor_id_1] || 'Corretor 1',
           corretor_numero: 1,
-          // Campos adicionais necessários - manter apenas os IDs do corretor específico
           corretor_id_1: redacaoOriginal.corretor_id_1,
-          corretor_id_2: null, // Limpar ID do outro corretor para evitar confusão
+          corretor_id_2: null,
           created_at: redacaoOriginal.data_envio,
-          // Notas específicas do corretor 1
           nota_c1: redacaoOriginal.c1_corretor_1,
           nota_c2: redacaoOriginal.c2_corretor_1,
           nota_c3: redacaoOriginal.c3_corretor_1,
           nota_c4: redacaoOriginal.c4_corretor_1,
           nota_c5: redacaoOriginal.c5_corretor_1,
           nota_total: redacaoOriginal.nota_final_corretor_1,
-          // Comentários do corretor 1
           comentario_c1_corretor_1: redacaoOriginal.comentario_c1_corretor_1,
           comentario_c2_corretor_1: redacaoOriginal.comentario_c2_corretor_1,
           comentario_c3_corretor_1: redacaoOriginal.comentario_c3_corretor_1,
@@ -202,7 +215,7 @@ const SimuladoRedacaoCorrigida = () => {
       }
 
       // Corretor 2
-      if (redacaoOriginal.corretor_id_2) {
+      if (redacaoOriginal.corretor_id_2 && mostrarCorretor2) {
         const statusCorretor2 = redacaoOriginal.status_corretor_2 || 'pendente';
         redacoesProcessadas.push({
           ...redacaoOriginal,
@@ -215,18 +228,15 @@ const SimuladoRedacaoCorrigida = () => {
           corrigida: statusCorretor2 === 'corrigida',
           corretor: nomesCorretores[redacaoOriginal.corretor_id_2] || 'Corretor 2',
           corretor_numero: 2,
-          // Campos adicionais necessários - manter apenas os IDs do corretor específico
-          corretor_id_1: null, // Limpar ID do outro corretor para evitar confusão
+          corretor_id_1: null,
           corretor_id_2: redacaoOriginal.corretor_id_2,
           created_at: redacaoOriginal.data_envio,
-          // Notas específicas do corretor 2
           nota_c1: redacaoOriginal.c1_corretor_2,
           nota_c2: redacaoOriginal.c2_corretor_2,
           nota_c3: redacaoOriginal.c3_corretor_2,
           nota_c4: redacaoOriginal.c4_corretor_2,
           nota_c5: redacaoOriginal.c5_corretor_2,
           nota_total: redacaoOriginal.nota_final_corretor_2,
-          // Comentários do corretor 2
           comentario_c1_corretor_2: redacaoOriginal.comentario_c1_corretor_2,
           comentario_c2_corretor_2: redacaoOriginal.comentario_c2_corretor_2,
           comentario_c3_corretor_2: redacaoOriginal.comentario_c3_corretor_2,
@@ -235,6 +245,49 @@ const SimuladoRedacaoCorrigida = () => {
           elogios_pontos_atencao_corretor_2: redacaoOriginal.elogios_pontos_atencao_corretor_2,
           correcao_arquivo_url_corretor_2: redacaoOriginal.correcao_arquivo_url_corretor_2,
           audio_url: redacaoOriginal.audio_url_corretor_2
+        });
+      }
+
+      // Admin (terceira correção) — exibido como "Coordenação"
+      if (mostrarAdmin) {
+        redacoesProcessadas.push({
+          ...redacaoOriginal,
+          id: `${redacaoOriginal.id}-admin`,
+          original_id: redacaoOriginal.id,
+          frase_tematica: redacaoOriginal.simulados?.frase_tematica || 'Simulado',
+          redacao_texto: redacaoOriginal.texto || '',
+          tipo_envio: 'simulado',
+          status: 'corrigida',
+          corrigida: true,
+          corretor: 'Coordenação',
+          corretor_numero: 3,
+          corretor_id_1: null,
+          corretor_id_2: null,
+          created_at: redacaoOriginal.data_envio,
+          nota_c1: redacaoOriginal.c1_admin,
+          nota_c2: redacaoOriginal.c2_admin,
+          nota_c3: redacaoOriginal.c3_admin,
+          nota_c4: redacaoOriginal.c4_admin,
+          nota_c5: redacaoOriginal.c5_admin,
+          nota_total: redacaoOriginal.nota_final_admin,
+          // Admin não fornece feedback pedagógico — limpar campos de comentário
+          comentario_c1_corretor_1: null,
+          comentario_c2_corretor_1: null,
+          comentario_c3_corretor_1: null,
+          comentario_c4_corretor_1: null,
+          comentario_c5_corretor_1: null,
+          elogios_pontos_atencao_corretor_1: null,
+          comentario_c1_corretor_2: null,
+          comentario_c2_corretor_2: null,
+          comentario_c3_corretor_2: null,
+          comentario_c4_corretor_2: null,
+          comentario_c5_corretor_2: null,
+          elogios_pontos_atencao_corretor_2: null,
+          correcao_arquivo_url_corretor_1: null,
+          correcao_arquivo_url_corretor_2: null,
+          audio_url: null,
+          audio_url_corretor_1: null,
+          audio_url_corretor_2: null,
         });
       }
 
@@ -261,7 +314,7 @@ const SimuladoRedacaoCorrigida = () => {
     if (redacoesSimulado) {
       setRedacoesCorretor(redacoesSimulado);
       if (redacoesSimulado.length > 0) {
-        setSelectedCorretor(1); // Começar sempre pelo corretor 1
+        setSelectedCorretor(redacoesSimulado[0].corretor_numero ?? 1);
       }
     }
   }, [redacoesSimulado]);
