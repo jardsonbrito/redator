@@ -144,6 +144,7 @@ import { JarvisConfigManagement } from "@/components/admin/JarvisConfigManagemen
 import { JarvisCreditManagementBulk } from "@/components/admin/JarvisCreditManagementBulk";
 import { JarvisModosManagement } from "@/components/admin/JarvisModosManagement";
 import { JarvisHistoricoAdmin } from "@/components/admin/JarvisHistoricoAdmin";
+import { JarvisTutoriaConfiguracao } from "@/components/admin/JarvisTutoriaConfiguracao";
 
 // Import diário components
 import GestaoEtapas from "@/pages/admin/GestaoEtapas";
@@ -681,7 +682,7 @@ const Admin = () => {
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
     // PRIMEIRO: Jarvis - Assistente Pedagógico
-    { id: "jarvis", label: "Jarvis", icon: Bot, iconColor: "#7C3AED", chips: ["Créditos", "Modos", "Parâmetros", "Histórico"] },
+    { id: "jarvis", label: "Jarvis", icon: Bot, iconColor: "#7C3AED", chips: ["Créditos", "Modos", "Parâmetros", "Tutoria", "Histórico"] },
 
     // Destaque: Processo Seletivo
     { id: "processo-seletivo", label: "Processo Seletivo", icon: ListChecks, iconColor: "#8B5CF6" },
@@ -1114,10 +1115,11 @@ const Admin = () => {
 
         return (
           <Tabs defaultValue={subtabJarvis || "creditos"} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="creditos">Créditos</TabsTrigger>
               <TabsTrigger value="modos">Modos</TabsTrigger>
               <TabsTrigger value="configuracoes">Parâmetros</TabsTrigger>
+              <TabsTrigger value="tutoria">Tutoria</TabsTrigger>
               <TabsTrigger value="historico">Histórico</TabsTrigger>
             </TabsList>
             <TabsContent value="creditos" className="space-y-6">
@@ -1128,6 +1130,9 @@ const Admin = () => {
             </TabsContent>
             <TabsContent value="configuracoes" className="space-y-6">
               <JarvisConfigManagement />
+            </TabsContent>
+            <TabsContent value="tutoria" className="space-y-6">
+              <JarvisTutoriaConfiguracao />
             </TabsContent>
             <TabsContent value="historico" className="space-y-6">
               <JarvisHistoricoAdmin />
@@ -1242,6 +1247,7 @@ const Admin = () => {
                         "Créditos": "creditos",
                         "Modos": "modos",
                         "Parâmetros": "configuracoes",
+                        "Tutoria": "tutoria",
                         "Histórico": "historico"
                       };
                       const subtab = subtabMap[chipValue];
