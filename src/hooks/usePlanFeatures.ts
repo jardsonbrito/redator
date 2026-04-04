@@ -20,7 +20,8 @@ const VISITANTE_FEATURES = {
   'gamificacao': false,
   'top_5': false,
   'minhas_conquistas': false,
-  'repertorio_orientado': false
+  'repertorio_orientado': false,
+  'jarvis': true
 };
 
 // Definir funcionalidades padrão por plano
@@ -40,7 +41,8 @@ const DEFAULT_PLAN_FEATURES = {
     'gamificacao': true,
     'top_5': true,
     'minhas_conquistas': true,
-    'repertorio_orientado': false
+    'repertorio_orientado': false,
+    'jarvis': true
   },
   'Lapidação': {
     'temas': true,
@@ -57,7 +59,8 @@ const DEFAULT_PLAN_FEATURES = {
     'gamificacao': true,
     'top_5': true,
     'minhas_conquistas': true,
-    'repertorio_orientado': true
+    'repertorio_orientado': true,
+    'jarvis': true
   },
   'Liderança': {
     'temas': true,
@@ -74,7 +77,8 @@ const DEFAULT_PLAN_FEATURES = {
     'gamificacao': true,
     'top_5': true,
     'minhas_conquistas': true,
-    'repertorio_orientado': true
+    'repertorio_orientado': true,
+    'jarvis': true
   },
   'Bolsista': {
     'temas': true,
@@ -91,7 +95,8 @@ const DEFAULT_PLAN_FEATURES = {
     'gamificacao': true,
     'top_5': true,
     'minhas_conquistas': true,
-    'repertorio_orientado': false
+    'repertorio_orientado': false,
+    'jarvis': true
   }
 };
 
@@ -196,7 +201,7 @@ export const usePlanFeatures = (userEmail: string) => {
     isLoading: !subscription,
     isVisitante,
     debugInfo: {
-      userEmail: userEmail.slice(0, 10) + '...',
+      userEmail: userEmail ? userEmail.slice(0, 10) + '...' : '',
       hasSubscription: !!subscription,
       plano: subscription?.plano,
       overridesCount: overrides.length,

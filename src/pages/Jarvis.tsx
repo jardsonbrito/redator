@@ -11,6 +11,7 @@ import { useJarvisModos } from "@/hooks/useJarvisModos";
 import type { CampoResposta } from "@/hooks/useJarvisModos";
 import { useVoiceTranscription } from "@/hooks/useVoiceTranscription";
 import { JarvisIcon } from "@/components/icons/JarvisIcon";
+import { TutoriaView } from "@/components/tutoria/TutoriaView";
 import {
   Loader2, Copy, CheckCircle2, AlertCircle, FileEdit,
   Sparkles, Lock, History, ChevronDown, ChevronUp,
@@ -342,7 +343,13 @@ const Jarvis = () => {
                     VIEW: Modo ativo (entrada ou resultado)
                 ════════════════════════════════ */}
                 {!isHistorico && modoAtivo && (
-                  <div className="space-y-4">
+                  <>
+                    {/* RENDERIZAÇÃO CONDICIONAL: Modo Simples vs Modo Interativo */}
+                    {modoAtivo.tipo_modo === 'interativo' ? (
+                      <TutoriaView modo={modoAtivo} userEmail={studentData?.email || ''} />
+                    ) : (
+                      /* Modo Simples (comportamento atual - INTOCADO) */
+                      <div className="space-y-4">
 
                     {/* ── Bloco de entrada — visível quando não há resultado ── */}
                     {!showResult && (
@@ -484,6 +491,8 @@ const Jarvis = () => {
                     </div>
 
                   </div>
+                    )}
+                  </>
                 )}
 
                 {/* ════════════════════════════════
@@ -504,6 +513,29 @@ const Jarvis = () => {
                       <div className="divide-y divide-gray-100">
                         {historico.map((item) => {
                           const campos = resolverCampos(item);
+                          // Detectar se é tutoria
+                          const isTutoria = item.subtab_nome && item.etapa;
+                          const isGeracaoTutoria = isTutoria && item.etapa === 'geracao';
+
+                          // Para tutoria + geração: mostrar texto gerado
+                          // Para outros: mostrar texto original
+                          const textoPreview = isGeracaoTutoria && item.versao_melhorada
+                            ? item.versao_melhorada
+                            : item.texto_original;
+
+                          // Label da etapa de tutoria
+                          const etapaLabel = isTutoria
+                            ? item.etapa === 'geracao' ? '📝 Texto Gerado'
+                              : item.etapa === 'validacao' ? '✓ Validação'
+                              : item.etapa === 'sugestoes' ? '💡 Sugestões'
+                              : item.etapa
+                            : null;
+
+                          // Palavras (para geração de tutoria, usar palavras_melhorada)
+                          const palavrasExibir = isGeracaoTutoria && item.palavras_melhorada
+                            ? item.palavras_melhorada
+                            : item.palavras_original;
+
                           return (
                             <div key={item.id} className="py-3">
                               <button
@@ -516,16 +548,28 @@ const Jarvis = () => {
                                 <div className="flex justify-between items-start gap-3">
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm text-gray-700">
-                                      {truncateText(item.texto_original)}
+                                      {truncateText(textoPreview)}
                                     </p>
-                                    {item.modo_label && (
-                                      <span className="inline-block mt-1 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">
-                                        {item.modo_label}
-                                      </span>
-                                    )}
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                      {item.modo_label && (
+                                        <span className="inline-block text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">
+                                          {item.modo_label}
+                                        </span>
+                                      )}
+                                      {etapaLabel && (
+                                        <span className="inline-block text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                                          {etapaLabel}
+                                        </span>
+                                      )}
+                                      {isTutoria && item.creditos_consumidos > 0 && (
+                                        <span className="inline-block text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                          💳 {item.creditos_consumidos} créditos
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                   <div className="flex items-center gap-3 shrink-0 text-xs text-gray-400">
-                                    <span>{item.palavras_original} palavras</span>
+                                    <span>{palavrasExibir} palavras</span>
                                     <span>{formatDate(item.created_at)}</span>
                                     {expandedId === item.id
                                       ? <ChevronUp className="w-4 h-4" />

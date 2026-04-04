@@ -39,7 +39,8 @@ const DEFAULT_PLAN_FEATURES = {
     'diario_online': true,
     'gamificacao': true,
     'top_5': true,
-    'minhas_conquistas': true
+    'minhas_conquistas': true,
+    'jarvis': true
   },
   'Lapidação': {
     'temas': true,
@@ -55,7 +56,8 @@ const DEFAULT_PLAN_FEATURES = {
     'diario_online': true,
     'gamificacao': true,
     'top_5': true,
-    'minhas_conquistas': true
+    'minhas_conquistas': true,
+    'jarvis': true
   },
   'Liderança': {
     'temas': true,
@@ -71,7 +73,8 @@ const DEFAULT_PLAN_FEATURES = {
     'diario_online': true,
     'gamificacao': true,
     'top_5': true,
-    'minhas_conquistas': true
+    'minhas_conquistas': true,
+    'jarvis': true
   },
   'Bolsista': {
     'temas': true,
@@ -87,7 +90,8 @@ const DEFAULT_PLAN_FEATURES = {
     'diario_online': true,
     'gamificacao': true,
     'top_5': true,
-    'minhas_conquistas': true
+    'minhas_conquistas': true,
+    'jarvis': true
   }
 };
 
@@ -105,7 +109,8 @@ const FUNCTIONALITY_LABELS = {
   'diario_online': 'Diário Online',
   'gamificacao': 'Gamificação',
   'top_5': 'Top 5',
-  'minhas_conquistas': 'Minhas Conquistas'
+  'minhas_conquistas': 'Minhas Conquistas',
+  'jarvis': 'Jarvis'
 };
 
 export const CustomizePlanSimple = () => {

@@ -16,6 +16,8 @@ export interface JarvisModo {
   icone: string;
   campos_resposta: CampoResposta[];
   ordem: number;
+  tipo_modo?: 'simples' | 'interativo';  // Novo campo para diferenciar tipos
+  config_interativa?: any;  // Configuração de modos interativos
 }
 
 export const useJarvisModos = () => {

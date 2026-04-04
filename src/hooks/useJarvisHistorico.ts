@@ -18,6 +18,11 @@ export interface JarvisHistoricoItem {
   modo_nome: string | null;
   modo_label: string | null;
   modo_campos_resposta: CampoResposta[] | null;
+  // Campos de tutoria (modos interativos)
+  subtab_nome: string | null;
+  etapa: string | null;
+  sessao_id: string | null;
+  creditos_consumidos: number;
   created_at: string;
 }
 

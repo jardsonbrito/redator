@@ -4,7 +4,7 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList, Library } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList, Library, Bot } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 
@@ -51,6 +51,14 @@ const Student = () => {
       path: "/biblioteca",
       icon: File,
       tooltip: "Acesse materiais em PDF organizados por competência.",
+      showAlways: true
+    },
+    // Jarvis - Assistente de Escrita
+    {
+      title: "Jarvis",
+      path: "/jarvis",
+      icon: Bot,
+      tooltip: "Assistente pedagógico para melhorar sua escrita - 1 crédito por análise.",
       showAlways: true
     },
     // Linha 3, Coluna 1: Lousa

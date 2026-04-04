@@ -36,7 +36,8 @@ const FUNCTIONALITY_LABELS = {
   'diario_online': 'Diário Online',
   'gamificacao': 'Gamificação',
   'top_5': 'Top 5',
-  'minhas_conquistas': 'Minhas Conquistas'
+  'minhas_conquistas': 'Minhas Conquistas',
+  'jarvis': 'Jarvis'
 };
 
 export const CustomizeStudentPlan = () => {
