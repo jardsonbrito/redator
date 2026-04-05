@@ -9,6 +9,7 @@ export interface MicroTopico {
   descricao: string | null;
   ordem: number;
   ativo: boolean;
+  cover_storage_path: string | null;
   total_itens: number;
   total_concluidos: number;
   created_at: string;

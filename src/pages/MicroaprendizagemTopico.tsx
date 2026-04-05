@@ -91,9 +91,9 @@ const MicroaprendizagemTopico = () => {
 
           {/* Lista de itens */}
           {loadingItens ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-20 bg-white rounded-xl animate-pulse" />
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-44 bg-white rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : itens.length === 0 ? (
@@ -105,7 +105,7 @@ const MicroaprendizagemTopico = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               {itens.map(item => (
                 <MicroItemCard
                   key={item.id}

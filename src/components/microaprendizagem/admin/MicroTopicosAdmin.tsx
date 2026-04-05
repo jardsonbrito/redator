@@ -30,7 +30,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Pencil, Trash2, ListChecks, ChevronDown, ChevronUp, MoreHorizontal } from 'lucide-react';
+import { Plus, Pencil, Trash2, ListChecks, ChevronDown, ChevronUp, MoreHorizontal, ImagePlus } from 'lucide-react';
+import { sanitizeFileName } from '@/utils/fileUtils';
 import { toast } from 'sonner';
 
 const schema = z.object({
@@ -47,6 +48,7 @@ interface Topico {
   descricao: string | null;
   ordem: number;
   ativo: boolean;
+  cover_storage_path?: string | null;
 }
 
 export const MicroTopicosAdmin = () => {
@@ -56,6 +58,8 @@ export const MicroTopicosAdmin = () => {
   const [topicoSelecionado, setTopicoSelecionado] = useState<Topico | null>(null);
   const [topicoExcluindo, setTopicoExcluindo] = useState<Topico | null>(null);
   const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -65,28 +69,53 @@ export const MicroTopicosAdmin = () => {
   const openEditar = (t: Topico) => {
     setTopicoSelecionado(t);
     reset({ titulo: t.titulo, descricao: t.descricao ?? '', ordem: t.ordem, ativo: t.ativo });
+    setCoverFile(null);
+    if (t.cover_storage_path) {
+      const { data } = supabase.storage.from('micro-covers').getPublicUrl(t.cover_storage_path);
+      setCoverPreview(data.publicUrl);
+    } else {
+      setCoverPreview(null);
+    }
     setModo('editar');
   };
 
   const openCriar = () => {
     setTopicoSelecionado(null);
     reset({ titulo: '', descricao: '', ordem: topicos.length, ativo: true });
+    setCoverFile(null);
+    setCoverPreview(null);
     setModo('criar');
+  };
+
+  const uploadCover = async (topicoId: string): Promise<string | null> => {
+    if (!coverFile) return topicoSelecionado?.cover_storage_path ?? null;
+    const nome = sanitizeFileName(coverFile.name);
+    const path = `${topicoId}/${Date.now()}_${nome}`;
+    const { error } = await supabase.storage.from('micro-covers').upload(path, coverFile, { upsert: true });
+    if (error) throw error;
+    return path;
   };
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (modo === 'editar' && topicoSelecionado) {
+        const coverPath = await uploadCover(topicoSelecionado.id);
         const { error } = await supabase
           .from('micro_topicos')
-          .update({ titulo: data.titulo, descricao: data.descricao || null, ordem: data.ordem, ativo: data.ativo })
+          .update({ titulo: data.titulo, descricao: data.descricao || null, ordem: data.ordem, ativo: data.ativo, cover_storage_path: coverPath })
           .eq('id', topicoSelecionado.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data: novo, error } = await supabase
           .from('micro_topicos')
-          .insert({ titulo: data.titulo, descricao: data.descricao || null, ordem: data.ordem, ativo: data.ativo });
+          .insert({ titulo: data.titulo, descricao: data.descricao || null, ordem: data.ordem, ativo: data.ativo })
+          .select()
+          .single();
         if (error) throw error;
+        const coverPath = await uploadCover(novo.id);
+        if (coverPath) {
+          await supabase.from('micro_topicos').update({ cover_storage_path: coverPath }).eq('id', novo.id);
+        }
       }
     },
     onSuccess: () => {
@@ -189,6 +218,30 @@ export const MicroTopicosAdmin = () => {
               <Label>Descrição</Label>
               <Textarea {...register('descricao')} placeholder="Breve descrição do tópico" rows={2} />
             </div>
+            {/* Imagem de capa */}
+            <div className="space-y-2">
+              <Label>Imagem de capa</Label>
+              <div className="flex items-start gap-3">
+                {coverPreview && (
+                  <img src={coverPreview} alt="Capa" className="w-20 h-14 object-cover rounded-lg border border-gray-200 shrink-0" />
+                )}
+                <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-lg p-3 cursor-pointer hover:border-purple-300 transition-colors">
+                  <ImagePlus className="w-5 h-5 text-gray-400 mb-1" />
+                  <span className="text-xs text-gray-400">{coverFile ? coverFile.name : 'Clique para enviar (JPG, PNG, WebP)'}</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0] ?? null;
+                      setCoverFile(f);
+                      if (f) setCoverPreview(URL.createObjectURL(f));
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
             <div className="space-y-1">
               <Label>Ordem de exibição</Label>
               <Input
