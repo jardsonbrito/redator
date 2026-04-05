@@ -1019,24 +1019,12 @@ const Admin = () => {
         return (
           <div className="space-y-6">
             <div className="bg-muted/50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Painel de Resultados - Radar</h3>
+              <h3 className="font-semibold mb-2">Radar de Monitoramento Pedagógico</h3>
               <p className="text-sm text-muted-foreground">
-                Acompanhe aqui o desempenho geral dos alunos nos exercícios e redações corrigidas.
+                Acompanhe o desempenho, tendências e situação dos alunos por turma, com análise automática de engajamento.
               </p>
             </div>
-            <Tabs defaultValue="alunos" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="alunos">Alunos</TabsTrigger>
-                <TabsTrigger value="exercicios">Importar Exercícios</TabsTrigger>
-              </TabsList>
-              <TabsContent value="alunos" className="space-y-6">
-                <MonitoramentoPage />
-              </TabsContent>
-              <TabsContent value="exercicios" className="space-y-6">
-                <RadarUpload />
-                <RadarList />
-              </TabsContent>
-            </Tabs>
+            <MonitoramentoPage />
           </div>
         );
       

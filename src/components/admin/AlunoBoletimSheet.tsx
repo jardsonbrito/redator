@@ -36,6 +36,10 @@ import {
   Library,
   Map,
   Brain,
+  AlertTriangle,
+  TrendingDown,
+  CheckCircle2,
+  Info,
 } from "lucide-react";
 import {
   LineChart,
@@ -48,11 +52,15 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  ReferenceLine,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAlunoBoletim } from "@/hooks/useAlunoBoletim";
+import { useAlunoScoreHistorico } from "@/hooks/useAlunoScoreHistorico";
 import { exportarBoletimPDF } from "@/utils/boletimPDF";
+import { calcularScore, classificarFaixa, calcularTendencia, gerarAlertas } from "@/utils/radarScore";
+import { RADAR_CONFIG } from "@/config/radarConfig";
 
 interface AlunoBoletimSheetProps {
   open: boolean;
@@ -60,6 +68,7 @@ interface AlunoBoletimSheetProps {
   email: string | null;
   turma: string | null;
   nomeAluno: string;
+  isBolsista?: boolean;
 }
 
 const MESES = [
@@ -126,12 +135,158 @@ function SkeletonBoletim() {
   );
 }
 
+// ─── Painel de Score (novo componente interno) ────────────────────────────────
+
+function ScorePanel({
+  historico,
+  loading,
+  isBolsista,
+  metricas,
+}: {
+  historico:  ReturnType<typeof useAlunoScoreHistorico>["data"];
+  loading:    boolean;
+  isBolsista: boolean;
+  metricas:   any;
+}) {
+  if (loading) {
+    return (
+      <div className="mt-4 mb-2 space-y-2">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!historico || historico.length === 0) return null;
+
+  const mesAtual   = historico[historico.length - 1];
+  const mesAnterior = historico.length >= 2 ? historico[historico.length - 2] : null;
+
+  const score     = mesAtual.score;
+  const faixa     = mesAtual.faixa;
+  const tendencia = mesAtual.tendencia;
+
+  const alertas = gerarAlertas(
+    historico.map(h => ({ score: h.score, metricas: h.metricas })),
+    isBolsista
+  );
+
+  // Dados para o gráfico
+  const chartData = historico.map(h => ({
+    label:  h.label,
+    score:  h.score,
+  }));
+
+  const corScore = faixa?.cor ?? '#6b7280';
+
+  return (
+    <div className="mt-4 mb-1 space-y-3">
+      {/* Score + status composto */}
+      <div
+        className="rounded-xl p-4 border-l-4"
+        style={{ backgroundColor: faixa?.bg ?? '#f9fafb', borderLeftColor: corScore }}
+      >
+        <div className="flex items-start gap-4">
+          {/* Score grande */}
+          <div className="text-center shrink-0">
+            {score !== null ? (
+              <>
+                <div className="text-3xl font-black tabular-nums" style={{ color: corScore }}>
+                  {score.toFixed(1)}
+                </div>
+                <div className="text-[10px] text-muted-foreground font-medium">/ 10,0</div>
+              </>
+            ) : (
+              <div className="text-2xl font-bold text-gray-300">—</div>
+            )}
+          </div>
+
+          {/* Faixa + tendência + status */}
+          <div className="flex-1 min-w-0">
+            {faixa ? (
+              <div className="text-sm font-bold" style={{ color: faixa.corTexto }}>
+                {faixa.label}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Sem dados suficientes</div>
+            )}
+
+            {tendencia && (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-xs font-semibold" style={{ color: tendencia.cor }}>
+                  {tendencia.icone} {tendencia.label}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  ({tendencia.delta > 0 ? '+' : ''}{tendencia.delta.toFixed(1)} vs mês anterior)
+                </span>
+              </div>
+            )}
+
+            {mesAnterior?.score !== null && mesAnterior && (
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                Mês anterior: {mesAnterior.score?.toFixed(1) ?? '—'}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Gráfico de evolução dos últimos 4 meses */}
+      <div className="rounded-xl border bg-card p-3">
+        <p className="text-xs font-semibold text-muted-foreground mb-2">Evolução (últimos 4 meses)</p>
+        <ResponsiveContainer width="100%" height={110}>
+          <BarChart data={chartData} margin={{ top: 10, right: 8, bottom: 0, left: -20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f5" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+            <YAxis domain={[0, 10]} ticks={[0, 5, 7, 10]} tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+            <Tooltip
+              formatter={(v: number) => [v?.toFixed(1) ?? '—', 'Score']}
+              contentStyle={{ fontSize: 11, borderRadius: 8 }}
+            />
+            <ReferenceLine y={7} stroke="#3b82f6" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'meta', fontSize: 9, fill: '#3b82f6', position: 'right' }} />
+            <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+              {chartData.map((entry, i) => {
+                const f = entry.score !== null ? classificarFaixa(entry.score) : null;
+                return <Cell key={i} fill={f?.cor ?? '#e5e7eb'} />;
+              })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Alertas automáticos */}
+      {alertas.length > 0 && (
+        <div className="space-y-1.5">
+          {alertas.map((a, i) => {
+            const Icon = a.tipo === 'alerta' ? AlertTriangle
+                       : a.tipo === 'positivo' ? CheckCircle2
+                       : Info;
+            const cor  = a.tipo === 'alerta'   ? '#ef4444'
+                       : a.tipo === 'positivo' ? '#10b981'
+                       : '#6b7280';
+            return (
+              <div key={i} className="flex items-start gap-2 text-xs rounded-lg px-3 py-2"
+                style={{ backgroundColor: `${cor}10`, color: cor }}>
+                <Icon className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>{a.texto}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sheet principal ──────────────────────────────────────────────────────────
+
 export function AlunoBoletimSheet({
   open,
   onOpenChange,
   email,
   turma,
   nomeAluno,
+  isBolsista = false,
 }: AlunoBoletimSheetProps) {
   const now = new Date();
   const [mes, setMes] = useState(now.getMonth() + 1);
@@ -139,6 +294,13 @@ export function AlunoBoletimSheet({
   const [exportando, setExportando] = useState(false);
 
   const { data, isLoading } = useAlunoBoletim(
+    open ? email : null,
+    open ? turma : null,
+    mes,
+    ano
+  );
+
+  const { data: historico, isLoading: historicoLoading } = useAlunoScoreHistorico(
     open ? email : null,
     open ? turma : null,
     mes,
@@ -249,6 +411,14 @@ export function AlunoBoletimSheet({
               </div>
             ) : (
               <>
+                {/* ── Painel de Score Analítico ── */}
+                <ScorePanel
+                  historico={historico}
+                  loading={historicoLoading}
+                  isBolsista={isBolsista}
+                  metricas={data?.metricas}
+                />
+
                 {/* ── Cards de métricas ── */}
                 <SectionTitle>Métricas do Período</SectionTitle>
                 <div className="grid grid-cols-3 gap-3">
