@@ -138,7 +138,9 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           const isPlanFeatureDisabled = functionalityName && !isFeatureEnabled(functionalityName);
 
           // Funcionalidades que sempre devem estar disponíveis (não controladas por plano)
-          const alwaysAvailableFeatures = ['ajuda_rapida', 'minhas_redacoes', 'jarvis'];
+          // microaprendizagem: o card sempre aparece; o controle de acesso
+          // é feito por planos_permitidos em cada item de conteúdo
+          const alwaysAvailableFeatures = ['ajuda_rapida', 'minhas_redacoes', 'jarvis', 'microaprendizagem'];
           const isAlwaysAvailable = alwaysAvailableFeatures.includes(functionalityName || '');
 
           // Verificação de funcionalidades (logs de debug removidos para produção)
