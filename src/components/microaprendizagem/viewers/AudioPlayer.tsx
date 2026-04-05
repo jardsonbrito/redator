@@ -42,7 +42,7 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !srcResolvido) return;
 
     const onTimeUpdate = () => {
       if (audio.duration) setProgresso(audio.currentTime / audio.duration);
@@ -55,13 +55,17 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
     audio.addEventListener('loadedmetadata', onLoaded);
     audio.addEventListener('ended', onEndedEvt);
     audio.addEventListener('error', onError);
+
+    // Forçar carregamento dos metadados quando o src é definido
+    audio.load();
+
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoaded);
       audio.removeEventListener('ended', onEndedEvt);
       audio.removeEventListener('error', onError);
     };
-  }, [onEnded]);
+  }, [srcResolvido, onEnded]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
