@@ -23,7 +23,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, ListChecks, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, Pencil, Trash2, ListChecks, ChevronDown, ChevronUp, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 
 const schema = z.object({
@@ -48,6 +55,7 @@ export const MicroTopicosAdmin = () => {
   const [modo, setModo] = useState<'lista' | 'criar' | 'editar' | 'itens'>('lista');
   const [topicoSelecionado, setTopicoSelecionado] = useState<Topico | null>(null);
   const [topicoExcluindo, setTopicoExcluindo] = useState<Topico | null>(null);
+  const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -277,7 +285,7 @@ export const MicroTopicosAdmin = () => {
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     variant="outline"
                     size="sm"
@@ -287,15 +295,36 @@ export const MicroTopicosAdmin = () => {
                     <ListChecks className="w-3 h-3 mr-1" />
                     Itens
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditar(topico)}>
-                    <Pencil className="w-3 h-3 text-gray-400" />
-                  </Button>
-                  <Button
-                    variant="ghost" size="icon" className="h-7 w-7 text-red-300 hover:text-red-500"
-                    onClick={() => setTopicoExcluindo(topico)}
+                  <DropdownMenu
+                    open={dropdownAberto === topico.id}
+                    onOpenChange={open => setDropdownAberto(open ? topico.id : null)}
                   >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                        <MoreHorizontal className="h-4 w-4 text-gray-600" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
+                      <DropdownMenuItem
+                        className="flex items-center cursor-pointer hover:bg-gray-50"
+                        onClick={() => { setDropdownAberto(null); openEditar(topico); }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50"
+                        onClick={() => {
+                          setDropdownAberto(null);
+                          setTimeout(() => setTopicoExcluindo(topico), 100);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardContent>
             </Card>

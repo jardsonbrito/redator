@@ -16,7 +16,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, Pencil, Trash2, ArrowLeft, Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MicroItem } from '@/hooks/useMicroItens';
 
@@ -43,6 +50,7 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
   const [modo, setModo] = useState<'lista' | 'criar' | 'editar'>('lista');
   const [itemEditando, setItemEditando] = useState<MicroItem | null>(null);
   const [itemExcluindo, setItemExcluindo] = useState<MicroItem | null>(null);
+  const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
 
   const toggleStatus = useMutation({
     mutationFn: async (item: MicroItem) => {
@@ -170,42 +178,59 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <Badge
-                    variant={item.status === 'ativo' ? 'default' : 'secondary'}
                     className={`text-xs ${item.status === 'ativo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
                   >
                     {item.status === 'ativo' ? 'Ativo' : 'Inativo'}
                   </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    title={item.status === 'ativo' ? 'Desativar' : 'Ativar'}
-                    onClick={() => toggleStatus.mutate(item)}
+                  <DropdownMenu
+                    open={dropdownAberto === item.id}
+                    onOpenChange={open => setDropdownAberto(open ? item.id : null)}
                   >
-                    {item.status === 'ativo' ? (
-                      <EyeOff className="w-3 h-3 text-gray-400" />
-                    ) : (
-                      <Eye className="w-3 h-3 text-gray-400" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => { setItemEditando(item); setModo('editar'); }}
-                  >
-                    <Pencil className="w-3 h-3 text-gray-400" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-red-300 hover:text-red-500"
-                    onClick={() => setItemExcluindo(item)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                        <MoreHorizontal className="h-4 w-4 text-gray-600" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
+                      <DropdownMenuItem
+                        className="flex items-center cursor-pointer hover:bg-gray-50"
+                        onClick={() => {
+                          setDropdownAberto(null);
+                          setItemEditando(item);
+                          setModo('editar');
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="flex items-center cursor-pointer hover:bg-gray-50"
+                        onClick={() => {
+                          setDropdownAberto(null);
+                          toggleStatus.mutate(item);
+                        }}
+                      >
+                        {item.status === 'ativo' ? (
+                          <><EyeOff className="mr-2 h-4 w-4" />Desativar</>
+                        ) : (
+                          <><Eye className="mr-2 h-4 w-4" />Ativar</>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50"
+                        onClick={() => {
+                          setDropdownAberto(null);
+                          setTimeout(() => setItemExcluindo(item), 100);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardContent>
             </Card>
