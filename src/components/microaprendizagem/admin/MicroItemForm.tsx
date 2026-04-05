@@ -63,6 +63,10 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
   const [arquivoUpload, setArquivoUpload] = useState<File | null>(null);
   const [uploadando, setUploadando] = useState(false);
   const [questoes, setQuestoes] = useState<Questao[]>([]);
+  // Modo do microtexto: 'pdf' ou 'texto'
+  const [microtextoModo, setMicrotextoModo] = useState<'pdf' | 'texto'>(
+    item?.tipo === 'microtexto' && item?.conteudo_texto ? 'texto' : 'pdf'
+  );
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -193,8 +197,10 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
         ordem: data.ordem,
         planos_permitidos: data.planos_permitidos,
         conteudo_url: ['video', 'podcast'].includes(data.tipo) ? (data.conteudo_url || null) : null,
-        conteudo_texto: data.tipo === 'card' ? (data.conteudo_texto || null) : null,
-        conteudo_storage_path: storagePath,
+        conteudo_texto: data.tipo === 'card' ? (data.conteudo_texto || null)
+          : (data.tipo === 'microtexto' && microtextoModo === 'texto') ? (data.conteudo_texto || null)
+          : null,
+        conteudo_storage_path: (data.tipo === 'microtexto' && microtextoModo === 'texto') ? null : storagePath,
         nota_maxima: data.tipo === 'quiz' ? (data.nota_maxima ?? null) : null,
       };
 
@@ -238,9 +244,10 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
     },
   });
 
-  const precisaUpload = ['audio', 'microtexto', 'infografico', 'flashcard'].includes(tipo);
+  const precisaUpload = ['audio', 'infografico', 'flashcard'].includes(tipo)
+    || (tipo === 'microtexto' && microtextoModo === 'pdf');
   const precisaUrl = ['video', 'podcast'].includes(tipo);
-  const precisaTexto = tipo === 'card';
+  const precisaTexto = tipo === 'card' || (tipo === 'microtexto' && microtextoModo === 'texto');
 
   return (
     <form onSubmit={handleSubmit(d => mutation.mutate(d))} className="space-y-4">
@@ -281,6 +288,29 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
       </div>
 
       {/* Conteúdo condicional */}
+      {/* Toggle PDF / Texto para microtexto */}
+      {tipo === 'microtexto' && (
+        <div className="space-y-1">
+          <Label>Formato do conteúdo</Label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMicrotextoModo('pdf')}
+              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${microtextoModo === 'pdf' ? 'bg-[#3f0776] text-white border-[#3f0776]' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300'}`}
+            >
+              📄 Upload de PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => setMicrotextoModo('texto')}
+              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${microtextoModo === 'texto' ? 'bg-[#3f0776] text-white border-[#3f0776]' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300'}`}
+            >
+              ✏️ Texto digitado
+            </button>
+          </div>
+        </div>
+      )}
+
       {precisaUrl && (
         <div className="space-y-1">
           <Label>URL {tipo === 'video' ? 'do YouTube' : 'do Podcast'} *</Label>
@@ -314,11 +344,13 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
 
       {precisaTexto && (
         <div className="space-y-1">
-          <Label>Conteúdo do card *</Label>
+          <Label>{tipo === 'microtexto' ? 'Conteúdo do texto *' : 'Conteúdo do card *'}</Label>
           <Textarea
             {...register('conteudo_texto')}
-            placeholder="Digite o conteúdo do post-it..."
-            rows={5}
+            placeholder={tipo === 'microtexto'
+              ? 'Digite o texto completo. Use linhas em branco para separar parágrafos...'
+              : 'Digite o conteúdo do post-it...'}
+            rows={tipo === 'microtexto' ? 10 : 5}
           />
         </div>
       )}

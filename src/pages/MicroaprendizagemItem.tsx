@@ -13,6 +13,7 @@ const VideoViewer      = lazy(() => import('@/components/microaprendizagem/viewe
 const AudioPlayer      = lazy(() => import('@/components/microaprendizagem/viewers/AudioPlayer').then(m => ({ default: m.AudioPlayer })));
 const PodcastViewer    = lazy(() => import('@/components/microaprendizagem/viewers/PodcastViewer').then(m => ({ default: m.PodcastViewer })));
 const PdfViewer        = lazy(() => import('@/components/microaprendizagem/viewers/PdfViewer').then(m => ({ default: m.PdfViewer })));
+const MicrotextoViewer = lazy(() => import('@/components/microaprendizagem/viewers/MicrotextoViewer').then(m => ({ default: m.MicrotextoViewer })));
 const InfographicViewer= lazy(() => import('@/components/microaprendizagem/viewers/InfographicViewer').then(m => ({ default: m.InfographicViewer })));
 const CardPostItViewer = lazy(() => import('@/components/microaprendizagem/viewers/CardPostItViewer').then(m => ({ default: m.CardPostItViewer })));
 const QuizViewer       = lazy(() => import('@/components/microaprendizagem/viewers/QuizViewer').then(m => ({ default: m.QuizViewer })));
@@ -86,6 +87,11 @@ const MicroaprendizagemItem = () => {
           />
         );
       case 'microtexto':
+        // Modo texto digitado
+        if (item.conteudo_texto) {
+          return <MicrotextoViewer texto={item.conteudo_texto} />;
+        }
+        // Modo PDF
         return (
           <PdfViewer
             storagePath={item.conteudo_storage_path ?? ''}
