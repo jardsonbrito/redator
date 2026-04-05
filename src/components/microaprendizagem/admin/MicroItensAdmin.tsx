@@ -61,8 +61,27 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
 
   const excluirItem = useMutation({
     mutationFn: async (id: string) => {
+      // Buscar o item antes de deletar para saber o storage path e bucket
+      const { data: item } = await supabase
+        .from('micro_itens')
+        .select('conteudo_storage_path, tipo')
+        .eq('id', id)
+        .single();
+
+      // Apagar o registro do banco
       const { error } = await supabase.from('micro_itens').delete().eq('id', id);
       if (error) throw error;
+
+      // Apagar o arquivo do Storage (hard delete)
+      if (item?.conteudo_storage_path) {
+        const bucket = item.tipo === 'audio'
+          ? 'micro-audio'
+          : item.tipo === 'infografico'
+          ? 'micro-infograficos'
+          : 'micro-pdfs';
+
+        await supabase.storage.from(bucket).remove([item.conteudo_storage_path]);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['micro-itens-admin', topicoId] });

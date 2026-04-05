@@ -91,8 +91,39 @@ export const MicroTopicosAdmin = () => {
 
   const excluirTopico = useMutation({
     mutationFn: async (id: string) => {
+      // Buscar todos os itens do tópico com storage path antes de deletar
+      const { data: itens } = await supabase
+        .from('micro_itens')
+        .select('conteudo_storage_path, tipo')
+        .eq('topico_id', id)
+        .not('conteudo_storage_path', 'is', null);
+
+      // Apagar o tópico (CASCADE apaga os itens no banco)
       const { error } = await supabase.from('micro_topicos').delete().eq('id', id);
       if (error) throw error;
+
+      // Hard delete dos arquivos no Storage
+      if (itens?.length) {
+        const porBucket: Record<string, string[]> = {
+          'micro-audio': [],
+          'micro-pdfs': [],
+          'micro-infograficos': [],
+        };
+        for (const item of itens) {
+          if (!item.conteudo_storage_path) continue;
+          const bucket = item.tipo === 'audio'
+            ? 'micro-audio'
+            : item.tipo === 'infografico'
+            ? 'micro-infograficos'
+            : 'micro-pdfs';
+          porBucket[bucket].push(item.conteudo_storage_path);
+        }
+        await Promise.all(
+          Object.entries(porBucket)
+            .filter(([, paths]) => paths.length > 0)
+            .map(([bucket, paths]) => supabase.storage.from(bucket).remove(paths))
+        );
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['micro-topicos-admin'] });
