@@ -23,19 +23,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Pencil, Trash2, ArrowLeft, Eye, EyeOff, MoreHorizontal } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, Eye, EyeOff, MoreHorizontal, PlaySquare, FileText, StickyNote, AudioWaveform, Mic, Brain, GalleryHorizontalEnd, Image, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MicroItem } from '@/hooks/useMicroItens';
 
-const TIPO_LABEL: Record<string, string> = {
-  video: '🎥 Vídeo',
-  audio: '🎙️ Áudio',
-  podcast: '🎧 Podcast',
-  microtexto: '📄 Microtexto',
-  infografico: '🖼️ Infográfico',
-  card: '📌 Card',
-  quiz: '❓ Quiz',
-  flashcard: '🃏 Flashcard',
+const TIPO_CONFIG: Record<string, { icon: LucideIcon; label: string; iconBg: string; iconColor: string }> = {
+  video:       { icon: PlaySquare,           label: 'Vídeo',       iconBg: 'bg-gray-800',   iconColor: 'text-white' },
+  microtexto:  { icon: FileText,             label: 'Microtexto',  iconBg: 'bg-green-100',  iconColor: 'text-green-700' },
+  card:        { icon: StickyNote,           label: 'Card',        iconBg: 'bg-amber-100',  iconColor: 'text-amber-600' },
+  audio:       { icon: AudioWaveform,        label: 'Áudio',       iconBg: 'bg-slate-100',  iconColor: 'text-slate-700' },
+  podcast:     { icon: Mic,                  label: 'Podcast',     iconBg: 'bg-slate-100',  iconColor: 'text-slate-600' },
+  quiz:        { icon: Brain,                label: 'Quiz',        iconBg: 'bg-purple-100', iconColor: 'text-purple-700' },
+  flashcard:   { icon: GalleryHorizontalEnd, label: 'Flashcard',   iconBg: 'bg-blue-100',   iconColor: 'text-blue-700' },
+  infografico: { icon: Image,                label: 'Infográfico', iconBg: 'bg-teal-100',   iconColor: 'text-teal-700' },
 };
 
 interface Props {
@@ -161,11 +161,15 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
           {itens.map((item) => (
             <Card key={item.id} className="border border-gray-100">
               <CardContent className="py-3 px-4 flex items-center gap-3">
-                <span className="text-lg shrink-0">{TIPO_LABEL[item.tipo]?.split(' ')[0]}</span>
+                {(() => { const cfg = TIPO_CONFIG[item.tipo]; const Icon = cfg?.icon ?? FileText; return (
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${cfg?.iconBg ?? 'bg-gray-100'}`}>
+                    <Icon className={`w-4 h-4 ${cfg?.iconColor ?? 'text-gray-500'}`} />
+                  </div>
+                ); })()}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate">{item.titulo}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-xs text-gray-400">{TIPO_LABEL[item.tipo]?.split(' ').slice(1).join(' ')}</span>
+                    <span className="text-xs text-gray-400">{TIPO_CONFIG[item.tipo]?.label ?? item.tipo}</span>
                     <span className="text-xs text-gray-300">·</span>
                     <span className="text-xs text-gray-400">Ordem: {item.ordem}</span>
                     {item.planos_permitidos.length > 0 && (

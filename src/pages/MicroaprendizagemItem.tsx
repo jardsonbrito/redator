@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { StudentHeader } from '@/components/StudentHeader';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, PlaySquare, FileText, StickyNote, AudioWaveform, Mic, Brain, GalleryHorizontalEnd, Image, type LucideIcon } from 'lucide-react';
 import { useMicroItem } from '@/hooks/useMicroItens';
 import { useMicroProgressoItem, useMicroProgressoMutation } from '@/hooks/useMicroProgresso';
 import { MicroProgressBadge } from '@/components/microaprendizagem/progress/MicroProgressBadge';
@@ -18,15 +18,15 @@ const CardPostItViewer = lazy(() => import('@/components/microaprendizagem/viewe
 const QuizViewer       = lazy(() => import('@/components/microaprendizagem/viewers/QuizViewer').then(m => ({ default: m.QuizViewer })));
 const FlashcardViewer  = lazy(() => import('@/components/microaprendizagem/viewers/FlashcardViewer').then(m => ({ default: m.FlashcardViewer })));
 
-const TIPO_LABEL: Record<string, string> = {
-  video: '🎥 Vídeo',
-  audio: '🎙️ Áudio',
-  podcast: '🎧 Podcast',
-  microtexto: '📄 Microtexto',
-  infografico: '🖼️ Infográfico',
-  card: '📌 Card',
-  quiz: '❓ Quiz',
-  flashcard: '🃏 Flashcard',
+const TIPO_CONFIG: Record<string, { icon: LucideIcon; label: string; iconBg: string; iconColor: string }> = {
+  video:       { icon: PlaySquare,           label: 'Vídeo',       iconBg: 'bg-gray-800',   iconColor: 'text-white' },
+  microtexto:  { icon: FileText,             label: 'Microtexto',  iconBg: 'bg-green-100',  iconColor: 'text-green-700' },
+  card:        { icon: StickyNote,           label: 'Card',        iconBg: 'bg-amber-100',  iconColor: 'text-amber-600' },
+  audio:       { icon: AudioWaveform,        label: 'Áudio',       iconBg: 'bg-slate-100',  iconColor: 'text-slate-700' },
+  podcast:     { icon: Mic,                  label: 'Podcast',     iconBg: 'bg-slate-100',  iconColor: 'text-slate-600' },
+  quiz:        { icon: Brain,                label: 'Quiz',        iconBg: 'bg-purple-100', iconColor: 'text-purple-700' },
+  flashcard:   { icon: GalleryHorizontalEnd, label: 'Flashcard',   iconBg: 'bg-blue-100',   iconColor: 'text-blue-700' },
+  infografico: { icon: Image,                label: 'Infográfico', iconBg: 'bg-teal-100',   iconColor: 'text-teal-700' },
 };
 
 const ViewerSkeleton = () => (
@@ -171,9 +171,12 @@ const MicroaprendizagemItem = () => {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h1 className="text-xl font-bold text-gray-900">{item.titulo}</h1>
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                      {TIPO_LABEL[item.tipo]}
-                    </span>
+                    {(() => { const cfg = TIPO_CONFIG[item.tipo]; const Icon = cfg?.icon ?? FileText; return (
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${cfg?.iconBg ?? 'bg-gray-100'} ${cfg?.iconColor ?? 'text-gray-600'}`}>
+                        <Icon className="w-3 h-3" />
+                        {cfg?.label ?? item.tipo}
+                      </span>
+                    ); })()}
                     <MicroProgressBadge status={status} size="md" />
                   </div>
                   {item.descricao_curta && (
