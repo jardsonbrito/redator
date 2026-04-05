@@ -12,7 +12,6 @@ const toEmbedUrl = (url: string): string => {
 
     // Spotify: open.spotify.com/episode/ID ou /show/ID
     if (u.hostname === 'open.spotify.com') {
-      // Já é embed se o path começa com /embed
       if (u.pathname.startsWith('/embed')) return url;
       return `https://open.spotify.com/embed${u.pathname}?utm_source=generator`;
     }
@@ -22,14 +21,40 @@ const toEmbedUrl = (url: string): string => {
       return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%233f0776&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false`;
     }
 
-    // Anchor.fm (redirecionado para Spotify)
+    // Anchor.fm
     if (u.hostname === 'anchor.fm' || u.hostname === 'www.anchor.fm') {
       return `https://anchor.fm${u.pathname}/embed`;
+    }
+
+    // YouTube: youtube.com/watch?v=ID ou youtu.be/ID
+    if (u.hostname === 'www.youtube.com' || u.hostname === 'youtube.com') {
+      if (u.pathname.startsWith('/embed')) return url;
+      const videoId = u.searchParams.get('v');
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+    }
+    if (u.hostname === 'youtu.be') {
+      const videoId = u.pathname.slice(1);
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+    }
+
+    // Instagram: /p/ID/ ou /reel/ID/
+    if (u.hostname === 'www.instagram.com' || u.hostname === 'instagram.com') {
+      if (u.pathname.endsWith('/embed/')) return url;
+      const path = u.pathname.replace(/\/$/, '');
+      return `https://www.instagram.com${path}/embed/`;
     }
   } catch {
     // URL inválida, retorna como está
   }
   return url;
+};
+
+const isVideo = (url: string) => {
+  try {
+    const h = new URL(url).hostname;
+    return h === 'www.youtube.com' || h === 'youtube.com' || h === 'youtu.be'
+      || h === 'www.instagram.com' || h === 'instagram.com';
+  } catch { return false; }
 };
 
 export const PodcastViewer = ({ url, onPlay }: Props) => {
@@ -38,10 +63,11 @@ export const PodcastViewer = ({ url, onPlay }: Props) => {
   onPlayRef.current = onPlay;
 
   useEffect(() => {
-    // Marca em andamento ao montar (não depende do onLoad do iframe)
     onPlayRef.current?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const altura = isVideo(url) ? '400px' : '232px';
 
   return (
     <div className="w-full space-y-3">
@@ -51,7 +77,7 @@ export const PodcastViewer = ({ url, onPlay }: Props) => {
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy"
           className="w-full"
-          style={{ minHeight: '232px', border: 0 }}
+          style={{ minHeight: altura, border: 0 }}
           title="Podcast"
         />
       </div>

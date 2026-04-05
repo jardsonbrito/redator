@@ -290,7 +290,7 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
           />
           {tipo === 'podcast' && (
             <p className="text-xs text-gray-400">
-              Cole a URL da página do episódio. Spotify, SoundCloud e Anchor.fm são convertidos automaticamente para embed.
+              Plataformas suportadas: Spotify, SoundCloud, Anchor.fm, YouTube e Instagram. Cole a URL normal — o embed é gerado automaticamente.
             </p>
           )}
         </div>
