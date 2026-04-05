@@ -225,7 +225,7 @@ const Index = () => {
     {
       title: "Microaprendizagem",
       path: "/microaprendizagem",
-      icon: Layers,
+      icon: BookOpen,
       tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais para aprender no seu ritmo.",
       showAlways: true
     }
