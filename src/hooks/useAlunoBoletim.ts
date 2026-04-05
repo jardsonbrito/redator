@@ -68,6 +68,7 @@ export interface MetricasBoletim {
     obras: number;
   };
   totalGuiasConcluidos: number;
+  totalMicroItens: number;
 }
 
 export interface EvolucaoNota {
@@ -155,6 +156,7 @@ async function fetchBoletimData(
     aulasRes,
     lousasRes,
     eventosRes,
+    microProgressoRes,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -224,6 +226,14 @@ async function fetchBoletimData(
       .eq("month", mes)
       .eq("year", ano)
       .order("occurred_at", { ascending: false }),
+
+    supabase
+      .from("micro_progresso")
+      .select("id", { count: "exact", head: true })
+      .eq("email_aluno", email)
+      .eq("status", "concluido")
+      .gte("concluido_em", monthStart)
+      .lte("concluido_em", monthEnd),
   ]);
 
   const autorId: string | null = (perfilRes.data as any)?.id ?? null;
@@ -408,6 +418,7 @@ async function fetchBoletimData(
     totalRepertorio: repertorioDetalhe.paragrafos + repertorioDetalhe.frases + repertorioDetalhe.obras,
     repertorioDetalhe,
     totalGuiasConcluidos: new Set((guiasConcluídosRes.data || []).map((r: any) => r.guia_id)).size,
+    totalMicroItens: microProgressoRes.count ?? 0,
   };
 
   // --- Evolução de notas (redações com nota, ordenadas por data) ---
@@ -444,6 +455,7 @@ async function fetchBoletimData(
     { tipo: "Aulas ao Vivo", total: totalPresencas, cor: "#f59e0b" },
     { tipo: "Lousas", total: lousas.length, cor: "#10b981" },
     { tipo: "Repertório", total: metricas.totalRepertorio, cor: "#f97316" },
+    { tipo: "Microaprendizagem", total: metricas.totalMicroItens, cor: "#06b6d4" },
   ];
 
   return {

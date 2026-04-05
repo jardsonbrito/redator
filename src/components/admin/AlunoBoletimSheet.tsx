@@ -35,6 +35,7 @@ import {
   Calendar,
   Library,
   Map,
+  Brain,
 } from "lucide-react";
 import {
   LineChart,
@@ -317,6 +318,13 @@ export function AlunoBoletimSheet({
                     color="#7c3aed"
                     icon={Map}
                   />
+                  <MetricCard
+                    label="Microaprendizagem"
+                    value={(data.metricas.totalMicroItens ?? 0).toString()}
+                    sub="itens concluídos"
+                    color="#06b6d4"
+                    icon={Brain}
+                  />
                 </div>
 
                 {/* ── Evolução de notas ── */}
@@ -589,7 +597,8 @@ export function AlunoBoletimSheet({
                   data.metricas.totalExercicios === 0 &&
                   data.metricas.totalPresencas === 0 &&
                   data.metricas.totalLousas === 0 &&
-                  data.metricas.totalRepertorio === 0 && (
+                  data.metricas.totalRepertorio === 0 &&
+                  data.metricas.totalMicroItens === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                       <BarChart3 className="h-8 w-8 opacity-30" />
                       <p className="text-sm">Nenhuma atividade registrada neste período</p>

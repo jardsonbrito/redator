@@ -190,6 +190,11 @@ function drawMetricCards(doc: jsPDF, metricas: MetricasBoletim, y: number): numb
       value: (metricas.totalGuiasConcluidos ?? 0).toString(),
       color: [124, 58, 237] as [number, number, number],
     },
+    {
+      label: "Microaprendizagem",
+      value: (metricas.totalMicroItens ?? 0).toString(),
+      color: [6, 182, 212] as [number, number, number],
+    },
   ];
 
   const numRows = Math.ceil(cards.length / 3);
