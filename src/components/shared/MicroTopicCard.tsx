@@ -55,11 +55,7 @@ export const MicroTopicCard = ({ topico, index = 0 }: Props) => {
 
         {/* Overlay escuro na imagem para legibilidade */}
         {coverUrl && (
-          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-              <BookOpen className="w-6 h-6 text-white" />
-            </div>
-          </div>
+          <div className="absolute inset-0 bg-black/30" />
         )}
 
         {todosConcluidos && (
