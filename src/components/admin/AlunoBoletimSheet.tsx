@@ -289,8 +289,14 @@ export function AlunoBoletimSheet({
   isBolsista = false,
 }: AlunoBoletimSheetProps) {
   const now = new Date();
-  const [mes, setMes] = useState(now.getMonth() + 1);
-  const [ano, setAno] = useState(now.getFullYear());
+  const defaultMes = now.getDate() <= 10
+    ? (now.getMonth() === 0 ? 12 : now.getMonth())
+    : now.getMonth() + 1;
+  const defaultAno = now.getDate() <= 10 && now.getMonth() === 0
+    ? now.getFullYear() - 1
+    : now.getFullYear();
+  const [mes, setMes] = useState(defaultMes);
+  const [ano, setAno] = useState(defaultAno);
   const [exportando, setExportando] = useState(false);
 
   const { data, isLoading } = useAlunoBoletim(

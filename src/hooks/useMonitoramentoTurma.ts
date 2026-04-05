@@ -178,24 +178,22 @@ async function fetchMonitoramentoTurma(
       .eq('plano', 'Bolsista')
       .gte('data_validade', hoje),
 
+    // Radar mede ENGAJAMENTO: contar todas as redações enviadas (não só corrigidas)
     supabase.from('redacoes_enviadas')
       .select('email_aluno, data_envio')
       .in('email_aluno', emails)
-      .eq('corrigida', true)
       .gte('data_envio', rangeStart)
       .lte('data_envio', rangeEnd),
 
     supabase.from('redacoes_simulado')
       .select('email_aluno, data_envio')
       .in('email_aluno', emails)
-      .eq('corrigida', true)
       .gte('data_envio', rangeStart)
       .lte('data_envio', rangeEnd),
 
     supabase.from('redacoes_exercicio')
       .select('email_aluno, data_envio')
       .in('email_aluno', emails)
-      .eq('corrigida', true)
       .gte('data_envio', rangeStart)
       .lte('data_envio', rangeEnd),
 

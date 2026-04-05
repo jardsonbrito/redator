@@ -69,12 +69,17 @@ export function calcularScore(
   };
 
   // Excluir métricas marcadas como "sem dados" (-1)
-  const validas        = Object.entries(notas).filter(([, v]) => v >= 0);
-  const comAtividade   = validas.filter(([, v]) => v > 0);
+  const validas      = Object.entries(notas).filter(([, v]) => v >= 0);
+  const comAtividade = validas.filter(([, v]) => v > 0);
+
+  // Confiança: frequência não-null (aulas no período) já é dado suficiente,
+  // mesmo que o aluno não tenha comparecido a nenhuma
+  const temFrequencia = metricas.frequencia !== null;
 
   const confianca: ScoreResult['confianca'] =
     comAtividade.length >= 3 ? 'total' :
-    comAtividade.length >= 1 ? 'parcial' : 'insuficiente';
+    (comAtividade.length >= 1 || temFrequencia) ? 'parcial' :
+    'insuficiente';
 
   let somaPesos     = 0;
   let somaPonderada = 0;

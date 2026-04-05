@@ -70,16 +70,17 @@ async function fetchScoreHistorico(
     guiasRes,
     repPRes, repFRes, repORes,
   ] = await Promise.all([
+    // Score histórico do Radar mede engajamento: todas as enviadas
     supabase.from('redacoes_enviadas').select('data_envio')
-      .eq('email_aluno', email).eq('corrigida', true)
+      .eq('email_aluno', email)
       .gte('data_envio', rangeStart).lte('data_envio', rangeEnd),
 
     supabase.from('redacoes_simulado').select('data_envio')
-      .eq('email_aluno', email).eq('corrigida', true)
+      .eq('email_aluno', email)
       .gte('data_envio', rangeStart).lte('data_envio', rangeEnd),
 
     supabase.from('redacoes_exercicio').select('data_envio')
-      .eq('email_aluno', email).eq('corrigida', true)
+      .eq('email_aluno', email)
       .gte('data_envio', rangeStart).lte('data_envio', rangeEnd),
 
     supabase.from('radar_dados').select('data_realizacao')

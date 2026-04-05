@@ -36,9 +36,17 @@ function SkeletonList() {
 
 export const MonitoramentoPage = () => {
   const now = new Date();
+  // Nos primeiros 10 dias do mês, o mês atual tem poucos dados — usar mês anterior como padrão
+  const defaultMes = now.getDate() <= 10
+    ? (now.getMonth() === 0 ? 12 : now.getMonth())
+    : now.getMonth() + 1;
+  const defaultAno = now.getDate() <= 10 && now.getMonth() === 0
+    ? now.getFullYear() - 1
+    : now.getFullYear();
+
   const [selectedTurma, setSelectedTurma] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-  const [selectedYear,  setSelectedYear]  = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(defaultMes);
+  const [selectedYear,  setSelectedYear]  = useState(defaultAno);
   const [filtroAtivo,   setFiltroAtivo]   = useState<string | null>(null);
   const [selectedAluno, setSelectedAluno] = useState<AlunoMonitoramento | null>(null);
   const [boletimOpen,   setBoletimOpen]   = useState(false);
