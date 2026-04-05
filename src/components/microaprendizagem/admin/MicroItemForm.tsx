@@ -44,6 +44,7 @@ const schema = z.object({
   planos_permitidos: z.array(z.string()).min(1, 'Selecione ao menos um plano'),
   conteudo_url: z.string().optional(),
   conteudo_texto: z.string().optional(),
+  nota_maxima: z.number().min(0).nullable().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -74,6 +75,7 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
       planos_permitidos: item?.planos_permitidos ?? [],
       conteudo_url: item?.conteudo_url ?? '',
       conteudo_texto: item?.conteudo_texto ?? '',
+      nota_maxima: item?.nota_maxima ?? null,
     },
   });
 
@@ -193,6 +195,7 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
         conteudo_url: ['video', 'podcast'].includes(data.tipo) ? (data.conteudo_url || null) : null,
         conteudo_texto: data.tipo === 'card' ? (data.conteudo_texto || null) : null,
         conteudo_storage_path: storagePath,
+        nota_maxima: data.tipo === 'quiz' ? (data.nota_maxima ?? null) : null,
       };
 
       let itemId = item?.id;
@@ -283,8 +286,13 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
           <Label>URL {tipo === 'video' ? 'do YouTube' : 'do Podcast'} *</Label>
           <Input
             {...register('conteudo_url')}
-            placeholder={tipo === 'video' ? 'https://www.youtube.com/watch?v=...' : 'URL do podcast...'}
+            placeholder={tipo === 'video' ? 'https://www.youtube.com/watch?v=...' : 'https://open.spotify.com/episode/...'}
           />
+          {tipo === 'podcast' && (
+            <p className="text-xs text-gray-400">
+              Cole a URL da página do episódio. Spotify, SoundCloud e Anchor.fm são convertidos automaticamente para embed.
+            </p>
+          )}
         </div>
       )}
 
@@ -312,6 +320,30 @@ export const MicroItemForm = ({ topicoId, item, onSuccess, onCancel }: Props) =>
             placeholder="Digite o conteúdo do post-it..."
             rows={5}
           />
+        </div>
+      )}
+
+      {tipo === 'quiz' && (
+        <div className="space-y-1">
+          <Label>Nota máxima do quiz</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="Ex: 10"
+              value={watch('nota_maxima') ?? ''}
+              onChange={e => {
+                const v = e.target.value;
+                setValue('nota_maxima', v === '' ? null : Number(v));
+              }}
+              className="w-28"
+            />
+            <p className="text-xs text-gray-400">
+              Cada questão valerá <strong>{watch('nota_maxima') && questoes.length ? ((watch('nota_maxima') as number) / questoes.length).toFixed(2) : '—'}</strong> ponto(s)
+            </p>
+          </div>
+          <p className="text-xs text-gray-400">Deixe em branco para exibir apenas "acertou X de Y"</p>
         </div>
       )}
 

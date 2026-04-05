@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Volume2 } from 'lucide-react';
@@ -19,6 +19,8 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
   const [playing, setPlaying] = useState(false);
   const [progresso, setProgresso] = useState(0);
   const [duracao, setDuracao] = useState(0);
+  const onEndedRef = useRef(onEnded);
+  onEndedRef.current = onEnded;
 
   // Resolver URL: se vier storagePath, gerar signed URL (evita problema de CORS)
   useEffect(() => {
@@ -48,7 +50,7 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
       if (audio.duration) setProgresso(audio.currentTime / audio.duration);
     };
     const onLoaded = () => setDuracao(audio.duration);
-    const onEndedEvt = () => { setPlaying(false); onEnded?.(); };
+    const onEndedEvt = () => { setPlaying(false); onEndedRef.current?.(); };
     const onError = () => { setPlaying(false); setErroCarregar(true); };
 
     audio.addEventListener('timeupdate', onTimeUpdate);
@@ -65,7 +67,8 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
       audio.removeEventListener('ended', onEndedEvt);
       audio.removeEventListener('error', onError);
     };
-  }, [srcResolvido, onEnded]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [srcResolvido]);
 
   const togglePlay = () => {
     const audio = audioRef.current;

@@ -9,6 +9,7 @@ import { useMicroQuizQuestoes } from '@/hooks/useMicroItens';
 
 interface Props {
   itemId: string;
+  notaMaxima?: number | null;
   onConcluido?: () => void;
 }
 
@@ -24,7 +25,7 @@ const embaralhar = <T,>(arr: T[], seed: number): T[] => {
   return a;
 };
 
-export const QuizViewer = ({ itemId, onConcluido }: Props) => {
+export const QuizViewer = ({ itemId, notaMaxima, onConcluido }: Props) => {
   const { studentData } = useStudentAuth();
   const { data: questoes = [], isLoading } = useMicroQuizQuestoes(itemId);
   const queryClient = useQueryClient();
@@ -146,15 +147,34 @@ export const QuizViewer = ({ itemId, onConcluido }: Props) => {
 
   // Tela de resultado final
   if (quizConcluido) {
+    const notaObtida = notaMaxima != null
+      ? (acertosTotal / questoes.length) * notaMaxima
+      : null;
+    const aprovado = notaMaxima != null ? notaObtida! >= notaMaxima * 0.6 : acertosTotal === questoes.length;
+
     return (
       <div className="text-center space-y-4 py-6">
-        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-          <CheckCircle2 className="w-8 h-8 text-green-600" />
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${aprovado ? 'bg-green-100' : 'bg-yellow-100'}`}>
+          <CheckCircle2 className={`w-8 h-8 ${aprovado ? 'text-green-600' : 'text-yellow-500'}`} />
         </div>
         <h3 className="text-lg font-bold text-gray-800">Quiz concluído!</h3>
-        <p className="text-sm text-gray-500">
-          Você acertou <strong>{acertosTotal}</strong> de <strong>{questoes.length}</strong> questões.
-        </p>
+
+        {notaMaxima != null ? (
+          <div className="space-y-1">
+            <p className="text-3xl font-bold text-[#3f0776]">
+              {notaObtida!.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+              <span className="text-lg text-gray-400 font-normal"> / {notaMaxima.toLocaleString('pt-BR')}</span>
+            </p>
+            <p className="text-sm text-gray-500">
+              {acertosTotal} de {questoes.length} questões corretas
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Você acertou <strong>{acertosTotal}</strong> de <strong>{questoes.length}</strong> questões.
+          </p>
+        )}
+
         <Button variant="outline" size="sm" onClick={reiniciar}>
           <RefreshCw className="w-4 h-4 mr-1" />
           Refazer quiz

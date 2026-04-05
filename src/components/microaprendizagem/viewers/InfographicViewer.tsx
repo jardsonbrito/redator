@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PdfViewer } from './PdfViewer';
 
@@ -11,6 +11,8 @@ const isPdf = (path: string) => path.toLowerCase().endsWith('.pdf');
 
 export const InfographicViewer = ({ storagePath, onOpen }: Props) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const onOpenRef = useRef(onOpen);
+  onOpenRef.current = onOpen;
 
   useEffect(() => {
     if (isPdf(storagePath)) return;
@@ -20,8 +22,9 @@ export const InfographicViewer = ({ storagePath, onOpen }: Props) => {
       .getPublicUrl(storagePath);
 
     setImageUrl(data.publicUrl);
-    onOpen?.();
-  }, [storagePath, onOpen]);
+    onOpenRef.current?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storagePath]);
 
   if (isPdf(storagePath)) {
     return <PdfViewer storagePath={storagePath} bucket="micro-infograficos" onOpen={onOpen} />;

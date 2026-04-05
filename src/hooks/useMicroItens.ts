@@ -15,6 +15,7 @@ export interface MicroItem {
   conteudo_url: string | null;
   conteudo_storage_path: string | null;
   conteudo_texto: string | null;
+  nota_maxima: number | null;
   created_at: string;
   updated_at: string;
 }

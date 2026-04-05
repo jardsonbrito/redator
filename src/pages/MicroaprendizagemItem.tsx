@@ -111,6 +111,7 @@ const MicroaprendizagemItem = () => {
         return (
           <QuizViewer
             itemId={item.id}
+            notaMaxima={item.nota_maxima}
             onConcluido={() => marcarConcluido.mutate(item.id)}
           />
         );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText } from 'lucide-react';
 
@@ -11,6 +11,8 @@ interface Props {
 export const PdfViewer = ({ storagePath, bucket = 'micro-pdfs', onOpen }: Props) => {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [erro, setErro] = useState(false);
+  const onOpenRef = useRef(onOpen);
+  onOpenRef.current = onOpen;
 
   useEffect(() => {
     const gerar = async () => {
@@ -23,10 +25,11 @@ export const PdfViewer = ({ storagePath, bucket = 'micro-pdfs', onOpen }: Props)
         return;
       }
       setSignedUrl(data.signedUrl);
-      onOpen?.();
+      onOpenRef.current?.();
     };
     gerar();
-  }, [storagePath, bucket, onOpen]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storagePath, bucket]);
 
   if (erro) {
     return (
