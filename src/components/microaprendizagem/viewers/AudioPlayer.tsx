@@ -1,18 +1,44 @@
 import { useState, useRef, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Volume2 } from 'lucide-react';
 
 interface Props {
-  url: string;
+  /** URL direta (para áudio com URL externa) */
+  url?: string;
+  /** Path no bucket micro-audio (para áudio enviado via upload) */
+  storagePath?: string;
   onPlay?: () => void;
   onEnded?: () => void;
 }
 
-export const AudioPlayer = ({ url, onPlay, onEnded }: Props) => {
+export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [srcResolvido, setSrcResolvido] = useState<string | null>(null);
+  const [erroCarregar, setErroCarregar] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progresso, setProgresso] = useState(0);
   const [duracao, setDuracao] = useState(0);
+
+  // Resolver URL: se vier storagePath, gerar signed URL (evita problema de CORS)
+  useEffect(() => {
+    if (url) {
+      setSrcResolvido(url);
+      return;
+    }
+    if (!storagePath) return;
+
+    supabase.storage
+      .from('micro-audio')
+      .createSignedUrl(storagePath, 3600) // 1 hora
+      .then(({ data, error }) => {
+        if (error || !data?.signedUrl) {
+          setErroCarregar(true);
+          return;
+        }
+        setSrcResolvido(data.signedUrl);
+      });
+  }, [url, storagePath]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -23,14 +49,17 @@ export const AudioPlayer = ({ url, onPlay, onEnded }: Props) => {
     };
     const onLoaded = () => setDuracao(audio.duration);
     const onEndedEvt = () => { setPlaying(false); onEnded?.(); };
+    const onError = () => { setPlaying(false); setErroCarregar(true); };
 
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoaded);
     audio.addEventListener('ended', onEndedEvt);
+    audio.addEventListener('error', onError);
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoaded);
       audio.removeEventListener('ended', onEndedEvt);
+      audio.removeEventListener('error', onError);
     };
   }, [onEnded]);
 
@@ -41,9 +70,15 @@ export const AudioPlayer = ({ url, onPlay, onEnded }: Props) => {
       audio.pause();
       setPlaying(false);
     } else {
-      audio.play();
-      setPlaying(true);
-      onPlay?.();
+      audio.play()
+        .then(() => {
+          setPlaying(true);
+          onPlay?.();
+        })
+        .catch(() => {
+          setPlaying(false);
+          setErroCarregar(true);
+        });
     }
   };
 
@@ -56,17 +91,32 @@ export const AudioPlayer = ({ url, onPlay, onEnded }: Props) => {
   };
 
   const formatTime = (s: number) => {
-    if (!isFinite(s)) return '0:00';
+    if (!isFinite(s) || s === 0) return '0:00';
     const m = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
+  if (erroCarregar) {
+    return (
+      <div className="bg-white border border-red-100 rounded-2xl p-5 text-center text-sm text-red-400">
+        Não foi possível carregar o áudio. Verifique o arquivo cadastrado.
+      </div>
+    );
+  }
+
+  if (!srcResolvido) {
+    return (
+      <div className="bg-white border border-gray-100 rounded-2xl p-5 h-40 flex items-center justify-center animate-pulse">
+        <p className="text-sm text-gray-400">Carregando áudio...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-      <audio ref={audioRef} src={url} preload="metadata" />
+      <audio ref={audioRef} src={srcResolvido} preload="metadata" />
 
-      {/* Ícone + título */}
       <div className="flex items-center gap-3 mb-5">
         <div className="w-12 h-12 rounded-xl bg-[#3f0776] flex items-center justify-center shrink-0">
           <Volume2 className="w-6 h-6 text-white" />
@@ -79,7 +129,6 @@ export const AudioPlayer = ({ url, onPlay, onEnded }: Props) => {
         </div>
       </div>
 
-      {/* Barra de progresso */}
       <div
         className="w-full h-2 bg-gray-100 rounded-full cursor-pointer mb-3 relative overflow-hidden"
         onClick={seek}
@@ -90,13 +139,11 @@ export const AudioPlayer = ({ url, onPlay, onEnded }: Props) => {
         />
       </div>
 
-      {/* Tempo */}
       <div className="flex justify-between text-xs text-gray-400 mb-4">
         <span>{formatTime((audioRef.current?.currentTime) ?? 0)}</span>
         <span>{formatTime(duracao)}</span>
       </div>
 
-      {/* Play/Pause */}
       <div className="flex justify-center">
         <Button
           onClick={togglePlay}

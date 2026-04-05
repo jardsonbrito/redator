@@ -43,7 +43,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <App />
       <Toaster />
-      <SonnerToaster position="top-right" richColors />
+      <SonnerToaster position="top-right" richColors duration={2000} />
     </QueryClientProvider>
   </StrictMode>,
 );

@@ -73,7 +73,8 @@ const MicroaprendizagemItem = () => {
       case 'audio':
         return (
           <AudioPlayer
-            url={getPublicUrl(item)}
+            storagePath={item.conteudo_storage_path ?? undefined}
+            url={item.conteudo_url ?? undefined}
             onPlay={() => marcarEmAndamento.mutate(item.id)}
           />
         );
