@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Bot } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Bot, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -220,6 +220,13 @@ const Index = () => {
       path: "/gamificacao",
       icon: Gamepad2,
       tooltip: "Participe de jogos educativos para treinar redação.",
+      showAlways: true
+    },
+    {
+      title: "Microaprendizagem",
+      path: "/microaprendizagem",
+      icon: Layers,
+      tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais para aprender no seu ritmo.",
       showAlways: true
     }
   ];
