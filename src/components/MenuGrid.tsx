@@ -100,7 +100,8 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
       'Diário Online': 'diario_online',
       'Gamificação': 'gamificacao',
       'Repertório Orientado': 'repertorio_orientado',
-      'Jarvis': 'jarvis'
+      'Jarvis': 'jarvis',
+      'Microaprendizagem': 'microaprendizagem'
     };
     return mapping[title] || '';
   };

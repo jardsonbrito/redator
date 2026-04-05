@@ -16,7 +16,8 @@ import {
   Mail,
   StickyNote,
   Map,
-  Bot
+  Bot,
+  Layers
 } from "lucide-react";
 import {
   BookOpen as PhosphorBookOpen,
@@ -145,6 +146,9 @@ import { JarvisCreditManagementBulk } from "@/components/admin/JarvisCreditManag
 import { JarvisModosManagement } from "@/components/admin/JarvisModosManagement";
 import { JarvisHistoricoAdmin } from "@/components/admin/JarvisHistoricoAdmin";
 import { JarvisTutoriaConfiguracao } from "@/components/admin/JarvisTutoriaConfiguracao";
+
+// Import microaprendizagem admin
+import { MicroTopicosAdmin } from "@/components/microaprendizagem/admin/MicroTopicosAdmin";
 
 // Import diário components
 import GestaoEtapas from "@/pages/admin/GestaoEtapas";
@@ -717,6 +721,7 @@ const Admin = () => {
     { id: "ajuda-rapida", label: "Ajuda Rápida", icon: ChatCircle, iconColor: "#00BCD4" },
     { id: "repertorio-orientado", label: "Repertório Orientado", icon: Article, iconColor: "#8B5CF6" },
     { id: "laboratorio", label: "Laboratório", icon: LaboratorioIcon, iconColor: "#7C3AED" },
+    { id: "microaprendizagem", label: "Microaprendizagem", icon: Layers, iconColor: "#8B5CF6" },
     { id: "guia-tematico", label: "Guia Temático", icon: Map, iconColor: "#7C3AED" },
 
     // Linha 7: Gestão de Usuários
@@ -1151,6 +1156,19 @@ const Admin = () => {
       case "laboratorio":
         navigate('/admin/laboratorio');
         return null;
+
+      case "microaprendizagem":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Microaprendizagem</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Gerencie tópicos e conteúdos. O acesso é controlado por plano em cada item.
+              </p>
+            </div>
+            <MicroTopicosAdmin />
+          </div>
+        );
 
       case "guia-tematico":
         navigate('/admin/guia-tematico');

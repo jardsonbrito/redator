@@ -42,7 +42,8 @@ const DEFAULT_PLAN_FEATURES = {
     'top_5': true,
     'minhas_conquistas': true,
     'repertorio_orientado': false,
-    'jarvis': true
+    'jarvis': true,
+    'microaprendizagem': false
   },
   'Lapidação': {
     'temas': true,
@@ -60,7 +61,8 @@ const DEFAULT_PLAN_FEATURES = {
     'top_5': true,
     'minhas_conquistas': true,
     'repertorio_orientado': true,
-    'jarvis': true
+    'jarvis': true,
+    'microaprendizagem': false
   },
   'Liderança': {
     'temas': true,
@@ -78,7 +80,8 @@ const DEFAULT_PLAN_FEATURES = {
     'top_5': true,
     'minhas_conquistas': true,
     'repertorio_orientado': true,
-    'jarvis': true
+    'jarvis': true,
+    'microaprendizagem': false
   },
   'Bolsista': {
     'temas': true,
@@ -96,7 +99,8 @@ const DEFAULT_PLAN_FEATURES = {
     'top_5': true,
     'minhas_conquistas': true,
     'repertorio_orientado': false,
-    'jarvis': true
+    'jarvis': true,
+    'microaprendizagem': false
   }
 };
 

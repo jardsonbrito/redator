@@ -4,7 +4,7 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList, Library, Bot } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList, Library, Bot, Layers } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 
@@ -131,6 +131,14 @@ const Student = () => {
       path: "/simulados",
       icon: ClipboardCheck,
       tooltip: "Participe de simulados com horário controlado e correção detalhada.",
+      showAlways: true
+    },
+    // Microaprendizagem
+    {
+      title: "Microaprendizagem",
+      path: "/microaprendizagem",
+      icon: Layers,
+      tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais para aprender no seu ritmo.",
       showAlways: true
     },
     // Processo Seletivo - Visível apenas para alunos sem plano ativo e que não participaram anteriormente
