@@ -62,8 +62,8 @@ export const MonitoramentoPage = () => {
     if (!data?.alunos) return [];
     const list = data.alunos;
     if (filtroAtivo === 'bolsistas')  return list.filter(a => a.isBolsista);
-    if (filtroAtivo === 'sem_dados')  return list.filter(a => !a.aptoParaAvaliar || a.confiancaMesAtual === 'insuficiente');
-    if (filtroAtivo)                  return list.filter(a => a.faixa?.label === filtroAtivo);
+    if (filtroAtivo === 'sem_dados')  return list.filter(a => !a.aptoParaAvaliar || a.scoreGeral === null);
+    if (filtroAtivo)                  return list.filter(a => a.faixaGeral?.label === filtroAtivo);
     return list;
   }, [data?.alunos, filtroAtivo]);
 

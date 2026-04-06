@@ -59,7 +59,7 @@ import { ptBR } from "date-fns/locale";
 import { useAlunoBoletim } from "@/hooks/useAlunoBoletim";
 import { useAlunoScoreHistorico } from "@/hooks/useAlunoScoreHistorico";
 import { exportarBoletimPDF } from "@/utils/boletimPDF";
-import { calcularScore, classificarFaixa, calcularTendencia, gerarAlertas } from "@/utils/radarScore";
+import { classificarScoreGeral } from "@/utils/radarScore";
 import { RADAR_CONFIG } from "@/config/radarConfig";
 
 interface AlunoBoletimSheetProps {
@@ -159,22 +159,29 @@ function ScorePanel({
 
   if (!historico || historico.length === 0) return null;
 
-  const mesAtual   = historico[historico.length - 1];
+  const mesAtual = historico[historico.length - 1];
   const mesAnterior = historico.length >= 2 ? historico[historico.length - 2] : null;
 
-  const score     = mesAtual.score;
-  const faixa     = mesAtual.faixa;
-  const tendencia = mesAtual.tendencia;
+  const scoreGeral = mesAtual.scoreGeral;
+  const faixa = scoreGeral !== null ? classificarScoreGeral(scoreGeral) : null;
 
-  const alertas = gerarAlertas(
-    historico.map(h => ({ score: h.score, metricas: h.metricas })),
-    isBolsista
-  );
+  // Calcular evolução
+  let evolucao = null;
+  if (scoreGeral !== null && mesAnterior?.scoreGeral !== null) {
+    const delta = scoreGeral - mesAnterior.scoreGeral;
+    const config = RADAR_CONFIG.evolucao.find(e => delta >= e.minDelta) ?? RADAR_CONFIG.evolucao[RADAR_CONFIG.evolucao.length - 1];
+    evolucao = {
+      label: config.label,
+      delta,
+      icone: config.icone,
+      cor: config.cor,
+    };
+  }
 
   // Dados para o gráfico
   const chartData = historico.map(h => ({
     label:  h.label,
-    score:  h.score,
+    score:  h.scoreGeral,
   }));
 
   const corScore = faixa?.cor ?? '#6b7280';
@@ -189,10 +196,10 @@ function ScorePanel({
         <div className="flex items-start gap-4">
           {/* Score grande */}
           <div className="text-center shrink-0">
-            {score !== null ? (
+            {scoreGeral !== null ? (
               <>
                 <div className="text-3xl font-black tabular-nums" style={{ color: corScore }}>
-                  {score.toFixed(1)}
+                  {scoreGeral.toFixed(1)}
                 </div>
                 <div className="text-[10px] text-muted-foreground font-medium">/ 10,0</div>
               </>
@@ -211,20 +218,20 @@ function ScorePanel({
               <div className="text-sm text-muted-foreground">Sem dados suficientes</div>
             )}
 
-            {tendencia && (
+            {evolucao && (
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-xs font-semibold" style={{ color: tendencia.cor }}>
-                  {tendencia.icone} {tendencia.label}
+                <span className="text-xs font-semibold" style={{ color: evolucao.cor }}>
+                  {evolucao.icone} {evolucao.label}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  ({tendencia.delta > 0 ? '+' : ''}{tendencia.delta.toFixed(1)} vs mês anterior)
+                  ({evolucao.delta > 0 ? '+' : ''}{evolucao.delta.toFixed(1)} vs mês anterior)
                 </span>
               </div>
             )}
 
-            {mesAnterior?.score !== null && mesAnterior && (
+            {mesAnterior?.scoreGeral !== null && mesAnterior && (
               <div className="text-[10px] text-muted-foreground mt-0.5">
-                Mês anterior: {mesAnterior.score?.toFixed(1) ?? '—'}
+                Mês anterior: {mesAnterior.scoreGeral?.toFixed(1) ?? '—'}
               </div>
             )}
           </div>
@@ -246,34 +253,13 @@ function ScorePanel({
             <ReferenceLine y={7} stroke="#3b82f6" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'meta', fontSize: 9, fill: '#3b82f6', position: 'right' }} />
             <Bar dataKey="score" radius={[4, 4, 0, 0]}>
               {chartData.map((entry, i) => {
-                const f = entry.score !== null ? classificarFaixa(entry.score) : null;
+                const f = entry.score !== null ? classificarScoreGeral(entry.score) : null;
                 return <Cell key={i} fill={f?.cor ?? '#e5e7eb'} />;
               })}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
-
-      {/* Alertas automáticos */}
-      {alertas.length > 0 && (
-        <div className="space-y-1.5">
-          {alertas.map((a, i) => {
-            const Icon = a.tipo === 'alerta' ? AlertTriangle
-                       : a.tipo === 'positivo' ? CheckCircle2
-                       : Info;
-            const cor  = a.tipo === 'alerta'   ? '#ef4444'
-                       : a.tipo === 'positivo' ? '#10b981'
-                       : '#6b7280';
-            return (
-              <div key={i} className="flex items-start gap-2 text-xs rounded-lg px-3 py-2"
-                style={{ backgroundColor: `${cor}10`, color: cor }}>
-                <Icon className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                <span>{a.texto}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

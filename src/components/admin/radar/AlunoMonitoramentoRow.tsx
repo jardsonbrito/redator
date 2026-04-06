@@ -10,10 +10,14 @@ interface AlunoMonitoramentoRowProps {
 }
 
 export function AlunoMonitoramentoRow({ aluno, index, onVerBoletim }: AlunoMonitoramentoRowProps) {
-  const borderColor = aluno.faixa?.cor ?? '#e5e7eb';
-  const semDados    = !aluno.aptoParaAvaliar || aluno.confiancaMesAtual === 'insuficiente';
+  const borderColor = aluno.faixaGeral?.cor ?? '#e5e7eb';
+  const semDados    = !aluno.aptoParaAvaliar || aluno.scoreGeral === null;
 
-  const m = aluno.metricas;
+  // Valores das métricas para exibição
+  const totalRedacoes = aluno.redacoes.valorAtual;
+  const taxaPresenca = aluno.presenca.taxa;
+  const totalExercicios = aluno.exercicios.valorAtual;
+  const totalMicro = aluno.micro.valorAtual;
 
   return (
     <button
@@ -49,10 +53,10 @@ export function AlunoMonitoramentoRow({ aluno, index, onVerBoletim }: AlunoMonit
           {/* Mini-métricas */}
           {!semDados && (
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
-              <span>📝 {m.redacoes} red.</span>
-              <span>📅 {m.frequencia !== null ? `${m.frequencia}%` : '—'}</span>
-              <span>📚 {m.exercicios} ex.</span>
-              <span>🧠 {m.microItens} micro</span>
+              <span>📝 {totalRedacoes} red.</span>
+              <span>📅 {taxaPresenca !== null ? `${Math.round(taxaPresenca)}%` : '—'}</span>
+              <span>📚 {totalExercicios} ex.</span>
+              <span>🧠 {totalMicro} micro</span>
             </div>
           )}
         </div>
@@ -64,18 +68,18 @@ export function AlunoMonitoramentoRow({ aluno, index, onVerBoletim }: AlunoMonit
           ) : (
             <>
               <div className="flex items-center gap-1.5">
-                <BadgeScore score={aluno.scoreMesAtual} cor={aluno.faixa?.cor ?? '#6b7280'} />
-                {aluno.tendencia && (
-                  <span className="text-xs font-semibold" style={{ color: aluno.tendencia.cor }}>
-                    {aluno.tendencia.icone}
-                    {Math.abs(aluno.tendencia.delta).toFixed(1)}
+                <BadgeScore score={aluno.scoreGeral} cor={aluno.faixaGeral?.cor ?? '#6b7280'} />
+                {aluno.evolucaoGeral && aluno.evolucaoGeral.delta !== null && (
+                  <span className="text-xs font-semibold" style={{ color: aluno.evolucaoGeral.cor }}>
+                    {aluno.evolucaoGeral.icone}
+                    {Math.abs(aluno.evolucaoGeral.delta).toFixed(1)}
                   </span>
                 )}
               </div>
               <BadgeStatus
-                faixa={aluno.faixa}
-                tendencia={aluno.tendencia}
-                score={aluno.scoreMesAtual}
+                faixa={aluno.faixaGeral}
+                tendencia={aluno.evolucaoGeral as any}
+                score={aluno.scoreGeral}
               />
             </>
           )}

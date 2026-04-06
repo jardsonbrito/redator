@@ -12,7 +12,7 @@ interface TurmaSummaryPanelProps {
 export function TurmaSummaryPanel({
   resumo, total, filtroAtivo, onFiltroChange,
 }: TurmaSummaryPanelProps) {
-  const { faixas } = RADAR_CONFIG;
+  const { faixasScoreGeral } = RADAR_CONFIG;
 
   function toggleFiltro(label: string) {
     onFiltroChange(filtroAtivo === label ? null : label);
@@ -24,7 +24,7 @@ export function TurmaSummaryPanel({
     <div className="space-y-3">
       {/* Cards por faixa */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        {faixas.map(f => {
+        {faixasScoreGeral.map(f => {
           const qtd     = resumo.porFaixa[f.label] ?? 0;
           const pct     = avaliados > 0 ? Math.round((qtd / avaliados) * 100) : 0;
           const ativo   = filtroAtivo === f.label;

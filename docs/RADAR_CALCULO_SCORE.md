@@ -1,251 +1,558 @@
-# Radar 2.0 — Lógica de Cálculo do Score Pedagógico
+# Radar 2.0 — Nova Lógica de Cálculo Pedagógico
 
-> Arquivo de referência para entender como o sistema classifica cada aluno.
+> **Versão 2.0** — Comparação intraindividual por funcionalidade
 > Configuração editável em: `src/config/radarConfig.ts`
 
 ---
 
-## 1. Score Geral (0 a 10)
+## 🎯 Princípio Fundamental
 
-Cada aluno recebe um **score mensal de 0 a 10**, calculado a partir de 7 métricas ponderadas.
+**Comparação intraindividual**: Cada aluno é avaliado **apenas em relação a ele mesmo** no mês anterior.
 
-### Métricas e Pesos
+❌ **NÃO há**:
+- Comparação com média da turma
+- Percentil entre alunos
+- Ranking
+- Meta fixa para redações regulares
 
-| Métrica | Peso | Meta mensal padrão |
-|---|---|---|
-| Redações enviadas | 3,0 | 2 redações |
-| Frequência em aulas | 2,0 | 100% (sem meta fixa) |
-| Exercícios realizados | 1,5 | 3 exercícios |
-| Lousas concluídas | 1,0 | 2 lousas |
-| Microaprendizagem (itens) | 1,0 | 5 itens |
-| Repertório adicionado | 0,75 | 3 itens |
-| Guias temáticos concluídos | 0,75 | 1 guia |
-| **Total** | **10,0** | — |
-
-> Os pesos somam exatamente 10,0. O score final é a média ponderada das notas normalizadas.
+✅ **Há**:
+- Comparação mês a mês por métrica
+- Evolução individual
+- Leitura por funcionalidade
+- Score geral como métrica **secundária**
 
 ---
 
-## 2. Normalização de cada métrica (0 a 10)
+## 📊 1. Estrutura de Pesos (Total = 10.0)
 
-Cada métrica é convertida para uma nota de 0 a 10 com base na meta do mês:
-
-```
-nota = min( (valor_real / meta) × 10 , 10 )
-```
-
-### Exemplos práticos (meta redações = 2):
-
-| Redações enviadas | Cálculo | Nota |
+| Métrica | Peso | Justificativa |
 |---|---|---|
-| 0 | 0/2 × 10 | 0,0 |
-| 1 | 1/2 × 10 | 5,0 |
-| 2 | 2/2 × 10 | 10,0 |
-| 3+ | min(15, 10) | 10,0 (cap) |
+| **Redações** | 4.0 | Prioridade máxima — core do sistema |
+| **Presença** | 3.0 | Segunda prioridade — engajamento |
+| **Exercícios (Radar)** | 1.2 | Prática regular |
+| **Lousa** | 0.8 | Atividade complementar |
+| **Microaprendizagem** | 0.5 | Conteúdo adicional |
+| **Guia Temático** | 0.3 | Material de apoio |
+| **Repertório** | 0.2 | Criação livre |
 
-### Frequência (tratamento especial):
-
-```
-nota = taxa_frequencia / 10
-```
-
-| Frequência | Nota |
-|---|---|
-| 100% | 10,0 |
-| 80% | 8,0 |
-| 50% | 5,0 |
-| 0% | 0,0 |
-| sem aulas no período | excluída do cálculo |
+> Redações + Presença = 70% do score geral
 
 ---
 
-## 3. Cálculo do Score Final
+## 📈 2. Lógica de Cálculo por Métrica
+
+### 🔴 **Princípio Geral**
+
+Cada métrica gera um **score de 0 a 100** baseado em:
 
 ```
-score = Σ(nota_métrica × peso_métrica) / Σ(pesos das métricas válidas)
+score = (realizado / ofertado) × 100
 ```
 
-Métricas **sem dados** (frequência nula por ausência de aulas) são excluídas
-do numerador e do denominador — o peso é redistribuído automaticamente entre
-as demais.
+E é comparado com o **mês anterior** para gerar a **evolução**.
 
-### Exemplo completo:
+---
 
-Aluno com: 1 redação, 60% frequência, 2 exercícios, 1 lousa, 3 micro, 2 repertório, 0 guias.
+### ✍️ **2.1. Redações (peso 4.0)**
 
-| Métrica | Valor | Nota | Peso | Ponderado |
+**Composição**:
+- **Simulado** (40% do score de redações): fixo, 1 por mês
+- **Regulares** (60% do score de redações): quantidade livre
+
+#### Score do Simulado (binário)
+
+```typescript
+scoreSimulado = simulados >= 1 ? 100 : 0
+```
+
+#### Score de Redações Regulares (comparação intraindividual)
+
+```typescript
+if regularesAtual === 0 && regularesAnterior === 0:
+  scoreRegulares = null  // sem dados
+
+else if regularesAnterior === 0:
+  scoreRegulares = regularesAtual > 0 ? 100 : 0
+
+else:
+  percentual = (regularesAtual / regularesAnterior) × 100
+  scoreRegulares = min(percentual, 100)
+```
+
+#### Score Final de Redações
+
+```typescript
+if scoreRegulares === null:
+  scoreFinal = scoreSimulado  // apenas simulado
+else:
+  scoreFinal = (scoreSimulado × 0.4) + (scoreRegulares × 0.6)
+```
+
+**Exemplos**:
+
+| Mês Anterior | Mês Atual | Score Simulado | Score Regulares | Score Final |
 |---|---|---|---|---|
-| Redações | 1 | 5,0 | 3,0 | 15,0 |
-| Frequência | 60% | 6,0 | 2,0 | 12,0 |
-| Exercícios | 2 | 6,7 | 1,5 | 10,0 |
-| Lousas | 1 | 5,0 | 1,0 | 5,0 |
-| Micro | 3 | 6,0 | 1,0 | 6,0 |
-| Repertório | 2 | 6,7 | 0,75 | 5,0 |
-| Guias | 0 | 0,0 | 0,75 | 0,0 |
-| **Total** | — | — | **10,0** | **53,0** |
-
-**Score = 53,0 / 10,0 = 5,3 → Abaixo da média**
+| 0 regulares, 0 simulados | 1 simulado, 0 regulares | 100 | null | **100** |
+| 2 regulares, 1 simulado | 2 regulares, 1 simulado | 100 | 100 | **100** |
+| 3 regulares, 1 simulado | 6 regulares, 0 simulados | 0 | 100 (cap) | **60** |
+| 4 regulares, 1 simulado | 2 regulares, 1 simulado | 100 | 50 | **70** |
 
 ---
 
-## 4. Metas Efetivas (ajuste por oferta real da turma)
+### 📅 **2.2. Presença (peso 3.0)**
 
-Se a turma inteira atingiu menos de 50% de uma meta, o sistema ajusta automaticamente:
+```typescript
+if aulasOfertadas === 0:
+  score = null  // sem aulas no período
 
+else:
+  taxa = (presencas / aulasOfertadas) × 100
+  score = taxa
 ```
-se max_real_da_turma < meta_config × 0,5:
-    meta_efetiva = max_real_da_turma
-senão:
-    meta_efetiva = meta_config
-```
 
-**Exemplo:** Meta de exercícios = 3. Mas o admin só importou 1 exercício no mês.
-Nenhum aluno pode ter mais que 1. O sistema ajusta a meta para 1.
-Todos os alunos que fizeram o único exercício disponível recebem nota 10,0 em exercícios.
+**Exemplos**:
+
+| Presenças | Aulas Ofertadas | Score |
+|---|---|---|
+| 4 | 4 | **100** |
+| 3 | 4 | **75** |
+| 0 | 4 | **0** |
+| 0 | 0 | **null** (sem dados) |
 
 ---
 
-## 5. Faixas Pedagógicas
+### 📝 **2.3. Exercícios Radar (peso 1.2)**
+
+```typescript
+if oferta === 0:
+  score = null
+
+else:
+  score = (realizados / oferta) × 100
+```
+
+**Meta fixa**: 3 exercícios por mês
+
+**Exemplos**:
+
+| Realizados | Oferta | Score |
+|---|---|---|
+| 3 | 3 | **100** |
+| 2 | 3 | **67** |
+| 0 | 3 | **0** |
+| 0 | 0 | **null** |
+
+---
+
+### 🖍️ **2.4. Lousa (peso 0.8)**
+
+```typescript
+if oferta === 0:
+  score = null
+
+else:
+  score = (concluidas / oferta) × 100
+```
+
+**Oferta dinâmica**: Baseada em lousas criadas para a turma no mês
+
+---
+
+### 🧠 **2.5. Microaprendizagem (peso 0.5)**
+
+```typescript
+if oferta === 0:
+  score = null
+
+else:
+  score = (concluidos / oferta) × 100
+```
+
+**Oferta dinâmica**: Baseada em tópicos micro publicados até o fim do mês
+
+---
+
+### 📚 **2.6. Guia Temático (peso 0.3)**
+
+```typescript
+if oferta === 0:
+  score = null
+
+else:
+  score = (concluidos / oferta) × 100
+```
+
+**Oferta dinâmica**: Baseada em guias publicados até o fim do mês
+
+---
+
+### 💡 **2.7. Repertório (peso 0.2)**
+
+Repertório **não tem oferta** — é criação livre do aluno.
+
+```typescript
+if valorAtual === 0 && valorAnterior === 0:
+  score = null  // sem dados
+
+else if valorAnterior === 0:
+  score = valorAtual > 0 ? 100 : 0
+
+else:
+  percentual = (valorAtual / valorAnterior) × 100
+  score = min(percentual, 100)
+```
+
+**Comparação intraindividual**: Aluno é comparado com ele mesmo.
+
+---
+
+## 🔄 3. Evolução (Comparação com Mês Anterior)
+
+Para cada métrica, o sistema calcula a **evolução**:
+
+```typescript
+delta = scoreAtual - scoreAnterior
+```
+
+### Classificação de Evolução
+
+| Delta | Tipo | Label | Ícone | Cor |
+|---|---|---|---|---|
+| ≥ 5 | evolucao_forte | Evolução significativa | ▲▲ | Verde |
+| > 0.1 | evolucao | Evoluiu | ▲ | Verde |
+| -5 a 0 | estavel | Manteve | → | Cinza |
+| -10 a -5 | queda | Caiu | ▼ | Laranja |
+| < -10 | queda_forte | Queda significativa | ▼▼ | Vermelho |
+
+**Se não há dados do mês anterior**: `sem_dados` (—)
+
+---
+
+## 📐 4. Faixas de Classificação por Métrica (0-100)
+
+| Faixa | Percentual | Cor |
+|---|---|---|
+| **Excelente** | 100% | 🟢 Verde |
+| **Adequado** | 70-99% | 🔵 Azul |
+| **Abaixo da média** | 50-69% | 🟡 Âmbar |
+| **Baixo desempenho** | 25-49% | 🟠 Laranja |
+| **Crítico** | 0-24% | 🔴 Vermelho |
+
+---
+
+## 🎯 5. Score Geral (Secundário — 0 a 10)
+
+O score geral é calculado como **média ponderada** dos scores individuais (0-100), convertido para escala 0-10.
+
+```typescript
+scoreGeral = Σ(scoreMetrica × peso) / Σ(pesos válidos)
+scoreGeral = scoreGeral / 10  // conversão para 0-10
+```
+
+### Requisitos
+
+- **Mínimo 3 métricas válidas** para calcular o score geral
+- Métricas com `score = null` são excluídas do cálculo
+
+### Faixas do Score Geral (0-10)
 
 | Faixa | Score | Cor |
 |---|---|---|
-| Excelente | 8,5 – 10,0 | 🟢 Verde |
-| Adequado | 7,0 – 8,4 | 🔵 Azul |
-| Abaixo da média | 5,0 – 6,9 | 🟡 Âmbar |
-| Baixo desempenho | 3,0 – 4,9 | 🟠 Laranja |
-| Crítico | 0,0 – 2,9 | 🔴 Vermelho |
+| **Excelente** | 8.5 – 10.0 | 🟢 Verde |
+| **Adequado** | 7.0 – 8.4 | 🔵 Azul |
+| **Abaixo da média** | 5.0 – 6.9 | 🟡 Âmbar |
+| **Baixo desempenho** | 3.0 – 4.9 | 🟠 Laranja |
+| **Crítico** | 0.0 – 2.9 | 🔴 Vermelho |
 
 ---
 
-## 6. Tendência (comparação com mês anterior)
+## 🎓 6. Status Bolsista
 
-O sistema compara o score do mês atual com o mês anterior:
-
-```
-delta = score_atual - score_anterior
-```
-
-| Delta | Classificação | Ícone |
-|---|---|---|
-| ≥ +0,5 | Evolução | ▲ |
-| -0,5 a +0,49 | Estável | → |
-| -0,5 a -1,49 | Queda | ▼ |
-| ≤ -1,5 | Queda acentuada | ▼▼ |
-
-> Se não há dados do mês anterior, a tendência fica em branco (sem punir o aluno).
-
----
-
-## 7. Status Composto
-
-O sistema exibe **faixa + tendência** combinados em uma única leitura:
-
-| Exemplos |
-|---|
-| "Excelente, em evolução" |
-| "Adequado, estável" |
-| "Abaixo da média, em queda" |
-| "Crítico, em queda acentuada" |
-
----
-
-## 8. Bolsistas — Regras Especiais
+### Classificação
 
 | Situação | Critério | Nível | Cor |
 |---|---|---|---|
-| Em dia | Score ≥ 7,0 | OK | 🟡 Dourado |
-| Atenção | 5,0 ≤ Score < 7,0 | Atenção | 🟡 Âmbar |
-| Em Risco | Score < 5,0 | Risco | 🔴 Vermelho |
-| Alerta Pedagógico | Queda consecutiva por 2 meses (independente do score) | Alerta | 🟣 Roxo |
+| Em dia | Score geral ≥ 7.0 | OK | 🟢 Verde |
+| Atenção | 5.0 ≤ Score < 7.0 | Atenção | 🟡 Âmbar |
+| Em Risco | Score < 5.0 | Risco | 🔴 Vermelho |
+| Alerta Pedagógico | Queda consecutiva por **3 meses** | Alerta | 🟣 Roxo |
 
-O **Alerta Pedagógico** é o mais grave: mesmo um bolsista com score 7,5 pode receber alerta se está caindo há 2 meses seguidos.
+### Alertas Específicos
 
----
-
-## 9. Confiança do Score (quando exibir ou não)
-
-O sistema não exibe score quando não há dados suficientes:
-
-| Situação | Confiança | Exibição |
-|---|---|---|
-| ≥ 3 métricas com atividade | Total | Score completo |
-| 1-2 métricas com atividade OU frequência registrada (mesmo 0%) | Parcial | Score com aviso implícito |
-| Zero atividades E sem aulas no período | Insuficiente | "Sem dados" |
-
-> **Frequência 0%** (aluno faltou a todas as aulas) ainda é um **dado registrado**,
-> diferente de **frequência nula** (não havia aulas no período).
-> No primeiro caso, o score é calculado. No segundo, a frequência é excluída do cálculo.
+O sistema verifica:
+- Queda no envio de redações
+- Queda na presença
+- Baixa participação em exercícios (< 50%)
+- Tendência negativa há 3 meses
 
 ---
 
-## 10. Casos Especiais Tratados
+## ⚠️ 7. Tratamento de Distorções
 
-### Início de mês (primeiros 10 dias)
-O Radar usa automaticamente o **mês anterior** como padrão, pois o mês em curso
-tem poucos dados. O usuário pode trocar para o mês atual manualmente.
-
-### Redações: engajamento, não performance
-O Radar conta **todas as redações enviadas** (corrigidas ou não), pois mede
-engajamento. O Boletim Individual usa apenas redações corrigidas para calcular
-médias e notas C1–C5.
-
-### Aluno recém-aprovado (< 7 dias na turma no mês)
-Se `data_aprovacao` cai no mês avaliado e o aluno tem menos de 7 dias na turma,
-ele é marcado como "Sem dados" para evitar penalização injusta.
-
-### Baixa oferta do sistema
-Se a turma inteira atingiu menos de 50% de uma meta (ex: admin importou só 1 exercício),
-a meta é ajustada para o máximo real da turma. Isso evita que toda a turma receba
-score baixo por limitação do sistema, e não do aluno.
-
----
-
-## 11. Prioridade de Ordenação na Lista
-
-Os alunos são ordenados automaticamente para mostrar os mais críticos primeiro:
-
-1. 🟣 Bolsistas com Alerta Pedagógico
-2. 🔴 Bolsistas em Risco
-3. 🔴 Críticos + Queda acentuada
-4. 🔴 Críticos
-5. 🟠 Queda acentuada + Baixo desempenho
-6. ↕ Queda acentuada (outras faixas)
-7. 🟡 Bolsistas com Atenção
-8. 🟠 Baixo desempenho
-9. 🔽 Em queda (outras faixas)
-10. ⬆ Adequados e Excelentes (por score decrescente)
-11. ⚪ Sem dados (final da lista)
-
----
-
-## 12. Configuração (sem editar código)
-
-Todos os parâmetros estão centralizados em `src/config/radarConfig.ts`:
+### 7.1. Baixa oferta do sistema
 
 ```typescript
-metas: {
-  redacoes:   2,   // meta mensal de redações
-  exercicios: 3,   // meta de exercícios
-  lousas:     2,   // meta de lousas
-  microItens: 5,   // meta de itens de microaprendizagem
-  repertorio: 3,   // meta de itens de repertório
-  guias:      1,   // meta de guias concluídos
-},
-pesos: {
-  redacoes:   3.0,
-  frequencia: 2.0,
-  exercicios: 1.5,
-  lousas:     1.0,
-  microItens: 1.0,
-  repertorio: 0.75,
-  guias:      0.75,
-},
-bolsista: {
-  scoreAtencao:     7.0,  // abaixo → atenção
-  scoreRisco:       5.0,  // abaixo → risco
-  mesesQuedaAlerta: 2,    // quedas consecutivas → alerta pedagógico
-},
-robustez: {
-  diasMinimoNaTurma: 7,   // dias mínimos no mês para ser avaliado
-},
+if oferta === 0:
+  score = null
+  exibir "Sem oferta no período"
 ```
+
+**Não penaliza o aluno** por falta de oferta.
+
+---
+
+### 7.2. Ausência de dados
+
+```typescript
+if valorAtual === 0 && oferta === 0:
+  score = null
+  exibir "Sem dados suficientes"
+```
+
+---
+
+### 7.3. Aluno recém-aprovado
+
+```typescript
+if diasNaTurma < 7:
+  scoreGeral = null
+  todas métricas = null
+  exibir "Aluno recém-aprovado"
+```
+
+Alunos com menos de **7 dias na turma** não são avaliados no mês.
+
+---
+
+## 📊 8. Estrutura de Dados Retornada
+
+```typescript
+interface AlunoMonitoramento {
+  // Identificação
+  id: string
+  nome: string
+  email: string
+  isBolsista: boolean
+  aptoParaAvaliar: boolean
+
+  // Scores por métrica (0-100)
+  redacoes: ScoreRedacoes
+  presenca: ScorePresenca
+  exercicios: ScoreMetrica
+  lousa: ScoreMetrica
+  micro: ScoreMetrica
+  guia: ScoreMetrica
+  repertorio: ScoreMetrica
+
+  // Score geral (0-10) — SECUNDÁRIO
+  scoreGeral: number | null
+  faixaGeral: FaixaConfig | null
+  evolucaoGeral: Evolucao
+
+  // Status e alertas
+  statusBolsista: StatusBolsista
+  alertas: Alerta[]
+}
+
+interface ScoreMetrica {
+  score: number | null          // 0-100
+  valorAtual: number            // valor bruto
+  valorAnterior: number | null  // valor do mês anterior
+  ofertaAtual: number | null    // total ofertado
+  ofertaAnterior: number | null
+  faixa: FaixaConfig | null     // classificação
+  evolucao: Evolucao            // comparação com mês anterior
+}
+```
+
+---
+
+## 📈 9. Histórico (4 meses)
+
+O hook `useAlunoScoreHistorico` retorna:
+
+```typescript
+interface ScoreMes {
+  mes: number
+  ano: number
+  label: string  // "jan/26"
+
+  // Scores por métrica (0-100)
+  redacoes: number | null
+  presenca: number | null
+  exercicios: number | null
+  lousa: number | null
+  micro: number | null
+  guia: number | null
+  repertorio: number | null
+
+  // Score geral (0-10)
+  scoreGeral: number | null
+
+  // Valores brutos para cada métrica
+  valoresRedacoes: { simulados: number; regulares: number }
+  valoresPresenca: { presencas: number; aulasOfertadas: number }
+  // ... demais valores
+}
+```
+
+---
+
+## 🎨 10. Visualização no Dashboard
+
+### Card Principal do Aluno
+
+```
+┌────────────────────────────────────────────────────┐
+│ 👤 João Silva              🎓 Bolsista (OK)        │
+├────────────────────────────────────────────────────┤
+│ Score Geral: 7.8 → 8.2  ▲ Evoluiu                 │
+│ Faixa: Adequado                                    │
+├────────────────────────────────────────────────────┤
+│ Análise por Funcionalidade:                        │
+│                                                     │
+│ ✍️ Redações        [████████░░] 85%  ▲ Evoluiu    │
+│ 📅 Presença        [██████████] 100% → Manteve    │
+│ 📝 Exercícios      [██████░░░░] 67%  ▼ Caiu       │
+│ 🖍️ Lousa           [█████░░░░░] 50%  → Manteve    │
+│ 🧠 Micro           [████░░░░░░] 40%  ▲ Evoluiu    │
+│ 📚 Guia Temático   [██████████] 100% ▲▲ Evolução! │
+│ 💡 Repertório      [██░░░░░░░░] 25%  ▼ Caiu       │
+├────────────────────────────────────────────────────┤
+│ ⚠️ Alertas:                                        │
+│ • Queda em Exercícios nos últimos 2 meses         │
+│ • Repertório abaixo da média                       │
+└────────────────────────────────────────────────────┘
+```
+
+### Tabela de Evolução (4 meses)
+
+```
+┌──────────────┬────────┬────────┬────────┬────────┬──────────┐
+│ Métrica      │ Jan/26 │ Fev/26 │ Mar/26 │ Abr/26 │ Evolução │
+├──────────────┼────────┼────────┼────────┼────────┼──────────┤
+│ Redações     │  70%   │  75%   │  80%   │  85%   │   ▲▲     │
+│ Presença     │  95%   │  100%  │  100%  │  100%  │   →      │
+│ Exercícios   │  100%  │  100%  │  83%   │  67%   │   ▼      │
+│ Lousa        │  50%   │  50%   │  50%   │  50%   │   →      │
+│ Micro        │  20%   │  30%   │  35%   │  40%   │   ▲      │
+│ Guia         │  0%    │  0%    │  100%  │  100%  │   →      │
+│ Repertório   │  50%   │  33%   │  30%   │  25%   │   ▼      │
+├──────────────┼────────┼────────┼────────┼────────┼──────────┤
+│ Score Geral  │  7.2   │  7.5   │  7.8   │  8.2   │   ▲      │
+└──────────────┴────────┴────────┴────────┴────────┴──────────┘
+```
+
+---
+
+## 🔧 11. Configuração Centralizada
+
+Todos os parâmetros em `src/config/radarConfig.ts`:
+
+```typescript
+export const RADAR_CONFIG = {
+  // Pesos somam 10.0
+  pesos: {
+    redacoes:   4.0,
+    frequencia: 3.0,
+    exercicios: 1.2,
+    lousas:     0.8,
+    microItens: 0.5,
+    repertorio: 0.2,
+    guias:      0.3,
+  },
+
+  // Proporções de redações
+  redacoes: {
+    pesoSimulado:  0.4,  // 40%
+    pesoRegulares: 0.6,  // 60%
+  },
+
+  // Faixas por percentual (0-100)
+  faixas: [
+    { label: 'Excelente',        min: 100, max: 100, ... },
+    { label: 'Adequado',         min: 70,  max: 99,  ... },
+    { label: 'Abaixo da média',  min: 50,  max: 69,  ... },
+    { label: 'Baixo desempenho', min: 25,  max: 49,  ... },
+    { label: 'Crítico',          min: 0,   max: 24,  ... },
+  ],
+
+  // Evolução (delta)
+  evolucao: [
+    { label: 'Evolução significativa', minDelta:  5,        ... },
+    { label: 'Evoluiu',                minDelta:  0.1,      ... },
+    { label: 'Manteve',                minDelta: -5,        ... },
+    { label: 'Caiu',                   minDelta: -10,       ... },
+    { label: 'Queda significativa',    minDelta: -Infinity, ... },
+  ],
+
+  bolsista: {
+    scoreAtencao:     7.0,
+    scoreRisco:       5.0,
+    mesesQuedaAlerta: 3,
+  },
+
+  robustez: {
+    diasMinimoNaTurma: 7,
+    minimoMetricasValidas: 3,
+  },
+}
+```
+
+---
+
+## ✅ 12. Vantagens da Nova Lógica
+
+✓ **Leitura clara**: Aluno vê exatamente onde está bem/mal
+✓ **Justiça**: Redações regulares não penalizam por quantidade
+✓ **Evolução granular**: Identifica precisamente onde melhorar
+✓ **Sem distorções**: Trata corretamente meses com oferta diferente
+✓ **Comparação justa**: Cada aluno é medido contra ele mesmo
+✓ **Foco pedagógico**: Score geral é secundário — prioridade é por funcionalidade
+
+---
+
+## 🎯 13. Papel do Score Geral
+
+O **score geral** existe, mas é **secundário**.
+
+**Leitura principal**:
+- ✅ Por funcionalidade (redações, presença, exercícios, etc.)
+- ✅ Evolução individual (▲ ▼ →)
+- ✅ Tendência por métrica
+
+**Leitura secundária**:
+- Score geral (0-10)
+- Faixa geral
+
+---
+
+## 📌 14. Diferenças da Versão Antiga
+
+| Aspecto | Versão 1.0 (antiga) | Versão 2.0 (nova) |
+|---------|---------------------|-------------------|
+| **Comparação** | Com meta fixa / turma | Com ele mesmo (mês anterior) |
+| **Foco principal** | Score geral | Por funcionalidade |
+| **Redações regulares** | Meta fixa (2) | Comparação com histórico próprio |
+| **Classificação** | Nota 0-10 | Percentual 0-100% |
+| **Pesos** | Distribuídos igualmente | Redação (4) + Presença (3) = 70% |
+| **Evolução** | Apenas geral | Por métrica individual |
+| **Distorções** | Possíveis | Tratadas (oferta, dados, entrada) |
+| **Bolsistas** | Score geral | Alertas por métrica + tendência |
+
+---
+
+## 🚀 15. Próximos Passos
+
+A implementação está completa nos arquivos:
+
+- `src/config/radarConfig.ts` — Configuração centralizada
+- `src/utils/radarScore.ts` — Funções de cálculo
+- `src/hooks/useMonitoramentoTurma.ts` — Hook de monitoramento
+- `src/hooks/useAlunoScoreHistorico.ts` — Hook de histórico
+
+**Próximas melhorias**:
+- Atualizar componentes de UI para exibir scores por métrica
+- Criar visualizações (radar chart, tabelas de evolução)
+- Implementar filtros por métrica
+- Adicionar exportação de relatórios
