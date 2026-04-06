@@ -3,9 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, GripVertical, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export interface Alternativa {
@@ -44,7 +43,7 @@ const novaQuestao = (ordem: number): Questao => ({
   enunciado: '',
   tentativas_max: 3,
   ordem,
-  alternativas: [novaAlternativa(0), novaAlternativa(1), novaAlternativa(2)],
+  alternativas: [novaAlternativa(0), novaAlternativa(1), novaAlternativa(2), novaAlternativa(3)],
 });
 
 export const MicroQuizBuilder = ({ questoes, onChange }: MicroQuizBuilderProps) => {
@@ -90,6 +89,17 @@ export const MicroQuizBuilder = ({ questoes, onChange }: MicroQuizBuilderProps) 
       return {
         ...q,
         alternativas: q.alternativas.map(a => a.id === altId ? { ...a, ...campo } : a),
+      };
+    }));
+  };
+
+  const marcarCorreta = (questaoId: string, altId: string) => {
+    // Comportamento de rádio: desmarca todas e marca apenas a escolhida
+    onChange(questoes.map(q => {
+      if (q.id !== questaoId) return q;
+      return {
+        ...q,
+        alternativas: q.alternativas.map(a => ({ ...a, correta: a.id === altId })),
       };
     }));
   };
@@ -179,17 +189,26 @@ export const MicroQuizBuilder = ({ questoes, onChange }: MicroQuizBuilderProps) 
                 </div>
 
                 {questao.alternativas.map((alt, ai) => (
-                  <div key={alt.id} className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50">
+                  <div
+                    key={alt.id}
+                    className={`border rounded-lg p-3 space-y-2 transition-colors ${alt.correta ? 'border-green-400 bg-green-50' : 'border-gray-100 bg-gray-50'}`}
+                  >
                     <div className="flex items-start gap-2">
-                      <div className="flex items-center gap-2 pt-1">
-                        <Switch
-                          checked={alt.correta}
-                          onCheckedChange={v => atualizarAlternativa(questao.id, alt.id, { correta: v })}
-                        />
-                        {alt.correta && (
-                          <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => marcarCorreta(questao.id, alt.id)}
+                        className={`mt-1 shrink-0 flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md border transition-colors ${
+                          alt.correta
+                            ? 'bg-green-500 text-white border-green-500'
+                            : 'bg-white text-gray-400 border-gray-200 hover:border-green-400 hover:text-green-600'
+                        }`}
+                        title="Marcar como resposta correta"
+                      >
+                        <span className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${alt.correta ? 'border-white' : 'border-current'}`}>
+                          {alt.correta && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </span>
+                        Correta
+                      </button>
                       <div className="flex-1 space-y-1">
                         <Input
                           value={alt.texto}
