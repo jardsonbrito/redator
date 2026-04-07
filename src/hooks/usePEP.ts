@@ -142,12 +142,21 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
   const desde = seisMesesAtras.toISOString();
 
   const [
+    { data: marcacoes },
     { data: redacoes },
     { data: simulados },
     { data: exercicios },
     { data: lousas },
     { data: quizErros },
   ] = await Promise.all([
+    // 0. Marcações estruturadas do corretor — FONTE PRINCIPAL (peso 2.0 por marcação)
+    supabase
+      .from('pep_marcacoes_corretor')
+      .select('competencia, aspecto_id, created_at, aspecto:aspecto_id(nome)')
+      .ilike('aluno_email', emailNorm)
+      .gte('created_at', desde)
+      .order('created_at', { ascending: false }),
+
     // 1. Redações tema livre — notas C1-C5 + comentários do corretor (fonte primária)
     supabase
       .from('redacoes_enviadas')
@@ -217,7 +226,7 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
     ...(exercicios ?? []),
   ];
 
-  const totalFontesSecundarias = (lousas ?? []).length + (quizErros ?? []).length;
+  const totalFontesSecundarias = (lousas ?? []).length + (quizErros ?? []).length + (marcacoes ?? []).length;
 
   // Sem nenhum dado histórico disponível: plano não pode ser gerado
   if (todasRedacoes.length === 0 && totalFontesSecundarias === 0) return false;
@@ -406,6 +415,18 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
         trechosComentario.set(eixo, trecho);
       }
     }
+  }
+
+  // — Marcações estruturadas do corretor (FONTE PRINCIPAL, peso 2.0) —
+  // Cada aspecto marcado pelo corretor indica um problema pedagógico confirmado.
+  // Peso 2x maior que redações pois é diagnóstico direto, não inferência.
+  for (const m of (marcacoes ?? [])) {
+    const codigo = ERRO_POR_EIXO[m.competencia as string] ?? null;
+    if (!codigo) continue;
+    const cur = contagem.get(codigo) ?? { count: 0, somaNotas: 0 };
+    cur.count += 2.0;
+    cur.somaNotas += 60 * 2.0; // sintético: marcação = abaixo da média (60/200)
+    contagem.set(codigo, cur);
   }
 
   // — Quizzes de microaprendizagem (fonte terciária, peso 0.3) —

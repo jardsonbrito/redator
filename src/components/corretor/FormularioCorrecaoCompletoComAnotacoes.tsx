@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check, AlertTriangle, Info } from "lucide-react";
+import { ArrowLeft, Eye, X, Copy, Maximize2, Pause, Package, Check, AlertTriangle, Info, BookMarked } from "lucide-react";
 import { estaCongelada } from "@/utils/redacaoUtils";
 import { RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
 import { RedacaoAnotacaoVisual } from "./RedacaoAnotacaoVisual";
@@ -14,6 +14,7 @@ import { TextareaWithSpellcheck } from "@/components/ui/textarea-with-spellcheck
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
+import { PEPMarcacaoModal } from "./PEPMarcacaoModal";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -71,6 +72,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [showRelatorioModal, setShowRelatorioModal] = useState(false);
   const [showTemaModal, setShowTemaModal] = useState(false);
   const [showDevolverModal, setShowDevolverModal] = useState(false);
+  const [showPEPModal, setShowPEPModal] = useState(false);
   const [showRedacaoExpandida, setShowRedacaoExpandida] = useState(false);
   const [motivoDevolucao, setMotivoDevolucao] = useState("");
   const [loading, setLoading] = useState(false);
@@ -561,8 +563,20 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
               ))}
             </div>
             
-            {/* Botão gravar áudio e nota */}
+            {/* Botão gravar áudio, PEP e nota */}
             <div className="flex items-center gap-2">
+              {/* Botão PEP — abre modal de marcação de aspectos */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPEPModal(true)}
+                className="h-8 gap-1.5 text-xs border-[#3f0776] text-[#3f0776] hover:bg-[#f1e4fe]"
+              >
+                <BookMarked className="w-3.5 h-3.5" />
+                PEP
+              </Button>
+
               <AudioRecorder
                 redacaoId={redacao.id}
                 tabela={redacao.tipo_redacao === 'regular' ? 'redacoes_enviadas' : 
@@ -729,6 +743,20 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         isOpen={showTemaModal}
         onClose={() => setShowTemaModal(false)}
         tema={temaCompleto}
+      />
+
+      {/* Modal PEP — marcação de aspectos pedagógicos */}
+      <PEPMarcacaoModal
+        open={showPEPModal}
+        onClose={() => setShowPEPModal(false)}
+        redacaoId={redacao.id}
+        redacaoTipo={
+          redacao.tipo_redacao === 'simulado' ? 'simulado'
+          : redacao.tipo_redacao === 'exercicio' ? 'exercicio'
+          : 'regular'
+        }
+        alunoEmail={(redacao as any).email_aluno ?? ''}
+        corretorEmail={corretorEmail}
       />
 
       {/* Modal de Devolução */}

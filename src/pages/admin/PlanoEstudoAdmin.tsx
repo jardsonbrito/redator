@@ -5,6 +5,7 @@ import {
   BookMarked, Users, AlertTriangle, BarChart3,
   ChevronLeft, Search, CheckCircle2, Lock, Circle,
   ArrowUpDown, Plus, Ban, Unlock, RefreshCw, Loader2,
+  Settings2, Pencil, Trash2, GripVertical, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,8 +15,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { diasParado, type PEPTask } from '@/hooks/usePEP';
+import {
+  useAspectosPEPAdmin,
+  useCriarAspecto,
+  useEditarAspecto,
+  useExcluirAspecto,
+  type PEPAspecto,
+} from '@/hooks/usePEPMarcacoes';
 
 // ─── Queries admin ────────────────────────────────────────────────────────────
 
@@ -509,6 +520,217 @@ function VisaoMacro() {
   );
 }
 
+// ─── Gerenciar Aspectos por Competência ──────────────────────────────────────
+
+const COMP_CORES: Record<string, string> = {
+  C1: 'bg-red-100 text-red-700 border-red-200',
+  C2: 'bg-green-100 text-green-700 border-green-200',
+  C3: 'bg-blue-100 text-blue-700 border-blue-200',
+  C4: 'bg-orange-100 text-orange-700 border-orange-200',
+  C5: 'bg-purple-100 text-purple-700 border-purple-200',
+};
+
+const COMP_LABELS: Record<string, string> = {
+  C1: 'C1 — Norma-padrão',
+  C2: 'C2 — Tema e repertório',
+  C3: 'C3 — Organização e argumentação',
+  C4: 'C4 — Coesão textual',
+  C5: 'C5 — Proposta de intervenção',
+};
+
+function GerenciarAspectos() {
+  const { data: aspectos = [], isLoading } = useAspectosPEPAdmin();
+  const { mutate: criar, isPending: criando } = useCriarAspecto();
+  const { mutate: editar, isPending: editando } = useEditarAspecto();
+  const { mutate: excluir } = useExcluirAspecto();
+
+  const [modalAberto, setModalAberto] = useState(false);
+  const [editando_aspecto, setEditandoAspecto] = useState<PEPAspecto | null>(null);
+  const [form, setForm] = useState({ competencia: 'C2', nome: '', descricao: '' });
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
+
+  const abrirCriar = () => {
+    setEditandoAspecto(null);
+    setForm({ competencia: 'C2', nome: '', descricao: '' });
+    setModalAberto(true);
+  };
+
+  const abrirEditar = (a: PEPAspecto) => {
+    setEditandoAspecto(a);
+    setForm({ competencia: a.competencia, nome: a.nome, descricao: a.descricao ?? '' });
+    setModalAberto(true);
+  };
+
+  const handleSalvar = () => {
+    if (!form.nome.trim()) { toast.error('Nome obrigatório.'); return; }
+    if (editando_aspecto) {
+      editar(
+        { id: editando_aspecto.id, nome: form.nome.trim(), descricao: form.descricao.trim() || undefined },
+        { onSuccess: () => setModalAberto(false) }
+      );
+    } else {
+      const maxOrdem = Math.max(0, ...aspectos.filter(a => a.competencia === form.competencia).map(a => a.ordem));
+      criar(
+        { competencia: form.competencia, nome: form.nome.trim(), descricao: form.descricao.trim() || undefined, ordem: maxOrdem + 1 },
+        { onSuccess: () => setModalAberto(false) }
+      );
+    }
+  };
+
+  const handleToggleAtivo = (a: PEPAspecto) => {
+    editar({ id: a.id, ativo: !a.ativo });
+  };
+
+  // Agrupa por competência
+  const porComp = (['C1','C2','C3','C4','C5'] as const).map(c => ({
+    comp: c,
+    itens: aspectos.filter(a => a.competencia === c).sort((a, b) => a.ordem - b.ordem),
+  }));
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">
+          Aspectos que os corretores podem marcar ao corrigir uma redação. Esses dados alimentam o diagnóstico do PEP.
+        </p>
+        <Button onClick={abrirCriar} className="bg-[#3f0776] hover:bg-[#5a1a9e] text-white gap-1.5">
+          <Plus className="w-4 h-4" /> Novo aspecto
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-[#3f0776]" /></div>
+      ) : (
+        <div className="grid gap-4">
+          {porComp.map(({ comp, itens }) => (
+            <Card key={comp}>
+              <CardHeader className="pb-2 pt-4 px-5">
+                <div className="flex items-center justify-between">
+                  <Badge className={`text-xs font-semibold border ${COMP_CORES[comp]}`}>
+                    {COMP_LABELS[comp]}
+                  </Badge>
+                  <span className="text-xs text-gray-400">{itens.filter(a => a.ativo).length} ativo(s)</span>
+                </div>
+              </CardHeader>
+              <CardContent className="px-5 pb-4">
+                {itens.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">Nenhum aspecto cadastrado para esta competência.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {itens.map(a => (
+                      <div
+                        key={a.id}
+                        className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-opacity ${!a.ativo ? 'opacity-40' : ''}`}
+                      >
+                        <GripVertical className="w-4 h-4 text-gray-300 shrink-0" />
+                        <span className="flex-1 text-sm text-gray-800">{a.nome}</span>
+                        {!a.ativo && <Badge variant="secondary" className="text-[10px]">Inativo</Badge>}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost" size="icon"
+                            className="h-7 w-7 text-gray-400 hover:text-blue-600"
+                            onClick={() => abrirEditar(a)}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon"
+                            className={`h-7 w-7 ${a.ativo ? 'text-gray-400 hover:text-orange-500' : 'text-orange-400 hover:text-green-600'}`}
+                            onClick={() => handleToggleAtivo(a)}
+                            title={a.ativo ? 'Inativar' : 'Reativar'}
+                          >
+                            {a.ativo ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon"
+                            className="h-7 w-7 text-gray-400 hover:text-red-600"
+                            onClick={() => setExcluindoId(a.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Modal criar/editar */}
+      <Dialog open={modalAberto} onOpenChange={v => { if (!v) setModalAberto(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editando_aspecto ? 'Editar aspecto' : 'Novo aspecto'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {!editando_aspecto && (
+              <div className="space-y-1.5">
+                <Label>Competência</Label>
+                <Select value={form.competencia} onValueChange={v => setForm(f => ({ ...f, competencia: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(['C1','C2','C3','C4','C5'] as const).map(c => (
+                      <SelectItem key={c} value={c}>{COMP_LABELS[c]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label>Nome do aspecto <span className="text-red-500">*</span></Label>
+              <Input
+                placeholder="Ex.: Repertório improdutivo"
+                value={form.nome}
+                onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Descrição <span className="text-gray-400 font-normal">(opcional)</span></Label>
+              <Input
+                placeholder="Descrição adicional para o corretor"
+                value={form.descricao}
+                onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalAberto(false)}>Cancelar</Button>
+            <Button
+              onClick={handleSalvar}
+              disabled={criando || editando}
+              className="bg-[#3f0776] hover:bg-[#5a1a9e] text-white"
+            >
+              {(criando || editando) ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação de exclusão */}
+      <Dialog open={!!excluindoId} onOpenChange={v => { if (!v) setExcluindoId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir aspecto?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">Esta ação é irreversível. Marcações existentes serão removidas.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExcluindoId(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => { if (excluindoId) { excluir(excluindoId, { onSuccess: () => setExcluindoId(null) }); } }}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function PlanoEstudoAdmin() {
@@ -544,6 +766,9 @@ export default function PlanoEstudoAdmin() {
             <TabsTrigger value="individual" className="flex items-center gap-1.5">
               <Users className="w-4 h-4" /> Por Aluno
             </TabsTrigger>
+            <TabsTrigger value="aspectos" className="flex items-center gap-1.5">
+              <Settings2 className="w-4 h-4" /> Aspectos
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="macro">
@@ -552,6 +777,10 @@ export default function PlanoEstudoAdmin() {
 
           <TabsContent value="individual">
             <VisaoIndividual />
+          </TabsContent>
+
+          <TabsContent value="aspectos">
+            <GerenciarAspectos />
           </TabsContent>
         </Tabs>
       </div>
