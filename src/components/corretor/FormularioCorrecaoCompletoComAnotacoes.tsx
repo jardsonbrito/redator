@@ -541,11 +541,36 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
       )}
 
       {/* Vista Pedagógica */}
-      <Card className="card">
-        <CardHeader>
-          <CardTitle>Vista Pedagógica</CardTitle>
+      <Card className={`card ${marcacoesPEP.length === 0 ? 'border-amber-300' : 'border-green-300'}`}>
+        <CardHeader className="pb-2 pt-3 px-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Vista Pedagógica</CardTitle>
+            {/* Botão PEP — destacado, com status visual */}
+            <Button
+              type="button"
+              onClick={() => setShowPEPModal(true)}
+              className={`gap-2 h-9 px-4 text-sm font-semibold ${
+                marcacoesPEP.length === 0
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse'
+                  : 'bg-[#3f0776] hover:bg-[#5a1a9e] text-white'
+              }`}
+            >
+              <BookMarked className="w-4 h-4" />
+              Plano de Estudo (PEP)
+              {marcacoesPEP.length > 0 && (
+                <span className="ml-1 bg-white/25 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {marcacoesPEP.length}
+                </span>
+              )}
+            </Button>
+          </div>
+          {marcacoesPEP.length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">
+              ⚠ Preencha os aspectos do Plano de Estudo antes de finalizar a correção.
+            </p>
+          )}
         </CardHeader>
-        <CardContent className="space-y-2 p-3">
+        <CardContent className="space-y-2 p-3 pt-1">
           {/* Todas as competências, botão gravar áudio e nota em uma única linha */}
           <div className="flex items-center gap-2 justify-between">
             {/* Competências C1-C5 compactas */}
@@ -577,20 +602,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
                 </div>
               ))}
             </div>
-            
-            {/* Botão gravar áudio, PEP e nota */}
+
+            {/* Botão gravar áudio e nota */}
             <div className="flex items-center gap-2">
-              {/* Botão PEP — abre modal de marcação de aspectos */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPEPModal(true)}
-                className="h-8 gap-1.5 text-xs border-[#3f0776] text-[#3f0776] hover:bg-[#f1e4fe]"
-              >
-                <BookMarked className="w-3.5 h-3.5" />
-                PEP
-              </Button>
 
               <AudioRecorder
                 redacaoId={redacao.id}
