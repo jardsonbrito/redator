@@ -3,13 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   BookMarked, Users, AlertTriangle, BarChart3,
-  ChevronLeft, ChevronDown, ChevronUp, Search, CheckCircle2, Lock, Circle,
+  ChevronDown, ChevronUp, Search, CheckCircle2, Lock, Circle,
   ArrowUpDown, Plus, Ban, Unlock, RefreshCw, Loader2,
   Settings2, Pencil, Trash2, GripVertical, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { ModernAdminHeader } from '@/components/admin/ModernAdminHeader';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -756,29 +758,34 @@ function GerenciarAspectos() {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function PlanoEstudoAdmin() {
-  const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    signOut();
+  };
 
   if (!isAdmin) return <Navigate to="/login" replace />;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Cabeçalho */}
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => navigate('/admin')}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#3f0776] transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Admin
-          </button>
-          <span className="text-gray-300">/</span>
-          <div className="flex items-center gap-2">
-            <BookMarked className="w-5 h-5 text-[#3f0776]" />
-            <h1 className="text-lg font-bold text-[#3f0776]">Plano de Estudo Personalizado</h1>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <ModernAdminHeader userEmail={user?.email} onLogout={handleLogout} />
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb */}
+        <Breadcrumb className="mb-6">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin" className="text-primary font-medium">
+                Dashboard
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-foreground">Plano de Estudo Personalizado</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
         <Tabs defaultValue="macro">
           <TabsList className="mb-6">
@@ -805,7 +812,7 @@ export default function PlanoEstudoAdmin() {
             <GerenciarAspectos />
           </TabsContent>
         </Tabs>
-      </div>
+      </main>
     </div>
   );
 }
