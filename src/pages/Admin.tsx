@@ -723,6 +723,7 @@ const Admin = () => {
     { id: "laboratorio", label: "Laboratório", icon: LaboratorioIcon, iconColor: "#7C3AED" },
     { id: "microaprendizagem", label: "Microaprendizagem", icon: Layers, iconColor: "#8B5CF6" },
     { id: "guia-tematico", label: "Guia Temático", icon: Map, iconColor: "#7C3AED" },
+    { id: "plano-estudo", label: "Plano de Estudo", icon: ListChecks, iconColor: "#3F0776" },
 
     // Linha 7: Gestão de Usuários
     { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
@@ -1160,6 +1161,10 @@ const Admin = () => {
 
       case "guia-tematico":
         navigate('/admin/guia-tematico');
+        return null;
+
+      case "plano-estudo":
+        navigate('/admin/plano-estudo');
         return null;
 
       case "exportacao":

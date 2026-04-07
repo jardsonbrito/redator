@@ -68,7 +68,6 @@ const Top5Admin               = lazy(() => import("./pages/admin/Top5Admin"));
 const AulasAoVivo             = lazy(() => import("./pages/AulasAoVivo"));
 const SalasVirtuais           = lazy(() => import("./pages/SalasVirtuais"));
 const RedacaoManuscrita       = lazy(() => import("./pages/RedacaoManuscrita"));
-const MinhasConquistas        = lazy(() => import("./pages/MinhasConquistas"));
 const Gamificacao             = lazy(() => import("./pages/Gamificacao"));
 const DiarioOnline            = lazy(() => import("./pages/DiarioOnline"));
 const SimuladoRedacaoCorrigida = lazy(() => import("./pages/SimuladoRedacaoCorrigida"));
@@ -81,6 +80,8 @@ const AdminNotes              = lazy(() => import("./pages/admin/AdminNotes"));
 const GuiaTematico            = lazy(() => import("./pages/GuiaTematico"));
 const GuiaTematicoAdmin       = lazy(() => import("./pages/admin/GuiaTematicoAdmin"));
 const Jarvis                  = lazy(() => import("./pages/Jarvis"));
+const PlanoEstudo             = lazy(() => import("./pages/PlanoEstudo"));
+const PlanoEstudoAdmin        = lazy(() => import("./pages/admin/PlanoEstudoAdmin"));
 
 // ── Páginas com named export ─────────────────────────────────────────────────
 const Avisos            = lazy(() => import("./pages/admin/Avisos").then(m => ({ default: m.Avisos })));
@@ -174,9 +175,9 @@ function App() {
                     <Route path="/guia-tematico" element={<ProtectedStudentRoute><GuiaTematico /></ProtectedStudentRoute>} />
                     <Route path="/guia-tematico/:id" element={<ProtectedStudentRoute><GuiaTematicoView /></ProtectedStudentRoute>} />
                     <Route path="/jarvis" element={<ProtectedStudentRoute><Jarvis /></ProtectedStudentRoute>} />
+                    <Route path="/plano-estudo" element={<ProtectedStudentRoute><PlanoEstudo /></ProtectedStudentRoute>} />
                     <Route path="/repertorio-orientado" element={<ProtectedStudentRoute><RepertorioOrientado /></ProtectedStudentRoute>} />
                     <Route path="/repertorio-orientado/laboratorio/:id" element={<ProtectedStudentRoute><LaboratorioAulaView /></ProtectedStudentRoute>} />
-                    <Route path="/minhas-conquistas" element={<ProtectedStudentRoute><MinhasConquistas /></ProtectedStudentRoute>} />
                     <Route path="/gamificacao" element={<ProtectedStudentRoute><Gamificacao /></ProtectedStudentRoute>} />
                     <Route path="/diario-online" element={<ProtectedStudentRoute><DiarioOnline /></ProtectedStudentRoute>} />
                     <Route path="/microaprendizagem" element={<ProtectedStudentRoute><Microaprendizagem /></ProtectedStudentRoute>} />
@@ -203,6 +204,7 @@ function App() {
                     <Route path="/admin/anotacoes" element={<AdminNotes />} />
                     <Route path="/admin/laboratorio" element={<RepertorioLaboratorio />} />
                     <Route path="/admin/guia-tematico" element={<GuiaTematicoAdmin />} />
+                    <Route path="/admin/plano-estudo" element={<PlanoEstudoAdmin />} />
 
                     {/* Rotas do Corretor */}
                     <Route path="/corretor/login" element={<CorretorLogin />} />

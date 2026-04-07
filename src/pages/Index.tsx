@@ -12,6 +12,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
+import { PlanoEstudoCard } from "@/components/PlanoEstudoCard";
 import { StudentInboxManager } from "@/components/student/StudentInboxManager";
 import { AlertasAtividadesModal } from "@/components/AlertasAtividadesModal";
 import {
@@ -202,13 +203,6 @@ const Index = () => {
       showAlways: true
     },
     {
-      title: "Minhas Conquistas",
-      path: "/minhas-conquistas",
-      icon: Trophy,
-      tooltip: "Acompanhe suas atividades por mês.",
-      showAlways: true
-    },
-    {
       title: "Diário Online",
       path: "/diario-online",
       icon: Calendar,
@@ -261,8 +255,9 @@ const Index = () => {
 
 
             {/* Cards do painel */}
-            <div className="max-w-5xl mx-auto mb-8">
+            <div className="max-w-5xl mx-auto mb-8 space-y-4">
               <MeuDesempenho />
+              {studentData.userType === 'aluno' && <PlanoEstudoCard />}
             </div>
 
             {/* Mural de Avisos */}
