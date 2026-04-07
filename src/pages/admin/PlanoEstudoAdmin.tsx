@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   BookMarked, Users, AlertTriangle, BarChart3,
-  ChevronLeft, Search, CheckCircle2, Lock, Circle,
+  ChevronLeft, ChevronDown, ChevronUp, Search, CheckCircle2, Lock, Circle,
   ArrowUpDown, Plus, Ban, Unlock, RefreshCw, Loader2,
   Settings2, Pencil, Trash2, GripVertical, ToggleLeft, ToggleRight,
 } from 'lucide-react';
@@ -581,6 +581,17 @@ function GerenciarAspectos() {
     editar({ id: a.id, ativo: !a.ativo });
   };
 
+  // Colapso por competência (todas abertas por padrão)
+  const [colapsados, setColapsados] = useState<Set<string>>(new Set());
+  const toggleColapso = (comp: string) => {
+    setColapsados(prev => {
+      const next = new Set(prev);
+      if (next.has(comp)) next.delete(comp);
+      else next.add(comp);
+      return next;
+    });
+  };
+
   // Agrupa por competência
   const porComp = (['C1','C2','C3','C4','C5'] as const).map(c => ({
     comp: c,
@@ -602,16 +613,25 @@ function GerenciarAspectos() {
         <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-[#3f0776]" /></div>
       ) : (
         <div className="grid gap-4">
-          {porComp.map(({ comp, itens }) => (
+          {porComp.map(({ comp, itens }) => {
+            const colapsado = colapsados.has(comp);
+            return (
             <Card key={comp}>
-              <CardHeader className="pb-2 pt-4 px-5">
+              <CardHeader
+                className="pb-2 pt-4 px-5 cursor-pointer select-none"
+                onClick={() => toggleColapso(comp)}
+              >
                 <div className="flex items-center justify-between">
-                  <Badge className={`text-xs font-semibold border ${COMP_CORES[comp]}`}>
-                    {COMP_LABELS[comp]}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {colapsado ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
+                    <Badge className={`text-xs font-semibold border ${COMP_CORES[comp]}`}>
+                      {COMP_LABELS[comp]}
+                    </Badge>
+                  </div>
                   <span className="text-xs text-gray-400">{itens.filter(a => a.ativo).length} ativo(s)</span>
                 </div>
               </CardHeader>
+              {!colapsado && (
               <CardContent className="px-5 pb-4">
                 {itens.length === 0 ? (
                   <p className="text-xs text-gray-400 italic">Nenhum aspecto cadastrado para esta competência.</p>
@@ -654,8 +674,10 @@ function GerenciarAspectos() {
                   </div>
                 )}
               </CardContent>
+              )}
             </Card>
-          ))}
+          );
+          })}
         </div>
       )}
 
