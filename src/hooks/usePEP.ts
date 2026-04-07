@@ -46,31 +46,72 @@ export interface PEPTask {
 // ─── Constantes pedagógicas ───────────────────────────────────────────────────
 
 /**
- * Para cada competência, o código do erro primário mais representativo.
+ * Para cada competência, o código do erro primário mais representativo no banco.
  * A detecção NÃO usa threshold fixo — é relativa por redação (ver bootstrap).
+ *
+ * Definições ENEM:
+ *  C1 — Domínio da norma-padrão (gramática, ortografia, pontuação, vocabulário formal)
+ *  C2 — Compreensão do tema, uso de repertório sociocultural e estrutura dissertativa
+ *  C3 — Organização das ideias e argumentação (defesa do ponto de vista, lógica, progressão)
+ *  C4 — Mecanismos linguísticos de coesão (conectivos, coesão referencial e sequencial)
+ *  C5 — Proposta de intervenção social detalhada e respeitosa aos direitos humanos
  */
 const COMPETENCIAS: Array<{ campo: string; codigo: string }> = [
   { campo: 'nota_c1', codigo: 'C1_CONCORDANCIA' },
   { campo: 'nota_c2', codigo: 'C2_REPERTORIO'   },
-  { campo: 'nota_c3', codigo: 'C3_TESE'         },
-  { campo: 'nota_c4', codigo: 'C4_CONECTIVOS'   },
+  { campo: 'nota_c3', codigo: 'C3_PROGRESSAO'   }, // C3_PROGRESSAO representa melhor a competência toda
+  { campo: 'nota_c4', codigo: 'C4_COESAO_SEQ'   }, // C4_COESAO_SEQ cobre mecanismos de coesão como um todo
   { campo: 'nota_c5', codigo: 'C5_PROPOSTA'     },
 ];
 
+/**
+ * Nome de exibição da tarefa — reflete a competência completa, não um sub-erro isolado.
+ * Todos os códigos da taxonomia são mapeados para o nome da competência-mãe.
+ */
 const ERRO_NOME: Record<string, string> = {
-  C1_CONCORDANCIA: 'Concordância e norma culta',
-  C2_REPERTORIO:   'Uso de repertório sociocultural',
-  C3_TESE:         'Construção de tese',
-  C4_CONECTIVOS:   'Uso de conectivos e coesão',
+  // C1 — Norma-padrão (qualquer sub-erro gera a mesma missão de competência)
+  C1_CONCORDANCIA: 'Norma-padrão da língua portuguesa',
+  C1_REGENCIA:     'Norma-padrão da língua portuguesa',
+  C1_PONTUACAO:    'Norma-padrão da língua portuguesa',
+  C1_ORTOGRAFIA:   'Norma-padrão da língua portuguesa',
+  C1_PARAGRAFACAO: 'Norma-padrão da língua portuguesa',
+  // C2 — Tema e repertório
+  C2_TEMA:         'Compreensão do tema e repertório sociocultural',
+  C2_REPERTORIO:   'Compreensão do tema e repertório sociocultural',
+  C2_PERTINENCIA:  'Compreensão do tema e repertório sociocultural',
+  // C3 — Organização e argumentação
+  C3_TESE:         'Organização e desenvolvimento argumentativo',
+  C3_PROGRESSAO:   'Organização e desenvolvimento argumentativo',
+  C3_CONTRA_ARG:   'Organização e desenvolvimento argumentativo',
+  // C4 — Coesão e mecanismos linguísticos
+  C4_COESAO_REF:   'Coesão e mecanismos linguísticos',
+  C4_CONECTIVOS:   'Coesão e mecanismos linguísticos',
+  C4_COESAO_SEQ:   'Coesão e mecanismos linguísticos',
+  // C5 — Proposta de intervenção
   C5_PROPOSTA:     'Proposta de intervenção',
+  C5_DETALHAMENTO: 'Proposta de intervenção',
+  C5_RESPEITO_DH:  'Proposta de intervenção',
 };
 
+/** Rótulo curto do eixo para uso no motivo template */
 const EIXO_NOME: Record<string, string> = {
-  C1: 'Norma Culta',
-  C2: 'Repertório e Tema',
-  C3: 'Argumentação',
-  C4: 'Coesão',
-  C5: 'Proposta de Intervenção',
+  C1: 'Competência 1 — norma-padrão',
+  C2: 'Competência 2 — tema e repertório',
+  C3: 'Competência 3 — organização e argumentação',
+  C4: 'Competência 4 — coesão textual',
+  C5: 'Competência 5 — proposta de intervenção',
+};
+
+/**
+ * Descrição pedagógica do que cada competência avalia —
+ * usada no template do motivo quando não há comentário do corretor disponível.
+ */
+const DESCRICAO_COMPETENCIA: Record<string, string> = {
+  C1: 'escrever em conformidade com a norma-padrão: gramática, ortografia, pontuação e vocabulário formal',
+  C2: 'compreender o tema e usar repertório sociocultural pertinente em texto dissertativo-argumentativo',
+  C3: 'organizar as ideias e construir argumentos de forma lógica, coerente e bem estruturada',
+  C4: 'articular o texto com mecanismos de coesão entre frases, períodos e parágrafos',
+  C5: 'elaborar uma proposta de intervenção social detalhada e respeitosa aos direitos humanos',
 };
 
 // ─── Core: bootstrap retroativo ───────────────────────────────────────────────
@@ -187,20 +228,25 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
   // "Paralelismo Sintático" (C1), "Reconhecimento dos 3 momentos da Introdução" (C3)
 
   function inferirEixoDaLousa(titulo: string): string | null {
-    const t = titulo.toLowerCase();
-    // Referência direta: "competência X" ou "competencia X"
-    const matchDireto = t.match(/compet[eê]ncia\s+([1-5])/);
+    // Referência direta: "competência X", "competencia X" ou "C X"
+    const matchDireto = titulo.match(/compet[eê]ncia\s+([1-5])/i);
     if (matchDireto) return `C${matchDireto[1]}`;
-    // Palavras-chave C1 — norma culta
-    if (/ponto|vírgula|pontua|concord|regência|sintax|paralel|ortogr|gramát|norma culta/i.test(titulo)) return 'C1';
-    // Palavras-chave C2 — tema e repertório
-    if (/repertório|repertorio|tema|sociocult|contextuali|frase temát/i.test(titulo)) return 'C2';
-    // Palavras-chave C3 — argumentação
-    if (/argum|tese|introdução|introduc|desenvolvi|paragraf|estrutura do text/i.test(titulo)) return 'C3';
-    // Palavras-chave C4 — coesão
-    if (/coes|conect|articulac|articulaç|coerên|coer|referenci|pronome/i.test(titulo)) return 'C4';
-    // Palavras-chave C5 — proposta
-    if (/proposta|interven|conclus|agente|finalidade|efeito/i.test(titulo)) return 'C5';
+
+    // C1 — Domínio da norma-padrão: gramática, ortografia, pontuação, vocabulário formal
+    if (/ponto|vírgula|pontua|concord|regência|regencia|sintax|paralel|ortogr|acentu|gramát|gramat|norma.?padr|norma culta|vocabulário|vocabulario|léxico|lexico|registro formal|reescrit/i.test(titulo)) return 'C1';
+
+    // C2 — Compreensão do tema, repertório sociocultural, estrutura dissertativa
+    if (/repertório|repertorio|tema|sociocult|contextuali|frase temát|frase temat|dissertat|introdução|introducao|tese\s+da|delimitação|recorte/i.test(titulo)) return 'C2';
+
+    // C3 — Organização das ideias e argumentação (defesa do ponto de vista, progressão, desenvolvimento lógico)
+    if (/argum|organiz|progressão|progressao|desenvolvi|paragraf|estrutura do text|ponto de vista|defesa|lógic|logic|tópico fras|topico fras|causa.?efeito|contra.?arg/i.test(titulo)) return 'C3';
+
+    // C4 — Mecanismos linguísticos de coesão (conectivos, coesão referencial e sequencial)
+    if (/coes|conect|articulac|articulaç|referenc|pronome|anáfor|anafor|elipse|substituição|substituicao|sequenc|ligação|ligacao|fluidez/i.test(titulo)) return 'C4';
+
+    // C5 — Proposta de intervenção
+    if (/proposta|interven|conclus|agente|finalidade|efeito|direitos humanos|viabilidade/i.test(titulo)) return 'C5';
+
     return null;
   }
 
@@ -260,7 +306,7 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
 
       // Prefere linhas com comentário pedagógico ou descrição explícita de erro
       const linhasRicas = linhas.filter(l =>
-        /Comentário pedagógico|incorret|inadequ|imprecis|semanticam|concordância|regência|coesão|argum|tese|→\s*(não|parcial)|insuficiente|fragi/i.test(l)
+        /Comentário pedagógico|incorret|inadequ|imprecis|semanticam|concordância|regência|coesão|argum|tese|organiz|progressão|progressao|lógic|ponto de vista|defesa|→\s*(não|parcial)|insuficiente|fragi/i.test(l)
       );
 
       const melhores = (linhasRicas.length > 0 ? linhasRicas : linhas).slice(0, 2);
@@ -437,19 +483,19 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       ? `Acesse o recurso vinculado a esta missão e conclua a atividade proposta.`
       : `Revise o conteúdo sobre ${ERRO_NOME[e.codigo] ?? erro.nome} disponível em Aulas Gravadas ou Microaprendizagem.`;
 
-    // Motivo: prioriza o feedback real dos corretores; usa estatística como complemento
+    // Motivo: prioriza o feedback real dos corretores; usa template pedagógico como fallback
     const trechoCorretor = trechosComentario.get(erro.eixo);
+    const descComp = DESCRICAO_COMPETENCIA[erro.eixo] ?? '';
     let motivo: string;
     if (trechoCorretor) {
-      // Complemento quantitativo (só quando há mais de uma ocorrência)
       const complementoQuant = e.count >= 2
         ? ` Esta dificuldade apareceu em ${Math.round(e.count)} das suas redações analisadas.`
         : '';
-      motivo = `Seus corretores identificaram: "${trechoCorretor.replace(/"/g, '\u201c').replace(/"/g, '\u201d')}"${complementoQuant}`;
+      motivo = `Seus corretores identificaram: "${trechoCorretor}"${complementoQuant}`;
     } else if (e.count === 1) {
-      motivo = `Em uma das suas redações corrigidas, esta foi a competência com pior resultado (média de ${e.avgNota} pontos em ${eixoLabel}).`;
+      motivo = `A ${eixoLabel} avalia a capacidade de ${descComp}. Em uma das suas redações corrigidas, esta foi a competência com pior resultado (nota: ${e.avgNota} pontos).`;
     } else {
-      motivo = `Esta competência foi uma das mais frágeis em ${Math.round(e.count)} das suas ${total} redações analisadas, com média de ${e.avgNota} pontos.`;
+      motivo = `A ${eixoLabel} avalia a capacidade de ${descComp}. Ela foi a mais frágil em ${Math.round(e.count)} das suas ${total} redações analisadas (média de ${e.avgNota} pontos).`;
     }
 
     return {
