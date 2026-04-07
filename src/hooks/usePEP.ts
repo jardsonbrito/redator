@@ -95,12 +95,19 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
     taxonomia.map(t => [t.codigo, t as PEPTaxonomiaErro])
   );
 
-  // 2. Buscar redações corrigidas (últimos 6 meses para ter histórico útil)
+  // 2. Buscar todas as fontes de diagnóstico em paralelo (últimos 6 meses)
   const seisMesesAtras = new Date();
   seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
   const desde = seisMesesAtras.toISOString();
 
-  const [{ data: redacoes }, { data: simulados }] = await Promise.all([
+  const [
+    { data: redacoes },
+    { data: simulados },
+    { data: exercicios },
+    { data: lousas },
+    { data: quizErros },
+  ] = await Promise.all([
+    // 1. Redações tema livre — notas C1-C5 explícitas (fonte primária)
     supabase
       .from('redacoes_enviadas')
       .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, data_correcao, id')
@@ -111,6 +118,7 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       .order('data_correcao', { ascending: false })
       .limit(30),
 
+    // 2. Redações de simulado — notas C1-C5 explícitas (fonte primária)
     supabase
       .from('redacoes_simulado')
       .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, data_correcao, id')
@@ -120,45 +128,158 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       .is('deleted_at', null)
       .order('data_correcao', { ascending: false })
       .limit(20),
+
+    // 3. Redações de exercício — mesma estrutura C1-C5 (fonte primária, estava ignorada)
+    supabase
+      .from('redacoes_exercicio')
+      .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, data_correcao, id')
+      .ilike('email_aluno', emailNorm)
+      .not('nota_total', 'is', null)
+      .gte('data_correcao', desde)
+      .is('deleted_at', null)
+      .order('data_correcao', { ascending: false })
+      .limit(20),
+
+    // 4. Lousas corrigidas — nota 0-10, título identifica a competência (fonte secundária)
+    supabase
+      .from('lousa_resposta')
+      .select('nota, submitted_at, lousa_id, lousa:lousa_id(titulo)')
+      .ilike('email_aluno', emailNorm)
+      .not('nota', 'is', null)
+      .gte('submitted_at', desde)
+      .order('submitted_at', { ascending: false })
+      .limit(30),
+
+    // 5. Erros em quizzes de microaprendizagem — acertou=false, título do tópico identifica competência
+    supabase
+      .from('micro_quiz_tentativas')
+      .select(`
+        acertou,
+        created_at,
+        questao:questao_id(
+          item:item_id(
+            topico:topico_id(titulo)
+          )
+        )
+      `)
+      .ilike('email_aluno', emailNorm)
+      .eq('acertou', false)
+      .gte('created_at', desde)
+      .order('created_at', { ascending: false })
+      .limit(50),
   ]);
 
-  const todasRedacoes = [...(redacoes ?? []), ...(simulados ?? [])];
+  // Todas as fontes primárias (têm notas C1-C5 estruturadas)
+  const todasRedacoes = [
+    ...(redacoes ?? []),
+    ...(simulados ?? []),
+    ...(exercicios ?? []),
+  ];
 
-  if (todasRedacoes.length === 0) return false;
+  const totalFontesSecundarias = (lousas ?? []).length + (quizErros ?? []).length;
 
-  // 3. Detecção relativa por redação
+  // Sem nenhum dado histórico disponível: plano não pode ser gerado
+  if (todasRedacoes.length === 0 && totalFontesSecundarias === 0) return false;
+
+  // ─── Inferência de competência pelo título da lousa ───────────────────────
+  // O título das lousas indica diretamente a competência trabalhada.
+  // Exemplos reais: "Competência 1", "Competência 2 (aspecto 1)",
+  // "Paralelismo Sintático" (C1), "Reconhecimento dos 3 momentos da Introdução" (C3)
+
+  function inferirEixoDaLousa(titulo: string): string | null {
+    const t = titulo.toLowerCase();
+    // Referência direta: "competência X" ou "competencia X"
+    const matchDireto = t.match(/compet[eê]ncia\s+([1-5])/);
+    if (matchDireto) return `C${matchDireto[1]}`;
+    // Palavras-chave C1 — norma culta
+    if (/ponto|vírgula|pontua|concord|regência|sintax|paralel|ortogr|gramát|norma culta/i.test(titulo)) return 'C1';
+    // Palavras-chave C2 — tema e repertório
+    if (/repertório|repertorio|tema|sociocult|contextuali|frase temát/i.test(titulo)) return 'C2';
+    // Palavras-chave C3 — argumentação
+    if (/argum|tese|introdução|introduc|desenvolvi|paragraf|estrutura do text/i.test(titulo)) return 'C3';
+    // Palavras-chave C4 — coesão
+    if (/coes|conect|articulac|articulaç|coerên|coer|referenci|pronome/i.test(titulo)) return 'C4';
+    // Palavras-chave C5 — proposta
+    if (/proposta|interven|conclus|agente|finalidade|efeito/i.test(titulo)) return 'C5';
+    return null;
+  }
+
+  // ─── Mapa de erro por eixo (para lousas) ─────────────────────────────────
+  const ERRO_POR_EIXO: Record<string, string> = {
+    C1: 'C1_CONCORDANCIA',
+    C2: 'C2_REPERTORIO',
+    C3: 'C3_TESE',
+    C4: 'C4_CONECTIVOS',
+    C5: 'C5_PROPOSTA',
+  };
+
+  // 3. Contagem unificada de erros por competência
   //
-  // Lógica: para cada redação, identifica as 2 competências com PIOR nota
-  // naquela redação específica (ranking interno). Só conta se a nota for < 160
-  // (deixa de contar competências onde o aluno já vai bem).
+  // Fonte primária (redações): para cada texto, detecta as 2 piores competências
+  //   (ranking relativo interno). Só conta se nota < 160 — evita penalizar
+  //   alunos por competências onde já vão bem.
   //
-  // Isso torna a detecção PERSONALIZADA por aluno:
-  //   - Aluno com C5=190 e C1=110 → C1 detectada (não C5)
-  //   - Aluno com C5=40 e tudo mais ≥ 160 → C5 detectada (correto)
-  //   - Dois alunos com o mesmo padrão de C5 baixo → ambos recebem C5 (correto)
+  // Fonte secundária (lousas): nota < 7 em uma lousa indica dificuldade
+  //   na competência inferida pelo título. Peso reduzido (0.5 por ocorrência)
+  //   para não sobrepor o sinal mais rico das redações.
 
   interface ContagemErro { count: number; somaNotas: number }
   const contagem = new Map<string, ContagemErro>();
 
+  // — Redações e simulados —
   for (const r of todasRedacoes) {
-    // Monta lista de competências com nota real (ignora nulas)
     const notasRedacao = COMPETENCIAS
       .map(c => ({ codigo: c.codigo, nota: (r as any)[c.campo] }))
       .filter(n => typeof n.nota === 'number')
-      .sort((a, b) => a.nota - b.nota); // piores primeiro (menor nota)
+      .sort((a, b) => a.nota - b.nota);
 
     if (notasRedacao.length === 0) continue;
 
-    // Pega as 2 piores competências desta redação, mas só se nota < 160
-    // (≥ 160 = "atendeu bem", não precisa de atenção)
+    // 2 piores desta redação, apenas se < 160
     const detectadas = notasRedacao.slice(0, 2).filter(n => n.nota < 160);
 
     for (const { codigo, nota } of detectadas) {
       const cur = contagem.get(codigo) ?? { count: 0, somaNotas: 0 };
-      cur.count++;
+      cur.count += 1;
       cur.somaNotas += nota;
       contagem.set(codigo, cur);
     }
+  }
+
+  // — Lousas corrigidas (fonte secundária, peso 0.5) —
+  // Detecta dificuldade quando nota < 7 e o título da lousa indica a competência.
+  for (const l of (lousas ?? [])) {
+    const titulo = (l as any).lousa?.titulo ?? '';
+    const eixo = inferirEixoDaLousa(titulo);
+    if (!eixo) continue;
+
+    const nota = typeof l.nota === 'number' ? l.nota : 10;
+    if (nota >= 7) continue; // desempenho satisfatório, não conta
+
+    const codigo = ERRO_POR_EIXO[eixo];
+    const notaConvertida = nota * 20; // escala 0-10 → 0-200
+    const cur = contagem.get(codigo) ?? { count: 0, somaNotas: 0 };
+    cur.count += 0.5;
+    cur.somaNotas += notaConvertida * 0.5;
+    contagem.set(codigo, cur);
+  }
+
+  // — Quizzes de microaprendizagem (fonte terciária, peso 0.3) —
+  // Cada erro em quiz (acertou=false) sinaliza dificuldade no tópico.
+  // A competência é inferida pelo título do tópico (mesma lógica das lousas).
+  for (const q of (quizErros ?? [])) {
+    const tituloTopico = (q as any).questao?.item?.topico?.titulo ?? '';
+    if (!tituloTopico) continue;
+
+    const eixo = inferirEixoDaLousa(tituloTopico); // reutiliza o mesmo inferidor
+    if (!eixo) continue;
+
+    const codigo = ERRO_POR_EIXO[eixo];
+    const cur = contagem.get(codigo) ?? { count: 0, somaNotas: 0 };
+    // Nota sintética: quiz errado = desempenho muito baixo (40/200 = 20%)
+    cur.count += 0.3;
+    cur.somaNotas += 40 * 0.3;
+    contagem.set(codigo, cur);
   }
 
   if (contagem.size === 0) return false;
@@ -206,6 +327,7 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
 
   // 7. Gerar tasks (1 ativa + 2 bloqueadas)
   const agora = new Date().toISOString();
+  // "Total" para o motivo = redações + simulados + exercícios corrigidos (fontes primárias)
   const total = todasRedacoes.length;
 
   const tasksParaInserir = errosOrdenados.map((e, idx) => {
