@@ -42,7 +42,7 @@ export const JarvisCreditManagementBulk = () => {
   const [selectedTurma, setSelectedTurma] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [actionType, setActionType] = useState<'add' | 'set'>('add');
+  const [actionType, setActionType] = useState<'add' | 'remove' | 'set'>('add');
   const [creditAmount, setCreditAmount] = useState<number>(1);
   const [reason, setReason] = useState<string>('');
   const [creditHistory, setCreditHistory] = useState<JarvisCreditAudit[]>([]);
@@ -50,7 +50,7 @@ export const JarvisCreditManagementBulk = () => {
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
 
   // Para ação em lote
-  const [bulkAction, setBulkAction] = useState<'add' | 'set'>('add');
+  const [bulkAction, setBulkAction] = useState<'add' | 'remove' | 'set'>('add');
   const [bulkAmount, setBulkAmount] = useState<number>(1);
   const [bulkReason, setBulkReason] = useState<string>('');
 
@@ -110,26 +110,31 @@ export const JarvisCreditManagementBulk = () => {
       if (!adminData) throw new Error('Admin não encontrado');
 
       // Chamar RPC apropriada
-      const rpcName = actionType === 'add' ? 'add_jarvis_credits' : 'set_jarvis_credits';
-      const rpcParams = actionType === 'add' ? {
-        target_user_id: selectedStudent.id,
-        credit_amount: creditAmount,
-        admin_user_id: adminData.id,
-        reason_text: reason || `${actionType === 'add' ? 'Adição' : 'Definição'} manual de créditos Jarvis`
-      } : {
+      const rpcName = actionType === 'add'
+        ? 'add_jarvis_credits'
+        : actionType === 'remove'
+          ? 'remove_jarvis_credits'
+          : 'set_jarvis_credits';
+      const rpcParams = actionType === 'set' ? {
         target_user_id: selectedStudent.id,
         new_amount: creditAmount,
         admin_user_id: adminData.id,
         reason_text: reason || 'Definição manual de créditos Jarvis'
+      } : {
+        target_user_id: selectedStudent.id,
+        credit_amount: creditAmount,
+        admin_user_id: adminData.id,
+        reason_text: reason || (actionType === 'add' ? 'Adição' : 'Remoção') + ' manual de créditos Jarvis'
       };
 
       const { error } = await supabase.rpc(rpcName, rpcParams);
 
       if (error) throw error;
 
+      const actionLabel = actionType === 'add' ? 'adicionados' : actionType === 'remove' ? 'removidos' : 'definidos';
       toast({
         title: "✅ Sucesso",
-        description: `Créditos Jarvis ${actionType === 'add' ? 'adicionados' : 'definidos'} com sucesso!`,
+        description: `Créditos Jarvis ${actionLabel} com sucesso!`,
         className: "border-green-200 bg-green-50 text-green-900"
       });
 
@@ -170,19 +175,23 @@ export const JarvisCreditManagementBulk = () => {
 
       if (!adminData) throw new Error('Admin não encontrado');
 
-      const rpcName = bulkAction === 'add' ? 'add_jarvis_credits' : 'set_jarvis_credits';
+      const rpcName = bulkAction === 'add'
+        ? 'add_jarvis_credits'
+        : bulkAction === 'remove'
+          ? 'remove_jarvis_credits'
+          : 'set_jarvis_credits';
 
       for (const student of students) {
-        const rpcParams = bulkAction === 'add' ? {
-          target_user_id: student.id,
-          credit_amount: bulkAmount,
-          admin_user_id: adminData.id,
-          reason_text: bulkReason || `Adição em lote - ${selectedTurma}`
-        } : {
+        const rpcParams = bulkAction === 'set' ? {
           target_user_id: student.id,
           new_amount: bulkAmount,
           admin_user_id: adminData.id,
           reason_text: bulkReason || `Definição em lote - ${selectedTurma}`
+        } : {
+          target_user_id: student.id,
+          credit_amount: bulkAmount,
+          admin_user_id: adminData.id,
+          reason_text: bulkReason || `${bulkAction === 'add' ? 'Adição' : 'Remoção'} em lote - ${selectedTurma}`
         };
 
         await supabase.rpc(rpcName, rpcParams);
@@ -233,6 +242,7 @@ export const JarvisCreditManagementBulk = () => {
   const formatAction = (action: string) => {
     const actions: { [key: string]: string } = {
       add: 'Adicionado',
+      remove: 'Removido',
       set: 'Definido',
       consume: 'Consumido'
     };
@@ -282,12 +292,13 @@ export const JarvisCreditManagementBulk = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label>Ação</Label>
-                    <Select value={bulkAction} onValueChange={(value: 'add' | 'set') => setBulkAction(value)}>
+                    <Select value={bulkAction} onValueChange={(value: 'add' | 'remove' | 'set') => setBulkAction(value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="add">Adicionar</SelectItem>
+                        <SelectItem value="remove">Remover</SelectItem>
                         <SelectItem value="set">Definir</SelectItem>
                       </SelectContent>
                     </Select>
@@ -390,12 +401,13 @@ export const JarvisCreditManagementBulk = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="space-y-2">
                                     <Label>Ação</Label>
-                                    <Select value={actionType} onValueChange={(value: 'add' | 'set') => setActionType(value)}>
+                                    <Select value={actionType} onValueChange={(value: 'add' | 'remove' | 'set') => setActionType(value)}>
                                       <SelectTrigger>
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="add">Adicionar</SelectItem>
+                                        <SelectItem value="remove">Remover</SelectItem>
                                         <SelectItem value="set">Definir</SelectItem>
                                       </SelectContent>
                                     </Select>

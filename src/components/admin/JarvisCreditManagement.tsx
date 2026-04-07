@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Plus, Settings } from "lucide-react";
+import { Bot, Plus, Minus, Settings } from "lucide-react";
 
 interface Props {
   userId: string;
@@ -22,6 +22,7 @@ export const JarvisCreditManagement = ({
   onUpdate
 }: Props) => {
   const [amount, setAmount] = useState<string>("");
+  const [removeAmount, setRemoveAmount] = useState<string>("");
   const [newTotal, setNewTotal] = useState<string>("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -68,6 +69,60 @@ export const JarvisCreditManagement = ({
       });
 
       setAmount("");
+      setReason("");
+      onUpdate();
+
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Erro",
+        description: err.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    const qty = parseInt(removeAmount);
+    if (isNaN(qty) || qty <= 0) {
+      toast({
+        title: "Erro",
+        description: "Quantidade inválida",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const adminSession = JSON.parse(localStorage.getItem('admin_session') || '{}');
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('email', adminSession.email)
+        .single();
+
+      if (!adminData) throw new Error('Admin não encontrado');
+
+      const { error } = await supabase.rpc('remove_jarvis_credits', {
+        target_user_id: userId,
+        credit_amount: qty,
+        admin_user_id: adminData.id,
+        reason_text: reason || 'Remoção manual de créditos Jarvis'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Créditos Jarvis Removidos",
+        description: `-${qty} créditos de ${userEmail}`,
+        className: "border-red-200 bg-red-50 text-red-900"
+      });
+
+      setRemoveAmount("");
       setReason("");
       onUpdate();
 
@@ -186,6 +241,29 @@ export const JarvisCreditManagement = ({
             className="w-full bg-indigo-600 hover:bg-indigo-700"
           >
             {loading ? "Processando..." : "Adicionar"}
+          </Button>
+        </div>
+
+        {/* Remover Créditos */}
+        <div className="space-y-3 border-t pt-4">
+          <Label className="flex items-center gap-2">
+            <Minus className="w-4 h-4" />
+            Remover Créditos
+          </Label>
+          <Input
+            type="number"
+            placeholder="Quantidade a remover"
+            value={removeAmount}
+            onChange={(e) => setRemoveAmount(e.target.value)}
+            min="1"
+          />
+          <Button
+            onClick={handleRemove}
+            disabled={loading || !removeAmount}
+            variant="outline"
+            className="w-full border-red-300 text-red-700 hover:bg-red-50"
+          >
+            {loading ? "Processando..." : "Remover"}
           </Button>
         </div>
 
