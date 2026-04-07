@@ -107,10 +107,10 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
     { data: lousas },
     { data: quizErros },
   ] = await Promise.all([
-    // 1. Redações tema livre — notas C1-C5 explícitas (fonte primária)
+    // 1. Redações tema livre — notas C1-C5 + comentários do corretor (fonte primária)
     supabase
       .from('redacoes_enviadas')
-      .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, data_correcao, id')
+      .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, data_correcao, id, elogios_pontos_atencao_corretor_1')
       .ilike('email_aluno', emailNorm)
       .not('nota_total', 'is', null)
       .gte('data_correcao', desde)
@@ -118,10 +118,10 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       .order('data_correcao', { ascending: false })
       .limit(30),
 
-    // 2. Redações de simulado — notas C1-C5 explícitas (fonte primária)
+    // 2. Redações de simulado — notas C1-C5 + comentários do corretor (fonte primária)
     supabase
       .from('redacoes_simulado')
-      .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, data_correcao, id')
+      .select('nota_c1, nota_c2, nota_c3, nota_c4, nota_c5, data_correcao, id, elogios_pontos_atencao_corretor_1')
       .ilike('email_aluno', emailNorm)
       .not('nota_total', 'is', null)
       .gte('data_correcao', desde)
@@ -213,11 +213,88 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
     C5: 'C5_PROPOSTA',
   };
 
+  // ─── Extração de sinais dos comentários dos corretores ───────────────────
+  //
+  // Os corretores usam o campo elogios_pontos_atencao_corretor_1 com seções
+  // explícitas "Competência X – ..." que permitem extrair feedback por eixo.
+  // Peso 0.4 por detecção (entre lousas 0.5 e quizzes 0.3).
+
+  interface SinalComentario { eixo: string; trecho: string }
+
+  // Mapa romano → número (V antes de IV, III antes de II antes de I para match correto)
+  const ROMAN_TO_NUM: Record<string, string> = { 'V': '5', 'IV': '4', 'III': '3', 'II': '2', 'I': '1' };
+
+  function extrairSignaisDeComentario(texto: string): SinalComentario[] {
+    if (!texto || texto.length < 30) return [];
+    const sinais: SinalComentario[] = [];
+
+    // Os corretores usam tanto números arábicos (1-5) quanto romanos (I-V).
+    // Exemplos reais: "COMPETÊNCIA I\n", "Competência I – Domínio", "Competência 1 – ..."
+    // String.split com grupo de captura inclui os grupos no resultado:
+    // ["prefixo", "I", "conteudo_c1", "II", "conteudo_c2", ...]
+    const partes = texto.split(/[Cc]ompet[eê]ncia\s+([1-5]|V|IV|III|II|I)\s*[–\-—:]?/i);
+
+    for (let i = 1; i < partes.length; i += 2) {
+      const capturado = partes[i]?.trim().toUpperCase();
+      if (!capturado) continue;
+
+      // Converte romano → número ou usa arábico direto
+      const num = ROMAN_TO_NUM[capturado] ?? (/^[1-5]$/.test(capturado) ? capturado : null);
+      if (!num) continue;
+
+      const conteudo = partes[i + 1] ?? '';
+      if (!conteudo.trim()) continue;
+
+      // Só extrai se há indicação CLARA de problema — evita falsos positivos em seções com
+      // feedback misto (ex.: C5 "proposta completa, sugiro atenção à escolha lexical")
+      const eNegativo = /Correção sugerida|Comentário pedagógico|incorret|inadequ|imprecis[ãao]|→\s*(não|parcial)|insuficiente|fragi|não\s+(apresenta|há|possui|tem\s+)|ausência\s+de/i.test(conteudo);
+      if (!eNegativo) continue;
+
+      // Extrai linhas mais informativas (ignora cabeçalhos e blocos de reescrita)
+      const linhas = conteudo.split('\n')
+        .map(l => l.replace(/^[\s•·●◦▪►\-\d.\to]+/, '').trim())
+        .filter(l => l.length > 25 && l.length < 220)
+        .filter(l => !/^(Sugestão de reescrita|REDAÇÃO LAPIDADA|Trecho|Parágrafo\s+\d|Competência|Verificação|Correção sugerida)/i.test(l))
+        // Exclui linhas explicitamente positivas que surgem no início de seções
+        .filter(l => !/^(A proposta é|O repertório|O texto está|Bem elaborad|Parabéns|Ótim|Excelen|Todos os elementos|Está (correto|completo|boa))/i.test(l));
+
+      // Prefere linhas com comentário pedagógico ou descrição explícita de erro
+      const linhasRicas = linhas.filter(l =>
+        /Comentário pedagógico|incorret|inadequ|imprecis|semanticam|concordância|regência|coesão|argum|tese|→\s*(não|parcial)|insuficiente|fragi/i.test(l)
+      );
+
+      const melhores = (linhasRicas.length > 0 ? linhasRicas : linhas).slice(0, 2);
+      // Só gera trecho se as linhas têm conteúdo negativo real
+      const trechoRaw = melhores.join(' ').replace(/\s+/g, ' ').trim().substring(0, 280);
+      // O trecho final deve conter linguagem negativa explícita — descarta trechos positivos
+      const trechoTemProblema = /incorret|inadequ|imprecis|erro\s|fragi|insuficiente|→\s*(não|parcial)|problem|deve\s+ser\s+revisad|ausência|falta\s+de/i.test(trechoRaw);
+      // Descarta se o trecho pertence na verdade a outra competência (dica cross-C no texto)
+      const outrasComps = [1, 2, 3, 4, 5].filter(n => n !== +num);
+      const mencionaOutraComp = new RegExp(`(nota em C|reduz[ir]+\\s+nota\\s+em\\s+C)(${outrasComps.join('|')})`, 'i').test(trechoRaw);
+      const trecho = (trechoTemProblema && !mencionaOutraComp) ? trechoRaw : '';
+
+      if (trecho) sinais.push({ eixo: `C${num}`, trecho });
+    }
+
+    return sinais;
+  }
+
+  // Coleta de trechos por eixo (melhor trecho = mais longo/mais detalhado)
+  const trechosComentario = new Map<string, string>(); // eixo → trecho
+
+  const comentariosParaAnalise = [
+    ...(redacoes ?? []).map((r: any) => r.elogios_pontos_atencao_corretor_1 as string | null),
+    ...(simulados ?? []).map((r: any) => r.elogios_pontos_atencao_corretor_1 as string | null),
+  ].filter((c): c is string => !!c && c.length > 30);
+
   // 3. Contagem unificada de erros por competência
   //
   // Fonte primária (redações): para cada texto, detecta as 2 piores competências
   //   (ranking relativo interno). Só conta se nota < 160 — evita penalizar
   //   alunos por competências onde já vão bem.
+  //
+  // Comentários dos corretores: cada menção negativa a uma competência vale +0.4
+  //   e fornece o trecho real para compor o motivo da missão.
   //
   // Fonte secundária (lousas): nota < 7 em uma lousa indica dificuldade
   //   na competência inferida pelo título. Peso reduzido (0.5 por ocorrência)
@@ -262,6 +339,27 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
     cur.count += 0.5;
     cur.somaNotas += notaConvertida * 0.5;
     contagem.set(codigo, cur);
+  }
+
+  // — Comentários dos corretores (peso 0.4 por detecção negativa) —
+  for (const comentario of comentariosParaAnalise) {
+    const sinais = extrairSignaisDeComentario(comentario);
+    for (const { eixo, trecho } of sinais) {
+      const codigo = ERRO_POR_EIXO[eixo];
+      if (!codigo) continue;
+
+      // Adiciona peso ao diagnóstico quantitativo
+      const cur = contagem.get(codigo) ?? { count: 0, somaNotas: 0 };
+      cur.count += 0.4;
+      cur.somaNotas += 80 * 0.4; // sintético: menção negativa ≈ abaixo da média
+      contagem.set(codigo, cur);
+
+      // Guarda o trecho mais rico para uso no motivo
+      const existente = trechosComentario.get(eixo) ?? '';
+      if (trecho.length > existente.length) {
+        trechosComentario.set(eixo, trecho);
+      }
+    }
   }
 
   // — Quizzes de microaprendizagem (fonte terciária, peso 0.3) —
@@ -339,10 +437,20 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       ? `Acesse o recurso vinculado a esta missão e conclua a atividade proposta.`
       : `Revise o conteúdo sobre ${ERRO_NOME[e.codigo] ?? erro.nome} disponível em Aulas Gravadas ou Microaprendizagem.`;
 
-    // Motivo com dados reais do aluno: recorrência + nota média
-    const motivo = e.count === 1
-      ? `Em uma das suas redações corrigidas, esta foi a competência com pior resultado (média de ${e.avgNota} pontos em ${eixoLabel}).`
-      : `Esta competência foi uma das mais frágeis em ${e.count} das suas ${total} redações analisadas, com média de ${e.avgNota} pontos (${eixoLabel}).`;
+    // Motivo: prioriza o feedback real dos corretores; usa estatística como complemento
+    const trechoCorretor = trechosComentario.get(erro.eixo);
+    let motivo: string;
+    if (trechoCorretor) {
+      // Complemento quantitativo (só quando há mais de uma ocorrência)
+      const complementoQuant = e.count >= 2
+        ? ` Esta dificuldade apareceu em ${Math.round(e.count)} das suas redações analisadas.`
+        : '';
+      motivo = `Seus corretores identificaram: "${trechoCorretor.replace(/"/g, '\u201c').replace(/"/g, '\u201d')}"${complementoQuant}`;
+    } else if (e.count === 1) {
+      motivo = `Em uma das suas redações corrigidas, esta foi a competência com pior resultado (média de ${e.avgNota} pontos em ${eixoLabel}).`;
+    } else {
+      motivo = `Esta competência foi uma das mais frágeis em ${Math.round(e.count)} das suas ${total} redações analisadas, com média de ${e.avgNota} pontos.`;
+    }
 
     return {
       aluno_email: emailNorm,
