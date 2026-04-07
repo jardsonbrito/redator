@@ -43,15 +43,19 @@ export interface PEPTask {
   recurso?: PEPRecurso | null;
 }
 
-// ─── Mapeamento nota → erro primário ─────────────────────────────────────────
-// Threshold: nota < 120 = abaixo de "medianamente" (ENEM: 0-40-80-120-160-200)
-const COMPETENCIA_ERRO_PRIMARIO: Record<string, string> = {
-  nota_c1: 'C1_CONCORDANCIA',
-  nota_c2: 'C2_REPERTORIO',
-  nota_c3: 'C3_TESE',
-  nota_c4: 'C4_CONECTIVOS',
-  nota_c5: 'C5_PROPOSTA',
-};
+// ─── Constantes pedagógicas ───────────────────────────────────────────────────
+
+/**
+ * Para cada competência, o código do erro primário mais representativo.
+ * A detecção NÃO usa threshold fixo — é relativa por redação (ver bootstrap).
+ */
+const COMPETENCIAS: Array<{ campo: string; codigo: string }> = [
+  { campo: 'nota_c1', codigo: 'C1_CONCORDANCIA' },
+  { campo: 'nota_c2', codigo: 'C2_REPERTORIO'   },
+  { campo: 'nota_c3', codigo: 'C3_TESE'         },
+  { campo: 'nota_c4', codigo: 'C4_CONECTIVOS'   },
+  { campo: 'nota_c5', codigo: 'C5_PROPOSTA'     },
+];
 
 const ERRO_NOME: Record<string, string> = {
   C1_CONCORDANCIA: 'Concordância e norma culta',
@@ -122,28 +126,59 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
 
   if (todasRedacoes.length === 0) return false;
 
-  // 3. Contar ocorrências de erro por competência (nota < 120 = necessita atenção)
-  const contagem = new Map<string, number>();
+  // 3. Detecção relativa por redação
+  //
+  // Lógica: para cada redação, identifica as 2 competências com PIOR nota
+  // naquela redação específica (ranking interno). Só conta se a nota for < 160
+  // (deixa de contar competências onde o aluno já vai bem).
+  //
+  // Isso torna a detecção PERSONALIZADA por aluno:
+  //   - Aluno com C5=190 e C1=110 → C1 detectada (não C5)
+  //   - Aluno com C5=40 e tudo mais ≥ 160 → C5 detectada (correto)
+  //   - Dois alunos com o mesmo padrão de C5 baixo → ambos recebem C5 (correto)
+
+  interface ContagemErro { count: number; somaNotas: number }
+  const contagem = new Map<string, ContagemErro>();
 
   for (const r of todasRedacoes) {
-    for (const [campo, codigo] of Object.entries(COMPETENCIA_ERRO_PRIMARIO)) {
-      const nota = (r as any)[campo];
-      if (typeof nota === 'number' && nota < 120) {
-        contagem.set(codigo, (contagem.get(codigo) ?? 0) + 1);
-      }
+    // Monta lista de competências com nota real (ignora nulas)
+    const notasRedacao = COMPETENCIAS
+      .map(c => ({ codigo: c.codigo, nota: (r as any)[c.campo] }))
+      .filter(n => typeof n.nota === 'number')
+      .sort((a, b) => a.nota - b.nota); // piores primeiro (menor nota)
+
+    if (notasRedacao.length === 0) continue;
+
+    // Pega as 2 piores competências desta redação, mas só se nota < 160
+    // (≥ 160 = "atendeu bem", não precisa de atenção)
+    const detectadas = notasRedacao.slice(0, 2).filter(n => n.nota < 160);
+
+    for (const { codigo, nota } of detectadas) {
+      const cur = contagem.get(codigo) ?? { count: 0, somaNotas: 0 };
+      cur.count++;
+      cur.somaNotas += nota;
+      contagem.set(codigo, cur);
     }
   }
 
   if (contagem.size === 0) return false;
 
-  // 4. Ordenar por recorrência (maior → menor) e pegar top 3
+  // 4. Ordenar: maior recorrência primeiro; em empate, menor nota média (mais urgente)
   const errosOrdenados = Array.from(contagem.entries())
-    .sort((a, b) => b[1] - a[1])
+    .map(([codigo, v]) => ({
+      codigo,
+      count: v.count,
+      avgNota: Math.round(v.somaNotas / v.count),
+    }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.avgNota - b.avgNota; // menor nota = mais urgente no empate
+    })
     .slice(0, 3);
 
   // 5. Upsert na pep_consolidacao_erros
-  for (const [codigo, rec] of errosOrdenados) {
-    const erro = taxonomiaMap.get(codigo);
+  for (const e of errosOrdenados) {
+    const erro = taxonomiaMap.get(e.codigo);
     if (!erro) continue;
 
     await supabase
@@ -151,7 +186,7 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       .upsert({
         aluno_email: emailNorm,
         erro_id: erro.id,
-        recorrencia: rec,
+        recorrencia: e.count,
         ultima_deteccao: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),
       }, { onConflict: 'aluno_email,erro_id' });
@@ -171,23 +206,28 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
 
   // 7. Gerar tasks (1 ativa + 2 bloqueadas)
   const agora = new Date().toISOString();
+  const total = todasRedacoes.length;
 
-  const tasksParaInserir = errosOrdenados.map(([codigo, rec], idx) => {
-    const erro = taxonomiaMap.get(codigo)!;
-    const total = todasRedacoes.length;
+  const tasksParaInserir = errosOrdenados.map((e, idx) => {
+    const erro = taxonomiaMap.get(e.codigo)!;
     const eixoLabel = EIXO_NOME[erro.eixo] ?? erro.eixo;
-    const recursoId = recursoParaErro(codigo);
+    const recursoId = recursoParaErro(e.codigo);
 
     const acaoBase = recursoId
       ? `Acesse o recurso vinculado a esta missão e conclua a atividade proposta.`
-      : `Revise o conteúdo sobre ${ERRO_NOME[codigo] ?? erro.nome} disponível em Aulas Gravadas ou Microaprendizagem.`;
+      : `Revise o conteúdo sobre ${ERRO_NOME[e.codigo] ?? erro.nome} disponível em Aulas Gravadas ou Microaprendizagem.`;
+
+    // Motivo com dados reais do aluno: recorrência + nota média
+    const motivo = e.count === 1
+      ? `Em uma das suas redações corrigidas, esta foi a competência com pior resultado (média de ${e.avgNota} pontos em ${eixoLabel}).`
+      : `Esta competência foi uma das mais frágeis em ${e.count} das suas ${total} redações analisadas, com média de ${e.avgNota} pontos (${eixoLabel}).`;
 
     return {
       aluno_email: emailNorm,
       erro_id: erro.id,
       recurso_id: recursoId,
-      titulo: ERRO_NOME[codigo] ?? erro.nome,
-      motivo: `Esse ponto apareceu com baixo desempenho em ${rec} das suas ${total} redações analisadas no período. É o foco prioritário de ${eixoLabel}.`,
+      titulo: ERRO_NOME[e.codigo] ?? erro.nome,
+      motivo,
       acao: acaoBase,
       criterio_conclusao: recursoId
         ? 'Acesse e conclua a atividade vinculada a esta missão.'
