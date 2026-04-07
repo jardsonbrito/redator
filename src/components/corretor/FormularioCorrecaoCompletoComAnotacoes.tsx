@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AudioRecorder } from "./AudioRecorder";
 import { PEPMarcacaoModal } from "./PEPMarcacaoModal";
+import { useMarcacoesRedacao } from "@/hooks/usePEPMarcacoes";
 
 interface FormularioCorrecaoCompletoComAnotacoesProps {
   redacao: RedacaoCorretor;
@@ -73,6 +74,9 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   const [showTemaModal, setShowTemaModal] = useState(false);
   const [showDevolverModal, setShowDevolverModal] = useState(false);
   const [showPEPModal, setShowPEPModal] = useState(false);
+
+  // Marcações PEP existentes — usadas para validar antes de finalizar
+  const { data: marcacoesPEP = [] } = useMarcacoesRedacao(redacao.id);
   const [showRedacaoExpandida, setShowRedacaoExpandida] = useState(false);
   const [motivoDevolucao, setMotivoDevolucao] = useState("");
   const [loading, setLoading] = useState(false);
@@ -247,6 +251,17 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   };
 
   const salvarCorrecao = useCallback(async (status: 'incompleta' | 'corrigida') => {
+    // Bloqueia finalização sem PEP preenchido
+    if (status === 'corrigida' && marcacoesPEP.length === 0) {
+      toast({
+        title: 'Plano de Estudo não preenchido',
+        description: 'Clique em PEP na Vista Pedagógica e marque os aspectos identificados antes de finalizar.',
+        variant: 'destructive',
+      });
+      setShowPEPModal(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.rpc('salvar_correcao_corretor', {
@@ -618,8 +633,10 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
         <Button
           onClick={() => salvarCorrecao('corrigida')}
           disabled={loading || redacaoCongelada}
-          className="flex-1 bg-purple-600 hover:bg-purple-700"
+          className={`flex-1 ${marcacoesPEP.length === 0 ? 'bg-gray-400 hover:bg-gray-500' : 'bg-purple-600 hover:bg-purple-700'}`}
+          title={marcacoesPEP.length === 0 ? 'Preencha o Plano de Estudo (PEP) antes de finalizar' : undefined}
         >
+          {marcacoesPEP.length === 0 && <BookMarked className="w-4 h-4 mr-1.5 opacity-70" />}
           Finalizar correção
         </Button>
       </div>
