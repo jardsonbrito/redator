@@ -788,14 +788,14 @@ export default function PlanoEstudoAdmin() {
         </Breadcrumb>
 
         <Tabs defaultValue="macro">
-          <TabsList className="mb-6">
-            <TabsTrigger value="macro" className="flex items-center gap-1.5">
+          <TabsList className="mb-6 rounded-full bg-white border border-gray-200 p-1 h-auto shadow-sm">
+            <TabsTrigger value="macro" className="rounded-full px-4 py-2 flex items-center gap-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#3f0776]">
               <BarChart3 className="w-4 h-4" /> Visão Geral
             </TabsTrigger>
-            <TabsTrigger value="individual" className="flex items-center gap-1.5">
+            <TabsTrigger value="individual" className="rounded-full px-4 py-2 flex items-center gap-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#3f0776]">
               <Users className="w-4 h-4" /> Por Aluno
             </TabsTrigger>
-            <TabsTrigger value="aspectos" className="flex items-center gap-1.5">
+            <TabsTrigger value="aspectos" className="rounded-full px-4 py-2 flex items-center gap-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#3f0776]">
               <Settings2 className="w-4 h-4" /> Aspectos
             </TabsTrigger>
           </TabsList>
