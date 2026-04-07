@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { BookMarked, ChevronRight, Lock, CheckCircle2, Loader2 } from 'lucide-react';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
-import { useTasksAluno } from '@/hooks/usePEP';
+import { useTasksAluno, useBootstrapPEP } from '@/hooks/usePEP';
 
 export const PlanoEstudoCard = () => {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ export const PlanoEstudoCard = () => {
   const email = studentData.email ?? '';
 
   const { data: tasks = [], isLoading } = useTasksAluno(email || undefined);
+  const { bootstrapping } = useBootstrapPEP(email || undefined);
 
   const taskAtiva    = tasks.find(t => t.status === 'ativa');
   const proximaBloq  = tasks.find(t => t.status === 'bloqueada' && (!taskAtiva || t.ordem > taskAtiva.ordem));
@@ -30,10 +31,10 @@ export const PlanoEstudoCard = () => {
         <ChevronRight className="w-5 h-5 text-gray-400" />
       </div>
 
-      {isLoading ? (
+      {(isLoading || bootstrapping) ? (
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Loader2 className="w-4 h-4 animate-spin" />
-          Carregando seu plano…
+          {bootstrapping ? 'Montando seu plano personalizado…' : 'Carregando seu plano…'}
         </div>
       ) : !taskAtiva ? (
         /* Estado vazio */

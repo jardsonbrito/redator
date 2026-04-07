@@ -10,6 +10,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
 import {
   useTasksAluno,
+  useBootstrapPEP,
   useConcluirTask,
   labelTipoRecurso,
   rotaRecurso,
@@ -173,6 +174,7 @@ const PlanoEstudo = () => {
   const email = studentData.email ?? '';
 
   const { data: tasks = [], isLoading } = useTasksAluno(email || undefined);
+  const { bootstrapping } = useBootstrapPEP(email || undefined);
 
   const taskAtiva    = tasks.find(t => t.status === 'ativa');
   const tasksBloq    = tasks.filter(t => t.status === 'bloqueada').sort((a, b) => a.ordem - b.ordem);
@@ -206,10 +208,19 @@ const PlanoEstudo = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {(isLoading || bootstrapping) ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <Loader2 className="w-8 h-8 animate-spin text-[#3f0776]" />
-              <p className="text-sm text-gray-500">Carregando seu plano…</p>
+              <p className="text-sm text-gray-500">
+                {bootstrapping
+                  ? 'Analisando seu histórico e montando seu plano…'
+                  : 'Carregando seu plano…'}
+              </p>
+              {bootstrapping && (
+                <p className="text-xs text-gray-400 text-center max-w-xs">
+                  Estamos lendo suas redações e atividades anteriores para identificar seus pontos de melhoria.
+                </p>
+              )}
             </div>
           ) : tasks.length === 0 ? (
             /* Estado vazio */
