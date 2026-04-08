@@ -41,7 +41,16 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
     setIsLoading(true);
     try {
-      const [presencaRes, justificativaRes] = await Promise.all([
+      // Buscar turmas autorizadas da aula para listar todos os alunos matriculados
+      const { data: aulaData } = await supabase
+        .from('aulas_virtuais')
+        .select('turmas_autorizadas')
+        .eq('id', aulaId)
+        .single();
+
+      const turmasAutorizadas: string[] = aulaData?.turmas_autorizadas || [];
+
+      const [presencaRes, justificativaRes, alunosMatriculadosRes] = await Promise.all([
         supabase
           .from('presenca_aulas')
           .select('*')
@@ -51,11 +60,19 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
           .from('justificativas_ausencia')
           .select('email_aluno, nome_aluno, turma, justificativa, criado_em')
           .eq('aula_id', aulaId),
+        turmasAutorizadas.length > 0
+          ? supabase
+              .from('profiles')
+              .select('email, nome, turma')
+              .in('turma', turmasAutorizadas)
+              .eq('ativo', true)
+              .eq('user_type', 'aluno')
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (presencaRes.error) throw presencaRes.error;
 
-      // Mapa de justificativas por email (inclui nome/turma para alunos sem presença)
+      // Mapa de justificativas por email
       const justMap = new Map<string, { texto: string; criadoEm: string; nome: string; turma: string }>();
       (justificativaRes.data || []).forEach((j: any) => {
         justMap.set(j.email_aluno, {
@@ -66,16 +83,29 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         });
       });
 
-      // Processar registros de presença agrupando por aluno
+      // Começar pelo cadastro completo: todos os alunos matriculados = ausente por padrão
       const alunosMap = new Map<string, FrequenciaAluno>();
+      (alunosMatriculadosRes.data || []).forEach((aluno: any) => {
+        const just = justMap.get(aluno.email);
+        alunosMap.set(aluno.email, {
+          nome: aluno.nome || aluno.email,
+          email: aluno.email,
+          turma: aluno.turma,
+          status: 'ausente',
+          justificativa: just?.texto,
+          justificativaCriadoEm: just?.criadoEm,
+        });
+      });
 
+      // Aplicar registros de presença sobre o mapa base
       (presencaRes.data || []).forEach((record: any) => {
         const alunoKey = record.email_aluno;
-        let alunoExistente = alunosMap.get(alunoKey);
+        let aluno = alunosMap.get(alunoKey);
 
-        if (!alunoExistente) {
+        if (!aluno) {
+          // Aluno presente que não está mais matriculado (edge case)
           const just = justMap.get(alunoKey);
-          alunoExistente = {
+          aluno = {
             nome: record.nome_aluno,
             email: record.email_aluno,
             turma: record.turma,
@@ -83,25 +113,20 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
             justificativa: just?.texto,
             justificativaCriadoEm: just?.criadoEm,
           };
-          alunosMap.set(alunoKey, alunoExistente);
+          alunosMap.set(alunoKey, aluno);
         }
 
-        if (record.entrada_at) {
-          alunoExistente.entrada = record.entrada_at;
-        }
+        if (record.entrada_at) aluno.entrada = record.entrada_at;
+        if (record.saida_at) aluno.saida = record.saida_at;
 
-        if (record.saida_at) {
-          alunoExistente.saida = record.saida_at;
-        }
-
-        if (alunoExistente.entrada && alunoExistente.saida) {
-          alunoExistente.status = 'presente';
-        } else if (alunoExistente.entrada && !alunoExistente.saida) {
-          alunoExistente.status = 'em_aula';
+        if (aluno.entrada && aluno.saida) {
+          aluno.status = 'presente';
+        } else if (aluno.entrada && !aluno.saida) {
+          aluno.status = 'em_aula';
         }
       });
 
-      // Adicionar alunos que só justificaram (sem nenhum registro em presenca_aulas)
+      // Adicionar alunos que só justificaram e não estão no cadastro nem na presença
       justMap.forEach((just, email) => {
         if (!alunosMap.has(email)) {
           alunosMap.set(email, {
