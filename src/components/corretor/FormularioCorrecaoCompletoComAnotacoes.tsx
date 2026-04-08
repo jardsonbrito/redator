@@ -91,7 +91,7 @@ export const FormularioCorrecaoCompletoComAnotacoes = ({
   // Verificar se a redação está congelada (prazo de 7 dias expirado)
   const redacaoCongelada = estaCongelada({
     data_envio: redacao.data_envio,
-    corrigida: redacao.corrigida || false,
+    corrigida: redacao.corrigida === true || redacao.status_minha_correcao === 'corrigida',
     congelada: redacao.congelada,
     data_descongelamento: redacao.data_descongelamento
   });
