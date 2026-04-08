@@ -41,14 +41,21 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
     setIsLoading(true);
     try {
-      // Buscar turmas autorizadas da aula para listar todos os alunos matriculados
+      // Buscar dados da aula para listar turmas e calcular se encerrou há mais de 24h
       const { data: aulaData } = await supabase
         .from('aulas_virtuais')
-        .select('turmas_autorizadas')
+        .select('turmas_autorizadas, data_aula, horario_fim')
         .eq('id', aulaId)
         .single();
 
       const turmasAutorizadas: string[] = aulaData?.turmas_autorizadas || [];
+
+      // Verificar se a aula terminou há mais de 24h (para corrigir "em_aula" esquecido)
+      let aulaEncerradaHa24h = false;
+      if (aulaData?.data_aula && aulaData?.horario_fim) {
+        const fimAula = new Date(`${aulaData.data_aula}T${aulaData.horario_fim}`);
+        aulaEncerradaHa24h = Date.now() - fimAula.getTime() > 24 * 60 * 60 * 1000;
+      }
 
       const [presencaRes, justificativaRes, alunosMatriculadosRes] = await Promise.all([
         supabase
@@ -122,7 +129,8 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         if (aluno.entrada && aluno.saida) {
           aluno.status = 'presente';
         } else if (aluno.entrada && !aluno.saida) {
-          aluno.status = 'em_aula';
+          // Se a aula terminou há mais de 24h, saída esquecida → considerar presente
+          aluno.status = aulaEncerradaHa24h ? 'presente' : 'em_aula';
         }
       });
 
