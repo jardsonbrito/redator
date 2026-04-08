@@ -69,6 +69,7 @@ export interface MetricasBoletim {
   };
   totalGuiasConcluidos: number;
   totalMicroItens: number;
+  totalFaltasJustificadas: number;
 }
 
 export interface EvolucaoNota {
@@ -91,6 +92,14 @@ export interface DadoEngajamento {
   cor: string;
 }
 
+export interface JustificativaBoletim {
+  aula_id: string;
+  aula_titulo: string;
+  aula_data: string;
+  justificativa: string;
+  criado_em: string;
+}
+
 export interface AlunoBoletimDados {
   aluno: {
     nome: string;
@@ -109,6 +118,7 @@ export interface AlunoBoletimDados {
   evolucaoNotas: EvolucaoNota[];
   mediasPorCompetencia: MediaCompetencia[];
   engajamento: DadoEngajamento[];
+  justificativas: JustificativaBoletim[];
 }
 
 function calcularMedia(valores: (number | null)[]): number | null {
@@ -205,7 +215,7 @@ async function fetchBoletimData(
 
     supabase
       .from("aulas_virtuais")
-      .select("id, data_aula, aula_mae_id")
+      .select("id, titulo, data_aula, aula_mae_id")
       .contains("turmas_autorizadas", [turma])
       .gte("data_aula", dateStart)
       .lte("data_aula", dateEnd),
@@ -367,7 +377,7 @@ async function fetchBoletimData(
   // --- Métricas ---
   // Agrupar aulas virtuais por unidade pedagógica:
   // repetições (aula_mae_id != null) se juntam ao grupo da aula mãe
-  const rawAulasList = (aulasRes.data || []) as { id: string; aula_mae_id: string | null }[];
+  const rawAulasList = (aulasRes.data || []) as { id: string; titulo: string; data_aula: string; aula_mae_id: string | null }[];
   const gruposAulas: Record<string, string[]> = {};
   for (const a of rawAulasList.filter(a => !a.aula_mae_id)) {
     gruposAulas[a.id] = [a.id];
@@ -387,6 +397,50 @@ async function fetchBoletimData(
   const totalPresencas = Object.values(gruposAulas).filter(ids =>
     ids.some(id => idsComPresenca.has(id))
   ).length;
+
+  // Faltas justificadas por unidade pedagógica
+  const absentGrupoIds = Object.keys(gruposAulas).filter(
+    grupoId => !gruposAulas[grupoId].some(id => idsComPresenca.has(id))
+  );
+  const absentAllIds = absentGrupoIds.flatMap(g => gruposAulas[g]);
+
+  // Mapa de aula_id -> {titulo, data_aula} para todas as aulas do período
+  const aulaInfoMap = new Map<string, { titulo: string; data_aula: string }>();
+  for (const a of rawAulasList) {
+    aulaInfoMap.set(a.id, { titulo: a.titulo, data_aula: a.data_aula });
+  }
+
+  let totalFaltasJustificadas = 0;
+  const justificativas: JustificativaBoletim[] = [];
+  if (absentAllIds.length > 0) {
+    const justRes = await supabase
+      .from('justificativas_ausencia')
+      .select('aula_id, justificativa, criado_em')
+      .eq('email_aluno', email)
+      .in('aula_id', absentAllIds);
+
+    const justRecords = (justRes.data || []) as { aula_id: string; justificativa: string; criado_em: string }[];
+    const justifiedAulaIds = new Set(justRecords.map(j => j.aula_id));
+
+    totalFaltasJustificadas = absentGrupoIds.filter(grupoId =>
+      gruposAulas[grupoId].some(id => justifiedAulaIds.has(id))
+    ).length;
+
+    // Construir array de justificativas com info da aula
+    for (const grupoId of absentGrupoIds) {
+      const justifiedId = gruposAulas[grupoId].find(id => justifiedAulaIds.has(id));
+      if (!justifiedId) continue;
+      const record = justRecords.find(j => j.aula_id === justifiedId)!;
+      const aulaInfo = aulaInfoMap.get(grupoId) ?? aulaInfoMap.get(justifiedId);
+      justificativas.push({
+        aula_id: grupoId,
+        aula_titulo: aulaInfo?.titulo ?? '—',
+        aula_data: aulaInfo?.data_aula ?? '',
+        justificativa: record.justificativa,
+        criado_em: record.criado_em,
+      });
+    }
+  }
 
   const taxaFrequencia =
     totalAulasNoPeriodo > 0
@@ -419,6 +473,7 @@ async function fetchBoletimData(
     repertorioDetalhe,
     totalGuiasConcluidos: new Set((guiasConcluídosRes.data || []).map((r: any) => r.guia_id)).size,
     totalMicroItens: microProgressoRes.count ?? 0,
+    totalFaltasJustificadas,
   };
 
   // --- Evolução de notas (redações com nota, ordenadas por data) ---
@@ -478,6 +533,7 @@ async function fetchBoletimData(
     evolucaoNotas,
     mediasPorCompetencia,
     engajamento,
+    justificativas,
   };
 }
 

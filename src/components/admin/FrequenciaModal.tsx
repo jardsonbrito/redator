@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Clock, Users, Download } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { Clock, Users, Download, Bell } from "lucide-react";
 
 
 interface FrequenciaAluno {
@@ -30,7 +32,9 @@ interface FrequenciaModalProps {
 export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: FrequenciaModalProps) => {
   const [frequenciaData, setFrequenciaData] = useState<FrequenciaAluno[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingNotif, setIsSendingNotif] = useState(false);
   const [justificativaModal, setJustificativaModal] = useState<{ texto: string; criadoEm: string; nome: string } | null>(null);
+  const { user } = useAuth();
 
   const fetchFrequencia = async () => {
     if (!aulaId) return;
@@ -143,6 +147,94 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
     link.click();
   };
 
+  const notificarAusentes = async () => {
+    const ausentes = frequenciaData.filter(
+      (a) => a.status === 'ausente' && !a.justificativa
+    );
+
+    if (ausentes.length === 0) {
+      toast.info('Todos os ausentes já possuem justificativa ou não há faltas a notificar.');
+      return;
+    }
+
+    if (!user?.id) {
+      toast.error('Usuário admin não identificado.');
+      return;
+    }
+
+    setIsSendingNotif(true);
+    try {
+      // Verificar se já existe mensagem de notificação para esta aula
+      const { data: existingMsg } = await supabase
+        .from('inbox_messages')
+        .select('id')
+        .eq('acao', 'justificativa_ausencia')
+        .eq('aula_id', aulaId)
+        .maybeSingle();
+
+      let messageId: string;
+
+      if (existingMsg) {
+        messageId = existingMsg.id;
+      } else {
+        const { data: newMsg, error: msgError } = await supabase
+          .from('inbox_messages')
+          .insert({
+            message: `Você faltou à aula: "${aulaTitle}"\n\nJustifique sua ausência abaixo. Essa justificativa será registrada no sistema e ficará visível para o professor.`,
+            type: 'bloqueante',
+            valid_until: null,
+            created_by: user.id,
+            aula_id: aulaId,
+            acao: 'justificativa_ausencia',
+          } as any)
+          .select('id')
+          .single();
+
+        if (msgError || !newMsg) throw msgError || new Error('Falha ao criar mensagem');
+        messageId = newMsg.id;
+      }
+
+      // Buscar quem já é destinatário dessa mensagem
+      const { data: existingRecipients } = await supabase
+        .from('inbox_recipients')
+        .select('student_email')
+        .eq('message_id', messageId);
+
+      const jaNotificados = new Set(
+        (existingRecipients || []).map((r: any) => r.student_email)
+      );
+
+      const novosDestinatarios = ausentes.filter(
+        (a) => !jaNotificados.has(a.email)
+      );
+
+      if (novosDestinatarios.length === 0) {
+        toast.info('Todos os ausentes já foram notificados anteriormente.');
+        setIsSendingNotif(false);
+        return;
+      }
+
+      const { error: recError } = await supabase.from('inbox_recipients').insert(
+        novosDestinatarios.map((a) => ({
+          message_id: messageId,
+          student_email: a.email,
+          status: 'pendente',
+        }))
+      );
+
+      if (recError) throw recError;
+
+      toast.success(
+        `${novosDestinatarios.length} aluno${novosDestinatarios.length > 1 ? 's' : ''} notificado${novosDestinatarios.length > 1 ? 's' : ''} com sucesso!`
+      );
+    } catch (err: any) {
+      console.error('Erro ao notificar ausentes:', err);
+      toast.error('Erro ao enviar notificações. Tente novamente.');
+    } finally {
+      setIsSendingNotif(false);
+    }
+  };
+
   const getStatusText = (status: string) => {
     switch (status) {
       case 'presente': return 'Presente';
@@ -223,10 +315,21 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
               </div>
             </div>
             
-            <Button onClick={exportCSV} variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={notificarAusentes}
+                variant="outline"
+                size="sm"
+                disabled={isSendingNotif || frequenciaData.filter(a => a.status === 'ausente' && !a.justificativa).length === 0}
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                {isSendingNotif ? 'Notificando...' : 'Notificar ausentes'}
+              </Button>
+              <Button onClick={exportCSV} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Exportar CSV
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (

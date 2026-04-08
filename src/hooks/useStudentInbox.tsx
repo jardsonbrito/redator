@@ -16,6 +16,8 @@ export interface StudentInboxMessage {
   status: "pendente" | "lida" | "respondida";
   response_text: string | null;
   responded_at: string | null;
+  aula_id: string | null;
+  acao: string | null;
 }
 
 export function useStudentInbox() {
@@ -48,7 +50,9 @@ export function useStudentInbox() {
               valid_until,
               extra_link,
               extra_image,
-              created_at
+              created_at,
+              aula_id,
+              acao
             )
           `)
           .eq('student_email', emailToUse)
@@ -87,6 +91,8 @@ export function useStudentInbox() {
             status: item.status,
             response_text: item.response_text,
             responded_at: item.responded_at,
+            aula_id: (item.inbox_messages as any).aula_id ?? null,
+            acao: (item.inbox_messages as any).acao ?? null,
           })) as StudentInboxMessage[];
 
         return validMessages;

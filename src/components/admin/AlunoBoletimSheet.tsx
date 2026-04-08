@@ -5,6 +5,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -90,12 +96,14 @@ function MetricCard({
   sub,
   color,
   icon: Icon,
+  onSubClick,
 }: {
   label: string;
   value: string;
   sub?: string;
   color: string;
   icon: React.ElementType;
+  onSubClick?: () => void;
 }) {
   return (
     <div className="rounded-lg border bg-card p-3 flex flex-col gap-1">
@@ -106,7 +114,17 @@ function MetricCard({
       <span className="text-2xl font-bold" style={{ color }}>
         {value}
       </span>
-      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
+      {sub && !onSubClick && (
+        <span className="text-xs text-muted-foreground">{sub}</span>
+      )}
+      {sub && onSubClick && (
+        <button
+          onClick={onSubClick}
+          className="text-xs text-left text-blue-600 hover:underline underline-offset-2 cursor-pointer"
+        >
+          {sub}
+        </button>
+      )}
     </div>
   );
 }
@@ -284,6 +302,7 @@ export function AlunoBoletimSheet({
   const [mes, setMes] = useState(defaultMes);
   const [ano, setAno] = useState(defaultAno);
   const [exportando, setExportando] = useState(false);
+  const [modalJustificativas, setModalJustificativas] = useState(false);
 
   const { data, isLoading } = useAlunoBoletim(
     open ? email : null,
@@ -324,6 +343,7 @@ export function AlunoBoletimSheet({
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
@@ -441,9 +461,18 @@ export function AlunoBoletimSheet({
                   <MetricCard
                     label="Presenças"
                     value={`${data.metricas.totalPresencas} / ${data.metricas.totalAulasNoPeriodo}`}
-                    sub="aulas confirmadas"
+                    sub={
+                      data.metricas.totalAulasNoPeriodo - data.metricas.totalPresencas > 0
+                        ? `aulas confirmadas · ${data.metricas.totalFaltasJustificadas} falta${data.metricas.totalFaltasJustificadas !== 1 ? "s" : ""} justificada${data.metricas.totalFaltasJustificadas !== 1 ? "s" : ""}`
+                        : "aulas confirmadas"
+                    }
                     color="#f59e0b"
                     icon={Users}
+                    onSubClick={
+                      data.metricas.totalFaltasJustificadas > 0
+                        ? () => setModalJustificativas(true)
+                        : undefined
+                    }
                   />
                   <MetricCard
                     label="Frequência"
@@ -772,5 +801,50 @@ export function AlunoBoletimSheet({
         </ScrollArea>
       </SheetContent>
     </Sheet>
+
+    {/* Modal de justificativas de falta */}
+    {data && (
+      <Dialog open={modalJustificativas} onOpenChange={setModalJustificativas}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              Justificativas de Falta — {MESES[mes - 1]} {ano}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            {data.justificativas.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhuma justificativa registrada.
+              </p>
+            ) : (
+              data.justificativas.map((j) => (
+                <div key={j.aula_id} className="rounded-md border p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium truncate">{j.aula_titulo}</span>
+                    {j.aula_data && (
+                      <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                        {format(parseISO(j.aula_data), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    )}
+                  </div>
+                  <div className="rounded bg-muted/50 p-3 text-sm text-gray-700 whitespace-pre-wrap">
+                    {j.justificativa}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enviada em{" "}
+                    {format(
+                      new Date(j.criado_em),
+                      "dd/MM/yyyy 'às' HH:mm",
+                      { locale: ptBR }
+                    )}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   );
 }
