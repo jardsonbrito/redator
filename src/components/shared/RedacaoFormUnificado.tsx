@@ -93,24 +93,22 @@ export const RedacaoFormUnificado = ({
 
   if (isSimulado) {
     tipoEnvio = "simulado";
-    // FIX: Definir turma para alunos em simulados também
-    if (userType === "aluno" && alunoTurma) {
-      turmaCode = getTurmaCode(alunoTurma);
+    if (userType === "aluno") {
+      turmaCode = studentData.turma || alunoTurma || "visitante";
     }
   } else if (isProcessoSeletivo) {
     tipoEnvio = "processo_seletivo";
-    if (userType === "aluno" && alunoTurma) {
-      turmaCode = getTurmaCode(alunoTurma);
+    if (userType === "aluno") {
+      turmaCode = studentData.turma || alunoTurma || "visitante";
     }
   } else if (exercicioId) {
     tipoEnvio = "exercicio";
-    // FIX: Definir turma para alunos em exercícios também
-    if (userType === "aluno" && alunoTurma) {
-      turmaCode = getTurmaCode(alunoTurma);
+    if (userType === "aluno") {
+      turmaCode = studentData.turma || alunoTurma || "visitante";
     }
-  } else if (userType === "aluno" && alunoTurma) {
+  } else if (userType === "aluno") {
     tipoEnvio = "regular";
-    turmaCode = getTurmaCode(alunoTurma);
+    turmaCode = studentData.turma || alunoTurma || "visitante";
   }
 
   // Hook para gerenciar créditos
@@ -485,7 +483,9 @@ export const RedacaoFormUnificado = ({
 
       if (userType === "aluno") {
         const alunoEmail = studentData.email || localStorage.getItem("alunoEmail");
-        const alunoNome = localStorage.getItem("alunoNome") || "Aluno";
+        const alunoNome = studentData.nomeUsuario || (() => {
+          try { return JSON.parse(localStorage.getItem("alunoData") || "{}").nome; } catch { return null; }
+        })() || "";
 
         if (alunoEmail) {
           finalEmail = alunoEmail.toLowerCase().trim();

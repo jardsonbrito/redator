@@ -11,6 +11,7 @@ import { ArrowLeft, Search, Eye, User, GraduationCap, Star, AlertTriangle, Chevr
 import { CorretorLayout } from "@/components/corretor/CorretorLayout";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { verificarDivergencia } from "@/utils/simuladoDivergencia";
+import { normalizeTurmaToLetter } from "@/utils/turmaUtils";
 
 interface RedacaoSimulado {
   id: string;
@@ -360,7 +361,7 @@ const CorretorSimuladoRedacoes = () => {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <GraduationCap className="w-4 h-4" />
-                          <span>Turma: {redacao.turma}</span>
+                          <span>Turma: {normalizeTurmaToLetter(redacao.turma) || redacao.turma}</span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {new Date(redacao.data_envio).toLocaleDateString('pt-BR')}
