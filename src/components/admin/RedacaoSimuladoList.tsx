@@ -786,8 +786,8 @@ const RedacaoSimuladoList = () => {
             const par = redacaoNotas.par_utilizado as '1_2' | '1_admin' | '2_admin' | null;
             const nomePar: Record<string, string> = {
               '1_2': `${redacaoNotas.corretor_1?.nome_completo ?? 'Corretor 1'} + ${redacaoNotas.corretor_2?.nome_completo ?? 'Corretor 2'}`,
-              '1_admin': `${redacaoNotas.corretor_1?.nome_completo ?? 'Corretor 1'} + Admin`,
-              '2_admin': `${redacaoNotas.corretor_2?.nome_completo ?? 'Corretor 2'} + Admin`,
+              '1_admin': `${redacaoNotas.corretor_1?.nome_completo ?? 'Corretor 1'} + Coordenação`,
+              '2_admin': `${redacaoNotas.corretor_2?.nome_completo ?? 'Corretor 2'} + Coordenação`,
             };
             return (
               <div className="mt-4 space-y-4">
@@ -850,7 +850,7 @@ const RedacaoSimuladoList = () => {
                       </TableHead>
                       {temTerceira && (
                         <TableHead className={`text-center ${par === '1_admin' || par === '2_admin' ? 'bg-green-50' : ''}`}>
-                          Admin (3º){par === '1_admin' || par === '2_admin' ? ' ✓' : ''}
+                          Coordenação (3º){par === '1_admin' || par === '2_admin' ? ' ✓' : ''}
                         </TableHead>
                       )}
                       {(div && !redacaoNotas.status_terceira_correcao) && <TableHead className="text-center">Diferença</TableHead>}
@@ -936,8 +936,8 @@ const RedacaoSimuladoList = () => {
             const parPreview = calcularParMaisProximo(N1, N2, totalAdmin);
             const nomesPreview: Record<string, string> = {
               '1_2': `${redacaoTerceiraCorrecao.corretor_1?.nome_completo ?? 'Corretor 1'} + ${redacaoTerceiraCorrecao.corretor_2?.nome_completo ?? 'Corretor 2'}`,
-              '1_admin': `${redacaoTerceiraCorrecao.corretor_1?.nome_completo ?? 'Corretor 1'} + Admin`,
-              '2_admin': `${redacaoTerceiraCorrecao.corretor_2?.nome_completo ?? 'Corretor 2'} + Admin`,
+              '1_admin': `${redacaoTerceiraCorrecao.corretor_1?.nome_completo ?? 'Corretor 1'} + Coordenação`,
+              '2_admin': `${redacaoTerceiraCorrecao.corretor_2?.nome_completo ?? 'Corretor 2'} + Coordenação`,
             };
 
             return (
@@ -1048,8 +1048,8 @@ const RedacaoSimuladoList = () => {
                     const par = redacaoParaFinalizar.par_utilizado as '1_2' | '1_admin' | '2_admin';
                     const nomePar: Record<string, string> = {
                       '1_2': `${redacaoParaFinalizar.corretor_1?.nome_completo ?? 'Corretor 1'} + ${redacaoParaFinalizar.corretor_2?.nome_completo ?? 'Corretor 2'}`,
-                      '1_admin': `${redacaoParaFinalizar.corretor_1?.nome_completo ?? 'Corretor 1'} + Admin`,
-                      '2_admin': `${redacaoParaFinalizar.corretor_2?.nome_completo ?? 'Corretor 2'} + Admin`,
+                      '1_admin': `${redacaoParaFinalizar.corretor_1?.nome_completo ?? 'Corretor 1'} + Coordenação`,
+                      '2_admin': `${redacaoParaFinalizar.corretor_2?.nome_completo ?? 'Corretor 2'} + Coordenação`,
                     };
                     return (
                       <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded text-sm text-orange-800 space-y-1">
