@@ -87,7 +87,29 @@ const CorretorSimuladoRedacoes = () => {
         throw error;
       }
 
-      return data as RedacaoSimulado[];
+      // Buscar nomes reais dos alunos no profiles (registros antigos têm "Aluno")
+      const emails = Array.from(new Set((data || []).map((r) => r.email_aluno).filter(Boolean)));
+      let nomesMap: Record<string, string> = {};
+      if (emails.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('email, nome')
+          .in('email', emails);
+        (profiles || []).forEach((p: any) => {
+          if (p.email && p.nome) nomesMap[p.email.toLowerCase()] = p.nome;
+        });
+      }
+
+      // Sobrescrever nome_aluno quando for genérico ou vazio
+      const enriched = (data || []).map((r) => {
+        const emailKey = (r.email_aluno || '').toLowerCase();
+        const nomeReal = nomesMap[emailKey];
+        const nomeAtual = (r.nome_aluno || '').trim();
+        const isGenerico = !nomeAtual || nomeAtual.toLowerCase() === 'aluno';
+        return isGenerico && nomeReal ? { ...r, nome_aluno: nomeReal } : r;
+      });
+
+      return enriched as RedacaoSimulado[];
     },
     enabled: !!simuladoId
   });
