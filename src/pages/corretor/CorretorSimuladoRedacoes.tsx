@@ -418,7 +418,7 @@ const CorretorSimuladoRedacoes = () => {
                       {/* Ações */}
                       <div className="lg:col-span-2">
                         <Button
-                          onClick={() => navigate(`/corretor/simulados/redacao/${redacao.id}`)}
+                          onClick={() => navigate(`/corretor/simulados/redacao/${redacao.id}${corretorNumero ? `?corretor=${corretorNumero}` : ''}`)}
                           variant="outline"
                           size="sm"
                           className="w-full"
