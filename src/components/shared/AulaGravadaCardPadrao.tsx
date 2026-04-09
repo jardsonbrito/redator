@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MoreHorizontal, ExternalLink, FileText, BarChart3, Edit, Power, PowerOff, Trash2, GraduationCap } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, FileText, BarChart3, Edit, Power, PowerOff, Trash2, GraduationCap, CheckCircle2, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,7 @@ interface AulaGravadaCardData {
 interface AulaGravadaCardActions {
   onAssistir?: (id: string) => void;
   onBaixarPdf?: (id: string) => void;
+  onConfirmar?: (id: string) => void; // Confirmação explícita de que assistiu
   onEditar?: (id: string) => void;
   onDesativar?: (id: string) => void;
   onExcluir?: (id: string) => void;
@@ -49,14 +50,18 @@ interface AulaGravadaCardPadraoProps {
   aula: AulaGravadaCardData;
   perfil: 'aluno' | 'admin' | 'corretor';
   actions?: AulaGravadaCardActions;
-  isWatched?: boolean; // Para mostrar badge "Assistida"
+  isWatched?: boolean;    // Abriu o vídeo (first_watched_at)
+  isConfirmed?: boolean;  // Confirmou que assistiu (confirmed_at)
+  isConfirming?: boolean; // Loading do botão de confirmação
 }
 
 export const AulaGravadaCardPadrao = ({
   aula,
   perfil,
   actions,
-  isWatched = false
+  isWatched = false,
+  isConfirmed = false,
+  isConfirming = false,
 }: AulaGravadaCardPadraoProps) => {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
 
@@ -107,13 +112,23 @@ export const AulaGravadaCardPadrao = ({
   };
 
   const getWatchedBadge = () => {
-    if (!isWatched || perfil === 'admin') return null;
-
-    return (
-      <Badge className="text-xs bg-green-100 text-green-700">
-        Assistida
-      </Badge>
-    );
+    if (perfil === 'admin') return null;
+    if (isConfirmed) {
+      return (
+        <Badge className="text-xs bg-green-100 text-green-700 flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3" />
+          Assistida
+        </Badge>
+      );
+    }
+    if (isWatched) {
+      return (
+        <Badge className="text-xs bg-amber-100 text-amber-700">
+          Aberta
+        </Badge>
+      );
+    }
+    return null;
   };
 
   const formatCreatedDate = () => {
@@ -278,6 +293,34 @@ export const AulaGravadaCardPadrao = ({
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Assistir
                 </Button>
+
+                {/* Estado: confirmado → botão verde desabilitado */}
+                {isConfirmed && (
+                  <Button
+                    disabled
+                    variant="outline"
+                    className="w-full bg-green-50 text-green-700 border-green-200 cursor-default opacity-100"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Assistida
+                  </Button>
+                )}
+
+                {/* Estado: aberta mas não confirmada → botão de confirmação (fallback para nova aba) */}
+                {isWatched && !isConfirmed && (
+                  <Button
+                    variant="outline"
+                    className="w-full border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white"
+                    onClick={() => actions?.onConfirmar?.(aula.id)}
+                    disabled={isConfirming}
+                  >
+                    {isConfirming ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Confirmando…</>
+                    ) : (
+                      <><CheckCircle2 className="w-4 h-4 mr-2" />Confirmar que assisti</>
+                    )}
+                  </Button>
+                )}
 
                 {aula.pdf_url && (
                   <Button

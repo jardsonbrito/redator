@@ -114,6 +114,30 @@ const DESCRICAO_COMPETENCIA: Record<string, string> = {
   C5: 'elaborar uma proposta de intervenção social detalhada e respeitosa aos direitos humanos',
 };
 
+// ─── Mapeamento: eixo → módulo e palavras-chave para busca automática ────────
+
+/** Valor exato do campo `modulo` na view aulas_front para cada eixo */
+const EIXO_PARA_MODULO: Record<string, string> = {
+  C1: 'Competência 1',
+  C2: 'Competência 2',
+  C3: 'Competência 3',
+  C4: 'Competência 4',
+  C5: 'Competência 5',
+};
+
+/**
+ * Palavras-chave secundárias por eixo.
+ * Usadas no fallback quando não há aulas do módulo exato disponíveis:
+ * busca por título + descrição em qualquer aula ativa.
+ */
+const EIXO_KEYWORDS: Record<string, string[]> = {
+  C1: ['norma', 'gramática', 'ortografia', 'pontuação', 'concordância', 'sintaxe', 'vocabulário', 'norma-padrão', 'formal'],
+  C2: ['tema', 'repertório', 'dissertat', 'sociocultural', 'tese', 'introdução', 'frase temática', 'recorte'],
+  C3: ['organização', 'argumento', 'progressão', 'coerência', 'desenvolvimento', 'parágrafo', 'lógica', 'contra-argumento'],
+  C4: ['coesão', 'conectivo', 'referencial', 'sequencial', 'articulação', 'pronome', 'mecanismo linguístico'],
+  C5: ['proposta', 'intervenção', 'conclusão', 'agente', 'finalidade', 'direitos humanos', 'viabilidade'],
+};
+
 // ─── Core: bootstrap retroativo ───────────────────────────────────────────────
 
 /**
@@ -148,6 +172,8 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
     { data: exercicios },
     { data: lousas },
     { data: quizErros },
+    { data: aulasGravadas },
+    { data: aulasAssistidas },
   ] = await Promise.all([
     // 0. Marcações estruturadas do corretor — FONTE PRINCIPAL (peso 2.0 por marcação)
     supabase
@@ -217,6 +243,15 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       .gte('created_at', desde)
       .order('created_at', { ascending: false })
       .limit(50),
+
+    // 6. Todas as aulas gravadas disponíveis (via view aulas_front — já resolve modulo como texto)
+    supabase
+      .from('aulas_front')
+      .select('id, titulo, descricao, modulo'),
+
+    // 7. Aulas que o aluno já CONFIRMOU ter assistido (via RPC SECURITY DEFINER —
+    //    necessário porque o projeto usa auth customizada, não Supabase Auth).
+    supabase.rpc('get_confirmed_lesson_views', { p_student_email: emailNorm }),
   ]);
 
   // Todas as fontes primárias (têm notas C1-C5 estruturadas)
@@ -478,30 +513,114 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       }, { onConflict: 'aluno_email,erro_id' });
   }
 
-  // 6. Tentar buscar recurso vinculado ao erro (se houver no catálogo)
+  // ─── Busca automática de aula gravada relevante ───────────────────────────
+  //
+  // IDs das aulas que o aluno já assistiu — para priorizar não-assistidas nas missões.
+  const aulasAssitidasIds = new Set(
+    (aulasAssistidas ?? []).map((a: any) => a.lesson_id as string)
+  );
+
+  interface AulaCandidata { id: string; titulo: string; descricao: string | null; modulo: string }
+
+  /**
+   * Busca a aula mais relevante para um dado eixo de competência.
+   * Ordem de prioridade:
+   *   1. Aulas do módulo exato (ex: 'Competência 3') ainda não assistidas
+   *   2. Aulas do módulo exato já assistidas (melhor assistir de novo que não ter recurso)
+   *   3. Fallback: qualquer aula ativa com palavras-chave do eixo no título/descrição
+   */
+  function buscarAulaParaErro(eixo: string): AulaCandidata | null {
+    const moduloAlvo = EIXO_PARA_MODULO[eixo];
+    if (!moduloAlvo || !aulasGravadas) return null;
+
+    const daComp = (aulasGravadas as AulaCandidata[]).filter(a => a.modulo === moduloAlvo);
+
+    // 1. Prioriza não-assistidas
+    const naoAssistidas = daComp.filter(a => !aulasAssitidasIds.has(a.id));
+    if (naoAssistidas.length > 0) return naoAssistidas[0];
+
+    // 2. Todas já assistidas → retorna a primeira da competência mesmo assim
+    if (daComp.length > 0) return daComp[0];
+
+    // 3. Fallback por palavras-chave no título/descrição (qualquer módulo exceto Redatoria)
+    const keywords = EIXO_KEYWORDS[eixo] ?? [];
+    const porKeyword = (aulasGravadas as AulaCandidata[])
+      .filter(a => a.modulo !== 'Aula ao vivo' && a.modulo !== 'Redatoria')
+      .filter(a => !aulasAssitidasIds.has(a.id))
+      .filter(a => {
+        const texto = `${a.titulo} ${a.descricao ?? ''}`.toLowerCase();
+        return keywords.some(kw => texto.includes(kw.toLowerCase()));
+      });
+
+    return porKeyword[0] ?? null;
+  }
+
+  // 6. Buscar recursos do catálogo manual + enriquecer com aulas encontradas automaticamente
   const { data: recursos } = await supabase
     .from('pep_recursos')
-    .select('id, tipo, titulo, tags_erros')
+    .select('id, tipo, titulo, tags_erros, recurso_id')
     .eq('ativo', true);
 
-  const recursoParaErro = (codigo: string): string | null => {
-    if (!recursos) return null;
-    const rec = recursos.find(r => r.tags_erros?.includes(codigo));
-    return rec?.id ?? null;
-  };
+  /**
+   * Resolve o pep_recursos.id para um código de erro:
+   *   1. Busca no catálogo manual (admin configurou)
+   *   2. Busca automática em aulas_front por módulo/palavras-chave
+   *      → se encontrada, faz upsert em pep_recursos para manter o catálogo vivo
+   */
+  async function resolverRecursoId(codigo: string, eixo: string): Promise<string | null> {
+    // Catálogo manual tem prioridade
+    if (recursos) {
+      const rec = recursos.find(r => r.tags_erros?.includes(codigo));
+      if (rec) return rec.id;
+    }
+
+    // Busca automática nas aulas gravadas
+    const aula = buscarAulaParaErro(eixo);
+    if (!aula) return null;
+
+    // Verifica se já existe entrada para essa aula no catálogo
+    const existente = (recursos ?? []).find(
+      r => r.tipo === 'aula' && r.recurso_id === aula.id
+    );
+    if (existente) return existente.id;
+
+    // Insere automaticamente em pep_recursos para uso futuro
+    const { data: novo } = await supabase
+      .from('pep_recursos')
+      .insert({
+        tipo: 'aula',
+        recurso_id: aula.id,
+        titulo: aula.titulo,
+        descricao: aula.descricao,
+        tags_erros: [codigo],
+        ativo: true,
+      })
+      .select('id')
+      .single();
+
+    return novo?.id ?? null;
+  }
 
   // 7. Gerar tasks (1 ativa + 2 bloqueadas)
   const agora = new Date().toISOString();
   // "Total" para o motivo = redações + simulados + exercícios corrigidos (fontes primárias)
   const total = todasRedacoes.length;
 
+  // Resolve todos os recurso_ids de forma assíncrona antes de montar as tasks
+  const recursoIds = await Promise.all(
+    errosOrdenados.map(e => {
+      const erro = taxonomiaMap.get(e.codigo)!;
+      return resolverRecursoId(e.codigo, erro.eixo);
+    })
+  );
+
   const tasksParaInserir = errosOrdenados.map((e, idx) => {
     const erro = taxonomiaMap.get(e.codigo)!;
     const eixoLabel = EIXO_NOME[erro.eixo] ?? erro.eixo;
-    const recursoId = recursoParaErro(e.codigo);
+    const recursoId = recursoIds[idx];
 
     const acaoBase = recursoId
-      ? `Acesse o recurso vinculado a esta missão e conclua a atividade proposta.`
+      ? `Assista à aula vinculada a esta missão e depois pratique com um exercício ou redação sobre o tema.`
       : `Revise o conteúdo sobre ${ERRO_NOME[e.codigo] ?? erro.nome} disponível em Aulas Gravadas ou Microaprendizagem.`;
 
     // Motivo: prioriza o feedback real dos corretores; usa template pedagógico como fallback
@@ -527,7 +646,7 @@ async function bootstrapPlanoFromHistorico(email: string): Promise<boolean> {
       motivo,
       acao: acaoBase,
       criterio_conclusao: recursoId
-        ? 'Acesse e conclua a atividade vinculada a esta missão.'
+        ? 'Assista à aula vinculada e confirme que assistiu. Depois pratique com uma redação ou exercício sobre o tema.'
         : 'Complete uma atividade sobre esse tema (lousa, exercício ou redação) e demonstre melhora.',
       status: idx === 0 ? 'ativa' : 'bloqueada',
       ordem: idx + 1,
@@ -631,7 +750,12 @@ export function useBootstrapPEP(email: string | undefined) {
 
   useEffect(() => {
     if (!email || isLoading || isPending) return;
-    if (tasks && tasks.length > 0) return; // já tem tasks, não faz nada
+    // Só dispara se não há tasks ativas ou bloqueadas.
+    // Tasks concluídas são histórico — não impedem a geração de novas missões.
+    const temTasksPendentes = tasks?.some(
+      t => t.status === 'ativa' || t.status === 'bloqueada'
+    );
+    if (temTasksPendentes) return;
     const key = email.toLowerCase().trim();
     if (bootstrappedRef.current.has(key)) return; // já rodou nesta sessão
     bootstrappedRef.current.add(key);
@@ -710,7 +834,7 @@ export function labelTipoRecurso(tipo: string): string {
 
 export function rotaRecurso(recurso: PEPRecurso): string {
   switch (recurso.tipo) {
-    case 'aula':            return '/aulas';
+    case 'aula':            return recurso.recurso_id ? `/aulas?aula=${recurso.recurso_id}` : '/aulas';
     case 'micro_topico':    return recurso.recurso_id ? `/microaprendizagem/${recurso.recurso_id}` : '/microaprendizagem';
     case 'exercicio':       return '/exercicios';
     case 'lousa':           return '/lousa';
