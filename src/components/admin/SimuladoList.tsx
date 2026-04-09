@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SimuladoForm } from "./SimuladoForm";
 import { SimuladoCardPadrao } from "@/components/shared/SimuladoCardPadrao";
@@ -14,6 +15,8 @@ const SimuladoList = () => {
   const queryClient = useQueryClient();
   const [simuladoEditando, setSimuladoEditando] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const anoAtual = new Date().getFullYear();
+  const [apenasAnoAtual, setApenasAnoAtual] = useState(true);
 
   const { data: simulados, isLoading } = useQuery({
     queryKey: ['admin-simulados'],
@@ -180,24 +183,43 @@ const SimuladoList = () => {
     );
   }
 
+  const simuladosFiltrados = apenasAnoAtual
+    ? (simulados || []).filter((s) => {
+        const d = new Date(s.data_inicio);
+        return !isNaN(d.getTime()) && d.getFullYear() === anoAtual;
+      })
+    : (simulados || []);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-redator-primary">Simulados Cadastrados</h2>
-        <Button onClick={() => setShowForm(true)} variant="default" size="sm">
-          Novo Simulado
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={apenasAnoAtual ? "default" : "outline"}
+            size="sm"
+            onClick={() => setApenasAnoAtual(!apenasAnoAtual)}
+          >
+            <Calendar className="w-3 h-3 mr-1" />
+            {apenasAnoAtual ? `Ano atual (${anoAtual})` : "Todos os anos"}
+          </Button>
+          <Button onClick={() => setShowForm(true)} variant="default" size="sm">
+            Novo Simulado
+          </Button>
+        </div>
       </div>
 
-      {!simulados || simulados.length === 0 ? (
+      {simuladosFiltrados.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-gray-500">Nenhum simulado cadastrado ainda.</p>
+            <p className="text-gray-500">
+              {apenasAnoAtual ? `Nenhum simulado em ${anoAtual}` : "Nenhum simulado cadastrado ainda."}
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {simulados.map((simulado) => (
+          {simuladosFiltrados.map((simulado) => (
             <SimuladoCardPadrao
               key={simulado.id}
               simulado={simulado}
