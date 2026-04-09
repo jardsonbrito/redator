@@ -4,7 +4,7 @@ import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, User, Home, BookOpen, Video, Library, FileText, Trophy, Menu, X, MessageCircle, Presentation } from "lucide-react";
+import { LogOut, Home, BookOpen, FileText, Trophy, Menu, X, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CorretorAvatar } from "@/components/corretor/CorretorAvatar";
@@ -45,10 +45,6 @@ export const CorretorLayout = ({ children }: CorretorLayoutProps) => {
     { icon: BookOpen, label: "Temas", path: "/corretor/temas" },
     { icon: FileText, label: "Simulados", path: "/corretor/simulados" },
     { icon: FileText, label: "Exemplares", path: "/corretor/redacoes" },
-    { icon: Presentation, label: "Lousas", path: "/corretor/lousas" },
-    { icon: Video, label: "Aulas", path: "/corretor/aulas" },
-    { icon: Video, label: "Videoteca", path: "/corretor/videoteca" },
-    { icon: Library, label: "Biblioteca", path: "/corretor/biblioteca" },
     { icon: Trophy, label: "Top 5", path: "/corretor/top5" },
   ];
 
