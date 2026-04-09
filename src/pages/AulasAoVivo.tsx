@@ -29,6 +29,7 @@ interface AulaAoVivo {
   ativo: boolean;
   imagem_capa_url?: string;
   status_transmissao?: string;
+  aula_gravada_id?: string | null;
 }
 
 interface AttendanceRecord {
@@ -45,6 +46,8 @@ const AulasAoVivo = () => {
   const [attendanceMap, setAttendanceMap] = useState<Record<string, AttendanceStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [loadingOperations, setLoadingOperations] = useState<Record<string, boolean>>({});
+  // Data de cadastro/aprovação do aluno na plataforma (ISO string ou null)
+  const [studentEnrolledAt, setStudentEnrolledAt] = useState<string | null>(null);
 
   // Justificativas: { aulaId: { texto, criadoEm } | null }
   const [justificativaMap, setJustificativaMap] = useState<Record<string, { texto: string; criadoEm: string } | null>>({});
@@ -53,7 +56,20 @@ const AulasAoVivo = () => {
   const fetchAulas = async () => {
     try {
       setIsLoading(true);
-      
+
+      // Buscar data de cadastro do aluno para saber se estava matriculado na época de cada aula
+      if (studentData.email && studentData.userType === 'aluno') {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('created_at, data_aprovacao')
+          .eq('email', studentData.email.toLowerCase())
+          .maybeSingle();
+        if (profileData) {
+          // Preferir data_aprovacao; fallback para created_at
+          setStudentEnrolledAt(profileData.data_aprovacao || profileData.created_at || null);
+        }
+      }
+
       // Buscar aulas ao vivo ativas
       const { data: aulasData, error: aulasError } = await supabase
         .from('aulas_virtuais')
@@ -260,6 +276,14 @@ const AulasAoVivo = () => {
     }
   };
 
+  /** Retorna true se o aluno se matriculou APÓS a data da aula (aula anterior à matrícula) */
+  const isEnrolledAfterClass = (aula: AulaAoVivo): boolean => {
+    if (!studentEnrolledAt) return false;
+    const enrolledDate = new Date(studentEnrolledAt);
+    const classDate = new Date(aula.data_aula + 'T23:59:59');
+    return enrolledDate > classDate;
+  };
+
   const getStatusAula = (aula: AulaAoVivo) => {
     try {
       if (!aula.data_aula || !aula.horario_inicio || !aula.horario_fim) {
@@ -341,6 +365,7 @@ const AulasAoVivo = () => {
                     attendanceStatus={attendanceStatus}
                     loadingOperation={loadingOperations[aula.id]}
                     justificativaEnviada={!!justificativaMap[aula.id]}
+                    enrolledAfterClass={isEnrolledAfterClass(aula)}
                     actions={{
                       onEntrarAula: () => window.open(aula.link_meet, '_blank'),
                       onRegistrarEntrada: () => handleRegistrarEntrada(aula.id),

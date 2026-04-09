@@ -13,6 +13,7 @@ import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
 const TURMAS = TURMAS_VALIDAS;
 
 type AulaDisponivel = { id: string; titulo: string; data_aula: string };
+type AulaGravadaDisponivel = { id: string; titulo: string; criado_em: string };
 
 const formatarData = (data: string) => {
   if (!data) return '';
@@ -35,6 +36,7 @@ interface AulaVirtual {
   ativo: boolean;
   eh_aula_ao_vivo?: boolean;
   aula_mae_id?: string | null;
+  aula_gravada_id?: string | null;
 }
 
 interface AulaVirtualEditFormProps {
@@ -47,6 +49,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
+  const [aulasGravadas, setAulasGravadas] = useState<AulaGravadaDisponivel[]>([]);
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -63,6 +66,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
     eh_aula_ao_vivo: true,
     eh_repeticao: false,
     aula_mae_id: null as string | null,
+    aula_gravada_id: null as string | null,
   });
 
   useEffect(() => {
@@ -82,6 +86,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         eh_aula_ao_vivo: aula.eh_aula_ao_vivo ?? true,
         eh_repeticao: !!aula.aula_mae_id,
         aula_mae_id: aula.aula_mae_id || null,
+        aula_gravada_id: aula.aula_gravada_id || null,
       });
     }
   }, [aula]);
@@ -97,6 +102,13 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         .neq('id', aula.id)
         .order('data_aula', { ascending: false }) as any);
       setAulasDisponiveis((data || []) as AulaDisponivel[]);
+
+      const { data: gravadas } = await supabase
+        .from('aulas')
+        .select('id, titulo, criado_em')
+        .eq('ativo', true)
+        .order('criado_em', { ascending: false });
+      setAulasGravadas((gravadas || []) as AulaGravadaDisponivel[]);
     };
     carregarAulas();
   }, [aula.id]);
@@ -178,6 +190,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         p_ativo: aulaData.ativo,
         p_eh_aula_ao_vivo: aulaData.eh_aula_ao_vivo,
         p_aula_mae_id: aulaData.aula_mae_id,
+        p_aula_gravada_id: formData.aula_gravada_id,
       });
 
       if (error) {
@@ -329,6 +342,30 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                       className="text-sm"
                       spellCheck={false}
                     />
+                  </div>
+                </div>
+
+                {/* Aula Gravada Vinculada */}
+                <div className="border border-gray-200 rounded-xl p-5 mb-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Aula Gravada Vinculada <span className="text-gray-400 font-normal">(opcional)</span></label>
+                    <p className="text-xs text-gray-500">Alunos matriculados após esta aula verão um botão "Assistir Gravação" em vez de "Ausente".</p>
+                    <Select
+                      value={formData.aula_gravada_id || 'nenhuma'}
+                      onValueChange={(value) => setFormData({...formData, aula_gravada_id: value === 'nenhuma' ? null : value})}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Selecione a aula gravada..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="nenhuma">— Nenhuma —</SelectItem>
+                        {aulasGravadas.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.titulo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

@@ -108,7 +108,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         turmasAutorizadas.length > 0
           ? supabase
               .from('profiles')
-              .select('email, nome, turma')
+              .select('email, nome, turma, created_at')
               .in('turma', turmasAutorizadas)
               .eq('ativo', true)
               .eq('user_type', 'aluno')
@@ -132,8 +132,18 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
       });
 
       // ── 4. Montar mapa base: todos os matriculados = ausente
+      // Excluir alunos que se matricularam APÓS a sessão mais recente do grupo
+      const latestClassDate = latestSessao?.data_aula
+        ? new Date(latestSessao.data_aula + 'T23:59:59')
+        : null;
+
       const alunosMap = new Map<string, FrequenciaAluno>();
       (alunosMatriculadosRes.data || []).forEach((aluno: any) => {
+        // Se temos data da aula e data de cadastro do aluno, verificar se ele já estava matriculado
+        if (latestClassDate && aluno.created_at) {
+          const enrolledAt = new Date(aluno.created_at);
+          if (enrolledAt > latestClassDate) return; // matriculado após a aula — não contabilizar falta
+        }
         const just = justMap.get(aluno.email);
         alunosMap.set(aluno.email, {
           nome: aluno.nome || aluno.email,

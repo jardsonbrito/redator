@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, Users, MoreHorizontal, Video, ExternalLink, LogIn, LogOut, BarChart3, Edit, Power, PowerOff, Trash2, FileText } from 'lucide-react';
+import { Clock, Users, MoreHorizontal, Video, ExternalLink, LogIn, LogOut, BarChart3, Edit, Power, PowerOff, Trash2, FileText, PlayCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { computeStatus } from '@/utils/aulaStatus';
 import { formatTurmaDisplay } from '@/utils/turmaUtils';
+import { useNavigate } from 'react-router-dom';
 
 interface AulaCardData {
   id: string;
@@ -29,6 +30,7 @@ interface AulaCardData {
   ativo: boolean;
   eh_aula_ao_vivo?: boolean;
   status_transmissao?: string;
+  aula_gravada_id?: string | null;
 }
 
 interface AulaCardActions {
@@ -49,10 +51,13 @@ interface AulaCardPadraoProps {
   attendanceStatus?: 'presente' | 'ausente' | 'entrada_registrada' | 'saida_registrada';
   loadingOperation?: boolean;
   justificativaEnviada?: boolean;
+  /** true quando o aluno se matriculou APÓS a realização desta aula */
+  enrolledAfterClass?: boolean;
 }
 
-export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ausente', loadingOperation, justificativaEnviada }: AulaCardPadraoProps) => {
+export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ausente', loadingOperation, justificativaEnviada, enrolledAfterClass = false }: AulaCardPadraoProps) => {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const getStatusAula = () => {
     if (!aula.eh_aula_ao_vivo) return 'encerrada';
@@ -118,6 +123,13 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
     // Para aulas encerradas, mostrar status final
     if (status === 'encerrada') {
       const isPresent = attendanceStatus === 'entrada_registrada' || attendanceStatus === 'saida_registrada' || attendanceStatus === 'presente';
+      if (!isPresent && enrolledAfterClass) {
+        return (
+          <Badge className="text-xs bg-amber-100 text-amber-800">
+            Ver Gravação
+          </Badge>
+        );
+      }
       return (
         <Badge variant={isPresent ? 'default' : 'secondary'} className="text-xs">
           {isPresent ? 'Presente' : 'Ausente'}
@@ -301,8 +313,21 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   {getButtonText()}
                 </Button>
 
-                {/* Botão de justificativa — apenas para aulas encerradas onde o aluno está ausente */}
-                {aula.eh_aula_ao_vivo && status === 'encerrada' && attendanceStatus === 'ausente' && (
+                {/* Botão para assistir gravação — quando aluno entrou no curso após a aula */}
+                {aula.eh_aula_ao_vivo && status === 'encerrada' && enrolledAfterClass && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white"
+                    onClick={() => navigate(aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas')}
+                  >
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Assistir Gravação
+                  </Button>
+                )}
+
+                {/* Botão de justificativa — apenas para aulas encerradas onde o aluno está ausente E já era matriculado */}
+                {aula.eh_aula_ao_vivo && status === 'encerrada' && attendanceStatus === 'ausente' && !enrolledAfterClass && (
                   <div className="space-y-2">
                     {justificativaEnviada ? (
                       <div className="flex items-center gap-2">
