@@ -47,6 +47,7 @@ interface AulaVirtualEditFormProps {
 
 export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEditFormProps) => {
   const [loading, setLoading] = useState(false);
+  const [gerandoGravada, setGerandoGravada] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
   const [aulasGravadas, setAulasGravadas] = useState<AulaGravadaDisponivel[]>([]);
@@ -112,6 +113,42 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
     };
     carregarAulas();
   }, [aula.id]);
+
+  const gerarAulaGravada = async () => {
+    const MODULO_AULA_AO_VIVO_ID = 'b14dd9be-a203-45df-97b7-ae592f5c60ed';
+    setGerandoGravada(true);
+    try {
+      const { data: novaGravada, error } = await supabase
+        .from('aulas')
+        .insert([{
+          titulo: formData.titulo.trim(),
+          descricao: formData.descricao.trim() || null,
+          link_conteudo: '',
+          turmas_autorizadas: formData.turmas_autorizadas,
+          permite_visitante: formData.permite_visitante,
+          cover_url: formData.imagem_capa_url.trim() || null,
+          cover_source: formData.imagem_capa_url.trim() ? 'url' : null,
+          modulo_id: MODULO_AULA_AO_VIVO_ID,
+          ativo: false,
+        }])
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      await supabase
+        .from('aulas_virtuais')
+        .update({ aula_gravada_id: novaGravada.id })
+        .eq('id', aula.id);
+
+      setFormData(prev => ({ ...prev, aula_gravada_id: novaGravada.id }));
+      toast.success('Aula gravada gerada! Agora adicione o link do YouTube em Aulas Gravadas.');
+    } catch (err: any) {
+      toast.error('Erro ao gerar aula gravada: ' + err.message);
+    } finally {
+      setGerandoGravada(false);
+    }
+  };
 
   const handleAction = () => {
     // Validações básicas
@@ -349,7 +386,25 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                 <div className="border border-gray-200 rounded-xl p-5 mb-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Aula Gravada Vinculada <span className="text-gray-400 font-normal">(opcional)</span></label>
-                    <p className="text-xs text-gray-500">Alunos matriculados após esta aula verão um botão "Assistir Gravação" em vez de "Ausente".</p>
+                    <p className="text-xs text-gray-500">Alunos ausentes verão um botão "Assistir Gravação" direcionado para esta gravação.</p>
+
+                    {/* Botão para gerar a aula gravada automaticamente */}
+                    {!formData.aula_gravada_id && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={gerarAulaGravada}
+                        disabled={gerandoGravada}
+                        className="w-full border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white"
+                      >
+                        {gerandoGravada ? 'Gerando...' : '✦ Gerar Aula Gravada automaticamente'}
+                      </Button>
+                    )}
+                    {formData.aula_gravada_id && (
+                      <p className="text-xs text-green-600 font-medium">✓ Aula gravada vinculada</p>
+                    )}
+
                     <Select
                       value={formData.aula_gravada_id || 'nenhuma'}
                       onValueChange={(value) => setFormData({...formData, aula_gravada_id: value === 'nenhuma' ? null : value})}
