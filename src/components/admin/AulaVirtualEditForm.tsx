@@ -398,7 +398,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                         disabled={gerandoGravada}
                         className="w-full border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white"
                       >
-                        {gerandoGravada ? 'Gerando...' : '✦ Gerar Aula Gravada automaticamente'}
+                        {gerandoGravada ? 'Gerando...' : 'Gerar Aula Gravada automaticamente'}
                       </Button>
                     )}
                     {formData.aula_gravada_id && (
