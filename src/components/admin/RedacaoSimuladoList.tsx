@@ -645,6 +645,15 @@ const RedacaoSimuladoList = () => {
                               </span>
                             </div>
                           )}
+                          {(r.par_utilizado === '1_admin' || r.par_utilizado === '2_admin') && (
+                            <div className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+                              <span>Coordenação</span>
+                              <span className="text-[10px] px-1 rounded bg-green-100 text-green-700">
+                                ok
+                              </span>
+                            </div>
+                          )}
                           {!r.corretor_id_1 && !r.corretor_id_2 && (
                             <span className="text-gray-400">Nenhum corretor</span>
                           )}
