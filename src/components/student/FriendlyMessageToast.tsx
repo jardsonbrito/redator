@@ -7,6 +7,11 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useStudentInbox, type StudentInboxMessage } from "@/hooks/useStudentInbox";
 
+const QUICK_REPLIES: Record<string, string[]> = {
+  followup_gravacao: ["Sim, já assisti ✓", "Ainda não assisti"],
+  followup_duvidas: ["Tenho dúvidas, vou entrar em contato", "Sem dúvidas por enquanto ✓"],
+};
+
 interface FriendlyMessageToastProps {
   message: StudentInboxMessage;
   onDismiss: () => void;
@@ -14,16 +19,23 @@ interface FriendlyMessageToastProps {
 
 export function FriendlyMessageToast({ message, onDismiss }: FriendlyMessageToastProps) {
   const [isVisible, setIsVisible] = useState(true);
-  const { markAsRead, markAsReadLoading } = useStudentInbox();
+  const { markAsRead, markAsReadLoading, respondMessage, respondMessageLoading } = useStudentInbox();
+
+  const quickReplies = message.acao ? QUICK_REPLIES[message.acao] : null;
 
   const handleMarkAsRead = () => {
     markAsRead(message.id);
     handleDismiss();
   };
 
+  const handleQuickReply = (text: string) => {
+    respondMessage({ recipientId: message.id, responseText: text });
+    handleDismiss();
+  };
+
   const handleDismiss = () => {
     setIsVisible(false);
-    setTimeout(onDismiss, 300); // Aguardar animação
+    setTimeout(onDismiss, 300);
   };
 
   if (!isVisible) return null;
@@ -85,18 +97,33 @@ export function FriendlyMessageToast({ message, onDismiss }: FriendlyMessageToas
               </div>
             )}
 
-            {/* Botão marcar como lida */}
-            <div className="flex justify-end pt-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleMarkAsRead}
-                disabled={markAsReadLoading}
-                className="text-xs"
-              >
-                <Check className="h-3 w-3 mr-1" />
-                {markAsReadLoading ? "Marcando..." : "Marcar como lida"}
-              </Button>
+            {/* Botões de resposta */}
+            <div className="flex flex-wrap gap-2 pt-2 justify-end">
+              {quickReplies ? (
+                quickReplies.map((text) => (
+                  <Button
+                    key={text}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleQuickReply(text)}
+                    disabled={respondMessageLoading}
+                    className="text-xs"
+                  >
+                    {text}
+                  </Button>
+                ))
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleMarkAsRead}
+                  disabled={markAsReadLoading}
+                  className="text-xs"
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  {markAsReadLoading ? "Marcando..." : "Marcar como lida"}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>

@@ -13,6 +13,7 @@ import { InboxDestinatariosListaAlunos, type AlunoSelecionado } from "./InboxDes
 import { InboxExtrasForm, type InboxExtras } from "./InboxExtrasForm";
 import { InboxMensagensList } from "./InboxMensagensList";
 import { InboxProgressIndicator } from "./InboxProgressIndicator";
+import { InboxTemplatesForm } from "./InboxTemplatesForm";
 
 interface InboxFormData {
   message: string;
@@ -191,7 +192,8 @@ export function InboxForm() {
     { value: 'configuracao', label: 'Configuração' },
     { value: 'destinatarios', label: 'Destinatários' },
     { value: 'extras', label: 'Extras' },
-    { value: 'mensagens', label: 'Mensagens' }
+    { value: 'mensagens', label: 'Mensagens' },
+    { value: 'automaticas', label: 'Automáticas' },
   ];
 
   return (
@@ -217,7 +219,7 @@ export function InboxForm() {
           </div>
 
           {/* Botão de enviar */}
-          {activeTab !== "mensagens" && (
+          {activeTab !== "mensagens" && activeTab !== "automaticas" && (
             <Button
               onClick={handleSendMessage}
               disabled={!canSendMessage() || createMessageMutation.isPending}
@@ -275,6 +277,10 @@ export function InboxForm() {
             onEdit={handleEditMessage}
             onDuplicate={handleDuplicateMessage}
           />
+        </TabsContent>
+
+        <TabsContent value="automaticas" className="space-y-6">
+          <InboxTemplatesForm />
         </TabsContent>
       </Tabs>
     </div>

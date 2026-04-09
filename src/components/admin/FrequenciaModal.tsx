@@ -34,6 +34,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   const [isLoading, setIsLoading] = useState(false);
   const [isSendingNotif, setIsSendingNotif] = useState(false);
   const [justificativaModal, setJustificativaModal] = useState<{ texto: string; criadoEm: string; nome: string } | null>(null);
+  const [aulaInfo, setAulaInfo] = useState<{ data_aula: string; horario_fim: string } | null>(null);
   const { user } = useAuth();
 
   const fetchFrequencia = async () => {
@@ -49,6 +50,11 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         .single();
 
       const turmasAutorizadas: string[] = aulaData?.turmas_autorizadas || [];
+
+      // Guardar info para uso no agendamento de follow-ups
+      if (aulaData?.data_aula && aulaData?.horario_fim) {
+        setAulaInfo({ data_aula: aulaData.data_aula, horario_fim: aulaData.horario_fim });
+      }
 
       // Verificar se a aula terminou há mais de 24h (para corrigir "em_aula" esquecido)
       let aulaEncerradaHa24h = false;
@@ -181,12 +187,13 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   };
 
   const notificarAusentes = async () => {
-    const ausentes = frequenciaData.filter(
+    const ausentesSemJustificativa = frequenciaData.filter(
       (a) => a.status === 'ausente' && !a.justificativa
     );
+    const todosAusentes = frequenciaData.filter(a => a.status === 'ausente');
 
-    if (ausentes.length === 0) {
-      toast.info('Todos os ausentes já possuem justificativa ou não há faltas a notificar.');
+    if (todosAusentes.length === 0) {
+      toast.info('Não há faltas a notificar.');
       return;
     }
 
@@ -197,69 +204,138 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
     setIsSendingNotif(true);
     try {
-      // Verificar se já existe mensagem de notificação para esta aula
-      const { data: existingMsg } = await supabase
-        .from('inbox_messages')
-        .select('id')
-        .eq('acao', 'justificativa_ausencia')
-        .eq('aula_id', aulaId)
-        .maybeSingle();
+      let notificadosCount = 0;
 
-      let messageId: string;
-
-      if (existingMsg) {
-        messageId = existingMsg.id;
-      } else {
-        const { data: newMsg, error: msgError } = await supabase
+      // ── 1. Mensagem bloqueante de justificativa (apenas sem justificativa)
+      if (ausentesSemJustificativa.length > 0) {
+        const { data: existingMsg } = await supabase
           .from('inbox_messages')
-          .insert({
-            message: `Você faltou à aula: "${aulaTitle}"\n\nJustifique sua ausência abaixo. Essa justificativa será registrada no sistema e ficará visível para o professor.`,
-            type: 'bloqueante',
-            valid_until: null,
-            created_by: user.id,
-            aula_id: aulaId,
-            acao: 'justificativa_ausencia',
-          } as any)
           .select('id')
-          .single();
+          .eq('acao', 'justificativa_ausencia')
+          .eq('aula_id', aulaId)
+          .maybeSingle();
 
-        if (msgError || !newMsg) throw msgError || new Error('Falha ao criar mensagem');
-        messageId = newMsg.id;
+        let messageId: string;
+
+        if (existingMsg) {
+          messageId = existingMsg.id;
+        } else {
+          const { data: newMsg, error: msgError } = await supabase
+            .from('inbox_messages')
+            .insert({
+              message: `Você faltou à aula: "${aulaTitle}"\n\nJustifique sua ausência abaixo. Essa justificativa será registrada no sistema e ficará visível para o professor.`,
+              type: 'bloqueante',
+              valid_until: null,
+              created_by: user.id,
+              aula_id: aulaId,
+              acao: 'justificativa_ausencia',
+            } as any)
+            .select('id')
+            .single();
+
+          if (msgError || !newMsg) throw msgError || new Error('Falha ao criar mensagem');
+          messageId = newMsg.id;
+        }
+
+        const { data: existingRecipients } = await supabase
+          .from('inbox_recipients')
+          .select('student_email')
+          .eq('message_id', messageId);
+
+        const jaNotificados = new Set(
+          (existingRecipients || []).map((r: any) => r.student_email)
+        );
+
+        const novos = ausentesSemJustificativa.filter(a => !jaNotificados.has(a.email));
+
+        if (novos.length > 0) {
+          const { error: recError } = await supabase.from('inbox_recipients').insert(
+            novos.map(a => ({
+              message_id: messageId,
+              student_email: a.email,
+              status: 'pendente',
+            }))
+          );
+          if (recError) throw recError;
+          notificadosCount = novos.length;
+        }
       }
 
-      // Buscar quem já é destinatário dessa mensagem
-      const { data: existingRecipients } = await supabase
-        .from('inbox_recipients')
-        .select('student_email')
-        .eq('message_id', messageId);
+      // ── 2. Follow-ups agendados (todos os ausentes, incluindo os que justificaram)
+      if (aulaInfo) {
+        const { data: templates } = await supabase
+          .from('inbox_templates' as any)
+          .select('*')
+          .in('acao', ['followup_gravacao', 'followup_duvidas']);
 
-      const jaNotificados = new Set(
-        (existingRecipients || []).map((r: any) => r.student_email)
-      );
+        const fimAula = new Date(`${aulaInfo.data_aula}T${aulaInfo.horario_fim}`);
 
-      const novosDestinatarios = ausentes.filter(
-        (a) => !jaNotificados.has(a.email)
-      );
+        for (const tpl of (templates || []) as any[]) {
+          if (!tpl.delay_horas) continue;
 
-      if (novosDestinatarios.length === 0) {
-        toast.info('Todos os ausentes já foram notificados anteriormente.');
-        setIsSendingNotif(false);
-        return;
+          const sendAt = new Date(fimAula.getTime() + tpl.delay_horas * 60 * 60 * 1000);
+          const messageText = (tpl.message as string).replace(/\{\{titulo\}\}/g, aulaTitle);
+
+          // Verificar se já existe mensagem para essa aula+acao
+          const { data: existingFollowup } = await supabase
+            .from('inbox_messages')
+            .select('id')
+            .eq('acao', tpl.acao)
+            .eq('aula_id', aulaId)
+            .maybeSingle();
+
+          let followupMsgId: string;
+
+          if (existingFollowup) {
+            followupMsgId = existingFollowup.id;
+          } else {
+            const { data: newFollowup, error: followupError } = await supabase
+              .from('inbox_messages')
+              .insert({
+                message: messageText,
+                type: tpl.type,
+                valid_until: null,
+                created_by: user.id,
+                aula_id: aulaId,
+                acao: tpl.acao,
+                send_at: sendAt.toISOString(),
+              } as any)
+              .select('id')
+              .single();
+
+            if (followupError || !newFollowup) continue;
+            followupMsgId = newFollowup.id;
+          }
+
+          // Adicionar todos os ausentes que ainda não são destinatários
+          const { data: existingRec } = await supabase
+            .from('inbox_recipients')
+            .select('student_email')
+            .eq('message_id', followupMsgId);
+
+          const jaDestinatarios = new Set((existingRec || []).map((r: any) => r.student_email));
+          const novos = todosAusentes.filter(a => !jaDestinatarios.has(a.email));
+
+          if (novos.length > 0) {
+            await supabase.from('inbox_recipients').insert(
+              novos.map(a => ({
+                message_id: followupMsgId,
+                student_email: a.email,
+                status: 'pendente',
+              }))
+            );
+          }
+        }
       }
 
-      const { error: recError } = await supabase.from('inbox_recipients').insert(
-        novosDestinatarios.map((a) => ({
-          message_id: messageId,
-          student_email: a.email,
-          status: 'pendente',
-        }))
-      );
-
-      if (recError) throw recError;
-
-      toast.success(
-        `${novosDestinatarios.length} aluno${novosDestinatarios.length > 1 ? 's' : ''} notificado${novosDestinatarios.length > 1 ? 's' : ''} com sucesso!`
-      );
+      const partes: string[] = [];
+      if (notificadosCount > 0) {
+        partes.push(`${notificadosCount} aluno${notificadosCount > 1 ? 's' : ''} notificado${notificadosCount > 1 ? 's' : ''}`);
+      }
+      if (aulaInfo) {
+        partes.push('follow-ups agendados');
+      }
+      toast.success(partes.length > 0 ? partes.join(' • ') + '.' : 'Ação concluída.');
     } catch (err: any) {
       console.error('Erro ao notificar ausentes:', err);
       toast.error('Erro ao enviar notificações. Tente novamente.');
@@ -353,7 +429,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
                 onClick={notificarAusentes}
                 variant="outline"
                 size="sm"
-                disabled={isSendingNotif || frequenciaData.filter(a => a.status === 'ausente' && !a.justificativa).length === 0}
+                disabled={isSendingNotif || frequenciaData.filter(a => a.status === 'ausente').length === 0}
               >
                 <Bell className="w-4 h-4 mr-2" />
                 {isSendingNotif ? 'Notificando...' : 'Notificar ausentes'}

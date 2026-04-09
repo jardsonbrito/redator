@@ -12,6 +12,11 @@ import { ptBR } from "date-fns/locale";
 import { useStudentInbox, type StudentInboxMessage } from "@/hooks/useStudentInbox";
 import { toast } from "sonner";
 
+const QUICK_REPLIES: Record<string, string[]> = {
+  followup_gravacao: ["Sim, já assisti ✓", "Ainda não assisti"],
+  followup_duvidas: ["Tenho dúvidas, vou entrar em contato", "Sem dúvidas por enquanto ✓"],
+};
+
 interface StudentInboxModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -159,17 +164,33 @@ export function StudentInboxModal({ isOpen, onClose }: StudentInboxModalProps) {
                     </div>
                   </div>
 
-                  {/* Botão marcar como lida (só para mensagens pendentes e amigáveis) */}
+                  {/* Ações para mensagens amigáveis pendentes */}
                   {message.status === 'pendente' && message.type === 'amigavel' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleMarkAsRead(message.id)}
-                      disabled={markAsReadLoading}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Marcar como lida
-                    </Button>
+                    message.acao && QUICK_REPLIES[message.acao] ? (
+                      <div className="flex flex-wrap gap-2">
+                        {QUICK_REPLIES[message.acao].map((text) => (
+                          <Button
+                            key={text}
+                            size="sm"
+                            variant="outline"
+                            onClick={() => respondMessage({ recipientId: message.id, responseText: text })}
+                            disabled={respondMessageLoading}
+                          >
+                            {text}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMarkAsRead(message.id)}
+                        disabled={markAsReadLoading}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Marcar como lida
+                      </Button>
+                    )
                   )}
                 </div>
 

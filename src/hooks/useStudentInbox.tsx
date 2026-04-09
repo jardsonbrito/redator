@@ -18,6 +18,7 @@ export interface StudentInboxMessage {
   responded_at: string | null;
   aula_id: string | null;
   acao: string | null;
+  send_at: string | null;
 }
 
 export function useStudentInbox() {
@@ -52,7 +53,8 @@ export function useStudentInbox() {
               extra_image,
               created_at,
               aula_id,
-              acao
+              acao,
+              send_at
             )
           `)
           .eq('student_email', emailToUse)
@@ -76,8 +78,11 @@ export function useStudentInbox() {
           .filter((item) => {
             const message = item.inbox_messages;
             if (!message) return false;
-            if (!message.valid_until) return true; // Permanente
-            return new Date(message.valid_until) > now; // Não expirada
+            // Mensagem expirada
+            if (message.valid_until && new Date(message.valid_until) <= now) return false;
+            // Mensagem agendada ainda não no horário
+            if ((message as any).send_at && new Date((message as any).send_at) > now) return false;
+            return true;
           })
           .map((item) => ({
             id: item.id,
@@ -93,6 +98,7 @@ export function useStudentInbox() {
             responded_at: item.responded_at,
             aula_id: (item.inbox_messages as any).aula_id ?? null,
             acao: (item.inbox_messages as any).acao ?? null,
+            send_at: (item.inbox_messages as any).send_at ?? null,
           })) as StudentInboxMessage[];
 
         return validMessages;
