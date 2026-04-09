@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { computeStatus } from '@/utils/aulaStatus';
 import { formatTurmaDisplay } from '@/utils/turmaUtils';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 interface AulaCardData {
   id: string;
@@ -57,7 +57,6 @@ interface AulaCardPadraoProps {
 
 export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ausente', loadingOperation, justificativaEnviada, enrolledAfterClass = false }: AulaCardPadraoProps) => {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  const navigate = useNavigate();
 
   const getStatusAula = () => {
     if (!aula.eh_aula_ao_vivo) return 'encerrada';
@@ -124,15 +123,15 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
     if (status === 'encerrada') {
       const isPresent = attendanceStatus === 'entrada_registrada' || attendanceStatus === 'saida_registrada' || attendanceStatus === 'presente';
       if (!isPresent && enrolledAfterClass) {
-        const href = aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas';
+        const to = aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas';
         return (
-          <button
-            onClick={() => navigate(href)}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors cursor-pointer border-0"
+          <Link
+            to={to}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
           >
             <PlayCircle className="w-3 h-3" />
             Ver Gravação
-          </button>
+          </Link>
         );
       }
       return (
@@ -320,15 +319,13 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
 
                 {/* Botão para assistir gravação — quando aluno entrou no curso após a aula */}
                 {aula.eh_aula_ao_vivo && status === 'encerrada' && enrolledAfterClass && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white"
-                    onClick={() => navigate(aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas')}
+                  <Link
+                    to={aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas'}
+                    className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium rounded-md border border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white transition-colors"
                   >
                     <PlayCircle className="w-4 h-4 mr-2" />
                     Assistir Gravação
-                  </Button>
+                  </Link>
                 )}
 
                 {/* Botão de justificativa — apenas para aulas encerradas onde o aluno está ausente E já era matriculado */}
