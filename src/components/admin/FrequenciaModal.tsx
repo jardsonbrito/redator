@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Clock, Users, Download, Bell } from "lucide-react";
+import { Clock, Users, Download, Bell, Link2 } from "lucide-react";
 
 
 interface FrequenciaAluno {
@@ -20,6 +20,8 @@ interface FrequenciaAluno {
   status: 'em_aula' | 'presente' | 'ausente';
   justificativa?: string;
   justificativaCriadoEm?: string;
+  /** true quando presença foi registrada em outra sessão do grupo, não nesta */
+  presencaEmOutraSessao?: boolean;
 }
 
 interface FrequenciaModalProps {
@@ -35,6 +37,9 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   const [isSendingNotif, setIsSendingNotif] = useState(false);
   const [justificativaModal, setJustificativaModal] = useState<{ texto: string; criadoEm: string; nome: string } | null>(null);
   const [aulaInfo, setAulaInfo] = useState<{ data_aula: string; horario_fim: string } | null>(null);
+  // ID canônico do grupo para inbox_messages (sempre o da mãe)
+  const [aulaMaeId, setAulaMaeId] = useState<string>(aulaId);
+  const [grupoSessoes, setGrupoSessoes] = useState<number>(1);
   const { user } = useAuth();
 
   const fetchFrequencia = async () => {
@@ -42,37 +47,64 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
     setIsLoading(true);
     try {
-      // Buscar dados da aula para listar turmas e calcular se encerrou há mais de 24h
+      // ── 1. Dados da aula atual (inclui aula_mae_id)
       const { data: aulaData } = await supabase
         .from('aulas_virtuais')
-        .select('turmas_autorizadas, data_aula, horario_fim')
+        .select('turmas_autorizadas, data_aula, horario_fim, aula_mae_id')
         .eq('id', aulaId)
         .single();
 
       const turmasAutorizadas: string[] = aulaData?.turmas_autorizadas || [];
 
-      // Guardar info para uso no agendamento de follow-ups
-      if (aulaData?.data_aula && aulaData?.horario_fim) {
-        setAulaInfo({ data_aula: aulaData.data_aula, horario_fim: aulaData.horario_fim });
+      // ── 2. Identificar o grupo (mãe + filhas)
+      const maeid: string = (aulaData as any)?.aula_mae_id || aulaId;
+      setAulaMaeId(maeid);
+
+      const { data: grupoAulas } = await supabase
+        .from('aulas_virtuais')
+        .select('id, data_aula, horario_fim')
+        .or(`id.eq.${maeid},aula_mae_id.eq.${maeid}`);
+
+      const grupo = grupoAulas && grupoAulas.length > 0
+        ? grupoAulas
+        : [{ id: aulaId, data_aula: aulaData?.data_aula, horario_fim: aulaData?.horario_fim }];
+
+      const grupoIds = grupo.map((a: any) => a.id);
+      setGrupoSessoes(grupoIds.length);
+
+      // Mapa aulaId → encerradaHá24h
+      const grupoEncerradaMap = new Map<string, boolean>();
+      grupo.forEach((a: any) => {
+        const fim = a.data_aula && a.horario_fim
+          ? new Date(`${a.data_aula}T${a.horario_fim}`)
+          : null;
+        grupoEncerradaMap.set(a.id, fim ? Date.now() - fim.getTime() > 24 * 3600 * 1000 : false);
+      });
+
+      // aulaInfo = sessão mais recente do grupo (para calcular send_at dos follow-ups)
+      const latestSessao = grupo.reduce((acc: any, cur: any) => {
+        if (!acc.data_aula || !acc.horario_fim) return cur;
+        return new Date(`${cur.data_aula}T${cur.horario_fim}`) > new Date(`${acc.data_aula}T${acc.horario_fim}`)
+          ? cur
+          : acc;
+      }, grupo[0]);
+      if (latestSessao?.data_aula && latestSessao?.horario_fim) {
+        setAulaInfo({ data_aula: latestSessao.data_aula, horario_fim: latestSessao.horario_fim });
       }
 
-      // Verificar se a aula terminou há mais de 24h (para corrigir "em_aula" esquecido)
-      let aulaEncerradaHa24h = false;
-      if (aulaData?.data_aula && aulaData?.horario_fim) {
-        const fimAula = new Date(`${aulaData.data_aula}T${aulaData.horario_fim}`);
-        aulaEncerradaHa24h = Date.now() - fimAula.getTime() > 24 * 60 * 60 * 1000;
-      }
-
+      // ── 3. Buscar dados em paralelo
       const [presencaRes, justificativaRes, alunosMatriculadosRes] = await Promise.all([
+        // Presença de TODAS as sessões do grupo
         supabase
           .from('presenca_aulas')
           .select('*')
-          .eq('aula_id', aulaId)
+          .in('aula_id', grupoIds)
           .order('nome_aluno', { ascending: true }),
+        // Justificativas de TODAS as sessões do grupo
         supabase
           .from('justificativas_ausencia')
-          .select('email_aluno, nome_aluno, turma, justificativa, criado_em')
-          .eq('aula_id', aulaId),
+          .select('email_aluno, nome_aluno, turma, justificativa, criado_em, aula_id')
+          .in('aula_id', grupoIds),
         turmasAutorizadas.length > 0
           ? supabase
               .from('profiles')
@@ -85,18 +117,21 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
       if (presencaRes.error) throw presencaRes.error;
 
-      // Mapa de justificativas por email
+      // Mapa de justificativas por email (usa a mais recente do grupo)
       const justMap = new Map<string, { texto: string; criadoEm: string; nome: string; turma: string }>();
       (justificativaRes.data || []).forEach((j: any) => {
-        justMap.set(j.email_aluno, {
-          texto: j.justificativa,
-          criadoEm: j.criado_em,
-          nome: j.nome_aluno || '',
-          turma: j.turma || '',
-        });
+        const existing = justMap.get(j.email_aluno);
+        if (!existing || new Date(j.criado_em) > new Date(existing.criadoEm)) {
+          justMap.set(j.email_aluno, {
+            texto: j.justificativa,
+            criadoEm: j.criado_em,
+            nome: j.nome_aluno || '',
+            turma: j.turma || '',
+          });
+        }
       });
 
-      // Começar pelo cadastro completo: todos os alunos matriculados = ausente por padrão
+      // ── 4. Montar mapa base: todos os matriculados = ausente
       const alunosMap = new Map<string, FrequenciaAluno>();
       (alunosMatriculadosRes.data || []).forEach((aluno: any) => {
         const just = justMap.get(aluno.email);
@@ -110,13 +145,13 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         });
       });
 
-      // Aplicar registros de presença sobre o mapa base
+      // ── 5. Aplicar registros de presença do grupo inteiro
+      // Status reflete o grupo; entrada/saída exibe apenas a sessão atual (aulaId)
       (presencaRes.data || []).forEach((record: any) => {
         const alunoKey = record.email_aluno;
         let aluno = alunosMap.get(alunoKey);
 
         if (!aluno) {
-          // Aluno presente que não está mais matriculado (edge case)
           const just = justMap.get(alunoKey);
           aluno = {
             nome: record.nome_aluno,
@@ -129,18 +164,34 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
           alunosMap.set(alunoKey, aluno);
         }
 
-        if (record.entrada_at) aluno.entrada = record.entrada_at;
-        if (record.saida_at) aluno.saida = record.saida_at;
+        // Horários de entrada/saída: apenas para a sessão específica aberta no modal
+        if (record.aula_id === aulaId) {
+          if (record.entrada_at) aluno.entrada = record.entrada_at;
+          if (record.saida_at) aluno.saida = record.saida_at;
+        }
 
-        if (aluno.entrada && aluno.saida) {
+        // STATUS considera qualquer sessão do grupo
+        if (aluno.status === 'presente') return; // já presente, não regredir
+
+        const encerrada = grupoEncerradaMap.get(record.aula_id) ?? false;
+        const temEntrada = !!record.entrada_at;
+        const temSaida = !!record.saida_at;
+
+        if (temEntrada && temSaida) {
           aluno.status = 'presente';
-        } else if (aluno.entrada && !aluno.saida) {
-          // Se a aula terminou há mais de 24h, saída esquecida → considerar presente
-          aluno.status = aulaEncerradaHa24h ? 'presente' : 'em_aula';
+          aluno.presencaEmOutraSessao = record.aula_id !== aulaId;
+        } else if (temEntrada && !temSaida) {
+          if (encerrada) {
+            // Saída esquecida → considerar presente
+            aluno.status = 'presente';
+            aluno.presencaEmOutraSessao = record.aula_id !== aulaId;
+          } else {
+            aluno.status = 'em_aula';
+          }
         }
       });
 
-      // Adicionar alunos que só justificaram e não estão no cadastro nem na presença
+      // Adicionar alunos que só justificaram (não estão no cadastro nem na presença)
       justMap.forEach((just, email) => {
         if (!alunosMap.has(email)) {
           alunosMap.set(email, {
@@ -206,13 +257,16 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
     try {
       let notificadosCount = 0;
 
+      // Usar o ID canônico do grupo (mãe) para evitar duplicatas ao notificar de dias distintos
+      const canonicalAulaId = aulaMaeId || aulaId;
+
       // ── 1. Mensagem bloqueante de justificativa (apenas sem justificativa)
       if (ausentesSemJustificativa.length > 0) {
         const { data: existingMsg } = await supabase
           .from('inbox_messages')
           .select('id')
           .eq('acao', 'justificativa_ausencia')
-          .eq('aula_id', aulaId)
+          .eq('aula_id', canonicalAulaId)
           .maybeSingle();
 
         let messageId: string;
@@ -227,7 +281,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
               type: 'bloqueante',
               valid_until: null,
               created_by: user.id,
-              aula_id: aulaId,
+              aula_id: canonicalAulaId,
               acao: 'justificativa_ausencia',
             } as any)
             .select('id')
@@ -276,12 +330,12 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
           const sendAt = new Date(fimAula.getTime() + tpl.delay_horas * 60 * 60 * 1000);
           const messageText = (tpl.message as string).replace(/\{\{titulo\}\}/g, aulaTitle);
 
-          // Verificar se já existe mensagem para essa aula+acao
+          // Usar canonicalAulaId para deduplicar por grupo
           const { data: existingFollowup } = await supabase
             .from('inbox_messages')
             .select('id')
             .eq('acao', tpl.acao)
-            .eq('aula_id', aulaId)
+            .eq('aula_id', canonicalAulaId)
             .maybeSingle();
 
           let followupMsgId: string;
@@ -296,7 +350,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
                 type: tpl.type,
                 valid_until: null,
                 created_by: user.id,
-                aula_id: aulaId,
+                aula_id: canonicalAulaId,
                 acao: tpl.acao,
                 send_at: sendAt.toISOString(),
               } as any)
@@ -356,7 +410,9 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   const getStatusBadge = (aluno: FrequenciaAluno) => {
     switch (aluno.status) {
       case 'presente':
-        return <Badge className="bg-green-100 text-green-800">✔ Presente</Badge>;
+        return aluno.presencaEmOutraSessao
+          ? <Badge className="bg-green-100 text-green-800">✔ Presente (outra sessão)</Badge>
+          : <Badge className="bg-green-100 text-green-800">✔ Presente</Badge>;
       case 'em_aula':
         return <Badge className="bg-blue-100 text-blue-800">⏰ Em aula</Badge>;
       case 'ausente':
@@ -412,6 +468,16 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         </DialogHeader>
 
         <div className="space-y-4">
+          {grupoSessoes > 1 && (
+            <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              <Link2 className="w-4 h-4 shrink-0" />
+              <span>
+                Esta aula faz parte de um grupo de <strong>{grupoSessoes} sessões</strong>.
+                Um aluno só é considerado ausente se faltou a <strong>todas</strong> as sessões.
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
