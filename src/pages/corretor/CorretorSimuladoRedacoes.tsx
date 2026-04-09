@@ -265,9 +265,8 @@ const CorretorSimuladoRedacoes = () => {
                 corretorNumero = 1;
               } else if (corretor?.id === redacao.corretor_id_2) {
                 corretorNumero = 2;
-              } else {
-                corretorNumero = redacao.corretor_id_1 ? 1 : 2;
               }
+              // Se não é corretor desta redação, não exibir o aviso de nota não utilizada
 
               const notaNaoUtilizada = getNotaNaoUtilizada(redacao, corretorNumero);
 
@@ -397,10 +396,7 @@ const CorretorSimuladoRedacoes = () => {
                       {/* Ações */}
                       <div className="lg:col-span-2">
                         <Button
-                          onClick={() => {
-                            const redacaoUrlId = `${redacao.id}-corretor${corretorNumero}`;
-                            navigate(`/redacoes/manuscrita/${redacaoUrlId}?origem=corretor`);
-                          }}
+                          onClick={() => navigate(`/corretor/simulados/redacao/${redacao.id}`)}
                           variant="outline"
                           size="sm"
                           className="w-full"
