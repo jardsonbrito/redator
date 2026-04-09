@@ -164,6 +164,9 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
   const handleSubmit = async () => {
     setLoading(true);
 
+    // ID do módulo "Aula ao vivo" — usado ao criar a aula gravada correspondente
+    const MODULO_AULA_AO_VIVO_ID = 'b14dd9be-a203-45df-97b7-ae592f5c60ed';
+
     try {
       const aulaData = {
         titulo: formData.titulo.trim(),
@@ -181,11 +184,55 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
         aula_mae_id: (formData.eh_aula_ao_vivo && formData.eh_repeticao) ? formData.aula_mae_id : null,
       };
 
-      const { error } = await supabase
+      const { data: novaAulaVirtual, error } = await supabase
         .from('aulas_virtuais')
-        .insert([aulaData]);
+        .insert([aulaData])
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      // ── Criar aula gravada correspondente (apenas para aulas não-repetição)
+      if (formData.eh_aula_ao_vivo && !formData.eh_repeticao && novaAulaVirtual) {
+        const { data: novaGravada } = await supabase
+          .from('aulas')
+          .insert([{
+            titulo: formData.titulo.trim(),
+            descricao: formData.descricao.trim() || null,
+            link_conteudo: '',           // admin adiciona o YouTube depois
+            turmas_autorizadas: formData.turmas_autorizadas,
+            permite_visitante: formData.permite_visitante,
+            cover_url: formData.imagem_capa_url.trim() || null,
+            cover_source: formData.imagem_capa_url.trim() ? 'url' : null,
+            modulo_id: MODULO_AULA_AO_VIVO_ID,
+            ativo: false,               // ativa quando o YouTube link for inserido
+          }])
+          .select('id')
+          .single();
+
+        if (novaGravada) {
+          await supabase
+            .from('aulas_virtuais')
+            .update({ aula_gravada_id: novaGravada.id })
+            .eq('id', novaAulaVirtual.id);
+        }
+      }
+
+      // ── Para repetições: herdar aula_gravada_id da aula mãe
+      if (formData.eh_aula_ao_vivo && formData.eh_repeticao && formData.aula_mae_id && novaAulaVirtual) {
+        const { data: mae } = await supabase
+          .from('aulas_virtuais')
+          .select('aula_gravada_id')
+          .eq('id', formData.aula_mae_id)
+          .maybeSingle();
+
+        if (mae?.aula_gravada_id) {
+          await supabase
+            .from('aulas_virtuais')
+            .update({ aula_gravada_id: mae.aula_gravada_id })
+            .eq('id', novaAulaVirtual.id);
+        }
+      }
 
       toast.success('Aula ao vivo criada com sucesso!');
 
