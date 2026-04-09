@@ -124,10 +124,15 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
     if (status === 'encerrada') {
       const isPresent = attendanceStatus === 'entrada_registrada' || attendanceStatus === 'saida_registrada' || attendanceStatus === 'presente';
       if (!isPresent && enrolledAfterClass) {
+        const href = aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas';
         return (
-          <Badge className="text-xs bg-amber-100 text-amber-800">
+          <button
+            onClick={() => navigate(href)}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors cursor-pointer border-0"
+          >
+            <PlayCircle className="w-3 h-3" />
             Ver Gravação
-          </Badge>
+          </button>
         );
       }
       return (

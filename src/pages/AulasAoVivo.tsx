@@ -48,6 +48,8 @@ const AulasAoVivo = () => {
   const [loadingOperations, setLoadingOperations] = useState<Record<string, boolean>>({});
   // Data de cadastro/aprovação do aluno na plataforma (ISO string ou null)
   const [studentEnrolledAt, setStudentEnrolledAt] = useState<string | null>(null);
+  // Mapa: id da aula ao vivo → id da aula gravada correspondente (manual ou auto-matched por título)
+  const [gravadaIdMap, setGravadaIdMap] = useState<Record<string, string | null>>({});
 
   // Justificativas: { aulaId: { texto, criadoEm } | null }
   const [justificativaMap, setJustificativaMap] = useState<Record<string, { texto: string; criadoEm: string } | null>>({});
@@ -123,6 +125,20 @@ const AulasAoVivo = () => {
       });
 
       setAulas(aulasOrdenadas);
+
+      // Buscar aulas gravadas para auto-matching por título
+      const { data: aulasGravadas } = await supabase
+        .from('aulas')
+        .select('id, titulo')
+        .eq('ativo', true);
+
+      const gravadas = (aulasGravadas || []) as Array<{ id: string; titulo: string }>;
+      const newGravadaMap: Record<string, string | null> = {};
+      for (const aula of aulasOrdenadas) {
+        // Preferência: vínculo manual → auto-match por título
+        newGravadaMap[aula.id] = (aula as any).aula_gravada_id || matchGravadaByTitle(aula.titulo, gravadas);
+      }
+      setGravadaIdMap(newGravadaMap);
 
       // Buscar status de presença para cada aula autorizada
       for (const aula of aulasAutorizadas) {
@@ -276,6 +292,37 @@ const AulasAoVivo = () => {
     }
   };
 
+  /** Busca a aula gravada correspondente por similaridade de título */
+  const matchGravadaByTitle = (titulo: string, gravadas: Array<{ id: string; titulo: string }>): string | null => {
+    const norm = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ');
+    const t = norm(titulo);
+
+    // 1. Correspondência exata
+    let found = gravadas.find(g => norm(g.titulo) === t);
+    if (found) return found.id;
+
+    // 2. Um contém o outro
+    found = gravadas.find(g => {
+      const gt = norm(g.titulo);
+      return t.includes(gt) || gt.includes(t);
+    });
+    if (found) return found.id;
+
+    // 3. Sobreposição de palavras significativas (≥4 chars, ≥50% de match)
+    const words = t.split(' ').filter(w => w.length >= 4);
+    if (words.length > 0) {
+      found = gravadas.find(g => {
+        const gt = norm(g.titulo);
+        const hits = words.filter(w => gt.includes(w)).length;
+        return hits >= Math.ceil(words.length * 0.5);
+      });
+      if (found) return found.id;
+    }
+
+    return null;
+  };
+
   /** Retorna true se o aluno se matriculou APÓS a data da aula (aula anterior à matrícula) */
   const isEnrolledAfterClass = (aula: AulaAoVivo): boolean => {
     if (!studentEnrolledAt) return false;
@@ -357,10 +404,11 @@ const AulasAoVivo = () => {
                 console.log('   - Attendance Map:', attendanceMap);
                 console.log('   - Attendance Status:', attendanceStatus);
 
+                const aulaComGravada = { ...aula, aula_gravada_id: gravadaIdMap[aula.id] ?? null };
                 return (
                   <AulaCardPadrao
                     key={aula.id}
-                    aula={aula}
+                    aula={aulaComGravada}
                     perfil="aluno"
                     attendanceStatus={attendanceStatus}
                     loadingOperation={loadingOperations[aula.id]}
