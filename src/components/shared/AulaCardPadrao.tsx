@@ -317,8 +317,8 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   {getButtonText()}
                 </Button>
 
-                {/* Botão para assistir gravação — quando aluno entrou no curso após a aula */}
-                {aula.eh_aula_ao_vivo && status === 'encerrada' && enrolledAfterClass && (
+                {/* Botão para assistir gravação — ausente (qualquer motivo) ou ingressante tardio */}
+                {aula.eh_aula_ao_vivo && status === 'encerrada' && (enrolledAfterClass || attendanceStatus === 'ausente') && (
                   <Link
                     to={aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas'}
                     className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium rounded-md border border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white transition-colors"
