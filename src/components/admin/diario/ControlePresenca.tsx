@@ -131,7 +131,6 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
 
   const contadores = {
     presentes: alunosPresenca.filter(a => a.presente).length,
-    participaram: alunosPresenca.filter(a => a.participou).length,
     total: alunosPresenca.length
   };
 
@@ -173,17 +172,11 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
           )}
 
           {/* Estatísticas */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
             <Card>
               <CardContent className="p-2 sm:p-4 text-center">
                 <div className="text-xl sm:text-2xl font-bold text-green-600">{contadores.presentes}</div>
                 <div className="text-xs sm:text-sm text-muted-foreground">Presentes</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-2 sm:p-4 text-center">
-                <div className="text-xl sm:text-2xl font-bold text-blue-600">{contadores.participaram}</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Participaram</div>
               </CardContent>
             </Card>
             <Card>
@@ -252,18 +245,6 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
                           />
                         </div>
 
-                        {/* Participação */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Participou</span>
-                          <Checkbox
-                            id={`participou-${aluno.email}`}
-                            checked={aluno.participou}
-                            disabled={!aluno.presente || isAulaOnline}
-                            onCheckedChange={(checked) =>
-                              handleParticipacaoChange(aluno.email, checked as boolean)
-                            }
-                          />
-                        </div>
                       </div>
                     </div>
 
@@ -302,23 +283,6 @@ export function ControlePresenca({ aula, onClose }: ControlePresencaProps) {
                           </label>
                         </div>
 
-                        {/* Participação */}
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`participou-desktop-${aluno.email}`}
-                            checked={aluno.participou}
-                            disabled={!aluno.presente || isAulaOnline}
-                            onCheckedChange={(checked) =>
-                              handleParticipacaoChange(aluno.email, checked as boolean)
-                            }
-                          />
-                          <label
-                            htmlFor={`participou-desktop-${aluno.email}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Participou
-                          </label>
-                        </div>
                       </div>
                     </div>
                   </CardContent>
