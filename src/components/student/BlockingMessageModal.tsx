@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { type StudentInboxMessage } from "@/hooks/useStudentInbox";
@@ -26,6 +26,20 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
 
   const isFaltaJustificativa =
     message.acao === "justificativa_ausencia" && !!message.aula_id;
+
+  const { data: aulaInfo } = useQuery({
+    queryKey: ["aula-info-justificativa", message.aula_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("aulas")
+        .select("titulo, data_aula, horario_inicio")
+        .eq("id", message.aula_id!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isFaltaJustificativa,
+  });
 
   const handleRespond = async () => {
     const responseText = response.trim();
@@ -82,6 +96,14 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
     }
   };
 
+  const aulaDataFormatada = aulaInfo?.data_aula
+    ? format(parseISO(aulaInfo.data_aula), "dd/MM/yyyy", { locale: ptBR })
+    : null;
+
+  const aulaHorario = aulaInfo?.horario_inicio
+    ? aulaInfo.horario_inicio.substring(0, 5).replace(":00", "h").replace(/:(\d+)/, "h$1")
+    : null;
+
   return (
     <Dialog open={isOpen} onOpenChange={() => {}} modal>
       <DialogContent
@@ -90,41 +112,42 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle className="text-red-600">
-            {isFaltaJustificativa
-              ? "Justificativa de Falta – Resposta Obrigatória"
-              : "Mensagem Importante – Resposta Obrigatória"}
+          <DialogTitle>
+            {isFaltaJustificativa ? "Justificativa de falta" : "Mensagem Importante – Resposta Obrigatória"}
           </DialogTitle>
-          <p className="text-sm text-gray-500">
-            {format(new Date(message.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-          </p>
+          {!isFaltaJustificativa && (
+            <p className="text-sm text-gray-500">
+              {format(new Date(message.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            </p>
+          )}
         </DialogHeader>
 
-        {/* Corpo da mensagem */}
-        <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap">
-          {message.message}
-        </div>
-
-        {isFaltaJustificativa && (
-          <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-            A ausência permanece registrada. A justificativa será enviada ao professor e ficará visível no seu histórico.
+        {isFaltaJustificativa ? (
+          <div className="rounded-md bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-900 space-y-1">
+            {aulaInfo?.titulo && <p>Aula: {aulaInfo.titulo}</p>}
+            {aulaDataFormatada && <p>Data da aula: {aulaDataFormatada}</p>}
+            {aulaHorario && <p>Horário: {aulaHorario}</p>}
+          </div>
+        ) : (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap">
+            {message.message}
           </div>
         )}
 
         {/* Campo de resposta */}
         <div className="mt-2">
-          <label className="text-sm font-medium">
-            {isFaltaJustificativa ? "Motivo da ausência:" : "Sua resposta:"}
-          </label>
+          {!isFaltaJustificativa && (
+            <label className="text-sm font-medium">Sua resposta:</label>
+          )}
           <Textarea
             value={response}
             onChange={(e) => setResponse(e.target.value)}
             placeholder={
               isFaltaJustificativa
-                ? "Descreva o motivo pelo qual não pôde participar da aula..."
+                ? "Descreva de forma objetiva o motivo pelo qual você não pôde participar da aula."
                 : "Digite sua resposta..."
             }
-            className="mt-2"
+            className={isFaltaJustificativa ? undefined : "mt-2"}
             rows={4}
             maxLength={500}
             disabled={isSending}
@@ -143,7 +166,7 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
             {isSending
               ? "Enviando..."
               : isFaltaJustificativa
-              ? "Enviar Justificativa"
+              ? "Enviar justificativa"
               : "Enviar Resposta"}
           </Button>
         </div>
