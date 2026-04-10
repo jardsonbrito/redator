@@ -467,12 +467,17 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
             for (const aula of aulasVirtuais.filter(a => !a.aula_mae_id)) {
               grupos[aula.id] = [aula.id];
             }
+            // Mãe fora do período: múltiplas filhas com o mesmo mae_id devem ser agrupadas
+            const maeForaDoperiodo = new Map<string, string>();
             for (const aula of aulasVirtuais.filter(a => !!a.aula_mae_id)) {
               if (grupos[aula.aula_mae_id!]) {
                 grupos[aula.aula_mae_id!].push(aula.id);
+              } else if (maeForaDoperiodo.has(aula.aula_mae_id!)) {
+                const repId = maeForaDoperiodo.get(aula.aula_mae_id!)!;
+                grupos[repId].push(aula.id);
               } else {
-                // Aula mãe fora do período — tratar como unidade independente
                 grupos[aula.id] = [aula.id];
+                maeForaDoperiodo.set(aula.aula_mae_id!, aula.id);
               }
             }
 
@@ -752,7 +757,7 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
       // Buscar todos os alunos dessa turma (usando turma normalizada)
       const { data: alunos, error: alunosError } = await supabase
         .from('profiles')
-        .select('email, nome')
+        .select('email, nome, created_at')
         .eq('user_type', 'aluno')
         .eq('turma', turmaNormalizada)
         .eq('ativo', true);
@@ -839,16 +844,18 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
 
       const { data: aulas } = await supabase
         .from('aulas_diario')
-        .select('id')
+        .select('id, data_aula')
         .in('turma', possiveisTurmas)
-        .eq('etapa_id', etapas.id);
+        .eq('etapa_id', etapas.id)
+        .is('origem_aula_virtual_id', null); // Excluir entradas criadas por aulas ao vivo (contadas separadamente)
 
-      const aulaIds = aulas?.map(a => a.id) || [];
+      const aulasData = (aulas || []) as { id: string; data_aula: string }[];
+      const aulaIds = aulasData.map(a => a.id);
 
       // Buscar TODAS as presenças de UMA VEZ para todos os alunos
       const { data: todasPresencas } = await supabase
         .from('presenca_participacao_diario')
-        .select('aluno_email, presente, participou')
+        .select('aluno_email, aula_id, presente, participou')
         .in('aluno_email', emailsAlunos)
         .in('aula_id', aulaIds);
 
@@ -856,37 +863,69 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
       // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade
       const { data: aulasVirtuais } = await supabase
         .from('aulas_virtuais')
-        .select('id')
+        .select('id, aula_mae_id, data_aula')
         .eq('ativo', true)
         .gte('data_aula', etapas.data_inicio)
         .lt('data_aula', etapas.data_fim + 'T23:59:59')
         .or(`turmas_autorizadas.cs.{"${turmaNormalizada}"},turmas_autorizadas.cs.{"TURMA ${turmaNormalizada}"},turmas_autorizadas.cs.{"Turma ${turmaNormalizada}"},turmas_autorizadas.cs.{"Todas"}`);
 
-      const aulasVirtuaisIds = aulasVirtuais?.map(a => a.id) || [];
-      
+      const rawAulasVirtuais = (aulasVirtuais || []) as { id: string; aula_mae_id: string | null; data_aula: string }[];
+      const allAulasVirtuaisIds = rawAulasVirtuais.map(a => a.id);
+
+      // Agrupar aulas virtuais por unidade pedagógica (mãe + filhas = 1 unidade)
+      // Inclui tratamento para mãe fora do período: filhas irmãs agrupadas entre si
+      const gruposAulasVirtuais: Record<string, { ids: string[]; dataAula: string }> = {};
+      const maeForaDoperiodoVirtual = new Map<string, string>();
+      for (const aula of rawAulasVirtuais.filter(a => !a.aula_mae_id)) {
+        gruposAulasVirtuais[aula.id] = { ids: [aula.id], dataAula: aula.data_aula };
+      }
+      for (const aula of rawAulasVirtuais.filter(a => !!a.aula_mae_id)) {
+        if (gruposAulasVirtuais[aula.aula_mae_id!]) {
+          gruposAulasVirtuais[aula.aula_mae_id!].ids.push(aula.id);
+        } else if (maeForaDoperiodoVirtual.has(aula.aula_mae_id!)) {
+          const repId = maeForaDoperiodoVirtual.get(aula.aula_mae_id!)!;
+          gruposAulasVirtuais[repId].ids.push(aula.id);
+        } else {
+          gruposAulasVirtuais[aula.id] = { ids: [aula.id], dataAula: aula.data_aula };
+          maeForaDoperiodoVirtual.set(aula.aula_mae_id!, aula.id);
+        }
+      }
+
       // Buscar TODAS as presenças nas aulas virtuais para todos os alunos (UMA VEZ SÓ)
-      const { data: todasPresencasVirtuais } = aulasVirtuaisIds.length > 0 ? await supabase
+      const { data: todasPresencasVirtuais } = allAulasVirtuaisIds.length > 0 ? await supabase
         .from('presenca_aulas')
-        .select('email_aluno, entrada_at')
+        .select('email_aluno, aula_id, entrada_at')
         .filter('email_aluno', 'in', `(${emailsAlunos.map(e => `"${e.toLowerCase()}"`).join(',')})`)
-        .in('aula_id', aulasVirtuaisIds)
+        .in('aula_id', allAulasVirtuaisIds)
         .not('entrada_at', 'is', null) : { data: [] };
 
       console.log(`🎯 Dados de presença virtual carregados: ${todasPresencasVirtuais?.length || 0} registros`);
 
       for (const aluno of alunos) {
-        // Contar presenças nas aulas do diário
-        const presencasAluno = todasPresencas?.filter(p => p.aluno_email === aluno.email) || [];
-        const totalAulasDiario = aulaIds.length;
+        // Data de matrícula do aluno (para excluir aulas anteriores ao ingresso)
+        const enrolledDate = (aluno as any).created_at
+          ? ((aluno as any).created_at as string).substring(0, 10)
+          : etapas.data_inicio;
+
+        // Aulas do diário disponíveis para este aluno (excluir anteriores à matrícula)
+        const aulasDiarioParaAluno = aulasData.filter(a => a.data_aula >= enrolledDate);
+        const aulaIdsDiarioParaAluno = aulasDiarioParaAluno.map(a => a.id);
+        const totalAulasDiario = aulaIdsDiarioParaAluno.length;
+
+        // Presenças nas aulas do diário filtradas por matrícula
+        const presencasAluno = todasPresencas?.filter(
+          p => p.aluno_email === aluno.email && aulaIdsDiarioParaAluno.includes(p.aula_id)
+        ) || [];
         const aulasPresentes = presencasAluno.filter(p => p.presente).length;
         const aulasParticipou = presencasAluno.filter(p => p.participou).length;
 
-        // Contar presenças nas aulas virtuais para este aluno
-        const presencasVirtuaisAluno = todasPresencasVirtuais?.filter(p => 
-          p.email_aluno === aluno.email.toLowerCase()
-        ) || [];
-        const totalAulasVirtuais = aulasVirtuaisIds.length;
-        const presencasVirtuais = presencasVirtuaisAluno.length;
+        // Grupos de aulas virtuais disponíveis para este aluno (excluir grupos anteriores à matrícula)
+        const gruposParaAluno = Object.values(gruposAulasVirtuais).filter(g => g.dataAula >= enrolledDate);
+        const totalAulasVirtuais = gruposParaAluno.length;
+        const idsComPresencaVirtual = new Set(
+          todasPresencasVirtuais?.filter(p => p.email_aluno === aluno.email.toLowerCase()).map(p => p.aula_id) || []
+        );
+        const presencasVirtuais = gruposParaAluno.filter(g => g.ids.some(id => idsComPresencaVirtual.has(id))).length;
 
         // Combinar dados do diário + aulas virtuais
         const totalAulasCompleto = totalAulasDiario + totalAulasVirtuais;

@@ -40,6 +40,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
   // ID canônico do grupo para inbox_messages (sempre o da mãe)
   const [aulaMaeId, setAulaMaeId] = useState<string>(aulaId);
   const [grupoSessoes, setGrupoSessoes] = useState<number>(1);
+  const [dispensadosNotif, setDispensadosNotif] = useState<Set<string>>(new Set());
   const { user } = useAuth();
 
   const fetchFrequencia = async () => {
@@ -108,7 +109,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         turmasAutorizadas.length > 0
           ? supabase
               .from('profiles')
-              .select('email, nome, turma, created_at')
+              .select('email, nome, turma, created_at, dispensar_notif_frequencia')
               .in('turma', turmasAutorizadas)
               .eq('ativo', true)
               .eq('user_type', 'aluno')
@@ -137,6 +138,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
         ? new Date(latestSessao.data_aula + 'T23:59:59')
         : null;
 
+      const novoDispensadosSet = new Set<string>();
       const alunosMap = new Map<string, FrequenciaAluno>();
       (alunosMatriculadosRes.data || []).forEach((aluno: any) => {
         // Se temos data da aula e data de cadastro do aluno, verificar se ele já estava matriculado
@@ -144,6 +146,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
           const enrolledAt = new Date(aluno.created_at);
           if (enrolledAt > latestClassDate) return; // matriculado após a aula — não contabilizar falta
         }
+        if (aluno.dispensar_notif_frequencia) novoDispensadosSet.add(aluno.email);
         const just = justMap.get(aluno.email);
         alunosMap.set(aluno.email, {
           nome: aluno.nome || aluno.email,
@@ -154,6 +157,7 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
           justificativaCriadoEm: just?.criadoEm,
         });
       });
+      setDispensadosNotif(novoDispensadosSet);
 
       // ── 5. Aplicar registros de presença do grupo inteiro
       // Status reflete o grupo; entrada/saída exibe apenas a sessão atual (aulaId)
@@ -249,9 +253,11 @@ export const FrequenciaModal = ({ isOpen, onClose, aulaId, aulaTitle }: Frequenc
 
   const notificarAusentes = async () => {
     const ausentesSemJustificativa = frequenciaData.filter(
-      (a) => a.status === 'ausente' && !a.justificativa
+      (a) => a.status === 'ausente' && !a.justificativa && !dispensadosNotif.has(a.email)
     );
-    const todosAusentes = frequenciaData.filter(a => a.status === 'ausente');
+    const todosAusentes = frequenciaData.filter(
+      a => a.status === 'ausente' && !dispensadosNotif.has(a.email)
+    );
 
     if (todosAusentes.length === 0) {
       toast.info('Não há faltas a notificar.');

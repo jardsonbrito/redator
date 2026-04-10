@@ -382,12 +382,17 @@ async function fetchBoletimData(
   for (const a of rawAulasList.filter(a => !a.aula_mae_id)) {
     gruposAulas[a.id] = [a.id];
   }
+  // Mãe fora do período: múltiplas filhas com o mesmo mae_id devem ser agrupadas
+  const maeForaDoperiodo = new Map<string, string>(); // mae_id → id representante do grupo
   for (const a of rawAulasList.filter(a => !!a.aula_mae_id)) {
     if (gruposAulas[a.aula_mae_id!]) {
       gruposAulas[a.aula_mae_id!].push(a.id);
+    } else if (maeForaDoperiodo.has(a.aula_mae_id!)) {
+      const repId = maeForaDoperiodo.get(a.aula_mae_id!)!;
+      gruposAulas[repId].push(a.id);
     } else {
-      // Aula mãe fora do período — tratar como unidade independente
       gruposAulas[a.id] = [a.id];
+      maeForaDoperiodo.set(a.aula_mae_id!, a.id);
     }
   }
   const totalAulasNoPeriodo = Object.keys(gruposAulas).length;

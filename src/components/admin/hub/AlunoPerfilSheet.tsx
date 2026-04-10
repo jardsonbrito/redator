@@ -12,7 +12,8 @@ import { StudentLoginActivityModal } from '@/components/admin/StudentLoginActivi
 import { StudentSubscriptionSection } from './StudentSubscriptionSection';
 import { StudentPlanSection } from './StudentPlanSection';
 import { TURMAS_VALIDAS, formatTurmaDisplay, normalizeTurmaToLetter } from '@/utils/turmaUtils';
-import { User, Crown, Settings2, Activity, Edit2, Save, X, MoveRight } from 'lucide-react';
+import { User, Crown, Settings2, Activity, Edit2, Save, X, MoveRight, BellOff } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { MigrarVisitanteModal } from '@/components/admin/MigrarVisitanteModal';
 
 export interface AlunoHubItem {
@@ -42,6 +43,8 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
   const [planoAtivo, setPlanoAtivo] = useState<'Liderança' | 'Lapidação' | 'Largada' | 'Bolsista' | null>(null);
   const [migrarOpen, setMigrarOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [dispensarNotif, setDispensarNotif] = useState(false);
+  const [loadingDispensa, setLoadingDispensa] = useState(false);
 
   const isVisitante = aluno?.tipo === 'visitante';
 
@@ -53,8 +56,35 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
         turma: normalizeTurmaToLetter(aluno.turma) || '',
       });
       setEditMode(false);
+      // Carregar configuração de dispensa de notificação
+      if (aluno.tipo !== 'visitante') {
+        supabase
+          .from('profiles')
+          .select('dispensar_notif_frequencia')
+          .eq('id', aluno.id)
+          .single()
+          .then(({ data }) => {
+            setDispensarNotif(data?.dispensar_notif_frequencia ?? false);
+          });
+      }
     }
   }, [aluno?.id]);
+
+  const toggleDispensarNotif = async () => {
+    setLoadingDispensa(true);
+    const novoValor = !dispensarNotif;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ dispensar_notif_frequencia: novoValor })
+      .eq('id', aluno!.id);
+    if (error) {
+      toast({ title: 'Erro ao atualizar configuração', variant: 'destructive' });
+    } else {
+      setDispensarNotif(novoValor);
+      toast({ title: novoValor ? 'Notificações de falta desativadas' : 'Notificações de falta reativadas' });
+    }
+    setLoadingDispensa(false);
+  };
 
   if (!aluno) return null;
 
@@ -203,6 +233,21 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
                   <div className="pt-2 border-t">
                     <p className="text-xs text-muted-foreground mb-1">Cadastrado em</p>
                     <p className="text-sm">{aluno.created_at ? new Date(aluno.created_at).toLocaleDateString('pt-BR') : '—'}</p>
+                  </div>
+
+                  <div className="pt-2 border-t flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BellOff className="h-3.5 w-3.5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Dispensar notificações de falta</p>
+                        <p className="text-xs text-muted-foreground">Aluno não receberá mensagens de justificativa de ausência</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={dispensarNotif}
+                      onCheckedChange={toggleDispensarNotif}
+                      disabled={loadingDispensa}
+                    />
                   </div>
                 </>
               )}
