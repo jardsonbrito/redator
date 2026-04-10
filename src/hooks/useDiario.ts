@@ -842,22 +842,26 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
         `turma ${turmaNormalizada}`    // "turma C"
       ];
 
+      // Buscar TODAS as aulas do diário (com e sem origem virtual)
+      // Para frequência: excluímos as criadas por aulas ao vivo (contadas separadamente em aulas_virtuais)
+      // Para participação: incluímos todas, pois o campo `participou` é registrado no diário mesmo para aulas ao vivo
       const { data: aulas } = await supabase
         .from('aulas_diario')
-        .select('id, data_aula')
+        .select('id, data_aula, origem_aula_virtual_id')
         .in('turma', possiveisTurmas)
-        .eq('etapa_id', etapas.id)
-        .is('origem_aula_virtual_id', null); // Excluir entradas criadas por aulas ao vivo (contadas separadamente)
+        .eq('etapa_id', etapas.id);
 
-      const aulasData = (aulas || []) as { id: string; data_aula: string }[];
-      const aulaIds = aulasData.map(a => a.id);
+      const aulasData = (aulas || []) as { id: string; data_aula: string; origem_aula_virtual_id: string | null }[];
+      // Apenas aulas puras do diário (sem origem virtual) → denominador de FREQUÊNCIA do diário
+      const aulasFreqData = aulasData.filter(a => !a.origem_aula_virtual_id);
+      const allAulaIds = aulasData.map(a => a.id);
 
-      // Buscar TODAS as presenças de UMA VEZ para todos os alunos
+      // Buscar TODAS as presenças de UMA VEZ para todos os alunos (frequência + participação)
       const { data: todasPresencas } = await supabase
         .from('presenca_participacao_diario')
         .select('aluno_email, aula_id, presente, participou')
         .in('aluno_email', emailsAlunos)
-        .in('aula_id', aulaIds);
+        .in('aula_id', allAulaIds);
 
       // Buscar aulas virtuais do período da etapa para esta turma (UMA VEZ SÓ)
       // IMPORTANTE: Buscar com múltiplos formatos para compatibilidade
@@ -907,17 +911,26 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           ? ((aluno as any).created_at as string).substring(0, 10)
           : etapas.data_inicio;
 
-        // Aulas do diário disponíveis para este aluno (excluir anteriores à matrícula)
-        const aulasDiarioParaAluno = aulasData.filter(a => a.data_aula >= enrolledDate);
-        const aulaIdsDiarioParaAluno = aulasDiarioParaAluno.map(a => a.id);
-        const totalAulasDiario = aulaIdsDiarioParaAluno.length;
+        // Aulas puras do diário (sem origem virtual) para FREQUÊNCIA, filtradas por matrícula
+        const aulasDiarioFreqParaAluno = aulasFreqData.filter(a => a.data_aula >= enrolledDate);
+        const aulaIdsFreqParaAluno = aulasDiarioFreqParaAluno.map(a => a.id);
+        const totalAulasDiario = aulaIdsFreqParaAluno.length;
 
-        // Presenças nas aulas do diário filtradas por matrícula
-        const presencasAluno = todasPresencas?.filter(
-          p => p.aluno_email === aluno.email && aulaIdsDiarioParaAluno.includes(p.aula_id)
+        // Todas as aulas do diário (incluindo de aulas ao vivo) para PARTICIPAÇÃO, filtradas por matrícula
+        const aulasPartParaAluno = aulasData.filter(a => a.data_aula >= enrolledDate);
+        const aulaIdsPartParaAluno = aulasPartParaAluno.map(a => a.id);
+
+        // Presenças para frequência (apenas aulas puras do diário)
+        const presencasFreqAluno = todasPresencas?.filter(
+          p => p.aluno_email === aluno.email && aulaIdsFreqParaAluno.includes(p.aula_id)
         ) || [];
-        const aulasPresentes = presencasAluno.filter(p => p.presente).length;
-        const aulasParticipou = presencasAluno.filter(p => p.participou).length;
+        const aulasPresentes = presencasFreqAluno.filter(p => p.presente).length;
+
+        // Participação (todas as aulas do diário, campo participou)
+        const presencasPartAluno = todasPresencas?.filter(
+          p => p.aluno_email === aluno.email && aulaIdsPartParaAluno.includes(p.aula_id)
+        ) || [];
+        const aulasParticipou = presencasPartAluno.filter(p => p.participou).length;
 
         // Grupos de aulas virtuais disponíveis para este aluno (excluir grupos anteriores à matrícula)
         const gruposParaAluno = Object.values(gruposAulasVirtuais).filter(g => g.dataAula >= enrolledDate);
@@ -937,11 +950,13 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           percentual_frequencia: totalAulasCompleto > 0 ? (totalPresencasCompleto / totalAulasCompleto) * 100 : 0
         };
 
-        // Para participação, considerar apenas aulas do diário (aulas virtuais não têm participação)
+        // Para participação, usar TODAS as aulas do diário (incluindo criadas por aulas ao vivo)
+        // pois o campo `participou` é registrado no diário mesmo para aulas ao vivo
+        const totalAulasParticipacao = aulaIdsPartParaAluno.length;
         const participacaoData = {
-          total_aulas: totalAulasDiario,
+          total_aulas: totalAulasParticipacao,
           aulas_participou: aulasParticipou,
-          percentual_participacao: totalAulasDiario > 0 ? (aulasParticipou / totalAulasDiario) * 100 : 0
+          percentual_participacao: totalAulasParticipacao > 0 ? (aulasParticipou / totalAulasParticipacao) * 100 : 0
         };
 
         // Buscar redações do período da etapa com campos corretos
