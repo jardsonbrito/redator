@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UserPlus, Upload, Link } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { AlunoCSVImport } from "./AlunoCSVImport";
 import { AlunoSelfService } from "./AlunoSelfService";
 import { TODAS_TURMAS, formatTurmaDisplay } from "@/utils/turmaUtils";
@@ -249,19 +249,10 @@ export const AlunoForm = ({ onSuccess, alunoEditando, onCancelEdit }: AlunoFormP
 
   return (
     <Tabs defaultValue="manual" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="manual" className="flex items-center gap-2">
-          <UserPlus className="w-4 h-4" />
-          CM
-        </TabsTrigger>
-        <TabsTrigger value="csv" className="flex items-center gap-2">
-          <Upload className="w-4 h-4" />
-          CSV
-        </TabsTrigger>
-        <TabsTrigger value="link" className="flex items-center gap-2">
-          <Link className="w-4 h-4" />
-          Autoatendimento
-        </TabsTrigger>
+      <TabsList>
+        <TabsTrigger value="manual">CM</TabsTrigger>
+        <TabsTrigger value="csv">CSV</TabsTrigger>
+        <TabsTrigger value="link">Autoatendimento</TabsTrigger>
       </TabsList>
       
       <TabsContent value="manual">

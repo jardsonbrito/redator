@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Users, FileText, GraduationCap, Loader2, Search, CheckSquare, Square } from "lucide-react";
+import { Download, Users, FileText, Loader2, Search, CheckSquare, Square } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import jsPDF from "jspdf";
@@ -1074,19 +1074,10 @@ export function ExportarAlunosModal({ isOpen, onClose }: ExportarAlunosModalProp
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="lista" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Lista de Alunos
-            </TabsTrigger>
-            <TabsTrigger value="redacoes" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Redações (PDF)
-            </TabsTrigger>
-            <TabsTrigger value="resumo" className="flex items-center gap-2">
-              <GraduationCap className="w-4 h-4" />
-              Resumo por Aluno
-            </TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="lista">Lista de Alunos</TabsTrigger>
+            <TabsTrigger value="redacoes">Redações (PDF)</TabsTrigger>
+            <TabsTrigger value="resumo">Resumo por Aluno</TabsTrigger>
           </TabsList>
 
           {/* Lista de Alunos */}

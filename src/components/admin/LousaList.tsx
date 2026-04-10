@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageSquare, EyeOff, Clock, Users, Trash2, UserCheck, Calendar, Plus } from 'lucide-react';
+import { MessageSquare, EyeOff, Clock, Users, Trash2, UserCheck, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -223,20 +222,10 @@ export default function LousaList() {
       </div>
 
       <Tabs defaultValue="list" value={editingLousa ? "create" : undefined} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList>
           <TabsTrigger value="list">Gerenciar Lousas</TabsTrigger>
           <TabsTrigger value="create">
-            {editingLousa ? (
-              <>
-                <Edit className="w-4 h-4 mr-2" />
-                Editar Lousa
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Lousa
-              </>
-            )}
+            {editingLousa ? 'Editar Lousa' : 'Nova Lousa'}
           </TabsTrigger>
         </TabsList>
 

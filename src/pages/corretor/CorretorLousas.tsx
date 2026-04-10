@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Eye, MessageCircle, Calendar, Users, Plus, Edit, Trash2, StopCircle, MoreHorizontal } from 'lucide-react';
+import { Eye, MessageCircle, Calendar, Users, Trash2, StopCircle, MoreHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -201,20 +201,10 @@ export default function CorretorLousas() {
         </div>
 
         <Tabs defaultValue="list" value={editingLousa ? "create" : undefined} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList>
             <TabsTrigger value="list">Minhas Lousas</TabsTrigger>
             <TabsTrigger value="create">
-              {editingLousa ? (
-                <>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Editar Lousa
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nova Lousa
-                </>
-              )}
+              {editingLousa ? 'Editar Lousa' : 'Nova Lousa'}
             </TabsTrigger>
           </TabsList>
           

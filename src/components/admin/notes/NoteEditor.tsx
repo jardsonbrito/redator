@@ -137,7 +137,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs defaultValue="basico" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList>
               <TabsTrigger value="basico">Básico</TabsTrigger>
               <TabsTrigger value="midia">Mídia</TabsTrigger>
               <TabsTrigger value="organizacao">Organização</TabsTrigger>

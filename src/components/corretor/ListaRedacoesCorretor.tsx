@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCorretorRedacoes, RedacaoCorretor } from "@/hooks/useCorretorRedacoes";
-import { Clock, FileText, CheckCircle, User, Search } from "lucide-react";
+import { Clock, User, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useVisualizacoesRealtime } from "@/hooks/useVisualizacoesRealtime";
 import { supabase } from "@/integrations/supabase/client";
@@ -409,35 +409,11 @@ export const ListaRedacoesCorretor = ({ corretorEmail, onCorrigir }: ListaRedaco
       <Card>
         <CardContent>
           <Tabs defaultValue="pendentes" className="w-full">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1 gap-1 h-auto' : 'grid-cols-4'}`}>
-            <TabsTrigger 
-              value="pendentes" 
-              className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isMobile ? 'justify-start' : 'justify-center'}`}
-            >
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-              Pendentes ({pendentes.length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="incompletas" 
-              className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isMobile ? 'justify-start' : 'justify-center'}`}
-            >
-              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-              Incompletas ({incompletas.length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="corrigidas" 
-              className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isMobile ? 'justify-start' : 'justify-center'}`}
-            >
-              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-              Corrigidas ({corrigidas.length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="devolvidas" 
-              className={`flex items-center gap-1 sm:gap-2 text-xs sm:text-sm ${isMobile ? 'justify-start' : 'justify-center'}`}
-            >
-              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-              Devolvidas ({devolvidas.length})
-            </TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="pendentes">Pendentes ({pendentes.length})</TabsTrigger>
+            <TabsTrigger value="incompletas">Incompletas ({incompletas.length})</TabsTrigger>
+            <TabsTrigger value="corrigidas">Corrigidas ({corrigidas.length})</TabsTrigger>
+            <TabsTrigger value="devolvidas">Devolvidas ({devolvidas.length})</TabsTrigger>
           </TabsList>
           
           <TabsContent value="pendentes" className="mt-4">

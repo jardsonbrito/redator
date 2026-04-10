@@ -12,7 +12,7 @@ import { StudentLoginActivityModal } from '@/components/admin/StudentLoginActivi
 import { StudentSubscriptionSection } from './StudentSubscriptionSection';
 import { StudentPlanSection } from './StudentPlanSection';
 import { TURMAS_VALIDAS, formatTurmaDisplay, normalizeTurmaToLetter } from '@/utils/turmaUtils';
-import { User, Crown, Settings2, Activity, Edit2, Save, X, MoveRight, BellOff } from 'lucide-react';
+import { Activity, Edit2, Save, X, MoveRight, BellOff } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { MigrarVisitanteModal } from '@/components/admin/MigrarVisitanteModal';
 
@@ -160,19 +160,11 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
           </SheetHeader>
 
           <Tabs defaultValue="dados" className="mt-4">
-            <TabsList className="w-full grid grid-cols-4 h-9">
-              <TabsTrigger value="dados" className="text-xs gap-1">
-                <User className="h-3 w-3" />Dados
-              </TabsTrigger>
-              <TabsTrigger value="assinatura" className="text-xs gap-1" disabled={isVisitante}>
-                <Crown className="h-3 w-3" />Plano
-              </TabsTrigger>
-              <TabsTrigger value="funcionalidades" className="text-xs gap-1" disabled={isVisitante}>
-                <Settings2 className="h-3 w-3" />Funções
-              </TabsTrigger>
-              <TabsTrigger value="atividade" className="text-xs gap-1" disabled={isVisitante}>
-                <Activity className="h-3 w-3" />Atividade
-              </TabsTrigger>
+            <TabsList>
+              <TabsTrigger value="dados">Dados</TabsTrigger>
+              <TabsTrigger value="assinatura" disabled={isVisitante}>Plano</TabsTrigger>
+              <TabsTrigger value="funcionalidades" disabled={isVisitante}>Funções</TabsTrigger>
+              <TabsTrigger value="atividade" disabled={isVisitante}>Atividade</TabsTrigger>
             </TabsList>
 
             {/* Aba: Dados básicos */}

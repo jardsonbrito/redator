@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserPlus, BarChart3 } from 'lucide-react';
 import { AlunoFormModern } from '@/components/admin/AlunoFormModern';
 import { AlunoList } from '@/components/admin/AlunoList';
 import { AlunoPerfilSheet, type AlunoHubItem } from './AlunoPerfilSheet';
@@ -31,18 +30,9 @@ export function AlunosHub() {
     <>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="lista" className="gap-1.5">
-            <Users className="h-3.5 w-3.5" />
-            Lista
-          </TabsTrigger>
-          <TabsTrigger value="cadastro" className="gap-1.5">
-            <UserPlus className="h-3.5 w-3.5" />
-            Cadastro
-          </TabsTrigger>
-          <TabsTrigger value="turma" className="gap-1.5">
-            <BarChart3 className="h-3.5 w-3.5" />
-            Por Turma
-          </TabsTrigger>
+          <TabsTrigger value="lista">Lista</TabsTrigger>
+          <TabsTrigger value="cadastro">Cadastro</TabsTrigger>
+          <TabsTrigger value="turma">Por Turma</TabsTrigger>
         </TabsList>
 
         {/* Lista de alunos + visitantes */}

@@ -205,16 +205,10 @@ export const AlunoListProfessor = ({ refresh }: AlunoListProfessorProps) => {
       
       <CardContent>
         <Tabs value={activeTurma} onValueChange={setActiveTurma} className="w-full">
-          <TabsList className="flex w-full flex-wrap gap-1 h-auto p-1 bg-muted rounded-lg">
-            <TabsTrigger value="todos" className="flex items-center gap-2">
-              Todos ({usuarios.length})
-            </TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="todos">Todos ({usuarios.length})</TabsTrigger>
             {turmasDisponiveis.map((turma) => (
-              <TabsTrigger 
-                key={turma} 
-                value={turma}
-                className="flex items-center gap-2"
-              >
+              <TabsTrigger key={turma} value={turma}>
                 {turma === 'visitante' ? 'Visitantes' : turma} ({contadorPorTurma[turma] || 0})
               </TabsTrigger>
             ))}

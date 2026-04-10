@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Star, Filter, RefreshCw, FileText, MessageSquareQuote, Clapperboard } from "lucide-react";
+import { Plus, Star, Filter, RefreshCw } from "lucide-react";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { StudentHeader } from "@/components/StudentHeader";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
@@ -233,28 +233,10 @@ const RepertorioOrientado = () => {
 
         {/* Tabs para alternar entre Parágrafos, Frases e Obras */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3 bg-purple-100/70">
-            <TabsTrigger
-              value="paragrafos"
-              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Parágrafos</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="frases"
-              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
-            >
-              <MessageSquareQuote className="h-4 w-4" />
-              <span className="hidden sm:inline">Frases</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="obras"
-              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white"
-            >
-              <Clapperboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Obras</span>
-            </TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="paragrafos">Parágrafos</TabsTrigger>
+            <TabsTrigger value="frases">Frases</TabsTrigger>
+            <TabsTrigger value="obras">Obras</TabsTrigger>
           </TabsList>
 
           {/* Conteúdo da aba Parágrafos */}

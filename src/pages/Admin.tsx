@@ -811,7 +811,7 @@ const Admin = () => {
       case "temas":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList>
               <TabsTrigger value="list">Listar Temas</TabsTrigger>
               <TabsTrigger value="create">Criar Tema</TabsTrigger>
               <TabsTrigger value="metrics">Métricas</TabsTrigger>
@@ -831,7 +831,7 @@ const Admin = () => {
       case "redacoes":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Redações</TabsTrigger>
               <TabsTrigger value="create">Criar Redação</TabsTrigger>
             </TabsList>
@@ -847,7 +847,7 @@ const Admin = () => {
       case "videos":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Vídeos</TabsTrigger>
               <TabsTrigger value="create">Criar Vídeo</TabsTrigger>
             </TabsList>
@@ -863,7 +863,7 @@ const Admin = () => {
       case "biblioteca":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Materiais</TabsTrigger>
               <TabsTrigger value="create">Cadastrar Material</TabsTrigger>
             </TabsList>
@@ -879,7 +879,7 @@ const Admin = () => {
       case "simulados":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Simulados</TabsTrigger>
               <TabsTrigger value="create">Criar Simulado</TabsTrigger>
             </TabsList>
@@ -895,7 +895,7 @@ const Admin = () => {
       case "aulas":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Aulas</TabsTrigger>
               <TabsTrigger value="create">Criar Aula</TabsTrigger>
             </TabsList>
@@ -911,7 +911,7 @@ const Admin = () => {
       case "exercicios":
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Exercícios</TabsTrigger>
               <TabsTrigger value="create">Criar Exercício</TabsTrigger>
             </TabsList>
@@ -1004,7 +1004,7 @@ const Admin = () => {
 
         return (
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="list">Listar Salas</TabsTrigger>
               <TabsTrigger value="create">Criar Sala</TabsTrigger>
             </TabsList>
@@ -1033,7 +1033,7 @@ const Admin = () => {
       case "redacoes-enviadas":
         return (
           <Tabs defaultValue="avulsas" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList>
               <TabsTrigger value="avulsas">Redações</TabsTrigger>
               <TabsTrigger value="simulados">Simulados</TabsTrigger>
             </TabsList>
@@ -1089,7 +1089,7 @@ const Admin = () => {
 
         return (
           <Tabs defaultValue={subtabJarvis || "creditos"} className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList>
               <TabsTrigger value="creditos">Créditos</TabsTrigger>
               <TabsTrigger value="modos">Modos</TabsTrigger>
               <TabsTrigger value="configuracoes">Parâmetros</TabsTrigger>

@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Settings2, Plus, Edit, Trash2, Save, BookOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, Save } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -362,15 +362,9 @@ export const JarvisTutoriaConfiguracao = () => {
   return (
     <>
     <Tabs defaultValue="calibracao" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="calibracao">
-          <Settings2 className="h-4 w-4 mr-2" />
-          Calibração Pedagógica
-        </TabsTrigger>
-        <TabsTrigger value="modelos">
-          <BookOpen className="h-4 w-4 mr-2" />
-          Modelos de Referência
-        </TabsTrigger>
+      <TabsList>
+        <TabsTrigger value="calibracao">Calibração Pedagógica</TabsTrigger>
+        <TabsTrigger value="modelos">Modelos de Referência</TabsTrigger>
       </TabsList>
 
       <TabsContent value="calibracao" className="space-y-4">

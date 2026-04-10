@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Inbox, Archive } from "lucide-react";
 import { useAjudaRapida, type Conversa } from "@/hooks/useAjudaRapida";
 import { useCorretorAuth } from "@/hooks/useCorretorAuth";
 import { ChatConversa } from "./ChatConversa";
@@ -87,20 +86,16 @@ export const MensagensCorretor = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="pendentes" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="pendentes" className="flex items-center space-x-2">
-                  <Inbox className="w-4 h-4" />
-                  <span>Pendentes</span>
+              <TabsList>
+                <TabsTrigger value="pendentes">
+                  Pendentes
                   {conversasPendentes.length > 0 && (
                     <Badge variant="destructive" className="rounded-full ml-2">
                       {conversasPendentes.length}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="respondidas" className="flex items-center space-x-2">
-                  <Archive className="w-4 h-4" />
-                  <span>Respondidas</span>
-                </TabsTrigger>
+                <TabsTrigger value="respondidas">Respondidas</TabsTrigger>
               </TabsList>
               
               <TabsContent value="pendentes" className="mt-6">
