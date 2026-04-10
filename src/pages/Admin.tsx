@@ -106,6 +106,7 @@ import { FrequenciaAulas } from "@/components/admin/FrequenciaAulas";
 
 // Import aluno components
 import { AlunoFormModern } from "@/components/admin/AlunoFormModern";
+import { AlunosHub } from "@/components/admin/hub/AlunosHub";
 
 // Import corretor components
 import { CorretorForm } from "@/components/admin/CorretorForm";
@@ -1053,28 +1054,7 @@ const Admin = () => {
         return null;
 
       case "alunos":
-        const handleAlunoSuccess = () => {
-          setRefreshAlunos(!refreshAlunos);
-          setAlunoEditando(null);
-        };
-
-        const handleEditAluno = (aluno: any) => {
-          setAlunoEditando(aluno);
-        };
-
-        const handleCancelAlunoEdit = () => {
-          setAlunoEditando(null);
-        };
-
-        return (
-          <AlunoFormModern
-            onSuccess={handleAlunoSuccess}
-            alunoEditando={alunoEditando}
-            onCancelEdit={handleCancelAlunoEdit}
-            refresh={refreshAlunos}
-            onEdit={handleEditAluno}
-          />
-        );
+        return <AlunosHub />;
 
       case "professores":
         const handleProfessorSuccess = () => {

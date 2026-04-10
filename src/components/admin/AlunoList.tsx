@@ -37,9 +37,11 @@ interface Aluno {
 interface AlunoListProps {
   refresh: boolean;
   onEdit: (aluno: Aluno) => void;
+  /** Quando fornecido, cliques em "Ver Perfil" abrem o sheet centralizado em vez da edição inline */
+  onOpenPerfil?: (aluno: Aluno) => void;
 }
 
-export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
+export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -377,6 +379,10 @@ export const AlunoList = ({ refresh, onEdit }: AlunoListProps) => {
   };
 
   const handleShowVisitanteInfo = (visitante: Aluno) => {
+    if (onOpenPerfil) {
+      onOpenPerfil(visitante);
+      return;
+    }
     setSelectedVisitante(visitante);
     setIsInfoModalOpen(true);
   };
