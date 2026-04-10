@@ -22,24 +22,24 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
   const { studentData } = useStudentAuth();
   const queryClient = useQueryClient();
 
-  if (!message) return null;
-
   const isFaltaJustificativa =
-    message.acao === "justificativa_ausencia" && !!message.aula_id;
+    message?.acao === "justificativa_ausencia" && !!message?.aula_id;
 
   const { data: aulaInfo } = useQuery({
-    queryKey: ["aula-info-justificativa", message.aula_id],
+    queryKey: ["aula-info-justificativa", message?.aula_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("aulas")
+        .from("aulas_virtuais")
         .select("titulo, data_aula, horario_inicio")
-        .eq("id", message.aula_id!)
+        .eq("id", message!.aula_id!)
         .single();
       if (error) throw error;
       return data;
     },
     enabled: isFaltaJustificativa,
   });
+
+  if (!message) return null;
 
   const handleRespond = async () => {
     const responseText = response.trim();
