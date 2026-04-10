@@ -21,38 +21,16 @@ const converterNota1000ParaNota10 = (nota: number): number => {
   return nota / 100; // 800 -> 8.0
 };
 
+// Média final: frequência + redações + lousas + simulados (÷ 4)
 const calcularMediaOnline = (
   frequencia: number,
-  participacao: number,
   redacoes: number,
   lousas: number,
   simulados: number
 ): number => {
-  return (frequencia + participacao + redacoes + lousas + simulados) / 5;
+  return (frequencia + redacoes + lousas + simulados) / 4;
 };
 
-const calcularNovaMediaFinal = (
-  frequencia: number,
-  participacao: number,
-  redacoes: number,
-  lousas: number,
-  simulados: number
-): number => {
-  return (frequencia + participacao + redacoes + lousas + simulados) / 5;
-};
-
-const calcularMediaFinalComAvaliacao = (
-  mediaOnline: number,
-  notaAvaliacaoPresencial: number | null
-): number => {
-  // Se não houver avaliação presencial, retorna apenas a média online
-  if (notaAvaliacaoPresencial === null || notaAvaliacaoPresencial === undefined) {
-    return mediaOnline;
-  }
-
-  // Se houver avaliação presencial: (Média Online + Avaliação Presencial) ÷ 2
-  return (mediaOnline + notaAvaliacaoPresencial) / 2;
-};
 
 // Hook para gerenciar etapas
 export function useEtapas(turma?: string) {
@@ -649,58 +627,15 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           console.log('⚠️ Erro ao buscar exercícios:', error);
         }
 
-        // Buscar avaliação presencial da etapa
-        let avaliacaoPresencialData: { nota: number | null; observacoes?: string } = { nota: null };
-        try {
-          const { data: avaliacaoData, error: avaliacaoError } = await supabase
-            .from('avaliacoes_presenciais')
-            .select('nota, observacoes')
-            .ilike('aluno_email', alunoEmail)
-            .eq('etapa_id', etapa.id)
-            .maybeSingle();
-
-          if (!avaliacaoError && avaliacaoData) {
-            avaliacaoPresencialData = {
-              nota: avaliacaoData.nota,
-              observacoes: avaliacaoData.observacoes
-            };
-          }
-        } catch (error) {
-          console.error('Erro ao buscar avaliação presencial:', error);
-        }
-
-        // NOVA LÓGICA: Calcular média final
-        // Converter percentuais para notas 0-10
+        // Calcular média final: (frequência + redações + lousas + simulados) ÷ 4
         const frequenciaNota = converterPercentualParaNota(frequenciaData.percentual_frequencia);
-        const participacaoNota = converterPercentualParaNota(participacaoData.percentual_participacao);
-
-        // Converter notas 0-1000 para 0-10
         const redacoesNota = converterNota1000ParaNota10(redacoesData.nota_media);
         const simuladosNota = converterNota1000ParaNota10(simuladosData.nota_media);
-
-        // Converter notas das lousas (já estão em escala 0-10)
         const lousasNota = lousasData.nota_media;
 
-        // 1. Calcular média online (5 critérios ÷ 5)
-        const mediaOnline = calcularMediaOnline(
-          frequenciaNota,
-          participacaoNota,
-          redacoesNota,
-          lousasNota,
-          simuladosNota
-        );
+        const mediaFinal = calcularMediaOnline(frequenciaNota, redacoesNota, lousasNota, simuladosNota);
 
-        // 2. Calcular média final: (Média Online + Avaliação Presencial) ÷ 2
-        const mediaFinal = calcularMediaFinalComAvaliacao(
-          mediaOnline,
-          avaliacaoPresencialData.nota
-        );
-
-        // Logs simplificados para melhor performance
-        const avaliacaoText = avaliacaoPresencialData.nota !== null
-          ? `AP${avaliacaoPresencialData.nota.toFixed(1)}`
-          : 'AP-';
-        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: Online=${mediaOnline.toFixed(1)} (F${frequenciaNota.toFixed(1)} P${participacaoNota.toFixed(1)} R${redacoesNota.toFixed(1)} L${lousasNota.toFixed(1)} S${simuladosNota.toFixed(1)}) ${avaliacaoText} → Final=${mediaFinal.toFixed(1)}`);
+        console.log(`🧮 ${alunoEmail} - ${etapa.nome}: F${frequenciaNota.toFixed(1)} R${redacoesNota.toFixed(1)} L${lousasNota.toFixed(1)} S${simuladosNota.toFixed(1)} → Final=${mediaFinal.toFixed(1)}`);
 
         diarioData.push({
           etapa_numero: etapa.numero,
@@ -713,8 +648,8 @@ export function useDiarioAluno(alunoEmail: string, turma: string, etapaNumero?: 
           simulados: simuladosData,
           exercicios: exerciciosData,
           lousas: lousasData,
-          avaliacao_presencial: avaliacaoPresencialData,
-          media_final: Math.max(0, Math.min(10, mediaFinal)) // Garantir que fica entre 0 e 10
+          avaliacao_presencial: { nota: null },
+          media_final: Math.max(0, Math.min(10, mediaFinal))
         });
       }
       
@@ -1097,53 +1032,13 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
 
         console.log(`📊 Resumo para ${aluno.email} - Período: ${etapas.data_inicio} a ${etapas.data_fim}`);
 
-        // Buscar avaliação presencial da etapa
-        let avaliacaoPresencialData: { nota: number | null; observacoes?: string } = { nota: null };
-        try {
-          const { data: avaliacaoData, error: avaliacaoError } = await supabase
-            .from('avaliacoes_presenciais')
-            .select('nota, observacoes')
-            .eq('aluno_email', aluno.email)
-            .eq('etapa_id', etapas.id)
-            .maybeSingle();
-
-          if (!avaliacaoError && avaliacaoData) {
-            avaliacaoPresencialData = {
-              nota: avaliacaoData.nota,
-              observacoes: avaliacaoData.observacoes
-            };
-            console.log(`✅ Avaliação presencial de ${aluno.email}: ${avaliacaoData.nota}`);
-          }
-        } catch (error) {
-          console.log('⚠️ Erro ao buscar avaliação presencial:', aluno.email, error);
-        }
-
-        // NOVA LÓGICA: Calcular média final com 5 critérios fixos
-        // Converter percentuais para notas 0-10
+        // Calcular média final: (frequência + redações + lousas + simulados) ÷ 4
         const frequenciaNota = converterPercentualParaNota(frequenciaData.percentual_frequencia);
-        const participacaoNota = converterPercentualParaNota(participacaoData.percentual_participacao);
-
-        // Converter notas 0-1000 para 0-10
         const redacoesNota = converterNota1000ParaNota10(redacoesData.nota_media);
         const simuladosNota = converterNota1000ParaNota10(simuladosData.nota_media);
-
-        // Converter notas das lousas (já estão em escala 0-10)
         const lousasNota = lousasData.nota_media;
 
-        // 1. Calcular Média Online (5 critérios)
-        const mediaOnline = calcularMediaOnline(
-          frequenciaNota,
-          participacaoNota,
-          redacoesNota,
-          lousasNota,
-          simuladosNota
-        );
-
-        // 2. Calcular Média Final: (Média Online + Avaliação Presencial) ÷ 2
-        const mediaFinal = calcularMediaFinalComAvaliacao(
-          mediaOnline,
-          avaliacaoPresencialData.nota
-        );
+        const mediaFinal = calcularMediaOnline(frequenciaNota, redacoesNota, lousasNota, simuladosNota);
 
         const dadosAluno = {
           frequencia: frequenciaData,
@@ -1152,7 +1047,7 @@ export function useResumoTurma(turma: string, etapaNumero: number) {
           simulados: simuladosData,
           exercicios: exerciciosData,
           lousas: lousasData,
-          avaliacao_presencial: avaliacaoPresencialData,
+          avaliacao_presencial: { nota: null },
           media_final: Math.max(0, Math.min(10, mediaFinal))
         };
 

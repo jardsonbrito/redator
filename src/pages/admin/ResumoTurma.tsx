@@ -42,7 +42,6 @@ export default function ResumoTurma() {
       'Simulados',
       'Nota Média Simulados',
       'Exercícios',
-      'Avaliação Presencial',
       'Nota Final'
     ];
 
@@ -57,7 +56,6 @@ export default function ResumoTurma() {
       aluno.dados.simulados.total_simulados,
       aluno.dados.simulados.nota_media,
       aluno.dados.exercicios.total_exercicios,
-      aluno.dados.avaliacao_presencial?.nota ?? '-',
       aluno.dados.media_final
     ]);
 
@@ -291,7 +289,6 @@ export default function ResumoTurma() {
                       <TableHead className="text-center">Lousa</TableHead>
                       <TableHead className="text-center">Simulados</TableHead>
                       <TableHead className="text-center">Exercícios</TableHead>
-                      <TableHead className="text-center">Aval. Presencial</TableHead>
                       <TableHead className="text-center">Nota Final</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -341,20 +338,6 @@ export default function ResumoTurma() {
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="font-medium">{aluno.dados.exercicios.total_exercicios}</div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="space-y-1">
-                            {aluno.dados.avaliacao_presencial?.nota !== null && aluno.dados.avaliacao_presencial?.nota !== undefined ? (
-                              <>
-                                <div className="text-lg font-bold text-green-600">
-                                  {aluno.dados.avaliacao_presencial.nota.toFixed(1)}
-                                </div>
-                                <Badge variant="default" className="bg-green-600">Realizada</Badge>
-                              </>
-                            ) : (
-                              <div className="text-sm text-muted-foreground">—</div>
-                            )}
-                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="text-lg font-bold text-primary">

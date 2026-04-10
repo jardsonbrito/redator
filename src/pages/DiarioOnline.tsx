@@ -277,17 +277,7 @@ const DiarioOnline = () => {
                         <BookOpen className="w-4 h-4 text-indigo-600" />
                       )}
 
-                      {/* 5. Avaliação Presencial (já em escala 0-10) */}
-                      {renderCardMetrica(
-                        'Avaliação Presencial',
-                        etapaSelecionada.avaliacao_presencial?.nota?.toFixed(1) || '-',
-                        etapaSelecionada.avaliacao_presencial?.nota
-                          ? 'Nota da avaliação presencial'
-                          : 'Sem avaliação presencial',
-                        <FileText className="w-4 h-4 text-teal-600" />
-                      )}
-
-                      {/* 6. Simulados (convertida para 0-10) */}
+                      {/* 5. Simulados (convertida para 0-10) */}
                       {renderCardMetrica(
                         'Simulados',
                         converterNota1000ParaNota10(etapaSelecionada.simulados.nota_media).toFixed(1),
@@ -295,47 +285,14 @@ const DiarioOnline = () => {
                         <Trophy className="w-4 h-4 text-orange-600" />
                       )}
 
-                      {/* Média Online (5 critérios) */}
-                      {(() => {
-                        const mediaOnline = (
-                          converterPercentualParaNota(etapaSelecionada.frequencia.percentual_frequencia) +
-                          converterPercentualParaNota(etapaSelecionada.participacao.percentual_participacao) +
-                          converterNota1000ParaNota10(etapaSelecionada.redacoes.nota_media) +
-                          (etapaSelecionada.lousas?.nota_media || 0) +
-                          converterNota1000ParaNota10(etapaSelecionada.simulados.nota_media)
-                        ) / 5;
-
-                        return renderCardMetrica(
-                          'Média Online',
-                          mediaOnline.toFixed(1),
-                          'Média dos 5 critérios online (F+P+R+L+S) ÷ 5',
-                          <BarChart3 className="w-4 h-4 text-blue-600" />
-                        );
-                      })()}
-
                       {/* Nota Final da Etapa */}
-                      {(() => {
-                        const mediaOnline = (
-                          converterPercentualParaNota(etapaSelecionada.frequencia.percentual_frequencia) +
-                          converterPercentualParaNota(etapaSelecionada.participacao.percentual_participacao) +
-                          converterNota1000ParaNota10(etapaSelecionada.redacoes.nota_media) +
-                          (etapaSelecionada.lousas?.nota_media || 0) +
-                          converterNota1000ParaNota10(etapaSelecionada.simulados.nota_media)
-                        ) / 5;
-
-                        const notaAvaliacao = etapaSelecionada.avaliacao_presencial?.nota;
-                        const descricao = notaAvaliacao !== null && notaAvaliacao !== undefined
-                          ? `(Média Online ${mediaOnline.toFixed(1)} + Aval. Presencial ${notaAvaliacao.toFixed(1)}) ÷ 2`
-                          : 'Apenas Média Online (sem avaliação presencial)';
-
-                        return renderCardMetrica(
-                          'Nota Final da Etapa',
-                          etapaSelecionada.media_final.toFixed(1),
-                          descricao,
-                          <TrendingUp className="w-4 h-4 text-primary" />,
-                          <Badge className="text-lg">{etapaSelecionada.media_final >= 7 ? '✓' : '!'}</Badge>
-                        );
-                      })()}
+                      {renderCardMetrica(
+                        'Nota Final da Etapa',
+                        etapaSelecionada.media_final.toFixed(1),
+                        'Média de frequência + redações + lousas + simulados (÷ 4)',
+                        <TrendingUp className="w-4 h-4 text-primary" />,
+                        <Badge className="text-lg">{etapaSelecionada.media_final >= 7 ? '✓' : '!'}</Badge>
+                      )}
                     </div>
 
                   </div>
