@@ -796,12 +796,16 @@ const Admin = () => {
 
         return (
           <div className="space-y-6">
-            <CorretorForm 
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Corretores</h1>
+              <p className="text-muted-foreground mt-1">Gerencie a equipe de corretores da plataforma</p>
+            </div>
+            <CorretorForm
               onSuccess={handleCorretorSuccess}
               corretorEditando={corretorEditando}
               onCancelEdit={handleCancelCorretorEdit}
             />
-            <CorretorList 
+            <CorretorList
               refresh={refreshCorretores}
               onEdit={handleEditCorretor}
             />
@@ -1020,9 +1024,11 @@ const Admin = () => {
       case "radar":
         return (
           <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold">Radar de Monitoramento</h1>
-              <p className="text-muted-foreground mt-1">Acompanhe o desempenho e situação dos alunos por turma</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Radar de Monitoramento</h1>
+                <p className="text-muted-foreground mt-1">Acompanhe o desempenho e situação dos alunos por turma</p>
+              </div>
             </div>
             <MonitoramentoPage />
           </div>
@@ -1127,9 +1133,11 @@ const Admin = () => {
       case "microaprendizagem":
         return (
           <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold">Microaprendizagem</h1>
-              <p className="text-muted-foreground mt-1">Gerencie tópicos e conteúdos. O acesso é controlado por plano em cada item.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Microaprendizagem</h1>
+                <p className="text-muted-foreground mt-1">Gerencie tópicos e conteúdos. O acesso é controlado por plano em cada item.</p>
+              </div>
             </div>
             <MicroTopicosAdmin />
           </div>

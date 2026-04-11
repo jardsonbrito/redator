@@ -21,9 +21,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Edit, Eye, EyeOff, Trash2, AlertTriangle, FileText } from 'lucide-react';
+import { MoreVertical, Edit, Eye, EyeOff, Trash2, AlertTriangle, FileText, Download } from 'lucide-react';
 import { TemaSubmissionsModal } from '@/components/admin/TemaSubmissionsModal';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchFullTema, generateTemaPDF } from '@/utils/temaPdfUtils';
+import { toast } from 'sonner';
 
 export interface TemaCardData {
   id: string;
@@ -108,6 +110,24 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [submissionsCount, setSubmissionsCount] = useState<number>(0);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setDropdownOpen(false);
+    setDownloadingPdf(true);
+    const toastId = toast.loading('Gerando PDF...');
+    try {
+      const fullTema = await fetchFullTema(tema.id);
+      if (!fullTema) throw new Error('Tema não encontrado');
+      await generateTemaPDF(fullTema);
+      toast.success('PDF gerado com sucesso!', { id: toastId });
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err);
+      toast.error('Erro ao gerar PDF. Tente novamente.', { id: toastId });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   useEffect(() => {
     if (perfil === 'admin') {
@@ -285,6 +305,17 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Alunos que Enviaram
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDownloadPdf();
+                  }}
+                  disabled={downloadingPdf}
+                  className="flex items-center cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <Download className="h-4 w-4 mr-2 text-purple-600" />
+                  {downloadingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {

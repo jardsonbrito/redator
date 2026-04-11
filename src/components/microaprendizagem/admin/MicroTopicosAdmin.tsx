@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Pencil, Trash2, ListChecks, ChevronDown, ChevronUp, MoreHorizontal, ImagePlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, ListChecks, ChevronDown, ChevronUp, MoreHorizontal, ImagePlus, BookOpen } from 'lucide-react';
 import { sanitizeFileName } from '@/utils/fileUtils';
 import { toast } from 'sonner';
 
@@ -278,14 +278,11 @@ export const MicroTopicosAdmin = () => {
 
   // Modo lista
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-gray-700">Tópicos</h3>
-          <p className="text-xs text-gray-400 mt-0.5">{topicos.length} tópico(s) cadastrado(s)</p>
-        </div>
-        <Button size="sm" className="bg-[#3f0776] hover:bg-[#643293]" onClick={openCriar}>
-          <Plus className="w-4 h-4 mr-1" />
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <p className="text-sm text-muted-foreground">{topicos.length} tópico(s) cadastrado(s)</p>
+        <Button className="bg-[#3f0776] hover:bg-[#643293] w-full sm:w-auto" onClick={openCriar}>
+          <Plus className="w-4 h-4 mr-2" />
           Novo Tópico
         </Button>
       </div>
@@ -293,7 +290,8 @@ export const MicroTopicosAdmin = () => {
       {isLoading ? (
         <p className="text-sm text-gray-400 text-center py-8">Carregando...</p>
       ) : topicos.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-16 text-gray-400">
+          <BookOpen className="mx-auto w-12 h-12 mb-3 opacity-40" />
           <p className="text-sm">Nenhum tópico cadastrado.</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={openCriar}>
             <Plus className="w-4 h-4 mr-1" />
@@ -301,87 +299,114 @@ export const MicroTopicosAdmin = () => {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
-          {[...topicos].sort((a, b) => a.ordem - b.ordem).map((topico, idx, arr) => (
-            <Card key={topico.id} className="border border-gray-100">
-              <CardContent className="py-3 px-4 flex items-center gap-3">
-                {/* Botões de reordenação */}
-                <div className="flex flex-col gap-0.5 shrink-0">
-                  <Button
-                    variant="ghost" size="icon" className="h-5 w-5"
-                    disabled={idx === 0}
-                    onClick={() => mover(topico, 'up')}
-                  >
-                    <ChevronUp className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant="ghost" size="icon" className="h-5 w-5"
-                    disabled={idx === arr.length - 1}
-                    onClick={() => mover(topico, 'down')}
-                  >
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...topicos].sort((a, b) => a.ordem - b.ordem).map((topico, idx, arr) => {
+            const coverUrl = topico.cover_storage_path
+              ? supabase.storage.from('micro-covers').getPublicUrl(topico.cover_storage_path).data.publicUrl
+              : null;
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-gray-800">{topico.titulo}</p>
+            return (
+              <Card
+                key={topico.id}
+                className="bg-white hover:shadow-md transition-all duration-200 border border-border/20 rounded-lg shadow-sm overflow-hidden flex flex-col"
+              >
+                {/* Imagem de capa */}
+                <div className="relative w-full aspect-video bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden">
+                  {coverUrl ? (
+                    <img
+                      src={coverUrl}
+                      alt={topico.titulo}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <BookOpen className="w-10 h-10 text-purple-300" />
+                    </div>
+                  )}
+                  {/* Badge status sobre a imagem */}
+                  <div className="absolute top-2 right-2">
                     <Badge
-                      variant={topico.ativo ? 'default' : 'secondary'}
-                      className={`text-xs ${topico.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                      className={`text-xs font-medium ${topico.ativo ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}
                     >
                       {topico.ativo ? 'Ativo' : 'Inativo'}
                     </Badge>
                   </div>
-                  {topico.descricao && (
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{topico.descricao}</p>
-                  )}
+                  {/* Ordem */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-0.5">
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-6 w-6 bg-white/80 hover:bg-white rounded-full shadow-sm"
+                      disabled={idx === 0}
+                      onClick={() => mover(topico, 'up')}
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-6 w-6 bg-white/80 hover:bg-white rounded-full shadow-sm"
+                      disabled={idx === arr.length - 1}
+                      onClick={() => mover(topico, 'down')}
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => { setTopicoSelecionado(topico); setModo('itens'); }}
-                  >
-                    <ListChecks className="w-3 h-3 mr-1" />
-                    Itens
-                  </Button>
-                  <DropdownMenu
-                    open={dropdownAberto === topico.id}
-                    onOpenChange={open => setDropdownAberto(open ? topico.id : null)}
-                  >
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                        <MoreHorizontal className="h-4 w-4 text-gray-600" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
-                      <DropdownMenuItem
-                        className="flex items-center cursor-pointer hover:bg-gray-50"
-                        onClick={() => { setDropdownAberto(null); openEditar(topico); }}
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50"
-                        onClick={() => {
-                          setDropdownAberto(null);
-                          setTimeout(() => setTopicoExcluindo(topico), 100);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardContent className="p-4 flex flex-col flex-1 gap-3">
+                  {/* Título e descrição */}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-base text-foreground leading-tight">{topico.titulo}</h3>
+                    {topico.descricao && (
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{topico.descricao}</p>
+                    )}
+                  </div>
+
+                  {/* Ações */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/20">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-9 text-xs"
+                      onClick={() => { setTopicoSelecionado(topico); setModo('itens'); }}
+                    >
+                      <ListChecks className="w-3.5 h-3.5 mr-1.5" />
+                      Itens
+                    </Button>
+                    <DropdownMenu
+                      open={dropdownAberto === topico.id}
+                      onOpenChange={open => setDropdownAberto(open ? topico.id : null)}
+                    >
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
+                          <MoreHorizontal className="h-4 w-4 text-gray-600" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
+                        <DropdownMenuItem
+                          className="flex items-center cursor-pointer hover:bg-gray-50"
+                          onClick={() => { setDropdownAberto(null); openEditar(topico); }}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="flex items-center cursor-pointer text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            setDropdownAberto(null);
+                            setTimeout(() => setTopicoExcluindo(topico), 100);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

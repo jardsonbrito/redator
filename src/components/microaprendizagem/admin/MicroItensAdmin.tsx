@@ -107,8 +107,9 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
             <ArrowLeft className="w-4 h-4 mr-1" />
             Voltar
           </Button>
-          <h3 className="text-base font-semibold text-gray-700">
-            {modo === 'criar' ? 'Novo item' : 'Editar item'} — {topicoTitulo}
+          <span className="text-muted-foreground">/</span>
+          <h3 className="text-base font-semibold text-foreground">
+            {modo === 'criar' ? 'Novo item' : 'Editar item'}
           </h3>
         </div>
         <MicroItemForm
@@ -122,34 +123,35 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onVoltar}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button variant="ghost" size="sm" onClick={onVoltar} className="text-primary hover:bg-primary/10 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Tópicos
           </Button>
-          <h3 className="text-base font-semibold text-gray-700">
-            {topicoTitulo}
-          </h3>
-          <Badge variant="outline" className="text-xs">{itens.length} itens</Badge>
+          <span className="text-muted-foreground">/</span>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">{topicoTitulo}</h2>
+            <p className="text-sm text-muted-foreground">{itens.length} {itens.length === 1 ? 'item' : 'itens'}</p>
+          </div>
         </div>
         <Button
-          size="sm"
-          className="bg-[#3f0776] hover:bg-[#643293]"
+          className="bg-[#3f0776] hover:bg-[#643293] w-full sm:w-auto"
           onClick={() => setModo('criar')}
         >
-          <Plus className="w-4 h-4 mr-1" />
+          <Plus className="w-4 h-4 mr-2" />
           Novo Item
         </Button>
       </div>
 
-      {/* Lista */}
+      {/* Grid de itens */}
       {isLoading ? (
         <p className="text-sm text-gray-400 text-center py-8">Carregando...</p>
       ) : itens.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-16 text-gray-400">
+          <FileText className="mx-auto w-12 h-12 mb-3 opacity-40" />
           <p className="text-sm">Nenhum item neste tópico.</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => setModo('criar')}>
             <Plus className="w-4 h-4 mr-1" />
@@ -157,88 +159,100 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
-          {itens.map((item) => (
-            <Card key={item.id} className="border border-gray-100">
-              <CardContent className="py-3 px-4 flex items-center gap-3">
-                {(() => { const cfg = TIPO_CONFIG[item.tipo]; const Icon = cfg?.icon ?? FileText; return (
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${cfg?.iconBg ?? 'bg-gray-100'}`}>
-                    <Icon className={`w-4 h-4 ${cfg?.iconColor ?? 'text-gray-500'}`} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {itens.map((item) => {
+            const cfg = TIPO_CONFIG[item.tipo];
+            const Icon = cfg?.icon ?? FileText;
+            return (
+              <Card
+                key={item.id}
+                className="bg-white hover:shadow-md transition-all duration-200 border border-border/20 rounded-lg shadow-sm overflow-hidden flex flex-col"
+              >
+                {/* Topo colorido com ícone do tipo */}
+                <div className={`relative w-full h-28 flex items-center justify-center ${cfg?.iconBg ?? 'bg-gray-100'}`}>
+                  <Icon className={`w-12 h-12 opacity-70 ${cfg?.iconColor ?? 'text-gray-500'}`} />
+                  {/* Badge status */}
+                  <div className="absolute top-2 right-2">
+                    <Badge
+                      className={`text-xs font-medium ${item.status === 'ativo' ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}
+                    >
+                      {item.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                    </Badge>
                   </div>
-                ); })()}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{item.titulo}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-xs text-gray-400">{TIPO_CONFIG[item.tipo]?.label ?? item.tipo}</span>
-                    <span className="text-xs text-gray-300">·</span>
-                    <span className="text-xs text-gray-400">Ordem: {item.ordem}</span>
-                    {item.planos_permitidos.length > 0 && (
-                      <>
-                        <span className="text-xs text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">
+                  {/* Tipo */}
+                  <div className="absolute bottom-2 left-2">
+                    <Badge variant="secondary" className="text-xs bg-white/80 text-gray-700">
+                      {cfg?.label ?? item.tipo}
+                    </Badge>
+                  </div>
+                </div>
+
+                <CardContent className="p-4 flex flex-col flex-1 gap-3">
+                  {/* Título */}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-base text-foreground leading-tight line-clamp-2">{item.titulo}</h3>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                      <span className="text-xs text-muted-foreground">Ordem: {item.ordem}</span>
+                      {item.planos_permitidos.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
                           {item.planos_permitidos.join(', ')}
                         </span>
-                      </>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge
-                    className={`text-xs ${item.status === 'ativo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                  >
-                    {item.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                  </Badge>
-                  <DropdownMenu
-                    open={dropdownAberto === item.id}
-                    onOpenChange={open => setDropdownAberto(open ? item.id : null)}
-                  >
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="p-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                        <MoreHorizontal className="h-4 w-4 text-gray-600" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
-                      <DropdownMenuItem
-                        className="flex items-center cursor-pointer hover:bg-gray-50"
-                        onClick={() => {
-                          setDropdownAberto(null);
-                          setItemEditando(item);
-                          setModo('editar');
-                        }}
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="flex items-center cursor-pointer hover:bg-gray-50"
-                        onClick={() => {
-                          setDropdownAberto(null);
-                          toggleStatus.mutate(item);
-                        }}
-                      >
-                        {item.status === 'ativo' ? (
-                          <><EyeOff className="mr-2 h-4 w-4" />Desativar</>
-                        ) : (
-                          <><Eye className="mr-2 h-4 w-4" />Ativar</>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="flex items-center cursor-pointer text-red-600 hover:bg-red-50"
-                        onClick={() => {
-                          setDropdownAberto(null);
-                          setTimeout(() => setItemExcluindo(item), 100);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  {/* Ações */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/20">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-9 text-xs"
+                      onClick={() => { setItemEditando(item); setModo('editar'); }}
+                    >
+                      <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                      Editar
+                    </Button>
+                    <DropdownMenu
+                      open={dropdownAberto === item.id}
+                      onOpenChange={open => setDropdownAberto(open ? item.id : null)}
+                    >
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
+                          <MoreHorizontal className="h-4 w-4 text-gray-600" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 shadow-lg border border-gray-200">
+                        <DropdownMenuItem
+                          className="flex items-center cursor-pointer hover:bg-gray-50"
+                          onClick={() => {
+                            setDropdownAberto(null);
+                            toggleStatus.mutate(item);
+                          }}
+                        >
+                          {item.status === 'ativo' ? (
+                            <><EyeOff className="mr-2 h-4 w-4" />Desativar</>
+                          ) : (
+                            <><Eye className="mr-2 h-4 w-4" />Ativar</>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="flex items-center cursor-pointer text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            setDropdownAberto(null);
+                            setTimeout(() => setItemExcluindo(item), 100);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

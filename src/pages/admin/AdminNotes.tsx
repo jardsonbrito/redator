@@ -18,10 +18,12 @@ import {
   Filter,
   Archive,
   X,
+  StickyNote,
 } from 'lucide-react';
 import { useAdminNotes } from '@/hooks/useAdminNotes';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { ModernAdminHeader } from '@/components/admin/ModernAdminHeader';
 import { NotesCard } from '@/components/admin/NotesCard';
 import { NoteEditor } from '@/components/admin/notes/NoteEditor';
 import {
@@ -38,8 +40,14 @@ import {
 } from '@/types/admin-notes';
 
 const AdminNotes = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    signOut();
+    navigate('/login', { replace: true });
+  };
   const [filters, setFilters] = useState<NoteFilters>({
     termo_busca: '',
     categoria: '',
@@ -199,32 +207,32 @@ const AdminNotes = () => {
     filters.cor;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Breadcrumb Navigation */}
-      <nav className="bg-white/80 backdrop-blur-sm border-b border-primary/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 py-3">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/admin" className="text-primary font-medium hover:text-primary/80">
-                    Dashboard
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-primary font-semibold">Anotações</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <ModernAdminHeader userEmail={user?.email} onLogout={handleLogout} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Header */}
-        <div className="flex justify-end">
-          <Button onClick={handleOpenNew} size="lg">
+        {/* Breadcrumb */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin" className="text-primary font-medium">
+                Dashboard
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-foreground">Anotações</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        {/* Título e ação */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Anotações</h1>
+            <p className="text-muted-foreground mt-1">Gerencie suas anotações e lembretes administrativos</p>
+          </div>
+          <Button onClick={handleOpenNew} className="w-full sm:w-auto">
             <Plus className="mr-2 h-5 w-5" />
             Nova Anotação
           </Button>
