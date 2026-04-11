@@ -129,7 +129,7 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
     try {
       const fullTema = await fetchFullTema(tema.id);
       if (!fullTema) throw new Error('Tema não encontrado');
-      generateTemaPDF(fullTema, win);
+      await generateTemaPDF(fullTema, win);
       toast.success('PDF gerado com sucesso!', { id: toastId });
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);

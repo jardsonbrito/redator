@@ -52,6 +52,28 @@ function resolveCoverUrl(tema: FullTema): string | null {
   return tema.cover_url || tema.imagem_texto_4_url || null;
 }
 
+// Tenta converter uma URL de imagem em data URL (embedded) para garantir renderização no print.
+// Funciona para imagens do Supabase (mesma origem ou CORS aberto).
+// Para imagens externas com CORS bloqueado, retorna a URL original e o browser tenta carregar direto.
+async function tryImageAsDataUrl(url: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) return url;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) || url);
+      reader.onerror = () => resolve(url);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+}
+
 interface Motivador {
   label: string;
   text: string | null | undefined;
@@ -69,12 +91,22 @@ function buildMotivadores(tema: FullTema): Motivador[] {
   ].filter(m => m.text || m.imgUrl);
 }
 
+async function resolveMotivadorImages(motivadores: Motivador[]): Promise<Motivador[]> {
+  return Promise.all(
+    motivadores.map(async (m) => {
+      if (!m.imgUrl) return m;
+      const resolved = await tryImageAsDataUrl(m.imgUrl);
+      return { ...m, imgUrl: resolved };
+    })
+  );
+}
+
 function getLayoutClass(tema: FullTema, motivadores: Motivador[]): string {
   const totalChars = motivadores.reduce(
     (acc, m) => acc + (m.text?.length ?? 0) + (m.fonte?.length ?? 0), 0
   );
   const themeIsLong = tema.frase_tematica.length > 90;
-  const useSingleCol = totalChars > 2800 || motivadores.some(m => !!m.imgUrl);
+  const useSingleCol = totalChars > 2800;
   return [themeIsLong ? 'long-theme' : '', useSingleCol ? 'single-column compact' : '']
     .filter(Boolean).join(' ');
 }
@@ -99,20 +131,23 @@ function renderMotivadorCard(m: Motivador): string {
 
 // ─── Construção do HTML ───────────────────────────────────────────────────────
 
-function buildHtml(tema: FullTema): string {
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function buildHtml(tema: FullTema, motivadores: Motivador[]): string {
   const logoUrl = `${window.location.origin}/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png`;
   const coverUrl = resolveCoverUrl(tema);
-  const motivadores = buildMotivadores(tema);
   const layoutClass = getLayoutClass(tema, motivadores);
   const year = new Date().getFullYear();
+  const eixo = capitalize(tema.eixo_tematico || '');
 
   const coverHtml = coverUrl
     ? `<div class="cover-banner"><img src="${esc(coverUrl)}" alt="Capa" onerror="this.parentElement.style.display='none'" /></div>`
     : '';
 
-  const enemHtml = tema.cabecalho_enem?.trim()
-    ? `<p class="proposal-text">${esc(tema.cabecalho_enem)}</p>`
-    : '';
+  // Instrução padronizada sem citar o tema (evita redundância com o destaque abaixo)
+  const instrucaoEnem = `<p class="proposal-text">Com base na leitura dos textos motivadores e nos conhecimentos construídos ao longo de sua formação, redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa, apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, de forma coerente e coesa, argumentos e fatos para a defesa de seu ponto de vista, sobre <strong>o tema apresentado a seguir</strong>:</p>`;
 
   const motivadoresHtml = motivadores.length > 0 ? `
     <section class="motivators-section">
@@ -126,6 +161,7 @@ function buildHtml(tema: FullTema): string {
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${esc(tema.frase_tematica)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
@@ -149,13 +185,12 @@ function buildHtml(tema: FullTema): string {
   --r-md:        9px;
 }
 
-*  { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
 body {
   margin: 0;
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
   color: var(--text);
-  background: var(--bg);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -216,13 +251,13 @@ body {
   border-radius: var(--r-lg);
   overflow: hidden;
   margin-bottom: 11px;
-  height: 108px;
+  background: var(--purple-soft);
 }
 
 .cover-banner img {
   width: 100%;
-  height: 108px;
-  object-fit: cover;
+  max-height: 160px;
+  object-fit: contain;
   display: block;
 }
 
@@ -329,8 +364,9 @@ body {
 
 .motivator-image {
   width: 100%;
-  max-height: 120px;
-  object-fit: cover;
+  max-height: 220px;
+  object-fit: contain;
+  background: var(--purple-soft);
   border-radius: 6px;
   margin-bottom: 8px;
   display: block;
@@ -373,8 +409,45 @@ body {
 
 .footer strong { color: var(--purple-mid); font-weight: 700; }
 
+/* ── SCREEN: preview A4 centralizado ─────────────── */
+@media screen {
+  html, body {
+    background: #dde0e6;
+    padding: 0;
+    margin: 0;
+  }
+  body {
+    padding: 28px 12px 48px;
+    min-height: 100vh;
+  }
+  .page {
+    max-width: 794px;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 6px 40px rgba(0,0,0,0.22);
+    border-radius: 6px;
+    padding: 36px 40px;
+  }
+  /* Mobile: sem padding lateral excessivo */
+  @media (max-width: 600px) {
+    body { padding: 0; }
+    .page {
+      border-radius: 0;
+      padding: 20px 16px 32px;
+      box-shadow: none;
+    }
+    .motivators-grid { grid-template-columns: 1fr !important; }
+    .header-title { font-size: 16px; }
+    .theme-title { font-size: 16px; }
+    .long-theme .theme-title { font-size: 14px; }
+  }
+}
+
+/* ── PRINT ────────────────────────────────────────── */
 @media print {
+  html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { max-width: none !important; padding: 0 !important; box-shadow: none !important; border-radius: 0 !important; }
 }
 </style>
 </head>
@@ -385,7 +458,7 @@ body {
     <div class="header-body">
       <h1 class="header-title">TEMAS DE REDAÇÃO</h1>
       <div class="header-sub">App do Redator · ${year}</div>
-      <div class="meta-bar">${esc(tema.eixo_tematico)} &nbsp;|&nbsp; Proposta ENEM</div>
+      <div class="meta-bar">${esc(eixo)} &nbsp;|&nbsp; Proposta ENEM</div>
     </div>
     <img class="header-logo" src="${logoUrl}" alt="Logo" onerror="this.style.display='none'" />
   </header>
@@ -394,7 +467,7 @@ body {
 
   <section class="proposal-box">
     <h2 class="section-title">Proposta (ENEM)</h2>
-    ${enemHtml}
+    ${instrucaoEnem}
     <div class="theme-highlight">
       <div class="theme-label">Tema</div>
       <h3 class="theme-title">${esc(tema.frase_tematica)}</h3>
@@ -411,7 +484,7 @@ body {
 </div>
 <script>
   window.onload = function () {
-    setTimeout(function () { window.print(); }, 700);
+    setTimeout(function () { window.print(); }, 900);
   };
 </script>
 </body>
@@ -420,8 +493,10 @@ body {
 
 // ─── Exportação principal ─────────────────────────────────────────────────────
 
-export function generateTemaPDF(tema: FullTema, win?: Window | null): void {
-  const html = buildHtml(tema);
+export async function generateTemaPDF(tema: FullTema, win?: Window | null): Promise<void> {
+  const raw = buildMotivadores(tema);
+  const motivadores = await resolveMotivadorImages(raw);
+  const html = buildHtml(tema, motivadores);
 
   const target = win ?? window.open('', '_blank');
   if (!target) {
