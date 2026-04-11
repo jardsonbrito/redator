@@ -116,13 +116,24 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
     setDropdownOpen(false);
     setDownloadingPdf(true);
     const toastId = toast.loading('Gerando PDF...');
+
+    // Abre a janela sincronicamente enquanto ainda está no contexto de gesto do usuário.
+    // Após um await, o browser bloqueia window.open() como popup.
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast.error('Popup bloqueado. Permita popups para este site e tente novamente.', { id: toastId });
+      setDownloadingPdf(false);
+      return;
+    }
+
     try {
       const fullTema = await fetchFullTema(tema.id);
       if (!fullTema) throw new Error('Tema não encontrado');
-      await generateTemaPDF(fullTema);
+      generateTemaPDF(fullTema, win);
       toast.success('PDF gerado com sucesso!', { id: toastId });
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
+      win.close();
       toast.error('Erro ao gerar PDF. Tente novamente.', { id: toastId });
     } finally {
       setDownloadingPdf(false);

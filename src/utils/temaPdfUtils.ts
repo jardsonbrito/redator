@@ -420,17 +420,17 @@ body {
 
 // ─── Exportação principal ─────────────────────────────────────────────────────
 
-export async function generateTemaPDF(tema: FullTema): Promise<void> {
+export function generateTemaPDF(tema: FullTema, win?: Window | null): void {
   const html = buildHtml(tema);
 
-  const win = window.open('', '_blank');
-  if (!win) {
+  const target = win ?? window.open('', '_blank');
+  if (!target) {
     throw new Error('Popup bloqueado. Permita popups para este site e tente novamente.');
   }
 
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
+  target.document.open();
+  target.document.write(html);
+  target.document.close();
 }
 
 // ─── Buscar tema completo do Supabase ─────────────────────────────────────────
