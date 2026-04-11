@@ -1020,11 +1020,9 @@ const Admin = () => {
       case "radar":
         return (
           <div className="space-y-6">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Radar de Monitoramento Pedagógico</h3>
-              <p className="text-sm text-muted-foreground">
-                Acompanhe o desempenho, tendências e situação dos alunos por turma, com análise automática de engajamento.
-              </p>
+            <div>
+              <h1 className="text-3xl font-bold">Radar de Monitoramento</h1>
+              <p className="text-muted-foreground mt-1">Acompanhe o desempenho e situação dos alunos por turma</p>
             </div>
             <MonitoramentoPage />
           </div>
@@ -1130,10 +1128,8 @@ const Admin = () => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">Microaprendizagem</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Gerencie tópicos e conteúdos. O acesso é controlado por plano em cada item.
-              </p>
+              <h1 className="text-3xl font-bold">Microaprendizagem</h1>
+              <p className="text-muted-foreground mt-1">Gerencie tópicos e conteúdos. O acesso é controlado por plano em cada item.</p>
             </div>
             <MicroTopicosAdmin />
           </div>

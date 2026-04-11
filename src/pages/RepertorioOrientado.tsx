@@ -3,6 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { Plus, Star, Filter, RefreshCw } from "lucide-react";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { StudentHeader } from "@/components/StudentHeader";
+import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
+import { supabase } from "@/integrations/supabase/client";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,7 +35,13 @@ const RepertorioOrientado = () => {
   const [searchParams] = useSearchParams();
 
   const { studentData, isStudentLoggedIn } = useStudentAuth();
-  const { isAdmin: isAdminAuth, user: adminUser } = useAuth();
+  const { isAdmin: isAdminAuth, user: adminUser, signOut } = useAuth();
+
+  const handleAdminLogout = async () => {
+    await supabase.auth.signOut();
+    signOut();
+    navigate('/login', { replace: true });
+  };
 
   const [showNovaPublicacaoModal, setShowNovaPublicacaoModal] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
@@ -184,43 +192,31 @@ const RepertorioOrientado = () => {
     <div className="min-h-screen bg-background">
       {/* Header condicional - Admin ou Student */}
       {isAdmin ? (
-        <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                  <img src="/lovable-uploads/f86e5092-80dc-4e06-bb6a-f4cec6ee1b5b.png" alt="" className="h-6 w-6 rounded-sm" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-foreground leading-tight">Painel Administrativo</h1>
-                  <p className="text-xs text-muted-foreground">Sistema de Gestão</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-3">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/admin" className="text-primary font-medium">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Repertório Orientado</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
+        <ModernAdminHeader userEmail={adminUser?.email} onLogout={handleAdminLogout} />
       ) : (
         <StudentHeader pageTitle="Repertório Orientado" />
       )}
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Breadcrumb (admin) */}
+        {isAdmin && (
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin" className="text-primary font-medium">Dashboard</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-foreground">Repertório Orientado</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        )}
+
         {/* Header com título */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold">
               Repertório Orientado
             </h1>
             {!isAdmin && (

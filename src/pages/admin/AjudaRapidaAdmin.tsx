@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Eye, Trash2, ArrowLeft, Home } from "lucide-react";
+import { MessageSquare, Eye, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { ChatConversa } from "@/components/ajuda-rapida/ChatConversa";
@@ -17,8 +17,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { ModernAdminHeader } from "@/components/admin/ModernAdminHeader";
+import { supabase } from "@/integrations/supabase/client";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 
 interface ConversaAdmin {
@@ -37,7 +39,14 @@ export const AjudaRapidaAdmin = () => {
   const [conversaAtiva, setConversaAtiva] = useState<{ alunoId: string; corretorId: string } | null>(null);
   const { buscarTodasConversas, deletarConversa } = useAjudaRapida();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    signOut();
+    navigate('/login', { replace: true });
+  };
 
   const carregarConversas = async () => {
     setLoading(true);
@@ -128,32 +137,8 @@ export const AjudaRapidaAdmin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-secondary/10 to-secondary/5">
-      {/* Header exatamente igual ao painel administrativo */}
-      <header className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-primary/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <Link to="/app" className="flex items-center gap-2 bg-primary/10 hover:bg-primary/20 px-3 py-2 rounded-lg transition-all duration-300 text-primary hover:text-primary font-medium">
-                <Home className="w-5 h-5" />
-                <span>Voltar ao App</span>
-              </Link>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  Painel Administrativo
-                </h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/5 backdrop-blur-sm px-4 py-2 rounded-full border border-primary/10">
-                <span className="text-sm text-muted-foreground">Olá, </span>
-                <span className="text-sm font-medium text-primary">{user?.email}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <ModernAdminHeader userEmail={user?.email} onLogout={handleLogout} />
 
       {/* Conteúdo principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

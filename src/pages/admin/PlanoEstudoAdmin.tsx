@@ -5,7 +5,7 @@ import {
   BookMarked, Users, AlertTriangle, BarChart3,
   ChevronDown, ChevronUp, Search, CheckCircle2, Lock, Circle,
   ArrowUpDown, Plus, Ban, Unlock, RefreshCw, Loader2,
-  Settings2, Pencil, Trash2, GripVertical, ToggleLeft, ToggleRight,
+  Pencil, Trash2, GripVertical, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -788,16 +788,10 @@ export default function PlanoEstudoAdmin() {
         </Breadcrumb>
 
         <Tabs defaultValue="macro">
-          <TabsList className="mb-6 bg-transparent h-auto gap-2 p-0 justify-start">
-            <TabsTrigger value="macro" className="rounded-full px-4 py-2 flex items-center gap-1.5 text-sm font-medium text-white bg-[#B175FF] hover:bg-[#662F96] transition-colors data-[state=active]:bg-[#662F96] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <BarChart3 className="w-4 h-4" /> Visão Geral
-            </TabsTrigger>
-            <TabsTrigger value="individual" className="rounded-full px-4 py-2 flex items-center gap-1.5 text-sm font-medium text-white bg-[#B175FF] hover:bg-[#662F96] transition-colors data-[state=active]:bg-[#662F96] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <Users className="w-4 h-4" /> Por Aluno
-            </TabsTrigger>
-            <TabsTrigger value="aspectos" className="rounded-full px-4 py-2 flex items-center gap-1.5 text-sm font-medium text-white bg-[#B175FF] hover:bg-[#662F96] transition-colors data-[state=active]:bg-[#662F96] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <Settings2 className="w-4 h-4" /> Aspectos
-            </TabsTrigger>
+          <TabsList className="mb-6">
+            <TabsTrigger value="macro">Visão Geral</TabsTrigger>
+            <TabsTrigger value="individual">Por Aluno</TabsTrigger>
+            <TabsTrigger value="aspectos">Aspectos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="macro">
