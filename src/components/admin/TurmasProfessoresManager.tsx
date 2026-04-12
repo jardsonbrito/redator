@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Eye, EyeOff, Link as LinkIcon, MoreHorizontal, Plus, Power, PowerOff, Ticket } from "lucide-react";
+import { Copy, Eye, EyeOff, Link as LinkIcon, MoreHorizontal, Plus, Power, PowerOff, Ticket, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 
@@ -46,6 +56,7 @@ export const TurmasProfessoresManager = () => {
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState("");
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [turmaParaDeletar, setTurmaParaDeletar] = useState<TurmaProfessor | null>(null);
   const [codigosVisiveis, setCodigosVisiveis] = useState<Set<string>>(new Set());
 
   // Estado do dialog de convite
@@ -127,6 +138,22 @@ export const TurmasProfessoresManager = () => {
       toast({ title: "Status atualizado", description: `Turma ${!turma.ativo ? "ativada" : "inativada"}.` });
       fetchTurmas();
     }
+  };
+
+  const handleDeletarTurma = async () => {
+    if (!turmaParaDeletar) return;
+    const { error } = await supabase
+      .from('turmas_professores')
+      .delete()
+      .eq('id', turmaParaDeletar.id);
+
+    if (error) {
+      toast({ title: 'Erro', description: 'Não foi possível deletar a turma.', variant: 'destructive' });
+    } else {
+      toast({ title: 'Turma deletada', description: `"${turmaParaDeletar.nome}" foi removida.` });
+      fetchTurmas();
+    }
+    setTurmaParaDeletar(null);
   };
 
   const handleGerarConvite = async () => {
@@ -289,6 +316,17 @@ export const TurmasProfessoresManager = () => {
                                 </>
                               )}
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                setTimeout(() => setTurmaParaDeletar(turma), 100);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Deletar turma
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -300,6 +338,28 @@ export const TurmasProfessoresManager = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* AlertDialog de confirmação de exclusão */}
+      <AlertDialog open={!!turmaParaDeletar} onOpenChange={(open) => !open && setTurmaParaDeletar(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar turma</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar a turma <strong>"{turmaParaDeletar?.nome}"</strong>?
+              Professores associados a ela ficarão sem turma. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleDeletarTurma}
+            >
+              Deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog de convite */}
       <Dialog open={!!turmaConvite} onOpenChange={(open) => !open && setTurmaConvite(null)}>
