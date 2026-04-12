@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   BookOpen,
   FileText,
+  MessageSquare,
   Video,
   GraduationCap,
   Library,
@@ -21,6 +22,13 @@ const menuItems = [
     showAlways: true,
   },
   {
+    title: "Guia Temático",
+    path: "/professor/guia-tematico",
+    icon: Map,
+    tooltip: "Explore o guia temático com artigos e análises.",
+    showAlways: true,
+  },
+  {
     title: "Redações Exemplares",
     path: "/professor/redacoes",
     icon: FileText,
@@ -28,10 +36,26 @@ const menuItems = [
     showAlways: true,
   },
   {
-    title: "Guia Temático",
-    path: "/professor/guia-tematico",
-    icon: Map,
-    tooltip: "Explore o guia temático com artigos e análises.",
+    title: "Redações Comentadas",
+    path: "/professor/redacoes-comentadas",
+    icon: MessageSquare,
+    tooltip: "Em breve: redações com comentários detalhados do professor.",
+    showAlways: true,
+    disabled: true,
+  },
+  {
+    title: "Aulas ao Vivo",
+    path: "/professor/salas-virtuais",
+    icon: Video,
+    tooltip: "Em breve: acesso às salas virtuais de aulas ao vivo.",
+    showAlways: true,
+    disabled: true,
+  },
+  {
+    title: "Aulas",
+    path: "/professor/aulas",
+    icon: GraduationCap,
+    tooltip: "Acesse aulas organizadas por competência.",
     showAlways: true,
   },
   {
@@ -42,10 +66,10 @@ const menuItems = [
     showAlways: true,
   },
   {
-    title: "Aulas",
-    path: "/professor/aulas",
-    icon: GraduationCap,
-    tooltip: "Acesse aulas organizadas por competência.",
+    title: "Microaprendizagem",
+    path: "/professor/microaprendizagem",
+    icon: Layers,
+    tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais.",
     showAlways: true,
   },
   {
@@ -53,13 +77,6 @@ const menuItems = [
     path: "/professor/biblioteca",
     icon: Library,
     tooltip: "Acesse materiais em PDF organizados por competência.",
-    showAlways: true,
-  },
-  {
-    title: "Microaprendizagem",
-    path: "/professor/microaprendizagem",
-    icon: Layers,
-    tooltip: "Conteúdos rápidos em vídeo, áudio, quiz e mais.",
     showAlways: true,
   },
 ];

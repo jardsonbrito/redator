@@ -21,6 +21,7 @@ interface MenuItem {
   showCondition?: boolean;
   resourceType?: string;
   highlight?: boolean; // Destaque especial (ex: processo seletivo pendente)
+  disabled?: boolean;  // Card em breve / ainda não disponível
 }
 
 interface MenuGridProps {
@@ -153,7 +154,21 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           return (
             <Tooltip key={index}>
               <TooltipTrigger asChild>
-                {isBlocked ? (
+                {item.disabled ? (
+                  <div className="group relative flex flex-col items-center justify-center p-6 bg-gray-100 rounded-2xl shadow-sm opacity-50 min-h-[120px] cursor-not-allowed">
+                    <div className="mb-3">
+                      <item.icon className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-400 text-center leading-tight">
+                      {item.title}
+                    </h3>
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-gray-400 text-white text-xs px-2 py-1 rounded-full">
+                        Em breve
+                      </div>
+                    </div>
+                  </div>
+                ) : isBlocked ? (
                   <div 
                     onClick={() => handleBlockedClick(item.title)}
                     className={`group relative flex flex-col items-center justify-center p-6 ${cardColor.bg} rounded-2xl shadow-lg hover:bg-muted/70 transition-all duration-300 hover:scale-105 hover:shadow-xl min-h-[120px] cursor-pointer opacity-75`}
