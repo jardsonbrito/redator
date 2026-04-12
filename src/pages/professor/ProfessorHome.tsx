@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Library,
   Map,
-  BookMarked,
   Layers,
 } from "lucide-react";
 
@@ -33,13 +32,6 @@ const menuItems = [
     path: "/professor/guia-tematico",
     icon: Map,
     tooltip: "Explore o guia temático com artigos e análises.",
-    showAlways: true,
-  },
-  {
-    title: "Repertório Orientado",
-    path: "/professor/repertorio",
-    icon: BookMarked,
-    tooltip: "Publique parágrafos com repertório e receba feedback dos colegas.",
     showAlways: true,
   },
   {
