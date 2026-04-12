@@ -94,19 +94,14 @@ const AjudaRapidaAdmin  = lazy(() => import("./pages/admin/AjudaRapidaAdmin").th
 const CustomizePlanSimple  = lazy(() => import("./pages/admin/CustomizePlanSimple").then(m => ({ default: m.CustomizePlanSimple })));
 const CustomizePlanByName  = lazy(() => import("./pages/admin/CustomizePlanByName").then(m => ({ default: m.CustomizePlanByName })));
 const CustomizeStudentPlan = lazy(() => import("./pages/admin/CustomizeStudentPlan").then(m => ({ default: m.CustomizeStudentPlan })));
-const ProfessorLogin       = lazy(() => import("./pages/ProfessorLogin").then(m => ({ default: m.ProfessorLogin })));
-const ProfessorDashboard   = lazy(() => import("./pages/ProfessorDashboard").then(m => ({ default: m.ProfessorDashboard })));
+const ProfessorLogin          = lazy(() => import("./pages/ProfessorLogin").then(m => ({ default: m.ProfessorLogin })));
+const ProfessorAutoAtendimento = lazy(() => import("./pages/ProfessorAutoAtendimento"));
+const ProfessorHome        = lazy(() => import("./pages/professor/ProfessorHome"));
 const TrocarSenhaProfessor = lazy(() => import("./pages/TrocarSenhaProfessor").then(m => ({ default: m.TrocarSenhaProfessor })));
-const ProfessorTemas       = lazy(() => import("./pages/professor/ProfessorTemas").then(m => ({ default: m.ProfessorTemas })));
-const ProfessorRedacoes    = lazy(() => import("./pages/professor/ProfessorRedacoes").then(m => ({ default: m.ProfessorRedacoes })));
-const ProfessorBiblioteca  = lazy(() => import("./pages/professor/ProfessorBiblioteca").then(m => ({ default: m.ProfessorBiblioteca })));
-const ProfessorVideoteca   = lazy(() => import("./pages/professor/ProfessorVideoteca").then(m => ({ default: m.ProfessorVideoteca })));
 const ProfessorTurmas      = lazy(() => import("./pages/professor/ProfessorTurmas").then(m => ({ default: m.ProfessorTurmas })));
 const ProfessorAlunos      = lazy(() => import("./pages/professor/ProfessorAlunos").then(m => ({ default: m.ProfessorAlunos })));
-const ProfessorAulas       = lazy(() => import("./pages/professor/ProfessorAulas").then(m => ({ default: m.ProfessorAulas })));
 const ProfessorExercicios  = lazy(() => import("./pages/professor/ProfessorExercicios").then(m => ({ default: m.ProfessorExercicios })));
 const ProfessorSimulados   = lazy(() => import("./pages/professor/ProfessorSimulados").then(m => ({ default: m.ProfessorSimulados })));
-const ProfessorSalasVirtuais = lazy(() => import("./pages/professor/ProfessorSalasVirtuais").then(m => ({ default: m.ProfessorSalasVirtuais })));
 const ProfessorAvisos      = lazy(() => import("./pages/professor/ProfessorAvisos").then(m => ({ default: m.ProfessorAvisos })));
 const ProfessorVisitantes  = lazy(() => import("./pages/professor/ProfessorVisitantes").then(m => ({ default: m.ProfessorVisitantes })));
 const LaboratorioAulaView  = lazy(() => import("./components/repertorio/laboratorio/LaboratorioAula").then(m => ({ default: m.LaboratorioAulaView })));
@@ -229,9 +224,10 @@ function App() {
 
                     {/* Rotas do Professor */}
                     <Route path="/professor/login" element={<ProfessorLogin />} />
+                    <Route path="/professor/entrar" element={<ProfessorAutoAtendimento />} />
                     <Route path="/professor/dashboard" element={
                       <ProfessorProtectedRoute>
-                        <ProfessorDashboard />
+                        <ProfessorHome />
                       </ProfessorProtectedRoute>
                     } />
                     <Route path="/professor/trocar-senha" element={<TrocarSenhaProfessor />} />
@@ -247,7 +243,7 @@ function App() {
                     } />
                     <Route path="/professor/aulas" element={
                       <ProfessorProtectedRoute>
-                        <ProfessorAulas />
+                        <Aulas />
                       </ProfessorProtectedRoute>
                     } />
                     <Route path="/professor/exercicios" element={
@@ -262,7 +258,7 @@ function App() {
                     } />
                     <Route path="/professor/salas-virtuais" element={
                       <ProfessorProtectedRoute>
-                        <ProfessorSalasVirtuais />
+                        <SalasVirtuais />
                       </ProfessorProtectedRoute>
                     } />
                     <Route path="/professor/avisos" element={
@@ -275,26 +271,18 @@ function App() {
                         <ProfessorVisitantes />
                       </ProfessorProtectedRoute>
                     } />
-                    <Route path="/professor/temas" element={
-                      <ProfessorProtectedRoute>
-                        <ProfessorTemas />
-                      </ProfessorProtectedRoute>
-                    } />
-                    <Route path="/professor/redacoes" element={
-                      <ProfessorProtectedRoute>
-                        <ProfessorRedacoes />
-                      </ProfessorProtectedRoute>
-                    } />
-                    <Route path="/professor/biblioteca" element={
-                      <ProfessorProtectedRoute>
-                        <ProfessorBiblioteca />
-                      </ProfessorProtectedRoute>
-                    } />
-                    <Route path="/professor/videoteca" element={
-                      <ProfessorProtectedRoute>
-                        <ProfessorVideoteca />
-                      </ProfessorProtectedRoute>
-                    } />
+                    {/* Módulos herdados — mesma tela do aluno, só a rota muda */}
+                    <Route path="/professor/temas" element={<ProfessorProtectedRoute><Temas /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/temas/:id" element={<ProfessorProtectedRoute><TemaDetalhes /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/redacoes" element={<ProfessorProtectedRoute><RedacoesExemplar /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/biblioteca" element={<ProfessorProtectedRoute><Biblioteca /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/videoteca" element={<ProfessorProtectedRoute><Videoteca /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/guia-tematico" element={<ProfessorProtectedRoute><GuiaTematico /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/guia-tematico/:id" element={<ProfessorProtectedRoute><GuiaTematicoView /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/repertorio" element={<ProfessorProtectedRoute><RepertorioOrientado /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/microaprendizagem" element={<ProfessorProtectedRoute><Microaprendizagem /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/microaprendizagem/:topicoId" element={<ProfessorProtectedRoute><MicroaprendizagemTopico /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/microaprendizagem/:topicoId/:itemId" element={<ProfessorProtectedRoute><MicroaprendizagemItem /></ProfessorProtectedRoute>} />
                   </Routes>
                   </Suspense>
                 </div>
