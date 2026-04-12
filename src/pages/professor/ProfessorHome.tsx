@@ -57,13 +57,6 @@ const menuItems = [
     showAlways: true,
   },
   {
-    title: "Aulas ao Vivo",
-    path: "/professor/salas-virtuais",
-    icon: Video,
-    tooltip: "Acesse e gerencie salas virtuais de aulas ao vivo.",
-    showAlways: true,
-  },
-  {
     title: "Biblioteca",
     path: "/professor/biblioteca",
     icon: Library,

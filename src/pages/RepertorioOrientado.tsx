@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Star, Filter, RefreshCw } from "lucide-react";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
@@ -36,6 +37,7 @@ const RepertorioOrientado = () => {
 
   const { studentData, isStudentLoggedIn } = useStudentAuth();
   const { isAdmin: isAdminAuth, user: adminUser, signOut } = useAuth();
+  const { professor } = useProfessorAuth();
 
   const handleAdminLogout = async () => {
     await supabase.auth.signOut();
@@ -94,8 +96,9 @@ const RepertorioOrientado = () => {
   // Determinar tipo de usuário e permissões
   const isVisitante = studentData.userType === "visitante";
   const isAluno = studentData.userType === "aluno";
-  const isProfessor = false; // TODO: implementar detecção de professor
-  const podePublicar = isAluno || isAdmin || isProfessor;
+  const isProfessor = !!professor;
+  // Professor tem acesso de leitura apenas (sem publicação)
+  const podePublicar = isAluno || isAdmin;
   const podeVotar = isAluno || isAdmin || isProfessor;
 
   // Obter ID do usuário atual
