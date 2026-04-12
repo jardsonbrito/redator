@@ -46,7 +46,6 @@ import {
   File as PhosphorFile,
   GraduationCap as PhosphorGraduationCap,
   NotebookPen as PhosphorNotebookPen,
-  MessageSquare as PhosphorMessageSquare,
   Users as PhosphorUsers,
   UserCheck as PhosphorUserCheck,
   Presentation as PhosphorPresentation,
@@ -635,6 +634,19 @@ const Admin = () => {
           : `${totalConfigs} configurações`
       };
 
+      // Redações Comentadas
+      const { data: redacoesComentadas } = await supabase
+        .from('redacoes_comentadas')
+        .select('id, ativo');
+
+      const rcPublicadas = redacoesComentadas?.filter(r => r.ativo).length || 0;
+      const rcRascunhos = redacoesComentadas?.filter(r => !r.ativo).length || 0;
+
+      data['redacoes-comentadas'] = {
+        info: `${rcPublicadas} ${rcPublicadas === 1 ? 'publicada' : 'publicadas'}`,
+        badge: rcRascunhos > 0 ? `${rcRascunhos} rascunho${rcRascunhos > 1 ? 's' : ''}` : undefined
+      };
+
       // Cards limpos - apenas título, sem informações adicionais
       const cardsLimpos = [
         "radar", "professores", "administradores", "exportacao", "top5", "configuracoes"
@@ -654,7 +666,7 @@ const Admin = () => {
       // Em caso de erro, retornar dados padrão
       const defaultData: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
       const allCards = [
-        "temas", "redacoes", "redacoes-enviadas", "diario", "exercicios", "simulados",
+        "temas", "redacoes", "redacoes-enviadas", "redacoes-comentadas", "diario", "exercicios", "simulados",
         "lousa", "salas-virtuais", "aulas", "videos", "biblioteca", "avisos", "inbox",
         "radar", "gamificacao", "ajuda-rapida", "alunos", "corretores",
         "professores", "administradores", "exportacao", "configuracoes", "top5"
@@ -700,6 +712,7 @@ const Admin = () => {
     // Linha 1: Conteúdo Pedagógico Principal
     { id: "temas", label: "Temas", icon: PhosphorBookOpen, iconColor: "#FF6B35" },
     { id: "redacoes", label: "Redações Exemplares", icon: Star, iconColor: "#FFD700" },
+    { id: "redacoes-comentadas", label: "Redações Comentadas", icon: ChatCircle, iconColor: "#7C3AED" },
     { id: "redacoes-enviadas", label: "Redações Enviadas", icon: PaperPlaneTilt, iconColor: "#4CAF50" },
 
     // Linha 2: Atividades e Avaliações
@@ -1165,6 +1178,10 @@ const Admin = () => {
 
       case "plano-estudo":
         navigate('/admin/plano-estudo');
+        return null;
+
+      case "redacoes-comentadas":
+        navigate('/admin/redacoes-comentadas');
         return null;
 
       case "exportacao":

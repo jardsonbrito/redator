@@ -154,6 +154,13 @@ const Index = () => {
       showAlways: true
     },
     {
+      title: "Redações Comentadas",
+      path: "/redacoes-comentadas",
+      icon: MessageSquare,
+      tooltip: "Analise redações com comentários detalhados e anotações por trecho.",
+      showAlways: true
+    },
+    {
       title: "Videoteca",
       path: "/videoteca",
       icon: Video,

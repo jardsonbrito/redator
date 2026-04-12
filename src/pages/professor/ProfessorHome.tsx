@@ -39,9 +39,8 @@ const menuItems = [
     title: "Redações Comentadas",
     path: "/professor/redacoes-comentadas",
     icon: MessageSquare,
-    tooltip: "Em breve: redações com comentários detalhados do professor.",
+    tooltip: "Redações com comentários detalhados e anotações por trecho.",
     showAlways: true,
-    disabled: true,
   },
   {
     title: "Aulas ao Vivo",

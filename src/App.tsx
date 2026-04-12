@@ -79,6 +79,9 @@ const ProcessoSeletivoInscricao = lazy(() => import("./pages/ProcessoSeletivoIns
 const RepertorioOrientado     = lazy(() => import("./pages/RepertorioOrientado"));
 const RepertorioLaboratorio   = lazy(() => import("./pages/admin/RepertorioLaboratorio"));
 const AdminNotes              = lazy(() => import("./pages/admin/AdminNotes"));
+const RedacoesComentadasAdmin = lazy(() => import("./pages/admin/RedacoesComentadasAdmin"));
+const RedacoesComentadas      = lazy(() => import("./pages/RedacoesComentadas"));
+const RedacaoComentadaDetalhes = lazy(() => import("./pages/RedacaoComentadaDetalhes"));
 const GuiaTematico            = lazy(() => import("./pages/GuiaTematico"));
 const GuiaTematicoAdmin       = lazy(() => import("./pages/admin/GuiaTematicoAdmin"));
 const Jarvis                  = lazy(() => import("./pages/Jarvis"));
@@ -158,6 +161,8 @@ function App() {
                     <Route path="/videoteca" element={<ProtectedStudentRoute><Videoteca /></ProtectedStudentRoute>} />
                     <Route path="/biblioteca" element={<ProtectedStudentRoute><Biblioteca /></ProtectedStudentRoute>} />
                     <Route path="/redacoes" element={<ProtectedStudentRoute><RedacoesExemplar /></ProtectedStudentRoute>} />
+                    <Route path="/redacoes-comentadas" element={<ProtectedStudentRoute><RedacoesComentadas /></ProtectedStudentRoute>} />
+                    <Route path="/redacoes-comentadas/:id" element={<ProtectedStudentRoute><RedacaoComentadaDetalhes /></ProtectedStudentRoute>} />
                     <Route path="/redacoes-exemplar/:id" element={
                       <ProtectedStudentOrAdminRoute>
                         <ErrorBoundary>
@@ -202,6 +207,7 @@ function App() {
                     <Route path="/admin/laboratorio" element={<RepertorioLaboratorio />} />
                     <Route path="/admin/guia-tematico" element={<GuiaTematicoAdmin />} />
                     <Route path="/admin/plano-estudo" element={<PlanoEstudoAdmin />} />
+                    <Route path="/admin/redacoes-comentadas" element={<RedacoesComentadasAdmin />} />
 
                     {/* Rotas do Corretor */}
                     <Route path="/corretor/login" element={<CorretorLogin />} />
@@ -276,6 +282,8 @@ function App() {
                     <Route path="/professor/temas" element={<ProfessorProtectedRoute><Temas /></ProfessorProtectedRoute>} />
                     <Route path="/professor/temas/:id" element={<ProfessorProtectedRoute><TemaDetalhes /></ProfessorProtectedRoute>} />
                     <Route path="/professor/redacoes" element={<ProfessorProtectedRoute><RedacoesExemplar /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/redacoes-comentadas" element={<ProfessorProtectedRoute><RedacoesComentadas /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/redacoes-comentadas/:id" element={<ProfessorProtectedRoute><RedacaoComentadaDetalhes /></ProfessorProtectedRoute>} />
                     <Route path="/professor/redacoes-exemplar/:id" element={<ProfessorProtectedRoute><RedacaoExemplarDetalhes /></ProfessorProtectedRoute>} />
                     <Route path="/professor/biblioteca" element={<ProfessorProtectedRoute><Biblioteca /></ProfessorProtectedRoute>} />
                     <Route path="/professor/videoteca" element={<ProfessorProtectedRoute><Videoteca /></ProfessorProtectedRoute>} />

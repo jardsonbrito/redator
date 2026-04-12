@@ -290,10 +290,11 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
       // 4. Atualizar avatar_url no banco usando update direto
       console.log("🔍 Tentando atualizar avatar_url para email:", studentData.email);
       
+      const emailParaAtualizar = (studentData.email || user?.email || '').toLowerCase();
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: newAvatarUrl })
-        .eq('email', studentData.email.toLowerCase())
+        .eq('email', emailParaAtualizar)
         .eq('user_type', 'aluno');
 
       if (updateError) {
