@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import { useMicroTopicos } from '@/hooks/useMicroTopicos';
 import { MicroTopicCard } from '@/components/shared/MicroTopicCard';
+import { useProfessorAuth } from '@/hooks/useProfessorAuth';
 
 const Microaprendizagem = () => {
   const navigate = useNavigate();
   const { data: topicos = [], isLoading } = useMicroTopicos();
+  const { professor } = useProfessorAuth();
 
   return (
     <TooltipProvider>
@@ -21,7 +23,7 @@ const Microaprendizagem = () => {
               variant="ghost"
               size="sm"
               className="mb-4 text-gray-500 hover:text-gray-700 -ml-2"
-              onClick={() => navigate('/app')}
+              onClick={() => navigate(professor ? '/professor/dashboard' : '/app')}
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Voltar

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGuia } from '@/hooks/useGuiaTematico';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
+import { useProfessorAuth } from '@/hooks/useProfessorAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { GuiaTelaCapa } from './GuiaTelaCapa';
 import { GuiaTela2FraseTematica } from './GuiaTela2FraseTematica';
@@ -39,6 +40,8 @@ export function GuiaTematicoView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { studentData } = useStudentAuth();
+  const { professor } = useProfessorAuth();
+  const guiaBaseUrl = professor ? '/professor/guia-tematico' : '/guia-tematico';
 
   const savedStep = id ? sessionStorage.getItem(stepKey(id)) : null;
   const [step, setStep] = useState<Step>(
@@ -89,7 +92,7 @@ export function GuiaTematicoView() {
 
     if (id) sessionStorage.removeItem(stepKey(id));
     toast.success('Percurso concluído!', { description: 'Bom trabalho.' });
-    navigate('/guia-tematico');
+    navigate(guiaBaseUrl);
   };
 
   if (isLoading) {
@@ -106,7 +109,7 @@ export function GuiaTematicoView() {
     return (
       <div className="max-w-3xl mx-auto py-16 px-4 text-center space-y-4">
         <p className="text-gray-500">Guia não encontrado.</p>
-        <Button variant="ghost" onClick={() => navigate('/guia-tematico')}>
+        <Button variant="ghost" onClick={() => navigate(guiaBaseUrl)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar ao Guia Temático
         </Button>
@@ -124,7 +127,7 @@ export function GuiaTematicoView() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/guia-tematico')}
+            onClick={() => navigate(guiaBaseUrl)}
             className="gap-2 text-gray-500 hover:text-gray-800 shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />

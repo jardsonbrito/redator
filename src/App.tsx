@@ -275,6 +275,7 @@ function App() {
                     <Route path="/professor/temas" element={<ProfessorProtectedRoute><Temas /></ProfessorProtectedRoute>} />
                     <Route path="/professor/temas/:id" element={<ProfessorProtectedRoute><TemaDetalhes /></ProfessorProtectedRoute>} />
                     <Route path="/professor/redacoes" element={<ProfessorProtectedRoute><RedacoesExemplar /></ProfessorProtectedRoute>} />
+                    <Route path="/professor/redacoes-exemplar/:id" element={<ProfessorProtectedRoute><RedacaoExemplarDetalhes /></ProfessorProtectedRoute>} />
                     <Route path="/professor/biblioteca" element={<ProfessorProtectedRoute><Biblioteca /></ProfessorProtectedRoute>} />
                     <Route path="/professor/videoteca" element={<ProfessorProtectedRoute><Videoteca /></ProfessorProtectedRoute>} />
                     <Route path="/professor/guia-tematico" element={<ProfessorProtectedRoute><GuiaTematico /></ProfessorProtectedRoute>} />

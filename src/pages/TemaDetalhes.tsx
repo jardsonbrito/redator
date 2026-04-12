@@ -15,6 +15,7 @@ import { getTemaCoverUrl, getTemaMotivatorIVUrl } from '@/utils/temaImageUtils';
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { FormattedText } from '@/components/shared/FormattedText';
 import { useNavigationContext } from "@/hooks/useNavigationContext";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { MotivatorWithImage } from '@/components/shared/MotivatorWithImage';
 
 // Type extension para incluir os campos novos e legado
@@ -71,6 +72,7 @@ const TemaDetalhes = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { studentData } = useStudentAuth();
+  const { professor } = useProfessorAuth();
   const { checkIfTodayAllowsTopicSubmissions, getDaysAllowedText, settings } = useAppSettings();
 
   // Verificar se veio do processo seletivo
@@ -125,8 +127,8 @@ const TemaDetalhes = () => {
   useEffect(() => {
     if (tema?.frase_tematica) {
       setBreadcrumbs([
-        { label: 'Início', href: '/app' },
-        { label: 'Temas', href: '/temas' },
+        { label: 'Início', href: professor ? '/professor/dashboard' : '/app' },
+        { label: 'Temas', href: professor ? '/professor/temas' : '/temas' },
         { label: tema.frase_tematica }
       ]);
       setPageTitle(tema.frase_tematica);

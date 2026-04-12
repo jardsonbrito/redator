@@ -39,7 +39,7 @@ interface RedacaoExemplarCardActions {
 
 interface RedacaoExemplarCardPadraoProps {
   redacao: RedacaoExemplarCardData;
-  perfil: 'aluno' | 'admin' | 'corretor';
+  perfil: 'aluno' | 'admin' | 'corretor' | 'professor';
   actions?: RedacaoExemplarCardActions;
 }
 
@@ -128,6 +128,8 @@ export const RedacaoExemplarCardPadrao = ({
   const handleViewRedacao = () => {
     if (perfil === 'corretor') {
       navigate(`/corretor/redacoes-exemplar/${redacao.id}`);
+    } else if (perfil === 'professor') {
+      navigate(`/professor/redacoes-exemplar/${redacao.id}`);
     } else {
       // Admin e aluno usam a mesma rota
       navigate(`/redacoes-exemplar/${redacao.id}`);

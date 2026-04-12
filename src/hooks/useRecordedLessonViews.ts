@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
+import { useProfessorAuth } from '@/hooks/useProfessorAuth';
 import { useEventTracking } from '@/hooks/useEventTracking';
 
 export interface RecordedLessonView {
@@ -16,6 +17,7 @@ export function useRecordedLessonViews() {
   const [isConfirming, setIsConfirming] = useState(false);
   const { toast } = useToast();
   const { studentData } = useStudentAuth();
+  const { professor } = useProfessorAuth();
   const { trackVideoWatched } = useEventTracking();
   const queryClient = useQueryClient();
 
@@ -50,6 +52,8 @@ export function useRecordedLessonViews() {
   // Marcar aula como assistida
   const markAsWatched = async (lessonId: string, lessonTitle?: string) => {
     if (!studentData.email || !studentData.nomeUsuario) {
+      // Professor não tem studentData — silenciosamente não registra progresso
+      if (professor) return false;
       toast({
         title: "Erro",
         description: "Você precisa estar logado para registrar a visualização.",
