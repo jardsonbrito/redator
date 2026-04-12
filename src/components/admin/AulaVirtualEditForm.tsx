@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
 
 const TURMAS = TURMAS_VALIDAS;
+type TurmaProfessor = { id: string; nome: string };
 
 type AulaDisponivel = { id: string; titulo: string; data_aula: string };
 type AulaGravadaDisponivel = { id: string; titulo: string; criado_em: string };
@@ -51,6 +52,7 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [aulasDisponiveis, setAulasDisponiveis] = useState<AulaDisponivel[]>([]);
   const [aulasGravadas, setAulasGravadas] = useState<AulaGravadaDisponivel[]>([]);
+  const [turmasProfessores, setTurmasProfessores] = useState<TurmaProfessor[]>([]);
 
   const [formData, setFormData] = useState({
     titulo: "",
@@ -110,6 +112,13 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
         .eq('ativo', true)
         .order('criado_em', { ascending: false });
       setAulasGravadas((gravadas || []) as AulaGravadaDisponivel[]);
+
+      const { data: turmasProf } = await supabase
+        .from('turmas_professores')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome', { ascending: true });
+      setTurmasProfessores((turmasProf || []) as TurmaProfessor[]);
     };
     carregarAulas();
   }, [aula.id]);
@@ -549,23 +558,32 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                     </div>
                   </div>
 
-                  {/* Visível para Professores */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-0.5">
-                      <div className="text-sm font-medium">Visível para Professores</div>
-                      <div className="text-xs text-gray-500">Professores podem acessar e registrar presença nesta aula</div>
+                  {/* Turmas de Professores */}
+                  {turmasProfessores.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium">Turmas de Professores</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {turmasProfessores.map((turma) => (
+                          <div key={turma.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`turma-prof-edit-${turma.id}`}
+                              checked={formData.turmas_autorizadas.includes(turma.nome)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, turma.nome]});
+                                } else {
+                                  setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== turma.nome)});
+                                }
+                              }}
+                            />
+                            <label htmlFor={`turma-prof-edit-${turma.id}`} className="text-sm font-medium">
+                              {turma.nome}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <Switch
-                      checked={formData.turmas_autorizadas.includes('Professor')}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, 'Professor']});
-                        } else {
-                          setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== 'Professor')});
-                        }
-                      }}
-                    />
-                  </div>
+                  )}
 
                   {/* Permitir Visitantes */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">

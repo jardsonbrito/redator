@@ -7,6 +7,7 @@ interface Professor {
   email: string;
   role: string;
   primeiro_login: boolean;
+  turma_nome?: string | null;
 }
 
 interface ProfessorAuthContextType {
@@ -71,11 +72,24 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
       }
 
       const professorData = result.professor;
+
+      // Buscar turma do professor para enriquecer a sessão
+      try {
+        const { data: profRow } = await supabase
+          .from('professores')
+          .select('turmas_professores(nome)')
+          .eq('id', professorData.id)
+          .maybeSingle();
+        professorData.turma_nome = (profRow?.turmas_professores as any)?.nome ?? null;
+      } catch {
+        professorData.turma_nome = null;
+      }
+
       setProfessor(professorData);
-      
+
       // Salvar sessão no localStorage
       localStorage.setItem('professor_session', JSON.stringify(professorData));
-      
+
       return {};
     } catch (error: any) {
       console.error('Erro no login do professor:', error);

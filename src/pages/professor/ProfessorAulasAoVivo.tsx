@@ -73,10 +73,13 @@ const ProfessorAulasAoVivo = () => {
 
       if (error) throw error;
 
-      // Filtrar aulas autorizadas para professor (valor "Professor" em turmas_autorizadas)
+      // Filtrar aulas autorizadas para professor:
+      // - pelo nome da turma do professor (ex: "ENEM 2026")
+      // - OU pelo valor genérico "Professor" (retrocompatibilidade)
+      const turmaProfessor = professor?.turma_nome?.trim().toUpperCase() ?? null;
       const aulasAutorizadas = (aulasData || []).filter(aula => {
         const turmas = (aula.turmas_autorizadas || []).map((t: string) => t.trim().toUpperCase());
-        return turmas.includes('PROFESSOR');
+        return turmas.includes('PROFESSOR') || (turmaProfessor && turmas.includes(turmaProfessor));
       });
 
       // Ordenar: ao vivo > agendada > encerrada

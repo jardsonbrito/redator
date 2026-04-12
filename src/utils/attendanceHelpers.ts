@@ -21,7 +21,7 @@ function resolveUserIdentity(): {
         return {
           email: dados.email,
           nome: dados.nome_completo || 'Professor',
-          turma: 'Professor',
+          turma: dados.turma_nome || 'Professor',
         };
       }
     } catch (e) {
