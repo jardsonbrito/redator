@@ -142,6 +142,45 @@ export const TurmasProfessoresManager = () => {
 
   const handleDeletarTurma = async () => {
     if (!turmaParaDeletar) return;
+    const nome = turmaParaDeletar.nome;
+
+    // 1. Remover o nome da turma de turmas_autorizadas em aulas_virtuais e aulas
+    await Promise.all([
+      supabase.rpc('array_remove_value_aulas_virtuais' as any, { p_valor: nome }).catch(() => null),
+      supabase.rpc('array_remove_value_aulas' as any, { p_valor: nome }).catch(() => null),
+    ]);
+
+    // Fallback: UPDATE direto via SQL (compatível com Supabase JS)
+    // Não há RPC específica — fazemos via filtro
+    await supabase
+      .from('aulas_virtuais')
+      .select('id, turmas_autorizadas')
+      .contains('turmas_autorizadas', [nome])
+      .then(async ({ data }) => {
+        if (!data) return;
+        await Promise.all(data.map(aula =>
+          supabase
+            .from('aulas_virtuais')
+            .update({ turmas_autorizadas: aula.turmas_autorizadas.filter((t: string) => t !== nome) })
+            .eq('id', aula.id)
+        ));
+      });
+
+    await supabase
+      .from('aulas')
+      .select('id, turmas_autorizadas')
+      .contains('turmas_autorizadas', [nome])
+      .then(async ({ data }) => {
+        if (!data) return;
+        await Promise.all(data.map(aula =>
+          supabase
+            .from('aulas')
+            .update({ turmas_autorizadas: aula.turmas_autorizadas.filter((t: string) => t !== nome) })
+            .eq('id', aula.id)
+        ));
+      });
+
+    // 2. Deletar a turma
     const { error } = await supabase
       .from('turmas_professores')
       .delete()
@@ -150,7 +189,7 @@ export const TurmasProfessoresManager = () => {
     if (error) {
       toast({ title: 'Erro', description: 'Não foi possível deletar a turma.', variant: 'destructive' });
     } else {
-      toast({ title: 'Turma deletada', description: `"${turmaParaDeletar.nome}" foi removida.` });
+      toast({ title: 'Turma deletada', description: `"${nome}" foi removida de todas as aulas.` });
       fetchTurmas();
     }
     setTurmaParaDeletar(null);
