@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, Settings } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useToast } from "@/hooks/use-toast";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -19,12 +20,17 @@ interface StudentHeaderProps {
 export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
   const { studentData, logoutStudent } = useStudentAuth();
   const { user, isAdmin } = useAuth();
+  const { professor, logout: logoutProfessor } = useProfessorAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { data: subscription } = useSubscription(studentData.emailUsuario || '');
 
   const handleLogout = () => {
+    if (professor) {
+      logoutProfessor();
+      return;
+    }
     logoutStudent();
     toast({
       title: "Sessão encerrada",
@@ -33,6 +39,15 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
     navigate('/login', { replace: true });
   };
 
+  // Nome e turma exibidos no header — professor tem prioridade sobre aluno
+  const nomeExibido = professor
+    ? professor.nome_completo
+    : (studentData.nomeUsuario || 'Usuário');
+
+  const turmaExibida = professor
+    ? null
+    : (studentData.userType === "aluno" ? studentData.turma : null);
+
   return (
     <>
       <header className="bg-primary shadow-lg sticky top-0 z-50">
@@ -40,7 +55,7 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
           <div className="flex items-center justify-between">
             {/* Título à esquerda */}
             <Link
-              to="/app"
+              to={professor ? "/professor/dashboard" : "/app"}
               className="flex items-center text-primary-foreground hover:text-secondary transition-colors duration-200"
             >
               <span className="font-bold text-xl">App do Redator</span>
@@ -68,18 +83,18 @@ export const StudentHeader = ({ pageTitle }: StudentHeaderProps) => {
                 <StudentAvatar size="sm" showUpload={true} />
                 <div className="hidden sm:flex flex-col">
                   <span className="text-primary-foreground font-medium text-sm">
-                    {studentData.nomeUsuario || 'Usuário'}
+                    {nomeExibido}
                   </span>
-                  {studentData.userType === "aluno" && studentData.turma && (
+                  {turmaExibida && (
                     <span className="text-primary-foreground/70 text-xs">
-                      {studentData.turma}
+                      {turmaExibida}
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Link para Professor apenas se for admin autenticado */}
-              {user && isAdmin && (
+              {/* Link para Admin apenas se for admin autenticado e não estiver como professor */}
+              {user && isAdmin && !professor && (
                 <Link
                   to="/admin"
                   className="flex items-center gap-2 bg-secondary/20 text-primary-foreground px-3 py-2 rounded-xl hover:bg-secondary/30 transition-colors duration-200 text-sm font-medium"

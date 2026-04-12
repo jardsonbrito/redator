@@ -40,7 +40,9 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   // Mapear rotas para breadcrumbs automáticos
   const getAutomaticBreadcrumbs = useCallback((pathname: string): BreadcrumbItem[] => {
     const pathParts = pathname.split('/').filter(Boolean);
-    const crumbs: BreadcrumbItem[] = [{ label: 'Início', href: '/app' }];
+    const isProfessorPath = pathParts[0] === 'professor';
+    const homeHref = isProfessorPath ? '/professor/dashboard' : '/app';
+    const crumbs: BreadcrumbItem[] = [{ label: 'Início', href: homeHref }];
 
     // Mapeamento de rotas para labels
     const routeLabels: Record<string, string> = {
@@ -60,7 +62,13 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       'ajuda-rapida': 'Ajuda Rápida',
       'salas-virtuais': 'Salas Virtuais',
       'envie-redacao': 'Enviar Redação',
-      'manuscrita': 'Manuscrita'
+      'manuscrita': 'Manuscrita',
+      'guia-tematico': 'Guia Temático',
+      'repertorio': 'Repertório Orientado',
+      'redacoes': 'Redações Exemplares',
+      'salas-virtuais': 'Aulas ao Vivo',
+      'microaprendizagem': 'Microaprendizagem',
+      'dashboard': 'Início'
     };
 
     let currentPath = '';
@@ -69,8 +77,8 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       const part = pathParts[i];
       currentPath += `/${part}`;
       
-      // Pular se for 'app' (já incluído como Início)
-      if (part === 'app') continue;
+      // Pular segmentos de contexto já incluídos como Início
+      if (part === 'app' || part === 'professor') continue;
       
       // Se for ID (UUID ou número), usar contexto da parte anterior
       if ((/^[0-9]+$/.test(part) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(part)) && i > 0) {
