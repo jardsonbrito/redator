@@ -40,17 +40,36 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
 
   // Verificar se há sessão salva
   React.useEffect(() => {
-    const savedProfessorSession = localStorage.getItem('professor_session');
-    if (savedProfessorSession) {
-      try {
-        const professorData = JSON.parse(savedProfessorSession);
-        setProfessor(professorData);
-      } catch (error) {
-        console.error('Erro ao recuperar sessão do professor:', error);
-        localStorage.removeItem('professor_session');
+    const restoreSession = async () => {
+      const savedProfessorSession = localStorage.getItem('professor_session');
+      if (savedProfessorSession) {
+        try {
+          const professorData = JSON.parse(savedProfessorSession);
+
+          // Se turma_nome ainda não está na sessão, buscar e salvar
+          if (!professorData.turma_nome && professorData.id) {
+            try {
+              const { data: profRow } = await supabase
+                .from('professores')
+                .select('turmas_professores(nome)')
+                .eq('id', professorData.id)
+                .maybeSingle();
+              professorData.turma_nome = (profRow?.turmas_professores as any)?.nome ?? null;
+              localStorage.setItem('professor_session', JSON.stringify(professorData));
+            } catch {
+              professorData.turma_nome = null;
+            }
+          }
+
+          setProfessor(professorData);
+        } catch (error) {
+          console.error('Erro ao recuperar sessão do professor:', error);
+          localStorage.removeItem('professor_session');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    restoreSession();
   }, []);
 
   const loginAsProfessor = async (email: string): Promise<{ error?: string }> => {
