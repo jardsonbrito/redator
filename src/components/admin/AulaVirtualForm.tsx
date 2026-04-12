@@ -64,13 +64,15 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
 
   // Função para verificar etapas vigentes para as turmas selecionadas
   const verificarEtapasVigentes = async (): Promise<{ valido: boolean; turmasSemEtapa: string[] }> => {
-    if (!formData.eh_aula_ao_vivo || formData.turmas_autorizadas.length === 0) {
+    // "Professor" não é uma turma de aluno — ignorar na verificação de etapas
+    const turmasAluno = formData.turmas_autorizadas.filter(t => t !== 'Professor');
+    if (!formData.eh_aula_ao_vivo || turmasAluno.length === 0) {
       return { valido: true, turmasSemEtapa: [] };
     }
 
     const turmasSemEtapa: string[] = [];
 
-    for (const turma of formData.turmas_autorizadas) {
+    for (const turma of turmasAluno) {
       const turmaNormalizada = normalizeTurmaToLetter(turma) || turma;
 
       // Buscar etapa vigente para esta turma na data da aula
@@ -143,7 +145,9 @@ export const AulaVirtualForm = ({ onSuccess }: AulaVirtualFormProps) => {
 
     // Validação de etapa vigente (apenas para aulas ao vivo que NÃO são repetições)
     // Repetições não criam entrada no diário, então a etapa não é necessária
-    if (formData.eh_aula_ao_vivo && !formData.eh_repeticao && formData.turmas_autorizadas.length > 0) {
+    // "Professor" não é turma de aluno — ignorar na verificação
+    const turmasAlunoParaValidar = formData.turmas_autorizadas.filter(t => t !== 'Professor');
+    if (formData.eh_aula_ao_vivo && !formData.eh_repeticao && turmasAlunoParaValidar.length > 0) {
       setLoading(true);
       const { valido, turmasSemEtapa } = await verificarEtapasVigentes();
 
