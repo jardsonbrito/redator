@@ -111,11 +111,8 @@ export const EmailLoginStep = ({ onEmailVerified, loading }: EmailLoginStepProps
     <div className="space-y-4">
       <div className="text-center mb-6">
         <h3 className="text-lg font-semibold text-redator-primary mb-2">
-          Acesso por E-mail
+          Acesso por e-mail
         </h3>
-        <p className="text-sm text-redator-accent">
-          Digite seu e-mail para continuar
-        </p>
       </div>
 
       <div>

@@ -5,17 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Users, 
-  Edit, 
-  Shield, 
-  ShieldCheck, 
-  Power, 
-  PowerOff, 
+import {
+  Users,
+  Edit,
+  Power,
+  PowerOff,
   ArrowUpDown,
-  AlertTriangle,
-  Clock,
-  Eye
+  AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
@@ -24,15 +20,12 @@ interface Professor {
   id: string;
   nome_completo: string;
   email: string;
-  role: string;
   ativo: boolean;
   primeiro_login: boolean;
   ultimo_login: string | null;
   ultimo_ip: unknown;
-  ultimo_browser: string | null;
   criado_em: string;
-  atualizado_em: string;
-  senha_hash: string;
+  turmas_professores?: { nome: string } | null;
 }
 
 interface ProfessorListProps {
@@ -50,7 +43,7 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
     try {
       const { data, error } = await supabase
         .from('professores')
-        .select('*')
+        .select('*, turmas_professores(nome)')
         .order('criado_em', { ascending: sortOrder === 'asc' });
 
       if (error) throw error;
@@ -96,31 +89,6 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
     }
   };
 
-  const handleChangeRole = async (professorId: string, novoRole: string) => {
-    try {
-      const { error } = await supabase
-        .from('professores')
-        .update({ role: novoRole })
-        .eq('id', professorId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Tipo de acesso alterado",
-        description: `Tipo de acesso alterado para ${novoRole === 'admin' ? 'Administrador' : 'Professor'}.`
-      });
-
-      fetchProfessores();
-    } catch (error: any) {
-      console.error('Erro ao alterar role:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível alterar o tipo de acesso.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleSortByDate = () => {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
@@ -159,6 +127,7 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
+                  <TableHead>Turma</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="cursor-pointer" onClick={handleSortByDate}>
                     <div className="flex items-center gap-1">
@@ -166,7 +135,6 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                       <ArrowUpDown className="w-4 h-4" />
                     </div>
                   </TableHead>
-                  <TableHead>Tipo de Acesso</TableHead>
                   <TableHead>Último Login</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -188,6 +156,11 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">{professor.email}</TableCell>
+                    <TableCell className="text-sm">
+                      {professor.turmas_professores?.nome ?? (
+                        <span className="text-muted-foreground">Sem turma</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={professor.ativo ? "default" : "secondary"}>
                         {professor.ativo ? "Ativo" : "Inativo"}
@@ -195,18 +168,6 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                     </TableCell>
                     <TableCell className="text-sm">
                       {formatDate(professor.criado_em)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {professor.role === 'admin' ? (
-                          <ShieldCheck className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <Shield className="w-4 h-4 text-blue-500" />
-                        )}
-                        <span className="capitalize">
-                          {professor.role === 'admin' ? 'Administrador' : 'Professor'}
-                        </span>
-                      </div>
                     </TableCell>
                     <TableCell className="text-sm">
                       {professor.ultimo_login ? (
@@ -246,18 +207,6 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                           )}
                         </Button>
                         
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleChangeRole(professor.id, professor.role === 'admin' ? 'professor' : 'admin')}
-                          title={`Alterar para ${professor.role === 'admin' ? 'Professor' : 'Administrador'}`}
-                        >
-                          {professor.role === 'admin' ? (
-                            <Shield className="w-4 h-4 text-blue-500" />
-                          ) : (
-                            <ShieldCheck className="w-4 h-4 text-green-500" />
-                          )}
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

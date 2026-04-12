@@ -115,6 +115,7 @@ import { CorretorList } from "@/components/admin/CorretorList";
 // Import professor components
 import { ProfessorForm } from "@/components/admin/ProfessorForm";
 import { ProfessorList } from "@/components/admin/ProfessorList";
+import { TurmasProfessoresManager } from "@/components/admin/TurmasProfessoresManager";
 
 // Import lousa components
 import LousaForm from "@/components/admin/LousaForm";
@@ -686,6 +687,10 @@ const Admin = () => {
 
   // Definir menuItems seguindo ordem pedagógica (desktop: 3 colunas, celular: 1 coluna)
   const menuItems = [
+    // Eixos principais do sistema
+    { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
+    { id: "professores", label: "Professores", icon: GearSix, iconColor: "#9C27B0" },
+
     // PRIMEIRO: Jarvis - Assistente Pedagógico
     { id: "jarvis", label: "Jarvis", icon: Bot, iconColor: "#7C3AED", chips: ["Créditos", "Modos", "Parâmetros", "Tutoria", "Histórico"] },
 
@@ -727,9 +732,7 @@ const Admin = () => {
     { id: "plano-estudo", label: "Plano de Estudo", icon: ListChecks, iconColor: "#3F0776" },
 
     // Linha 7: Gestão de Usuários
-    { id: "alunos", label: "Alunos", icon: UsersThree, iconColor: "#4CAF50" },
     { id: "corretores", label: "Corretores", icon: MagnifyingGlass, iconColor: "#FF5722" },
-    { id: "professores", label: "Professores", icon: GearSix, iconColor: "#9C27B0" },
 
     // Linha 8: Administração Avançada
     { id: "administradores", label: "Administradores", icon: ShieldCheck, iconColor: "#9E9E9E" },
@@ -1060,7 +1063,7 @@ const Admin = () => {
       case "alunos":
         return <AlunosHub />;
 
-      case "professores":
+      case "professores": {
         const handleProfessorSuccess = () => {
           setRefreshProfessores(!refreshProfessores);
           setProfessorEditando(null);
@@ -1076,17 +1079,30 @@ const Admin = () => {
 
         return (
           <div className="space-y-6">
-            <ProfessorForm 
-              onSuccess={handleProfessorSuccess}
-              professorEditando={professorEditando}
-              onCancelEdit={handleCancelProfessorEdit}
-            />
-            <ProfessorList 
-              refresh={refreshProfessores}
-              onEdit={handleEditProfessor}
-            />
+            <h1 className="text-3xl font-bold">Gerenciar Professores</h1>
+            <Tabs defaultValue="professores" className="w-full">
+              <TabsList>
+                <TabsTrigger value="professores">Professores</TabsTrigger>
+                <TabsTrigger value="turmas">Turmas</TabsTrigger>
+              </TabsList>
+              <TabsContent value="professores" className="space-y-6 mt-6">
+                <ProfessorForm
+                  onSuccess={handleProfessorSuccess}
+                  professorEditando={professorEditando}
+                  onCancelEdit={handleCancelProfessorEdit}
+                />
+                <ProfessorList
+                  refresh={refreshProfessores}
+                  onEdit={handleEditProfessor}
+                />
+              </TabsContent>
+              <TabsContent value="turmas" className="mt-6">
+                <TurmasProfessoresManager />
+              </TabsContent>
+            </Tabs>
           </div>
         );
+      }
 
       case "jarvis":
         const subtabJarvis = searchParams.get('subtab');

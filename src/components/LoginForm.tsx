@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -41,16 +42,21 @@ export const LoginForm = ({ selectedProfile, onLogin, loading }: LoginFormProps)
           <CorretorLoginForm onLogin={handleLogin} loading={loading} />
         )}
 
-        {/* Checkbox Lembre-se de mim */}
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="remember-me"
-            checked={rememberMe}
-            onCheckedChange={(checked) => setRememberMe(checked === true)}
-          />
-          <Label htmlFor="remember-me" className="text-sm text-redator-accent">
-            Lembre-se de mim
-          </Label>
+        {/* Checkbox Lembre-se de mim + Link Área administrativa */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="remember-me"
+              checked={rememberMe}
+              onCheckedChange={(checked) => setRememberMe(checked === true)}
+            />
+            <Label htmlFor="remember-me" className="text-sm text-redator-accent">
+              Lembre-se de mim
+            </Label>
+          </div>
+          <Link to="/login" className="text-xs text-redator-primary hover:underline">
+            Área administrativa
+          </Link>
         </div>
       </CardContent>
     </Card>

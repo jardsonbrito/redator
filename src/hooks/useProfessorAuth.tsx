@@ -12,7 +12,7 @@ interface Professor {
 interface ProfessorAuthContextType {
   professor: Professor | null;
   loading: boolean;
-  loginAsProfessor: (email: string, senha: string) => Promise<{ error?: string }>;
+  loginAsProfessor: (email: string) => Promise<{ error?: string }>;
   logout: () => void;
   isProfessor: boolean;
   isAdmin: boolean;
@@ -52,14 +52,12 @@ export const ProfessorAuthProvider: React.FC<ProfessorAuthProviderProps> = ({ ch
     setLoading(false);
   }, []);
 
-  const loginAsProfessor = async (email: string, senha: string): Promise<{ error?: string }> => {
+  const loginAsProfessor = async (email: string): Promise<{ error?: string }> => {
     setLoading(true);
-    
+
     try {
-      // Chamar função de validação de login
       const { data, error } = await supabase.rpc('validate_professor_login', {
-        p_email: email,
-        p_senha: senha
+        p_email: email
       });
 
       if (error) {
