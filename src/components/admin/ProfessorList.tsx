@@ -11,8 +11,16 @@ import {
   Power,
   PowerOff,
   ArrowUpDown,
-  AlertTriangle
+  AlertTriangle,
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 
@@ -37,6 +45,7 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchProfessores = async () => {
@@ -184,30 +193,42 @@ export const ProfessorList = ({ refresh, onEdit }: ProfessorListProps) => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onEdit(professor)}
-                          title="Editar dados"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleAtivo(professor.id, !professor.ativo)}
-                          title={professor.ativo ? "Inativar conta" : "Ativar conta"}
-                        >
-                          {professor.ativo ? (
-                            <PowerOff className="w-4 h-4 text-red-500" />
-                          ) : (
-                            <Power className="w-4 h-4 text-green-500" />
-                          )}
-                        </Button>
-                        
-                      </div>
+                      <DropdownMenu
+                        open={openDropdownId === professor.id}
+                        onOpenChange={(open) => setOpenDropdownId(open ? professor.id : null)}
+                      >
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setOpenDropdownId(null);
+                            onEdit(professor);
+                          }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {
+                            setOpenDropdownId(null);
+                            handleToggleAtivo(professor.id, !professor.ativo);
+                          }}>
+                            {professor.ativo ? (
+                              <>
+                                <PowerOff className="mr-2 h-4 w-4 text-red-500" />
+                                Inativar conta
+                              </>
+                            ) : (
+                              <>
+                                <Power className="mr-2 h-4 w-4 text-green-500" />
+                                Ativar conta
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

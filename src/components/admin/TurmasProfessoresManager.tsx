@@ -8,7 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Eye, EyeOff, Link as LinkIcon, Plus, Power, PowerOff, Ticket } from "lucide-react";
+import { Copy, Eye, EyeOff, Link as LinkIcon, MoreHorizontal, Plus, Power, PowerOff, Ticket } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 
@@ -38,6 +45,7 @@ export const TurmasProfessoresManager = () => {
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState("");
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [codigosVisiveis, setCodigosVisiveis] = useState<Set<string>>(new Set());
 
   // Estado do dialog de convite
@@ -247,27 +255,42 @@ export const TurmasProfessoresManager = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => abrirDialogConvite(turma)}
-                            title="Gerar convite individual"
-                          >
-                            <Ticket className="w-4 h-4 mr-1" />
-                            Gerar convite
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleToggleAtivo(turma)}
-                            title={turma.ativo ? "Inativar turma" : "Ativar turma"}
-                          >
-                            {turma.ativo
-                              ? <PowerOff className="w-4 h-4 text-red-500" />
-                              : <Power className="w-4 h-4 text-green-500" />}
-                          </Button>
-                        </div>
+                        <DropdownMenu
+                          open={openDropdownId === turma.id}
+                          onOpenChange={(open) => setOpenDropdownId(open ? turma.id : null)}
+                        >
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setOpenDropdownId(null);
+                              setTimeout(() => abrirDialogConvite(turma), 100);
+                            }}>
+                              <Ticket className="mr-2 h-4 w-4" />
+                              Gerar convite
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => {
+                              setOpenDropdownId(null);
+                              handleToggleAtivo(turma);
+                            }}>
+                              {turma.ativo ? (
+                                <>
+                                  <PowerOff className="mr-2 h-4 w-4 text-red-500" />
+                                  Inativar turma
+                                </>
+                              ) : (
+                                <>
+                                  <Power className="mr-2 h-4 w-4 text-green-500" />
+                                  Ativar turma
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
