@@ -45,12 +45,13 @@ const RedacoesComentadas = () => {
   usePageTitle('Redações Comentadas');
   const navigate = useNavigate();
   const { studentData } = useStudentAuth();
-  const { professor } = useProfessorAuth();
+  const { professor, loading: professorLoading } = useProfessorAuth();
 
   const [redacoes, setRedacoes] = useState<RedacaoComentada[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (professorLoading) return;
     const fetchRedacoes = async () => {
       try {
         setIsLoading(true);
@@ -69,7 +70,10 @@ const RedacoesComentadas = () => {
         const filtradas = (data || []).filter((r) => {
           const turmas = r.turmas_autorizadas.map((t: string) => t.trim().toUpperCase());
           if (professor) {
-            return turmas.includes('PROFESSOR') || (turmaUsuario && turmas.includes(turmaUsuario));
+            // Professor vê conteúdo marcado como PROFESSOR ou da sua turma (se tiver)
+            if (turmas.includes('PROFESSOR')) return true;
+            if (turmaUsuario && turmas.includes(turmaUsuario)) return true;
+            return false;
           }
           return turmaUsuario ? turmas.includes(turmaUsuario) : false;
         });
@@ -80,7 +84,7 @@ const RedacoesComentadas = () => {
       }
     };
     fetchRedacoes();
-  }, [studentData.turma, professor]);
+  }, [studentData.turma, professor, professorLoading]);
 
   const basePath = professor ? '/professor' : '';
 

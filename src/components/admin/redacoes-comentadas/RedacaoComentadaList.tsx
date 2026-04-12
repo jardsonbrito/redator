@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { MoreHorizontal, Pencil, Trash2, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { MoreHorizontal, Pencil, Trash2, Eye, EyeOff, ExternalLink, MessageSquare } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +35,6 @@ interface RedacaoComentada {
   ativo: boolean;
   publicado_em: string | null;
   criado_em: string;
-  modos_correcao?: { nome: string } | null;
 }
 
 interface Props {
@@ -47,14 +47,15 @@ const MODO_LABELS: Record<string, string> = {
   revisao_linguistica: 'Revisão Linguística',
 };
 
-const MODO_COLORS: Record<string, string> = {
-  enem: 'bg-red-100 text-red-700 border-red-200',
-  pedagogico: 'bg-blue-100 text-blue-700 border-blue-200',
-  revisao_linguistica: 'bg-green-100 text-green-700 border-green-200',
+const MODO_BADGE_COLORS: Record<string, string> = {
+  enem: 'bg-red-100 text-red-700',
+  pedagogico: 'bg-blue-100 text-blue-700',
+  revisao_linguistica: 'bg-green-100 text-green-700',
 };
 
 export const RedacaoComentadaList = ({ onEdit }: Props) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -109,9 +110,16 @@ export const RedacaoComentadaList = ({ onEdit }: Props) => {
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
+          <Card key={i} className="overflow-hidden">
+            <div className="aspect-[16/9] bg-gray-200 animate-pulse" />
+            <div className="p-6 space-y-3">
+              <div className="h-6 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+              <div className="h-10 bg-gray-200 rounded animate-pulse" />
+            </div>
+          </Card>
         ))}
       </div>
     );
@@ -120,99 +128,131 @@ export const RedacaoComentadaList = ({ onEdit }: Props) => {
   if (redacoes.length === 0) {
     return (
       <Card>
-        <CardContent className="text-center py-12">
-          <MessageSquare className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+        <div className="text-center py-12 px-6">
+          <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
           <p className="text-muted-foreground">Nenhuma redação comentada criada ainda.</p>
-        </CardContent>
+        </div>
       </Card>
     );
   }
 
   return (
     <>
-      <div className="space-y-3">
+      <h3 className="text-lg font-semibold text-redator-primary mb-4">Redações Cadastradas</h3>
+
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {redacoes.map((item) => (
-          <Card key={item.id} className={!item.ativo ? 'opacity-60' : ''}>
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="flex-1 min-w-0 mr-4">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="font-medium truncate">{item.titulo}</span>
-                  <Badge
-                    variant="outline"
-                    className={`text-xs shrink-0 ${MODO_COLORS[item.modo_correcao_id] || ''}`}
-                  >
-                    {MODO_LABELS[item.modo_correcao_id] || item.modo_correcao_id}
-                  </Badge>
-                  {item.ativo ? (
-                    <Badge className="bg-green-100 text-green-700 border border-green-200 text-xs shrink-0">
-                      Publicado
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs shrink-0">
-                      Oculto
-                    </Badge>
-                  )}
+          <Card
+            key={item.id}
+            className={`overflow-hidden shadow-md rounded-2xl border border-gray-200 bg-white ${!item.ativo ? 'opacity-60' : ''}`}
+          >
+            {/* Capa 16:9 */}
+            <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-violet-200 relative">
+              <img
+                src="/placeholders/aula-cover.png"
+                alt={`Capa: ${item.titulo}`}
+                className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                onError={(e) => { e.currentTarget.src = '/placeholders/aula-cover.png'; }}
+                loading="lazy"
+              />
+              {/* Badge do modo sobre a imagem */}
+              <div className="absolute top-2 left-2">
+                <Badge className={`text-xs ${MODO_BADGE_COLORS[item.modo_correcao_id] || 'bg-gray-100 text-gray-700'}`}>
+                  {MODO_LABELS[item.modo_correcao_id] || item.modo_correcao_id}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Conteúdo */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* Título + dropdown */}
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg font-semibold text-gray-900 leading-tight mb-1">
+                      {item.titulo}
+                    </h2>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {item.ativo ? (
+                        <Badge className="text-xs bg-green-100 text-green-700">Publicado</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">Oculto</Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Menu três pontinhos */}
+                  <div className="flex-shrink-0">
+                    <DropdownMenu
+                      open={openDropdownId === item.id}
+                      onOpenChange={(open) => setOpenDropdownId(open ? item.id : null)}
+                    >
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 rounded-full bg-gray-100 hover:bg-gray-200"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setOpenDropdownId(null);
+                            setTimeout(() => onEdit(item.id), 100);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setOpenDropdownId(null);
+                            handleToggleAtivo(item);
+                          }}
+                          disabled={togglingId === item.id}
+                        >
+                          {item.ativo
+                            ? <><EyeOff className="w-4 h-4 mr-2" />Ocultar</>
+                            : <><Eye className="w-4 h-4 mr-2" />Publicar</>
+                          }
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => {
+                            setOpenDropdownId(null);
+                            setTimeout(() => setDeleteId(item.id), 100);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>
-                    Turmas: {item.turmas_autorizadas.length > 0
-                      ? item.turmas_autorizadas.join(', ')
-                      : 'Nenhuma'}
-                  </span>
-                  {item.publicado_em && (
-                    <span>
-                      Publicado em {format(new Date(item.publicado_em), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                  )}
+
+                {/* Data */}
+                {item.publicado_em && (
+                  <div className="text-sm text-gray-500">
+                    Criado em: {format(new Date(item.publicado_em), 'dd/MM/yyyy', { locale: ptBR })}
+                  </div>
+                )}
+
+                {/* Botão Ver */}
+                <div className="pt-2">
+                  <Button
+                    className="w-full font-semibold bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => navigate(`/redacoes-comentadas/${item.id}`)}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Ver Redação
+                  </Button>
                 </div>
               </div>
-
-              <DropdownMenu
-                open={openDropdownId === item.id}
-                onOpenChange={(open) => setOpenDropdownId(open ? item.id : null)}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setOpenDropdownId(null);
-                      setTimeout(() => onEdit(item.id), 100);
-                    }}
-                  >
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setOpenDropdownId(null);
-                      handleToggleAtivo(item);
-                    }}
-                    disabled={togglingId === item.id}
-                  >
-                    {item.ativo ? (
-                      <><EyeOff className="w-4 h-4 mr-2" />Ocultar</>
-                    ) : (
-                      <><Eye className="w-4 h-4 mr-2" />Publicar</>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => {
-                      setOpenDropdownId(null);
-                      setTimeout(() => setDeleteId(item.id), 100);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Excluir
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardContent>
+            </div>
           </Card>
         ))}
       </div>

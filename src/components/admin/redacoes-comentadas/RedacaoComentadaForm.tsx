@@ -732,16 +732,16 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
         </Button>
       </div>
 
-      {/* Abas de navegação */}
-      <div className="flex gap-1 border-b">
+      {/* Navegação em chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {(['info', 'blocos'] as const).map((sec) => (
           <button
             key={sec}
             onClick={() => setActiveSection(sec)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-white ${
               activeSection === sec
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+                ? 'bg-[#662F96]'
+                : 'bg-[#B175FF] hover:bg-[#662F96]'
             }`}
           >
             {sec === 'info' ? 'Informações' : `Blocos (${blocos.length})`}

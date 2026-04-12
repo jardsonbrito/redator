@@ -317,6 +317,7 @@ const RedacaoComentadaDetalhes = () => {
   const [blocos, setBlocos] = useState<Bloco[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blocoAtivoId, setBlocoAtivoId] = useState<string | null>(null);
 
   usePageTitle(redacao?.titulo || 'Redação Comentada');
 
@@ -341,7 +342,9 @@ const RedacaoComentadaDetalhes = () => {
         if (rcRes.error) throw rcRes.error;
         if (!rcRes.data) throw new Error('Redação não encontrada');
         setRedacao(rcRes.data as RedacaoComentada);
-        setBlocos((blocosRes.data || []) as Bloco[]);
+        const bls = (blocosRes.data || []) as Bloco[];
+        setBlocos(bls);
+        if (bls.length > 0) setBlocoAtivoId(bls[0].id);
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar redação');
       } finally {
@@ -419,62 +422,81 @@ const RedacaoComentadaDetalhes = () => {
           )}
         </div>
 
-        {/* Legenda de cores (se houver comentários_trecho) */}
-        {blocos.some(b => b.tipo === 'comentarios_trecho' && (b.conteudo?.anotacoes?.length ?? 0) > 0) && (
-          <Card className="bg-amber-50 border-amber-200">
-            <CardContent className="p-3">
-              <p className="text-xs font-medium text-amber-800 mb-2">
-                Legenda — clique nos trechos destacados para ver os comentários:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {redacao.modo_correcao_id === 'enem'
-                  ? COMPETENCIAS.map(c => (
-                    <span
-                      key={c}
-                      className={`text-xs px-2 py-0.5 rounded border ${COMPETENCIA_BADGE_COLORS[c]}`}
-                    >
-                      {COMPETENCIA_LABEL_SHORT[c]}
-                    </span>
-                  ))
-                  : ['erro', 'dica', 'elogio'].map(t => (
-                    <span
-                      key={t}
-                      className={`text-xs px-2 py-0.5 rounded border capitalize ${TIPO_HIGHLIGHT[t].replace('border-b-2', 'border')}`}
-                    >
-                      {t}
-                    </span>
-                  ))
-                }
-              </div>
-            </CardContent>
-          </Card>
+        {/* Chips de navegação entre blocos */}
+        {blocos.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {blocos.map((bloco) => (
+              <button
+                key={bloco.id}
+                onClick={() => setBlocoAtivoId(bloco.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors text-white ${
+                  blocoAtivoId === bloco.id
+                    ? 'bg-[#662F96]'
+                    : 'bg-[#B175FF] hover:bg-[#662F96]'
+                }`}
+              >
+                {TIPO_LABELS[bloco.tipo]}
+              </button>
+            ))}
+          </div>
         )}
 
-        {/* Blocos */}
-        {blocos.map((bloco) => {
+        {/* Bloco ativo */}
+        {(() => {
+          const bloco = blocos.find(b => b.id === blocoAtivoId);
+          if (!bloco) return null;
+
+          // Legenda para comentários por trecho
+          const legendaElement = bloco.tipo === 'comentarios_trecho' &&
+            (bloco.conteudo?.anotacoes?.length ?? 0) > 0 ? (
+            <Card className="bg-amber-50 border-amber-200">
+              <CardContent className="p-3">
+                <p className="text-xs font-medium text-amber-800 mb-2">
+                  Legenda — clique nos trechos destacados para ver os comentários:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {redacao.modo_correcao_id === 'enem'
+                    ? COMPETENCIAS.map(c => (
+                      <span key={c} className={`text-xs px-2 py-0.5 rounded border ${COMPETENCIA_BADGE_COLORS[c]}`}>
+                        {COMPETENCIA_LABEL_SHORT[c]}
+                      </span>
+                    ))
+                    : ['erro', 'dica', 'elogio'].map(t => (
+                      <span key={t} className={`text-xs px-2 py-0.5 rounded border capitalize ${TIPO_HIGHLIGHT[t].replace('border-b-2', 'border')}`}>
+                        {t}
+                      </span>
+                    ))
+                  }
+                </div>
+              </CardContent>
+            </Card>
+          ) : null;
+
           if (bloco.tipo === 'comentarios_trecho') {
             const anotacoes: Anotacao[] = bloco.conteudo?.anotacoes || [];
-            if (!textoOriginal && anotacoes.length === 0) return null;
             return (
-              <Card key={bloco.id}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {textoOriginal ? (
-                    <TrechoHighlightedText texto={textoOriginal} anotacoes={anotacoes} />
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      Texto original não disponível para destacar trechos.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                {legendaElement}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {textoOriginal ? (
+                      <TrechoHighlightedText texto={textoOriginal} anotacoes={anotacoes} />
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        Texto original não disponível para destacar trechos.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             );
           }
 
           return (
-            <Card key={bloco.id}>
+            <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
               </CardHeader>
@@ -483,7 +505,7 @@ const RedacaoComentadaDetalhes = () => {
               </CardContent>
             </Card>
           );
-        })}
+        })()}
       </main>
     </div>
   );
