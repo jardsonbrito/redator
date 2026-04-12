@@ -10,6 +10,7 @@ import { useAjudaRapida } from "@/hooks/useAjudaRapida";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 
 interface MenuItem {
   title: string;
@@ -36,6 +37,8 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
   const { studentData } = useStudentAuth();
   const { settings } = useAppSettings();
   const { isFeatureEnabled, debugInfo, overrides, subscription } = usePlanFeatures(studentData.email);
+  const { professor } = useProfessorAuth();
+  const isProfessor = !!professor;
 
   // Estado do hook de planos (logs removidos para produção)
 
@@ -134,8 +137,9 @@ export const MenuGrid = ({ menuItems, showMinhasRedacoes }: MenuGridProps) => {
           const isFreeTopicDisabled = isFreeTopicCard && settings && settings.free_topic_enabled === false;
 
           // Verificar se a funcionalidade está desabilitada pelo plano/override
+          // Professores têm acesso a todos os módulos sem restrição de plano
           const functionalityName = getFunctionalityName(item.title);
-          const isPlanFeatureDisabled = functionalityName && !isFeatureEnabled(functionalityName);
+          const isPlanFeatureDisabled = !isProfessor && functionalityName && !isFeatureEnabled(functionalityName);
 
           // Funcionalidades que sempre devem estar disponíveis (não controladas por plano)
           // microaprendizagem: o card sempre aparece; o controle de acesso
