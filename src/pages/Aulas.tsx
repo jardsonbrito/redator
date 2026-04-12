@@ -6,6 +6,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useProfessorAuth } from "@/hooks/useProfessorAuth";
 import { useRecordedLessonViews } from "@/hooks/useRecordedLessonViews";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
@@ -46,6 +47,7 @@ const Aulas = () => {
   usePageTitle('Aulas');
 
   const { studentData } = useStudentAuth();
+  const { professor } = useProfessorAuth();
   const { markAsWatched, isWatched, confirmAsWatched, isConfirmed, isConfirming } = useRecordedLessonViews();
   const { isFeatureEnabled } = usePlanFeatures(studentData.email);
   const [searchParams] = useSearchParams();
@@ -254,8 +256,8 @@ const Aulas = () => {
     }
   };
 
-  // Se a funcionalidade está desabilitada pelo plano, redirecionar
-  if (!isFeatureEnabled('aulas_gravadas')) {
+  // Se a funcionalidade está desabilitada pelo plano, redirecionar (professor é isento)
+  if (!professor && !isFeatureEnabled('aulas_gravadas')) {
     return <Navigate to="/app" replace />;
   }
 
