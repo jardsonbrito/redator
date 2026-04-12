@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
 interface RedacaoComentada {
   id: string;
@@ -35,6 +36,18 @@ interface RedacaoComentada {
   ativo: boolean;
   publicado_em: string | null;
   criado_em: string;
+  capa_source: string | null;
+  capa_url: string | null;
+  capa_file_path: string | null;
+}
+
+function resolveCapaUrl(item: RedacaoComentada): string {
+  if (item.capa_source === 'url' && item.capa_url) return item.capa_url;
+  if (item.capa_source === 'upload' && item.capa_file_path) {
+    const { data } = supabaseClient.storage.from('themes').getPublicUrl(item.capa_file_path);
+    return data.publicUrl;
+  }
+  return '/placeholders/aula-cover.png';
 }
 
 interface Props {
@@ -65,7 +78,7 @@ export const RedacaoComentadaList = ({ onEdit }: Props) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes_comentadas')
-        .select('id, titulo, modo_correcao_id, turmas_autorizadas, ativo, publicado_em, criado_em')
+        .select('id, titulo, modo_correcao_id, turmas_autorizadas, ativo, publicado_em, criado_em, capa_source, capa_url, capa_file_path')
         .order('criado_em', { ascending: false });
       if (error) throw error;
       return (data || []) as RedacaoComentada[];
@@ -149,7 +162,7 @@ export const RedacaoComentadaList = ({ onEdit }: Props) => {
             {/* Capa 16:9 */}
             <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-violet-200 relative">
               <img
-                src="/placeholders/aula-cover.png"
+                src={resolveCapaUrl(item)}
                 alt={`Capa: ${item.titulo}`}
                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                 onError={(e) => { e.currentTarget.src = '/placeholders/aula-cover.png'; }}

@@ -12,6 +12,7 @@ import { useProfessorAuth } from '@/hooks/useProfessorAuth';
 import { usePageTitle } from '@/hooks/useBreadcrumbs';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
 interface RedacaoComentada {
   id: string;
@@ -20,6 +21,18 @@ interface RedacaoComentada {
   turmas_autorizadas: string[];
   publicado_em: string | null;
   criado_em: string;
+  capa_source: string | null;
+  capa_url: string | null;
+  capa_file_path: string | null;
+}
+
+function resolveCapaUrl(r: RedacaoComentada): string {
+  if (r.capa_source === 'url' && r.capa_url) return r.capa_url;
+  if (r.capa_source === 'upload' && r.capa_file_path) {
+    const { data } = supabaseClient.storage.from('themes').getPublicUrl(r.capa_file_path);
+    return data.publicUrl;
+  }
+  return '/placeholders/aula-cover.png';
 }
 
 const MODO_LABELS: Record<string, string> = {
@@ -32,13 +45,6 @@ const MODO_COLORS: Record<string, string> = {
   enem: 'bg-red-100 text-red-700',
   pedagogico: 'bg-blue-100 text-blue-700',
   revisao_linguistica: 'bg-green-100 text-green-700',
-};
-
-// Imagem de capa por modo de correção
-const MODO_COVER: Record<string, string> = {
-  enem: '/placeholders/aula-cover.png',
-  pedagogico: '/placeholders/aula-cover.png',
-  revisao_linguistica: '/placeholders/aula-cover.png',
 };
 
 const RedacoesComentadas = () => {
@@ -57,7 +63,7 @@ const RedacoesComentadas = () => {
         setIsLoading(true);
         const { data, error } = await supabase
           .from('redacoes_comentadas')
-          .select('id, titulo, modo_correcao_id, turmas_autorizadas, publicado_em, criado_em')
+          .select('id, titulo, modo_correcao_id, turmas_autorizadas, publicado_em, criado_em, capa_source, capa_url, capa_file_path')
           .eq('ativo', true)
           .order('publicado_em', { ascending: false });
 
@@ -141,7 +147,7 @@ const RedacoesComentadas = () => {
                 {/* Capa 16:9 */}
                 <div className="aspect-[16/9] overflow-hidden bg-gradient-to-br from-purple-100 to-violet-200 relative">
                   <img
-                    src={MODO_COVER[r.modo_correcao_id] || '/placeholders/aula-cover.png'}
+                    src={resolveCapaUrl(r)}
                     alt={`Capa: ${r.titulo}`}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     onError={(e) => {

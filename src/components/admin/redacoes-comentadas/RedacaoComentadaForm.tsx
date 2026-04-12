@@ -15,7 +15,16 @@ import {
   ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Plus, X, ArrowLeft, Save, Loader2,
 } from 'lucide-react';
 import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
+import { ImageSelector } from '@/components/admin/ImageSelector';
 const uuidv4 = () => crypto.randomUUID();
+
+type ImageValue = {
+  source: 'upload' | 'url';
+  url?: string;
+  file_path?: string;
+  file_size?: number;
+  dimensions?: { width: number; height: number };
+} | null;
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -494,6 +503,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
   const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>([]);
   const [ativo, setAtivo] = useState(false);
   const [blocos, setBlocos] = useState<Bloco[]>([]);
+  const [capa, setCapa] = useState<ImageValue>(null);
 
   const [modosCorrecao, setModosCorrecao] = useState<ModoCorrecao[]>([]);
   const [turmasProfessores, setTurmasProfessores] = useState<TurmaProfessor[]>([]);
@@ -530,6 +540,11 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
           setModoCorrecaoId(rc.modo_correcao_id);
           setTurmasAutorizadas(rc.turmas_autorizadas || []);
           setAtivo(rc.ativo);
+          if (rc.capa_source === 'upload' && rc.capa_file_path) {
+            setCapa({ source: 'upload', file_path: rc.capa_file_path });
+          } else if (rc.capa_source === 'url' && rc.capa_url) {
+            setCapa({ source: 'url', url: rc.capa_url });
+          }
         }
         if (blocosRes.data) {
           setBlocos(blocosRes.data.map((b: any) => ({
@@ -647,6 +662,9 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
         turmas_autorizadas: turmasAutorizadas,
         ativo,
         atualizado_em: new Date().toISOString(),
+        capa_source: capa?.source ?? null,
+        capa_url: capa?.source === 'url' ? (capa.url ?? null) : null,
+        capa_file_path: capa?.source === 'upload' ? (capa.file_path ?? null) : null,
       };
 
       if (ativo && !editingId) {
@@ -817,6 +835,15 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
               </>
             )}
           </div>
+
+          <ImageSelector
+            title="Imagem de Capa"
+            description="Capa exibida no card da redação (16:9 recomendado). Faça upload ou informe uma URL."
+            bucket="themes"
+            value={capa}
+            onChange={setCapa}
+            minDimensions={{ width: 400, height: 225 }}
+          />
 
           <div className="flex items-center gap-3">
             <Switch checked={ativo} onCheckedChange={setAtivo} />
