@@ -30,8 +30,19 @@ export async function getMyAttendanceStatus(sessionId: string): Promise<Attendan
         }
       }
     }
-    
-    // Não usar Supabase Auth para alunos, apenas localStorage
+
+    // Fallback: professor_session
+    if (!studentEmail) {
+      const professorSession = localStorage.getItem("professor_session");
+      if (professorSession) {
+        try {
+          const dados = JSON.parse(professorSession);
+          studentEmail = dados.email;
+        } catch (e) {
+          console.error('Erro ao parsear professor_session:', e);
+        }
+      }
+    }
 
     if (!studentEmail) {
       console.warn('Nenhum email de estudante encontrado');
@@ -106,6 +117,21 @@ export async function registrarEntrada(sessionId: string): Promise<void> {
           studentTurma = 'Visitante';
         } catch (e) {
           console.error('Erro ao parsear dados do visitante:', e);
+        }
+      }
+    }
+
+    // Fallback: professor_session
+    if (!studentEmail) {
+      const professorSession = localStorage.getItem("professor_session");
+      if (professorSession) {
+        try {
+          const dados = JSON.parse(professorSession);
+          studentEmail = dados.email;
+          studentName = dados.nome_completo || 'Professor';
+          studentTurma = 'Professor';
+        } catch (e) {
+          console.error('Erro ao parsear professor_session:', e);
         }
       }
     }
@@ -234,6 +260,19 @@ export async function registrarSaida(sessionId: string): Promise<void> {
           studentEmail = dados.email;
         } catch (e) {
           console.error('Erro ao parsear dados do visitante:', e);
+        }
+      }
+    }
+
+    // Fallback: professor_session
+    if (!studentEmail) {
+      const professorSession = localStorage.getItem("professor_session");
+      if (professorSession) {
+        try {
+          const dados = JSON.parse(professorSession);
+          studentEmail = dados.email;
+        } catch (e) {
+          console.error('Erro ao parsear professor_session:', e);
         }
       }
     }

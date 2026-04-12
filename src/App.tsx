@@ -68,6 +68,7 @@ const VisitantesAdmin         = lazy(() => import("./pages/admin/VisitantesAdmin
 const Top5Admin               = lazy(() => import("./pages/admin/Top5Admin"));
 const AulasAoVivo             = lazy(() => import("./pages/AulasAoVivo"));
 const SalasVirtuais           = lazy(() => import("./pages/SalasVirtuais"));
+const ProfessorAulasAoVivo    = lazy(() => import("./pages/professor/ProfessorAulasAoVivo"));
 const RedacaoManuscrita       = lazy(() => import("./pages/RedacaoManuscrita"));
 const Gamificacao             = lazy(() => import("./pages/Gamificacao"));
 const DiarioOnline            = lazy(() => import("./pages/DiarioOnline"));
@@ -258,7 +259,7 @@ function App() {
                     } />
                     <Route path="/professor/salas-virtuais" element={
                       <ProfessorProtectedRoute>
-                        <SalasVirtuais />
+                        <ProfessorAulasAoVivo />
                       </ProfessorProtectedRoute>
                     } />
                     <Route path="/professor/avisos" element={

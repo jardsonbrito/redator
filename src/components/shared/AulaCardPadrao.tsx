@@ -46,7 +46,7 @@ interface AulaCardActions {
 
 interface AulaCardPadraoProps {
   aula: AulaCardData;
-  perfil: 'aluno' | 'admin';
+  perfil: 'aluno' | 'admin' | 'professor';
   actions?: AulaCardActions;
   attendanceStatus?: 'presente' | 'ausente' | 'entrada_registrada' | 'saida_registrada';
   loadingOperation?: boolean;
@@ -99,7 +99,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
   };
 
   const getAttendanceBadge = () => {
-    if (perfil !== 'aluno' || !aula.eh_aula_ao_vivo) return null;
+    if ((perfil !== 'aluno' && perfil !== 'professor') || !aula.eh_aula_ao_vivo) return null;
 
     // Para aulas ao vivo ou agendadas, mostrar se entrada/saída foi registrada
     if (status === 'ao_vivo' || status === 'agendada') {
@@ -306,7 +306,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
 
           {/* Ações */}
           <div className="pt-2">
-            {perfil === 'aluno' && (
+            {(perfil === 'aluno' || perfil === 'professor') && (
               <div className="space-y-2">
                 <Button
                   className={`w-full font-semibold ${status === 'ao_vivo' ? 'bg-red-600 hover:bg-red-700 animate-pulse' : status === 'encerrada' ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'} text-white`}
@@ -317,8 +317,8 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   {getButtonText()}
                 </Button>
 
-                {/* Botão para assistir gravação — ausente (qualquer motivo) ou ingressante tardio */}
-                {aula.eh_aula_ao_vivo && status === 'encerrada' && (enrolledAfterClass || attendanceStatus === 'ausente') && (
+                {/* Botão para assistir gravação — apenas para alunos */}
+                {perfil === 'aluno' && aula.eh_aula_ao_vivo && status === 'encerrada' && (enrolledAfterClass || attendanceStatus === 'ausente') && (
                   <Link
                     to={aula.aula_gravada_id ? `/aulas?aula=${aula.aula_gravada_id}` : '/aulas'}
                     className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium rounded-md border border-[#3f0776] text-[#3f0776] hover:bg-[#3f0776] hover:text-white transition-colors"
@@ -328,8 +328,8 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
                   </Link>
                 )}
 
-                {/* Botão de justificativa — apenas para aulas encerradas onde o aluno está ausente E já era matriculado */}
-                {aula.eh_aula_ao_vivo && status === 'encerrada' && attendanceStatus === 'ausente' && !enrolledAfterClass && (
+                {/* Botão de justificativa — apenas para alunos */}
+                {perfil === 'aluno' && aula.eh_aula_ao_vivo && status === 'encerrada' && attendanceStatus === 'ausente' && !enrolledAfterClass && (
                   <div className="space-y-2">
                     {justificativaEnviada ? (
                       <div className="flex items-center gap-2">

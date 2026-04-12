@@ -549,6 +549,24 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                     </div>
                   </div>
 
+                  {/* Visível para Professores */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">Visível para Professores</div>
+                      <div className="text-xs text-gray-500">Professores podem acessar e registrar presença nesta aula</div>
+                    </div>
+                    <Switch
+                      checked={formData.turmas_autorizadas.includes('Professor')}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, 'Professor']});
+                        } else {
+                          setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== 'Professor')});
+                        }
+                      }}
+                    />
+                  </div>
+
                   {/* Permitir Visitantes */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="space-y-0.5">
