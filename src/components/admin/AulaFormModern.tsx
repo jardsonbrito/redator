@@ -254,8 +254,10 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
       return;
     }
 
-    if (turmasAutorizadas.length === 0 && !permiteVisitante) {
-      toast.error('Pelo menos uma turma deve ser selecionada OU visitantes permitidos');
+    const turmasAluno = turmasAutorizadas.filter(t => t !== "Professor");
+    const permiteProfesor = turmasAutorizadas.includes("Professor");
+    if (turmasAluno.length === 0 && !permiteVisitante && !permiteProfesor) {
+      toast.error('Selecione pelo menos uma turma, habilite visitantes ou marque como visível para professores');
       setActiveSection('turmas');
       return;
     }
@@ -677,7 +679,7 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
                   <div className="space-y-3">
                     <div className="text-sm font-medium">Turmas Autorizadas</div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {turmas.map((turma) => (
+                      {turmas.filter(t => t !== "Professor").map((turma) => (
                         <div key={turma} className="flex items-center space-x-2">
                           <Checkbox
                             id={turma}
@@ -690,6 +692,24 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Visível para Professores */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-medium">Visível para Professores</div>
+                      <div className="text-xs text-gray-500">Professores podem acessar esta aula na área deles</div>
+                    </div>
+                    <Switch
+                      checked={turmasAutorizadas.includes("Professor")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setTurmasAutorizadas(prev => [...prev, "Professor"]);
+                        } else {
+                          setTurmasAutorizadas(prev => prev.filter(t => t !== "Professor"));
+                        }
+                      }}
+                    />
                   </div>
 
                   {/* Permitir Visitantes */}

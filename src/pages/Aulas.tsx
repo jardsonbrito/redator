@@ -99,7 +99,8 @@ const Aulas = () => {
       console.log('🔄 Dados do estudante completos:', JSON.stringify(studentData, null, 2));
       
       // Validar dados antes de fazer a consulta
-      const userType = studentData.userType || null;
+      // Professor tem tipo próprio; aluno usa turma; demais casos passam null (admin vê tudo)
+      const userType = professor ? 'professor' : (studentData.userType || null);
       const userTurma = (studentData.userType === 'aluno' && studentData.turma) ? studentData.turma : null;
       
       console.log('📋 Parâmetros para RPC:', { userType, userTurma });
