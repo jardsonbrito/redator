@@ -2,7 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MoreHorizontal, ExternalLink, Edit, Trash2, User } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, Edit, Trash2, User, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { fetchFullRedacaoExemplar, generateRedacaoExemplarPDF } from '@/utils/redacaoExemplarPdfUtils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +52,33 @@ export const RedacaoExemplarCardPadrao = ({
 }: RedacaoExemplarCardPadraoProps) => {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const [downloadingPdf, setDownloadingPdf] = React.useState(false);
+
+  const handleDownloadPdf = async () => {
+    setDropdownOpen(false);
+    setDownloadingPdf(true);
+    const toastId = toast.loading('Gerando PDF...');
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast.error('Popup bloqueado. Permita popups para este site e tente novamente.', { id: toastId });
+      setDownloadingPdf(false);
+      return;
+    }
+
+    try {
+      const full = await fetchFullRedacaoExemplar(redacao.id);
+      if (!full) throw new Error('Redação não encontrada');
+      await generateRedacaoExemplarPDF(full, win);
+      toast.success('PDF gerado com sucesso!', { id: toastId });
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err);
+      win.close();
+      toast.error('Erro ao gerar PDF. Tente novamente.', { id: toastId });
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
 
 
@@ -208,6 +237,13 @@ export const RedacaoExemplarCardPadrao = ({
                     }}>
                       <Edit className="mr-2 h-4 w-4" />
                       Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleDownloadPdf}
+                      disabled={downloadingPdf}
+                    >
+                      <Download className="mr-2 h-4 w-4 text-purple-600" />
+                      {downloadingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => {
