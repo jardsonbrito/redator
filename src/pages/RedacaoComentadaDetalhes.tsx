@@ -157,7 +157,21 @@ interface TrechoHighlightProps {
 
 const TrechoHighlightedText = ({ texto, anotacoes }: TrechoHighlightProps) => {
   const [anotacaoAberta, setAnotacaoAberta] = useState<Anotacao | null>(null);
-  const segments = buildSegments(texto, anotacoes);
+
+  // Filtra anotações incompletas ou com índices inválidos antes de passar ao parser
+  const anotacoesValidas = anotacoes.filter(
+    (a) =>
+      a &&
+      typeof a.start === 'number' &&
+      typeof a.end === 'number' &&
+      a.end > a.start &&
+      a.start >= 0 &&
+      a.end <= texto.length &&
+      typeof a.comentario === 'string' &&
+      a.comentario.trim().length > 0,
+  );
+
+  const segments = buildSegments(texto, anotacoesValidas);
 
   const getHighlightClass = (a: Anotacao) => {
     if (a.competencia && COMPETENCIA_HIGHLIGHT[a.competencia]) {
@@ -308,6 +322,84 @@ const BlocoRenderer = ({ bloco }: BlocoRendererProps) => {
   return null;
 };
 
+// ─── Bloco ativo (componente estável, sem IIFE) ───────────────────────────────
+
+interface BlocoAtivoViewProps {
+  bloco: Bloco | null;
+  textoOriginal: string;
+  modoCorrecaoId: string;
+}
+
+const BlocoAtivoView = ({ bloco, textoOriginal, modoCorrecaoId }: BlocoAtivoViewProps) => {
+  if (!bloco) return null;
+
+  if (bloco.tipo === 'comentarios_trecho') {
+    const anotacoes: Anotacao[] = bloco.conteudo?.anotacoes || [];
+    const temAnotacoes = anotacoes.length > 0;
+
+    return (
+      <div className="space-y-4">
+        {/* Legenda */}
+        {temAnotacoes && (
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="p-3">
+              <p className="text-xs font-medium text-amber-800 mb-2">
+                Legenda — clique nos trechos destacados para ver os comentários:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {modoCorrecaoId === 'enem'
+                  ? COMPETENCIAS.map(c => (
+                    <span key={c} className={`text-xs px-2 py-0.5 rounded border ${COMPETENCIA_BADGE_COLORS[c]}`}>
+                      {COMPETENCIA_LABEL_SHORT[c]}
+                    </span>
+                  ))
+                  : ['erro', 'dica', 'elogio'].map(t => (
+                    <span key={t} className={`text-xs px-2 py-0.5 rounded border capitalize ${TIPO_HIGHLIGHT[t].replace('border-b-2', 'border')}`}>
+                      {t}
+                    </span>
+                  ))
+                }
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {textoOriginal ? (
+              // key={bloco.id} garante que o componente é recriado apenas ao trocar de bloco,
+              // não em cada re-render do pai — preserva o estado anotacaoAberta durante o clique
+              <TrechoHighlightedText
+                key={bloco.id}
+                texto={textoOriginal}
+                anotacoes={anotacoes}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                Texto original não disponível para destacar trechos.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <BlocoRenderer bloco={bloco} />
+      </CardContent>
+    </Card>
+  );
+};
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const RedacaoComentadaDetalhes = () => {
@@ -318,6 +410,7 @@ const RedacaoComentadaDetalhes = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blocoAtivoId, setBlocoAtivoId] = useState<string | null>(null);
+  const [textoOriginal, setTextoOriginal] = useState<string>('');
 
   usePageTitle(redacao?.titulo || 'Redação Comentada');
 
@@ -332,19 +425,25 @@ const RedacaoComentadaDetalhes = () => {
             .select('id, titulo, modo_correcao_id, publicado_em')
             .eq('id', id)
             .single(),
+          // Busca TODOS os blocos (incluindo texto_original independente de visivel)
+          // para garantir que o texto base esteja sempre disponível para os highlights
           supabase
             .from('redacao_comentada_blocos')
             .select('*')
             .eq('redacao_comentada_id', id)
-            .eq('visivel', true)
             .order('ordem'),
         ]);
         if (rcRes.error) throw rcRes.error;
         if (!rcRes.data) throw new Error('Redação não encontrada');
         setRedacao(rcRes.data as RedacaoComentada);
-        const bls = (blocosRes.data || []) as Bloco[];
-        setBlocos(bls);
-        if (bls.length > 0) setBlocoAtivoId(bls[0].id);
+        const todos = (blocosRes.data || []) as Bloco[];
+        // Apenas os blocos visíveis aparecem como abas de navegação
+        const visiveis = todos.filter(b => b.visivel);
+        setBlocos(visiveis);
+        if (visiveis.length > 0) setBlocoAtivoId(visiveis[0].id);
+        // Texto original extraído de todos os blocos (mesmo que visivel = false)
+        const txtBloco = todos.find(b => b.tipo === 'texto_original');
+        setTextoOriginal(txtBloco?.conteudo?.texto ?? '');
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar redação');
       } finally {
@@ -353,8 +452,6 @@ const RedacaoComentadaDetalhes = () => {
     };
     fetchData();
   }, [id]);
-
-  const textoOriginal = blocos.find(b => b.tipo === 'texto_original')?.conteudo?.texto || '';
 
   if (isLoading) {
     return (
@@ -441,71 +538,12 @@ const RedacaoComentadaDetalhes = () => {
           </div>
         )}
 
-        {/* Bloco ativo */}
-        {(() => {
-          const bloco = blocos.find(b => b.id === blocoAtivoId);
-          if (!bloco) return null;
-
-          // Legenda para comentários por trecho
-          const legendaElement = bloco.tipo === 'comentarios_trecho' &&
-            (bloco.conteudo?.anotacoes?.length ?? 0) > 0 ? (
-            <Card className="bg-amber-50 border-amber-200">
-              <CardContent className="p-3">
-                <p className="text-xs font-medium text-amber-800 mb-2">
-                  Legenda — clique nos trechos destacados para ver os comentários:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {redacao.modo_correcao_id === 'enem'
-                    ? COMPETENCIAS.map(c => (
-                      <span key={c} className={`text-xs px-2 py-0.5 rounded border ${COMPETENCIA_BADGE_COLORS[c]}`}>
-                        {COMPETENCIA_LABEL_SHORT[c]}
-                      </span>
-                    ))
-                    : ['erro', 'dica', 'elogio'].map(t => (
-                      <span key={t} className={`text-xs px-2 py-0.5 rounded border capitalize ${TIPO_HIGHLIGHT[t].replace('border-b-2', 'border')}`}>
-                        {t}
-                      </span>
-                    ))
-                  }
-                </div>
-              </CardContent>
-            </Card>
-          ) : null;
-
-          if (bloco.tipo === 'comentarios_trecho') {
-            const anotacoes: Anotacao[] = bloco.conteudo?.anotacoes || [];
-            return (
-              <div className="space-y-4">
-                {legendaElement}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {textoOriginal ? (
-                      <TrechoHighlightedText texto={textoOriginal} anotacoes={anotacoes} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        Texto original não disponível para destacar trechos.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          }
-
-          return (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BlocoRenderer bloco={bloco} />
-              </CardContent>
-            </Card>
-          );
-        })()}
+        {/* Bloco ativo — renderização estável (sem IIFE) para preservar estado interno */}
+        <BlocoAtivoView
+          bloco={blocos.find(b => b.id === blocoAtivoId) ?? null}
+          textoOriginal={textoOriginal}
+          modoCorrecaoId={redacao.modo_correcao_id}
+        />
       </main>
     </div>
   );
