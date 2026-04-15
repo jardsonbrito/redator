@@ -331,28 +331,53 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
   const [novaAnotacao, setNovaAnotacao] = useState<Partial<Anotacao> | null>(null);
   const textoRef = useRef<HTMLDivElement>(null);
 
+  const anotacaoCardRef = useRef<HTMLDivElement>(null);
+
   const handleMouseUp = () => {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !textoRef.current) return;
-    const range = sel.getRangeAt(0);
-    const container = textoRef.current;
-    // Calcular offset absoluto dentro do container
-    const preRange = document.createRange();
-    preRange.selectNodeContents(container);
-    preRange.setEnd(range.startContainer, range.startOffset);
-    const start = preRange.toString().length;
-    const selected = sel.toString();
-    if (!selected.trim()) return;
-    setNovaAnotacao({
-      id: uuidv4(),
-      start,
-      end: start + selected.length,
-      trecho: selected,
-      comentario: '',
-      tipo: 'erro',
-      competencia: '',
-    });
-    sel.removeAllRanges();
+
+    try {
+      const range = sel.getRangeAt(0);
+      const container = textoRef.current;
+
+      // Garante que a seleção está inteiramente dentro do container do texto.
+      // Caso contrário, preRange.setEnd lança DOMException e derruba o componente.
+      if (
+        !container.contains(range.startContainer) ||
+        !container.contains(range.endContainer)
+      ) {
+        sel.removeAllRanges();
+        return;
+      }
+
+      // Calcula o offset absoluto dentro do container
+      const preRange = document.createRange();
+      preRange.selectNodeContents(container);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const start = preRange.toString().length;
+      const selected = sel.toString();
+      if (!selected.trim()) return;
+
+      setNovaAnotacao({
+        id: uuidv4(),
+        start,
+        end: start + selected.length,
+        trecho: selected,
+        comentario: '',
+        tipo: 'erro',
+        competencia: '',
+      });
+      sel.removeAllRanges();
+
+      // Rola o formulário de anotação para a vista após a renderização
+      setTimeout(() => {
+        anotacaoCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    } catch {
+      // Qualquer erro da Selection API é silenciado — não derruba o componente
+      sel?.removeAllRanges();
+    }
   };
 
   const handleSalvarAnotacao = () => {
@@ -399,6 +424,7 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
       )}
 
       {novaAnotacao && (
+        <div ref={anotacaoCardRef}>
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="p-3 space-y-2">
             <p className="text-xs font-medium text-primary">
@@ -449,6 +475,7 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
             </div>
           </CardContent>
         </Card>
+        </div>
       )}
 
       {anotacoes.length > 0 && (
