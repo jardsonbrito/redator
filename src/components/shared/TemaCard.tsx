@@ -63,7 +63,10 @@ const getStatusInfo = (tema: TemaCardData) => {
     return {
       label: 'Publicado',
       variant: 'default' as const,
-      bgColor: 'bg-blue-600'
+      bgColor: 'bg-blue-600',
+      dateLabel: 'Publicado em',
+      dateColor: 'text-blue-600',
+      dateBg: 'bg-blue-50',
     };
   }
 
@@ -71,7 +74,10 @@ const getStatusInfo = (tema: TemaCardData) => {
     return {
       label: 'Agendado',
       variant: 'secondary' as const,
-      bgColor: 'bg-yellow-500'
+      bgColor: 'bg-yellow-500',
+      dateLabel: 'Agendado para',
+      dateColor: 'text-yellow-700',
+      dateBg: 'bg-yellow-50',
     };
   }
 
@@ -79,14 +85,20 @@ const getStatusInfo = (tema: TemaCardData) => {
     return {
       label: 'Pendente',
       variant: 'destructive' as const,
-      bgColor: 'bg-orange-500'
+      bgColor: 'bg-orange-500',
+      dateLabel: 'Previsto para',
+      dateColor: 'text-orange-600',
+      dateBg: 'bg-orange-50',
     };
   }
 
   return {
     label: 'Rascunho',
     variant: 'secondary' as const,
-    bgColor: 'bg-purple-600'
+    bgColor: 'bg-purple-600',
+    dateLabel: 'Criado em',
+    dateColor: 'text-gray-500',
+    dateBg: 'bg-gray-50',
   };
 };
 
@@ -94,18 +106,19 @@ const getFormattedDate = (tema: TemaCardData) => {
   const now = new Date();
   const scheduledDate = tema.scheduled_publish_at ? new Date(tema.scheduled_publish_at) : null;
 
-  // Tema agendado: mostra a data de agendamento
   if (scheduledDate && scheduledDate > now) {
     return format(scheduledDate, "dd/MM/yyyy", { locale: ptBR });
   }
 
-  // Tema publicado: mostra a data de publicação
+  if (scheduledDate && scheduledDate <= now) {
+    return format(scheduledDate, "dd/MM/yyyy", { locale: ptBR });
+  }
+
   const publishedDate = tema.published_at || tema.publicado_em;
   if (publishedDate) {
     return format(new Date(publishedDate), "dd/MM/yyyy", { locale: ptBR });
   }
 
-  // Fallback: data de criação
   if (tema.created_at) {
     return format(new Date(tema.created_at), "dd/MM/yyyy", { locale: ptBR });
   }
@@ -116,6 +129,7 @@ const getFormattedDate = (tema: TemaCardData) => {
 export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCardProps) => {
   const statusInfo = getStatusInfo(tema);
   const formattedDate = getFormattedDate(tema);
+  const { dateLabel, dateColor, dateBg } = statusInfo;
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -253,12 +267,15 @@ export const TemaCardPadrao = ({ tema, perfil, actions, className = '' }: TemaCa
           <div className="flex items-center justify-between">
             {/* Informações à esquerda */}
             <div className="flex items-center gap-3">
-              {/* Data */}
-              <div className="text-xs text-gray-500 flex items-center gap-1">
-                <span>📅</span>
-                <span className="hidden sm:inline">{formattedDate || 'Sem data'}</span>
-                <span className="sm:hidden">{formattedDate?.split('/').slice(0, 2).join('/') || 'S/D'}</span>
-              </div>
+              {/* Data com contexto de status */}
+              {formattedDate && (
+                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${dateBg} ${dateColor}`}>
+                  <span className="hidden sm:inline">
+                    <span className="opacity-70">{dateLabel}:</span> {formattedDate}
+                  </span>
+                  <span className="sm:hidden">{formattedDate}</span>
+                </div>
+              )}
 
               {/* Contador de envios - clicável */}
               <button
