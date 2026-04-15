@@ -55,6 +55,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       'videoteca': 'Videoteca',
       'biblioteca': 'Biblioteca',
       'redacoes': 'Redações Exemplares',
+      'redacoes-exemplar': 'Redações Exemplares',
       'top5': 'TOP 5',
       'minhas-redacoes': 'Minhas Redações',
       'minhas-conquistas': 'Minhas Conquistas',
@@ -97,7 +98,12 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
         
         // Se não é a última parte, adicionar link
         if (i < pathParts.length - 1) {
-          crumbs.push({ label, href: currentPath });
+          // Alguns segmentos de rota não têm página de listagem própria —
+          // redirecionar para o path correto da lista correspondente
+          const hrefOverrides: Record<string, string> = {
+            '/redacoes-exemplar': '/redacoes',
+          };
+          crumbs.push({ label, href: hrefOverrides[currentPath] ?? currentPath });
         } else {
           crumbs.push({ label });
         }
