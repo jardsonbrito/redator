@@ -180,7 +180,7 @@ const Admin = () => {
   // Função para carregar dados dos cards
   const loadCardData = async () => {
     try {
-      const data: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
+      const data: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline"; chips?: string[] }> = {};
       const hoje = new Date();
 
       // Temas - quantos publicados e quantos agendados
@@ -190,16 +190,20 @@ const Admin = () => {
 
       const temasPublicados = temas?.filter(t => !t.scheduled_publish_at || new Date(t.scheduled_publish_at) <= hoje).length || 0;
       const temasAgendados = temas?.filter(t => t.scheduled_publish_at && new Date(t.scheduled_publish_at) > hoje).length || 0;
+      const temasRascunho = temas?.filter(t => {
+        const scheduled = t.scheduled_publish_at ? new Date(t.scheduled_publish_at) : null;
+        return t.status === 'rascunho' && (!scheduled || scheduled <= hoje);
+      }).length || 0;
       const temasSemCapa = temas?.filter(t => !t.cover_file_path && !t.cover_url && !t.imagem_texto_4_url).length || 0;
 
-      const temasBadgeParts = [];
-      if (temasAgendados > 0) temasBadgeParts.push(`${temasAgendados} agendados`);
-      if (temasSemCapa > 0) temasBadgeParts.push(`${temasSemCapa} sem capa ⚠️`);
+      const temasChips: string[] = [];
+      if (temasAgendados > 0) temasChips.push(`${temasAgendados} agendados`);
+      if (temasRascunho > 0) temasChips.push(`${temasRascunho} rascunhos`);
+      if (temasSemCapa > 0) temasChips.push(`${temasSemCapa} sem capa ⚠️`);
 
       data.temas = {
         info: `${temasPublicados} publicados`,
-        badge: temasBadgeParts.length > 0 ? temasBadgeParts.join(' · ') : undefined,
-        badgeVariant: temasSemCapa > 0 ? 'destructive' : undefined
+        chips: temasChips.length > 0 ? temasChips : undefined,
       };
 
       // Redações Exemplares - quantas publicadas e quantas agendadas
@@ -1270,10 +1274,21 @@ const Admin = () => {
                   primaryInfo={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "")}
                   secondaryInfo={cardData[item.id]?.badge}
                   description=""
-                  chips={item.chips}
+                  chips={cardData[item.id]?.chips ?? item.chips}
                   chipColor={item.iconColor}
                   onClick={() => setActiveView(item.id)}
                   onChipClick={(chipIndex, chipValue) => {
+                    // Handle Temas chips
+                    if (item.id === "temas") {
+                      let statusParam = 'todos';
+                      if (chipValue.includes('agendados')) statusParam = 'agendado';
+                      else if (chipValue.includes('rascunhos')) statusParam = 'rascunho';
+                      setActiveView("temas");
+                      const newParams = new URLSearchParams();
+                      newParams.set('status', statusParam);
+                      navigate(`?${newParams.toString()}`);
+                      return;
+                    }
                     // Handle Jarvis chips
                     if (item.id === "jarvis") {
                       const subtabMap: Record<string, string> = {
