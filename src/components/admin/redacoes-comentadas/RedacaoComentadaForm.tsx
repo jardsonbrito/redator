@@ -9,6 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -331,8 +338,6 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
   const [novaAnotacao, setNovaAnotacao] = useState<Partial<Anotacao> | null>(null);
   const textoRef = useRef<HTMLDivElement>(null);
 
-  const anotacaoCardRef = useRef<HTMLDivElement>(null);
-
   const handleMouseUp = () => {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !textoRef.current) return;
@@ -359,6 +364,9 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
       const selected = sel.toString();
       if (!selected.trim()) return;
 
+      sel.removeAllRanges();
+
+      // Abre o Dialog de anotação — a página não rola
       setNovaAnotacao({
         id: uuidv4(),
         start,
@@ -368,12 +376,6 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
         tipo: 'erro',
         competencia: '',
       });
-      sel.removeAllRanges();
-
-      // Rola o formulário de anotação para a vista após a renderização
-      setTimeout(() => {
-        anotacaoCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 50);
     } catch {
       // Qualquer erro da Selection API é silenciado — não derruba o componente
       sel?.removeAllRanges();
@@ -423,61 +425,75 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
         </p>
       )}
 
-      {novaAnotacao && (
-        <div ref={anotacaoCardRef}>
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-3 space-y-2">
-            <p className="text-xs font-medium text-primary">
-              Trecho selecionado: <span className="font-normal italic">"{novaAnotacao.trecho}"</span>
-            </p>
-            <Textarea
-              value={novaAnotacao.comentario || ''}
-              onChange={(e) => setNovaAnotacao(prev => prev ? { ...prev, comentario: e.target.value } : null)}
-              rows={2}
-              placeholder="Comentário sobre este trecho..."
-              className="text-sm"
-              autoFocus
-            />
-            <div className="flex gap-2 flex-wrap">
-              <Select
-                value={novaAnotacao.tipo || 'erro'}
-                onValueChange={(v) => setNovaAnotacao(prev => prev ? { ...prev, tipo: v } : null)}
-              >
-                <SelectTrigger className="w-32 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIPO_ANOTACAO_OPTIONS.map(t => (
-                    <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={novaAnotacao.competencia || ''}
-                onValueChange={(v) => setNovaAnotacao(prev => prev ? { ...prev, competencia: v } : null)}
-              >
-                <SelectTrigger className="w-36 h-8 text-xs">
-                  <SelectValue placeholder="Competência (opt.)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="" className="text-xs">Sem competência</SelectItem>
-                  {COMPETENCIAS.map(c => (
-                    <SelectItem key={c} value={c} className="text-xs">{COMPETENCIA_LABELS[c]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button size="sm" className="h-8 text-xs" onClick={handleSalvarAnotacao}>
-                Salvar
-              </Button>
-              <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setNovaAnotacao(null)}>
-                Cancelar
-              </Button>
+      {/* Dialog de nova anotação — abre na frente do texto, sem rolar a página */}
+      <Dialog open={!!novaAnotacao} onOpenChange={(open) => !open && setNovaAnotacao(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nova anotação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm italic text-amber-900 leading-relaxed">
+              "{novaAnotacao?.trecho}"
             </div>
-          </CardContent>
-        </Card>
-        </div>
-      )}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Comentário *</Label>
+              <Textarea
+                value={novaAnotacao?.comentario || ''}
+                onChange={(e) => setNovaAnotacao(prev => prev ? { ...prev, comentario: e.target.value } : null)}
+                rows={3}
+                placeholder="Escreva o comentário sobre este trecho..."
+                className="text-sm"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs font-medium">Tipo</Label>
+                <Select
+                  value={novaAnotacao?.tipo || 'erro'}
+                  onValueChange={(v) => setNovaAnotacao(prev => prev ? { ...prev, tipo: v } : null)}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIPO_ANOTACAO_OPTIONS.map(t => (
+                      <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs font-medium">Competência (opcional)</Label>
+                <Select
+                  value={novaAnotacao?.competencia || ''}
+                  onValueChange={(v) => setNovaAnotacao(prev => prev ? { ...prev, competencia: v } : null)}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Nenhuma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="" className="text-xs">Sem competência</SelectItem>
+                    {COMPETENCIAS.map(c => (
+                      <SelectItem key={c} value={c} className="text-xs">{COMPETENCIA_LABELS[c]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setNovaAnotacao(null)}>
+              Cancelar
+            </Button>
+            <Button type="button" size="sm" onClick={handleSalvarAnotacao}>
+              Salvar anotação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
+      {/* Lista de anotações já criadas */}
       {anotacoes.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-muted-foreground">
@@ -502,6 +518,7 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
                 </div>
               </div>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 text-muted-foreground shrink-0"
