@@ -28,6 +28,9 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
   const [blogPostId, setBlogPostId] = useState<string | null>(null);
   const [syncingBlog, setSyncingBlog] = useState(false);
 
+  // Validação ENEM
+  const [atualizadoBanca, setAtualizadoBanca] = useState(false);
+
   const [formData, setFormData] = useState({
     frase_tematica: '',
     eixo_tematico: '',
@@ -35,7 +38,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     pdf_url: '',
     dica_de_escrita: '',
     autor: '',
-    foto_autor: ''
+    foto_autor: '',
+    ano_banca: '',
   });
 
   useEffect(() => {
@@ -57,8 +61,10 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             pdf_url: data.pdf_url || '',
             dica_de_escrita: data.dica_de_escrita || '',
             autor: data.autor || '',
-            foto_autor: data.foto_autor || ''
+            foto_autor: data.foto_autor || '',
+            ano_banca: data.ano_banca ? String(data.ano_banca) : '',
           });
+          setAtualizadoBanca(data.atualizado_banca ?? false);
           setPublicarNoBlog(data.publicar_no_blog ?? false);
           setBlogPostId(data.blog_post_id ?? null);
         } catch (error: any) {
@@ -92,6 +98,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
             foto_autor: formData.foto_autor.trim() || null,
+            atualizado_banca: atualizadoBanca,
+            ano_banca: formData.ano_banca ? parseInt(formData.ano_banca, 10) : null,
           })
           .eq('id', redacaoId);
 
@@ -113,6 +121,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
             foto_autor: formData.foto_autor.trim() || null,
+            atualizado_banca: atualizadoBanca,
+            ano_banca: formData.ano_banca ? parseInt(formData.ano_banca, 10) : null,
             nota_total: 1000, // Redação exemplar
             data_envio: new Date().toISOString()
           }])
@@ -140,8 +150,10 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           pdf_url: '',
           dica_de_escrita: '',
           autor: '',
-          foto_autor: ''
+          foto_autor: '',
+          ano_banca: '',
         });
+        setAtualizadoBanca(false);
         setPublicarNoBlog(false);
         setBlogPostId(null);
       }
@@ -202,6 +214,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     { id: 'foto_autor', label: 'Foto do Autor' },
     { id: 'texto', label: 'Texto da Redação' },
     { id: 'dica', label: 'Dica de Escrita' },
+    { id: 'validacao', label: 'Validação ENEM' },
     { id: 'blog', label: 'Blog' },
   ];
 
@@ -379,6 +392,71 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
                   onChange={(e) => setFormData({...formData, pdf_url: e.target.value})}
                   className="text-sm"
                 />
+              </div>
+            )}
+
+            {/* Validação ENEM Section */}
+            {activeSection === 'validacao' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-5">
+                {/* Toggle principal */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Redação validada para o ENEM</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Ativa o selo de validação visível para alunos nos cards e na página da redação
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAtualizadoBanca((v) => !v)}
+                    className={cn(
+                      'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none',
+                      atualizadoBanca ? 'bg-green-600' : 'bg-gray-200'
+                    )}
+                    aria-pressed={atualizadoBanca}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                        atualizadoBanca ? 'translate-x-6' : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {/* Campo de ano (opcional) */}
+                {atualizadoBanca && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-700">
+                      Ano da banca <span className="font-normal text-gray-400">(opcional — se vazio, usa o ano corrente: {new Date().getFullYear()})</span>
+                    </label>
+                    <Input
+                      type="number"
+                      min={2000}
+                      max={2099}
+                      placeholder={String(new Date().getFullYear())}
+                      value={formData.ano_banca}
+                      onChange={(e) => setFormData({ ...formData, ano_banca: e.target.value })}
+                      className="text-sm w-36"
+                    />
+                  </div>
+                )}
+
+                {/* Preview do selo */}
+                {atualizadoBanca && (
+                  <div className="pt-1">
+                    <p className="text-xs text-gray-500 mb-2">Preview do selo:</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-semibold">
+                      ✅ Redação validada para o ENEM {formData.ano_banca || new Date().getFullYear()}
+                    </span>
+                  </div>
+                )}
+
+                {!atualizadoBanca && (
+                  <p className="text-xs text-gray-400">
+                    Ative o toggle para exibir o selo de validação nesta redação exemplar.
+                  </p>
+                )}
               </div>
             )}
 

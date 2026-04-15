@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SeloValidacaoENEM } from '@/components/shared/SeloValidacaoENEM';
 
 interface RedacaoExemplarCardData {
   id: string;
@@ -32,6 +33,9 @@ interface RedacaoExemplarCardData {
   // Campos para agendamento/publicação programada (legado)
   data_publicacao?: string | null;
   programada?: boolean;
+  // Validação ENEM
+  atualizado_banca?: boolean;
+  ano_banca?: number | null;
 }
 
 interface RedacaoExemplarCardActions {
@@ -258,6 +262,13 @@ export const RedacaoExemplarCardPadrao = ({
               </div>
             )}
           </div>
+
+          {/* Selo de validação ENEM */}
+          {redacao.atualizado_banca && (
+            <div>
+              <SeloValidacaoENEM ano={redacao.ano_banca} />
+            </div>
+          )}
 
           {/* Data de criação (só para admin) */}
           {perfil === 'admin' && formatCreatedDate() && (

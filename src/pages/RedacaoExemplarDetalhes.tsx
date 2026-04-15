@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { dicaToHTML } from "@/utils/dicaToHTML";
 import { formatRedacaoText } from "@/utils/formatRedacaoText";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
+import { SeloValidacaoENEM } from "@/components/shared/SeloValidacaoENEM";
 
 const RedacaoExemplarDetalhes = () => {
   const { id } = useParams<{ id: string }>();
@@ -139,6 +140,13 @@ const RedacaoExemplarDetalhes = () => {
                     <CardTitle className="text-2xl font-bold text-gray-900">
                       {redacao.frase_tematica}
                     </CardTitle>
+
+                    {/* Selo de validação ENEM */}
+                    {redacao.atualizado_banca && (
+                      <div>
+                        <SeloValidacaoENEM ano={redacao.ano_banca} />
+                      </div>
+                    )}
 
                     {/* Meta informações */}
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
