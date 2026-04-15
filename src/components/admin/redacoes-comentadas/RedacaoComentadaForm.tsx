@@ -366,8 +366,10 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
 
       sel.removeAllRanges();
 
-      // Abre o Dialog de anotação — a página não rola
-      setNovaAnotacao({
+      // setTimeout necessário: sem ele, o Radix UI detecta o mouseup como
+      // "clique fora do Dialog" e fecha o modal imediatamente ao abrir,
+      // corrompendo pointer-events do body (padrão documentado no projeto).
+      const payload = {
         id: uuidv4(),
         start,
         end: start + selected.length,
@@ -375,7 +377,8 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
         comentario: '',
         tipo: 'erro',
         competencia: '',
-      });
+      };
+      setTimeout(() => setNovaAnotacao(payload), 10);
     } catch {
       // Qualquer erro da Selection API é silenciado — não derruba o componente
       sel?.removeAllRanges();
@@ -427,7 +430,11 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
 
       {/* Dialog de nova anotação — abre na frente do texto, sem rolar a página */}
       <Dialog open={!!novaAnotacao} onOpenChange={(open) => !open && setNovaAnotacao(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent
+          className="max-w-lg"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Nova anotação</DialogTitle>
           </DialogHeader>
@@ -443,7 +450,6 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
                 rows={3}
                 placeholder="Escreva o comentário sobre este trecho..."
                 className="text-sm"
-                autoFocus
               />
             </div>
             <div className="flex gap-3">
