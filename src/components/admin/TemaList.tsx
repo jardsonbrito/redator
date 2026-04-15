@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { X as ClearIcon } from 'lucide-react';
+import { X as ClearIcon, ImageOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -24,6 +24,7 @@ export const TemaList = () => {
   // Usar o hook de filtros admin
   const {
     temas,
+    allTemas,
     isLoading,
     error,
     fraseFilter,
@@ -40,6 +41,10 @@ export const TemaList = () => {
     updateOrderBy,
     clearFilters,
   } = useAdminTemasFilters();
+
+  const temasSemCapa = (allTemas || []).filter(
+    t => !t.cover_file_path && !t.cover_url && !t.imagem_texto_4_url
+  );
 
   const refetch = async () => {
     await queryClient.invalidateQueries({ queryKey: ['admin-temas-all'] });
@@ -213,7 +218,38 @@ export const TemaList = () => {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-redator-primary">Temas Cadastrados</h3>
       </div>
-      
+
+      {/* Alerta: temas sem imagem de capa */}
+      {temasSemCapa.length > 0 && (
+        <div className="border border-red-200 bg-red-50 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <ImageOff className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-red-700 mb-2">
+                {temasSemCapa.length === 1
+                  ? '1 tema sem imagem de capa'
+                  : `${temasSemCapa.length} temas sem imagem de capa`}
+              </p>
+              <ul className="space-y-1.5">
+                {temasSemCapa.map(t => (
+                  <li key={t.id} className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-red-600 truncate">{t.frase_tematica}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 border-red-300 text-red-700 hover:bg-red-100 shrink-0"
+                      onClick={() => setEditingId(t.id)}
+                    >
+                      Adicionar capa
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Seção de Filtros Admin */}
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row gap-4 mb-4">

@@ -190,11 +190,16 @@ const Admin = () => {
 
       const temasPublicados = temas?.filter(t => !t.scheduled_publish_at || new Date(t.scheduled_publish_at) <= hoje).length || 0;
       const temasAgendados = temas?.filter(t => t.scheduled_publish_at && new Date(t.scheduled_publish_at) > hoje).length || 0;
+      const temasSemCapa = temas?.filter(t => !t.cover_file_path && !t.cover_url && !t.imagem_texto_4_url).length || 0;
 
+      const temasBadgeParts = [];
+      if (temasAgendados > 0) temasBadgeParts.push(`${temasAgendados} agendados`);
+      if (temasSemCapa > 0) temasBadgeParts.push(`${temasSemCapa} sem capa ⚠️`);
 
       data.temas = {
         info: `${temasPublicados} publicados`,
-        badge: temasAgendados > 0 ? `${temasAgendados} agendados` : undefined
+        badge: temasBadgeParts.length > 0 ? temasBadgeParts.join(' · ') : undefined,
+        badgeVariant: temasSemCapa > 0 ? 'destructive' : undefined
       };
 
       // Redações Exemplares - quantas publicadas e quantas agendadas

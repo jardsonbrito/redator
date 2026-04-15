@@ -268,6 +268,7 @@ export const useAdminTemasFilters = () => {
   return {
     // Dados
     temas: filteredTemas,
+    allTemas,
     isLoading,
     error,
 
