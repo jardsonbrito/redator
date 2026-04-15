@@ -91,11 +91,21 @@ const getStatusInfo = (tema: TemaCardData) => {
 };
 
 const getFormattedDate = (tema: TemaCardData) => {
+  const now = new Date();
+  const scheduledDate = tema.scheduled_publish_at ? new Date(tema.scheduled_publish_at) : null;
+
+  // Tema agendado: mostra a data de agendamento
+  if (scheduledDate && scheduledDate > now) {
+    return format(scheduledDate, "dd/MM/yyyy", { locale: ptBR });
+  }
+
+  // Tema publicado: mostra a data de publicação
   const publishedDate = tema.published_at || tema.publicado_em;
   if (publishedDate) {
     return format(new Date(publishedDate), "dd/MM/yyyy", { locale: ptBR });
   }
 
+  // Fallback: data de criação
   if (tema.created_at) {
     return format(new Date(tema.created_at), "dd/MM/yyyy", { locale: ptBR });
   }
