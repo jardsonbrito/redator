@@ -24,8 +24,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
 interface RedacaoComentada {
@@ -36,6 +34,7 @@ interface RedacaoComentada {
   ativo: boolean;
   publicado_em: string | null;
   criado_em: string;
+  eixo_tematico: string | null;
   capa_source: string | null;
   capa_url: string | null;
   capa_file_path: string | null;
@@ -78,7 +77,7 @@ export const RedacaoComentadaList = ({ onEdit }: Props) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes_comentadas')
-        .select('id, titulo, modo_correcao_id, turmas_autorizadas, ativo, publicado_em, criado_em, capa_source, capa_url, capa_file_path')
+        .select('id, titulo, modo_correcao_id, turmas_autorizadas, ativo, publicado_em, criado_em, eixo_tematico, capa_source, capa_url, capa_file_path')
         .order('criado_em', { ascending: false });
       if (error) throw error;
       return (data || []) as RedacaoComentada[];
@@ -247,10 +246,10 @@ export const RedacaoComentadaList = ({ onEdit }: Props) => {
                   </div>
                 </div>
 
-                {/* Data */}
-                {item.publicado_em && (
-                  <div className="text-sm text-gray-500">
-                    Criado em: {format(new Date(item.publicado_em), 'dd/MM/yyyy', { locale: ptBR })}
+                {/* Eixo temático */}
+                {item.eixo_tematico && (
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-violet-100 text-violet-800 text-xs font-medium">
+                    {item.eixo_tematico}
                   </div>
                 )}
 

@@ -62,7 +62,7 @@ const TIPO_LABELS: Record<TipoBloco, string> = {
   pontos_fortes: 'Pontos Fortes',
   pontos_melhoria: 'Pontos a Melhorar',
   observacoes_corretor: 'Observações do Corretor',
-  competencias_pontuacao: 'Competências e Pontuação',
+  competencias_pontuacao: 'Competências',
 };
 
 const MODO_LABELS: Record<string, string> = {
@@ -78,15 +78,15 @@ const MODO_COLORS: Record<string, string> = {
 };
 
 const COMPETENCIAS = ['c1', 'c2', 'c3', 'c4', 'c5'] as const;
-const COMPETENCIA_LABELS: Record<string, string> = {
-  c1: 'C1 – Norma Culta',
-  c2: 'C2 – Tema e Gênero',
-  c3: 'C3 – Argumentação',
-  c4: 'C4 – Coesão',
-  c5: 'C5 – Proposta de Intervenção',
-};
 const COMPETENCIA_LABEL_SHORT: Record<string, string> = {
   c1: 'C1', c2: 'C2', c3: 'C3', c4: 'C4', c5: 'C5',
+};
+const COMPETENCIA_LABEL_FULL: Record<string, string> = {
+  c1: 'Competência 1',
+  c2: 'Competência 2',
+  c3: 'Competência 3',
+  c4: 'Competência 4',
+  c5: 'Competência 5',
 };
 
 // Cores para highlight dos trechos: por competência (ENEM) ou por tipo
@@ -108,6 +108,20 @@ const COMPETENCIA_BADGE_COLORS: Record<string, string> = {
   c3: 'bg-blue-100 text-blue-700 border-blue-200',
   c4: 'bg-orange-100 text-orange-700 border-orange-200',
   c5: 'bg-purple-100 text-purple-700 border-purple-200',
+};
+
+// Cores do bloco de comentário no popup (fundo + texto)
+const COMPETENCIA_COMMENT_BG: Record<string, string> = {
+  c1: 'bg-red-100 text-red-900 border border-red-300',
+  c2: 'bg-emerald-100 text-emerald-900 border border-emerald-300',
+  c3: 'bg-blue-100 text-blue-900 border border-blue-300',
+  c4: 'bg-orange-100 text-orange-900 border border-orange-300',
+  c5: 'bg-purple-100 text-purple-900 border border-purple-300',
+};
+const TIPO_COMMENT_BG: Record<string, string> = {
+  erro: 'bg-red-100 text-red-900 border border-red-300',
+  dica: 'bg-blue-100 text-blue-900 border border-blue-300',
+  elogio: 'bg-emerald-100 text-emerald-900 border border-emerald-300',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -204,7 +218,7 @@ const TrechoHighlightedText = ({ texto, anotacoes }: TrechoHighlightProps) => {
           <DialogHeader>
             <DialogTitle className="text-base">
               {anotacaoAberta?.competencia
-                ? COMPETENCIA_LABELS[anotacaoAberta.competencia]
+                ? COMPETENCIA_LABEL_FULL[anotacaoAberta.competencia]
                 : 'Comentário'}
             </DialogTitle>
           </DialogHeader>
@@ -212,20 +226,21 @@ const TrechoHighlightedText = ({ texto, anotacoes }: TrechoHighlightProps) => {
             <div className="bg-muted/50 rounded p-3 text-sm italic text-muted-foreground">
               "{anotacaoAberta?.trecho}"
             </div>
-            <p className="text-sm">{anotacaoAberta?.comentario}</p>
-            <div className="flex gap-2">
-              {anotacaoAberta?.competencia && (
-                <Badge
-                  variant="outline"
-                  className={`text-xs border ${COMPETENCIA_BADGE_COLORS[anotacaoAberta.competencia]}`}
-                >
-                  {COMPETENCIA_LABEL_SHORT[anotacaoAberta.competencia]}
-                </Badge>
-              )}
-              <Badge variant="outline" className="text-xs capitalize">
-                {anotacaoAberta?.tipo}
-              </Badge>
+            <div className={`rounded p-3 text-sm leading-relaxed ${
+              anotacaoAberta?.competencia && COMPETENCIA_COMMENT_BG[anotacaoAberta.competencia]
+                ? COMPETENCIA_COMMENT_BG[anotacaoAberta.competencia]
+                : TIPO_COMMENT_BG[anotacaoAberta?.tipo || 'erro'] || 'bg-muted/50'
+            }`}>
+              {anotacaoAberta?.comentario}
             </div>
+            {/* Linha de badges: só exibe quando não há competência vinculada */}
+            {!anotacaoAberta?.competencia && (
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-xs capitalize">
+                  {anotacaoAberta?.tipo}
+                </Badge>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -288,27 +303,26 @@ const BlocoRenderer = ({ bloco }: BlocoRendererProps) => {
         {COMPETENCIAS.map((c) => (
           comp[c] && (
             <div key={c} className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between">
                 <Badge
                   variant="outline"
-                  className={`text-xs border ${COMPETENCIA_BADGE_COLORS[c]}`}
+                  className={`text-sm border ${COMPETENCIA_BADGE_COLORS[c]}`}
                 >
-                  {COMPETENCIA_LABEL_SHORT[c]}
+                  {COMPETENCIA_LABEL_FULL[c]}
                 </Badge>
-                <span className="text-sm font-medium">{COMPETENCIA_LABELS[c]}</span>
-                <span className="ml-auto text-sm font-bold text-primary">
-                  {comp[c].nota}/200
-                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xs text-muted-foreground">Pontuação</span>
+                  <span className="text-sm font-bold text-primary">{comp[c].nota}</span>
+                </div>
               </div>
               {comp[c].comentario && (
-                <p className="text-sm text-muted-foreground pl-8">{comp[c].comentario}</p>
+                <p className="text-sm text-muted-foreground">{comp[c].comentario}</p>
               )}
             </div>
           )
         ))}
-        <div className="border-t pt-2 flex justify-between items-center">
-          <span className="text-sm font-semibold">Total</span>
-          <span className="text-xl font-bold text-primary">{total}/1000</span>
+        <div className="border-t pt-3 flex justify-center">
+          <span className="text-3xl font-bold text-[#662F96]">{total}</span>
         </div>
       </div>
     );
@@ -344,13 +358,13 @@ const BlocoAtivoView = ({ bloco, textoOriginal, modoCorrecaoId }: BlocoAtivoView
           <Card className="bg-amber-50 border-amber-200">
             <CardContent className="p-3">
               <p className="text-xs font-medium text-amber-800 mb-2">
-                Legenda — clique nos trechos destacados para ver os comentários:
+                Clique nos trechos destacados para ver os comentários:
               </p>
               <div className="flex flex-wrap gap-2">
                 {modoCorrecaoId === 'enem'
                   ? COMPETENCIAS.map(c => (
                     <span key={c} className={`text-xs px-2 py-0.5 rounded border ${COMPETENCIA_BADGE_COLORS[c]}`}>
-                      {COMPETENCIA_LABEL_SHORT[c]}
+                      {COMPETENCIA_LABEL_FULL[c]}
                     </span>
                   ))
                   : ['erro', 'dica', 'elogio'].map(t => (
@@ -390,10 +404,12 @@ const BlocoAtivoView = ({ bloco, textoOriginal, modoCorrecaoId }: BlocoAtivoView
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
-      </CardHeader>
-      <CardContent>
+      {bloco.tipo !== 'competencias_pontuacao' && (
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
+        </CardHeader>
+      )}
+      <CardContent className={bloco.tipo === 'competencias_pontuacao' ? 'pt-6' : ''}>
         <BlocoRenderer bloco={bloco} />
       </CardContent>
     </Card>

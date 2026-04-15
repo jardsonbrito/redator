@@ -346,8 +346,6 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
       const range = sel.getRangeAt(0);
       const container = textoRef.current;
 
-      // Garante que a seleção está inteiramente dentro do container do texto.
-      // Caso contrário, preRange.setEnd lança DOMException e derruba o componente.
       if (
         !container.contains(range.startContainer) ||
         !container.contains(range.endContainer)
@@ -356,7 +354,6 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
         return;
       }
 
-      // Calcula o offset absoluto dentro do container
       const preRange = document.createRange();
       preRange.selectNodeContents(container);
       preRange.setEnd(range.startContainer, range.startOffset);
@@ -366,9 +363,6 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
 
       sel.removeAllRanges();
 
-      // setTimeout necessário: sem ele, o Radix UI detecta o mouseup como
-      // "clique fora do Dialog" e fecha o modal imediatamente ao abrir,
-      // corrompendo pointer-events do body (padrão documentado no projeto).
       const payload = {
         id: uuidv4(),
         start,
@@ -376,11 +370,11 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
         trecho: selected,
         comentario: '',
         tipo: 'erro',
-        competencia: '',
+        // 'none' internamente — Radix Select proíbe value="" em SelectItem
+        competencia: 'none' as string,
       };
       setTimeout(() => setNovaAnotacao(payload), 10);
     } catch {
-      // Qualquer erro da Selection API é silenciado — não derruba o componente
       sel?.removeAllRanges();
     }
   };
@@ -397,7 +391,9 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
       trecho: novaAnotacao.trecho!,
       comentario: novaAnotacao.comentario!,
       tipo: novaAnotacao.tipo || 'erro',
-      competencia: novaAnotacao.competencia || undefined,
+      competencia: (novaAnotacao.competencia && novaAnotacao.competencia !== 'none')
+        ? novaAnotacao.competencia
+        : undefined,
     };
     onChange({ anotacoes: [...anotacoes, nova] });
     setNovaAnotacao(null);
@@ -472,14 +468,19 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
               <div className="flex-1 space-y-1">
                 <Label className="text-xs font-medium">Competência (opcional)</Label>
                 <Select
-                  value={novaAnotacao?.competencia || ''}
-                  onValueChange={(v) => setNovaAnotacao(prev => prev ? { ...prev, competencia: v } : null)}
+                  value={novaAnotacao?.competencia || 'none'}
+                  onValueChange={(v) =>
+                    setNovaAnotacao(prev =>
+                      prev ? { ...prev, competencia: v === 'none' ? '' : v } : null
+                    )
+                  }
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="Nenhuma" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="" className="text-xs">Sem competência</SelectItem>
+                    {/* Radix Select proíbe value="" — usa 'none' e converte ao salvar */}
+                    <SelectItem value="none" className="text-xs">Sem competência</SelectItem>
                     {COMPETENCIAS.map(c => (
                       <SelectItem key={c} value={c} className="text-xs">{COMPETENCIA_LABELS[c]}</SelectItem>
                     ))}
@@ -549,6 +550,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
   const [activeSection, setActiveSection] = useState<'info' | 'blocos'>('info');
 
   const [titulo, setTitulo] = useState('');
+  const [eixoTematico, setEixoTematico] = useState('');
   const [modoCorrecaoId, setModoCorrecaoId] = useState('enem');
   const [turmasAutorizadas, setTurmasAutorizadas] = useState<string[]>([]);
   const [ativo, setAtivo] = useState(false);
@@ -557,6 +559,9 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
 
   const [modosCorrecao, setModosCorrecao] = useState<ModoCorrecao[]>([]);
   const [turmasProfessores, setTurmasProfessores] = useState<TurmaProfessor[]>([]);
+
+  // Chip de bloco ativo na seção Blocos
+  const [blocoAtivoLocalId, setBlocoAtivoLocalId] = useState<string | null>(null);
 
   // Tipo de bloco a adicionar manualmente
   const [tipoParaAdicionar, setTipoParaAdicionar] = useState<TipoBloco>('texto_original');
@@ -587,6 +592,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
         if (rcRes.data) {
           const rc = rcRes.data as any;
           setTitulo(rc.titulo);
+          setEixoTematico(rc.eixo_tematico || '');
           setModoCorrecaoId(rc.modo_correcao_id);
           setTurmasAutorizadas(rc.turmas_autorizadas || []);
           setAtivo(rc.ativo);
@@ -597,14 +603,16 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
           }
         }
         if (blocosRes.data) {
-          setBlocos(blocosRes.data.map((b: any) => ({
+          const loaded = blocosRes.data.map((b: any) => ({
             localId: uuidv4(),
             dbId: b.id,
             tipo: b.tipo as TipoBloco,
             ordem: b.ordem,
             visivel: b.visivel,
             conteudo: b.conteudo,
-          })));
+          }));
+          setBlocos(loaded);
+          if (loaded.length > 0) setBlocoAtivoLocalId(loaded[0].localId);
         }
       } finally {
         setInitialLoading(false);
@@ -619,15 +627,15 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
     if (editingId) return; // em edição, não substitui blocos
     const modo = modosCorrecao.find(m => m.id === novoModo);
     if (!modo) return;
-    setBlocos(
-      modo.blocos_padrao.map((bp, idx) => ({
-        localId: uuidv4(),
-        tipo: bp.tipo,
-        ordem: idx + 1,
-        visivel: bp.visivel,
-        conteudo: conteudoPadrao(bp.tipo),
-      }))
-    );
+    const novos = modo.blocos_padrao.map((bp, idx) => ({
+      localId: uuidv4(),
+      tipo: bp.tipo,
+      ordem: idx + 1,
+      visivel: bp.visivel,
+      conteudo: conteudoPadrao(bp.tipo),
+    }));
+    setBlocos(novos);
+    if (novos.length > 0) setBlocoAtivoLocalId(novos[0].localId);
   };
 
   // Carrega blocos padrão quando os modos chegam (criação inicial)
@@ -635,15 +643,15 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
     if (editingId || modosCorrecao.length === 0 || blocos.length > 0) return;
     const modo = modosCorrecao.find(m => m.id === modoCorrecaoId);
     if (!modo) return;
-    setBlocos(
-      modo.blocos_padrao.map((bp, idx) => ({
-        localId: uuidv4(),
-        tipo: bp.tipo,
-        ordem: idx + 1,
-        visivel: bp.visivel,
-        conteudo: conteudoPadrao(bp.tipo),
-      }))
-    );
+    const novos = modo.blocos_padrao.map((bp, idx) => ({
+      localId: uuidv4(),
+      tipo: bp.tipo,
+      ordem: idx + 1,
+      visivel: bp.visivel,
+      conteudo: conteudoPadrao(bp.tipo),
+    }));
+    setBlocos(novos);
+    if (novos.length > 0) setBlocoAtivoLocalId(novos[0].localId);
   }, [modosCorrecao]);
 
   // Texto original (para o editor de trechos)
@@ -676,18 +684,31 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
   };
 
   const handleRemoverBloco = (localId: string) => {
-    setBlocos(prev => prev.filter(b => b.localId !== localId).map((b, i) => ({ ...b, ordem: i + 1 })));
+    setBlocos(prev => {
+      const idx = prev.findIndex(b => b.localId === localId);
+      const filtered = prev.filter(b => b.localId !== localId).map((b, i) => ({ ...b, ordem: i + 1 }));
+      // Seleciona bloco adjacente após remoção
+      if (blocoAtivoLocalId === localId && filtered.length > 0) {
+        const nextIdx = Math.min(idx, filtered.length - 1);
+        setBlocoAtivoLocalId(filtered[nextIdx].localId);
+      } else if (filtered.length === 0) {
+        setBlocoAtivoLocalId(null);
+      }
+      return filtered;
+    });
   };
 
   const handleAdicionarBloco = () => {
+    const novoLocalId = uuidv4();
     const novoBloco: Bloco = {
-      localId: uuidv4(),
+      localId: novoLocalId,
       tipo: tipoParaAdicionar,
       ordem: blocos.length + 1,
       visivel: true,
       conteudo: conteudoPadrao(tipoParaAdicionar),
     };
     setBlocos(prev => [...prev, novoBloco]);
+    setBlocoAtivoLocalId(novoLocalId);
   };
 
   const handleSalvar = async () => {
@@ -708,6 +729,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
 
       const payload: any = {
         titulo: titulo.trim(),
+        eixo_tematico: eixoTematico.trim() || null,
         modo_correcao_id: modoCorrecaoId,
         turmas_autorizadas: turmasAutorizadas,
         ativo,
@@ -832,6 +854,17 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
           </div>
 
           <div>
+            <Label htmlFor="eixo_tematico">Eixo Temático</Label>
+            <Input
+              id="eixo_tematico"
+              value={eixoTematico}
+              onChange={(e) => setEixoTematico(e.target.value)}
+              placeholder="Ex.: Ciência e Tecnologia, Educação, Meio Ambiente..."
+              className="mt-1"
+            />
+          </div>
+
+          <div>
             <Label>Modo de Correção *</Label>
             <Select value={modoCorrecaoId} onValueChange={handleModoChange}>
               <SelectTrigger className="mt-1">
@@ -910,70 +943,98 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
       {/* Seção: Blocos */}
       {activeSection === 'blocos' && (
         <div className="space-y-3">
-          {blocos.length === 0 && (
+          {blocos.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
               Nenhum bloco adicionado. Use o seletor abaixo para adicionar blocos.
             </p>
-          )}
+          ) : (
+            <>
+              {/* Chips de navegação entre blocos */}
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {blocos.map((bloco) => (
+                  <button
+                    key={bloco.localId}
+                    type="button"
+                    onClick={() => setBlocoAtivoLocalId(bloco.localId)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                      !bloco.visivel ? 'opacity-50' : ''
+                    } ${
+                      blocoAtivoLocalId === bloco.localId
+                        ? 'bg-[#662F96] text-white'
+                        : 'bg-[#B175FF] text-white hover:bg-[#662F96]'
+                    }`}
+                  >
+                    {TIPO_LABELS[bloco.tipo]}
+                  </button>
+                ))}
+              </div>
 
-          {blocos.map((bloco, idx) => (
-            <Card key={bloco.localId} className={!bloco.visivel ? 'opacity-50' : ''}>
-              <CardHeader className="py-2 px-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-muted-foreground w-5 text-center">
-                      {idx + 1}
-                    </span>
-                    <CardTitle className="text-sm">{TIPO_LABELS[bloco.tipo]}</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      disabled={idx === 0}
-                      onClick={() => handleMoverBloco(bloco.localId, 'up')}
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      disabled={idx === blocos.length - 1}
-                      onClick={() => handleMoverBloco(bloco.localId, 'down')}
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      onClick={() => handleToggleVisivel(bloco.localId)}
-                      title={bloco.visivel ? 'Ocultar bloco' : 'Mostrar bloco'}
-                    >
-                      {bloco.visivel ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-destructive"
-                      onClick={() => handleRemoverBloco(bloco.localId)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-3 pb-3">
-                <BlocoEditor
-                  bloco={bloco}
-                  textoOriginal={textoOriginal}
-                  onChange={handleBlocoConteudoChange}
-                />
-              </CardContent>
-            </Card>
-          ))}
+              {/* Card do bloco ativo */}
+              {(() => {
+                const bloco = blocos.find(b => b.localId === blocoAtivoLocalId) ?? blocos[0];
+                if (!bloco) return null;
+                const idx = blocos.findIndex(b => b.localId === bloco.localId);
+                return (
+                  <Card key={bloco.localId} className={!bloco.visivel ? 'opacity-50' : ''}>
+                    <CardHeader className="py-2 px-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-muted-foreground w-5 text-center">
+                            {idx + 1}
+                          </span>
+                          <CardTitle className="text-sm">{TIPO_LABELS[bloco.tipo]}</CardTitle>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            disabled={idx === 0}
+                            onClick={() => handleMoverBloco(bloco.localId, 'up')}
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            disabled={idx === blocos.length - 1}
+                            onClick={() => handleMoverBloco(bloco.localId, 'down')}
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => handleToggleVisivel(bloco.localId)}
+                            title={bloco.visivel ? 'Ocultar bloco' : 'Mostrar bloco'}
+                          >
+                            {bloco.visivel ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive"
+                            onClick={() => handleRemoverBloco(bloco.localId)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-3 pb-3">
+                      <BlocoEditor
+                        bloco={bloco}
+                        textoOriginal={textoOriginal}
+                        onChange={handleBlocoConteudoChange}
+                      />
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+            </>
+          )}
 
           {/* Adicionar bloco */}
           <div className="flex gap-2 items-center border-t pt-3 mt-3">

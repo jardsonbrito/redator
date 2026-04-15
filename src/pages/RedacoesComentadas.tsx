@@ -10,8 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
 import { useProfessorAuth } from '@/hooks/useProfessorAuth';
 import { usePageTitle } from '@/hooks/useBreadcrumbs';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
 interface RedacaoComentada {
@@ -21,6 +19,7 @@ interface RedacaoComentada {
   turmas_autorizadas: string[];
   publicado_em: string | null;
   criado_em: string;
+  eixo_tematico: string | null;
   capa_source: string | null;
   capa_url: string | null;
   capa_file_path: string | null;
@@ -63,7 +62,7 @@ const RedacoesComentadas = () => {
         setIsLoading(true);
         const { data, error } = await supabase
           .from('redacoes_comentadas')
-          .select('id, titulo, modo_correcao_id, turmas_autorizadas, publicado_em, criado_em, capa_source, capa_url, capa_file_path')
+          .select('id, titulo, modo_correcao_id, turmas_autorizadas, publicado_em, criado_em, eixo_tematico, capa_source, capa_url, capa_file_path')
           .eq('ativo', true)
           .order('publicado_em', { ascending: false });
 
@@ -170,11 +169,10 @@ const RedacoesComentadas = () => {
                       <h2 className="text-lg font-semibold text-gray-900 leading-tight mb-1">
                         {r.titulo}
                       </h2>
-                      {r.publicado_em && (
-                        <p className="text-sm text-gray-500">
-                          Criado em:{' '}
-                          {format(new Date(r.publicado_em), 'dd/MM/yyyy', { locale: ptBR })}
-                        </p>
+                      {r.eixo_tematico && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-violet-100 text-violet-800 text-xs font-medium">
+                          {r.eixo_tematico}
+                        </span>
                       )}
                     </div>
 
