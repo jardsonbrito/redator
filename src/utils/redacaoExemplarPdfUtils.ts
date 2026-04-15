@@ -92,27 +92,15 @@ function buildHtml(
     ? paragraphs.map(p => `<p class="essay-paragraph">${esc(p)}</p>`).join('')
     : '<p class="essay-paragraph sem-conteudo"><em>Conteúdo não disponível.</em></p>';
 
-  const dicaHtml = redacao.dica_de_escrita
+  const dicaParas = (redacao.dica_de_escrita || '')
+    .split(/\n+/)
+    .map(p => p.trim())
+    .filter(Boolean);
+
+  const dicaHtml = dicaParas.length > 0
     ? `<section class="dica-box">
         <h2 class="section-title">Dica de Escrita</h2>
-        <p class="dica-text">${esc(redacao.dica_de_escrita)}</p>
-       </section>`
-    : '';
-
-  const hasNotas = [redacao.nota_c1, redacao.nota_c2, redacao.nota_c3, redacao.nota_c4, redacao.nota_c5, redacao.nota_total]
-    .some(n => n != null);
-
-  const notasHtml = hasNotas
-    ? `<section class="notas-box">
-        <h2 class="section-title">Notas por Competência</h2>
-        <div class="notas-grid">
-          <div class="nota-item"><span class="nota-label">C1</span><span class="nota-val">${formatNota(redacao.nota_c1)}</span></div>
-          <div class="nota-item"><span class="nota-label">C2</span><span class="nota-val">${formatNota(redacao.nota_c2)}</span></div>
-          <div class="nota-item"><span class="nota-label">C3</span><span class="nota-val">${formatNota(redacao.nota_c3)}</span></div>
-          <div class="nota-item"><span class="nota-label">C4</span><span class="nota-val">${formatNota(redacao.nota_c4)}</span></div>
-          <div class="nota-item"><span class="nota-label">C5</span><span class="nota-val">${formatNota(redacao.nota_c5)}</span></div>
-          <div class="nota-item nota-total"><span class="nota-label">Total</span><span class="nota-val">${formatNota(redacao.nota_total)}</span></div>
-        </div>
+        ${dicaParas.map(p => `<p class="dica-text">${esc(p)}</p>`).join('')}
        </section>`
     : '';
 
@@ -127,7 +115,7 @@ function buildHtml(
 
 @page {
   size: A4;
-  margin: 13mm 13mm 13mm 13mm;
+  margin: 0;
 }
 
 :root {
@@ -347,35 +335,17 @@ body {
 
 .dica-text {
   font-size: 11px;
-  line-height: 1.6;
+  line-height: 1.7;
   color: #78350f;
-  margin: 0;
+  text-align: justify;
+  text-indent: 2em;
+  margin: 0 0 8px;
 }
 
-/* ── NOTAS ────────────────────────────────────────── */
-.notas-box {
-  background: var(--card);
-  border: 1px solid #ddd5ee;
-  border-radius: var(--r-md);
-  padding: 13px 15px;
-  margin-bottom: 13px;
-  break-inside: avoid;
-}
+.dica-text:first-of-type { text-indent: 0; }
+.dica-text:last-child { margin-bottom: 0; }
 
-.notas-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-}
-
-.nota-item {
-  background: var(--purple-soft);
-  border: 1px solid var(--purple-line);
-  border-radius: 8px;
-  padding: 8px 4px;
-  text-align: center;
-}
-
+/* ── NOTAS (removido mas mantido vazio para compatibilidade) ── */
 .nota-total {
   background: linear-gradient(135deg, #f4f0fb 0%, #e2d5f4 100%);
   border-color: #c4aeed;
@@ -444,9 +414,25 @@ body {
 
 /* ── PRINT ────────────────────────────────────────── */
 @media print {
-  html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
-  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .page { max-width: none !important; padding: 0 !important; box-shadow: none !important; border-radius: 0 !important; }
+  html, body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 210mm !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    padding: 13mm !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+  img { max-width: 100% !important; height: auto !important; }
 }
 </style>
 </head>
@@ -457,7 +443,7 @@ body {
     <div class="header-body">
       <h1 class="header-title">REDAÇÃO EXEMPLAR</h1>
       <div class="header-sub">App do Redator · ${year}</div>
-      ${eixo ? `<div class="meta-bar">${esc(eixo)} &nbsp;|&nbsp; Redação Nota 1000</div>` : ''}
+      ${eixo ? `<div class="meta-bar">Eixo temático: ${esc(eixo)}</div>` : ''}
     </div>
     <img class="header-logo" src="${logoUrl}" alt="Logo" onerror="this.style.display='none'" />
   </header>
@@ -478,7 +464,6 @@ body {
     ${conteudoHtml}
   </section>
 
-  ${notasHtml}
   ${dicaHtml}
 
   <footer class="footer">

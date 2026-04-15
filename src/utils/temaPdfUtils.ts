@@ -168,7 +168,7 @@ function buildHtml(tema: FullTema, motivadores: Motivador[]): string {
 
 @page {
   size: A4;
-  margin: 13mm 13mm 13mm 13mm;
+  margin: 0;
 }
 
 :root {
@@ -445,9 +445,25 @@ body {
 
 /* ── PRINT ────────────────────────────────────────── */
 @media print {
-  html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
-  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .page { max-width: none !important; padding: 0 !important; box-shadow: none !important; border-radius: 0 !important; }
+  html, body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 210mm !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    padding: 13mm !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+  img { max-width: 100% !important; height: auto !important; }
 }
 </style>
 </head>
