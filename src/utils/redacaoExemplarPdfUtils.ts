@@ -425,14 +425,33 @@ body {
   .page {
     width: 210mm !important;
     max-width: 210mm !important;
-    padding: 13mm !important;
+    padding: 13mm 13mm 28mm !important; /* bottom extra para o rodapé fixo */
     box-sizing: border-box !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     margin: 0 !important;
-    overflow: hidden !important;
   }
   img { max-width: 100% !important; height: auto !important; }
+
+  /* Rodapé fixo: aparece em TODAS as páginas */
+  .footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding: 6px 13mm !important;
+    margin: 0 !important;
+    background: white !important;
+    border-top: 1.5px solid var(--purple-line) !important;
+    z-index: 1000;
+  }
+
+  /* Seções que não devem ser cortadas */
+  .tema-box,
+  .dica-box {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }
 </style>
 </head>

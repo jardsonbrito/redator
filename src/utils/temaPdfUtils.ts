@@ -330,17 +330,17 @@ body {
 .long-theme .theme-title { font-size: 17px; }
 
 /* ── MOTIVATORS ───────────────────────────────────── */
-.motivators-section { page-break-before: avoid; }
+.motivators-section { break-inside: auto; }
 
 .motivators-section .section-title { margin-bottom: 11px; }
 
+/* Multi-column: mais confiável que grid para break-inside no Chrome */
 .motivators-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 11px;
+  column-count: 2;
+  column-gap: 11px;
 }
 
-.single-column .motivators-grid { grid-template-columns: 1fr; }
+.single-column .motivators-grid { column-count: 1; }
 
 .motivator-card {
   background: var(--card);
@@ -350,6 +350,10 @@ body {
   overflow: hidden;
   break-inside: avoid;
   page-break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  display: inline-block; /* força break-inside no Chrome */
+  width: 100%;
+  margin-bottom: 11px;
 }
 
 .motivator-head {
@@ -456,14 +460,26 @@ body {
   .page {
     width: 210mm !important;
     max-width: 210mm !important;
-    padding: 13mm !important;
+    padding: 13mm 13mm 28mm !important; /* bottom extra para o rodapé fixo */
     box-sizing: border-box !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     margin: 0 !important;
-    overflow: hidden !important;
   }
   img { max-width: 100% !important; height: auto !important; }
+
+  /* Rodapé fixo: aparece em TODAS as páginas */
+  .footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding: 6px 13mm !important;
+    margin: 0 !important;
+    background: white !important;
+    border-top: 1.5px solid var(--purple-line) !important;
+    z-index: 1000;
+  }
 }
 </style>
 </head>
