@@ -274,7 +274,21 @@ const BlocoRenderer = ({ bloco }: BlocoRendererProps) => {
     );
   }
 
-  if (tipo === 'orientacao_estudo' || tipo === 'pontos_fortes' || tipo === 'pontos_melhoria') {
+  if (tipo === 'orientacao_estudo') {
+    const itens: Array<{ id: string; texto: string }> = conteudo.itens || [];
+    return (
+      <div className="space-y-2">
+        {itens.map((item, idx) => (
+          <p key={item.id} className="text-sm leading-relaxed">
+            <span className="font-semibold text-primary mr-2">{idx + 1}.</span>
+            {item.texto}
+          </p>
+        ))}
+      </div>
+    );
+  }
+
+  if (tipo === 'pontos_fortes' || tipo === 'pontos_melhoria') {
     const itens: Array<{ id: string; texto: string }> = conteudo.itens || [];
     return (
       <ul className="space-y-1.5">
