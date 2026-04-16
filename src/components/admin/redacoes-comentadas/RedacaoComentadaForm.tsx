@@ -925,7 +925,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
             conteudo: b.conteudo,
           }));
           setBlocos(loaded);
-          if (loaded.length > 0) setBlocoAtivoLocalId(loaded[0].localId);
+          if (loaded.length > 0) setBlocoAtivoLocalId((loaded.find(b => b.visivel) ?? loaded[0]).localId);
         }
       } finally {
         setInitialLoading(false);
@@ -948,7 +948,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
       conteudo: conteudoPadrao(bp.tipo),
     }));
     setBlocos(novos);
-    if (novos.length > 0) setBlocoAtivoLocalId(novos[0].localId);
+    if (novos.length > 0) setBlocoAtivoLocalId((novos.find(b => b.visivel) ?? novos[0]).localId);
   };
 
   // Carrega blocos padrão quando os modos chegam (criação inicial)
@@ -964,7 +964,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
       conteudo: conteudoPadrao(bp.tipo),
     }));
     setBlocos(novos);
-    if (novos.length > 0) setBlocoAtivoLocalId(novos[0].localId);
+    if (novos.length > 0) setBlocoAtivoLocalId((novos.find(b => b.visivel) ?? novos[0]).localId);
   }, [modosCorrecao]);
 
   // Texto original (para o editor de trechos)
@@ -981,7 +981,16 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
   };
 
   const handleToggleVisivel = (localId: string) => {
-    setBlocos(prev => prev.map(b => b.localId === localId ? { ...b, visivel: !b.visivel } : b));
+    setBlocos(prev => {
+      const atualizado = prev.map(b => b.localId === localId ? { ...b, visivel: !b.visivel } : b);
+      // Se o bloco ativo foi inativado, seleciona o primeiro visível restante
+      const blocoAlterado = atualizado.find(b => b.localId === localId);
+      if (blocoAtivoLocalId === localId && blocoAlterado && !blocoAlterado.visivel) {
+        const primeiroVisivel = atualizado.find(b => b.visivel);
+        setBlocoAtivoLocalId(primeiroVisivel ? primeiroVisivel.localId : localId);
+      }
+      return atualizado;
+    });
   };
 
   const handleMoverBloco = (localId: string, direcao: 'up' | 'down') => {
