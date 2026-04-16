@@ -50,8 +50,11 @@ export const AudioPlayer = ({ url, storagePath, durationHint, onPlay, onEnded }:
     if (!audio || !srcResolvido) return;
 
     const onTimeUpdate = () => {
-      if (audio.duration && isFinite(audio.duration)) {
-        setProgresso(audio.currentTime / audio.duration);
+      const d = (audio.duration && isFinite(audio.duration))
+        ? audio.duration
+        : (durationHint ?? 0);
+      if (d > 0) {
+        setProgresso(audio.currentTime / d);
         setCurrentTime(audio.currentTime);
       }
     };
@@ -106,10 +109,12 @@ export const AudioPlayer = ({ url, storagePath, durationHint, onPlay, onEnded }:
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
-    if (!audio || !audio.duration) return;
+    if (!audio) return;
+    const d = (audio.duration && isFinite(audio.duration)) ? audio.duration : (durationHint ?? 0);
+    if (!d) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = (e.clientX - rect.left) / rect.width;
-    audio.currentTime = pct * audio.duration;
+    audio.currentTime = pct * d;
   };
 
   const formatTime = (s: number) => {
