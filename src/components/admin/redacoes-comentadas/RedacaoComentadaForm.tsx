@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Plus, X, ArrowLeft, Save, Loader2, Mic, Square, Play, Pause,
+  ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Plus, X, ArrowLeft, Save, Loader2, Mic, Square, Play, Pause, Search,
 } from 'lucide-react';
 import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
 import { ImageSelector } from '@/components/admin/ImageSelector';
@@ -565,10 +565,33 @@ interface Anotacao {
   competencia?: string;
 }
 
+/** Renderiza o texto com os trechos que batem com `busca` destacados em amarelo. */
+function TextoComHighlight({ texto, busca }: { texto: string; busca: string }) {
+  if (!busca.trim()) return <>{texto}</>;
+  const escapado = busca.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const partes = texto.split(new RegExp(`(${escapado})`, 'gi'));
+  return (
+    <>
+      {partes.map((parte, i) =>
+        i % 2 === 1 ? (
+          <mark key={i} className="bg-yellow-300 text-yellow-900 rounded-sm">{parte}</mark>
+        ) : (
+          <span key={i}>{parte}</span>
+        )
+      )}
+    </>
+  );
+}
+
 const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) => {
   const anotacoes: Anotacao[] = conteudo.anotacoes || [];
   const [novaAnotacao, setNovaAnotacao] = useState<Partial<Anotacao> | null>(null);
+  const [busca, setBusca] = useState('');
   const textoRef = useRef<HTMLDivElement>(null);
+
+  const totalOcorrencias = busca.trim()
+    ? (textoOriginal.match(new RegExp(busca.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')) || []).length
+    : 0;
 
   const handleMouseUp = () => {
     const sel = window.getSelection();
@@ -642,12 +665,41 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
           <p className="text-xs text-muted-foreground">
             Selecione um trecho no texto abaixo para criar uma anotação:
           </p>
+
+          {/* Campo de busca */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar palavra no texto..."
+              className="w-full pl-8 pr-8 py-1.5 text-xs border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            {busca && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                {totalOcorrencias > 0 && (
+                  <span className="text-xs text-yellow-700 bg-yellow-100 px-1.5 py-0.5 rounded-full font-medium">
+                    {totalOcorrencias}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setBusca('')}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
           <div
             ref={textoRef}
             onMouseUp={handleMouseUp}
             className="border rounded-lg p-3 text-sm whitespace-pre-wrap leading-relaxed bg-amber-50 cursor-text select-text"
           >
-            {textoOriginal}
+            <TextoComHighlight texto={textoOriginal} busca={busca} />
           </div>
         </>
       ) : (
