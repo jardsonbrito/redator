@@ -603,12 +603,7 @@ const RedacaoComentadaDetalhes = () => {
                 Original
               </button>
               <button
-                onClick={() => {
-                  setModoLeitura('lapidada');
-                  // navega automaticamente para o bloco texto_original
-                  const txt = blocos.find(b => b.tipo === 'texto_original');
-                  if (txt) setBlocoAtivoId(txt.id);
-                }}
+                onClick={() => setModoLeitura('lapidada')}
                 className={`px-3 py-1.5 flex items-center gap-1.5 transition-colors ${
                   modoLeitura === 'lapidada'
                     ? 'bg-amber-500 text-white'
@@ -642,38 +637,28 @@ const RedacaoComentadaDetalhes = () => {
         )}
 
         {/* Bloco ativo */}
-        {(() => {
-          const blocoAtivo = blocos.find(b => b.id === blocoAtivoId) ?? null;
-          if (
-            modoLeitura === 'lapidada' &&
-            blocoAtivo?.tipo === 'texto_original' &&
-            textoLapidado
-          ) {
-            return (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    Versão Lapidada
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <VersaoLapidadaView
-                    textoOriginal={textoOriginal}
-                    textoLapidado={textoLapidado}
-                  />
-                </CardContent>
-              </Card>
-            );
-          }
-          return (
-            <BlocoAtivoView
-              bloco={blocoAtivo}
-              textoOriginal={textoOriginal}
-              modoCorrecaoId={redacao.modo_correcao_id}
-            />
-          );
-        })()}
+        {modoLeitura === 'lapidada' && textoLapidado ? (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                Versão Lapidada
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <VersaoLapidadaView
+                textoOriginal={textoOriginal}
+                textoLapidado={textoLapidado}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <BlocoAtivoView
+            bloco={blocos.find(b => b.id === blocoAtivoId) ?? null}
+            textoOriginal={textoOriginal}
+            modoCorrecaoId={redacao.modo_correcao_id}
+          />
+        )}
       </main>
     </div>
   );
