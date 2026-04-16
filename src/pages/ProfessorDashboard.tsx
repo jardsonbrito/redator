@@ -18,6 +18,7 @@ import {
   Map,
   PlayCircle,
 } from "lucide-react";
+import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { ProfessorAvatar } from "@/components/professor/ProfessorAvatar";
 
 type Origem = "herdado" | "exclusivo" | "filtrado" | "em-breve";
@@ -42,7 +43,7 @@ const menuItems: MenuItem[] = [
   { id: "guia-tematico",      label: "Guia Temático",        icon: Map,         path: "/professor/guia-tematico",  origem: "herdado"   },
   { id: "repertorio",         label: "Repertório Orientado", icon: BookMarked,  path: "/professor/repertorio",     origem: "herdado"   },
   { id: "redacoes-exemplares",label: "Redações Exemplares",  icon: FileText,    path: "/professor/redacoes",       origem: "herdado"   },
-  { id: "redacoes-comentadas",label: "Redações Comentadas",  icon: MessageSquare,path: null,                       origem: "exclusivo" },
+  { id: "redacoes-comentadas",label: "Redações Comentadas",  icon: RedacoesComentadasIcon as any,path: null,      origem: "exclusivo" },
   { id: "aulas-gravadas",     label: "Aulas Gravadas",       icon: PlayCircle,  path: "/professor/aulas",          origem: "herdado"   },
   { id: "aulas-ao-vivo",      label: "Aulas ao Vivo",        icon: Video,       path: "/professor/salas-virtuais", origem: "herdado"   },
   { id: "biblioteca",         label: "Biblioteca",           icon: Library,     path: "/professor/biblioteca",     origem: "herdado"   },

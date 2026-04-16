@@ -8,17 +8,20 @@ interface Props {
   url?: string;
   /** Path no bucket micro-audio (para áudio enviado via upload) */
   storagePath?: string;
+  /** Duração em segundos conhecida externamente (webm gravado não tem metadata de duração) */
+  durationHint?: number;
   onPlay?: () => void;
   onEnded?: () => void;
 }
 
-export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
+export const AudioPlayer = ({ url, storagePath, durationHint, onPlay, onEnded }: Props) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [srcResolvido, setSrcResolvido] = useState<string | null>(null);
   const [erroCarregar, setErroCarregar] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progresso, setProgresso] = useState(0);
-  const [duracao, setDuracao] = useState(0);
+  const [duracao, setDuracao] = useState(durationHint ?? 0);
+  const [currentTime, setCurrentTime] = useState(0);
   const onEndedRef = useRef(onEnded);
   onEndedRef.current = onEnded;
 
@@ -47,23 +50,35 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
     if (!audio || !srcResolvido) return;
 
     const onTimeUpdate = () => {
-      if (audio.duration) setProgresso(audio.currentTime / audio.duration);
+      if (audio.duration && isFinite(audio.duration)) {
+        setProgresso(audio.currentTime / audio.duration);
+        setCurrentTime(audio.currentTime);
+      }
     };
-    const onLoaded = () => setDuracao(audio.duration);
+    // loadedmetadata e durationchange — webm gravado via MediaRecorder reporta
+    // duration=Infinity; usa durationHint como fallback e atualiza se o browser calcular o real
+    const onDuration = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuracao(audio.duration);
+      } else if (durationHint) {
+        setDuracao(durationHint);
+      }
+    };
     const onEndedEvt = () => { setPlaying(false); onEndedRef.current?.(); };
     const onError = () => { setPlaying(false); setErroCarregar(true); };
 
     audio.addEventListener('timeupdate', onTimeUpdate);
-    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('loadedmetadata', onDuration);
+    audio.addEventListener('durationchange', onDuration);
     audio.addEventListener('ended', onEndedEvt);
     audio.addEventListener('error', onError);
 
-    // Forçar carregamento dos metadados quando o src é definido
     audio.load();
 
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate);
-      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('loadedmetadata', onDuration);
+      audio.removeEventListener('durationchange', onDuration);
       audio.removeEventListener('ended', onEndedEvt);
       audio.removeEventListener('error', onError);
     };
@@ -98,7 +113,7 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
   };
 
   const formatTime = (s: number) => {
-    if (!isFinite(s) || s === 0) return '0:00';
+    if (!isFinite(s) || isNaN(s) || s === 0) return '0:00';
     const m = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2, '0')}`;
@@ -121,23 +136,19 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
   }
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+    <div className="flex items-center gap-3 px-3 py-2 bg-violet-50 border border-violet-200 rounded-lg">
       <audio ref={audioRef} src={srcResolvido} preload="metadata" />
 
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-12 h-12 rounded-xl bg-[#3f0776] flex items-center justify-center shrink-0">
-          <Volume2 className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-700">Reprodutor de Áudio</p>
-          <p className="text-xs text-gray-400">
-            {duracao ? formatTime(duracao) : '--:--'}
-          </p>
-        </div>
-      </div>
+      <Button
+        onClick={togglePlay}
+        size="sm"
+        className="w-8 h-8 rounded-full bg-[#3f0776] hover:bg-[#643293] shrink-0 p-0"
+      >
+        {playing ? <Pause className="w-3.5 h-3.5 text-white" /> : <Play className="w-3.5 h-3.5 text-white ml-0.5" />}
+      </Button>
 
       <div
-        className="w-full h-2 bg-gray-100 rounded-full cursor-pointer mb-3 relative overflow-hidden"
+        className="flex-1 h-1.5 bg-violet-200 rounded-full cursor-pointer overflow-hidden"
         onClick={seek}
       >
         <div
@@ -146,23 +157,9 @@ export const AudioPlayer = ({ url, storagePath, onPlay, onEnded }: Props) => {
         />
       </div>
 
-      <div className="flex justify-between text-xs text-gray-400 mb-4">
-        <span>{formatTime((audioRef.current?.currentTime) ?? 0)}</span>
-        <span>{formatTime(duracao)}</span>
-      </div>
-
-      <div className="flex justify-center">
-        <Button
-          onClick={togglePlay}
-          className="w-14 h-14 rounded-full bg-[#3f0776] hover:bg-[#643293] shadow-md"
-        >
-          {playing ? (
-            <Pause className="w-6 h-6 text-white" />
-          ) : (
-            <Play className="w-6 h-6 text-white ml-0.5" />
-          )}
-        </Button>
-      </div>
+      <span className="text-xs text-violet-700 font-mono shrink-0 min-w-[36px] text-right">
+        {`-${formatTime(duracao - currentTime)}`}
+      </span>
     </div>
   );
 };

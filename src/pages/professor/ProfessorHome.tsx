@@ -12,6 +12,7 @@ import {
   Map,
   Layers,
 } from "lucide-react";
+import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 
 const menuItems = [
   {
@@ -38,7 +39,7 @@ const menuItems = [
   {
     title: "Redações Comentadas",
     path: "/professor/redacoes-comentadas",
-    icon: MessageSquare,
+    icon: RedacoesComentadasIcon as any,
     tooltip: "Redações com comentários detalhados e anotações por trecho.",
     showAlways: true,
   },

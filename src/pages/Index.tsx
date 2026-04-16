@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Bot, Layers } from "lucide-react";
+import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -156,7 +157,7 @@ const Index = () => {
     {
       title: "Redações Comentadas",
       path: "/redacoes-comentadas",
-      icon: MessageSquare,
+      icon: RedacoesComentadasIcon as any,
       tooltip: "Analise redações com comentários detalhados e anotações por trecho.",
       showAlways: true
     },

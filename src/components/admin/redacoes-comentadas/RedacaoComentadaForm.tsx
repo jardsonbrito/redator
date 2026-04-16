@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Plus, X, ArrowLeft, Save, Loader2,
+  ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Plus, X, ArrowLeft, Save, Loader2, Mic, Square, Play, Pause,
 } from 'lucide-react';
 import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
 import { ImageSelector } from '@/components/admin/ImageSelector';
@@ -107,8 +107,9 @@ function conteudoPadrao(tipo: TipoBloco): any {
     case 'texto_original':
     case 'texto_corrigido':
     case 'analise_global':
-    case 'observacoes_corretor':
       return { texto: '' };
+    case 'observacoes_corretor':
+      return { texto: '', audio_url: null, audio_duration: null, mostrar_texto: true, mostrar_audio: true };
     case 'comentarios_trecho':
       return { anotacoes: [] };
     case 'comentarios_paragrafo':
@@ -133,6 +134,199 @@ function conteudoPadrao(tipo: TipoBloco): any {
   }
 }
 
+// ─── Mini gravador de áudio para Observações do Corretor ─────────────────────
+
+interface AudioRecorderInlineProps {
+  existingUrl: string | null;
+  onSaved: (url: string, duration: number) => void;
+  onDeleted: () => void;
+}
+
+const AudioRecorderInline = ({ existingUrl, onSaved, onDeleted }: AudioRecorderInlineProps) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicId, setSelectedMicId] = useState<string>('');
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordingDurationRef = useRef<number>(0);
+
+  // Enumerar microfones disponíveis ao montar
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        // Pede permissão primeiro (sem ela o browser não retorna labels)
+        await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop()));
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(d => d.kind === 'audioinput');
+        setMicDevices(mics);
+        if (mics.length > 0) setSelectedMicId(mics[0].deviceId);
+      } catch { /* permissão negada — ignora, usa default */ }
+    };
+    loadDevices();
+  }, []);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        ...(selectedMicId ? { deviceId: { exact: selectedMicId } } : {}),
+      };
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      mediaRecorderRef.current = mr;
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        setPreviewUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mr.start(1000);
+      setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => setRecordingTime(p => {
+        const next = p >= 180 ? p : p + 1;
+        recordingDurationRef.current = next;
+        if (p >= 180) stopRecording();
+        return next;
+      }), 1000);
+    } catch {
+      toast.error('Não foi possível acessar o microfone.');
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  };
+
+  const extractStoragePath = (url: string) => {
+    const marker = 'audios-corretores/';
+    const idx = url.indexOf(marker);
+    return idx !== -1 ? url.slice(idx + marker.length) : null;
+  };
+
+  const uploadAudio = async () => {
+    if (!audioBlob) return;
+    setUploading(true);
+    try {
+      // Apaga o arquivo anterior do bucket antes de enviar o novo
+      if (existingUrl) {
+        const oldPath = extractStoragePath(existingUrl);
+        if (oldPath) await supabase.storage.from('audios-corretores').remove([oldPath]);
+      }
+      const path = `redacoes-comentadas/${Date.now()}.webm`;
+      const { error } = await supabase.storage.from('audios-corretores').upload(path, audioBlob, { contentType: 'audio/webm', upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('audios-corretores').getPublicUrl(path);
+      setAudioBlob(null);
+      setPreviewUrl(null);
+      onSaved(publicUrl, recordingDurationRef.current);
+      toast.success('Áudio salvo!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao salvar áudio.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const deleteAudio = async () => {
+    if (existingUrl) {
+      const filePath = extractStoragePath(existingUrl);
+      if (filePath) await supabase.storage.from('audios-corretores').remove([filePath]);
+    }
+    setAudioBlob(null);
+    setPreviewUrl(null);
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+    setIsPlaying(false);
+    onDeleted();
+  };
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) { audio.pause(); setIsPlaying(false); }
+    else { audio.play(); setIsPlaying(true); }
+  };
+
+  const activeUrl = existingUrl || previewUrl;
+
+  if (isRecording) {
+    return (
+      <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg mt-3">
+        <div className="flex items-center gap-2 text-red-600 flex-1">
+          <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+          <span className="text-sm font-medium">Gravando... {formatTime(recordingTime)}</span>
+        </div>
+        <Button type="button" size="sm" variant="destructive" className="rounded-full w-8 h-8 p-0" onClick={stopRecording}>
+          <Square className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
+  if (activeUrl) {
+    return (
+      <div className="flex items-center gap-3 p-3 bg-muted/40 border rounded-lg mt-3">
+        <audio ref={audioRef} src={activeUrl} onEnded={() => setIsPlaying(false)} preload="metadata" />
+        <Button type="button" size="sm" variant="outline" className="rounded-full w-8 h-8 p-0" onClick={togglePlay}>
+          {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+        </Button>
+        <span className="flex-1 text-xs text-muted-foreground">{audioBlob ? 'Áudio gravado (não salvo)' : 'Áudio salvo'}</span>
+        {audioBlob && (
+          <Button type="button" size="sm" disabled={uploading} onClick={uploadAudio} className="text-xs h-7">
+            {uploading ? 'Salvando...' : 'Salvar áudio'}
+          </Button>
+        )}
+        <Button type="button" size="sm" variant="ghost" className="rounded-full w-8 h-8 p-0 text-destructive" onClick={deleteAudio} disabled={uploading}>
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-3">
+      {micDevices.length > 1 && (
+        <Select value={selectedMicId} onValueChange={setSelectedMicId}>
+          <SelectTrigger className="h-8 text-xs w-auto max-w-[220px]">
+            <SelectValue placeholder="Microfone" />
+          </SelectTrigger>
+          <SelectContent>
+            {micDevices.map((d) => (
+              <SelectItem key={d.deviceId} value={d.deviceId} className="text-xs">
+                {d.label || `Microfone ${micDevices.indexOf(d) + 1}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      <Button type="button" size="sm" variant="outline" onClick={startRecording} className="gap-2 text-xs">
+        <Mic className="w-3.5 h-3.5 text-red-500" />
+        Gravar áudio
+      </Button>
+      <span className="text-xs text-muted-foreground">Opcional — até 3 minutos</span>
+    </div>
+  );
+};
+
 // ─── Editor de conteúdo por tipo ─────────────────────────────────────────────
 
 interface BlocoEditorProps {
@@ -144,8 +338,7 @@ interface BlocoEditorProps {
 const BlocoEditor = ({ bloco, textoOriginal, onChange }: BlocoEditorProps) => {
   const update = (partial: any) => onChange(bloco.localId, { ...bloco.conteudo, ...partial });
 
-  if (bloco.tipo === 'texto_original' || bloco.tipo === 'texto_corrigido' ||
-      bloco.tipo === 'analise_global' || bloco.tipo === 'observacoes_corretor') {
+  if (bloco.tipo === 'texto_original' || bloco.tipo === 'texto_corrigido' || bloco.tipo === 'analise_global') {
     return (
       <Textarea
         value={bloco.conteudo.texto || ''}
@@ -154,6 +347,45 @@ const BlocoEditor = ({ bloco, textoOriginal, onChange }: BlocoEditorProps) => {
         placeholder={`Digite o ${TIPO_LABELS[bloco.tipo].toLowerCase()}...`}
         className="text-sm"
       />
+    );
+  }
+
+  if (bloco.tipo === 'observacoes_corretor') {
+    const mostrarTexto = bloco.conteudo.mostrar_texto !== false;
+    const mostrarAudio = bloco.conteudo.mostrar_audio !== false;
+    return (
+      <div className="space-y-3">
+        {/* Toggles de visibilidade independentes */}
+        <div className="flex gap-4 text-xs text-muted-foreground">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch
+              checked={mostrarTexto}
+              onCheckedChange={(v) => update({ mostrar_texto: v })}
+            />
+            Exibir texto
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <Switch
+              checked={mostrarAudio}
+              onCheckedChange={(v) => update({ mostrar_audio: v })}
+            />
+            Exibir áudio
+          </label>
+        </div>
+
+        <Textarea
+          value={bloco.conteudo.texto || ''}
+          onChange={(e) => update({ texto: e.target.value })}
+          rows={5}
+          placeholder="Digite as observações do corretor..."
+          className={`text-sm ${!mostrarTexto ? 'opacity-40' : ''}`}
+        />
+        <AudioRecorderInline
+          existingUrl={bloco.conteudo.audio_url || null}
+          onSaved={(url, duration) => update({ audio_url: url, audio_duration: duration })}
+          onDeleted={() => update({ audio_url: null, audio_duration: null })}
+        />
+      </div>
     );
   }
 

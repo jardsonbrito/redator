@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { StudentHeader } from '@/components/StudentHeader';
+import { AudioPlayer } from '@/components/microaprendizagem/viewers/AudioPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { usePageTitle } from '@/hooks/useBreadcrumbs';
 import { format } from 'date-fns';
@@ -223,14 +224,17 @@ const TrechoHighlightedText = ({ texto, anotacoes }: TrechoHighlightProps) => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="bg-muted/50 rounded p-3 text-sm italic text-muted-foreground">
-              "{anotacaoAberta?.trecho}"
-            </div>
-            <div className={`rounded p-3 text-sm leading-relaxed ${
+            {/* Trecho = cor da competência (é o erro destacado no texto) */}
+            <div className={`rounded p-3 text-sm italic ${
               anotacaoAberta?.competencia && COMPETENCIA_COMMENT_BG[anotacaoAberta.competencia]
                 ? COMPETENCIA_COMMENT_BG[anotacaoAberta.competencia]
                 : TIPO_COMMENT_BG[anotacaoAberta?.tipo || 'erro'] || 'bg-muted/50'
             }`}>
+              {anotacaoAberta?.trecho}
+            </div>
+            {/* Comentário/correção = neutro */}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comentário</p>
+            <div className="bg-muted/50 rounded p-3 text-sm leading-relaxed text-foreground">
               {anotacaoAberta?.comentario}
             </div>
             {/* Linha de badges: só exibe quando não há competência vinculada */}
@@ -257,8 +261,14 @@ interface BlocoRendererProps {
 const BlocoRenderer = ({ bloco }: BlocoRendererProps) => {
   const { tipo, conteudo } = bloco;
 
-  if (tipo === 'texto_original' || tipo === 'texto_corrigido' ||
-      tipo === 'analise_global' || tipo === 'observacoes_corretor') {
+  if (tipo === 'texto_original' || tipo === 'texto_corrigido' || tipo === 'analise_global') {
+    return (
+      <p className="text-sm leading-relaxed whitespace-pre-wrap">{conteudo.texto || ''}</p>
+    );
+  }
+
+  if (tipo === 'observacoes_corretor') {
+    if (conteudo.mostrar_texto === false) return null;
     return (
       <p className="text-sm leading-relaxed whitespace-pre-wrap">{conteudo.texto || ''}</p>
     );
@@ -406,7 +416,19 @@ const BlocoAtivoView = ({ bloco, textoOriginal, modoCorrecaoId }: BlocoAtivoView
     <Card>
       {bloco.tipo !== 'competencias_pontuacao' && (
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
+          {bloco.tipo === 'observacoes_corretor' && bloco.conteudo?.audio_url && bloco.conteudo?.mostrar_audio !== false ? (
+            <div className="flex items-center gap-4 w-full">
+              <CardTitle className="text-base w-1/2">{TIPO_LABELS[bloco.tipo]}</CardTitle>
+              <div className="w-1/2">
+                <AudioPlayer
+                  url={bloco.conteudo.audio_url}
+                  durationHint={bloco.conteudo.audio_duration ?? undefined}
+                />
+              </div>
+            </div>
+          ) : (
+            <CardTitle className="text-base">{TIPO_LABELS[bloco.tipo]}</CardTitle>
+          )}
         </CardHeader>
       )}
       <CardContent className={bloco.tipo === 'competencias_pontuacao' ? 'pt-6' : ''}>

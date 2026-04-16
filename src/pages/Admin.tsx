@@ -156,6 +156,8 @@ import GestaoEtapas from "@/pages/admin/GestaoEtapas";
 import RegistroAulas from "@/pages/admin/RegistroAulas";
 import ResumoTurma from "@/pages/admin/ResumoTurma";
 import AvaliacaoPresencial from "@/pages/admin/AvaliacaoPresencial";
+import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
+import { ProfessorasIcon } from "@/components/icons/ProfessorasIcon";
 
 const Admin = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -1270,7 +1272,13 @@ const Admin = () => {
                 <DetailedDashboardCard
                   key={item.id}
                   title={item.label}
-                  icon={<item.icon size={32} color={item.iconColor} weight="fill" />}
+                  icon={
+                    item.id === 'redacoes-comentadas'
+                      ? <RedacoesComentadasIcon className="w-8 h-8" style={{ color: item.iconColor } as React.CSSProperties} />
+                      : item.id === 'professores'
+                        ? <ProfessorasIcon className="w-8 h-8" style={{ color: item.iconColor } as React.CSSProperties} />
+                        : <item.icon size={32} color={item.iconColor} weight="fill" />
+                  }
                   primaryInfo={isLoadingCards ? "Carregando..." : (cardData[item.id]?.info || "")}
                   secondaryInfo={cardData[item.id]?.badge}
                   description=""
