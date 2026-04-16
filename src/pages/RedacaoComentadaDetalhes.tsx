@@ -9,9 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, Sparkles } from 'lucide-react';
 import { StudentHeader } from '@/components/StudentHeader';
 import { AudioPlayer } from '@/components/microaprendizagem/viewers/AudioPlayer';
+import { VersaoLapidadaView } from '@/components/redacoes-comentadas/VersaoLapidadaView';
 import { supabase } from '@/integrations/supabase/client';
 import { usePageTitle } from '@/hooks/useBreadcrumbs';
 import { format } from 'date-fns';
@@ -20,7 +21,7 @@ import { ptBR } from 'date-fns/locale';
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type TipoBloco =
-  | 'texto_original' | 'texto_corrigido'
+  | 'texto_original' | 'texto_corrigido' | 'versao_lapidada'
   | 'comentarios_trecho' | 'comentarios_paragrafo'
   | 'analise_global' | 'orientacao_estudo'
   | 'pontos_fortes' | 'pontos_melhoria'
@@ -56,6 +57,7 @@ interface RedacaoComentada {
 const TIPO_LABELS: Record<TipoBloco, string> = {
   texto_original: 'Texto Original',
   texto_corrigido: 'Texto Corrigido',
+  versao_lapidada: 'Versão Lapidada',
   comentarios_trecho: 'Comentários por Trecho',
   comentarios_paragrafo: 'Comentários por Parágrafo',
   analise_global: 'Análise Global',
@@ -269,6 +271,8 @@ interface BlocoRendererProps {
 const BlocoRenderer = ({ bloco }: BlocoRendererProps) => {
   const { tipo, conteudo } = bloco;
 
+  if (tipo === 'versao_lapidada') return null; // renderizado via VersaoLapidadaView no componente pai
+
   if (tipo === 'texto_original' || tipo === 'texto_corrigido' || tipo === 'analise_global') {
     return (
       <p className="text-sm leading-relaxed whitespace-pre-wrap">{conteudo.texto || ''}</p>
@@ -471,6 +475,8 @@ const RedacaoComentadaDetalhes = () => {
   const [error, setError] = useState<string | null>(null);
   const [blocoAtivoId, setBlocoAtivoId] = useState<string | null>(null);
   const [textoOriginal, setTextoOriginal] = useState<string>('');
+  const [textoLapidado, setTextoLapidado] = useState<string>('');
+  const [modoLeitura, setModoLeitura] = useState<'original' | 'lapidada'>('original');
 
   usePageTitle(redacao?.titulo || 'Redação Comentada');
 
@@ -497,13 +503,15 @@ const RedacaoComentadaDetalhes = () => {
         if (!rcRes.data) throw new Error('Redação não encontrada');
         setRedacao(rcRes.data as RedacaoComentada);
         const todos = (blocosRes.data || []) as Bloco[];
-        // Apenas os blocos visíveis aparecem como abas de navegação
-        const visiveis = todos.filter(b => b.visivel);
+        // versao_lapidada é extraída mas não aparece como aba de navegação
+        const visiveis = todos.filter(b => b.visivel && b.tipo !== 'versao_lapidada');
         setBlocos(visiveis);
         if (visiveis.length > 0) setBlocoAtivoId(visiveis[0].id);
-        // Texto original extraído de todos os blocos (mesmo que visivel = false)
+        // Texto original e lapidado extraídos de todos os blocos
         const txtBloco = todos.find(b => b.tipo === 'texto_original');
         setTextoOriginal(txtBloco?.conteudo?.texto ?? '');
+        const lapBloco = todos.find(b => b.tipo === 'versao_lapidada' && b.visivel);
+        setTextoLapidado(lapBloco?.conteudo?.texto ?? '');
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar redação');
       } finally {
@@ -579,6 +587,41 @@ const RedacaoComentadaDetalhes = () => {
           )}
         </div>
 
+        {/* Toggle Original | Lapidada — só aparece quando há versão lapidada */}
+        {textoLapidado && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium">Visualização:</span>
+            <div className="flex rounded-full border border-gray-200 overflow-hidden text-xs font-medium">
+              <button
+                onClick={() => setModoLeitura('original')}
+                className={`px-3 py-1.5 transition-colors ${
+                  modoLeitura === 'original'
+                    ? 'bg-[#662F96] text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Original
+              </button>
+              <button
+                onClick={() => {
+                  setModoLeitura('lapidada');
+                  // navega automaticamente para o bloco texto_original
+                  const txt = blocos.find(b => b.tipo === 'texto_original');
+                  if (txt) setBlocoAtivoId(txt.id);
+                }}
+                className={`px-3 py-1.5 flex items-center gap-1.5 transition-colors ${
+                  modoLeitura === 'lapidada'
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-white text-gray-600 hover:bg-amber-50'
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                Lapidada
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Chips de navegação entre blocos */}
         {blocos.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1">
@@ -598,12 +641,39 @@ const RedacaoComentadaDetalhes = () => {
           </div>
         )}
 
-        {/* Bloco ativo — renderização estável (sem IIFE) para preservar estado interno */}
-        <BlocoAtivoView
-          bloco={blocos.find(b => b.id === blocoAtivoId) ?? null}
-          textoOriginal={textoOriginal}
-          modoCorrecaoId={redacao.modo_correcao_id}
-        />
+        {/* Bloco ativo */}
+        {(() => {
+          const blocoAtivo = blocos.find(b => b.id === blocoAtivoId) ?? null;
+          if (
+            modoLeitura === 'lapidada' &&
+            blocoAtivo?.tipo === 'texto_original' &&
+            textoLapidado
+          ) {
+            return (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    Versão Lapidada
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <VersaoLapidadaView
+                    textoOriginal={textoOriginal}
+                    textoLapidado={textoLapidado}
+                  />
+                </CardContent>
+              </Card>
+            );
+          }
+          return (
+            <BlocoAtivoView
+              bloco={blocoAtivo}
+              textoOriginal={textoOriginal}
+              modoCorrecaoId={redacao.modo_correcao_id}
+            />
+          );
+        })()}
       </main>
     </div>
   );

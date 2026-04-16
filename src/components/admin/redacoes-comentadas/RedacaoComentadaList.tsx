@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { MoreHorizontal, Pencil, Trash2, Eye, EyeOff, ExternalLink, MessageSquare } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Eye, EyeOff, ExternalLink, MessageSquare, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +38,7 @@ interface RedacaoComentada {
   capa_source: string | null;
   capa_url: string | null;
   capa_file_path: string | null;
+  tem_lapidada?: boolean;
 }
 
 function resolveCapaUrl(item: RedacaoComentada): string {
@@ -80,7 +81,18 @@ export const RedacaoComentadaList = ({ onEdit }: Props) => {
         .select('id, titulo, modo_correcao_id, turmas_autorizadas, ativo, publicado_em, criado_em, eixo_tematico, capa_source, capa_url, capa_file_path')
         .order('criado_em', { ascending: false });
       if (error) throw error;
-      return (data || []) as RedacaoComentada[];
+      const lista = (data || []) as RedacaoComentada[];
+      if (lista.length === 0) return lista;
+      // Busca quais redações têm versão lapidada visível
+      const ids = lista.map(r => r.id);
+      const { data: lapData } = await supabase
+        .from('redacao_comentada_blocos')
+        .select('redacao_comentada_id')
+        .eq('tipo', 'versao_lapidada')
+        .eq('visivel', true)
+        .in('redacao_comentada_id', ids);
+      const lapSet = new Set((lapData || []).map((b: any) => b.redacao_comentada_id));
+      return lista.map(r => ({ ...r, tem_lapidada: lapSet.has(r.id) }));
     },
   });
 
@@ -189,6 +201,12 @@ export const RedacaoComentadaList = ({ onEdit }: Props) => {
                         <Badge className="text-xs bg-green-100 text-green-700">Publicado</Badge>
                       ) : (
                         <Badge variant="outline" className="text-xs">Oculto</Badge>
+                      )}
+                      {item.tem_lapidada && (
+                        <Badge className="text-xs bg-amber-50 text-amber-700 border border-amber-300 gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          Versão lapidada
+                        </Badge>
                       )}
                     </div>
                   </div>

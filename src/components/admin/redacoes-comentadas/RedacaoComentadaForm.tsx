@@ -36,7 +36,7 @@ type ImageValue = {
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
 type TipoBloco =
-  | 'texto_original' | 'texto_corrigido'
+  | 'texto_original' | 'texto_corrigido' | 'versao_lapidada'
   | 'comentarios_trecho' | 'comentarios_paragrafo'
   | 'analise_global' | 'orientacao_estudo'
   | 'pontos_fortes' | 'pontos_melhoria'
@@ -74,6 +74,7 @@ interface Props {
 const TIPO_LABELS: Record<TipoBloco, string> = {
   texto_original: 'Texto Original',
   texto_corrigido: 'Texto Corrigido',
+  versao_lapidada: 'Versão Lapidada',
   comentarios_trecho: 'Comentários por Trecho',
   comentarios_paragrafo: 'Comentários por Parágrafo',
   analise_global: 'Análise Global',
@@ -85,7 +86,8 @@ const TIPO_LABELS: Record<TipoBloco, string> = {
 };
 
 const TODOS_TIPOS: TipoBloco[] = [
-  'texto_original', 'texto_corrigido', 'comentarios_trecho', 'comentarios_paragrafo',
+  'texto_original', 'texto_corrigido', 'versao_lapidada',
+  'comentarios_trecho', 'comentarios_paragrafo',
   'analise_global', 'orientacao_estudo', 'pontos_fortes', 'pontos_melhoria',
   'observacoes_corretor', 'competencias_pontuacao',
 ];
@@ -112,6 +114,7 @@ function conteudoPadrao(tipo: TipoBloco): any {
   switch (tipo) {
     case 'texto_original':
     case 'texto_corrigido':
+    case 'versao_lapidada':
     case 'analise_global':
       return { texto: '' };
     case 'observacoes_corretor':
@@ -344,13 +347,18 @@ interface BlocoEditorProps {
 const BlocoEditor = ({ bloco, textoOriginal, onChange }: BlocoEditorProps) => {
   const update = (partial: any) => onChange(bloco.localId, { ...bloco.conteudo, ...partial });
 
-  if (bloco.tipo === 'texto_original' || bloco.tipo === 'texto_corrigido' || bloco.tipo === 'analise_global') {
+  if (
+    bloco.tipo === 'texto_original' ||
+    bloco.tipo === 'texto_corrigido' ||
+    bloco.tipo === 'versao_lapidada' ||
+    bloco.tipo === 'analise_global'
+  ) {
     return (
       <Textarea
         value={bloco.conteudo.texto || ''}
         onChange={(e) => update({ texto: e.target.value })}
-        rows={6}
-        placeholder={`Digite o ${TIPO_LABELS[bloco.tipo].toLowerCase()}...`}
+        rows={bloco.tipo === 'versao_lapidada' ? 10 : 6}
+        placeholder={`Digite ${bloco.tipo === 'versao_lapidada' ? 'a versão lapidada do texto...' : `o ${TIPO_LABELS[bloco.tipo].toLowerCase()}...`}`}
         className="text-sm"
       />
     );

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, ExternalLink } from 'lucide-react';
+import { MessageSquare, ExternalLink, Sparkles } from 'lucide-react';
 import { StudentHeader } from '@/components/StudentHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +53,7 @@ const RedacoesComentadas = () => {
   const { professor, loading: professorLoading } = useProfessorAuth();
 
   const [redacoes, setRedacoes] = useState<RedacaoComentada[]>([]);
+  const [lapidadaIds, setLapidadaIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -84,6 +85,18 @@ const RedacoesComentadas = () => {
         });
 
         setRedacoes(filtradas);
+
+        // Busca quais redações filtradas têm versão lapidada visível
+        if (filtradas.length > 0) {
+          const ids = filtradas.map(r => r.id);
+          const { data: lapData } = await supabase
+            .from('redacao_comentada_blocos')
+            .select('redacao_comentada_id')
+            .eq('tipo', 'versao_lapidada')
+            .eq('visivel', true)
+            .in('redacao_comentada_id', ids);
+          setLapidadaIds(new Set((lapData || []).map((b: any) => b.redacao_comentada_id)));
+        }
       } finally {
         setIsLoading(false);
       }
@@ -169,11 +182,19 @@ const RedacoesComentadas = () => {
                       <h2 className="text-lg font-semibold text-gray-900 leading-tight mb-1">
                         {r.titulo}
                       </h2>
-                      {r.eixo_tematico && (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-violet-100 text-violet-800 text-xs font-medium">
-                          {r.eixo_tematico}
-                        </span>
-                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {r.eixo_tematico && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-violet-100 text-violet-800 text-xs font-medium">
+                            {r.eixo_tematico}
+                          </span>
+                        )}
+                        {lapidadaIds.has(r.id) && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium border border-amber-300">
+                            <Sparkles className="w-3 h-3" />
+                            Versão lapidada
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="pt-2">
