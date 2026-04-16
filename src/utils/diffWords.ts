@@ -162,7 +162,7 @@ export function diffWords(original: string, lapidada: string): DiffResult {
   const lcsLen = dp[a.length][b.length];
   const similarity = lcsLen / Math.max(a.length, b.length);
 
-  if (similarity < 0.30) {
+  if (similarity < 0.05) {
     return { blocks: [], tooLarge: true };
   }
 
