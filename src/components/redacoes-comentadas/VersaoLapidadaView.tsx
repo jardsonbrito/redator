@@ -47,6 +47,15 @@ function inlineWordDiff(before: string, after: string): WordGroup[] {
     }
   }
 
+  const lcsLen = dp[m][n];
+  const similarity = lcsLen / Math.max(m, n);
+
+  // Se a cláusula foi muito reestruturada (< 65% de palavras em comum),
+  // pinta a cláusula inteira — diff palavra-a-palavra seria enganoso
+  if (similarity < 0.65) {
+    return [{ type: 'added', text: bW.join(' ') }];
+  }
+
   // Backtrack (versão "after")
   const tokens: WordToken[] = [];
   let i = m, j = n;
