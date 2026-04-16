@@ -1,6 +1,7 @@
 /**
- * diffWords — diff de texto baseado em LCS (Longest Common Subsequence) palavra a palavra.
- * Alterações contínuas são agrupadas em blocos únicos para leitura pedagógica mais limpa.
+ * diffWords — diff de texto baseado em LCS (Longest Common Subsequence) por cláusulas.
+ * Cada token é uma cláusula inteira (trecho até vírgula, ponto, ponto-e-vírgula etc.).
+ * Alterações são marcadas por cláusula completa — menos poluição visual, leitura pedagógica.
  */
 
 export type DiffBlock =
@@ -15,13 +16,25 @@ export interface DiffResult {
 
 // ─── Tokenização ──────────────────────────────────────────────────────────────
 
-/** Separa o texto em palavras, preservando quebras de parágrafo como token especial '\n' */
+/**
+ * Separa o texto em cláusulas (até vírgula, ponto, ponto-e-vírgula, ! ou ?),
+ * preservando quebras de parágrafo como token especial '\n'.
+ * Ex: "A educação é um direito, não um privilégio. Porém, há muito a melhorar."
+ *  → ["A educação é um direito,", "não um privilégio.", "Porém,", "há muito a melhorar."]
+ */
 function tokenize(text: string): string[] {
   const tokens: string[] = [];
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    const words = lines[i].trim().split(/\s+/).filter(Boolean);
-    tokens.push(...words);
+    const line = lines[i].trim();
+    if (line) {
+      // Divide após pontuação seguida de espaço (lookbehind)
+      const clausulas = line
+        .split(/(?<=[.,;!?])\s+/)
+        .map(c => c.trim())
+        .filter(Boolean);
+      tokens.push(...clausulas);
+    }
     if (i < lines.length - 1) tokens.push('\n');
   }
   return tokens;
