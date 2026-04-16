@@ -100,7 +100,13 @@ const COMPETENCIA_COLORS: Record<string, string> = {
   c5: 'bg-purple-100 text-purple-700 border-purple-300',
 };
 
-const TIPO_ANOTACAO_OPTIONS = ['erro', 'dica', 'elogio'];
+const TIPO_ANOTACAO_OPTIONS = ['erro', 'dica', 'elogio', 'ponto_de_atencao'];
+const TIPO_ANOTACAO_LABELS: Record<string, string> = {
+  erro: 'Erro',
+  dica: 'Dica',
+  elogio: 'Elogio',
+  ponto_de_atencao: 'Ponto de atenção',
+};
 
 function conteudoPadrao(tipo: TipoBloco): any {
   switch (tipo) {
@@ -761,7 +767,7 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
                   </SelectTrigger>
                   <SelectContent>
                     {TIPO_ANOTACAO_OPTIONS.map(t => (
-                      <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                      <SelectItem key={t} value={t} className="text-xs">{TIPO_ANOTACAO_LABELS[t]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -812,7 +818,7 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
                 {' — '}
                 <span>{a.comentario}</span>
                 <div className="flex gap-1 mt-1 flex-wrap">
-                  <Badge variant="outline" className="text-xs capitalize">{a.tipo}</Badge>
+                  <Badge variant="outline" className="text-xs">{TIPO_ANOTACAO_LABELS[a.tipo] ?? a.tipo}</Badge>
                   {a.competencia && (
                     <Badge className={`text-xs border ${COMPETENCIA_COLORS[a.competencia]}`}>
                       {COMPETENCIA_LABELS[a.competencia as keyof typeof COMPETENCIA_LABELS]}
@@ -1256,9 +1262,12 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
             </p>
           ) : (
             <>
-              {/* Chips de navegação entre blocos */}
+              {/* Chips de navegação entre blocos — ativos primeiro, inativos no final */}
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {blocos.map((bloco) => (
+                {[...blocos].sort((a, b) => {
+                  if (a.visivel === b.visivel) return 0;
+                  return a.visivel ? -1 : 1;
+                }).map((bloco) => (
                   <button
                     key={bloco.localId}
                     type="button"

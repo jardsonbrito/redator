@@ -102,6 +102,13 @@ const TIPO_HIGHLIGHT: Record<string, string> = {
   erro: 'bg-red-200 text-red-900 border-b-2 border-red-400',
   dica: 'bg-blue-200 text-blue-900 border-b-2 border-blue-400',
   elogio: 'bg-emerald-200 text-emerald-900 border-b-2 border-emerald-400',
+  ponto_de_atencao: 'bg-amber-200 text-amber-900 border-b-2 border-amber-500',
+};
+const TIPO_LABELS_ANOTACAO: Record<string, string> = {
+  erro: 'Erro',
+  dica: 'Dica',
+  elogio: 'Elogio',
+  ponto_de_atencao: 'Ponto de atenção',
 };
 const COMPETENCIA_BADGE_COLORS: Record<string, string> = {
   c1: 'bg-red-100 text-red-700 border-red-200',
@@ -123,6 +130,7 @@ const TIPO_COMMENT_BG: Record<string, string> = {
   erro: 'bg-red-100 text-red-900 border border-red-300',
   dica: 'bg-blue-100 text-blue-900 border border-blue-300',
   elogio: 'bg-emerald-100 text-emerald-900 border border-emerald-300',
+  ponto_de_atencao: 'bg-amber-100 text-amber-900 border border-amber-300',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -240,8 +248,8 @@ const TrechoHighlightedText = ({ texto, anotacoes }: TrechoHighlightProps) => {
             {/* Linha de badges: só exibe quando não há competência vinculada */}
             {!anotacaoAberta?.competencia && (
               <div className="flex gap-2">
-                <Badge variant="outline" className="text-xs capitalize">
-                  {anotacaoAberta?.tipo}
+                <Badge variant="outline" className="text-xs">
+                  {TIPO_LABELS_ANOTACAO[anotacaoAberta?.tipo || ''] ?? anotacaoAberta?.tipo}
                 </Badge>
               </div>
             )}
@@ -391,9 +399,9 @@ const BlocoAtivoView = ({ bloco, textoOriginal, modoCorrecaoId }: BlocoAtivoView
                       {COMPETENCIA_LABEL_FULL[c]}
                     </span>
                   ))
-                  : ['erro', 'dica', 'elogio'].map(t => (
-                    <span key={t} className={`text-xs px-2 py-0.5 rounded border capitalize ${TIPO_HIGHLIGHT[t].replace('border-b-2', 'border')}`}>
-                      {t}
+                  : ['erro', 'dica', 'elogio', 'ponto_de_atencao'].map(t => (
+                    <span key={t} className={`text-xs px-2 py-0.5 rounded border ${TIPO_HIGHLIGHT[t].replace('border-b-2', 'border')}`}>
+                      {TIPO_LABELS_ANOTACAO[t] ?? t}
                     </span>
                   ))
                 }
