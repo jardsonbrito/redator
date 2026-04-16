@@ -114,15 +114,19 @@ function groupTokens(raw: RawToken[]): DiffBlock[] {
   };
 
   const flushChange = () => {
-    if (removedWords.length > 0 || addedWords.length > 0) {
-      blocks.push({
-        type: 'change',
-        before: tokensToText(removedWords),
-        after: tokensToText(addedWords),
-      });
-      removedWords = [];
-      addedWords = [];
+    const maxLen = Math.max(removedWords.length, addedWords.length);
+    if (maxLen === 0) return;
+    // Pareia cláusulas removidas e adicionadas individualmente:
+    // cada par vira um DiffBlock separado, garantindo um marcador por cláusula.
+    for (let k = 0; k < maxLen; k++) {
+      const before = k < removedWords.length ? removedWords[k] : '';
+      const after  = k < addedWords.length   ? addedWords[k]   : '';
+      // Ignora pares que são apenas quebras de parágrafo
+      if ((before === '\n' || before === '') && (after === '\n' || after === '')) continue;
+      blocks.push({ type: 'change', before, after });
     }
+    removedWords = [];
+    addedWords = [];
   };
 
   for (const token of raw) {
