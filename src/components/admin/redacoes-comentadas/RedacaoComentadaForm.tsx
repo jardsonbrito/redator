@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Plus, X, ArrowLeft, Save, Loader2, Mic, Square, Play, Pause, Search,
+  ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Plus, X, ArrowLeft, Save, Loader2, Mic, Square, Play, Pause, Search, Pencil,
 } from 'lucide-react';
 import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
 import { ImageSelector } from '@/components/admin/ImageSelector';
@@ -583,15 +583,22 @@ function TextoComHighlight({ texto, busca }: { texto: string; busca: string }) {
   );
 }
 
+interface DialogAnotacaoState {
+  dados: Partial<Anotacao>;
+  isEdit: boolean;
+}
+
 const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) => {
   const anotacoes: Anotacao[] = conteudo.anotacoes || [];
-  const [novaAnotacao, setNovaAnotacao] = useState<Partial<Anotacao> | null>(null);
+  const [dialogAnotacao, setDialogAnotacao] = useState<DialogAnotacaoState | null>(null);
   const [busca, setBusca] = useState('');
   const textoRef = useRef<HTMLDivElement>(null);
 
   const totalOcorrencias = busca.trim()
     ? (textoOriginal.match(new RegExp(busca.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')) || []).length
     : 0;
+
+  const fecharDialog = () => setDialogAnotacao(null);
 
   const handleMouseUp = () => {
     const sel = window.getSelection();
@@ -618,45 +625,59 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
 
       sel.removeAllRanges();
 
-      const payload = {
-        id: uuidv4(),
-        start,
-        end: start + selected.length,
-        trecho: selected,
-        comentario: '',
-        tipo: 'erro',
-        // 'none' internamente — Radix Select proíbe value="" em SelectItem
-        competencia: 'none' as string,
-      };
-      setTimeout(() => setNovaAnotacao(payload), 10);
+      setTimeout(() => setDialogAnotacao({
+        isEdit: false,
+        dados: {
+          id: uuidv4(),
+          start,
+          end: start + selected.length,
+          trecho: selected,
+          comentario: '',
+          tipo: 'erro',
+          competencia: 'none',
+        },
+      }), 10);
     } catch {
       sel?.removeAllRanges();
     }
   };
 
-  const handleSalvarAnotacao = () => {
-    if (!novaAnotacao || !novaAnotacao.comentario?.trim()) {
+  const handleEditarAnotacao = (a: Anotacao) => {
+    setDialogAnotacao({
+      isEdit: true,
+      dados: { ...a, competencia: a.competencia || 'none' },
+    });
+  };
+
+  const handleSalvarDialog = () => {
+    const { dados, isEdit } = dialogAnotacao!;
+    if (!dados.comentario?.trim()) {
       toast.error('Digite um comentário para a anotação');
       return;
     }
-    const nova: Anotacao = {
-      id: novaAnotacao.id!,
-      start: novaAnotacao.start!,
-      end: novaAnotacao.end!,
-      trecho: novaAnotacao.trecho!,
-      comentario: novaAnotacao.comentario!,
-      tipo: novaAnotacao.tipo || 'erro',
-      competencia: (novaAnotacao.competencia && novaAnotacao.competencia !== 'none')
-        ? novaAnotacao.competencia
-        : undefined,
+    const anotacao: Anotacao = {
+      id: dados.id!,
+      start: dados.start!,
+      end: dados.end!,
+      trecho: dados.trecho!,
+      comentario: dados.comentario!,
+      tipo: dados.tipo || 'erro',
+      competencia: (dados.competencia && dados.competencia !== 'none') ? dados.competencia : undefined,
     };
-    onChange({ anotacoes: [...anotacoes, nova] });
-    setNovaAnotacao(null);
+    if (isEdit) {
+      onChange({ anotacoes: anotacoes.map(a => a.id === anotacao.id ? anotacao : a) });
+    } else {
+      onChange({ anotacoes: [...anotacoes, anotacao] });
+    }
+    fecharDialog();
   };
 
   const handleRemoverAnotacao = (id: string) => {
     onChange({ anotacoes: anotacoes.filter(a => a.id !== id) });
   };
+
+  const atualizarDados = (patch: Partial<Anotacao>) =>
+    setDialogAnotacao(prev => prev ? { ...prev, dados: { ...prev.dados, ...patch } } : null);
 
   return (
     <div className="space-y-3">
@@ -683,11 +704,7 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
                     {totalOcorrencias}
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setBusca('')}
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <button type="button" onClick={() => setBusca('')} className="text-muted-foreground hover:text-foreground">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -708,25 +725,25 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
         </p>
       )}
 
-      {/* Dialog de nova anotação — abre na frente do texto, sem rolar a página */}
-      <Dialog open={!!novaAnotacao} onOpenChange={(open) => !open && setNovaAnotacao(null)}>
+      {/* Dialog unificado: criar ou editar anotação */}
+      <Dialog open={!!dialogAnotacao} onOpenChange={(open) => !open && fecharDialog()}>
         <DialogContent
           className="max-w-lg"
           onOpenAutoFocus={(e) => e.preventDefault()}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>Nova anotação</DialogTitle>
+            <DialogTitle>{dialogAnotacao?.isEdit ? 'Editar anotação' : 'Nova anotação'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm italic text-amber-900 leading-relaxed">
-              "{novaAnotacao?.trecho}"
+              "{dialogAnotacao?.dados.trecho}"
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium">Comentário *</Label>
               <Textarea
-                value={novaAnotacao?.comentario || ''}
-                onChange={(e) => setNovaAnotacao(prev => prev ? { ...prev, comentario: e.target.value } : null)}
+                value={dialogAnotacao?.dados.comentario || ''}
+                onChange={(e) => atualizarDados({ comentario: e.target.value })}
                 rows={3}
                 placeholder="Escreva o comentário sobre este trecho..."
                 className="text-sm"
@@ -736,8 +753,8 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
               <div className="flex-1 space-y-1">
                 <Label className="text-xs font-medium">Tipo</Label>
                 <Select
-                  value={novaAnotacao?.tipo || 'erro'}
-                  onValueChange={(v) => setNovaAnotacao(prev => prev ? { ...prev, tipo: v } : null)}
+                  value={dialogAnotacao?.dados.tipo || 'erro'}
+                  onValueChange={(v) => atualizarDados({ tipo: v })}
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
@@ -752,18 +769,13 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
               <div className="flex-1 space-y-1">
                 <Label className="text-xs font-medium">Competência (opcional)</Label>
                 <Select
-                  value={novaAnotacao?.competencia || 'none'}
-                  onValueChange={(v) =>
-                    setNovaAnotacao(prev =>
-                      prev ? { ...prev, competencia: v === 'none' ? '' : v } : null
-                    )
-                  }
+                  value={dialogAnotacao?.dados.competencia || 'none'}
+                  onValueChange={(v) => atualizarDados({ competencia: v === 'none' ? '' : v })}
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="Nenhuma" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Radix Select proíbe value="" — usa 'none' e converte ao salvar */}
                     <SelectItem value="none" className="text-xs">Sem competência</SelectItem>
                     {COMPETENCIAS.map(c => (
                       <SelectItem key={c} value={c} className="text-xs">{COMPETENCIA_LABELS[c]}</SelectItem>
@@ -774,11 +786,11 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setNovaAnotacao(null)}>
+            <Button type="button" variant="ghost" size="sm" onClick={fecharDialog}>
               Cancelar
             </Button>
-            <Button type="button" size="sm" onClick={handleSalvarAnotacao}>
-              Salvar anotação
+            <Button type="button" size="sm" onClick={handleSalvarDialog}>
+              {dialogAnotacao?.isEdit ? 'Salvar alterações' : 'Salvar anotação'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -813,7 +825,18 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 text-muted-foreground shrink-0"
+                onClick={() => handleEditarAnotacao(a)}
+                title="Editar anotação"
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-destructive shrink-0"
                 onClick={() => handleRemoverAnotacao(a.id)}
+                title="Remover anotação"
               >
                 <X className="w-3 h-3" />
               </Button>
