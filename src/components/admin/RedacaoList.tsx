@@ -35,9 +35,9 @@ export const RedacaoList = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes')
-        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor, atualizado_banca, ano_banca')
+        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor, atualizado_banca, ano_banca, ativo')
         .order('data_envio', { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -48,6 +48,41 @@ export const RedacaoList = () => {
       trackAdminEvent('admin_card_render', { module: 'exemplares', count: redacoes.length });
     }
   }, [redacoes]);
+
+  const handleToggleAtivo = async (id: string, currentStatus: boolean) => {
+    try {
+      if (!isAdmin || !user) {
+        throw new Error('Usuário não tem permissões de administrador');
+      }
+
+      const { error } = await supabase
+        .from('redacoes')
+        .update({ ativo: !currentStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Invalidar queries e forçar refetch
+      await queryClient.invalidateQueries({ queryKey: ['admin-redacoes'] });
+      await queryClient.invalidateQueries({ queryKey: ['redacoes'] });
+      await refetch();
+
+      toast({
+        title: currentStatus ? "Redação Inativada" : "Redação Ativada",
+        description: currentStatus
+          ? "A redação não estará mais visível para os usuários."
+          : "A redação está agora visível para os usuários.",
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao alterar status da redação:', error);
+      toast({
+        title: "Erro ao alterar status",
+        description: error.message || "Não foi possível alterar o status da redação.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -179,11 +214,13 @@ export const RedacaoList = () => {
                     dica_de_escrita: redacao.dica_de_escrita,
                     atualizado_banca: redacao.atualizado_banca,
                     ano_banca: redacao.ano_banca,
+                    ativo: redacao.ativo ?? true,
                   }}
                   perfil="admin"
                   actions={{
                     onEditar: () => setEditingId(redacao.id),
-                    onExcluir: () => setDeleteId(redacao.id)
+                    onExcluir: () => setDeleteId(redacao.id),
+                    onToggleAtivo: () => handleToggleAtivo(redacao.id, redacao.ativo ?? true)
                   }}
                 />
               ))}

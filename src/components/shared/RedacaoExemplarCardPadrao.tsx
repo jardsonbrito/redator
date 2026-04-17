@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MoreHorizontal, ExternalLink, Edit, Trash2, User, Download } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, Edit, Trash2, User, Download, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchFullRedacaoExemplar, generateRedacaoExemplarPDF } from '@/utils/redacaoExemplarPdfUtils';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,11 +36,14 @@ interface RedacaoExemplarCardData {
   // Validação ENEM
   atualizado_banca?: boolean;
   ano_banca?: number | null;
+  // Status ativo/inativo
+  ativo?: boolean;
 }
 
 interface RedacaoExemplarCardActions {
   onEditar?: (id: string) => void;
   onExcluir?: (id: string) => void;
+  onToggleAtivo?: () => void;
 }
 
 interface RedacaoExemplarCardPadraoProps {
@@ -189,6 +192,16 @@ export const RedacaoExemplarCardPadrao = ({
             {getEixoBadge()}
           </div>
         )}
+
+        {/* Badge de status inativo (só para admin) */}
+        {perfil === 'admin' && redacao.ativo === false && (
+          <div className="absolute top-2 right-2">
+            <Badge className="bg-red-600 text-white border-red-700">
+              <EyeOff className="w-3 h-3 mr-1" />
+              Inativa
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -248,6 +261,22 @@ export const RedacaoExemplarCardPadrao = ({
                     >
                       <Download className="mr-2 h-4 w-4 text-purple-600" />
                       {downloadingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setDropdownOpen(false);
+                      actions?.onToggleAtivo?.();
+                    }}>
+                      {redacao.ativo !== false ? (
+                        <>
+                          <EyeOff className="mr-2 h-4 w-4 text-orange-600" />
+                          <span className="text-orange-600">Inativar</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="mr-2 h-4 w-4 text-green-600" />
+                          <span className="text-green-600">Ativar</span>
+                        </>
+                      )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => {
