@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { syncToBlog } from '@/utils/blogSync';
@@ -36,6 +36,26 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
   const [publicarNoBlog, setPublicarNoBlog] = useState(false);
   const [blogPostId, setBlogPostId] = useState<string | null>(null);
   const [syncingBlog, setSyncingBlog] = useState(false);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+
+  const handleFotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingFoto(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `autor-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      setFormData((prev) => ({ ...prev, foto_autor: data.publicUrl }));
+    } catch (err: any) {
+      toast({ title: '❌ Erro no upload', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploadingFoto(false);
+      e.target.value = '';
+    }
+  };
 
   // Validação ENEM
   const [atualizadoBanca, setAtualizadoBanca] = useState(false);
@@ -255,7 +275,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     { id: 'eixo', label: 'Eixo Temático' },
     { id: 'autor', label: 'Autor' },
     { id: 'foto_autor', label: 'Foto do Autor' },
-    { id: 'texto', label: 'Texto da Redação' },
+    ...(modelos.length === 0 ? [{ id: 'texto', label: 'Texto da Redação' }] : []),
     { id: 'modelos', label: `Modelos${modelos.length > 0 ? ` (${modelos.length})` : ''}` },
     { id: 'dica', label: 'Dica de Escrita' },
     { id: 'validacao', label: 'Validação ENEM' },
@@ -366,36 +386,63 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             {activeSection === 'foto_autor' && (
               <div className="border border-gray-200 rounded-xl p-5 mb-4">
                 <div className="space-y-4">
+                  {/* Preview + upload */}
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-shrink-0">
+                      {formData.foto_autor ? (
+                        <img
+                          src={formData.foto_autor}
+                          alt="Foto do autor"
+                          className="w-20 h-20 rounded-full border-2 border-gray-200 object-cover"
+                          onError={(e) => { e.currentTarget.src = ''; }}
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="block">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={uploadingFoto}
+                          onClick={() => document.getElementById('foto-autor-input')?.click()}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {uploadingFoto ? 'Enviando...' : 'Fazer upload'}
+                        </Button>
+                        <input
+                          id="foto-autor-input"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFotoUpload}
+                        />
+                      </label>
+                      <p className="text-xs text-gray-400">ou cole uma URL abaixo</p>
+                    </div>
+                  </div>
+
+                  {/* URL manual como fallback */}
                   <Input
                     type="url"
                     value={formData.foto_autor}
-                    onChange={(e) => setFormData({...formData, foto_autor: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, foto_autor: e.target.value })}
                     className="text-sm"
+                    placeholder="https://..."
                   />
 
-                  {/* Preview da foto */}
                   {formData.foto_autor && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <img
-                        src={formData.foto_autor}
-                        alt="Preview da foto do autor"
-                        className="w-12 h-12 rounded-full border border-gray-200 object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                      <div className="text-sm text-gray-600">
-                        <p className="font-medium">Preview da foto</p>
-                        <p className="text-xs">Esta foto aparecerá nos cards e na página de detalhes</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {formData.foto_autor && (
-                    <p className="text-xs text-gray-500">
-                      💡 Dica: Use URLs de imagens hospedadas publicamente. A foto deve ter boa qualidade e ser quadrada para melhor resultado.
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, foto_autor: '' })}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Remover foto
+                    </button>
                   )}
                 </div>
               </div>
