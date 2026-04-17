@@ -106,6 +106,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     setLoading(true);
 
     try {
+      const conteudoFinal = modelos.length > 0 ? modelos[0].conteudo : formData.conteudo;
+
       const saveModelos = async (id: string) => {
         await supabase
           .from('redacao_exemplar_modelos' as any)
@@ -129,7 +131,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           .update({
             frase_tematica: formData.frase_tematica.trim(),
             eixo_tematico: formData.eixo_tematico.trim(),
-            conteudo: formData.conteudo.trim(),
+            conteudo: conteudoFinal.trim(),
             pdf_url: formData.pdf_url.trim() || null,
             dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
@@ -154,7 +156,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           .insert([{
             frase_tematica: formData.frase_tematica.trim(),
             eixo_tematico: formData.eixo_tematico.trim(),
-            conteudo: formData.conteudo.trim(),
+            conteudo: conteudoFinal.trim(),
             pdf_url: formData.pdf_url.trim() || null,
             dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
