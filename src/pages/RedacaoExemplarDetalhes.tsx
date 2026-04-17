@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, User, Calendar } from "lucide-react";
+import { ArrowLeft, User } from "lucide-react";
 import { StudentHeader } from "@/components/StudentHeader";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import { dicaToHTML } from "@/utils/dicaToHTML";
 import { formatRedacaoText } from "@/utils/formatRedacaoText";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { SeloValidacaoENEM } from "@/components/shared/SeloValidacaoENEM";
+import { useRedacaoExemplarModelos, RedacaoExemplarModelo } from "@/hooks/useRedacaoExemplarModelos";
 
 const RedacaoExemplarDetalhes = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,8 +21,15 @@ const RedacaoExemplarDetalhes = () => {
   const [redacao, setRedacao] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Configurar título da página
+  const [modeloAtivo, setModeloAtivo] = useState<RedacaoExemplarModelo | null>(null);
+  const { modelos } = useRedacaoExemplarModelos(id);
   usePageTitle(redacao?.frase_tematica || 'Redação Exemplar');
+
+  useEffect(() => {
+    if (modelos.length > 0 && !modeloAtivo) {
+      setModeloAtivo(modelos[0]);
+    }
+  }, [modelos]);
 
   useEffect(() => {
     if (id) {
@@ -172,7 +180,6 @@ const RedacaoExemplarDetalhes = () => {
                         </div>
                       )}
 
-
                       {/* Badge do eixo temático */}
                       {redacao.eixo_tematico && (
                         <Badge className="bg-purple-100 text-purple-700">
@@ -180,6 +187,28 @@ const RedacaoExemplarDetalhes = () => {
                         </Badge>
                       )}
                     </div>
+
+                    {/* Chips de navegação entre modelos */}
+                    {modelos.length > 1 && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-xs text-muted-foreground font-medium">Versão:</span>
+                        <div className="flex rounded-full border border-gray-200 overflow-hidden text-xs font-medium">
+                          {modelos.map((modelo) => (
+                            <button
+                              key={modelo.id}
+                              onClick={() => setModeloAtivo(modelo)}
+                              className={`px-3 py-1.5 transition-colors ${
+                                modeloAtivo?.id === modelo.id
+                                  ? 'bg-[#662F96] text-white'
+                                  : 'bg-white text-gray-600 hover:bg-gray-50'
+                              }`}
+                            >
+                              {modelo.titulo}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
 
@@ -202,7 +231,9 @@ const RedacaoExemplarDetalhes = () => {
                         <div
                           className="font-serif text-base leading-relaxed text-gray-700 border rounded-lg p-6 bg-gray-50 text-left hyphens-none [&_p]:indent-8 [&_p]:mb-4 [&_p:first-child]:indent-8"
                           dangerouslySetInnerHTML={{
-                            __html: formatRedacaoText(redacao.conteudo || redacao.texto)
+                            __html: formatRedacaoText(
+                              modeloAtivo?.conteudo ?? (redacao.conteudo || redacao.texto)
+                            )
                           }}
                         />
                       </div>

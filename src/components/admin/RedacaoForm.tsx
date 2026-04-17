@@ -4,10 +4,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { syncToBlog } from '@/utils/blogSync';
+
+interface ModeloForm {
+  titulo: string;
+  conteudo: string;
+  ordem: number;
+}
 
 interface RedacaoFormProps {
   mode?: 'create' | 'edit';
@@ -22,6 +28,9 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(mode === 'edit');
   const [activeSection, setActiveSection] = useState<string>('imagem');
+
+  // Modelos state
+  const [modelos, setModelos] = useState<ModeloForm[]>([]);
 
   // Blog sync state
   const [publicarNoBlog, setPublicarNoBlog] = useState(false);
@@ -46,11 +55,14 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     if (mode === 'edit' && redacaoId) {
       const fetchRedacao = async () => {
         try {
-          const { data, error } = await supabase
-            .from('redacoes')
-            .select('*')
-            .eq('id', redacaoId)
-            .single();
+          const [{ data, error }, { data: modelosData }] = await Promise.all([
+            supabase.from('redacoes').select('*').eq('id', redacaoId).single(),
+            supabase
+              .from('redacao_exemplar_modelos' as any)
+              .select('*')
+              .eq('redacao_id', redacaoId)
+              .order('ordem', { ascending: true }),
+          ]);
 
           if (error) throw error;
 
@@ -67,6 +79,13 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           setAtualizadoBanca(data.atualizado_banca ?? false);
           setPublicarNoBlog(data.publicar_no_blog ?? false);
           setBlogPostId(data.blog_post_id ?? null);
+          if (modelosData) {
+            setModelos((modelosData as any[]).map((m) => ({
+              titulo: m.titulo,
+              conteudo: m.conteudo,
+              ordem: m.ordem,
+            })));
+          }
         } catch (error: any) {
           toast({
             title: "❌ Erro",
@@ -87,6 +106,23 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     setLoading(true);
 
     try {
+      const saveModelos = async (id: string) => {
+        await supabase
+          .from('redacao_exemplar_modelos' as any)
+          .delete()
+          .eq('redacao_id', id);
+        if (modelos.length > 0) {
+          await supabase.from('redacao_exemplar_modelos' as any).insert(
+            modelos.map((m, i) => ({
+              redacao_id: id,
+              titulo: m.titulo.trim() || `Modelo ${i + 1}`,
+              conteudo: m.conteudo,
+              ordem: i,
+            }))
+          );
+        }
+      };
+
       if (mode === 'edit' && redacaoId) {
         const { error } = await supabase
           .from('redacoes')
@@ -104,6 +140,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           .eq('id', redacaoId);
 
         if (error) throw error;
+
+        await saveModelos(redacaoId);
 
         toast({
           title: "✅ Sucesso!",
@@ -131,6 +169,8 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
 
         if (error) throw error;
 
+        await saveModelos(insertedData.id);
+
         toast({
           title: "✅ Sucesso!",
           description: "Redação exemplar criada com sucesso.",
@@ -156,6 +196,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
         setAtualizadoBanca(false);
         setPublicarNoBlog(false);
         setBlogPostId(null);
+        setModelos([]);
       }
 
       onSuccess?.();
@@ -213,6 +254,7 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     { id: 'autor', label: 'Autor' },
     { id: 'foto_autor', label: 'Foto do Autor' },
     { id: 'texto', label: 'Texto da Redação' },
+    { id: 'modelos', label: `Modelos${modelos.length > 0 ? ` (${modelos.length})` : ''}` },
     { id: 'dica', label: 'Dica de Escrita' },
     { id: 'validacao', label: 'Validação ENEM' },
     { id: 'blog', label: 'Blog' },
@@ -367,6 +409,68 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
                   placeholder="Digite o texto da redação aqui. Use quebras de linha normais para separar parágrafos."
                   spellCheck={true}
                 />
+              </div>
+            )}
+
+            {/* Modelos Section */}
+            {activeSection === 'modelos' && (
+              <div className="border border-gray-200 rounded-xl p-5 mb-4 space-y-4">
+                <p className="text-sm text-gray-500">
+                  Adicione múltiplas versões (modelos) para esta redação exemplar. Os chips de navegação aparecerão automaticamente na página de visualização quando houver mais de um modelo cadastrado.
+                </p>
+
+                {modelos.map((modelo, index) => (
+                  <div key={index} className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                      <span className="text-xs font-semibold text-gray-600">Modelo {index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => setModelos((prev) => prev.filter((_, i) => i !== index))}
+                        className="text-red-500 hover:text-red-700 p-1 rounded"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <Input
+                        value={modelo.titulo}
+                        onChange={(e) =>
+                          setModelos((prev) =>
+                            prev.map((m, i) => (i === index ? { ...m, titulo: e.target.value } : m))
+                          )
+                        }
+                        className="text-sm"
+                        placeholder={`Modelo ${index + 1}`}
+                      />
+                      <Textarea
+                        value={modelo.conteudo}
+                        onChange={(e) =>
+                          setModelos((prev) =>
+                            prev.map((m, i) => (i === index ? { ...m, conteudo: e.target.value } : m))
+                          )
+                        }
+                        className="min-h-[300px] text-sm resize-none"
+                        placeholder="Texto completo da redação para este modelo..."
+                        spellCheck={true}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-dashed"
+                  onClick={() =>
+                    setModelos((prev) => [
+                      ...prev,
+                      { titulo: `Modelo ${prev.length + 1}`, conteudo: '', ordem: prev.length },
+                    ])
+                  }
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Modelo
+                </Button>
               </div>
             )}
 
