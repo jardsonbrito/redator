@@ -32,7 +32,7 @@ export interface AlunoMonitoramento {
   aptoParaAvaliar: boolean;
   isBolsista: boolean;
 
-  // Scores por métrica
+  // Scores por métrica (engajamento)
   redacoes: ScoreRedacoes;
   presenca: ScorePresenca;
   exercicios: ScoreMetrica;
@@ -41,7 +41,7 @@ export interface AlunoMonitoramento {
   guia: ScoreMetrica;
   repertorio: ScoreMetrica;
 
-  // Score geral (secundário)
+  // Score geral de engajamento (0-10)
   scoreGeral: number | null;
   scoreGeralAnterior: number | null;
   faixaGeral: FaixaConfig | null;
@@ -53,6 +53,10 @@ export interface AlunoMonitoramento {
 
   // Prioridade de ordenação
   prioridade: number;
+
+  // Desempenho por nota (0-1000, média de lousa+exercícios+redações)
+  notaDesempenho: number | null;
+  grupoDesempenho: 'acompanhamento' | 'consolidado' | null;
 }
 
 export interface ResumoTurma {
@@ -64,6 +68,10 @@ export interface ResumoTurma {
   bolsistasAtencao: number;
   bolsistasRisco: number;
   bolsistasAlerta: number;
+  // Grupos de desempenho por nota
+  desempenhoAcompanhamento: number;
+  desempenhoConsolidado: number;
+  desempenhoSemNota: number;
 }
 
 export interface MonitoramentoResult {
@@ -202,21 +210,21 @@ async function fetchMonitoramentoTurma(
     // Redações enviadas
     supabase
       .from('redacoes_enviadas')
-      .select('email_aluno, data_envio')
+      .select('email_aluno, data_envio, nota_total')
       .in('email_aluno', emails)
       .gte('data_envio', rangeStart)
       .lte('data_envio', rangeEnd),
 
     supabase
       .from('redacoes_simulado')
-      .select('email_aluno, data_envio')
+      .select('email_aluno, data_envio, nota_total')
       .in('email_aluno', emails)
       .gte('data_envio', rangeStart)
       .lte('data_envio', rangeEnd),
 
     supabase
       .from('redacoes_exercicio')
-      .select('email_aluno, data_envio')
+      .select('email_aluno, data_envio, nota_total')
       .in('email_aluno', emails)
       .gte('data_envio', rangeStart)
       .lte('data_envio', rangeEnd),
@@ -224,7 +232,7 @@ async function fetchMonitoramentoTurma(
     // Exercícios Radar
     supabase
       .from('radar_dados')
-      .select('email_aluno, data_realizacao')
+      .select('email_aluno, data_realizacao, nota')
       .in('email_aluno', emails)
       .gte('data_realizacao', rangeDateStart)
       .lte('data_realizacao', rangeDateEnd),
@@ -249,7 +257,7 @@ async function fetchMonitoramentoTurma(
     // Lousas respondidas
     supabase
       .from('lousa_resposta')
-      .select('email_aluno, lousa_id, submitted_at')
+      .select('email_aluno, lousa_id, submitted_at, nota')
       .in('email_aluno', emails)
       .not('submitted_at', 'is', null)
       .gte('submitted_at', rangeStart)
@@ -382,6 +390,27 @@ async function fetchMonitoramentoTurma(
       (repFByAutor.get(autorId) ?? []).filter(r => inTs(r.created_at, m.start, m.end)).length +
       (repOByAutor.get(autorId) ?? []).filter(r => inTs(r.created_at, m.start, m.end)).length;
 
+    // Notas reais para cálculo de desempenho (apenas m0 será usado)
+    const notasLousaDoMes = (lousasByEmail.get(email) ?? [])
+      .filter(l => inTs(l.submitted_at, m.start, m.end) && l.nota !== null)
+      .map(l => (l.nota as number) * 100); // normaliza 0-10 → 0-1000
+
+    const notasExerciciosDoMes = (radarByEmail.get(email) ?? [])
+      .filter(r => inDate(r.data_realizacao, m.dateStart, m.dateEnd) && (r as any).nota !== null)
+      .map(r => (r as any).nota as number);
+
+    const notasRedacoesDoMes = [
+      ...(redEnvByEmail.get(email) ?? [])
+        .filter(r => inTs(r.data_envio, m.start, m.end) && (r as any).nota_total !== null)
+        .map(r => (r as any).nota_total as number),
+      ...(redSimByEmail.get(email) ?? [])
+        .filter(r => inTs(r.data_envio, m.start, m.end) && (r as any).nota_total !== null)
+        .map(r => (r as any).nota_total as number),
+      ...(redExeByEmail.get(email) ?? [])
+        .filter(r => inTs(r.data_envio, m.start, m.end) && (r as any).nota_total !== null)
+        .map(r => (r as any).nota_total as number),
+    ];
+
     return {
       redacoesSimulado,
       redacoesRegulares,
@@ -396,7 +425,23 @@ async function fetchMonitoramentoTurma(
       guias,
       guiasOferta: guiasDisponiveisDoMes,
       repertorio,
+      notasLousa: notasLousaDoMes,
+      notasExercicios: notasExerciciosDoMes,
+      notasRedacoes: notasRedacoesDoMes,
     };
+  }
+
+  function calcularNotaDesempenho(
+    notasLousa: number[],
+    notasExercicios: number[],
+    notasRedacoes: number[],
+  ): number | null {
+    const avg = (arr: number[]) =>
+      arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+    const fontes = [avg(notasLousa), avg(notasExercicios), avg(notasRedacoes)]
+      .filter(v => v !== null) as number[];
+    if (fontes.length === 0) return null;
+    return Math.round(fontes.reduce((a, b) => a + b, 0) / fontes.length);
   }
 
   // 5. Montar objetos AlunoMonitoramento
@@ -504,6 +549,16 @@ async function fetchMonitoramentoTurma(
       isBolsista
     );
 
+    const notaDesempenho = calcularNotaDesempenho(
+      metricasM0.notasLousa,
+      metricasM0.notasExercicios,
+      metricasM0.notasRedacoes,
+    );
+
+    const grupoDesempenho: 'acompanhamento' | 'consolidado' | null =
+      notaDesempenho === null ? null :
+      notaDesempenho <= 599 ? 'acompanhamento' : 'consolidado';
+
     const parcial: AlunoMonitoramento = {
       id: p.id,
       nome: p.nome,
@@ -525,6 +580,8 @@ async function fetchMonitoramentoTurma(
       statusBolsista,
       alertas,
       prioridade: 0,
+      notaDesempenho,
+      grupoDesempenho,
     };
 
     return { ...parcial, prioridade: calcularPrioridade(parcial) };
@@ -544,7 +601,10 @@ async function fetchMonitoramentoTurma(
     bolsistasOk = 0,
     bolsistasAtencao = 0,
     bolsistasRisco = 0,
-    bolsistasAlerta = 0;
+    bolsistasAlerta = 0,
+    desempenhoAcompanhamento = 0,
+    desempenhoConsolidado = 0,
+    desempenhoSemNota = 0;
 
   for (const a of alunos) {
     if (!a.aptoParaAvaliar || a.scoreGeral === null) {
@@ -570,6 +630,10 @@ async function fetchMonitoramentoTurma(
           break;
       }
     }
+
+    if (a.grupoDesempenho === 'acompanhamento')      desempenhoAcompanhamento++;
+    else if (a.grupoDesempenho === 'consolidado')    desempenhoConsolidado++;
+    else                                             desempenhoSemNota++;
   }
 
   return {
@@ -583,6 +647,9 @@ async function fetchMonitoramentoTurma(
       bolsistasAtencao,
       bolsistasRisco,
       bolsistasAlerta,
+      desempenhoAcompanhamento,
+      desempenhoConsolidado,
+      desempenhoSemNota,
     },
   };
 }

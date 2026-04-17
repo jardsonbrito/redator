@@ -1,4 +1,4 @@
-import { GraduationCap, AlertTriangle, TrendingDown } from 'lucide-react';
+import { GraduationCap, AlertTriangle, TrendingDown, Target } from 'lucide-react';
 import { RADAR_CONFIG } from '@/config/radarConfig';
 import type { ResumoTurma } from '@/hooks/useMonitoramentoTurma';
 
@@ -69,6 +69,89 @@ export function TurmaSummaryPanel({
           );
         })()}
       </div>
+
+      {/* Seção de desempenho por nota */}
+      {(resumo.desempenhoAcompanhamento > 0 || resumo.desempenhoConsolidado > 0) && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <Target className="h-3.5 w-3.5" />
+            Desempenho por nota — lousa, exercícios e redações
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {/* Acompanhamento mais próximo (≤ 599) */}
+            {resumo.desempenhoAcompanhamento > 0 && (() => {
+              const ativo = filtroAtivo === 'acompanhamento';
+              return (
+                <button
+                  onClick={() => toggleFiltro('acompanhamento')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 border-2 transition-all text-left ${
+                    ativo
+                      ? 'border-orange-400 bg-orange-50 shadow-sm scale-[1.02]'
+                      : 'border-orange-200 bg-white hover:shadow-sm'
+                  }`}
+                >
+                  <div
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#f97316' }}
+                  />
+                  <div>
+                    <div className="text-base font-bold text-orange-600 leading-none">
+                      {resumo.desempenhoAcompanhamento}
+                    </div>
+                    <div className="text-[10px] font-medium text-orange-700 leading-tight mt-0.5">
+                      Acompanhamento mais próximo
+                    </div>
+                    <div className="text-[9px] text-orange-400">até 599 pts</div>
+                  </div>
+                </button>
+              );
+            })()}
+
+            {/* Desenvolvimento mais consolidado (> 599) */}
+            {resumo.desempenhoConsolidado > 0 && (() => {
+              const ativo = filtroAtivo === 'consolidado';
+              return (
+                <button
+                  onClick={() => toggleFiltro('consolidado')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 border-2 transition-all text-left ${
+                    ativo
+                      ? 'border-emerald-400 bg-emerald-50 shadow-sm scale-[1.02]'
+                      : 'border-emerald-200 bg-white hover:shadow-sm'
+                  }`}
+                >
+                  <div
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: '#10b981' }}
+                  />
+                  <div>
+                    <div className="text-base font-bold text-emerald-600 leading-none">
+                      {resumo.desempenhoConsolidado}
+                    </div>
+                    <div className="text-[10px] font-medium text-emerald-700 leading-tight mt-0.5">
+                      Desenvolvimento mais consolidado
+                    </div>
+                    <div className="text-[9px] text-emerald-400">acima de 599 pts</div>
+                  </div>
+                </button>
+              );
+            })()}
+
+            {resumo.desempenhoSemNota > 0 && (
+              <div className="flex items-center gap-2 rounded-lg px-3 py-2 border-2 border-gray-100 bg-white">
+                <div className="h-2.5 w-2.5 rounded-full bg-gray-300 shrink-0" />
+                <div>
+                  <div className="text-base font-bold text-gray-400 leading-none">
+                    {resumo.desempenhoSemNota}
+                  </div>
+                  <div className="text-[10px] font-medium text-gray-400 leading-tight mt-0.5">
+                    Sem notas no período
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Linha de bolsistas */}
       {resumo.totalBolsistas > 0 && (

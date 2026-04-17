@@ -50,13 +50,32 @@ export function AlunoMonitoramentoRow({ aluno, index, onVerBoletim }: AlunoMonit
           </div>
           <div className="text-xs text-muted-foreground truncate mb-1">{aluno.email}</div>
 
-          {/* Mini-métricas */}
+          {/* Mini-métricas de engajamento */}
           {!semDados && (
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
               <span>📝 {totalRedacoes} red.</span>
               <span>📅 {taxaPresenca !== null ? `${Math.round(taxaPresenca)}%` : '—'}</span>
               <span>📚 {totalExercicios} ex.</span>
               <span>🧠 {totalMicro} micro</span>
+            </div>
+          )}
+
+          {/* Badge de desempenho por nota */}
+          {aluno.notaDesempenho !== null && (
+            <div className="mt-0.5">
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                style={
+                  aluno.grupoDesempenho === 'consolidado'
+                    ? { backgroundColor: '#d1fae5', color: '#065f46' }
+                    : { backgroundColor: '#ffedd5', color: '#9a3412' }
+                }
+              >
+                {aluno.notaDesempenho} pts
+                <span className="font-normal opacity-75">
+                  {aluno.grupoDesempenho === 'consolidado' ? '· consolidado' : '· acompanhamento'}
+                </span>
+              </span>
             </div>
           )}
         </div>
