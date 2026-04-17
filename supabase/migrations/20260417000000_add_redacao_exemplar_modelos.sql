@@ -16,5 +16,9 @@ USING (true);
 
 CREATE POLICY "Admins gerenciam modelos exemplares"
 ON public.redacao_exemplar_modelos FOR ALL
-USING (public.is_admin())
-WITH CHECK (public.is_admin());
+USING (
+  auth.email() IN (SELECT email FROM public.admin_users WHERE ativo = true)
+)
+WITH CHECK (
+  auth.email() IN (SELECT email FROM public.admin_users WHERE ativo = true)
+);
