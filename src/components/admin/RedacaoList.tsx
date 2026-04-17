@@ -160,29 +160,33 @@ export const RedacaoList = () => {
       {redacoes && redacoes.length > 0 ? (
         <>
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {redacoes.map((redacao) => (
-              <RedacaoExemplarCardPadrao
-                key={redacao.id}
-                redacao={{
-                  id: redacao.id,
-                  frase_tematica: redacao.frase_tematica || 'Redação Exemplar',
-                  eixo_tematico: redacao.eixo_tematico,
-                  conteudo: redacao.conteudo,
-                  data_envio: redacao.data_envio,
-                  autor: redacao.autor,
-                  foto_autor: redacao.foto_autor,
-                  pdf_url: redacao.pdf_url,
-                  dica_de_escrita: redacao.dica_de_escrita,
-                  atualizado_banca: redacao.atualizado_banca,
-                  ano_banca: redacao.ano_banca,
-                }}
-                perfil="admin"
-                actions={{
-                  onEditar: () => setEditingId(redacao.id),
-                  onExcluir: () => setDeleteId(redacao.id)
-                }}
-              />
-            ))}
+            {[...redacoes]
+              .sort((a, b) =>
+                (a.frase_tematica || '').localeCompare(b.frase_tematica || '', 'pt-BR')
+              )
+              .map((redacao) => (
+                <RedacaoExemplarCardPadrao
+                  key={redacao.id}
+                  redacao={{
+                    id: redacao.id,
+                    frase_tematica: redacao.frase_tematica || 'Redação Exemplar',
+                    eixo_tematico: redacao.eixo_tematico,
+                    conteudo: redacao.conteudo,
+                    data_envio: redacao.data_envio,
+                    autor: redacao.autor,
+                    foto_autor: redacao.foto_autor,
+                    pdf_url: redacao.pdf_url,
+                    dica_de_escrita: redacao.dica_de_escrita,
+                    atualizado_banca: redacao.atualizado_banca,
+                    ano_banca: redacao.ano_banca,
+                  }}
+                  perfil="admin"
+                  actions={{
+                    onEditar: () => setEditingId(redacao.id),
+                    onExcluir: () => setDeleteId(redacao.id)
+                  }}
+                />
+              ))}
           </div>
 
           <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

@@ -180,13 +180,17 @@ const RedacoesExemplar = () => {
               </Card>
             ) : (
               <div role="list" className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {redacoesExemplares.map((redacao: any) => (
-                  <RedacaoExemplarCardPadrao
-                    key={redacao.id}
-                    redacao={redacao}
-                    perfil={professor ? "professor" : "aluno"}
-                  />
-                ))}
+                {[...redacoesExemplares]
+                  .sort((a: any, b: any) =>
+                    (a.frase_tematica || '').localeCompare(b.frase_tematica || '', 'pt-BR')
+                  )
+                  .map((redacao: any) => (
+                    <RedacaoExemplarCardPadrao
+                      key={redacao.id}
+                      redacao={redacao}
+                      perfil={professor ? "professor" : "aluno"}
+                    />
+                  ))}
               </div>
             )}
 
