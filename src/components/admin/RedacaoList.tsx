@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Edit, Trash2 } from 'lucide-react';
 import { IconAction, ACTION_ICON } from '@/components/ui/icon-action';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { RedacaoExemplarCardPadrao } from '@/components/shared/RedacaoExemplarCardPadrao';
 import { trackAdminEvent } from '@/utils/telemetry';
 import {
@@ -24,6 +25,7 @@ import { RedacaoForm } from './RedacaoForm';
 
 export const RedacaoList = () => {
   const { toast } = useToast();
+  const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -50,31 +52,10 @@ export const RedacaoList = () => {
   const handleDelete = async (id: string) => {
     try {
       console.log('🗑️ Iniciando exclusão da redação com ID:', id);
-      
-      // Verificar autenticação do usuário
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Usuário não autenticado');
-      }
-      console.log('✅ Usuário autenticado:', user.email);
 
-      // Verificar se é admin usando a tabela admin_users
-      const { data: adminUser, error: adminError } = await supabase
-        .from('admin_users')
-        .select('ativo')
-        .eq('email', user.email?.toLowerCase())
-        .eq('ativo', true)
-        .single();
-
-      if (adminError || !adminUser) {
-        console.error('❌ Erro ao verificar permissões admin:', adminError);
-        // Fallback para emails hardcoded (compatibilidade)
-        const adminEmails = ['jardsonbrito@gmail.com', 'jarvisluz@gmail.com'];
-        if (!adminEmails.includes(user.email?.toLowerCase() || '')) {
-          throw new Error('Usuário não tem permissões de administrador');
-        }
+      if (!isAdmin || !user) {
+        throw new Error('Usuário não tem permissões de administrador');
       }
-      console.log('✅ Usuário confirmado como admin');
 
       // Verificar se a redação existe antes da exclusão
       const { data: existingRedacao, error: checkError } = await supabase
