@@ -136,19 +136,29 @@ export function TurmaSummaryPanel({
               );
             })()}
 
-            {resumo.desempenhoSemNota > 0 && (
-              <div className="flex items-center gap-2 rounded-lg px-3 py-2 border-2 border-gray-100 bg-white">
-                <div className="h-2.5 w-2.5 rounded-full bg-gray-300 shrink-0" />
-                <div>
-                  <div className="text-base font-bold text-gray-400 leading-none">
-                    {resumo.desempenhoSemNota}
+            {resumo.desempenhoSemNota > 0 && (() => {
+              const ativo = filtroAtivo === 'sem_nota_desempenho';
+              return (
+                <button
+                  onClick={() => toggleFiltro('sem_nota_desempenho')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-2 border-2 transition-all text-left ${
+                    ativo
+                      ? 'border-gray-400 bg-gray-100 shadow-sm scale-[1.02]'
+                      : 'border-gray-100 bg-white hover:shadow-sm'
+                  }`}
+                >
+                  <div className="h-2.5 w-2.5 rounded-full bg-gray-300 shrink-0" />
+                  <div>
+                    <div className="text-base font-bold text-gray-400 leading-none">
+                      {resumo.desempenhoSemNota}
+                    </div>
+                    <div className="text-[10px] font-medium text-gray-400 leading-tight mt-0.5">
+                      Sem notas no período
+                    </div>
                   </div>
-                  <div className="text-[10px] font-medium text-gray-400 leading-tight mt-0.5">
-                    Sem notas no período
-                  </div>
-                </div>
-              </div>
-            )}
+                </button>
+              );
+            })()}
           </div>
         </div>
       )}

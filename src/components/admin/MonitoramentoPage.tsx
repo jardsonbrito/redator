@@ -63,8 +63,9 @@ export const MonitoramentoPage = () => {
     const list = data.alunos;
     if (filtroAtivo === 'bolsistas')       return list.filter(a => a.isBolsista);
     if (filtroAtivo === 'sem_dados')       return list.filter(a => !a.aptoParaAvaliar || a.scoreGeral === null);
-    if (filtroAtivo === 'acompanhamento') return list.filter(a => a.grupoDesempenho === 'acompanhamento');
-    if (filtroAtivo === 'consolidado')    return list.filter(a => a.grupoDesempenho === 'consolidado');
+    if (filtroAtivo === 'acompanhamento')      return list.filter(a => a.grupoDesempenho === 'acompanhamento');
+    if (filtroAtivo === 'consolidado')         return list.filter(a => a.grupoDesempenho === 'consolidado');
+    if (filtroAtivo === 'sem_nota_desempenho') return list.filter(a => a.grupoDesempenho === null);
     if (filtroAtivo)                       return list.filter(a => a.faixaGeral?.label === filtroAtivo);
     return list;
   }, [data?.alunos, filtroAtivo]);
