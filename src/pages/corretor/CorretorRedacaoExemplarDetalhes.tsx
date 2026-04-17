@@ -42,6 +42,7 @@ const CorretorRedacaoExemplarDetalhes = () => {
         .from('redacoes')
         .select('*')
         .eq('id', id)
+        .eq('ativo', true)
         .single();
 
       if (error) throw error;

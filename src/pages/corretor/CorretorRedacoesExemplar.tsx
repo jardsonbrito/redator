@@ -17,6 +17,7 @@ const CorretorRedacoesExemplar = () => {
         const { data, error } = await supabase
           .from('redacoes')
           .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor')
+          .eq('ativo', true)
           .order('data_envio', { ascending: false });
 
         if (error) {
