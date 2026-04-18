@@ -4,7 +4,7 @@ import { MenuGrid } from "@/components/MenuGrid";
 import { MinhasRedacoes } from "@/components/MinhasRedacoes";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList, Library, Bot, Layers } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, ClipboardList, Library, Bot, Layers, FlaskConical } from "lucide-react";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useProcessoSeletivo } from "@/hooks/useProcessoSeletivo";
 
@@ -75,6 +75,14 @@ const Student = () => {
       path: "/repertorio-orientado",
       icon: Library,
       tooltip: "Publique parágrafos com repertório e receba feedback dos colegas e professores.",
+      showAlways: true
+    },
+    // Laboratório de Repertório
+    {
+      title: "Laboratório de Repertório",
+      path: "/laboratorio-repertorio",
+      icon: FlaskConical,
+      tooltip: "Aulas em 3 etapas: Contexto → Repertório → Aplicação.",
       showAlways: true
     },
     // Linha 3, Coluna 2: Videoteca

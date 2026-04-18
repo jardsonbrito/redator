@@ -109,6 +109,7 @@ const ProfessorSimulados   = lazy(() => import("./pages/professor/ProfessorSimul
 const ProfessorAvisos      = lazy(() => import("./pages/professor/ProfessorAvisos").then(m => ({ default: m.ProfessorAvisos })));
 const ProfessorVisitantes  = lazy(() => import("./pages/professor/ProfessorVisitantes").then(m => ({ default: m.ProfessorVisitantes })));
 const LaboratorioAulaView  = lazy(() => import("./components/repertorio/laboratorio/LaboratorioAula").then(m => ({ default: m.LaboratorioAulaView })));
+const LaboratorioRepertorio = lazy(() => import("./pages/LaboratorioRepertorio"));
 const GuiaTematicoView     = lazy(() => import("./components/guia-tematico/GuiaTematicoView").then(m => ({ default: m.GuiaTematicoView })));
 
 // Fallback de carregamento entre rotas
@@ -179,6 +180,7 @@ function App() {
                     <Route path="/jarvis" element={<ProtectedStudentRoute><Jarvis /></ProtectedStudentRoute>} />
                     <Route path="/plano-estudo" element={<ProtectedStudentRoute><PlanoEstudo /></ProtectedStudentRoute>} />
                     <Route path="/repertorio-orientado" element={<ProtectedStudentRoute><RepertorioOrientado /></ProtectedStudentRoute>} />
+                    <Route path="/laboratorio-repertorio" element={<ProtectedStudentRoute><LaboratorioRepertorio /></ProtectedStudentRoute>} />
                     <Route path="/repertorio-orientado/laboratorio/:id" element={<ProtectedStudentRoute><LaboratorioAulaView /></ProtectedStudentRoute>} />
                     <Route path="/gamificacao" element={<ProtectedStudentRoute><Gamificacao /></ProtectedStudentRoute>} />
                     <Route path="/diario-online" element={<ProtectedStudentRoute><DiarioOnline /></ProtectedStudentRoute>} />
