@@ -191,10 +191,10 @@ export function useAlertasAtividades({ turma, userType, email, enabled = true }:
       }
 
       // ========================================
-      // 4. TEMAS RECÉM-PUBLICADOS (últimos 5 dias)
+      // 4. TEMAS RECÉM-PUBLICADOS (últimos 3 dias)
       // ========================================
       try {
-        const cincoDiasAtras = new Date(agora.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString();
+        const cincoDiasAtras = new Date(agora.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
 
         const { data: temas } = await supabase
           .from('temas')
