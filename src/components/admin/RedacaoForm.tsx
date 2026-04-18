@@ -65,7 +65,6 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     eixo_tematico: '',
     conteudo: '',
     pdf_url: '',
-    dica_de_escrita: '',
     autor: '',
     foto_autor: '',
     ano_banca: '',
@@ -91,7 +90,6 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             eixo_tematico: data.eixo_tematico || '',
             conteudo: data.conteudo || '',
             pdf_url: data.pdf_url || '',
-            dica_de_escrita: data.dica_de_escrita || '',
             autor: data.autor || '',
             foto_autor: data.foto_autor || '',
             ano_banca: data.ano_banca ? String(data.ano_banca) : '',
@@ -153,7 +151,6 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             eixo_tematico: formData.eixo_tematico.trim(),
             conteudo: conteudoFinal.trim(),
             pdf_url: formData.pdf_url.trim() || null,
-            dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
             foto_autor: formData.foto_autor.trim() || null,
             atualizado_banca: atualizadoBanca,
@@ -178,7 +175,6 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
             eixo_tematico: formData.eixo_tematico.trim(),
             conteudo: conteudoFinal.trim(),
             pdf_url: formData.pdf_url.trim() || null,
-            dica_de_escrita: formData.dica_de_escrita.trim() || null,
             autor: formData.autor.trim() || null,
             foto_autor: formData.foto_autor.trim() || null,
             atualizado_banca: atualizadoBanca,
@@ -210,7 +206,6 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
           eixo_tematico: '',
           conteudo: '',
           pdf_url: '',
-          dica_de_escrita: '',
           autor: '',
           foto_autor: '',
           ano_banca: '',
@@ -277,7 +272,6 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
     { id: 'foto_autor', label: 'Foto do Autor' },
     ...(modelos.length === 0 ? [{ id: 'texto', label: 'Texto da Redação' }] : []),
     { id: 'modelos', label: `Modelos${modelos.length > 0 ? ` (${modelos.length})` : ''}` },
-    { id: 'dica', label: 'Dica de Escrita' },
     { id: 'validacao', label: 'Validação ENEM' },
     { id: 'blog', label: 'Blog' },
   ];
@@ -523,18 +517,6 @@ export const RedacaoForm = ({ mode = 'create', redacaoId, onCancel, onSuccess }:
               </div>
             )}
 
-            {/* Dica de Escrita Section */}
-            {activeSection === 'dica' && (
-              <div className="border border-gray-200 rounded-xl p-5 mb-4">
-                <Textarea
-                  value={formData.dica_de_escrita}
-                  onChange={(e) => setFormData({...formData, dica_de_escrita: e.target.value})}
-                  className="min-h-[100px] text-sm resize-none"
-                  placeholder="Digite dicas de escrita para os alunos. Use quebras de linha normais para separar parágrafos."
-                  spellCheck={true}
-                />
-              </div>
-            )}
 
             {/* Imagem de Capa Section */}
             {activeSection === 'imagem' && (

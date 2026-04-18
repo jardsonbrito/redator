@@ -13,7 +13,6 @@ export interface RedacaoExemplar {
   data_envio: string;
   nota_total: number;
   pdf_url?: string;
-  dica_de_escrita?: string;
   autor?: string;
   foto_autor?: string;
   data_agendamento?: string | null;
@@ -40,7 +39,7 @@ export const useRedacoesExemplarFilters = () => {
       try {
         const { data, error } = await supabase
           .from('redacoes')
-          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor, atualizado_banca, ano_banca')
+          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, autor, foto_autor, atualizado_banca, ano_banca')
           .eq('ativo', true)
           .order('data_envio', { ascending: false });
 

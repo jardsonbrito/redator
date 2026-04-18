@@ -28,7 +28,6 @@ interface RedacaoExemplarCardData {
   foto_autor?: string;
   pdf_url?: string;
   imagem_url?: string;
-  dica_de_escrita?: string;
   data_agendamento?: string | null;
   // Campos para agendamento/publicação programada (legado)
   data_publicacao?: string | null;

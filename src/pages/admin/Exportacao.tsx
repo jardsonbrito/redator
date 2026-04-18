@@ -109,7 +109,6 @@ export default function Exportacao() {
         'Frase Temática': item.frase_tematica || '',
         'Eixo': item.eixo_tematico || '',
         'Redação Exemplar': item.conteudo || '',
-        'Dica de Escrita': item.dica_de_escrita || '',
         'URL Imagem': item.pdf_url || ''
       }));
 

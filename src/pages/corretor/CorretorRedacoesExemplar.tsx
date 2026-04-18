@@ -16,7 +16,7 @@ const CorretorRedacoesExemplar = () => {
         // Buscar redações exemplares da tabela 'redacoes' (cadastradas pelo administrador)
         const { data, error } = await supabase
           .from('redacoes')
-          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor')
+          .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, autor, foto_autor')
           .eq('ativo', true)
           .order('data_envio', { ascending: false });
 

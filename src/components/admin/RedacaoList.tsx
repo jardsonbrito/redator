@@ -35,7 +35,7 @@ export const RedacaoList = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('redacoes')
-        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, dica_de_escrita, autor, foto_autor, atualizado_banca, ano_banca, ativo')
+        .select('id, frase_tematica, eixo_tematico, conteudo, data_envio, nota_total, pdf_url, autor, foto_autor, atualizado_banca, ano_banca, ativo')
         .order('data_envio', { ascending: false });
 
       if (error) throw error;
@@ -211,7 +211,6 @@ export const RedacaoList = () => {
                     autor: redacao.autor,
                     foto_autor: redacao.foto_autor,
                     pdf_url: redacao.pdf_url,
-                    dica_de_escrita: redacao.dica_de_escrita,
                     atualizado_banca: redacao.atualizado_banca,
                     ano_banca: redacao.ano_banca,
                     ativo: redacao.ativo ?? true,

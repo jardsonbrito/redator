@@ -9,7 +9,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { dicaToHTML } from "@/utils/dicaToHTML";
 import { formatRedacaoText } from "@/utils/formatRedacaoText";
 import { usePageTitle } from "@/hooks/useBreadcrumbs";
 import { SeloValidacaoENEM } from "@/components/shared/SeloValidacaoENEM";
@@ -240,18 +239,6 @@ const RedacaoExemplarDetalhes = () => {
                       </div>
                     </div>
 
-                    {/* Dica de escrita se disponível */}
-                    {redacao.dica_de_escrita && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                        <h4 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
-                          <span>💡</span> Dica de Escrita
-                        </h4>
-                        <div
-                          className="text-sm text-yellow-700 leading-relaxed text-left [&_p]:indent-8 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_p:first-child]:indent-8"
-                          dangerouslySetInnerHTML={{ __html: dicaToHTML(redacao.dica_de_escrita) }}
-                        />
-                      </div>
-                    )}
 
                   </div>
                 </CardContent>
