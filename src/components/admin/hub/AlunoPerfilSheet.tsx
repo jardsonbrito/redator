@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { StudentLoginActivityModal } from '@/components/admin/StudentLoginActivityModal';
 import { StudentSubscriptionSection } from './StudentSubscriptionSection';
 import { StudentPlanSection } from './StudentPlanSection';
+import { StudentCreditSection } from './StudentCreditSection';
 import { TURMAS_VALIDAS, formatTurmaDisplay, normalizeTurmaToLetter } from '@/utils/turmaUtils';
 import { Activity, Edit2, Save, X, MoveRight, BellOff } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -163,6 +164,7 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
             <TabsList>
               <TabsTrigger value="dados">Dados</TabsTrigger>
               <TabsTrigger value="assinatura" disabled={isVisitante}>Plano</TabsTrigger>
+              <TabsTrigger value="creditos" disabled={isVisitante}>Créditos</TabsTrigger>
               <TabsTrigger value="funcionalidades" disabled={isVisitante}>Funções</TabsTrigger>
               <TabsTrigger value="atividade" disabled={isVisitante}>Atividade</TabsTrigger>
             </TabsList>
@@ -279,6 +281,13 @@ export function AlunoPerfilSheet({ aluno, isOpen, onClose, onRefresh }: AlunoPer
                   studentName={aluno.nome}
                   onPlanoChange={setPlanoAtivo}
                 />
+              )}
+            </TabsContent>
+
+            {/* Aba: Créditos */}
+            <TabsContent value="creditos" className="mt-4">
+              {!isVisitante && (
+                <StudentCreditSection studentId={aluno.id} studentName={aluno.nome} />
               )}
             </TabsContent>
 
