@@ -75,7 +75,11 @@
       "Bash(npx vite:*)",
       "Bash(taskkill /F /IM node.exe)",
       "Bash(cmd /c \"taskkill /F /IM node.exe\")",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(sed 's/^      //')",
+      "Bash(sed 's/:$//')",
+      "Bash(awk '/Tables:/{flag=1; next} /Functions:|Enums:/{flag=0} flag' \"/c/Users/jards/OneDrive/Área de Trabalho/Site/redator/src/integrations/supabase/types.ts\")",
+      "Bash(awk '/Tables:/,/Functions:/ {print NR\": \"$0}' \"/c/Users/jards/OneDrive/Área de Trabalho/Site/redator/src/integrations/supabase/types.ts\")"
     ]
   },
   "enableAllProjectMcpServers": true,
