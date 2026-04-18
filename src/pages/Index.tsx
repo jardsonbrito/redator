@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Bot, Layers, FlaskConical } from "lucide-react";
+import { BookOpen, FileText, Video, ClipboardCheck, Send, File, GraduationCap, NotebookPen, Trophy, MessageSquare, Presentation, Gamepad2, Calendar, ClipboardList, AlertCircle, Library, Map, Bot, Layers } from "lucide-react";
+import { LaboratorioIcon } from "@/components/icons/LaboratorioIcon";
 import { RedacoesComentadasIcon } from "@/components/icons/RedacoesComentadasIcon";
 import { useNavigate } from "react-router-dom";
 
@@ -143,7 +144,7 @@ const Index = () => {
     {
       title: "Laboratório de Repertório",
       path: "/laboratorio-repertorio",
-      icon: FlaskConical,
+      icon: LaboratorioIcon as any,
       tooltip: "Aulas em 3 etapas: Contexto → Repertório → Aplicação.",
       showAlways: true
     },
