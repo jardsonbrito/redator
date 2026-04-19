@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { JarvisLoadingScreen } from './JarvisLoadingScreen';
 import type { TutoriaSubtab } from '@/hooks/useJarvisTutoriaSubtabs';
 import type { TutoriaSessao } from '@/hooks/useTutoriaSessao';
 
@@ -85,19 +85,8 @@ export const EtapaPreenchimento = ({
     }
   };
 
-  // Tela de carregamento enquanto Jarvis processa
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
-        <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        </div>
-        <div className="space-y-1">
-          <p className="text-base font-semibold text-indigo-700">🤖 Jarvis está trabalhando...</p>
-          <p className="text-sm text-gray-500">Aguarde enquanto organizamos suas sugestões de redação.</p>
-        </div>
-      </div>
-    );
+    return <JarvisLoadingScreen />;
   }
 
   return (

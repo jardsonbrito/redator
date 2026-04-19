@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
+import { JarvisLoadingScreen } from './JarvisLoadingScreen';
 import type { TutoriaSubtab } from '@/hooks/useJarvisTutoriaSubtabs';
 import type { TutoriaSessao } from '@/hooks/useTutoriaSessao';
 
@@ -33,33 +34,39 @@ export const EtapaSugestoes = ({
     setLoading(true);
 
     try {
-      // Chamar validação com todos os dados (preenchidos + sugestões editadas)
       const validacao = await chamarValidacao(valores);
 
-      if (validacao) {
-        await updateSessao({
-          dados_preenchidos: {
-            ...sessao.dados_preenchidos,
-            ...valores  // Inclui campos editados pelo aluno
-          },
-          validacao_resultado: validacao,
-          etapa_atual: 'validacao'
-        });
+      if (!validacao) {
+        setLoading(false);
+        return;
       }
+
+      const ok = await updateSessao({
+        dados_preenchidos: {
+          ...sessao.dados_preenchidos,
+          ...valores
+        },
+        validacao_resultado: validacao,
+        etapa_atual: 'validacao'
+      });
+      if (!ok) setLoading(false);
+      // Se ok, componente pai troca para EtapaValidacao — não resetar loading
     } catch (err) {
       console.error('Erro ao aceitar sugestões:', err);
-    } finally {
       setLoading(false);
     }
   };
 
   const handleVoltar = async () => {
-    // Volta para preenchimento, mantendo dados preenchidos
     await updateSessao({
       dados_sugeridos: {},
       etapa_atual: 'preenchimento'
     });
   };
+
+  if (loading) {
+    return <JarvisLoadingScreen mensagem="Aguarde enquanto analisamos seus dados." />;
+  }
 
   return (
     <div className="space-y-4">

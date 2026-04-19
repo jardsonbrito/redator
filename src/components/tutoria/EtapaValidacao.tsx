@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { JarvisLoadingScreen } from './JarvisLoadingScreen';
 import type { TutoriaSubtab } from '@/hooks/useJarvisTutoriaSubtabs';
 import type { TutoriaSessao } from '@/hooks/useTutoriaSessao';
 
@@ -39,20 +40,18 @@ export const EtapaValidacao = ({
     setLoading(true);
 
     try {
-      console.log('🚀 Iniciando geração...');
       const resultado = await chamarGeracao(dadosCompletos, creditosNecessarios);
-
-      if (resultado) {
-        console.log('✅ Geração bem-sucedida!');
-        // Edge function já atualiza a sessão, não precisa recarregar
-        // O updateSessao será chamado pela edge function
-      }
+      // Se falhou, volta ao formulário; se ok, componente pai troca para EtapaResultado
+      if (!resultado) setLoading(false);
     } catch (err) {
-      console.error('❌ Erro ao gerar:', err);
-    } finally {
+      console.error('Erro ao gerar:', err);
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return <JarvisLoadingScreen mensagem="Gerando sua introdução. Isso pode levar alguns segundos." />;
+  }
 
   if (!validacao) {
     return (
@@ -131,14 +130,7 @@ export const EtapaValidacao = ({
           disabled={loading}
           className="flex-1 bg-green-600 hover:bg-green-700"
         >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Gerando...
-            </>
-          ) : (
-            'Gerar introdução'
-          )}
+          Gerar introdução
         </Button>
       </div>
     </div>
