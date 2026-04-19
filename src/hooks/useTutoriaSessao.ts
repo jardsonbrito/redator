@@ -26,15 +26,15 @@ export const useTutoriaSessao = (
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const loadSessao = useCallback(async () => {
+  const loadSessao = useCallback(async (silent = false) => {
     if (!userEmail || !modoId || !subtabNome) {
       setSessao(null);
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
 
       const { data, error: rpcError } = await supabase
@@ -61,7 +61,7 @@ export const useTutoriaSessao = (
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
       setSessao(null);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [userEmail, modoId, subtabNome]);
 
@@ -96,8 +96,8 @@ export const useTutoriaSessao = (
         return false;
       }
 
-      // Recarregar sessão atualizada
-      await loadSessao();
+      // Recarregar sessão sem disparar o loading do pai
+      await loadSessao(true);
       return true;
     } catch (err) {
       console.error('Erro ao atualizar sessão:', err);
@@ -128,7 +128,7 @@ export const useTutoriaSessao = (
       }
 
       // Recarregar sessão resetada
-      await loadSessao();
+      await loadSessao(true);
       return true;
     } catch (err) {
       console.error('Erro ao resetar sessão:', err);
