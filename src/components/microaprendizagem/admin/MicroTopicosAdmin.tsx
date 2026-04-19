@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,7 +30,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Pencil, Trash2, ListChecks, ChevronDown, ChevronUp, MoreHorizontal, ImagePlus, BookOpen } from 'lucide-react';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  arrayMove,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Plus, Pencil, Trash2, ListChecks, MoreHorizontal, GripVertical, ImagePlus, BookOpen } from 'lucide-react';
 import { sanitizeFileName } from '@/utils/fileUtils';
 import { toast } from 'sonner';
 
@@ -51,15 +69,132 @@ interface Topico {
   cover_storage_path?: string | null;
 }
 
+interface TopicoCardProps {
+  topico: Topico;
+  isDragging?: boolean;
+  onItens: (t: Topico) => void;
+  onEditar: (t: Topico) => void;
+  onExcluir: (t: Topico) => void;
+  dropdownAberto: string | null;
+  setDropdownAberto: (id: string | null) => void;
+}
+
+const TopicoCard = ({ topico, isDragging = false, onItens, onEditar, onExcluir, dropdownAberto, setDropdownAberto }: TopicoCardProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortableDragging } = useSortable({ id: topico.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isSortableDragging ? 0.4 : 1,
+  };
+
+  const coverUrl = topico.cover_storage_path
+    ? supabase.storage.from('micro-covers').getPublicUrl(topico.cover_storage_path).data.publicUrl
+    : null;
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white border border-border/20 rounded-lg shadow-sm overflow-hidden flex flex-col transition-all duration-200 ${isDragging ? 'shadow-xl ring-2 ring-primary/30' : 'hover:shadow-md'}`}
+    >
+      {/* Imagem de capa */}
+      <div className="relative w-full aspect-video bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden">
+        {coverUrl ? (
+          <img src={coverUrl} alt={topico.titulo} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <BookOpen className="w-10 h-10 text-purple-300" />
+          </div>
+        )}
+        {/* Badge status */}
+        <div className="absolute top-2 right-2">
+          <Badge className={`text-xs font-medium ${topico.ativo ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}>
+            {topico.ativo ? 'Ativo' : 'Inativo'}
+          </Badge>
+        </div>
+        {/* Handle de arrastar */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 left-2 cursor-grab active:cursor-grabbing p-1 rounded bg-black/20 hover:bg-black/30 touch-none"
+          title="Arrastar para reordenar"
+        >
+          <GripVertical className="w-4 h-4 text-white/90" />
+        </div>
+      </div>
+
+      <CardContent className="p-4 flex flex-col flex-1 gap-3">
+        <div className="flex-1">
+          <h3 className="font-semibold text-base text-foreground leading-tight">{topico.titulo}</h3>
+          {topico.descricao && (
+            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{topico.descricao}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 pt-2 border-t border-border/20">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 h-9 text-xs"
+            onClick={() => onItens(topico)}
+          >
+            <ListChecks className="w-3.5 h-3.5 mr-1.5" />
+            Itens
+          </Button>
+          <DropdownMenu
+            open={dropdownAberto === topico.id}
+            onOpenChange={open => setDropdownAberto(open ? topico.id : null)}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
+                <MoreHorizontal className="h-4 w-4 text-gray-600" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
+              <DropdownMenuItem
+                className="flex items-center cursor-pointer hover:bg-gray-50"
+                onClick={() => { setDropdownAberto(null); onEditar(topico); }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="flex items-center cursor-pointer text-red-600 hover:bg-red-50"
+                onClick={() => { setDropdownAberto(null); setTimeout(() => onExcluir(topico), 100); }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export const MicroTopicosAdmin = () => {
   const queryClient = useQueryClient();
   const { data: topicos = [], isLoading } = useMicroTopicosAdmin();
+  const [ordered, setOrdered] = useState<Topico[]>([]);
+  const [activeTopico, setActiveTopico] = useState<Topico | null>(null);
   const [modo, setModo] = useState<'lista' | 'criar' | 'editar' | 'itens'>('lista');
   const [topicoSelecionado, setTopicoSelecionado] = useState<Topico | null>(null);
   const [topicoExcluindo, setTopicoExcluindo] = useState<Topico | null>(null);
   const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOrdered([...topicos].sort((a, b) => a.ordem - b.ordem));
+  }, [topicos]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -128,18 +263,15 @@ export const MicroTopicosAdmin = () => {
 
   const excluirTopico = useMutation({
     mutationFn: async (id: string) => {
-      // Buscar todos os itens do tópico com storage path antes de deletar
       const { data: itens } = await supabase
         .from('micro_itens')
         .select('conteudo_storage_path, tipo')
         .eq('topico_id', id)
         .not('conteudo_storage_path', 'is', null);
 
-      // Apagar o tópico (CASCADE apaga os itens no banco)
       const { error } = await supabase.from('micro_topicos').delete().eq('id', id);
       if (error) throw error;
 
-      // Hard delete dos arquivos no Storage
       if (itens?.length) {
         const porBucket: Record<string, string[]> = {
           'micro-audio': [],
@@ -170,24 +302,36 @@ export const MicroTopicosAdmin = () => {
     onError: () => toast.error('Erro ao excluir tópico'),
   });
 
-  const moverOrdem = useMutation({
-    mutationFn: async ({ id, novaOrdem }: { id: string; novaOrdem: number }) => {
-      const { error } = await supabase.from('micro_topicos').update({ ordem: novaOrdem }).eq('id', id);
-      if (error) throw error;
+  const salvarOrdem = useMutation({
+    mutationFn: async (items: Topico[]) => {
+      const updates = items.map((t, idx) =>
+        supabase.from('micro_topicos').update({ ordem: idx + 1 }).eq('id', t.id)
+      );
+      await Promise.all(updates);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['micro-topicos-admin'] }),
+    onError: () => {
+      toast.error('Erro ao salvar ordem');
+      setOrdered([...topicos].sort((a, b) => a.ordem - b.ordem));
+    },
   });
 
-  const mover = (topico: Topico, direcao: 'up' | 'down') => {
-    const sorted = [...topicos].sort((a, b) => a.ordem - b.ordem);
-    const idx = sorted.findIndex(t => t.id === topico.id);
-    const outro = direcao === 'up' ? sorted[idx - 1] : sorted[idx + 1];
-    if (!outro) return;
-    moverOrdem.mutate({ id: topico.id, novaOrdem: outro.ordem });
-    moverOrdem.mutate({ id: outro.id, novaOrdem: topico.ordem });
+  const handleDragStart = (event: DragStartEvent) => {
+    const t = ordered.find(i => i.id === event.active.id);
+    setActiveTopico(t ?? null);
   };
 
-  // Modo de gerenciamento de itens
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveTopico(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = ordered.findIndex(i => i.id === active.id);
+    const newIdx = ordered.findIndex(i => i.id === over.id);
+    const newOrdered = arrayMove(ordered, oldIdx, newIdx);
+    setOrdered(newOrdered);
+    salvarOrdem.mutate(newOrdered);
+  };
+
   if (modo === 'itens' && topicoSelecionado) {
     return (
       <MicroItensAdmin
@@ -198,7 +342,6 @@ export const MicroTopicosAdmin = () => {
     );
   }
 
-  // Modo de formulário
   if (modo === 'criar' || modo === 'editar') {
     return (
       <Card>
@@ -218,7 +361,6 @@ export const MicroTopicosAdmin = () => {
               <Label>Descrição</Label>
               <Textarea {...register('descricao')} placeholder="Breve descrição do tópico" rows={2} />
             </div>
-            {/* Imagem de capa */}
             <div className="space-y-2">
               <Label>Imagem de capa</Label>
               <div className="flex items-start gap-3">
@@ -241,7 +383,6 @@ export const MicroTopicosAdmin = () => {
                 </label>
               </div>
             </div>
-
             <div className="space-y-1">
               <Label>Ordem de exibição</Label>
               <Input
@@ -276,11 +417,10 @@ export const MicroTopicosAdmin = () => {
     );
   }
 
-  // Modo lista
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <p className="text-sm text-muted-foreground">{topicos.length} tópico(s) cadastrado(s)</p>
+        <p className="text-sm text-muted-foreground">{ordered.length} tópico(s) cadastrado(s)</p>
         <Button className="bg-[#3f0776] hover:bg-[#643293] w-full sm:w-auto" onClick={openCriar}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Tópico
@@ -289,7 +429,7 @@ export const MicroTopicosAdmin = () => {
 
       {isLoading ? (
         <p className="text-sm text-gray-400 text-center py-8">Carregando...</p>
-      ) : topicos.length === 0 ? (
+      ) : ordered.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <BookOpen className="mx-auto w-12 h-12 mb-3 opacity-40" />
           <p className="text-sm">Nenhum tópico cadastrado.</p>
@@ -299,115 +439,41 @@ export const MicroTopicosAdmin = () => {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...topicos].sort((a, b) => a.ordem - b.ordem).map((topico, idx, arr) => {
-            const coverUrl = topico.cover_storage_path
-              ? supabase.storage.from('micro-covers').getPublicUrl(topico.cover_storage_path).data.publicUrl
-              : null;
-
-            return (
-              <Card
-                key={topico.id}
-                className="bg-white hover:shadow-md transition-all duration-200 border border-border/20 rounded-lg shadow-sm overflow-hidden flex flex-col"
-              >
-                {/* Imagem de capa */}
-                <div className="relative w-full aspect-video bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden">
-                  {coverUrl ? (
-                    <img
-                      src={coverUrl}
-                      alt={topico.titulo}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen className="w-10 h-10 text-purple-300" />
-                    </div>
-                  )}
-                  {/* Badge status sobre a imagem */}
-                  <div className="absolute top-2 right-2">
-                    <Badge
-                      className={`text-xs font-medium ${topico.ativo ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}
-                    >
-                      {topico.ativo ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </div>
-                  {/* Ordem */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-0.5">
-                    <Button
-                      variant="ghost" size="icon"
-                      className="h-6 w-6 bg-white/80 hover:bg-white rounded-full shadow-sm"
-                      disabled={idx === 0}
-                      onClick={() => mover(topico, 'up')}
-                    >
-                      <ChevronUp className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      variant="ghost" size="icon"
-                      className="h-6 w-6 bg-white/80 hover:bg-white rounded-full shadow-sm"
-                      disabled={idx === arr.length - 1}
-                      onClick={() => mover(topico, 'down')}
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <CardContent className="p-4 flex flex-col flex-1 gap-3">
-                  {/* Título e descrição */}
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-base text-foreground leading-tight">{topico.titulo}</h3>
-                    {topico.descricao && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{topico.descricao}</p>
-                    )}
-                  </div>
-
-                  {/* Ações */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-border/20">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-9 text-xs"
-                      onClick={() => { setTopicoSelecionado(topico); setModo('itens'); }}
-                    >
-                      <ListChecks className="w-3.5 h-3.5 mr-1.5" />
-                      Itens
-                    </Button>
-                    <DropdownMenu
-                      open={dropdownAberto === topico.id}
-                      onOpenChange={open => setDropdownAberto(open ? topico.id : null)}
-                    >
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-full bg-gray-100 hover:bg-gray-200">
-                          <MoreHorizontal className="h-4 w-4 text-gray-600" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44 shadow-lg border border-gray-200">
-                        <DropdownMenuItem
-                          className="flex items-center cursor-pointer hover:bg-gray-50"
-                          onClick={() => { setDropdownAberto(null); openEditar(topico); }}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="flex items-center cursor-pointer text-red-600 hover:bg-red-50"
-                          onClick={() => {
-                            setDropdownAberto(null);
-                            setTimeout(() => setTopicoExcluindo(topico), 100);
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={ordered.map(t => t.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {ordered.map(topico => (
+                <TopicoCard
+                  key={topico.id}
+                  topico={topico}
+                  onItens={t => { setTopicoSelecionado(t); setModo('itens'); }}
+                  onEditar={openEditar}
+                  onExcluir={t => setTopicoExcluindo(t)}
+                  dropdownAberto={dropdownAberto}
+                  setDropdownAberto={setDropdownAberto}
+                />
+              ))}
+            </div>
+          </SortableContext>
+          <DragOverlay>
+            {activeTopico && (
+              <TopicoCard
+                topico={activeTopico}
+                isDragging
+                onItens={() => {}}
+                onEditar={() => {}}
+                onExcluir={() => {}}
+                dropdownAberto={null}
+                setDropdownAberto={() => {}}
+              />
+            )}
+          </DragOverlay>
+        </DndContext>
       )}
 
       <AlertDialog open={!!topicoExcluindo} onOpenChange={open => !open && setTopicoExcluindo(null)}>
