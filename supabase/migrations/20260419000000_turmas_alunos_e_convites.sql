@@ -53,6 +53,8 @@ DECLARE
   v_convite   convites_alunos%ROWTYPE;
   v_turma     turmas_alunos%ROWTYPE;
   v_profile   profiles%ROWTYPE;
+  v_primeiro  text;
+  v_sobrenome text;
 BEGIN
   -- Buscar convite não utilizado
   SELECT * INTO v_convite
@@ -97,10 +99,17 @@ BEGIN
       RETURN jsonb_build_object('success', false, 'needs_name', true);
     END IF;
 
-    -- Criar perfil com turma (string) e turma_id (FK) — duplo vínculo para compatibilidade
-    INSERT INTO profiles (nome, email, turma, turma_id, user_type, ativo)
+    -- Separar primeiro nome e sobrenome (sobrenome é NOT NULL na tabela)
+    v_primeiro  := split_part(trim(p_nome), ' ', 1);
+    v_sobrenome := trim(substring(trim(p_nome) FROM length(v_primeiro) + 2));
+    IF v_sobrenome = '' THEN v_sobrenome := '-'; END IF;
+
+    -- Criar perfil com id explícito, sobrenome e duplo vínculo de turma
+    INSERT INTO profiles (id, nome, sobrenome, email, turma, turma_id, user_type, ativo)
     VALUES (
-      trim(p_nome),
+      gen_random_uuid(),
+      v_primeiro,
+      v_sobrenome,
       lower(p_email),
       v_turma.nome,
       v_turma.id,
@@ -128,7 +137,7 @@ BEGIN
   RETURN jsonb_build_object(
     'success', true,
     'profile', jsonb_build_object(
-      'nome',     v_profile.nome,
+      'nome',     v_profile.nome || ' ' || v_profile.sobrenome,
       'email',    v_profile.email,
       'turma',    v_profile.turma,
       'turma_id', v_turma.id::text
