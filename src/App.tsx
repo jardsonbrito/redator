@@ -98,6 +98,7 @@ const AjudaRapidaAdmin  = lazy(() => import("./pages/admin/AjudaRapidaAdmin").th
 const CustomizePlanSimple  = lazy(() => import("./pages/admin/CustomizePlanSimple").then(m => ({ default: m.CustomizePlanSimple })));
 const CustomizePlanByName  = lazy(() => import("./pages/admin/CustomizePlanByName").then(m => ({ default: m.CustomizePlanByName })));
 const CustomizeStudentPlan = lazy(() => import("./pages/admin/CustomizeStudentPlan").then(m => ({ default: m.CustomizeStudentPlan })));
+const AlunoAutoAtendimento    = lazy(() => import("./pages/AlunoAutoAtendimento"));
 const ProfessorLogin          = lazy(() => import("./pages/ProfessorLogin").then(m => ({ default: m.ProfessorLogin })));
 const ProfessorAutoAtendimento = lazy(() => import("./pages/ProfessorAutoAtendimento"));
 const ProfessorHome        = lazy(() => import("./pages/professor/ProfessorHome"));
@@ -138,6 +139,7 @@ function App() {
                     <Route path="/aluno-login" element={<AlunoLogin />} />
                     <Route path="/visitante-login" element={<VisitanteLogin />} />
                     <Route path="/cadastro-aluno" element={<CadastroAluno />} />
+                    <Route path="/aluno/entrar" element={<AlunoAutoAtendimento />} />
                     <Route path="/atualizar-email" element={<AtualizarEmail />} />
                     <Route path="/processo-seletivo/inscricao/:formularioId" element={<ProcessoSeletivoInscricao />} />
 

@@ -4,6 +4,7 @@ import { AlunoFormModern } from '@/components/admin/AlunoFormModern';
 import { AlunoList } from '@/components/admin/AlunoList';
 import { AlunoPerfilSheet, type AlunoHubItem } from './AlunoPerfilSheet';
 import ResumoTurma from '@/pages/admin/ResumoTurma';
+import { TurmasAlunosManager } from '@/components/admin/TurmasAlunosManager';
 
 export function AlunosHub() {
   const [refresh, setRefresh] = useState(false);
@@ -33,6 +34,7 @@ export function AlunosHub() {
           <TabsTrigger value="lista">Lista</TabsTrigger>
           <TabsTrigger value="cadastro">Cadastro</TabsTrigger>
           <TabsTrigger value="turma">Por Turma</TabsTrigger>
+          <TabsTrigger value="convites">Convites</TabsTrigger>
         </TabsList>
 
         {/* Lista de alunos + visitantes */}
@@ -64,6 +66,11 @@ export function AlunosHub() {
         {/* Resumo por turma */}
         <TabsContent value="turma">
           <ResumoTurma />
+        </TabsContent>
+
+        {/* Turmas dinâmicas + convites individuais (novo sistema paralelo) */}
+        <TabsContent value="convites">
+          <TurmasAlunosManager />
         </TabsContent>
       </Tabs>
 
