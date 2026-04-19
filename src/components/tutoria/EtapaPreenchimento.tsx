@@ -26,14 +26,24 @@ export const EtapaPreenchimento = ({
     sessao.dados_preenchidos || {}
   );
   const [loading, setLoading] = useState(false);
+  const [erroTema, setErroTema] = useState(false);
 
   const campos = subtab.config.campos || [];
+  // O primeiro campo é sempre o obrigatório (tema da redação)
+  const campoObrigatorio = campos[0];
 
   const handleContinuar = async () => {
+    // Validar campo obrigatório (tema)
+    if (campoObrigatorio && !valores[campoObrigatorio.nome]?.trim()) {
+      setErroTema(true);
+      return;
+    }
+
+    setErroTema(false);
     setLoading(true);
 
     try {
-      // Identificar campos vazios
+      // Identificar campos vazios (excluindo o obrigatório, que já foi validado)
       const camposVazios = campos
         .filter(c => !valores[c.nome]?.trim())
         .map(c => c.nome);
@@ -48,7 +58,6 @@ export const EtapaPreenchimento = ({
         const sugestoes = await chamarSugestoes(valores, camposVazios);
 
         if (sugestoes) {
-          // Atualizar sessão com sugestões e mudar etapa
           await updateSessao({
             dados_sugeridos: sugestoes,
             etapa_atual: 'sugestoes'
@@ -72,6 +81,21 @@ export const EtapaPreenchimento = ({
     }
   };
 
+  // Tela de carregamento enquanto Jarvis processa
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
+        <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-indigo-700">🤖 Jarvis está trabalhando...</p>
+          <p className="text-sm text-gray-500">Aguarde enquanto organizamos suas sugestões de redação.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Instrução */}
@@ -83,30 +107,46 @@ export const EtapaPreenchimento = ({
 
       {/* Formulário de campos */}
       <div className="space-y-4">
-        {campos.map((campo) => (
-          <div key={campo.nome} className="space-y-1.5">
-            <Label htmlFor={campo.nome} className="text-sm font-medium">
-              {campo.label}
-            </Label>
-            {campo.tipo === 'textarea' ? (
-              <Textarea
-                id={campo.nome}
-                value={valores[campo.nome] || ''}
-                onChange={e => setValores(v => ({ ...v, [campo.nome]: e.target.value }))}
-                placeholder={campo.placeholder}
-                rows={3}
-                className="resize-none"
-              />
-            ) : (
-              <Input
-                id={campo.nome}
-                value={valores[campo.nome] || ''}
-                onChange={e => setValores(v => ({ ...v, [campo.nome]: e.target.value }))}
-                placeholder={campo.placeholder}
-              />
-            )}
-          </div>
-        ))}
+        {campos.map((campo, index) => {
+          const obrigatorio = index === 0;
+          return (
+            <div key={campo.nome} className="space-y-1.5">
+              <Label htmlFor={campo.nome} className="text-sm font-medium">
+                {campo.label}
+                {!obrigatorio && (
+                  <span className="ml-1 text-xs font-normal text-gray-400">(opcional)</span>
+                )}
+              </Label>
+              {campo.tipo === 'textarea' ? (
+                <Textarea
+                  id={campo.nome}
+                  value={valores[campo.nome] || ''}
+                  onChange={e => {
+                    if (obrigatorio && erroTema) setErroTema(false);
+                    setValores(v => ({ ...v, [campo.nome]: e.target.value }));
+                  }}
+                  placeholder={obrigatorio ? campo.placeholder : undefined}
+                  rows={3}
+                  className={`resize-none ${obrigatorio && erroTema ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
+                />
+              ) : (
+                <Input
+                  id={campo.nome}
+                  value={valores[campo.nome] || ''}
+                  onChange={e => {
+                    if (obrigatorio && erroTema) setErroTema(false);
+                    setValores(v => ({ ...v, [campo.nome]: e.target.value }));
+                  }}
+                  placeholder={obrigatorio ? campo.placeholder : undefined}
+                  className={obrigatorio && erroTema ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                />
+              )}
+              {obrigatorio && erroTema && (
+                <p className="text-xs text-red-500">Digite o tema da redação para continuar.</p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Botão continuar */}
@@ -115,14 +155,7 @@ export const EtapaPreenchimento = ({
         disabled={loading}
         className="w-full bg-indigo-600 hover:bg-indigo-700"
       >
-        {loading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processando...
-          </>
-        ) : (
-          'Continuar'
-        )}
+        Continuar
       </Button>
     </div>
   );
