@@ -13,7 +13,7 @@ export const JarvisLoadingScreen = ({ mensagem }: JarvisLoadingScreenProps) => {
       <div className="space-y-1">
         <p className="text-base font-semibold text-indigo-700">Jarvis está trabalhando...</p>
         <p className="text-sm text-gray-500">
-          {mensagem || 'Aguarde enquanto organizamos suas sugestões de redação.'}
+          {mensagem || 'Aguarde enquanto organizo suas sugestões de redação.'}
         </p>
       </div>
     </div>

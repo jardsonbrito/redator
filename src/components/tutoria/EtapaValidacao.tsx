@@ -50,7 +50,7 @@ export const EtapaValidacao = ({
   };
 
   if (loading) {
-    return <JarvisLoadingScreen mensagem="Gerando sua introdução. Isso pode levar alguns segundos." />;
+    return <JarvisLoadingScreen mensagem="Estou gerando sua introdução. Isso pode levar alguns segundos." />;
   }
 
   if (!validacao) {

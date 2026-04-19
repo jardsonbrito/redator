@@ -65,7 +65,7 @@ export const EtapaSugestoes = ({
   };
 
   if (loading) {
-    return <JarvisLoadingScreen mensagem="Aguarde enquanto analisamos seus dados." />;
+    return <JarvisLoadingScreen mensagem="Aguarde enquanto analiso seus dados." />;
   }
 
   return (
