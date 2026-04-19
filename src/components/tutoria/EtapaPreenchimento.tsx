@@ -43,40 +43,44 @@ export const EtapaPreenchimento = ({
     setLoading(true);
 
     try {
-      // Identificar campos vazios (excluindo o obrigatório, que já foi validado)
       const camposVazios = campos
         .filter(c => !valores[c.nome]?.trim())
         .map(c => c.nome);
 
-      // Salvar dados preenchidos
-      await updateSessao({
-        dados_preenchidos: valores
-      });
+      await updateSessao({ dados_preenchidos: valores });
 
-      // Se há campos vazios, pedir sugestões
       if (camposVazios.length > 0) {
         const sugestoes = await chamarSugestoes(valores, camposVazios);
 
-        if (sugestoes) {
-          await updateSessao({
-            dados_sugeridos: sugestoes,
-            etapa_atual: 'sugestoes'
-          });
+        if (!sugestoes) {
+          // IA falhou: volta para o formulário
+          setLoading(false);
+          return;
         }
+
+        const ok = await updateSessao({
+          dados_sugeridos: sugestoes,
+          etapa_atual: 'sugestoes'
+        });
+        // Se falhou ao salvar, volta para o formulário
+        if (!ok) setLoading(false);
+        // Se ok, o componente pai vai trocar para EtapaSugestoes — não resetar loading
       } else {
-        // Todos campos preenchidos, vai direto para validação
         const validacao = await chamarValidacao(valores);
 
-        if (validacao) {
-          await updateSessao({
-            validacao_resultado: validacao,
-            etapa_atual: 'validacao'
-          });
+        if (!validacao) {
+          setLoading(false);
+          return;
         }
+
+        const ok = await updateSessao({
+          validacao_resultado: validacao,
+          etapa_atual: 'validacao'
+        });
+        if (!ok) setLoading(false);
       }
     } catch (err) {
       console.error('Erro ao continuar:', err);
-    } finally {
       setLoading(false);
     }
   };
