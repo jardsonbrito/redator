@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Pencil, Trash2, ArrowLeft, Eye, EyeOff, MoreHorizontal, PlaySquare, FileText, StickyNote, AudioWaveform, Mic, Brain, GalleryHorizontalEnd, Image, type LucideIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, ArrowUp, ArrowDown, Eye, EyeOff, MoreHorizontal, PlaySquare, FileText, StickyNote, AudioWaveform, Mic, Brain, GalleryHorizontalEnd, Image, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MicroItem } from '@/hooks/useMicroItens';
 
@@ -66,6 +66,23 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
     },
     onError: () => toast.error('Erro ao atualizar status'),
   });
+
+  const moverOrdem = useMutation({
+    mutationFn: async ({ id, novaOrdem }: { id: string; novaOrdem: number }) => {
+      const { error } = await supabase.from('micro_itens').update({ ordem: novaOrdem }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['micro-itens-admin', topicoId] }),
+  });
+
+  const mover = (item: MicroItem, direcao: 'up' | 'down') => {
+    const sorted = [...itens].sort((a, b) => a.ordem - b.ordem);
+    const idx = sorted.findIndex(t => t.id === item.id);
+    const outro = direcao === 'up' ? sorted[idx - 1] : sorted[idx + 1];
+    if (!outro) return;
+    moverOrdem.mutate({ id: item.id, novaOrdem: outro.ordem });
+    moverOrdem.mutate({ id: outro.id, novaOrdem: item.ordem });
+  };
 
   const excluirItem = useMutation({
     mutationFn: async (id: string) => {
@@ -160,7 +177,7 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {itens.map((item) => {
+          {itens.map((item, idx) => {
             const cfg = TIPO_CONFIG[item.tipo];
             const Icon = cfg?.icon ?? FileText;
             return (
@@ -203,6 +220,28 @@ export const MicroItensAdmin = ({ topicoId, topicoTitulo, onVoltar }: Props) => 
 
                   {/* Ações */}
                   <div className="flex items-center gap-2 pt-2 border-t border-border/20">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-9 p-0"
+                        disabled={idx === 0 || moverOrdem.isPending}
+                        onClick={() => mover(item, 'up')}
+                        title="Mover para cima"
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-9 p-0"
+                        disabled={idx === itens.length - 1 || moverOrdem.isPending}
+                        onClick={() => mover(item, 'down')}
+                        title="Mover para baixo"
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                      </Button>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
