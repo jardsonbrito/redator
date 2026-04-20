@@ -4,13 +4,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Users, CalendarDays, GraduationCap, X } from 'lucide-react';
-import { TODAS_TURMAS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 import { useMonitoramentoTurma, AlunoMonitoramento } from '@/hooks/useMonitoramentoTurma';
 import { AlunoBoletimSheet } from '@/components/admin/AlunoBoletimSheet';
 import { TurmaSummaryPanel } from '@/components/admin/radar/TurmaSummaryPanel';
 import { AlunoMonitoramentoRow } from '@/components/admin/radar/AlunoMonitoramentoRow';
 
-const TURMAS = TODAS_TURMAS.map(formatTurmaDisplay);
+const STATUS_RADAR = ['VISITANTE', 'AGUARDANDO', 'REPROVADOS'];
 
 const MESES = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -44,6 +44,7 @@ export const MonitoramentoPage = () => {
     ? now.getFullYear() - 1
     : now.getFullYear();
 
+  const { turmasDinamicas } = useTurmasAtivas();
   const [selectedTurma, setSelectedTurma] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(defaultMes);
   const [selectedYear,  setSelectedYear]  = useState(defaultAno);
@@ -111,7 +112,7 @@ export const MonitoramentoPage = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {TURMAS.map(turma => (
+            {[...turmasDinamicas.map(t => t.valor), ...STATUS_RADAR].map(turma => (
               <button
                 key={turma}
                 onClick={() => { setSelectedTurma(selectedTurma === turma ? '' : turma); setFiltroAtivo(null); }}
