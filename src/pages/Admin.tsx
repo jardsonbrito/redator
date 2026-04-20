@@ -90,6 +90,9 @@ import { RedacaoExercicioList } from "@/components/admin/RedacaoExercicioList";
 import { MuralFormModern as AvisoForm } from "@/components/admin/MuralFormModern";
 import { AvisoList } from "@/components/admin/AvisoList";
 
+// Import calendário components
+import { CalendarioAdmin } from "./admin/CalendarioAdmin";
+
 // Import inbox components
 import { InboxForm } from "@/components/admin/InboxForm";
 
@@ -678,7 +681,7 @@ const Admin = () => {
       const defaultData: Record<string, { info: string; badge?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" }> = {};
       const allCards = [
         "temas", "redacoes", "redacoes-enviadas", "redacoes-comentadas", "diario", "exercicios", "simulados",
-        "lousa", "salas-virtuais", "aulas", "videos", "biblioteca", "avisos", "inbox",
+        "lousa", "salas-virtuais", "aulas", "videos", "biblioteca", "avisos", "calendario", "inbox",
         "radar", "gamificacao", "ajuda-rapida", "alunos", "corretores",
         "professores", "administradores", "exportacao", "configuracoes", "top5"
       ];
@@ -739,6 +742,7 @@ const Admin = () => {
     // Linha 4: Recursos e Comunicação
     { id: "videos", label: "Videoteca", icon: VideoCamera, iconColor: "#FF4444" },
     { id: "biblioteca", label: "Biblioteca", icon: Books, iconColor: "#607D8B" },
+    { id: "calendario", label: "Calendário de Atividades", icon: PhosphorCalendar, iconColor: "#662F96" },
     { id: "avisos", label: "Mural de Avisos", icon: PushPin, iconColor: "#FFC107" },
 
     // Linha 5: Comunicação e Notificações
@@ -958,6 +962,9 @@ const Admin = () => {
 
       case "lousa":
         return <LousaList />;
+
+      case "calendario":
+        return <CalendarioAdmin />;
 
       case "avisos":
         const handleAvisoSuccess = () => {

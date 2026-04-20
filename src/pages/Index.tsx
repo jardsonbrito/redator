@@ -13,6 +13,7 @@ import { StudentHeader } from "@/components/StudentHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MenuGrid } from "@/components/MenuGrid";
 import { MuralAvisos } from "@/components/MuralAvisos";
+import { CalendarioAtividades } from "@/components/CalendarioAtividades";
 import { MeuDesempenho } from "@/components/MeuDesempenho";
 import { PlanoEstudoCard } from "@/components/PlanoEstudoCard";
 import { StudentInboxManager } from "@/components/student/StudentInboxManager";
@@ -276,7 +277,10 @@ const Index = () => {
               {studentData.userType === 'aluno' && <PlanoEstudoCard />}
             </div>
 
-            {/* Mural de Avisos */}
+            {/* Calendário de Atividades Pedagógicas */}
+            <CalendarioAtividades turmaCode={turmaCode} />
+
+            {/* Mural de Avisos (legado — mantido até migração definitiva) */}
             <MuralAvisos turmaCode={turmaCode} />
 
             {/* Menu Principal Horizontal */}

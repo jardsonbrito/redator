@@ -90,6 +90,7 @@ const PlanoEstudoAdmin        = lazy(() => import("./pages/admin/PlanoEstudoAdmi
 
 // ── Páginas com named export ─────────────────────────────────────────────────
 const Avisos            = lazy(() => import("./pages/admin/Avisos").then(m => ({ default: m.Avisos })));
+const CalendarioAdmin   = lazy(() => import("./pages/admin/CalendarioAdmin").then(m => ({ default: m.CalendarioAdmin })));
 const Redacoes          = lazy(() => import("./pages/admin/Redacoes").then(m => ({ default: m.Redacoes })));
 const SimuladosAdmin    = lazy(() => import("./pages/admin/SimuladosAdmin").then(m => ({ default: m.SimuladosAdmin })));
 const ExerciciosAdmin   = lazy(() => import("./pages/admin/ExerciciosAdmin").then(m => ({ default: m.ExerciciosAdmin })));
@@ -193,6 +194,7 @@ function App() {
                     {/* Rotas do Admin */}
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/admin/avisos" element={<Avisos />} />
+                    <Route path="/admin/calendario" element={<CalendarioAdmin />} />
                     <Route path="/admin/redacoes" element={<Redacoes />} />
                     <Route path="/admin/simulados" element={<SimuladosAdmin />} />
                     <Route path="/admin/exercicios" element={<ExerciciosAdmin />} />
