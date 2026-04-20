@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { EventoCalendarioForm, type EventoCalendario } from '@/components/admin/EventoCalendarioForm';
 import { EventoCalendarioList } from '@/components/admin/EventoCalendarioList';
 import { CalendarioAdminView } from '@/components/admin/CalendarioAdminView';
+import { CalendarioSincronizar } from '@/components/admin/CalendarioSincronizar';
 import { Button } from '@/components/ui/button';
 import { LayoutList, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
@@ -90,6 +91,9 @@ export const CalendarioAdmin = () => {
                 Calendário
               </button>
             </div>
+          )}
+          {!showForm && (
+            <CalendarioSincronizar onSyncComplete={() => setRefresh(r => !r)} />
           )}
           {!showForm && (
             <Button
