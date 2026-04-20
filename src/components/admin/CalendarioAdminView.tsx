@@ -84,8 +84,8 @@ export const CalendarioAdminView = ({ eventos, mesAtual, onMesChange, onEventoCl
         >
           ‹
         </button>
-        <h3 className="font-semibold text-gray-800 capitalize">
-          {format(mesAtual, "MMMM 'de' yyyy", { locale: ptBR })}
+        <h3 className="font-semibold text-gray-800">
+          {format(mesAtual, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^\w/, c => c.toUpperCase())}
         </h3>
         <button
           onClick={() => navMes(1)}

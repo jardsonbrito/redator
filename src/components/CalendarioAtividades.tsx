@@ -223,8 +223,8 @@ export const CalendarioAtividades = ({ turmaCode }: Props) => {
           >
             <ChevronLeft className="w-5 h-5 text-gray-500" />
           </button>
-          <h3 className="font-semibold text-gray-800 capitalize text-base">
-            {format(mesAtual, "MMMM 'de' yyyy", { locale: ptBR })}
+          <h3 className="font-semibold text-gray-800 text-base">
+            {format(mesAtual, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^\w/, c => c.toUpperCase())}
           </h3>
           <button
             onClick={() => setMesAtual(m => addMonths(m, 1))}
