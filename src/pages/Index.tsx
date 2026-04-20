@@ -278,10 +278,14 @@ const Index = () => {
             </div>
 
             {/* Calendário de Atividades Pedagógicas */}
-            <CalendarioAtividades turmaCode={turmaCode} />
+            <div className="max-w-5xl mx-auto">
+              <CalendarioAtividades turmaCode={turmaCode} />
+            </div>
 
             {/* Mural de Avisos (legado — mantido até migração definitiva) */}
-            <MuralAvisos turmaCode={turmaCode} />
+            <div className="max-w-5xl mx-auto">
+              <MuralAvisos turmaCode={turmaCode} />
+            </div>
 
             {/* Menu Principal Horizontal */}
             <MenuGrid

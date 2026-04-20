@@ -93,6 +93,7 @@ interface Evento {
   cor?: string;
   entidade_tipo?: string;
   entidade_id?: string;
+  link_direto?: string;
   turmas_autorizadas: string[];
   permite_visitante: boolean;
 }
@@ -188,12 +189,16 @@ export const CalendarioAtividades = ({ turmaCode }: Props) => {
   };
 
   const handleAcao = (evento: Evento) => {
+    setModalAberto(false);
+    // Se o evento tem link direto (ex: link_meet da aula ao vivo), abre externamente
+    if (evento.link_direto) {
+      window.open(evento.link_direto, '_blank', 'noopener,noreferrer');
+      return;
+    }
     if (!evento.entidade_tipo) return;
     const config = ENTIDADE_ACAO[evento.entidade_tipo];
     if (!config) return;
-    const rota = config.rota(evento.entidade_id || '');
-    navigate(rota);
-    setModalAberto(false);
+    navigate(config.rota(evento.entidade_id || ''));
   };
 
   const temEventos = eventos.length > 0;
@@ -415,7 +420,7 @@ export const CalendarioAtividades = ({ turmaCode }: Props) => {
                       )}
 
                       {/* Botão de ação */}
-                      {acaoConfig && (
+                      {(acaoConfig || evento.link_direto) && (
                         <Button
                           size="sm"
                           className="mt-2 text-white"
@@ -423,7 +428,9 @@ export const CalendarioAtividades = ({ turmaCode }: Props) => {
                           onClick={() => handleAcao(evento)}
                         >
                           <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                          {acaoConfig.label}
+                          {evento.link_direto && evento.entidade_tipo === 'aula_ao_vivo'
+                            ? 'Entrar na aula'
+                            : acaoConfig?.label}
                         </Button>
                       )}
                     </div>

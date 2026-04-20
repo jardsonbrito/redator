@@ -107,9 +107,12 @@ export const AvisoList = ({ refresh, onEdit }: AvisoListProps) => {
   };
 
   const handleToggleStatus = async (aviso: Aviso) => {
+    const novoStatus = aviso.status === 'publicado' ? 'rascunho' : 'publicado';
+
+    // Atualiza o estado local imediatamente para feedback visual instantâneo
+    setAvisos(prev => prev.map(a => a.id === aviso.id ? { ...a, status: novoStatus } : a));
+
     try {
-      const novoStatus = aviso.status === 'publicado' ? 'rascunho' : 'publicado';
-      
       const { error } = await supabase
         .from("avisos")
         .update({ status: novoStatus })
@@ -121,9 +124,9 @@ export const AvisoList = ({ refresh, onEdit }: AvisoListProps) => {
         title: "Status atualizado!",
         description: `Aviso ${novoStatus === 'publicado' ? 'publicado' : 'despublicado'} com sucesso.`,
       });
-
-      fetchAvisos();
     } catch (error) {
+      // Reverte o estado local em caso de erro
+      setAvisos(prev => prev.map(a => a.id === aviso.id ? { ...a, status: aviso.status } : a));
       console.error("Erro ao atualizar status:", error);
       toast({
         title: "Erro",

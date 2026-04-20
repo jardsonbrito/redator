@@ -31,6 +31,7 @@ interface ItemPreview {
   hora_fim: string | null;
   turmas_autorizadas: string[];
   permite_visitante: boolean;
+  link_direto?: string | null;
   ja_existe: boolean;
 }
 
@@ -68,7 +69,7 @@ export const CalendarioSincronizar = ({ onSyncComplete }: Props) => {
     // 2. Aulas virtuais (aula_ao_vivo)
     const { data: aulas } = await supabase
       .from('aulas_virtuais')
-      .select('id, titulo, data_aula, horario_inicio, horario_fim, turmas_autorizadas, permite_visitante')
+      .select('id, titulo, data_aula, horario_inicio, horario_fim, turmas_autorizadas, permite_visitante, link_meet')
       .order('data_aula', { ascending: true });
 
     for (const a of aulas || []) {
@@ -77,6 +78,7 @@ export const CalendarioSincronizar = ({ onSyncComplete }: Props) => {
         entidade_id: a.id,
         titulo: a.titulo,
         data_evento: a.data_aula,
+        link_direto: (a as any).link_meet || null,
         hora_inicio: a.horario_inicio,
         hora_fim: a.horario_fim,
         turmas_autorizadas: a.turmas_autorizadas || [],
@@ -155,6 +157,7 @@ export const CalendarioSincronizar = ({ onSyncComplete }: Props) => {
         hora_fim: item.hora_fim || null,
         entidade_tipo: item.entidade_tipo,
         entidade_id: item.entidade_id,
+        link_direto: item.link_direto || null,
         turmas_autorizadas: item.turmas_autorizadas,
         permite_visitante: item.permite_visitante,
         status: 'publicado',
