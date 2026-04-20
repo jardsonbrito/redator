@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { normalizeTurmaToLetter, TODAS_TURMAS } from '@/utils/turmaUtils';
+import { normalizeTurmaToLetter } from '@/utils/turmaUtils';
 import type {
   EtapaEstudo,
   AulaDiario,
@@ -1150,37 +1150,16 @@ export function useTurmasDisponiveis() {
   return useQuery({
     queryKey: ['turmas_disponiveis'],
     queryFn: async () => {
-      // Buscar turmas distintas que existem no sistema
       const { data, error } = await supabase
-        .from('profiles')
-        .select('turma')
-        .eq('user_type', 'aluno')
-        .not('turma', 'is', null);
+        .from('turmas_alunos')
+        .select('nome')
+        .eq('ativo', true)
+        .order('nome');
 
       if (error) throw error;
 
-      // Turmas dinâmicas encontradas
-      const turmasEncontradas = [...new Set(data.map(item => item.turma))];
-
-      // Turmas fixas no formato normalizado (A-H, VISITANTE)
-      const turmasFixas = [...TODAS_TURMAS];
-
-      // Combinar turmas fixas com as encontradas, removendo duplicatas
-      const todasTurmasLetras = [...new Set([...turmasFixas, ...turmasEncontradas])];
-
-      // Retornar no formato { codigo: "A", nome: "A" }
-      const turmasFormatadas = todasTurmasLetras.map(letra => ({
-        codigo: letra,
-        nome: letra // Apenas a letra (A, B, C, D, E ou VISITANTE)
-      }));
-
-      // Ordenar: A-E primeiro, depois VISITANTE
-      return turmasFormatadas.sort((a, b) => {
-        if (a.codigo === 'VISITANTE') return 1;
-        if (b.codigo === 'VISITANTE') return -1;
-        return a.codigo.localeCompare(b.codigo);
-      });
+      return (data || []).map(t => ({ codigo: t.nome, nome: t.nome }));
     },
-    staleTime: 10 * 60 * 1000, // 10 minutos
+    staleTime: 10 * 60 * 1000,
   });
 }
