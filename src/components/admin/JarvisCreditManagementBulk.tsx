@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, Plus, Settings, Users, History } from 'lucide-react';
-import { TODAS_TURMAS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 
 interface Student {
   id: string;
@@ -34,9 +34,8 @@ interface JarvisCreditAudit {
   created_at: string;
 }
 
-const TURMAS = TODAS_TURMAS;
-
 export const JarvisCreditManagementBulk = () => {
+  const { turmasDinamicas } = useTurmasAtivas();
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedTurma, setSelectedTurma] = useState<string>('');
@@ -270,9 +269,9 @@ export const JarvisCreditManagementBulk = () => {
                   <SelectValue placeholder="Selecione uma turma" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TURMAS.map((turma) => (
-                    <SelectItem key={turma} value={turma}>
-                      {formatTurmaDisplay(turma)}
+                  {turmasDinamicas.map(({ valor, label }) => (
+                    <SelectItem key={valor} value={valor}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
