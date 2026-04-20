@@ -14,7 +14,7 @@ import { Upload, FileText } from "lucide-react";
 import { ImageSelector } from "@/components/admin/ImageSelector";
 import { VideoParser, processAulaVideoMetadata, resolveAulaCover } from "@/utils/aulaImageUtils";
 import { VideoThumbnailReprocessor } from "@/components/admin/VideoThumbnailReprocessor";
-import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface AulaEditando {
   id: string;
@@ -46,6 +46,7 @@ interface AulaFormProps {
 }
 
 export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFormProps) => {
+  const { turmasDinamicas } = useTurmasAtivas();
   const [activeSection, setActiveSection] = useState<string>('detalhes');
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -63,7 +64,6 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [currentAulaData, setCurrentAulaData] = useState<AulaEditando | null>(null);
   const [modulos, setModulos] = useState<{id: string, nome: string}[]>([]);
-  const [turmas, setTurmas] = useState<string[]>([]);
 
   const [novoModuloNome, setNovoModuloNome] = useState("");
   const [mostrarNovoModulo, setMostrarNovoModulo] = useState(false);
@@ -101,8 +101,6 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
         ]);
       }
 
-      // Definir turmas normalizadas
-      setTurmas(TURMAS_VALIDAS as any);
     };
 
     fetchData();
@@ -679,15 +677,15 @@ export const AulaFormModern = ({ aulaEditando, onSuccess, onCancelEdit }: AulaFo
                   <div className="space-y-3">
                     <div className="text-sm font-medium">Turmas Autorizadas</div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {turmas.filter(t => t !== "Professor").map((turma) => (
-                        <div key={turma} className="flex items-center space-x-2">
+                      {turmasDinamicas.map(({ valor, label }) => (
+                        <div key={valor} className="flex items-center space-x-2">
                           <Checkbox
-                            id={turma}
-                            checked={turmasAutorizadas.includes(turma)}
-                            onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
+                            id={valor}
+                            checked={turmasAutorizadas.includes(valor)}
+                            onCheckedChange={(checked) => handleTurmaChange(valor, checked as boolean)}
                           />
-                          <Label htmlFor={turma} className="text-sm font-medium">
-                            {formatTurmaDisplay(turma)}
+                          <Label htmlFor={valor} className="text-sm font-medium">
+                            {label}
                           </Label>
                         </div>
                       ))}

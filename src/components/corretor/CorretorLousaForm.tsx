@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useCorretorAuth } from '@/hooks/useCorretorAuth';
 import { useQueryClient } from '@tanstack/react-query';
-import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 
 interface FormData {
   titulo: string;
@@ -30,9 +30,8 @@ interface CorretorLousaFormProps {
   editData?: any;
 }
 
-const TURMAS = TURMAS_VALIDAS;
-
 export default function CorretorLousaForm({ onSuccess, editData }: CorretorLousaFormProps) {
+  const { turmasDinamicas } = useTurmasAtivas();
   const { toast } = useToast();
   const { corretor } = useCorretorAuth();
   const queryClient = useQueryClient();
@@ -348,21 +347,21 @@ export default function CorretorLousaForm({ onSuccess, editData }: CorretorLousa
                   <div className="space-y-3">
                     <div className="text-sm font-medium">Turmas Autorizadas</div>
                     <div className="grid grid-cols-3 gap-2">
-                      {TURMAS.map((turma) => (
-                        <div key={turma} className="flex items-center space-x-2">
+                      {turmasDinamicas.map(({ valor, label }) => (
+                        <div key={valor} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`turma-${turma}`}
-                            checked={formData.turmas.includes(turma)}
+                            id={`turma-${valor}`}
+                            checked={formData.turmas.includes(valor)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFormData({...formData, turmas: [...formData.turmas, turma]});
+                                setFormData({...formData, turmas: [...formData.turmas, valor]});
                               } else {
-                                setFormData({...formData, turmas: formData.turmas.filter(t => t !== turma)});
+                                setFormData({...formData, turmas: formData.turmas.filter(t => t !== valor)});
                               }
                             }}
                           />
-                          <label htmlFor={`turma-${turma}`} className="text-sm font-medium">
-                            Turma {turma}
+                          <label htmlFor={`turma-${valor}`} className="text-sm font-medium">
+                            {label}
                           </label>
                         </div>
                       ))}

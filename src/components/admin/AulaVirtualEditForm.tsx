@@ -8,9 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
-
-const TURMAS = TURMAS_VALIDAS;
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 type TurmaProfessor = { id: string; nome: string };
 
 type AulaDisponivel = { id: string; titulo: string; data_aula: string };
@@ -47,6 +45,8 @@ interface AulaVirtualEditFormProps {
 }
 
 export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEditFormProps) => {
+  const { turmasDinamicas } = useTurmasAtivas();
+
   const [loading, setLoading] = useState(false);
   const [gerandoGravada, setGerandoGravada] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('detalhes');
@@ -537,21 +537,21 @@ export const AulaVirtualEditForm = ({ aula, onSuccess, onCancel }: AulaVirtualEd
                   <div className="space-y-3">
                     <div className="text-sm font-medium">Turmas Autorizadas</div>
                     <div className="grid grid-cols-3 gap-2">
-                      {TURMAS.map((turma) => (
-                        <div key={turma} className="flex items-center space-x-2">
+                      {turmasDinamicas.map(({ valor, label }) => (
+                        <div key={valor} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`turma-${turma}`}
-                            checked={formData.turmas_autorizadas.includes(turma)}
+                            id={`turma-${valor}`}
+                            checked={formData.turmas_autorizadas.includes(valor)}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, turma]});
+                                setFormData({...formData, turmas_autorizadas: [...formData.turmas_autorizadas, valor]});
                               } else {
-                                setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== turma)});
+                                setFormData({...formData, turmas_autorizadas: formData.turmas_autorizadas.filter(t => t !== valor)});
                               }
                             }}
                           />
-                          <label htmlFor={`turma-${turma}`} className="text-sm font-medium">
-                            {turma}
+                          <label htmlFor={`turma-${valor}`} className="text-sm font-medium">
+                            {label}
                           </label>
                         </div>
                       ))}

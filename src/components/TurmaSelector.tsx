@@ -1,11 +1,7 @@
 
-import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { TURMAS_VALIDAS, formatTurmaDisplay, type TurmaLetra } from "@/utils/turmaUtils";
-
-// Lista de turmas (armazenadas como letras)
-const turmasDisponiveis: TurmaLetra[] = [...TURMAS_VALIDAS];
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface TurmaSelectorProps {
   selectedTurmas: string[];
@@ -20,17 +16,19 @@ export const TurmaSelector = ({
   permiteeVisitante = false,
   onPermiteVisitanteChange
 }: TurmaSelectorProps) => {
-  const handleTurmaChange = (turma: TurmaLetra, checked: boolean) => {
+  const { turmasDinamicas } = useTurmasAtivas();
+
+  const handleTurmaChange = (valor: string, checked: boolean) => {
     if (checked) {
-      onTurmasChange([...selectedTurmas, turma]);
+      onTurmasChange([...selectedTurmas, valor]);
     } else {
-      onTurmasChange(selectedTurmas.filter(t => t !== turma));
+      onTurmasChange(selectedTurmas.filter(t => t !== valor));
     }
   };
 
   const handleTodasTurmasChange = (checked: boolean) => {
     if (checked) {
-      onTurmasChange(turmasDisponiveis);
+      onTurmasChange(turmasDinamicas.map(t => t.valor));
     } else {
       onTurmasChange([]);
     }
@@ -40,28 +38,28 @@ export const TurmaSelector = ({
     <div className="space-y-4">
       <div className="space-y-2">
         <Label className="text-base font-medium">Turmas Autorizadas</Label>
-        
+
         <div className="flex items-center space-x-2">
           <Checkbox
             id="todas-turmas"
-            checked={selectedTurmas.length === turmasDisponiveis.length}
+            checked={turmasDinamicas.length > 0 && selectedTurmas.length === turmasDinamicas.length}
             onCheckedChange={handleTodasTurmasChange}
           />
           <Label htmlFor="todas-turmas" className="font-medium">
             Todas as turmas
           </Label>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-2 ml-6">
-          {turmasDisponiveis.map((turma) => (
-            <div key={turma} className="flex items-center space-x-2">
+          {turmasDinamicas.map(({ valor, label }) => (
+            <div key={valor} className="flex items-center space-x-2">
               <Checkbox
-                id={turma}
-                checked={selectedTurmas.includes(turma)}
-                onCheckedChange={(checked) => handleTurmaChange(turma, !!checked)}
+                id={valor}
+                checked={selectedTurmas.includes(valor)}
+                onCheckedChange={(checked) => handleTurmaChange(valor, !!checked)}
               />
-              <Label htmlFor={turma} className="text-sm">
-                {formatTurmaDisplay(turma)}
+              <Label htmlFor={valor} className="text-sm">
+                {label}
               </Label>
             </div>
           ))}

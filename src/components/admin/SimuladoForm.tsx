@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { TODAS_TURMAS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 
 interface SimuladoEditando {
   id: string;
@@ -33,6 +33,7 @@ interface SimuladoFormProps {
 }
 
 export const SimuladoForm = ({ mode = 'create', simuladoEditando, onSuccess, onCancelEdit }: SimuladoFormProps) => {
+  const { turmasDinamicas } = useTurmasAtivas();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(mode === 'edit');
   const [activeSection, setActiveSection] = useState<string>('titulo');
@@ -115,8 +116,7 @@ export const SimuladoForm = ({ mode = 'create', simuladoEditando, onSuccess, onC
 
   const temaEscolhido = temas?.find(tema => tema.id === formData.tema_id);
 
-  // Turmas geradas dinamicamente a partir do utils
-  const turmasDisponiveis = TODAS_TURMAS.map(turma => formatTurmaDisplay(turma));
+  const turmasDisponiveis = turmasDinamicas;
 
   const handleTurmaChange = (turma: string, checked: boolean) => {
     if (checked) {
@@ -417,15 +417,15 @@ export const SimuladoForm = ({ mode = 'create', simuladoEditando, onSuccess, onC
             {activeSection === 'turmas' && (
               <div className="border border-gray-200 rounded-xl p-5 mb-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {turmasDisponiveis.map((turma) => (
-                    <div key={turma} className="flex items-center space-x-2">
+                  {turmasDisponiveis.map(({ valor, label }) => (
+                    <div key={valor} className="flex items-center space-x-2">
                       <Checkbox
-                        id={turma}
-                        checked={formData.turmas_autorizadas.includes(turma)}
-                        onCheckedChange={(checked) => handleTurmaChange(turma, checked as boolean)}
+                        id={valor}
+                        checked={formData.turmas_autorizadas.includes(valor)}
+                        onCheckedChange={(checked) => handleTurmaChange(valor, checked as boolean)}
                       />
-                      <Label htmlFor={turma} className="text-sm">
-                        {turma}
+                      <Label htmlFor={valor} className="text-sm">
+                        {label}
                       </Label>
                     </div>
                   ))}

@@ -14,7 +14,7 @@ export type TurmaLetra = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'VISITA
 /**
  * Lista de turmas válidas para alocação de alunos ativos
  */
-export const TURMAS_VALIDAS: readonly TurmaLetra[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
+export const TURMAS_VALIDAS: readonly TurmaLetra[] = ['A', 'B', 'C', 'D', 'G', 'H'] as const;
 
 /**
  * Status especiais de turma (não são turmas de aula)

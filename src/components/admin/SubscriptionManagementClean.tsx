@@ -15,7 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Crown, Edit2, History, Calendar, MoreVertical, Trash2, Settings2 } from 'lucide-react';
 import { formatDateSafe, isDateActiveOrFuture, formatDateTimeSafe } from '@/utils/dateUtils';
-import { TURMAS_VALIDAS, STATUS_ESPECIAIS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { STATUS_ESPECIAIS, formatTurmaDisplay } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 
 interface Student {
   id: string;
@@ -42,10 +43,14 @@ interface SubscriptionHistory {
   admin_responsavel: string;
 }
 
-const TURMAS = [...TURMAS_VALIDAS, ...STATUS_ESPECIAIS];
 const PLANOS = ['Liderança', 'Lapidação', 'Largada', 'Bolsista'] as const;
 
 export const SubscriptionManagementClean = () => {
+  const { turmasDinamicas } = useTurmasAtivas();
+  const turmasFiltro = [
+    ...turmasDinamicas.map(t => ({ valor: t.valor, label: t.label })),
+    ...STATUS_ESPECIAIS.map(s => ({ valor: s, label: formatTurmaDisplay(s) })),
+  ];
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -342,9 +347,9 @@ export const SubscriptionManagementClean = () => {
                   <SelectValue placeholder="Selecione uma turma" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TURMAS.map((turma) => (
-                    <SelectItem key={turma} value={turma}>
-                      {formatTurmaDisplay(turma)}
+                  {turmasFiltro.map(({ valor, label }) => (
+                    <SelectItem key={valor} value={valor}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>

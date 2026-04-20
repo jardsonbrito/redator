@@ -21,7 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Plus, X, ArrowLeft, Save, Loader2, Mic, Square, Play, Pause, Search, Pencil,
 } from 'lucide-react';
-import { TURMAS_VALIDAS } from '@/utils/turmaUtils';
+import { useTurmasAtivas } from '@/hooks/useTurmasAtivas';
 import { ImageSelector } from '@/components/admin/ImageSelector';
 const uuidv4 = () => crypto.randomUUID();
 
@@ -865,6 +865,7 @@ const TrechoEditor = ({ conteudo, textoOriginal, onChange }: TrechoEditorProps) 
 // ─── Formulário principal ─────────────────────────────────────────────────────
 
 export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) => {
+  const { turmasDinamicas } = useTurmasAtivas();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!!editingId);
@@ -1132,7 +1133,7 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
     );
   }
 
-  const turmasAlunos = TURMAS_VALIDAS as string[];
+  const turmasAlunos = turmasDinamicas;
 
   return (
     <div className="space-y-4">
@@ -1221,13 +1222,13 @@ export const RedacaoComentadaForm = ({ editingId, onSuccess, onCancel }: Props) 
               Selecione quais turmas de alunos e/ou professores podem visualizar esta redação.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {turmasAlunos.map((t) => (
-                <label key={t} className="flex items-center gap-2 cursor-pointer text-sm">
+              {turmasAlunos.map(({ valor, label }) => (
+                <label key={valor} className="flex items-center gap-2 cursor-pointer text-sm">
                   <Checkbox
-                    checked={turmasAutorizadas.includes(t)}
-                    onCheckedChange={() => handleToggleTurma(t)}
+                    checked={turmasAutorizadas.includes(valor)}
+                    onCheckedChange={() => handleToggleTurma(valor)}
                   />
-                  <span>Turma {t}</span>
+                  <span>{label}</span>
                 </label>
               ))}
             </div>

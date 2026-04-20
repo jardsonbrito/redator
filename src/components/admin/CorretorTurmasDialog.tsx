@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { TURMAS_VALIDAS, TODAS_TURMAS, formatTurmaDisplay, type TurmaLetra } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,33 +33,32 @@ export const CorretorTurmasDialog = ({
   corretor,
   onSuccess,
 }: CorretorTurmasDialogProps) => {
+  const { turmasDinamicas } = useTurmasAtivas();
   const [selectedTurmas, setSelectedTurmas] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Inicializar com as turmas já autorizadas ou todas as turmas
   useEffect(() => {
     if (open) {
       if (corretor.turmas_autorizadas && corretor.turmas_autorizadas.length > 0) {
         setSelectedTurmas(corretor.turmas_autorizadas);
       } else {
-        // Se não tem turmas autorizadas (NULL), marcar todas por padrão (incluindo VISITANTE)
-        setSelectedTurmas([...TODAS_TURMAS]);
+        setSelectedTurmas(turmasDinamicas.map(t => t.valor));
       }
     }
-  }, [open, corretor]);
+  }, [open, corretor, turmasDinamicas]);
 
-  const handleTurmaChange = (turma: TurmaLetra, checked: boolean) => {
+  const handleTurmaChange = (valor: string, checked: boolean) => {
     if (checked) {
-      setSelectedTurmas([...selectedTurmas, turma]);
+      setSelectedTurmas([...selectedTurmas, valor]);
     } else {
-      setSelectedTurmas(selectedTurmas.filter((t) => t !== turma));
+      setSelectedTurmas(selectedTurmas.filter((t) => t !== valor));
     }
   };
 
   const handleTodasTurmasChange = (checked: boolean) => {
     if (checked) {
-      setSelectedTurmas([...TODAS_TURMAS]);
+      setSelectedTurmas(turmasDinamicas.map(t => t.valor));
     } else {
       setSelectedTurmas([]);
     }
@@ -89,7 +88,7 @@ export const CorretorTurmasDialog = ({
 
       if (error) throw error;
 
-      const isTodasTurmas = selectedTurmas.length === TODAS_TURMAS.length;
+      const isTodasTurmas = selectedTurmas.length === turmasDinamicas.length;
       toast({
         title: "Disponibilidade atualizada!",
         description: `Corretor agora está disponível para ${
@@ -116,7 +115,7 @@ export const CorretorTurmasDialog = ({
     }
   };
 
-  const todasSelecionadas = selectedTurmas.length === TODAS_TURMAS.length;
+  const todasSelecionadas = turmasDinamicas.length > 0 && selectedTurmas.length === turmasDinamicas.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -143,15 +142,15 @@ export const CorretorTurmasDialog = ({
             </div>
 
             <div className="grid grid-cols-2 gap-2 ml-2">
-              {TODAS_TURMAS.map((turma) => (
-                <div key={turma} className="flex items-center space-x-2">
+              {turmasDinamicas.map(({ valor, label }) => (
+                <div key={valor} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`turma-${turma}`}
-                    checked={selectedTurmas.includes(turma)}
-                    onCheckedChange={(checked) => handleTurmaChange(turma, !!checked)}
+                    id={`turma-${valor}`}
+                    checked={selectedTurmas.includes(valor)}
+                    onCheckedChange={(checked) => handleTurmaChange(valor, !!checked)}
                   />
-                  <Label htmlFor={`turma-${turma}`} className="text-sm cursor-pointer">
-                    {formatTurmaDisplay(turma)}
+                  <Label htmlFor={`turma-${valor}`} className="text-sm cursor-pointer">
+                    {label}
                   </Label>
                 </div>
               ))}
