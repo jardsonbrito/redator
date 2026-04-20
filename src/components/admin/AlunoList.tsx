@@ -17,7 +17,8 @@ import { Label } from "@/components/ui/label";
 import { VisitanteInfoModal } from "./VisitanteInfoModal";
 import { MigrarVisitanteModal } from "./MigrarVisitanteModal";
 import { StudentLoginActivityModal } from "./StudentLoginActivityModal";
-import { formatTurmaDisplay, getTurmaColorClasses, TURMAS_VALIDAS, TODAS_TURMAS } from "@/utils/turmaUtils";
+import { formatTurmaDisplay, getTurmaColorClasses } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface Aluno {
   id: string;
@@ -63,6 +64,7 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
   const [confirmEmailInput, setConfirmEmailInput] = useState("");
   const [isDeletingDefinitivo, setIsDeletingDefinitivo] = useState(false);
   const { toast } = useToast();
+  const { turmasDinamicas } = useTurmasAtivas();
 
   const fetchAlunos = async () => {
     setLoading(true);
@@ -182,15 +184,11 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
     fetchAlunos();
   }, [refresh]);
 
-  // Lista fixa de turmas do sistema + visitantes + aguardando reativação
   const turmasDisponiveis = useMemo(() => {
-    // Usando formato normalizado: letras únicas + aba especial para aguardando reativação
-    const turmasFixas = ['VISITANTE', ...TURMAS_VALIDAS, 'AGUARDANDO'];
-    return turmasFixas;
-  }, []);
+    return ['VISITANTE', ...turmasDinamicas.map(t => t.valor), 'AGUARDANDO'];
+  }, [turmasDinamicas]);
 
-  // Turmas que requerem plano ativo para aparecer nas abas
-  const turmasComPlano = [...TURMAS_VALIDAS];
+  const turmasComPlano = useMemo(() => turmasDinamicas.map(t => t.valor), [turmasDinamicas]);
 
   // Filtrar alunos baseado na turma ativa e termo de busca
   const filteredAlunos = useMemo(() => {
@@ -224,7 +222,7 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
     }
 
     return filtered;
-  }, [alunos, activeTurma, searchTerm]);
+  }, [alunos, activeTurma, searchTerm, turmasComPlano]);
 
   // Contar alunos por turma (considerando plano ativo)
   const contadorPorTurma = useMemo(() => {
@@ -249,7 +247,7 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
     ).length;
 
     return contador;
-  }, [alunos]);
+  }, [alunos, turmasComPlano]);
 
 
   const handleEdit = (aluno: Aluno) => {
@@ -458,7 +456,7 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
   const isAlunoAguardando = (aluno: Aluno) =>
     aluno.tipo === 'aluno' && (
       aluno.turma === 'AGUARDANDO' ||
-      (!aluno.temPlanoAtivo && (TURMAS_VALIDAS as readonly string[]).includes(aluno.turma))
+      (!aluno.temPlanoAtivo && turmasComPlano.includes(aluno.turma))
     );
 
   const handleDeleteSelected = async () => {
@@ -892,9 +890,9 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
                 <SelectValue placeholder="Selecione a turma" />
               </SelectTrigger>
               <SelectContent>
-                {TURMAS_VALIDAS.map((turma) => (
-                  <SelectItem key={turma} value={turma}>
-                    Turma {turma}
+                {turmasDinamicas.map(({ valor, label }) => (
+                  <SelectItem key={valor} value={valor}>
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1210,7 +1208,7 @@ const AlunoTable = ({
                       (() => {
                         const isAguardando =
                           aluno.turma === 'AGUARDANDO' ||
-                          (!aluno.temPlanoAtivo && (TURMAS_VALIDAS as readonly string[]).includes(aluno.turma));
+                          (!aluno.temPlanoAtivo && turmasComPlano.includes(aluno.turma));
                         return (
                           <>
                             <DropdownMenuItem onClick={() => {
