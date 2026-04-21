@@ -256,27 +256,30 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
         setUserProfile(profileData);
         console.log("✅ Profile definido para upload:", profileData);
       }
-      const fileExt = file.name.split(".").pop();
-      // Usar timestamp para criar nome único e evitar cache
-      const timestamp = Date.now();
-      const filePath = `${userId}-${timestamp}.${fileExt}`;
+      // Deletar foto antiga do Storage antes de fazer o novo upload
+      const oldAvatarUrl = avatarUrl || userProfile?.avatar_url;
+      if (oldAvatarUrl && oldAvatarUrl.includes('/storage/v1/object/public/avatars/')) {
+        const match = oldAvatarUrl.match(/\/storage\/v1\/object\/public\/avatars\/(.+)/);
+        if (match?.[1]) {
+          await supabase.storage.from('avatars').remove([match[1]]);
+        }
+      }
 
-      console.log("📁 Path final do novo avatar com timestamp:", filePath);
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${userId}-${Date.now()}.${fileExt}`;
 
       // 2. Upload no Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { 
+        .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true 
+          upsert: true,
         });
 
       if (uploadError) {
         console.error("❌ Erro no upload:", uploadError);
         throw uploadError;
       }
-
-      console.log("✅ Upload realizado com sucesso!");
 
       // 3. Gerar URL pública do novo arquivo
       const { data: publicData } = supabase.storage
