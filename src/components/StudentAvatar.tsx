@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { User } from 'lucide-react';
+import { User, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudentAuth } from '@/hooks/useStudentAuth';
@@ -340,15 +340,20 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const cameraIconSize = size === 'lg' ? 'w-6 h-6' : size === 'md' ? 'w-4 h-4' : 'w-3 h-3';
+
   return (
-    <div className="relative group">
-      <Avatar 
-        className={`${sizeClasses[size]} border border-primary/20 transition-all ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer hover:ring-2 hover:ring-primary/50 hover:ring-offset-2 hover:shadow-lg' : ''}`}
+    <div
+      className="relative group"
+      title={showUpload ? 'Clique para alterar a foto de perfil' : undefined}
+    >
+      <Avatar
+        className={`${sizeClasses[size]} border-2 transition-all ${uploading ? 'opacity-50' : ''} ${showUpload ? 'cursor-pointer border-primary/30 hover:border-primary hover:ring-2 hover:ring-primary/40 hover:ring-offset-1 hover:shadow-md' : 'border-primary/20'}`}
         onClick={showUpload ? handleAvatarClick : undefined}
       >
         {avatarUrl && (
-          <AvatarImage 
-            src={avatarUrl} 
+          <AvatarImage
+            src={avatarUrl}
             alt="Avatar do usuário"
             className="object-cover"
           />
@@ -357,7 +362,27 @@ export const StudentAvatar = ({ size = 'md', showUpload = true, onAvatarUpdate }
           {studentData.nomeUsuario ? getInitials() : <User className={size === 'lg' ? 'w-8 h-8' : 'w-5 h-5'} />}
         </AvatarFallback>
       </Avatar>
-      
+
+      {/* Overlay de câmera — permanente se sem foto, visível no hover se tiver foto */}
+      {showUpload && !uploading && (
+        <div
+          className={`absolute inset-0 rounded-full flex items-center justify-center transition-opacity pointer-events-none ${
+            avatarUrl
+              ? 'bg-black/50 opacity-0 group-hover:opacity-100'
+              : 'bg-primary/20 opacity-100'
+          }`}
+        >
+          <Camera className={`${cameraIconSize} ${avatarUrl ? 'text-white' : 'text-primary'}`} />
+        </div>
+      )}
+
+      {/* Badge de câmera fixo no canto inferior direito (só no tamanho sm do header) */}
+      {showUpload && size === 'sm' && !uploading && (
+        <div className="absolute -bottom-0.5 -right-0.5 bg-primary rounded-full p-0.5 shadow-sm border border-white/30 pointer-events-none">
+          <Camera className="w-2.5 h-2.5 text-white" />
+        </div>
+      )}
+
       {showUpload && (
         <input
           ref={fileInputRef}
