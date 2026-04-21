@@ -1,12 +1,20 @@
 -- Fix: Garantir que alunos criados via convite tenham is_authenticated_student = true
+-- E que o campo turma contenha o codigo_acesso (não o nome) para funcionar com as abas
 -- Isso permite que eles apareçam na listagem de alunos do admin
 
--- 1. Atualizar profiles existentes que entraram por convite mas não têm is_authenticated_student
-UPDATE profiles
-SET is_authenticated_student = true
-WHERE user_type = 'aluno'
-  AND turma_id IS NOT NULL
-  AND (is_authenticated_student IS NULL OR is_authenticated_student = false);
+-- 1. Atualizar profiles existentes que entraram por convite
+-- Corrigir is_authenticated_student E sincronizar campo turma com codigo_acesso
+UPDATE profiles p
+SET
+  is_authenticated_student = true,
+  turma = t.codigo_acesso
+FROM turmas_alunos t
+WHERE p.turma_id = t.id
+  AND p.user_type = 'aluno'
+  AND (
+    p.is_authenticated_student IS NOT true
+    OR p.turma != t.codigo_acesso
+  );
 
 -- 2. Recriar função para incluir is_authenticated_student na criação
 CREATE OR REPLACE FUNCTION public.aluno_entrar_por_convite(
@@ -75,6 +83,7 @@ BEGIN
     IF v_sobrenome = '' THEN v_sobrenome := '-'; END IF;
 
     -- Criar perfil com is_authenticated_student = true
+    -- IMPORTANTE: turma deve ser o codigo_acesso para funcionar com as abas
     INSERT INTO profiles (
       id,
       nome,
@@ -91,7 +100,7 @@ BEGIN
       v_primeiro,
       v_sobrenome,
       lower(p_email),
-      v_turma.nome,
+      v_turma.codigo_acesso,  -- CORRIGIDO: usar codigo_acesso em vez de nome
       v_turma.id,
       'aluno',
       true,
@@ -99,10 +108,11 @@ BEGIN
     )
     RETURNING * INTO v_profile;
   ELSE
-    -- Aluno já cadastrado: garantir turma_id e is_authenticated_student
-    IF v_profile.turma_id IS NULL OR v_profile.is_authenticated_student IS NOT true THEN
+    -- Aluno já cadastrado: garantir turma_id, turma (codigo_acesso) e is_authenticated_student
+    IF v_profile.turma_id IS NULL OR v_profile.is_authenticated_student IS NOT true OR v_profile.turma != v_turma.codigo_acesso THEN
       UPDATE profiles
       SET
+        turma = v_turma.codigo_acesso,  -- CORRIGIDO: atualizar para codigo_acesso
         turma_id = v_turma.id,
         is_authenticated_student = true,
         ativo = true
