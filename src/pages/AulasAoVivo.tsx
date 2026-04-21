@@ -72,20 +72,38 @@ const AulasAoVivo = () => {
         }
       }
 
-      // Buscar aulas ao vivo ativas
+      // Calcular janela de exibição: hoje + amanhã
+      const agora = new Date();
+      const hoje = agora.toISOString().split('T')[0];
+      const horaAtual = agora.toTimeString().slice(0, 8);
+      const amanha = new Date(agora);
+      amanha.setDate(amanha.getDate() + 1);
+      const amanhaStr = amanha.toISOString().split('T')[0];
+
+      // Buscar aulas ao vivo ativas (apenas hoje e amanhã)
       const { data: aulasData, error: aulasError } = await supabase
         .from('aulas_virtuais')
         .select('*')
         .eq('ativo', true)
         .eq('eh_aula_ao_vivo', true)
-        .order('data_aula', { ascending: false });
+        .gte('data_aula', hoje)
+        .lte('data_aula', amanhaStr)
+        .order('data_aula', { ascending: true });
 
       if (aulasError) {
         throw aulasError;
       }
 
-      // Filtrar aulas baseado na autorização
-      const aulasAutorizadas = (aulasData || []).filter(aula => {
+      // Filtrar aulas baseado na autorização + regra de proximidade:
+      // - Todas as aulas de HOJE aparecem
+      // - Aulas de AMANHÃ só aparecem se hoje não tiver nenhuma aula pendente ou em curso
+      const todasAulas = (aulasData || []);
+      const temAulaHojeAtiva = todasAulas.some(a =>
+        a.data_aula === hoje && a.horario_fim >= horaAtual
+      );
+
+      const aulasAutorizadas = todasAulas.filter(aula => {
+        if (aula.data_aula === amanhaStr && temAulaHojeAtiva) return false;
         if (aula.permite_visitante && studentData.userType === 'visitante') {
           return true;
         }
