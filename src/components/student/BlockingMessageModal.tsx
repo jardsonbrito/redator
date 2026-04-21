@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { type StudentInboxMessage } from "@/hooks/useStudentInbox";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface BlockingMessageModalProps {
   message: StudentInboxMessage | null;
@@ -21,9 +22,13 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
   const [isSending, setIsSending] = useState(false);
   const { studentData } = useStudentAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const isFaltaJustificativa =
     message?.acao === "justificativa_ausencia" && !!message?.aula_id;
+
+  const isPreencherPerfil =
+    message?.acao === "preencher_perfil";
 
   const { data: aulaInfo } = useQuery({
     queryKey: ["aula-info-justificativa", message?.aula_id],
@@ -40,6 +45,32 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
   });
 
   if (!message) return null;
+
+  const handlePreencherPerfil = async () => {
+    setIsSending(true);
+    try {
+      // Marca a mensagem como respondida
+      const { error: inboxError } = await supabase
+        .from("inbox_recipients")
+        .update({
+          status: "respondida",
+          response_text: "Redirecionado para editar perfil",
+          responded_at: new Date().toISOString(),
+        })
+        .eq("id", message!.id);
+
+      if (inboxError) throw inboxError;
+
+      queryClient.invalidateQueries({ queryKey: ["student-inbox"] });
+      onClose();
+      navigate("/editar-perfil");
+    } catch (err: any) {
+      console.error("Erro ao processar redirecionamento:", err);
+      toast.error("Erro ao processar. Tente novamente.");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleRespond = async () => {
     const responseText = response.trim();
@@ -113,9 +144,13 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
       >
         <DialogHeader>
           <DialogTitle>
-            {isFaltaJustificativa ? "Justificativa de falta" : "Mensagem Importante – Resposta Obrigatória"}
+            {isFaltaJustificativa
+              ? "Justificativa de falta"
+              : isPreencherPerfil
+              ? "Complete seu perfil"
+              : "Mensagem Importante – Resposta Obrigatória"}
           </DialogTitle>
-          {!isFaltaJustificativa && (
+          {!isFaltaJustificativa && !isPreencherPerfil && (
             <p className="text-sm text-gray-500">
               {format(new Date(message.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </p>
@@ -128,43 +163,56 @@ export function BlockingMessageModal({ message, isOpen, onClose }: BlockingMessa
             {aulaDataFormatada && <p>Data da aula: {aulaDataFormatada}</p>}
             {aulaHorario && <p>Horário: {aulaHorario}</p>}
           </div>
+        ) : isPreencherPerfil ? (
+          <div className="bg-purple-50 border border-purple-200 rounded-md p-4 text-sm text-gray-700 space-y-3">
+            <p className="font-medium text-purple-900">
+              {message.message}
+            </p>
+            <p className="text-xs text-purple-700">
+              Clique no botão abaixo para ser redirecionado à página de edição de perfil.
+            </p>
+          </div>
         ) : (
           <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap">
             {message.message}
           </div>
         )}
 
-        {/* Campo de resposta */}
-        <div className="mt-2">
-          {!isFaltaJustificativa && (
-            <label className="text-sm font-medium">Sua resposta:</label>
-          )}
-          <Textarea
-            value={response}
-            onChange={(e) => setResponse(e.target.value)}
-            placeholder={
-              isFaltaJustificativa
-                ? "Descreva de forma objetiva o motivo pelo qual você não pôde participar da aula."
-                : "Digite sua resposta..."
-            }
-            className={isFaltaJustificativa ? undefined : "mt-2"}
-            rows={4}
-            maxLength={500}
-            disabled={isSending}
-          />
-          {isFaltaJustificativa && (
-            <p className="text-xs text-muted-foreground text-right mt-1">{response.length}/500</p>
-          )}
-        </div>
+        {/* Campo de resposta - não mostrar se for preencher perfil */}
+        {!isPreencherPerfil && (
+          <div className="mt-2">
+            {!isFaltaJustificativa && (
+              <label className="text-sm font-medium">Sua resposta:</label>
+            )}
+            <Textarea
+              value={response}
+              onChange={(e) => setResponse(e.target.value)}
+              placeholder={
+                isFaltaJustificativa
+                  ? "Descreva de forma objetiva o motivo pelo qual você não pôde participar da aula."
+                  : "Digite sua resposta..."
+              }
+              className={isFaltaJustificativa ? undefined : "mt-2"}
+              rows={4}
+              maxLength={500}
+              disabled={isSending}
+            />
+            {isFaltaJustificativa && (
+              <p className="text-xs text-muted-foreground text-right mt-1">{response.length}/500</p>
+            )}
+          </div>
+        )}
 
         {/* Botão */}
         <div className="mt-4 flex justify-end">
           <Button
-            onClick={handleRespond}
-            disabled={!response.trim() || isSending}
+            onClick={isPreencherPerfil ? handlePreencherPerfil : handleRespond}
+            disabled={!isPreencherPerfil && !response.trim() || isSending}
           >
             {isSending
-              ? "Enviando..."
+              ? "Processando..."
+              : isPreencherPerfil
+              ? "Ir para Editar Perfil"
               : isFaltaJustificativa
               ? "Enviar justificativa"
               : "Enviar Resposta"}
