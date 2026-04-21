@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { CalendarDays, Clock, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { computeSimuladoStatus } from '@/utils/simuladoStatus';
+import { toast } from 'sonner';
 
 // ── Configurações ─────────────────────────────────────────────────────────────
 
@@ -188,14 +190,69 @@ export const CalendarioAtividades = ({ turmaCode }: Props) => {
     setModalAberto(true);
   };
 
-  const handleAcao = (evento: Evento) => {
+  const handleAcao = async (evento: Evento) => {
     setModalAberto(false);
+
     // Se o evento tem link direto (ex: link_meet da aula ao vivo), abre externamente
     if (evento.link_direto) {
       window.open(evento.link_direto, '_blank', 'noopener,noreferrer');
       return;
     }
+
     if (!evento.entidade_tipo) return;
+
+    // Tratamento especial para simulados
+    if (evento.entidade_tipo === 'simulado' && evento.entidade_id) {
+      // Buscar dados do simulado para verificar status
+      const { data: simulado } = await supabase
+        .from('simulados')
+        .select('*')
+        .eq('id', evento.entidade_id)
+        .single();
+
+      if (!simulado) {
+        toast.error('Simulado não encontrado');
+        return;
+      }
+
+      const status = computeSimuladoStatus(simulado);
+
+      // Se está agendado, apenas mostrar mensagem informativa
+      if (status === 'agendado') {
+        toast.info('Este simulado ainda não começou. Aguarde o período de participação.');
+        return;
+      }
+
+      // Verificar se o aluno já enviou redação
+      if (studentData.email) {
+        const { data: redacao } = await supabase
+          .from('redacoes_simulado')
+          .select('id')
+          .eq('id_simulado', evento.entidade_id)
+          .eq('email_aluno', studentData.email)
+          .maybeSingle();
+
+        // Se já enviou ou se está encerrado, vai para página de redação corrigida
+        if (redacao || status === 'encerrado') {
+          navigate(`/simulados/${evento.entidade_id}/redacao-corrigida`);
+          return;
+        }
+      }
+
+      // Se está ativo e não enviou, vai para página de participação
+      if (status === 'ativo') {
+        navigate(`/simulados/${evento.entidade_id}`);
+        return;
+      }
+
+      // Se está encerrado e não enviou, mostrar mensagem
+      if (status === 'encerrado') {
+        toast.warning('Este simulado já foi encerrado');
+        return;
+      }
+    }
+
+    // Para outros tipos de evento, usar rota padrão
     const config = ENTIDADE_ACAO[evento.entidade_tipo];
     if (!config) return;
     navigate(config.rota(evento.entidade_id || ''));
@@ -384,7 +441,6 @@ export const CalendarioAtividades = ({ turmaCode }: Props) => {
               eventosDodia.map(evento => {
                 const cor = evento.cor || TIPO_CORES[evento.tipo_evento] || '#6b7280';
                 const acaoConfig = evento.entidade_tipo ? ENTIDADE_ACAO[evento.entidade_tipo] : null;
-                const temAcao = !!(acaoConfig && (evento.entidade_id || !['aula_ao_vivo', 'aula_gravada', 'exercicio', 'repertorio_orientado', 'diario_online'].includes(evento.entidade_tipo || '') || true));
 
                 return (
                   <div key={evento.id} className="rounded-xl border overflow-hidden">
