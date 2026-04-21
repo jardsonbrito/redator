@@ -830,6 +830,7 @@ export const AlunoList = ({ refresh, onEdit, onOpenPerfil }: AlunoListProps) => 
                 selectedIds={selectedIds}
                 onSelectItem={handleSelectItem}
                 onSelectAll={handleSelectAll}
+                turmasComPlano={turmasComPlano}
               />
             </TabsContent>
           ))}
