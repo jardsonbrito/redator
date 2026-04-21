@@ -80,13 +80,12 @@ const AulasAoVivo = () => {
       amanha.setDate(amanha.getDate() + 1);
       const amanhaStr = amanha.toISOString().split('T')[0];
 
-      // Buscar aulas ao vivo ativas (apenas hoje e amanhã)
+      // Busca: todas as passadas (sem limite inferior) + até amanhã no futuro
       const { data: aulasData, error: aulasError } = await supabase
         .from('aulas_virtuais')
         .select('*')
         .eq('ativo', true)
         .eq('eh_aula_ao_vivo', true)
-        .gte('data_aula', hoje)
         .lte('data_aula', amanhaStr)
         .order('data_aula', { ascending: true });
 
@@ -103,6 +102,8 @@ const AulasAoVivo = () => {
       );
 
       const aulasAutorizadas = todasAulas.filter(aula => {
+        // Passadas: sempre aparecem
+        // Amanhã: só aparece se hoje não tiver aula pendente/em curso
         if (aula.data_aula === amanhaStr && temAulaHojeAtiva) return false;
         if (aula.permite_visitante && studentData.userType === 'visitante') {
           return true;
