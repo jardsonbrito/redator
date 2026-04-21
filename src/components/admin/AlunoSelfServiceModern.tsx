@@ -7,7 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy, Check, ExternalLink, Loader2 } from "lucide-react";
-import { TURMAS_VALIDAS, getTurmaColorClasses } from "@/utils/turmaUtils";
+import { getTurmaColorClasses } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface AlunoSelfServiceModernProps {
   onSuccess: () => void;
@@ -88,8 +89,9 @@ export const AlunoSelfServiceModern = ({ onSuccess }: AlunoSelfServiceModernProp
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [savingTurma, setSavingTurma] = useState<string | null>(null);
   const { toast } = useToast();
+  const { turmasDinamicas } = useTurmasAtivas();
 
-  const turmas = [...TURMAS_VALIDAS];
+  const turmas = turmasDinamicas.map(t => t.valor);
 
   // Link de troca de email
   const linkTrocaEmail = `${window.location.origin}/atualizar-email`;
@@ -111,7 +113,7 @@ export const AlunoSelfServiceModern = ({ onSuccess }: AlunoSelfServiceModernProp
         } else {
           // Configuração padrão: todas habilitadas
           const configPadrao: TurmasConfig = {};
-          TURMAS_VALIDAS.forEach(turma => {
+          turmas.forEach(turma => {
             configPadrao[turma] = true;
           });
           setTurmasConfig(configPadrao);
@@ -120,7 +122,7 @@ export const AlunoSelfServiceModern = ({ onSuccess }: AlunoSelfServiceModernProp
         console.error("Erro ao carregar configuração:", error);
         // Em caso de erro, assume todas habilitadas
         const configPadrao: TurmasConfig = {};
-        TURMAS_VALIDAS.forEach(turma => {
+        turmas.forEach(turma => {
           configPadrao[turma] = true;
         });
         setTurmasConfig(configPadrao);
@@ -200,7 +202,7 @@ export const AlunoSelfServiceModern = ({ onSuccess }: AlunoSelfServiceModernProp
 
   // Contar turmas habilitadas
   const turmasHabilitadas = Object.values(turmasConfig).filter(Boolean).length;
-  const totalTurmas = TURMAS_VALIDAS.length;
+  const totalTurmas = turmas.length;
 
   return (
     <div className="space-y-6">
@@ -225,7 +227,7 @@ export const AlunoSelfServiceModern = ({ onSuccess }: AlunoSelfServiceModernProp
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {TURMAS_VALIDAS.map((turma) => {
+            {turmas.map((turma) => {
               const habilitado = turmasConfig[turma] ?? true;
               const isSaving = savingTurma === turma;
               const colorClasses = getTurmaColorClasses(turma);

@@ -139,7 +139,8 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/aluno-login" element={<AlunoLogin />} />
                     <Route path="/visitante-login" element={<VisitanteLogin />} />
-                    <Route path="/cadastro-aluno" element={<CadastroAluno />} />
+                    {/* Desabilitado: cadastro apenas via convites */}
+                    {/* <Route path="/cadastro-aluno" element={<CadastroAluno />} /> */}
                     <Route path="/aluno/entrar" element={<AlunoAutoAtendimento />} />
                     <Route path="/atualizar-email" element={<AtualizarEmail />} />
                     <Route path="/processo-seletivo/inscricao/:formularioId" element={<ProcessoSeletivoInscricao />} />

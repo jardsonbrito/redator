@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, Download, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TURMAS_VALIDAS, formatTurmaDisplay } from "@/utils/turmaUtils";
+import { formatTurmaDisplay } from "@/utils/turmaUtils";
+import { useTurmasAtivas } from "@/hooks/useTurmasAtivas";
 
 interface ImportResult {
   total: number;
@@ -21,12 +22,19 @@ export const AlunoCSVImport = ({ onSuccess }: { onSuccess: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
+  const { turmasDinamicas } = useTurmasAtivas();
 
   const downloadTemplate = () => {
+    // Usar turmas dinâmicas para o template
+    const turmasExemplo = turmasDinamicas.slice(0, 3);
+    const linhasExemplo = turmasExemplo.map((t, i) => {
+      const nomes = ['João da Silva', 'Maria Souza', 'Pedro Santos'];
+      const emails = ['joao@email.com', 'maria@email.com', 'pedro@email.com'];
+      return `${nomes[i] || 'Aluno'},${emails[i] || 'aluno@email.com'},${t.valor}`;
+    }).join('\n');
+
     const csvContent = `nome,email,turma
-João da Silva,joao@email.com,A
-Maria Souza,maria@email.com,B
-Pedro Santos,pedro@email.com,C`;
+${linhasExemplo}`;
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -84,7 +92,7 @@ Pedro Santos,pedro@email.com,C`;
       const emailIndex = headers.indexOf('email');
       const turmaIndex = headers.indexOf('turma');
 
-      const validTurmas = TURMAS_VALIDAS;
+      const validTurmas = turmasDinamicas.map(t => t.valor);
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       
       const alunosParaImportar = [];
