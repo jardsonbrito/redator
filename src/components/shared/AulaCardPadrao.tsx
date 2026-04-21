@@ -148,7 +148,7 @@ export const AulaCardPadrao = ({ aula, perfil, actions, attendanceStatus = 'ause
     try {
       const date = new Date(aula.data_aula + 'T00:00:00');
       const dateStr = format(date, 'dd/MM/yyyy', { locale: ptBR });
-      return `${dateStr} • ${aula.horario_inicio} - ${aula.horario_fim}`;
+      return `${dateStr} • ${aula.horario_inicio.slice(0, 5)} - ${aula.horario_fim.slice(0, 5)}`;
     } catch {
       return 'Data não disponível';
     }

@@ -117,11 +117,13 @@ const AulasAoVivo = () => {
         const prioridadeB = prioridade[statusB as keyof typeof prioridade] || 0;
 
         if (prioridadeA !== prioridadeB) {
-          return prioridadeB - prioridadeA; // Ordem decrescente de prioridade
+          return prioridadeB - prioridadeA;
         }
 
-        // Se têm a mesma prioridade, ordenar por data (mais recente primeiro)
-        return new Date(b.data_aula).getTime() - new Date(a.data_aula).getTime();
+        const dateA = new Date(a.data_aula).getTime();
+        const dateB = new Date(b.data_aula).getTime();
+        // Agendadas: mais próximas primeiro; encerradas: mais recentes primeiro
+        return statusA === 'agendada' ? dateA - dateB : dateB - dateA;
       });
 
       setAulas(aulasOrdenadas);
